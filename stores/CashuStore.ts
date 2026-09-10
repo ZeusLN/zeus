@@ -1631,7 +1631,9 @@ export default class CashuStore {
             const conditionData: CDKP2PKCondition = {
                 pubkey: p2pkPubkey.trim()
             };
-            if (locktime !== undefined && locktime !== null) {
+            // Only forward a locktime that is actually set: a `["locktime", "0"]`
+            // tag marks the lock as already expired and is rejected by mints.
+            if (locktime !== undefined && locktime !== null && locktime > 0) {
                 conditionData.locktime = locktime;
             }
             conditions = {

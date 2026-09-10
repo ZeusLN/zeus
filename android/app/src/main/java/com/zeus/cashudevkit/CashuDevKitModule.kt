@@ -59,28 +59,48 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         val data = json.optJSONObject("data") ?: return null
         val pubkeyHex = data.optString("pubkey").takeIf { it.isNotEmpty() } ?: return null
 
-        val locktime = if (data.has("locktime") && !data.isNull("locktime")) {
-            data.optLong("locktime").toULong()
-        } else {
-            0UL
-        }
+        // NUT-11 tags must be omitted entirely when they don't apply. Emitting
+        // them with a value of 0 (["locktime", "0"], ["n_sigs", "0"],
+        // ["n_sigs_refund", "0"]) produces tokens that mints such as CDK refuse
+        // to redeem, and a zero locktime marks the lock as already expired.
+        val locktime = optionalPositiveULong(data, "locktime")
+        val numSigs = optionalPositiveULong(data, "num_sigs")
+        val numSigsRefund = optionalPositiveULong(data, "num_sigs_refund")
+
+        val pubkeys = data.optJSONArray("pubkeys")?.let { arr ->
+            (0 until arr.length()).mapNotNull { i ->
+                arr.optString(i).takeIf { it.isNotEmpty() }
+            }
+        } ?: emptyList()
+
         val refundKeys = data.optJSONArray("refund_keys")?.let { arr ->
             (0 until arr.length()).mapNotNull { i ->
                 arr.optString(i).takeIf { it.isNotEmpty() }
             }
         } ?: emptyList()
 
+        val sigFlag: UByte = if (data.optString("sig_flag") == "SigAll") 1.toUByte() else 0.toUByte()
+
         return SpendingConditions.P2pk(
             pubkey = pubkeyHex,
             conditions = Conditions(
                 locktime = locktime,
-                pubkeys = emptyList(),
+                pubkeys = pubkeys,
                 refundKeys = refundKeys,
-                numSigs = 0UL,
-                sigFlag = 0.toUByte(),
-                numSigsRefund = 0UL
+                numSigs = numSigs,
+                sigFlag = sigFlag,
+                numSigsRefund = numSigsRefund
             )
         )
+    }
+
+    /**
+     * Returns the value at [key] only when it is a positive integer, so that
+     * optional NUT-11 tags stay absent instead of being serialized as 0.
+     */
+    private fun optionalPositiveULong(json: JSONObject, key: String): ULong? {
+        if (!json.has(key) || json.isNull(key)) return null
+        return readPositiveLong(json, key).takeIf { it > 0L }?.toULong()
     }
 
     private fun readPositiveLong(json: JSONObject, key: String): Long {

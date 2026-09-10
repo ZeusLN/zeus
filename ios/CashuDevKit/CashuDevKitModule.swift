@@ -42,39 +42,57 @@ class CashuDevKitModule: RCTEventEmitter {
 
     /// Parse P2PK spending conditions from JSON dictionary
     private func parseP2PKConditions(from json: [String: Any]) -> SpendingConditions? {
-       guard let kind = json["kind"] as? String,
-          kind == "P2PK",
-          let condData = json["data"] as? [String: Any],
-          let pubkey = condData["pubkey"] as? String,
-          !pubkey.isEmpty else {
-        return nil
+        guard let kind = json["kind"] as? String,
+              kind == "P2PK",
+              let condData = json["data"] as? [String: Any],
+              let pubkey = condData["pubkey"] as? String,
+              !pubkey.isEmpty else {
+            return nil
+        }
+
+        // NUT-11 tags must be omitted entirely when they don't apply. Emitting
+        // them with a value of 0 (`["locktime", "0"]`, `["n_sigs", "0"]`,
+        // `["n_sigs_refund", "0"]`) produces tokens that mints such as CDK
+        // refuse to redeem, and a zero locktime marks the lock as already
+        // expired.
+        let locktime = optionalPositiveUInt64(from: condData, key: "locktime")
+        let numSigs = optionalPositiveUInt64(from: condData, key: "num_sigs")
+        let numSigsRefund = optionalPositiveUInt64(from: condData, key: "num_sigs_refund")
+
+        let pubkeys: [String] = {
+            if let keys = condData["pubkeys"] as? [String] {
+                return keys.filter { !$0.isEmpty }
+            }
+            return []
+        }()
+
+        let refundKeys: [String] = {
+            if let keys = condData["refund_keys"] as? [String] {
+                return keys.filter { !$0.isEmpty }
+            }
+            return []
+        }()
+
+        let sigFlag: UInt8 = (condData["sig_flag"] as? String) == "SigAll" ? 1 : 0
+
+        let conditions = Conditions(
+            locktime: locktime,
+            pubkeys: pubkeys,
+            refundKeys: refundKeys,
+            numSigs: numSigs,
+            sigFlag: sigFlag,
+            numSigsRefund: numSigsRefund
+        )
+
+        return .p2pk(pubkey: pubkey, conditions: conditions)
     }
 
-      let locktime: UInt64 = {
-        if let lt = condData["locktime"] as? NSNumber {
-            return lt.uint64Value
-        }
-        return 0
-    }()
-
-    let refundKeys: [String] = {
-        if let keys = condData["refund_keys"] as? [String] {
-            return keys.filter { !$0.isEmpty }
-        }
-        return []
-    }()
-
-    let conditions = Conditions(
-        locktime: locktime,
-        pubkeys: [],
-        refundKeys: refundKeys,
-        numSigs: 0,
-        sigFlag: 0,
-        numSigsRefund: 0
-    )
-
-    return .p2pk(pubkey: pubkey, conditions: conditions)
-  }
+    /// Returns the value at `key` only when it is a positive integer, so that
+    /// optional NUT-11 tags stay absent instead of being serialized as 0.
+    private func optionalPositiveUInt64(from json: [String: Any], key: String) -> UInt64? {
+        let value = readPositiveUInt64(from: json, key: key)
+        return value > 0 ? value : nil
+    }
 
     private func readPositiveUInt64(from json: [String: Any], key: String) -> UInt64 {
         guard let raw = json[key] else {

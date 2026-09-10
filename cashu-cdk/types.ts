@@ -120,9 +120,16 @@ export interface CDKSpendingConditions {
 
 export interface CDKP2PKCondition {
     pubkey: string;
+    /**
+     * Optional NUT-11 tags. Leave them undefined when they don't apply - a
+     * value of 0 is serialized as a tag (e.g. ["n_sigs", "0"]) that mints
+     * reject.
+     */
     locktime?: number;
+    pubkeys?: string[];
     refund_keys?: string[];
     num_sigs?: number;
+    num_sigs_refund?: number;
     sig_flag?: 'SigInputs' | 'SigAll';
 }
 
