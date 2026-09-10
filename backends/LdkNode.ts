@@ -492,8 +492,11 @@ export default class LdkNode {
             string,
             import('../ldknode/LdkNode.d').LightningBalance[]
         >();
+        // claimableOnChannelClose is the normal balance of an OPEN channel, so
+        // it is meaningless for entries in the active list. For a channel that
+        // is no longer active it means the opposite: the close has not been
+        // broadcast/confirmed yet, so the channel is still unresolved.
         for (const lb of balances.lightningBalances) {
-            if (lb.type === 'claimableOnChannelClose') continue;
             if (activeChannelIds.has(lb.channelId)) continue;
             const list = channelLightningBalances.get(lb.channelId) || [];
             list.push(lb);
@@ -530,18 +533,31 @@ export default class LdkNode {
         const pendingForceClosing: any[] = [];
         const waitingClose: any[] = [];
 
+        // A close is cooperative if the node's own closure record says so, or
+        // if every remaining balance entry came from a coop close. The closure
+        // record is the stronger signal: a coop close that has not been
+        // broadcast yet only carries claimableOnChannelClose entries, which
+        // have no source to inspect.
+        const isCoopCloseForChannel = (
+            channelId: string,
+            lbs: import('../ldknode/LdkNode.d').LightningBalance[]
+        ) =>
+            LdkNode.isCooperativeReason(
+                closedChannelMap.get(channelId)?.closureReason
+            ) ||
+            lbs.every(
+                (lb) =>
+                    lb.type === 'claimableAwaitingConfirmations' &&
+                    lb.source === 'coopClose'
+            );
+
         // Cooperative closes with balance entries (claimableAwaitingConfirmations
         // with source: coopClose)
         channelLightningBalances.forEach((lbs, channelId) => {
             // Skip channels whose sweeps have already confirmed
             if (confirmedSweepChannelIds.has(channelId)) return;
 
-            const isCoopClose = lbs.every(
-                (lb) =>
-                    lb.type === 'claimableAwaitingConfirmations' &&
-                    lb.source === 'coopClose'
-            );
-            if (!isCoopClose) return;
+            if (!isCoopCloseForChannel(channelId, lbs)) return;
 
             const totalSats = lbs.reduce(
                 (sum, lb) => sum + lb.amountSatoshis,
@@ -576,12 +592,7 @@ export default class LdkNode {
             if (confirmedSweepChannelIds.has(channelId)) return;
 
             // Skip coop closes (already handled above)
-            const isCoopClose = lbs.every(
-                (lb) =>
-                    lb.type === 'claimableAwaitingConfirmations' &&
-                    lb.source === 'coopClose'
-            );
-            if (isCoopClose) return;
+            if (isCoopCloseForChannel(channelId, lbs)) return;
 
             // Check for pending timelock
             let blocksTilMaturity = 0;
@@ -668,7 +679,21 @@ export default class LdkNode {
             }
         });
 
-        // Closed channels with no balance entries that still need attention
+        // Cooperative closes with no remaining balance entries: keep showing
+        // them as pending briefly so the close stays visible right after it
+        // happens.
+        //
+        // Force closes are deliberately absent here. Reaching this point means
+        // the node reports no lightning balances and no pending sweeps for the
+        // channel, so every claim has settled and the channel belongs in the
+        // closed list: LDK archives a channel monitor only once it is fully
+        // resolved, and keeps reporting what is still claimable for as long as
+        // the monitor exists.
+        //
+        // In particular this must NOT be gated on lastLocalBalanceMsat. That
+        // field records the balance at the moment of close and never changes,
+        // so treating it as an outstanding claim pins settled channels in the
+        // pending list permanently.
         const channelIdsWithBalances = new Set<string>();
         channelLightningBalances.forEach((_, id) =>
             channelIdsWithBalances.add(id)
@@ -680,64 +705,28 @@ export default class LdkNode {
             if (channelIdsWithBalances.has(cc.channelId)) continue;
             // Skip channels that never had a funding tx broadcast
             if (!cc.fundingTxo_txid) continue;
+            if (!LdkNode.isCooperativeReason(cc.closureReason)) continue;
 
-            const isCoop = LdkNode.isCooperativeReason(cc.closureReason);
+            const ageSecs =
+                Math.floor(Date.now() / 1000) - cc.closedAtTimestamp;
+            if (ageSecs > 10 * 60) continue;
+
             const localBalanceSats = cc.lastLocalBalanceMsat
                 ? Math.floor(cc.lastLocalBalanceMsat / 1000)
                 : 0;
 
-            // Cooperative closes: show as pending for 10 minutes
-            if (isCoop) {
-                const ageSecs =
-                    Math.floor(Date.now() / 1000) - cc.closedAtTimestamp;
-                if (ageSecs > 10 * 60) continue;
-
-                pendingClosing.push({
-                    channel: {
-                        remote_pubkey: cc.counterpartyNodeId || '',
-                        channel_point: cc.fundingTxo_txid
-                            ? `${cc.fundingTxo_txid}:${cc.fundingTxo_vout || 0}`
-                            : '',
-                        capacity: (cc.channelCapacitySats || 0).toString(),
-                        local_balance: localBalanceSats.toString(),
-                        remote_balance: '0'
-                    },
-                    closing_txid: ''
-                });
-                continue;
-            }
-
-            // Force closes with non-zero local balance but no balance
-            // entries: commitment tx may not have been broadcast yet.
-            // Skip if sweeps already confirmed — funds are recovered.
-            // Also skip if the closure reason already indicates the
-            // commitment tx confirmed on-chain — if LDK reports no
-            // remaining balances, the sweep has fully settled.
-            const commitmentConfirmed =
-                cc.closureReason?.type === 'commitmentTxConfirmed' ||
-                cc.closureReason?.type === 'counterpartyForceClosed';
-            if (
-                localBalanceSats > 0 &&
-                !confirmedSweepChannelIds.has(cc.channelId) &&
-                !commitmentConfirmed
-            ) {
-                pendingForceClosing.push({
-                    channel: {
-                        remote_pubkey: cc.counterpartyNodeId || '',
-                        channel_point: cc.fundingTxo_txid
-                            ? `${cc.fundingTxo_txid}:${cc.fundingTxo_vout || 0}`
-                            : '',
-                        capacity: (
-                            cc.channelCapacitySats || localBalanceSats
-                        ).toString(),
-                        local_balance: localBalanceSats.toString(),
-                        remote_balance: '0',
-                        pendingClose: true
-                    },
-                    blocks_til_maturity: 0,
-                    closing_txid: ''
-                });
-            }
+            pendingClosing.push({
+                channel: {
+                    remote_pubkey: cc.counterpartyNodeId || '',
+                    channel_point: `${cc.fundingTxo_txid}:${
+                        cc.fundingTxo_vout || 0
+                    }`,
+                    capacity: (cc.channelCapacitySats || 0).toString(),
+                    local_balance: localBalanceSats.toString(),
+                    remote_balance: '0'
+                },
+                closing_txid: ''
+            });
         }
 
         // total_limbo_balance: sats in close-side limbo (cooperative closes
@@ -746,7 +735,6 @@ export default class LdkNode {
         // so ChannelsStore can read it uniformly across backends.
         let totalLimboBalance = new BigNumber(0);
         for (const lb of balances.lightningBalances) {
-            if (lb.type === 'claimableOnChannelClose') continue;
             if (activeChannelIds.has(lb.channelId)) continue;
             totalLimboBalance = totalLimboBalance.plus(lb.amountSatoshis);
         }
@@ -813,13 +801,14 @@ export default class LdkNode {
             return channelBalanceEntries.get(channelId)!;
         };
 
+        // claimableOnChannelClose is the normal balance of an OPEN channel; for
+        // a channel that is no longer active it means the close has not been
+        // broadcast/confirmed yet, so the channel is still unresolved.
         for (const lb of balances.lightningBalances) {
-            if (lb.type === 'claimableOnChannelClose') continue;
             if (activeChannelIds.has(lb.channelId)) continue;
             ensureEntry(lb.channelId).lightningBalances.push(lb);
         }
 
-        const confirmedSweepChannelIds = new Set<string>();
         for (const sb of balances.pendingBalancesFromChannelClosures) {
             if (!sb.channelId || activeChannelIds.has(sb.channelId)) continue;
 
@@ -829,7 +818,6 @@ export default class LdkNode {
                 sb.confirmationHeight != null &&
                 sb.confirmationHeight <= currentBlockHeight
             ) {
-                confirmedSweepChannelIds.add(sb.channelId);
                 continue;
             }
 
@@ -859,28 +847,17 @@ export default class LdkNode {
 
             // Skip channels that still have outstanding balances — they
             // belong in the pending tab until fully swept/confirmed
-            if (hasBalanceEntries) {
-                continue;
-            }
+            if (hasBalanceEntries) continue;
 
-            // Force closes with non-zero local balance but no balance
-            // entries may have unbroadcast commitment transactions —
-            // keep them in pending until funds are recovered.
-            // Allow through if sweeps already confirmed on-chain,
-            // or if the closure reason indicates the commitment tx
-            // already confirmed (funds fully settled by LDK).
-            const commitmentConfirmed =
-                cc.closureReason?.type === 'commitmentTxConfirmed' ||
-                cc.closureReason?.type === 'counterpartyForceClosed';
-            if (
-                !isCoop &&
-                cc.lastLocalBalanceMsat &&
-                cc.lastLocalBalanceMsat > 0 &&
-                !confirmedSweepChannelIds.has(cc.channelId) &&
-                !commitmentConfirmed
-            ) {
-                continue;
-            }
+            // Anything reaching here has no lightning balances and no pending
+            // sweeps, so the node considers every claim settled — LDK archives
+            // a channel monitor only once it is fully resolved, and reports
+            // what remains claimable for as long as the monitor exists.
+            //
+            // lastLocalBalanceMsat is deliberately NOT consulted: it records
+            // the balance at the moment of close and never changes, so using it
+            // to infer outstanding funds pinned settled channels in the pending
+            // list forever.
 
             // Calculate capacity and balance
             const balanceSats = cc.lastLocalBalanceMsat
