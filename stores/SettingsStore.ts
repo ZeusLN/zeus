@@ -1399,7 +1399,7 @@ export const LEGACY_ZEUS_SWAP_HOST_MAINNET = 'https://swaps.zeuslsp.com/api/v2';
 export const LEGACY_ZEUS_SWAP_HOST_TESTNET =
     'https://testnet-swaps.zeuslsp.com/api/v2';
 // Swap providers that have shut down; users pinned to one are moved
-// back to the default host by MigrationUtils.migrateRetiredSwapHosts
+// back to the default host by MigrationUtils.applyRetiredSwapHosts
 export const RETIRED_SWAP_HOSTS_MAINNET = ['https://boltz-api.eldamar.icu/v2'];
 
 export const DEFAULT_NOSTR_RELAYS_2023 = [
@@ -1982,7 +1982,6 @@ export default class SettingsStore {
                 const parsedSettings = JSON.parse(modernSettings);
                 this.settings = parsedSettings;
                 await MigrationsUtils.runSettingsMigrations(parsedSettings);
-                await MigrationsUtils.migrateRetiredSwapHosts(parsedSettings);
                 this.settings = parsedSettings;
             } else {
                 console.log('attempting to load legacy settings');

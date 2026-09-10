@@ -33,7 +33,6 @@ jest.mock('../utils/MigrationUtils', () => ({
     keychainCloudSyncMigration: jest.fn().mockResolvedValue(undefined),
     purgeRescueKeyFiles: jest.fn().mockResolvedValue(undefined),
     runSettingsMigrations: jest.fn().mockResolvedValue(undefined),
-    migrateRetiredSwapHosts: jest.fn().mockResolvedValue(undefined),
     legacySettingsMigrations: jest.fn().mockResolvedValue({}),
     storageMigrationV2: jest.fn().mockResolvedValue(undefined)
 }));

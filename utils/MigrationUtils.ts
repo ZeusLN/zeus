@@ -449,9 +449,6 @@ class MigrationsUtils {
         // is persisted once by storageMigrationV2
         await this.applySettingsMigrations(newSettings);
 
-        // move users off swap providers that have shut down
-        await this.migrateRetiredSwapHosts(newSettings);
-
         return newSettings;
     }
 
@@ -491,12 +488,14 @@ class MigrationsUtils {
     // memory and stamps the blob. Does NOT persist — runSettingsMigrations
     // (modern path) and storageMigrationV2 (legacy path) own the write.
     public async applySettingsMigrations(settings: any): Promise<boolean> {
-        const [rgsDone, olympusDone, swapDone, expiryDone] = await Promise.all([
-            EncryptedStorage.getItem('rgs-defaults-v2'),
-            EncryptedStorage.getItem('zeuslsp-hosts-2026'),
-            EncryptedStorage.getItem('swap-hosts-boltz'),
-            EncryptedStorage.getItem('invoices-expiry-display-fix-v2')
-        ]);
+        const [rgsDone, olympusDone, swapDone, retiredSwapDone, expiryDone] =
+            await Promise.all([
+                EncryptedStorage.getItem('rgs-defaults-v2'),
+                EncryptedStorage.getItem('zeuslsp-hosts-2026'),
+                EncryptedStorage.getItem('swap-hosts-boltz'),
+                EncryptedStorage.getItem('swap-hosts-retired-eldamar'),
+                EncryptedStorage.getItem('invoices-expiry-display-fix-v2')
+            ]);
 
         let changed = false;
         if (!rgsDone) {
@@ -507,6 +506,9 @@ class MigrationsUtils {
         }
         if (!swapDone) {
             changed = this.applySwapHostsToBoltz(settings) || changed;
+        }
+        if (!retiredSwapDone) {
+            changed = this.applyRetiredSwapHosts(settings) || changed;
         }
         if (!expiryDone) {
             changed = this.applyInvoiceExpiryDisplay(settings) || changed;
@@ -637,13 +639,11 @@ class MigrationsUtils {
     // entry in SWAP_HOST_KEYS_MAINNET, so the provider dropdown renders no
     // selection while every swap request goes to a dead endpoint. Custom
     // hosts are left alone: a retired host is only rewritten when it was
-    // picked from the dropdown, not typed in as a custom host. Must run on
-    // both the legacy and modern (zeus-settings-v2) paths.
-    public async migrateRetiredSwapHosts(settings: any) {
-        const MOD_KEY_RETIRED_SWAP_HOSTS = 'swap-hosts-retired-eldamar';
-        const mod = await EncryptedStorage.getItem(MOD_KEY_RETIRED_SWAP_HOSTS);
-        if (mod) return settings;
-
+    // picked from the dropdown, not typed in as a custom host. Retired
+    // flag: 'swap-hosts-retired-eldamar' (honored in
+    // applySettingsMigrations; installs that ran the migration before the
+    // stamp existed are not re-migrated over a since-changed value).
+    public applyRetiredSwapHosts(settings: any): boolean {
         let changed = false;
         if (
             settings?.swaps?.hostMainnet &&
@@ -652,10 +652,7 @@ class MigrationsUtils {
             settings.swaps.hostMainnet = DEFAULT_SWAP_HOST_MAINNET;
             changed = true;
         }
-
-        if (changed) await settingsStore.setSettings(settings);
-        await EncryptedStorage.setItem(MOD_KEY_RETIRED_SWAP_HOSTS, 'true');
-        return settings;
+        return changed;
     }
 
     // Repair invoice expiry display fields when out of sync with
