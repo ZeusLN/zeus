@@ -1284,6 +1284,11 @@
   dependencies:
     "@noble/curves" "^1.7.0"
 
+"@callstack/liquid-glass@0.8.1":
+  version "0.8.1"
+  resolved "https://registry.yarnpkg.com/@callstack/liquid-glass/-/liquid-glass-0.8.1.tgz#c11dda3a8dafea9cee602cf4c1a3ed43c39fc4f7"
+  integrity sha512-YWKw0UrpghgqtO3XOemJhOabMqwWSXGyYBJ4L4S+6eEoTXpbpbH8oEta5qY1zxQoAaPaljIq/iLS0x9y+RLFjg==
+
 "@eggjs/yauzl@^2.11.0":
   version "2.11.0"
   resolved "https://registry.yarnpkg.com/@eggjs/yauzl/-/yauzl-2.11.0.tgz#b8e4413f50fc7c51451f770f152de4c1137aa99b"
