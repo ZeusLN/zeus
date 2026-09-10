@@ -40,6 +40,14 @@ jest.mock('react-native-blob-util', () => ({
 }));
 
 jest.mock('react-native-share', () => ({ open: jest.fn() }));
+
+const mockPurgeChannelExportStaging = jest.fn().mockResolvedValue(undefined);
+
+jest.mock('./ChannelExportStagingUtils', () => ({
+    channelExportStagingPath: () => '/cache/channel-export-staging',
+    purgeChannelExportStaging: () => mockPurgeChannelExportStaging()
+}));
+
 jest.mock('react-native-restart', () => ({ Restart: jest.fn() }));
 jest.mock('./LocaleUtils', () => ({
     localeString: (key: string) => key
@@ -67,15 +75,33 @@ jest.mock('../storage', () => ({
     getItem: jest.fn().mockResolvedValue(null)
 }));
 
+// Mutable so the export tests can exercise both platforms. Read through a
+// getter: jest hoists this factory above the `const`, so a direct reference
+// captures the value while it is still in TDZ.
+const mockPlatform = {
+    OS: 'android',
+    select: (opts: any) => opts[mockPlatform.OS]
+};
+
 jest.mock('react-native', () => ({
     Alert: { alert: jest.fn() },
-    Platform: { OS: 'android', select: (opts: any) => opts.android }
+    get Platform() {
+        return mockPlatform;
+    }
 }));
+
+import { Alert } from 'react-native';
+import Share from 'react-native-share';
 
 import {
     validateChannelBackupFile,
-    importChannelDb
+    importChannelDb,
+    exportChannelDb
 } from './ChannelMigrationUtils';
+
+const STAGING_DIR = '/cache/channel-export-staging';
+const shareOpen = Share.open as jest.Mock;
+const alert = Alert.alert as jest.Mock;
 
 describe('ChannelMigrationUtils', () => {
     beforeEach(() => {
@@ -83,6 +109,9 @@ describe('ChannelMigrationUtils', () => {
         mockExists.mockResolvedValue(true);
         mockStat.mockResolvedValue({ size: 1024 });
         mockReadDir.mockResolvedValue([]);
+        mockZipFolder.mockResolvedValue(undefined);
+        mockPurgeChannelExportStaging.mockResolvedValue(undefined);
+        mockPlatform.OS = 'android';
     });
 
     describe('validateChannelBackupFile', () => {
@@ -236,6 +265,203 @@ describe('ChannelMigrationUtils', () => {
                 '/input.enc',
                 '/output.zip',
                 'my seed phrase'
+            );
+        });
+    });
+
+    describe('exportChannelDb', () => {
+        const stagedPath = () => mockZipFolder.mock.calls[0][1];
+
+        describe('staging', () => {
+            it.each(['android', 'ios'])(
+                'zips into a swept app-private cache dir on %s',
+                async (os) => {
+                    mockPlatform.OS = os;
+                    shareOpen.mockResolvedValue({ success: true });
+
+                    await exportChannelDb('lnd', false);
+
+                    expect(mockPurgeChannelExportStaging).toHaveBeenCalled();
+                    expect(mockMkdir).toHaveBeenCalledWith(STAGING_DIR);
+                    expect(stagedPath()).toMatch(
+                        /^\/cache\/channel-export-staging\/zeus-lnd-mainnet-\d+\.zip$/
+                    );
+                }
+            );
+
+            it('never stages in the Files-visible iOS Documents dir', async () => {
+                mockPlatform.OS = 'ios';
+                shareOpen.mockResolvedValue({ success: true });
+
+                await exportChannelDb('lnd', false);
+
+                expect(stagedPath()).not.toContain(
+                    '/data/user/0/app.zeusln.zeus/files'
+                );
+            });
+
+            it('names testnet exports for the network', async () => {
+                mockPlatform.OS = 'ios';
+                shareOpen.mockResolvedValue({ success: true });
+
+                await exportChannelDb('lnd', true);
+
+                expect(stagedPath()).toContain('zeus-lnd-testnet-');
+            });
+        });
+
+        describe('android', () => {
+            beforeEach(() => {
+                mockPlatform.OS = 'android';
+            });
+
+            it('copies to Downloads and sweeps the staged copy', async () => {
+                await exportChannelDb('lnd', false);
+
+                const staged = stagedPath();
+                expect(mockCopyFile).toHaveBeenCalledWith(
+                    staged,
+                    `/downloads/${staged.split('/').pop()}`
+                );
+                // copyFile has finished reading by the time it resolves, so
+                // unlike the share sheet this sweep is safe immediately
+                expect(mockPurgeChannelExportStaging).toHaveBeenCalledTimes(2);
+                expect(shareOpen).not.toHaveBeenCalled();
+                expect(alert).toHaveBeenCalledWith(
+                    'views.Tools.migration.export.success',
+                    'views.Tools.migration.export.success.text.android',
+                    expect.anything(),
+                    expect.anything()
+                );
+            });
+
+            it('sweeps a partial zip when zipping fails', async () => {
+                mockZipFolder.mockRejectedValue(new Error('disk full'));
+
+                await exportChannelDb('lnd', false);
+
+                expect(mockPurgeChannelExportStaging).toHaveBeenCalledTimes(2);
+                expect(alert).toHaveBeenCalledWith(
+                    'general.error',
+                    undefined,
+                    expect.anything(),
+                    expect.anything()
+                );
+            });
+        });
+
+        describe('ios share sheet', () => {
+            beforeEach(() => {
+                mockPlatform.OS = 'ios';
+            });
+
+            it('hands the staged file to Share.open', async () => {
+                shareOpen.mockResolvedValue({ success: true });
+
+                await exportChannelDb('lnd', false);
+
+                expect(shareOpen).toHaveBeenCalledWith(
+                    expect.objectContaining({
+                        url: `file://${stagedPath()}`,
+                        type: 'application/octet-stream',
+                        failOnCancel: false
+                    })
+                );
+            });
+
+            // The bug this suite exists for: Share.open can settle while an
+            // activity extension is still loading the NSItemProvider, so
+            // unlinking here hands the receiver a dead file while the user
+            // is told the export succeeded
+            it('does not unlink the staged file after a successful share', async () => {
+                shareOpen.mockResolvedValue({ success: true });
+
+                await exportChannelDb('lnd', false);
+
+                expect(mockUnlink).not.toHaveBeenCalled();
+                expect(mockPurgeChannelExportStaging).toHaveBeenCalledTimes(1);
+                expect(alert).toHaveBeenCalledWith(
+                    'views.Tools.migration.export.success',
+                    'views.Tools.migration.export.success.text',
+                    expect.anything(),
+                    expect.anything()
+                );
+            });
+
+            it.each([
+                ['dismissedAction', { dismissedAction: true }],
+                ['success: false', { success: false }]
+            ])(
+                'does not unlink the staged file after %s',
+                async (_label, result) => {
+                    shareOpen.mockResolvedValue(result);
+
+                    await exportChannelDb('lnd', false);
+
+                    expect(mockUnlink).not.toHaveBeenCalled();
+                    expect(mockPurgeChannelExportStaging).toHaveBeenCalledTimes(
+                        1
+                    );
+                    expect(alert).toHaveBeenCalledWith(
+                        'views.Tools.migration.export.cancelled',
+                        'views.Tools.migration.export.cancelled.text',
+                        expect.anything(),
+                        expect.anything()
+                    );
+                }
+            );
+
+            it('reports cancellation when Share.open rejects with a cancel', async () => {
+                shareOpen.mockRejectedValue(new Error('User did not share'));
+
+                await exportChannelDb('lnd', false);
+
+                expect(alert).toHaveBeenCalledWith(
+                    'views.Tools.migration.export.cancelled',
+                    'views.Tools.migration.export.cancelled.text',
+                    expect.anything(),
+                    expect.anything()
+                );
+            });
+
+            // Conservative: once the file is handed to the share sheet we
+            // cannot know a receiver is not reading it, so even a rejection
+            // leaves it for the launch sweep rather than unlinking here
+            it('leaves the staged file alone when Share.open rejects', async () => {
+                shareOpen.mockRejectedValue(new Error('kaboom'));
+
+                await exportChannelDb('lnd', false);
+
+                expect(mockUnlink).not.toHaveBeenCalled();
+                expect(mockPurgeChannelExportStaging).toHaveBeenCalledTimes(1);
+                expect(alert).toHaveBeenCalledWith(
+                    'general.error',
+                    undefined,
+                    expect.anything(),
+                    expect.anything()
+                );
+            });
+
+            it('sweeps a partial zip when zipping fails, before any handoff', async () => {
+                mockZipFolder.mockRejectedValue(new Error('disk full'));
+
+                await exportChannelDb('lnd', false);
+
+                expect(shareOpen).not.toHaveBeenCalled();
+                expect(mockPurgeChannelExportStaging).toHaveBeenCalledTimes(2);
+            });
+        });
+
+        it('bails out before staging when the graph dir is missing', async () => {
+            mockExists.mockResolvedValue(false);
+
+            await exportChannelDb('lnd', false);
+
+            expect(mockPurgeChannelExportStaging).not.toHaveBeenCalled();
+            expect(mockZipFolder).not.toHaveBeenCalled();
+            expect(alert).toHaveBeenCalledWith(
+                'general.error',
+                'views.Tools.migration.databaseNotFound'
             );
         });
     });
