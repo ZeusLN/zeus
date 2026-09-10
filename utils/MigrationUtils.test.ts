@@ -904,6 +904,9 @@ describe('MigrationUtils', () => {
             await MigrationUtils.purgeLegacyExportFiles();
 
             expect(mockPurgeCsvExports).toHaveBeenCalledTimes(1);
+            // the migration must not sweep Android Downloads; only a full
+            // wipe passes includeAndroidDownloads
+            expect(mockPurgeCsvExports).toHaveBeenCalledWith();
             expect(mockPurgeConfigExports).toHaveBeenCalledTimes(1);
             expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
                 'legacy-export-file-cleanup',
