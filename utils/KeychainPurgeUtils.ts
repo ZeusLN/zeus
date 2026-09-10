@@ -104,9 +104,26 @@ export interface PurgeScan {
 }
 
 export interface PurgeResult {
+    /** Entries that existed and were deleted. */
     deleted: number;
+    /** Entries whose deletion threw; a re-run retries them. */
     failures: string[];
+    /**
+     * Entries refused because deleting them could destroy the only copy of
+     * something. These are not failures: a re-run will refuse them again
+     * unless the migrated counterpart appears.
+     */
+    skipped: string[];
 }
+
+/**
+ * Maps an unprefixed legacy server to the zeus:-prefixed server the 2026
+ * keychain migration would have copied it to. The lone rename in that
+ * migration is the settings blob: the legacy v1 blob's successor is the v2
+ * blob, not a prefixed copy of the v1 key.
+ */
+const migratedCounterpartServer = (server: string): string =>
+    `${KEY_PREFIX}${server === LEGACY_STORAGE_KEY ? STORAGE_KEY : server}`;
 
 const probeExists = async (server: string): Promise<boolean> => {
     try {
@@ -272,7 +289,7 @@ export const verifyPurgePreflight = async (
 /**
  * Decides whether to show the one-time keychain cleanup offer: iOS only,
  * only after the desync migration has completed, and only once ever (the
- * offer flag is set the moment this returns true, so a dismissal is final;
+ * offer flag is set as soon as a scan completes, so a dismissal is final;
  * the Tools screen remains permanently available). Returns false when a
  * scan finds nothing to clean, silently consuming the offer.
  */
@@ -283,8 +300,11 @@ export const shouldOfferKeychainPurge = async (): Promise<boolean> => {
         if (desyncDone !== 'true') return false;
         const offered = await EncryptedStorage.getItem(PURGE_OFFER_KEY);
         if (offered === 'true') return false;
-        await EncryptedStorage.setItem(PURGE_OFFER_KEY, 'true');
         const scan = await scanPurgeCandidates();
+        // Consumed only after a successful scan: a scan that throws must not
+        // burn the one-time offer for a user who does have candidates (the
+        // catch below returns false and the next boot retries).
+        await EncryptedStorage.setItem(PURGE_OFFER_KEY, 'true');
         return (
             scan.syncServers.length +
                 scan.legacyLocalServers.length +
@@ -306,17 +326,42 @@ export const shouldOfferKeychainPurge = async (): Promise<boolean> => {
 export const executePurge = async (scan: PurgeScan): Promise<PurgeResult> => {
     let deleted = 0;
     const failures: string[] = [];
+    const skipped: string[] = [];
 
     const remove = async (server: string, cloudSync: boolean) => {
         try {
+            // resetInternetCredentials succeeds on a missing item, so probe
+            // first: `deleted` reports items that were actually removed, not
+            // deletion attempts.
+            const existed = (await getRawItem(server, cloudSync)) !== null;
             await removeRawItem(server, cloudSync);
-            deleted++;
+            if (existed) deleted++;
         } catch {
             failures.push(server);
         }
     };
 
+    // An unprefixed entry is only deletable when the 2026 migration's
+    // zeus:-prefixed copy of it exists: the migration's key catalog was not
+    // exhaustive across app versions, so an unmatched unprefixed entry may
+    // be the only copy of something. An unreadable counterpart also skips
+    // (deletion needs positive evidence of the copy, not an error).
+    const hasMigratedCounterpart = async (server: string): Promise<boolean> => {
+        try {
+            return (
+                (await getRawItem(migratedCounterpartServer(server), false)) !==
+                null
+            );
+        } catch {
+            return false;
+        }
+    };
+
     for (const server of scan.legacyLocalServers) {
+        if (!(await hasMigratedCounterpart(server))) {
+            skipped.push(server);
+            continue;
+        }
         await remove(server, false);
     }
 
@@ -328,6 +373,10 @@ export const executePurge = async (scan: PurgeScan): Promise<PurgeResult> => {
     );
 
     for (const server of unprefixedSync) {
+        if (!(await hasMigratedCounterpart(server))) {
+            skipped.push(server);
+            continue;
+        }
         await remove(server, true);
     }
 
@@ -336,7 +385,7 @@ export const executePurge = async (scan: PurgeScan): Promise<PurgeResult> => {
         const local = await getRawItem(server, false);
         const syncValue = await getRawItem(server, true);
         if (local === null && syncValue) {
-            failures.push(server);
+            skipped.push(server);
             continue;
         }
         await remove(server, true);
@@ -351,5 +400,5 @@ export const executePurge = async (scan: PurgeScan): Promise<PurgeResult> => {
         }
     }
 
-    return { deleted, failures };
+    return { deleted, failures, skipped };
 };
