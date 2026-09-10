@@ -380,29 +380,50 @@ export default class ChannelsPane extends React.PureComponent<
             }
         };
 
-        const createChannelScreen = (data: Channel[]) => () =>
-            (
-                <FlatList
-                    data={data}
-                    renderItem={this.renderItem}
-                    ListFooterComponent={<Spacer height={100} />}
-                    onRefresh={() => {
-                        this.props.NodeInfoStore?.getNodeInfo();
-                        getChannels();
-                    }}
-                    refreshing={loading}
-                    keyExtractor={(item, index) =>
-                        `${item.remote_pubkey}-${index}`
-                    }
-                />
-            );
+        const createChannelScreen =
+            (data: Channel[], emptyTextKey: string) => () =>
+                (
+                    <FlatList
+                        data={data}
+                        renderItem={this.renderItem}
+                        ListFooterComponent={<Spacer height={100} />}
+                        onRefresh={() => {
+                            this.props.NodeInfoStore?.getNodeInfo();
+                            getChannels();
+                        }}
+                        refreshing={loading}
+                        keyExtractor={(item, index) =>
+                            `${item.remote_pubkey}-${index}`
+                        }
+                        ListEmptyComponent={
+                            <Text
+                                style={[
+                                    styles.text,
+                                    {
+                                        fontSize: 20,
+                                        color: themeColor('secondaryText'),
+                                        textAlign: 'center',
+                                        padding: 20
+                                    }
+                                ]}
+                            >
+                                {localeString(emptyTextKey)}
+                            </Text>
+                        }
+                    />
+                );
 
-        const OpenChannelsScreen = createChannelScreen(filteredChannels);
+        const OpenChannelsScreen = createChannelScreen(
+            filteredChannels,
+            'views.ChannelsPane.noOpenChannels'
+        );
         const PendingChannelsScreen = createChannelScreen(
-            filteredPendingChannels
+            filteredPendingChannels,
+            'views.ChannelsPane.noPendingChannels'
         );
         const ClosedChannelsScreen = createChannelScreen(
-            filteredClosedChannels
+            filteredClosedChannels,
+            'views.ChannelsPane.noClosedChannels'
         );
 
         const openChannelsTabLabel = `${localeString(
@@ -625,6 +646,25 @@ export default class ChannelsPane extends React.PureComponent<
                                 refreshing={loading}
                                 keyExtractor={(item, index) =>
                                     `${item.remote_pubkey}-${index}`
+                                }
+                                ListEmptyComponent={
+                                    <Text
+                                        style={[
+                                            styles.text,
+                                            {
+                                                fontSize: 20,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                textAlign: 'center',
+                                                padding: 20
+                                            }
+                                        ]}
+                                    >
+                                        {localeString(
+                                            'views.ChannelsPane.noOpenChannels'
+                                        )}
+                                    </Text>
                                 }
                             />
                         )}
