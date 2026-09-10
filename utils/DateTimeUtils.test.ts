@@ -1,5 +1,10 @@
 import DateTimeUtils from './DateTimeUtils';
 
+jest.mock('./LocaleUtils', () => ({
+    localeString: (key: string) =>
+        key === 'general.notAvailable' ? 'N/A' : key
+}));
+
 describe('listDate', () => {
     it('returns date for timestamp as number', () => {
         const date = new Date(2024, 11, 26, 21, 21);

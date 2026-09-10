@@ -1,5 +1,7 @@
 import dateFormat from 'dateformat';
 
+import { localeString } from './LocaleUtils';
+
 class DateTimeUtils {
     listDate = (timestamp: number | string | undefined) =>
         new Date(Number(timestamp) * 1000);
@@ -12,7 +14,9 @@ class DateTimeUtils {
             const date = this.listDate(timestamp);
             return dateFormat(date, format).toString();
         } catch (error) {
-            return timestamp?.toString() || 'N/A';
+            return (
+                timestamp?.toString() || localeString('general.notAvailable')
+            );
         }
     };
 
