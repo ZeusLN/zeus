@@ -49,6 +49,7 @@
   },
   "dependencies": {
     "@bitcoinerlab/secp256k1": "1.2.0",
+    "@callstack/liquid-glass": "0.8.2",
     "@getalby/sdk": "8.0.3",
     "@keystonehq/bc-ur-registry": "0.8.0",
     "@lightninglabs/lnc-core": "file:zeus_modules/@lightninglabs/lnc-core",
