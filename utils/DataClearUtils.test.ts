@@ -1181,7 +1181,10 @@ describe('CDK database deletion', () => {
             // before the lock, it can land after a teardown drained the map
             // and park an undestroyed handle that keeps the unlinked
             // database open until the next init. Assert the insert sits
-            // behind a same-repo check inside the lock/queue.
+            // behind a same-repo check inside the lock/queue, and that it is
+            // first-wins: two callers racing the first access to the same
+            // mint must not overwrite (and thereby orphan) the earlier
+            // handle.
             it('guards the lazy wallet-map insert in the Android module', () => {
                 const source = fs.readFileSync(
                     path.join(
@@ -1205,6 +1208,13 @@ describe('CDK database deletion', () => {
                 expect(body.indexOf('repo === currentRepo')).toBeLessThan(
                     body.indexOf('wallets[normalized] = wallet')
                 );
+                const recheck = body.indexOf('wallets[normalized] ?:');
+                expect(recheck).toBeGreaterThan(
+                    body.indexOf('synchronized(handleLock)')
+                );
+                expect(recheck).toBeLessThan(
+                    body.indexOf('wallets[normalized] = wallet')
+                );
             });
 
             it('guards the lazy wallet-map insert in the iOS module', () => {
@@ -1218,6 +1228,15 @@ describe('CDK database deletion', () => {
                 const body = source.slice(source.indexOf('func getWallet'));
                 expect(body.indexOf('self.repo === repo')).toBeGreaterThan(-1);
                 expect(body.indexOf('self.repo === repo')).toBeLessThan(
+                    body.indexOf('wallets[normalized] = wallet')
+                );
+                const recheck = body.indexOf(
+                    'if let existing = wallets[normalized]'
+                );
+                expect(recheck).toBeGreaterThan(
+                    body.indexOf('self.repo === repo')
+                );
+                expect(recheck).toBeLessThan(
                     body.indexOf('wallets[normalized] = wallet')
                 );
             });

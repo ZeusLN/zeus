@@ -185,16 +185,21 @@ class CashuDevKitModule: RCTEventEmitter {
         // read before the create above, outside the queue), and an
         // unconditional insert would park an orphaned Wallet - keeping the
         // closed database alive via its own reference - in the map until the
-        // next initializeWallet drains it
-        let inserted = walletQueue.sync { () -> Bool in
-            guard self.repo === repo else { return false }
+        // next initializeWallet drains it. The insert is also first-wins:
+        // two callers racing the first access to the same mint both reach
+        // here with a fresh handle, and an overwrite would drop the earlier
+        // one out of teardown's reach (the loser here is simply released by
+        // ARC)
+        let winner = walletQueue.sync { () -> Wallet? in
+            guard self.repo === repo else { return nil }
+            if let existing = wallets[normalized] { return existing }
             wallets[normalized] = wallet
-            return true
+            return wallet
         }
-        guard inserted else {
+        guard let winner = winner else {
             throw FfiError.Internal(errorMessage: "Wallet not initialized")
         }
-        return wallet
+        return winner
     }
 
     private var currentDbPath: String?

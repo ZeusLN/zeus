@@ -260,20 +260,27 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         // unconditional insert would park an undestroyed Wallet - holding
         // its own reference to the closed database - in the map until the
         // next initializeWallet drains it, briefly reopening the
-        // reachability window the wipe paths exist to close
-        val inserted = synchronized(handleLock) {
+        // reachability window the wipe paths exist to close. The insert is
+        // also first-wins: two callers racing the first access to the same
+        // mint both reach here with a fresh handle, and an overwrite would
+        // orphan the earlier one to the Cleaner the same way
+        val winner = synchronized(handleLock) {
             if (repo === currentRepo) {
-                wallets[normalized] = wallet
-                true
+                wallets[normalized] ?: wallet.also {
+                    wallets[normalized] = wallet
+                }
             } else {
-                false
+                null
             }
         }
-        if (!inserted) {
+        if (winner == null) {
             destroyHandles(listOf(wallet))
             throw FfiException.Internal("Wallet not initialized")
         }
-        return wallet
+        if (winner !== wallet) {
+            destroyHandles(listOf(wallet))
+        }
+        return winner
     }
 
     @Volatile
