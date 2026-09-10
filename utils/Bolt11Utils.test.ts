@@ -1,3 +1,4 @@
+import { bech32 } from 'bech32';
 import * as secp from '@noble/secp256k1';
 
 import Bolt11Utils from './Bolt11Utils';
@@ -239,5 +240,143 @@ describe('lazy signature recovery', () => {
         expect(payeeDescriptor?.get).toBeUndefined();
         expect(sigDescriptor?.get).toBeDefined();
         expect(recoveryFlagDescriptor?.get).toBeDefined();
+    });
+});
+
+describe('duplicate singleton tags', () => {
+    // Attack shape from the `invoices` npm package bug (fixed there in
+    // 6.0.0, 2026-08-07): an invoice that repeats a singleton tag makes a
+    // last-wins reader track a different payment than the node, which
+    // settles on the first well-formed occurrence (lnd zpay32 behavior).
+    const HASH_A = 'aa'.repeat(32);
+    const HASH_B = 'bb'.repeat(32);
+    const PAYEE_A = '02' + 'ab'.repeat(32);
+    const PAYEE_B = '03' + 'cd'.repeat(32);
+
+    const hexToWords = (hex: string): number[] =>
+        bech32.toWords(
+            Uint8Array.from(
+                hex.match(/.{2}/g)!.map((byte) => parseInt(byte, 16))
+            )
+        );
+
+    const utf8ToWords = (text: string): number[] =>
+        bech32.toWords(Uint8Array.from(text, (char) => char.charCodeAt(0)));
+
+    const tag = (code: number, words: number[]): number[] => [
+        code,
+        words.length >> 5,
+        words.length & 31,
+        ...words
+    ];
+
+    // Timestamp of 1 (7 words) + tags + a zeroed 104-word signature block.
+    // The signature cannot recover, but recovery is lazy, so tests that
+    // never read destination/signature exercise only the tag loop.
+    const buildInvoice = (tags: number[][]): string => {
+        const words: number[] = [0, 0, 0, 0, 0, 0, 1];
+        for (const tagWords of tags) words.push(...tagWords);
+        words.push(...new Array(104).fill(0));
+        return bech32.encode('lnbcrt', words, Number.MAX_SAFE_INTEGER);
+    };
+
+    it('keeps the first payment_hash when the tag is duplicated', () => {
+        const decoded = Bolt11Utils.decode(
+            buildInvoice([
+                tag(1, hexToWords(HASH_A)),
+                tag(1, hexToWords(HASH_B))
+            ])
+        );
+
+        expect(decoded.payment_hash).toBe(HASH_A);
+    });
+
+    it('skips a wrong-length payment_hash tag like lnd does', () => {
+        // 20 bytes = 32 words: lnd's zpay32 ignores it entirely, so the
+        // valid second occurrence is the one the node settles on.
+        const decoded = Bolt11Utils.decode(
+            buildInvoice([
+                tag(1, hexToWords('cc'.repeat(20))),
+                tag(1, hexToWords(HASH_B))
+            ])
+        );
+
+        expect(decoded.payment_hash).toBe(HASH_B);
+    });
+
+    it('keeps the first payment_secret when the tag is duplicated', () => {
+        const decoded = Bolt11Utils.decode(
+            buildInvoice([
+                tag(1, hexToWords(HASH_A)),
+                tag(16, hexToWords(HASH_A)),
+                tag(16, hexToWords(HASH_B))
+            ])
+        );
+
+        expect(decoded.payment_secret).toBe(HASH_A);
+    });
+
+    it('keeps the first description_hash when the tag is duplicated', () => {
+        const decoded = Bolt11Utils.decode(
+            buildInvoice([
+                tag(23, hexToWords(HASH_A)),
+                tag(23, hexToWords(HASH_B))
+            ])
+        );
+
+        expect(decoded.description_hash).toBe(HASH_A);
+    });
+
+    it('keeps the first description when the tag is duplicated', () => {
+        const decoded = Bolt11Utils.decode(
+            buildInvoice([
+                tag(13, utf8ToWords('first memo')),
+                tag(13, utf8ToWords('second memo'))
+            ])
+        );
+
+        expect(decoded.description).toBe('first memo');
+    });
+
+    it('keeps the first expiry and derives timeExpireDate from it', () => {
+        // 3600 encoded big-endian in 5-bit words: 3*32^2 + 16*32 + 16
+        const decoded = Bolt11Utils.decode(
+            buildInvoice([
+                tag(1, hexToWords(HASH_A)),
+                tag(6, [3, 16, 16]),
+                tag(6, [1])
+            ])
+        );
+
+        expect(decoded.expiry).toBe(3600);
+        expect(decoded.timeExpireDate).toBe(decoded.timestamp + 3600);
+    });
+
+    it('keeps the first valid payee tag for destination', () => {
+        const decoded = Bolt11Utils.decode(
+            buildInvoice([
+                tag(19, hexToWords(PAYEE_A)),
+                tag(19, hexToWords(PAYEE_B))
+            ])
+        );
+
+        expect(decoded.destination).toBe(PAYEE_A);
+        expect(decoded.payeeNodeKey).toBe(PAYEE_A);
+    });
+
+    it('still records every occurrence in the sections array', () => {
+        const decoded = Bolt11Utils.decode(
+            buildInvoice([
+                tag(1, hexToWords(HASH_A)),
+                tag(1, hexToWords(HASH_B))
+            ])
+        );
+
+        const hashSections = decoded.sections.filter(
+            (s) => s.name === 'payment_hash'
+        );
+        expect(hashSections).toHaveLength(2);
+        expect(hashSections[0].value).toBe(HASH_A);
+        expect(hashSections[1].value).toBe(HASH_B);
     });
 });
