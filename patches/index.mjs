@@ -11,12 +11,17 @@ import { patchReanimatedSetFixes } from './patch-reanimated-set-fixes.mjs';
 console.log('Running postinstall patches...\n');
 
 (async () => {
-    patchJcenter();
-    patchNativeEventEmitter();
-    patchReactNativeNotifications();
-    patchNobleHashes();
-    patchReanimatedBoundaryAndroid();
-    patchReanimatedSetFixes();
+    try {
+        patchJcenter();
+        patchNativeEventEmitter();
+        patchReactNativeNotifications();
+        patchNobleHashes();
+        patchReanimatedBoundaryAndroid();
+        patchReanimatedSetFixes();
+    } catch (error) {
+        console.error(`\nPostinstall patch failed:\n\n${error.message}\n`);
+        process.exit(1);
+    }
 
     console.log('\nAll patches applied successfully.');
 })();
