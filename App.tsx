@@ -453,7 +453,15 @@ export default class App extends React.PureComponent {
                                 <StealthModeWrapper>
                                     <SafeAreaView
                                         style={{ flex: 1 }}
-                                        edges={['left', 'right', 'bottom']}
+                                        // on iOS the bottom inset is applied
+                                        // per screen via contentStyle below,
+                                        // so the native tab bar on Wallet can
+                                        // reach the true screen bottom
+                                        edges={
+                                            Platform.OS === 'ios'
+                                                ? ['left', 'right']
+                                                : ['left', 'right', 'bottom']
+                                        }
                                     >
                                         <Observer>
                                             {() => (
@@ -510,6 +518,20 @@ export default class App extends React.PureComponent {
                                                             }) => ({
                                                                 headerShown:
                                                                     false,
+                                                                ...(Platform.OS ===
+                                                                    'ios' && {
+                                                                    contentStyle:
+                                                                        {
+                                                                            paddingBottom:
+                                                                                route.name ===
+                                                                                'Wallet'
+                                                                                    ? 0
+                                                                                    : initialWindowMetrics
+                                                                                          ?.insets
+                                                                                          .bottom ??
+                                                                                      0
+                                                                        }
+                                                                }),
                                                                 animationDuration:
                                                                     Platform.OS ===
                                                                     'android'
