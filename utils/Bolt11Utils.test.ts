@@ -319,6 +319,7 @@ describe('duplicate singleton tags', () => {
     it('keeps the first description_hash when the tag is duplicated', () => {
         const decoded = Bolt11Utils.decode(
             buildInvoice([
+                tag(1, hexToWords(HASH_A)),
                 tag(23, hexToWords(HASH_A)),
                 tag(23, hexToWords(HASH_B))
             ])
@@ -330,6 +331,7 @@ describe('duplicate singleton tags', () => {
     it('keeps the first description when the tag is duplicated', () => {
         const decoded = Bolt11Utils.decode(
             buildInvoice([
+                tag(1, hexToWords(HASH_A)),
                 tag(13, utf8ToWords('first memo')),
                 tag(13, utf8ToWords('second memo'))
             ])
@@ -355,6 +357,7 @@ describe('duplicate singleton tags', () => {
     it('keeps the first valid payee tag for destination', () => {
         const decoded = Bolt11Utils.decode(
             buildInvoice([
+                tag(1, hexToWords(HASH_A)),
                 tag(19, hexToWords(PAYEE_A)),
                 tag(19, hexToWords(PAYEE_B))
             ])
@@ -362,6 +365,24 @@ describe('duplicate singleton tags', () => {
 
         expect(decoded.destination).toBe(PAYEE_A);
         expect(decoded.payeeNodeKey).toBe(PAYEE_A);
+    });
+
+    it('throws when no payment_hash tag is present', () => {
+        // lnd's zpay32 rejects such invoices outright; no node can
+        // settle them.
+        const action = () =>
+            Bolt11Utils.decode(buildInvoice([tag(13, utf8ToWords('memo'))]));
+
+        expect(action).toThrowError('No valid payment hash found');
+    });
+
+    it('throws when the only payment_hash tag has the wrong length', () => {
+        const action = () =>
+            Bolt11Utils.decode(
+                buildInvoice([tag(1, hexToWords('cc'.repeat(20)))])
+            );
+
+        expect(action).toThrowError('No valid payment hash found');
     });
 
     it('still records every occurrence in the sections array', () => {

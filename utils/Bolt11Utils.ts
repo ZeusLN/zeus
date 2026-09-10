@@ -267,6 +267,13 @@ class Bolt11Utils {
             }
         }
 
+        // lnd's zpay32 rejects an invoice without a valid payment hash
+        // (no node can settle it), so fail loudly rather than return a
+        // result whose payment_hash is silently absent.
+        if (result.payment_hash === undefined) {
+            throw new Error('No valid payment hash found');
+        }
+
         if (result.expiry != null) {
             result.timeExpireDate = timestamp + result.expiry;
         }
