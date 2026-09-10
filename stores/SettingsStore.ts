@@ -1964,6 +1964,7 @@ export default class SettingsStore {
         try {
             await MigrationsUtils.keychainCloudSyncMigration();
             await MigrationsUtils.purgeRescueKeyFiles();
+            await MigrationsUtils.purgeChannelExportFiles();
 
             const modernSettings: any = await Storage.getItem(STORAGE_KEY);
 

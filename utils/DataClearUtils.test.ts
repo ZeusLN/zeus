@@ -123,6 +123,10 @@ jest.mock('../utils/SwapUtils', () => ({
     purgeLegacyRescueKeyFiles: jest.fn().mockResolvedValue(undefined),
     unlinkRescueKeyStagingFile: jest.fn().mockResolvedValue(undefined)
 }));
+jest.mock('../utils/ChannelExportStagingUtils', () => ({
+    purgeChannelExportStaging: jest.fn().mockResolvedValue(undefined),
+    purgeLegacyChannelExports: jest.fn().mockResolvedValue(undefined)
+}));
 jest.mock('../stores/NostrWalletConnectStore', () => ({
     NWC_CONNECTIONS_KEY: 'zeus-nwc-connections',
     NWC_CLIENT_KEYS: 'zeus-nwc-client-keys',
@@ -194,6 +198,28 @@ const settingsWithNodes = (nodes: any[]) => ({
         key === 'zeus-settings-v2'
             ? Promise.resolve(JSON.stringify({ nodes }))
             : Promise.resolve(null)
+});
+
+describe('clearAllData export artifact sweep', () => {
+    const {
+        purgeChannelExportStaging,
+        purgeLegacyChannelExports
+    } = require('../utils/ChannelExportStagingUtils');
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+    });
+
+    // A channel backup names every peer and balance, so a panic/duress wipe
+    // must not leave one staged in cache or sitting in iOS Documents from an
+    // older build
+    it('sweeps staged and legacy channel backups', async () => {
+        await clearAllData();
+
+        expect(purgeChannelExportStaging).toHaveBeenCalled();
+        expect(purgeLegacyChannelExports).toHaveBeenCalled();
+    });
 });
 
 describe('clearAllData node data directory wipe (KEY-005 regression)', () => {
