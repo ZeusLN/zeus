@@ -1024,6 +1024,7 @@
     "views.Tools.keychainCleanup.confirmAction": "Delete permanently",
     "views.Tools.keychainCleanup.successMessage": "Cleanup complete. Entries deleted",
     "views.Tools.keychainCleanup.partialSuccess": "Cleanup finished with some failures. You can run it again",
+    "views.Tools.keychainCleanup.skippedForSafety": "Entries kept because no migrated copy of them exists",
     "views.Tools.keychainCleanup.preflightFailed": "Safety check failed. No data was deleted",
     "views.Tools.keychainCleanup.nothingFound": "No legacy or iCloud-synced entries found. Nothing to clean up.",
     "views.Tools.keychainCleanup.foundEntries": "Entries found",

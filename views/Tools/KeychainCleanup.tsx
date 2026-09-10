@@ -100,8 +100,8 @@ export default class KeychainCleanup extends React.Component<
                 return;
             }
 
-            const { deleted, failures } = await executePurge(scan);
-            const summary =
+            const { deleted, failures, skipped } = await executePurge(scan);
+            let summary =
                 failures.length > 0
                     ? `${localeString(
                           'views.Tools.keychainCleanup.partialSuccess'
@@ -109,6 +109,11 @@ export default class KeychainCleanup extends React.Component<
                     : `${localeString(
                           'views.Tools.keychainCleanup.successMessage'
                       )} (${deleted})`;
+            if (skipped.length > 0) {
+                summary += `\n${localeString(
+                    'views.Tools.keychainCleanup.skippedForSafety'
+                )} (${skipped.length})`;
+            }
             this.setState({ purging: false, result: summary });
             await this.runScan();
             this.setState({ result: summary });

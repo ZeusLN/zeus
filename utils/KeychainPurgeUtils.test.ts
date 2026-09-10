@@ -283,6 +283,7 @@ describe('KeychainPurgeUtils', () => {
             ]);
             expect(result.deleted).toBe(4);
             expect(result.failures).toEqual([]);
+            expect(result.skipped).toEqual([]);
         });
 
         it('never deletes a zeus: sync entry that is the only copy', async () => {
@@ -299,7 +300,77 @@ describe('KeychainPurgeUtils', () => {
 
             expect(StorageModule.removeRawItem).not.toHaveBeenCalled();
             expect(result.deleted).toBe(0);
-            expect(result.failures).toEqual(['zeus:zeus-settings-v2']);
+            expect(result.failures).toEqual([]);
+            expect(result.skipped).toEqual(['zeus:zeus-settings-v2']);
+        });
+
+        it('skips an unprefixed entry with no migrated counterpart', async () => {
+            // The unprefixed entry exists, but nothing was ever migrated to
+            // the zeus: namespace for it: it may be the only copy.
+            StorageModule.getRawItem.mockImplementation(
+                async (server: string) =>
+                    server.startsWith('zeus:') ? null : 'orphan-value'
+            );
+
+            const result = await executePurge({
+                syncServers: ['note-key-2'],
+                legacyLocalServers: ['note-key-1'],
+                hasLegacyEncryptedSettings: false
+            });
+
+            expect(StorageModule.removeRawItem).not.toHaveBeenCalled();
+            expect(result.deleted).toBe(0);
+            expect(result.failures).toEqual([]);
+            expect(result.skipped).toEqual(['note-key-1', 'note-key-2']);
+        });
+
+        it('maps the legacy settings blob to its v2 counterpart', async () => {
+            // zeus-settings has no zeus:zeus-settings counterpart; its
+            // migrated successor is zeus:zeus-settings-v2
+            StorageModule.getRawItem.mockImplementation(
+                async (server: string) =>
+                    server === 'zeus:zeus-settings-v2' ||
+                    server === 'zeus-settings'
+                        ? 'value'
+                        : null
+            );
+
+            const result = await executePurge({
+                syncServers: [],
+                legacyLocalServers: ['zeus-settings'],
+                hasLegacyEncryptedSettings: false
+            });
+
+            expect(StorageModule.removeRawItem).toHaveBeenCalledWith(
+                'zeus-settings',
+                false
+            );
+            expect(result.deleted).toBe(1);
+            expect(result.skipped).toEqual([]);
+        });
+
+        it('counts deletions of existing entries, not attempts', async () => {
+            // Counterpart exists but the entry itself is already gone:
+            // resetInternetCredentials would still succeed, and that must
+            // not inflate the deleted count.
+            StorageModule.getRawItem.mockImplementation(
+                async (server: string) =>
+                    server.startsWith('zeus:') ? 'value' : null
+            );
+
+            const result = await executePurge({
+                syncServers: [],
+                legacyLocalServers: ['gone-key'],
+                hasLegacyEncryptedSettings: false
+            });
+
+            expect(StorageModule.removeRawItem).toHaveBeenCalledWith(
+                'gone-key',
+                false
+            );
+            expect(result.deleted).toBe(0);
+            expect(result.failures).toEqual([]);
+            expect(result.skipped).toEqual([]);
         });
 
         it('aggregates failures and keeps deleting', async () => {
@@ -318,6 +389,7 @@ describe('KeychainPurgeUtils', () => {
 
             expect(result.deleted).toBe(1);
             expect(result.failures).toEqual(['bad-key']);
+            expect(result.skipped).toEqual([]);
         });
     });
 
@@ -350,6 +422,18 @@ describe('KeychainPurgeUtils', () => {
                 'keychain-purge-offer-v1',
                 'true'
             );
+        });
+
+        it('leaves the offer unconsumed when the scan throws', async () => {
+            EncryptedStorage.getItem.mockImplementation(async (key: string) =>
+                key === 'keychain-desync-v1' ? 'true' : null
+            );
+            StorageModule.getInternetPasswordServers.mockRejectedValue(
+                new Error('boom')
+            );
+
+            expect(await shouldOfferKeychainPurge()).toBe(false);
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
         });
 
         it('consumes the offer silently when nothing is found', async () => {
@@ -393,8 +477,15 @@ describe('KeychainPurgeUtils', () => {
             const catalogBlock = staticCatalogMatch![1];
 
             for (const identifier of migrationIdentifiers) {
-                expect(catalogBlock).toContain(identifier);
+                // Word-boundary match: a plain substring check would let
+                // SWAPS_KEY be satisfied by REVERSE_SWAPS_KEY
+                expect(catalogBlock).toMatch(new RegExp(`\\b${identifier}\\b`));
             }
+
+            // Migrated by keychainCloudSyncMigration outside the
+            // migrationKeys array, so the loop above cannot see them
+            expect(catalogBlock).toMatch(/\bSTORAGE_KEY\b/);
+            expect(catalogBlock).toMatch(/\bNOTES_KEY\b/);
 
             // The dynamic derivation must mirror the migration's cashu key
             // construction (lndDir fallback and walletId composition)
