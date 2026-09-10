@@ -124,13 +124,18 @@ export default class SendEcash extends React.Component<
         const params: SendEcashParams = route.params || {};
 
         if (params.fromLockSettings) {
+            // `value`/`satAmount` are intentionally left out of this
+            // restoration: this screen is never unmounted while the
+            // lock-settings/contact-picker sub-flow is open underneath it,
+            // so its own state is always the live, up-to-date amount.
+            // Restoring it from params here would instead reapply a stale
+            // copy - captured back when the lock button was first pressed -
+            // over whatever the user has since typed into the keypad.
             const stateUpdate: Partial<SendEcashState> = {
                 pubkey: params.pubkey ?? this.state.pubkey,
                 duration: params.duration ?? this.state.duration,
                 locktime: this.convertDurationToSeconds(params.duration),
                 memo: params.memo ?? this.state.memo,
-                value: params.value ?? this.state.value,
-                satAmount: params.satAmount ?? this.state.satAmount,
                 contactName: params.contactName ?? this.state.contactName,
                 showCustomDuration:
                     params.showCustomDuration ?? this.state.showCustomDuration,
@@ -141,9 +146,14 @@ export default class SendEcash extends React.Component<
                     params.customDurationUnit ?? this.state.customDurationUnit
             };
             this.setState(stateUpdate as SendEcashState, () => {
-                const updatedParams = { ...params };
-                delete updatedParams.fromLockSettings;
-                this.props.navigation.setParams(updatedParams);
+                // `setParams` merges with the route's existing params rather
+                // than replacing them, so `delete`-ing a key here wouldn't
+                // actually clear it from the route - only assigning
+                // `undefined` does.
+                this.props.navigation.setParams({
+                    ...params,
+                    fromLockSettings: undefined
+                });
             });
         }
     };
