@@ -1,7 +1,8 @@
 import * as React from 'react';
 import { inject, observer } from 'mobx-react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
-import { ButtonGroup, Icon } from '@rneui/themed';
+import { Icon } from '@rneui/themed';
+import ButtonGroup from '../../components/GlassButtonGroup';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 import BigNumber from 'bignumber.js';

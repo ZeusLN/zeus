@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { StyleSheet, View } from 'react-native';
-import { ButtonGroup } from '@rneui/themed';
+import ButtonGroup from '../../components/GlassButtonGroup';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';

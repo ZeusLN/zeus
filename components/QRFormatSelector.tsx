@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { Text, StyleSheet } from 'react-native';
-import { ButtonGroup } from '@rneui/themed';
+import ButtonGroup from './GlassButtonGroup';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
