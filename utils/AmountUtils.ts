@@ -404,5 +404,7 @@ export function getSatAmount(
             break;
     }
 
-    return satAmount;
+    // never hand back NaN - it is falsy in some checks and truthy once
+    // stringified, which lets unparseable input slip past amount guards
+    return isNaN(satAmount) ? 0 : satAmount;
 }

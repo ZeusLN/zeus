@@ -49,7 +49,7 @@ import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { scanNfcTag } from '../utils/NFCUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import { getUnformattedAmount, getAmountFromSats } from '../utils/AmountUtils';
+import { getUnformattedAmount } from '../utils/AmountUtils';
 import { clearPendingPaymentData } from '../utils/GraphSyncUtils';
 
 import NFC from '../assets/images/SVG/NFC-alt.svg';
@@ -215,7 +215,13 @@ export default class Send extends React.Component<SendProps, SendState> {
             };
 
             if (satAmount) {
-                const amount = getAmountFromSats(satAmount) || satAmount;
+                // must be the raw, unformatted value in the active unit -
+                // AmountInput's `amount` prop is parsed back into sats, so a
+                // display-formatted string (eg '12,618 sats') yields NaN
+                const amount =
+                    getUnformattedAmount({
+                        sats: satAmount
+                    }).amount || satAmount;
                 stateUpdate.amount = amount;
                 stateUpdate.satAmount = satAmount;
             }

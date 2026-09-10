@@ -1048,4 +1048,55 @@ describe('AmountUtils', () => {
             expect(getFeePercentage(1, 1000000)).toBe('0%');
         });
     });
+
+    // Regression: a BIP21 amount handed to Send/ClinkPay is fed into
+    // AmountInput's `amount` prop, which parses it back into sats with
+    // getSatAmount. getAmountFromSats returns a *display* string, so using it
+    // there rendered '12,618 sats sats' and a NaN conversion.
+    describe('AmountInput round-trip', () => {
+        beforeEach(() => {
+            (settingsStore as any).settings = {
+                fiat: 'USD',
+                display: {
+                    removeDecimalSpaces: false,
+                    showAllDecimalPlaces: false
+                }
+            };
+            (fiatStore as any).fiatRates = [
+                {
+                    code: 'USD',
+                    rate: 50000,
+                    cryptoCode: 'BTC',
+                    currencyPair: 'USD/BTC'
+                }
+            ];
+        });
+
+        it('round-trips getUnformattedAmount output in sats', () => {
+            (unitsStore as any).units = 'sats';
+            const { amount } = getUnformattedAmount({ sats: 12618 });
+            expect(amount).toBe('12618');
+            expect(getSatAmount(amount)).toBe(12618);
+        });
+
+        it('round-trips getUnformattedAmount output in BTC', () => {
+            (unitsStore as any).units = 'BTC';
+            const { amount } = getUnformattedAmount({ sats: 12618 });
+            expect(getSatAmount(amount)).toBe(12618);
+        });
+
+        it('getAmountFromSats output is display-only and does not round-trip', () => {
+            (unitsStore as any).units = 'sats';
+            expect(getAmountFromSats(12618)).toBe('12,618 sats');
+            // guarded to 0 rather than NaN so amount checks still reject it
+            expect(getSatAmount(getAmountFromSats(12618)!)).toBe(0);
+        });
+
+        it('returns 0 rather than NaN for unparseable input', () => {
+            (unitsStore as any).units = 'sats';
+            expect(getSatAmount('12,618 sats')).toBe(0);
+            (unitsStore as any).units = 'BTC';
+            expect(getSatAmount('\u20bf0.00012618')).toBe(0);
+        });
+    });
 });
