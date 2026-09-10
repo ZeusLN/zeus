@@ -349,6 +349,50 @@ describe('CashuUtils', () => {
         });
     });
 
+    describe('isTokenLockedError', () => {
+        it('detects CDK\'s older "witness is missing" wording', () => {
+            expect(
+                CashuUtils.isTokenLockedError(
+                    new Error('Witness is missing signatures required for P2PK')
+                )
+            ).toBe(true);
+        });
+
+        it('detects CDK\'s newer "signatures not provided" wording', () => {
+            expect(
+                CashuUtils.isTokenLockedError(
+                    new Error(
+                        'Witness signatures not provided. P2PK signatures are required but not provided'
+                    )
+                )
+            ).toBe(true);
+        });
+
+        it('is case-insensitive', () => {
+            expect(
+                CashuUtils.isTokenLockedError(
+                    new Error('witness SIGNATURE missing for P2PK')
+                )
+            ).toBe(true);
+        });
+
+        it('returns false for unrelated errors', () => {
+            expect(
+                CashuUtils.isTokenLockedError(new Error('Token already spent'))
+            ).toBe(false);
+            expect(
+                CashuUtils.isTokenLockedError(new Error('Network error'))
+            ).toBe(false);
+        });
+
+        it('returns false for non-error values', () => {
+            expect(CashuUtils.isTokenLockedError(undefined)).toBe(false);
+            expect(CashuUtils.isTokenLockedError(null)).toBe(false);
+            expect(CashuUtils.isTokenLockedError('a plain string')).toBe(false);
+            expect(CashuUtils.isTokenLockedError({})).toBe(false);
+        });
+    });
+
     describe('classifyCashuSeedOrigin', () => {
         const ldk12 =
             'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';

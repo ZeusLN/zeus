@@ -5296,11 +5296,7 @@ export default class CashuStore {
                     errorMessage: localeString('stores.CashuStore.alreadySpent')
                 };
             }
-            if (
-                typeof e?.message === 'string' &&
-                e.message.toLowerCase().includes('witness is missing') &&
-                e.message.toLowerCase().includes('p2pk')
-            ) {
+            if (CashuUtils.isTokenLockedError(e)) {
                 this.loading = false;
                 return {
                     success: false,
