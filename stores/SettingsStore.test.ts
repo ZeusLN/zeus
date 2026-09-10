@@ -32,7 +32,12 @@ jest.mock('../utils/LocaleUtils', () => ({
 jest.mock('../utils/MigrationUtils', () => ({
     keychainCloudSyncMigration: jest.fn().mockResolvedValue(undefined),
     purgeRescueKeyFiles: jest.fn().mockResolvedValue(undefined),
-    runSettingsMigrations: jest.fn().mockResolvedValue(undefined),
+    // getSettings adopts the return value (the queue's authoritative
+    // object when consolidation routes through updateSettings), so the
+    // stub must hand the settings back rather than resolve undefined
+    runSettingsMigrations: jest.fn().mockImplementation(
+        async (settings: any) => settings
+    ),
     legacySettingsMigrations: jest.fn().mockResolvedValue({}),
     storageMigrationV2: jest.fn().mockResolvedValue(undefined)
 }));

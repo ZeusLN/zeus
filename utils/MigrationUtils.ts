@@ -477,11 +477,26 @@ class MigrationsUtils {
             return settings;
         }
 
-        await this.applySettingsMigrations(settings);
+        if (settingsStore.settingsUpdateInProgress) {
+            // Already inside the updateSettings queue's critical section
+            // (applySettingsUpdate -> getSettings -> here): persisting
+            // directly is serialized with every other update, and
+            // enqueueing would deadlock behind the very task awaiting us.
+            await this.applySettingsMigrations(settings);
 
-        // single write: migrated values and stamp land atomically
-        await settingsStore.setSettings(settings);
-        return settings;
+            // single write: migrated values and stamp land atomically
+            await settingsStore.setSettings(settings);
+            return settings;
+        }
+
+        // Outside the queue `settings` is a snapshot that can go stale
+        // before the write lands (the blob read and the flag reads all
+        // yield), and setSettings overwrites wholesale, so a concurrent
+        // updateSettings landing in that window would be clobbered.
+        // Route the persist through the queue instead: the enqueued
+        // no-op update re-runs getSettings, which re-enters this method
+        // on fresh state inside the critical section (branch above).
+        return await settingsStore.updateSettings({});
     }
 
     // Applies every migration below the current SETTINGS_VERSION in

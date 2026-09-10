@@ -21,7 +21,9 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 }));
 jest.mock('../stores/Stores', () => ({
     settingsStore: {
-        setSettings: jest.fn()
+        settingsUpdateInProgress: false,
+        setSettings: jest.fn(),
+        updateSettings: jest.fn()
     }
 }));
 jest.mock('../stores/ChannelBackupStore', () => ({}));
@@ -701,9 +703,19 @@ describe('MigrationUtils', () => {
             EncryptedStorage.getItem.mockReset();
             EncryptedStorage.setItem.mockReset();
             settingsStore.setSettings.mockReset();
+            settingsStore.updateSettings.mockReset();
+            // most cases exercise the consolidation itself, which in
+            // production runs inside the updateSettings queue's critical
+            // section (applySettingsUpdate -> getSettings -> here)
+            settingsStore.settingsUpdateInProgress = true;
+        });
+
+        afterEach(() => {
+            settingsStore.settingsUpdateInProgress = false;
         });
 
         it('skips everything when the blob is already stamped', async () => {
+            settingsStore.settingsUpdateInProgress = false;
             const settings: any = {
                 settingsVersion: 1,
                 lspMainnet: 'https://0conf.lnolymp.us'
@@ -714,6 +726,71 @@ describe('MigrationUtils', () => {
             expect(settings.lspMainnet).toBe('https://0conf.lnolymp.us');
             expect(EncryptedStorage.getItem).not.toHaveBeenCalled();
             expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(settingsStore.updateSettings).not.toHaveBeenCalled();
+        });
+
+        it('routes the write through the updateSettings queue when outside it', async () => {
+            settingsStore.settingsUpdateInProgress = false;
+            settingsStore.updateSettings.mockResolvedValue({
+                settingsVersion: 1
+            });
+            const settings: any = {
+                swaps: { hostMainnet: 'https://boltz-api.eldamar.icu/v2' }
+            };
+
+            const result = await MigrationUtils.runSettingsMigrations(
+                settings
+            );
+
+            expect(settingsStore.updateSettings).toHaveBeenCalledWith({});
+            // the potentially stale snapshot is never written directly,
+            // and its flags are not read; the queued re-entry does both
+            // on fresh state
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.getItem).not.toHaveBeenCalled();
+            expect(result).toEqual({ settingsVersion: 1 });
+        });
+
+        it('does not clobber a concurrent update when called outside the queue', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+
+            // snapshot read before a concurrent updateSettings landed
+            const stale: any = {
+                swaps: { hostMainnet: 'https://boltz-api.eldamar.icu/v2' }
+            };
+            // state as the queue's critical section re-reads it, with
+            // the concurrent update's key present
+            const fresh: any = {
+                swaps: { hostMainnet: 'https://boltz-api.eldamar.icu/v2' },
+                supportedBiometryType: 'FaceID'
+            };
+
+            settingsStore.settingsUpdateInProgress = false;
+            settingsStore.updateSettings.mockImplementation(async () => {
+                // emulate applySettingsUpdate: getSettings re-enters
+                // runSettingsMigrations inside the critical section
+                settingsStore.settingsUpdateInProgress = true;
+                try {
+                    return await MigrationUtils.runSettingsMigrations(fresh);
+                } finally {
+                    settingsStore.settingsUpdateInProgress = false;
+                }
+            });
+
+            const result = await MigrationUtils.runSettingsMigrations(stale);
+
+            // the stale snapshot must never be persisted
+            expect(settingsStore.setSettings).not.toHaveBeenCalledWith(stale);
+            // the fresh state is migrated, stamped and persisted with the
+            // concurrent update intact
+            expect(result).toBe(fresh);
+            expect(result.supportedBiometryType).toBe('FaceID');
+            expect(result.swaps.hostMainnet).toBe(
+                'https://api.boltz.exchange/v2'
+            );
+            expect(result.settingsVersion).toBe(1);
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
+            expect(settingsStore.setSettings).toHaveBeenCalledWith(fresh);
         });
 
         it('consolidates an unstamped blob with a single write and stamps it', async () => {

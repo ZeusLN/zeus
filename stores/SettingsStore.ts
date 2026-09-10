@@ -1981,8 +1981,12 @@ export default class SettingsStore {
                 console.log('attempting to load modern settings');
                 const parsedSettings = JSON.parse(modernSettings);
                 this.settings = parsedSettings;
-                await MigrationsUtils.runSettingsMigrations(parsedSettings);
-                this.settings = parsedSettings;
+                // when consolidation routes through the updateSettings
+                // queue the authoritative object is the queue's, not this
+                // call's snapshot, so adopt the return value
+                this.settings = await MigrationsUtils.runSettingsMigrations(
+                    parsedSettings
+                );
             } else {
                 console.log('attempting to load legacy settings');
 
