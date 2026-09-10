@@ -1866,7 +1866,23 @@ export default class CashuStore {
                 });
                 await this.savePendingOfflineSends(pendingKey, records);
 
-                await CashuDevKit.removeProofs(selected.map((p) => p.y));
+                // removeProofs is a single transactional delete, so a
+                // rejection means no proofs were removed. The pending
+                // record must not outlive the failure: a later retry
+                // could consume overlapping proofs, after which
+                // reconciliation would see partial presence, burn the
+                // remainder, and promote a token that was never handed
+                // out. We are still inside the serialized section, so
+                // this cleanup cannot interleave with another send.
+                try {
+                    await CashuDevKit.removeProofs(selected.map((p) => p.y));
+                } catch (e) {
+                    await this.savePendingOfflineSends(
+                        pendingKey,
+                        records.filter((r) => r.encodedToken !== encoded)
+                    );
+                    throw e;
+                }
                 await this.syncCDKBalances();
 
                 return {
