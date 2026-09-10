@@ -277,6 +277,36 @@ class CashuUtils {
         }
         return undefined;
     };
+
+    /**
+     * True when a CDK claim/receive error means "you don't hold the private
+     * key this token is P2PK-locked to" (as opposed to e.g. already-spent,
+     * network, or mint errors). CDK's exact wording for this varies by
+     * version/code path - e.g. "Witness is missing ... for P2PK" or
+     * "Witness signatures not provided. P2PK signatures are required but
+     * not provided" - so this matches on the P2PK + missing-signature
+     * combination rather than one exact phrase.
+     */
+    isTokenLockedError = (error: unknown): boolean => {
+        const message =
+            error &&
+            typeof error === 'object' &&
+            'message' in error &&
+            typeof (error as { message?: unknown }).message === 'string'
+                ? (error as { message: string }).message.toLowerCase()
+                : '';
+
+        return (
+            // CDK 0.18's wallet-side NUT-11 error (SignatureMissingOrInvalid)
+            // is exactly this phrase, with no "p2pk" substring at all.
+            message.includes('signature missing or invalid') ||
+            (message.includes('p2pk') &&
+                message.includes('signature') &&
+                (message.includes('missing') ||
+                    message.includes('not provided') ||
+                    message.includes('required')))
+        );
+    };
 }
 
 const cashuUtils = new CashuUtils();

@@ -1631,7 +1631,9 @@ export default class CashuStore {
             const conditionData: CDKP2PKCondition = {
                 pubkey: p2pkPubkey.trim()
             };
-            if (locktime !== undefined && locktime !== null) {
+            // Only forward a locktime that is actually set: a `["locktime", "0"]`
+            // tag marks the lock as already expired and is rejected by mints.
+            if (locktime !== undefined && locktime !== null && locktime > 0) {
                 conditionData.locktime = locktime;
             }
             conditions = {
@@ -5294,11 +5296,7 @@ export default class CashuStore {
                     errorMessage: localeString('stores.CashuStore.alreadySpent')
                 };
             }
-            if (
-                typeof e?.message === 'string' &&
-                e.message.toLowerCase().includes('witness is missing') &&
-                e.message.toLowerCase().includes('p2pk')
-            ) {
+            if (CashuUtils.isTokenLockedError(e)) {
                 this.loading = false;
                 return {
                     success: false,
