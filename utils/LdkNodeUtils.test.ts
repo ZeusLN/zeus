@@ -1,5 +1,6 @@
 const mockMkdir = jest.fn();
 const mockExists = jest.fn();
+const mockStart = jest.fn();
 
 jest.mock('react-native', () => ({
     Platform: { OS: 'ios' }
@@ -14,7 +15,7 @@ jest.mock('react-native-fs', () => ({
 
 jest.mock('../ldknode/LdkNodeInjection', () => ({
     __esModule: true,
-    default: {}
+    default: { node: { start: (...args: any[]) => mockStart(...args) } }
 }));
 
 jest.mock('./LocaleUtils', () => ({
@@ -30,7 +31,8 @@ import {
     createLdkNodeDirectory,
     ensureLdkNodeBackupExclusion,
     getLdkNodeBaseDirectory,
-    getLdkNodeStoragePath
+    getLdkNodeStoragePath,
+    startLdkNodeWallet
 } from './LdkNodeUtils';
 
 describe('LdkNodeUtils', () => {
@@ -117,6 +119,35 @@ describe('LdkNodeUtils', () => {
             expect(mockMkdir).toHaveBeenCalledWith('/mock/documents/ldk-node', {
                 NSURLIsExcludedFromBackupKey: true
             });
+        });
+    });
+
+    describe('startLdkNodeWallet', () => {
+        it('applies the backup exclusion before the node starts', async () => {
+            const warnSpy = jest
+                .spyOn(console, 'warn')
+                .mockImplementation(() => {});
+            mockMkdir.mockResolvedValue(undefined);
+            // 'boom' doesn't match shouldRetry (LDK_NODE_NOT_INITIALIZED)
+            // or the fee-rate branches, so start fails fast and rethrows
+            mockStart.mockRejectedValue(new Error('boom'));
+
+            await expect(
+                startLdkNodeWallet({
+                    nodeDir: 'abc-123',
+                    seedMnemonic: 'x',
+                    network: 'mainnet',
+                    skipInit: true
+                })
+            ).rejects.toThrow('boom');
+
+            expect(mockMkdir).toHaveBeenCalledWith('/mock/documents/ldk-node', {
+                NSURLIsExcludedFromBackupKey: true
+            });
+            expect(mockMkdir.mock.invocationCallOrder[0]).toBeLessThan(
+                mockStart.mock.invocationCallOrder[0]
+            );
+            warnSpy.mockRestore();
         });
     });
 });
