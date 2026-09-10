@@ -297,11 +297,14 @@ class CashuUtils {
                 : '';
 
         return (
-            message.includes('p2pk') &&
-            message.includes('signature') &&
-            (message.includes('missing') ||
-                message.includes('not provided') ||
-                message.includes('required'))
+            // CDK 0.18's wallet-side NUT-11 error (SignatureMissingOrInvalid)
+            // is exactly this phrase, with no "p2pk" substring at all.
+            message.includes('signature missing or invalid') ||
+            (message.includes('p2pk') &&
+                message.includes('signature') &&
+                (message.includes('missing') ||
+                    message.includes('not provided') ||
+                    message.includes('required')))
         );
     };
 }

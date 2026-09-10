@@ -376,6 +376,14 @@ describe('CashuUtils', () => {
             ).toBe(true);
         });
 
+        it('detects CDK 0.18\'s "Signature missing or invalid" wording, which carries no "p2pk" substring', () => {
+            expect(
+                CashuUtils.isTokenLockedError(
+                    new Error('Signature missing or invalid')
+                )
+            ).toBe(true);
+        });
+
         it('returns false for unrelated errors', () => {
             expect(
                 CashuUtils.isTokenLockedError(new Error('Token already spent'))
