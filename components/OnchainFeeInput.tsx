@@ -9,6 +9,7 @@ import { feeStore, settingsStore } from '../stores/Stores';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { isPlausibleSatPerVbyte } from '../utils/FeeUtils';
 
 interface OnchainFeeInputProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -132,7 +133,7 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
                         setNewFee(text);
                         onChangeFee(text);
                     }}
-                    error={!newFee || newFee === '0'}
+                    error={!newFee || !isPlausibleSatPerVbyte(newFee)}
                 />
             )}
         </>
