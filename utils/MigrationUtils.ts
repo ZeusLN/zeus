@@ -472,7 +472,7 @@ class MigrationsUtils {
         // migrate retired ZEUS swap server hosts to Boltz
         await this.migrateSwapHostsToBoltz(newSettings);
 
-        // move users off swap providers that have shut down
+        // move users off swap providers that are no longer usable
         await this.migrateRetiredSwapHosts(newSettings);
 
         return newSettings;
@@ -595,7 +595,10 @@ class MigrationsUtils {
         return settings;
     }
 
-    // migrate users pointed at the retired ZEUS swap server to Boltz.
+    // migrate users pointed at the retired ZEUS swap server to the default
+    // host. Named for Boltz, which was the default when this was written; it
+    // rewrites to whatever DEFAULT_SWAP_HOST_* currently is. The mod key is
+    // kept as-is so this does not re-run for users it has already migrated.
     // Must run on both the legacy and modern (zeus-settings-v2) paths.
     public async migrateSwapHostsToBoltz(settings: any) {
         const MOD_KEY_SWAP_HOSTS = 'swap-hosts-boltz';
@@ -619,15 +622,29 @@ class MigrationsUtils {
         return settings;
     }
 
-    // Move users pinned to a swap provider that has shut down back to the
+    // Move users pinned to a swap provider that is no longer usable back to the
     // default host. Without this their persisted host no longer matches any
     // entry in SWAP_HOST_KEYS_MAINNET, so the provider dropdown renders no
     // selection while every swap request goes to a dead endpoint. Custom
     // hosts are left alone: a retired host is only rewritten when it was
-    // picked from the dropdown, not typed in as a custom host. Must run on
-    // both the legacy and modern (zeus-settings-v2) paths.
+    // picked from the dropdown, not typed in as a custom host.
+    //
+    // RETIRED_SWAP_HOSTS_MAINNET is the single source of truth, so retiring a
+    // provider means adding its URL there and bumping the mod key below. The
+    // key supersedes 'swap-hosts-retired-eldamar', whose flag is no longer
+    // consulted: that one is already set on every install that has booted
+    // since the Eldamar release, so reusing it would make this a no-op for
+    // exactly the users who need it.
+    //
+    // proEnabled is deliberately left alone: it is one flag shared across both
+    // networks, so clearing it here would also disable Pro for a testnet host
+    // this migration never touched. SwapStore.isProHost gates the header on
+    // the selected provider instead, which keeps the preference intact for
+    // whichever host does have a Pro tier.
+    //
+    // Must run on both the legacy and modern (zeus-settings-v2) paths.
     public async migrateRetiredSwapHosts(settings: any) {
-        const MOD_KEY_RETIRED_SWAP_HOSTS = 'swap-hosts-retired-eldamar';
+        const MOD_KEY_RETIRED_SWAP_HOSTS = 'swap-hosts-retired-v2';
         const mod = await EncryptedStorage.getItem(MOD_KEY_RETIRED_SWAP_HOSTS);
         if (mod) return settings;
 

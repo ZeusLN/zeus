@@ -64,11 +64,35 @@ jest.mock('../stores/SettingsStore', () => ({
     DEFAULT_LSPS1_REST_TESTNET: 'https://lsps1.testnet.zeuslsp.com',
     DEFAULT_LSPS1_REST_MUTINYNET: 'https://lsps1.mutinynet.zeuslsp.com',
     DEFAULT_SPEEDLOADER: 'https://egs.lnze.us/',
-    DEFAULT_SWAP_HOST_MAINNET: 'https://api.boltz.exchange/v2',
+    DEFAULT_SWAP_HOST_MAINNET: 'https://satsrouting.exchange/v2',
     DEFAULT_SWAP_HOST_TESTNET: 'https://api.testnet.boltz.exchange/v2',
     LEGACY_ZEUS_SWAP_HOST_MAINNET: 'https://swaps.zeuslsp.com/api/v2',
     LEGACY_ZEUS_SWAP_HOST_TESTNET: 'https://testnet-swaps.zeuslsp.com/api/v2',
-    RETIRED_SWAP_HOSTS_MAINNET: ['https://boltz-api.eldamar.icu/v2'],
+    RETIRED_SWAP_HOSTS_MAINNET: [
+        'https://boltz-api.eldamar.icu/v2',
+        'https://api.boltz.exchange/v2',
+        'https://api.middle-way.space/v2'
+    ],
+    SWAP_HOST_KEYS_MAINNET: [
+        {
+            key: 'SATS Routing',
+            value: 'https://satsrouting.exchange/v2',
+            pro: false,
+            supportsRescue: true
+        },
+        {
+            key: 'Coinos',
+            value: 'https://swap.coinos.io/v2',
+            pro: false,
+            supportsRescue: true
+        },
+        {
+            key: 'Custom',
+            value: 'Custom',
+            pro: true,
+            supportsRescue: true
+        }
+    ],
     DEFAULT_NOSTR_RELAYS_2023: [
         'wss://nostr.mutinywallet.com',
         'wss://relay.damus.io',
@@ -366,7 +390,7 @@ describe('MigrationUtils', () => {
             settingsStore.setSettings.mockReset();
         });
 
-        it('migrates retired ZEUS swap hosts to the Boltz defaults', async () => {
+        it('migrates retired ZEUS swap hosts to the current defaults', async () => {
             EncryptedStorage.getItem.mockResolvedValue(null);
             const settings: any = {
                 swaps: {
@@ -380,7 +404,7 @@ describe('MigrationUtils', () => {
             await MigrationUtils.migrateSwapHostsToBoltz(settings);
 
             expect(settings.swaps.hostMainnet).toBe(
-                'https://api.boltz.exchange/v2'
+                'https://satsrouting.exchange/v2'
             );
             expect(settings.swaps.hostTestnet).toBe(
                 'https://api.testnet.boltz.exchange/v2'
@@ -397,7 +421,7 @@ describe('MigrationUtils', () => {
             EncryptedStorage.getItem.mockResolvedValue(null);
             const settings: any = {
                 swaps: {
-                    hostMainnet: 'https://api.middle-way.space/v2',
+                    hostMainnet: 'https://swap.coinos.io/v2',
                     hostTestnet: 'Custom',
                     customHost: 'https://my-boltz.local/v2',
                     proEnabled: false
@@ -407,7 +431,7 @@ describe('MigrationUtils', () => {
             await MigrationUtils.migrateSwapHostsToBoltz(settings);
 
             expect(settings.swaps.hostMainnet).toBe(
-                'https://api.middle-way.space/v2'
+                'https://swap.coinos.io/v2'
             );
             expect(settings.swaps.hostTestnet).toBe('Custom');
             expect(settingsStore.setSettings).not.toHaveBeenCalled();
@@ -473,7 +497,7 @@ describe('MigrationUtils', () => {
             await MigrationUtils.migrateRetiredSwapHosts(settings);
 
             expect(settings.swaps.hostMainnet).toBe(
-                'https://api.boltz.exchange/v2'
+                'https://satsrouting.exchange/v2'
             );
             expect(settings.swaps.hostTestnet).toBe(
                 'https://api.testnet.boltz.exchange/v2'
@@ -481,9 +505,88 @@ describe('MigrationUtils', () => {
             expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
             expect(settingsStore.setSettings.mock.calls[0][0]).toBe(settings);
             expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
-                'swap-hosts-retired-eldamar',
+                'swap-hosts-retired-v2',
                 'true'
             );
+        });
+
+        it('moves users off Boltz, which suspended its swap service', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                swaps: {
+                    hostMainnet: 'https://api.boltz.exchange/v2',
+                    hostTestnet: 'https://api.testnet.boltz.exchange/v2',
+                    customHost: '',
+                    proEnabled: false
+                }
+            };
+
+            await MigrationUtils.migrateRetiredSwapHosts(settings);
+
+            expect(settings.swaps.hostMainnet).toBe(
+                'https://satsrouting.exchange/v2'
+            );
+            // the testnet Boltz host is a different URL and is not retired here
+            expect(settings.swaps.hostTestnet).toBe(
+                'https://api.testnet.boltz.exchange/v2'
+            );
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
+        });
+
+        it('moves users off SwapMarket, whose API is gated behind a secret', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                swaps: {
+                    hostMainnet: 'https://api.middle-way.space/v2',
+                    customHost: '',
+                    proEnabled: false
+                }
+            };
+
+            await MigrationUtils.migrateRetiredSwapHosts(settings);
+
+            expect(settings.swaps.hostMainnet).toBe(
+                'https://satsrouting.exchange/v2'
+            );
+            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
+        });
+
+        it('preserves proEnabled, which is shared with the testnet host', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                swaps: {
+                    hostMainnet: 'https://api.boltz.exchange/v2',
+                    hostTestnet: 'Custom',
+                    customHost: 'https://my-boltz.local/v2',
+                    proEnabled: true
+                }
+            };
+
+            await MigrationUtils.migrateRetiredSwapHosts(settings);
+
+            expect(settings.swaps.hostMainnet).toBe(
+                'https://satsrouting.exchange/v2'
+            );
+            // clearing the flag here would also disable Pro for the testnet
+            // host this migration never touched; SwapStore.isProHost gates the
+            // header on the selected provider instead
+            expect(settings.swaps.proEnabled).toBe(true);
+        });
+
+        it('leaves proEnabled alone when the host is not retired', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            const settings: any = {
+                swaps: {
+                    hostMainnet: 'Custom',
+                    customHost: 'https://my-boltz.local/v2',
+                    proEnabled: true
+                }
+            };
+
+            await MigrationUtils.migrateRetiredSwapHosts(settings);
+
+            expect(settings.swaps.proEnabled).toBe(true);
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
         });
 
         it('leaves a custom host pointed at a retired provider alone', async () => {
@@ -504,7 +607,7 @@ describe('MigrationUtils', () => {
             );
             expect(settingsStore.setSettings).not.toHaveBeenCalled();
             expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
-                'swap-hosts-retired-eldamar',
+                'swap-hosts-retired-v2',
                 'true'
             );
         });
@@ -525,7 +628,7 @@ describe('MigrationUtils', () => {
             );
             expect(settingsStore.setSettings).not.toHaveBeenCalled();
             expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
-                'swap-hosts-retired-eldamar',
+                'swap-hosts-retired-v2',
                 'true'
             );
         });
@@ -539,7 +642,7 @@ describe('MigrationUtils', () => {
             expect(settings).toEqual({});
             expect(settingsStore.setSettings).not.toHaveBeenCalled();
             expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
-                'swap-hosts-retired-eldamar',
+                'swap-hosts-retired-v2',
                 'true'
             );
         });

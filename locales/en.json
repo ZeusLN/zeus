@@ -2446,6 +2446,7 @@
     "zeuspay.zaplocker.retirement.redeemFirst": "Zaplocker addresses are being retired. Redeem your outstanding payments before switching your address to another type.",
     "zeuspay.zaplocker.retirement.switch": "Switch address type",
     "views.Swaps.title": "Swaps",
+    "views.Swaps.notAvailableOnTestnet": "Swaps are not available on testnet.",
     "views.Swaps.submarine": "Submarine swap",
     "views.Swaps.reverse": "Reverse swap",
     "views.Swaps.create": "Create swap",

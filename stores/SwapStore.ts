@@ -109,9 +109,37 @@ export default class SwapStore {
         this.apiError = '';
     };
 
+    /**
+     * Whether the selected provider has a Pro tier. `proEnabled` is a single
+     * flag shared across both networks while `pro` is a per-host property, so
+     * the two can disagree whenever the host changes without going through the
+     * picker — a migration, or switching to a network whose selected host
+     * differs. views/Swaps/Settings.tsx only renders the Pro switch for `pro`
+     * hosts, so a stale flag would otherwise keep sending `Referral: pro` to a
+     * provider that has no Pro tier with no way to turn it off. Resolved from
+     * the stored selection rather than getHost, so a custom host matches the
+     * `Custom` entry instead of its URL.
+     */
+    @computed get isProHost(): boolean {
+        const isTestnet = this.nodeInfoStore?.nodeInfo?.isTestNet;
+        const settings = this.settingsStore.settings;
+
+        const selected = isTestnet
+            ? settings.swaps?.hostTestnet || DEFAULT_SWAP_HOST_TESTNET
+            : settings.swaps?.hostMainnet || DEFAULT_SWAP_HOST_MAINNET;
+
+        const hostKeys = isTestnet
+            ? SWAP_HOST_KEYS_TESTNET
+            : SWAP_HOST_KEYS_MAINNET;
+
+        return (
+            hostKeys.find((host: any) => host.value === selected)?.pro === true
+        );
+    }
+
     @computed get getHeaders() {
         const settings = this.settingsStore.settings;
-        return settings.swaps?.proEnabled
+        return settings.swaps?.proEnabled && this.isProHost
             ? {
                   'Content-Type': 'application/json',
                   Referral: 'pro'
@@ -121,7 +149,7 @@ export default class SwapStore {
 
     @computed get referralId() {
         const settings = this.settingsStore.settings;
-        return settings.swaps?.proEnabled ? 'pro' : undefined;
+        return settings.swaps?.proEnabled && this.isProHost ? 'pro' : undefined;
     }
 
     /** Returns the API host based on network type */
