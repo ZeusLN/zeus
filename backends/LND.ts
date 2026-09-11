@@ -1026,6 +1026,9 @@ export default class LND {
     supportsChannelCoinControl = () => this.supports('v0.17.0');
     supportsHopPicking = () => this.supports('v0.11.0');
     supportsAccounts = () => this.supports('v0.13.0');
+    // ImportAccountRequest.birthday_height and the rescan RPC are Zeus
+    // lnd-fork extensions; upstream lnd has neither
+    supportsAccountImportRescan = () => false;
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
     supportsWithdrawalRequests = () => false;

@@ -242,20 +242,25 @@ export default class UTXOsStore {
             this.addresses_to_generate = data.addresses_to_generate || 50;
         }
 
-        if (this.start_height && !data.birthday_height) {
-            data.birthday_height = this.start_height;
-        }
+        // the dry run captures the birthday into start_height; the real
+        // import from ImportingAccount doesn't resend it
+        const birthday_height = data.birthday_height || this.start_height;
 
-        // birthday_height and addresses_to_generate drive the Zeus-side
-        // rescan and address pre-generation above; they aren't part of
-        // lnd's ImportAccountRequest. Embedded (protobufjs) and REST
-        // silently drop unknown fields but LNC's proto JSON unmarshaler
+        // addresses_to_generate only drives the Zeus-side address
+        // pre-generation above; no backend knows it. birthday_height is a
+        // Zeus lnd-fork extension (walletrpc ImportAccountRequest field 6)
+        // the embedded node uses to move the wallet birthday back to the
+        // account's; upstream lnd stops at dry_run = 5, and while REST
+        // silently drops unknown fields, LNC's proto JSON unmarshaler
         // rejects the whole request over them.
         const {
             birthday_height: _birthdayHeight,
             addresses_to_generate: _addressesToGenerate,
             ...importRequest
         } = data;
+        if (birthday_height && BackendUtils.supportsAccountImportRescan()) {
+            importRequest.birthday_height = birthday_height;
+        }
 
         return BackendUtils.importAccount(importRequest)
             .then(async (response: any) => {
@@ -289,20 +294,26 @@ export default class UTXOsStore {
                             });
                         }
 
-                        console.log(
-                            'Starting rescan at height',
-                            this.start_height
-                        );
+                        // rescan is a Zeus lnd-fork RPC; on backends
+                        // without it BackendUtils.call returns false and
+                        // the .then would throw into the outer catch,
+                        // reporting a successful import as failed
+                        if (BackendUtils.supportsAccountImportRescan()) {
+                            console.log(
+                                'Starting rescan at height',
+                                this.start_height
+                            );
 
-                        BackendUtils.rescan({
-                            start_height: this.start_height
-                        })
-                            .then((response: any) => {
-                                console.log('rescan resp', response);
+                            BackendUtils.rescan({
+                                start_height: this.start_height
                             })
-                            .catch((err: Error) => {
-                                console.log('rescan err', err);
-                            });
+                                .then((response: any) => {
+                                    console.log('rescan resp', response);
+                                })
+                                .catch((err: Error) => {
+                                    console.log('rescan err', err);
+                                });
+                        }
                     }
 
                     runInAction(() => {

@@ -886,6 +886,7 @@ export default class LightningNodeConnect {
         this.permNewAddress && this.supports('v0.17.0');
     supportsHopPicking = () => this.permOpenChannel;
     supportsAccounts = () => this.permImportAccount;
+    supportsAccountImportRescan = () => false;
     supportsRouting = () => this.permForwardingHistory;
     supportsNodeInfo = () => true;
     supportsWithdrawalRequests = () => false;
