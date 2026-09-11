@@ -117,6 +117,12 @@ export default class BalanceStore {
                     this.totalBlockchainBalanceAccounts =
                         totalBlockchainBalanceAccounts;
                 }
+                // a successful fetch proves the node is reachable; without
+                // this, an error from one timed-out request (e.g. over a
+                // VPN that was still establishing) keeps the full-screen
+                // connection error up forever, since reset() only runs on
+                // reconnect
+                this.error = false;
                 this.loadingBlockchainBalance = false;
             });
             return {
@@ -145,6 +151,8 @@ export default class BalanceStore {
                     this.lightningBalance = lightningBalance;
                 }
 
+                // see getBlockchainBalance: reachability clears the error
+                this.error = false;
                 this.loadingLightningBalance = false;
             });
 
@@ -167,16 +175,21 @@ export default class BalanceStore {
         }
 
         runInAction(() => {
-            // LN
-            this.pendingOpenBalance = lightning?.pendingOpenBalance || 0;
-            this.lightningBalance = lightning?.lightningBalance || 0;
-            // on-chain
-            this.otherAccounts = onChain?.accounts || [];
-            this.unconfirmedBlockchainBalance =
-                onChain?.unconfirmedBlockchainBalance || 0;
-            this.confirmedBlockchainBalance =
-                onChain?.confirmedBlockchainBalance || 0;
-            this.totalBlockchainBalance = onChain?.totalBlockchainBalance || 0;
+            // a failed leg returns undefined; hold its last known values
+            // rather than zeroing them, since a success on the other leg
+            // clears the error pane that used to cover the zeros
+            if (lightning) {
+                this.pendingOpenBalance = lightning.pendingOpenBalance;
+                this.lightningBalance = lightning.lightningBalance;
+            }
+            if (onChain) {
+                this.otherAccounts = onChain.accounts || [];
+                this.unconfirmedBlockchainBalance =
+                    onChain.unconfirmedBlockchainBalance;
+                this.confirmedBlockchainBalance =
+                    onChain.confirmedBlockchainBalance;
+                this.totalBlockchainBalance = onChain.totalBlockchainBalance;
+            }
         });
 
         return {
