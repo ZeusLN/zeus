@@ -4,7 +4,11 @@ import { sha256 } from '@noble/hashes/sha256';
 
 import Base64Utils from './Base64Utils';
 import Bolt11Utils from './Bolt11Utils';
-import { verifyLnurlPayInvoice, isLnurlCallbackAllowed } from './LnurlPayUtils';
+import {
+    verifyLnurlPayInvoice,
+    isLnurlCallbackAllowed,
+    verifyLnurlAuthCallback
+} from './LnurlPayUtils';
 
 const METADATA = '[["text/plain","Payment to Alice"]]';
 const MATCHING_HASH = Base64Utils.bytesToHex(
@@ -223,6 +227,90 @@ describe('LnurlPayUtils', () => {
         it('rejects an empty or missing callback', () => {
             expect(isLnurlCallbackAllowed('').ok).toBe(false);
             expect(isLnurlCallbackAllowed(undefined as any).ok).toBe(false);
+        });
+    });
+
+    describe('verifyLnurlAuthCallback', () => {
+        const K1 = 'a'.repeat(64);
+
+        it('accepts a callback whose host matches the signing domain', () => {
+            expect(
+                verifyLnurlAuthCallback(
+                    `https://service.example/auth?tag=login&k1=${K1}`,
+                    'service.example'
+                ).ok
+            ).toBe(true);
+        });
+
+        it('matches domains case-insensitively', () => {
+            expect(
+                verifyLnurlAuthCallback(
+                    `https://Service.Example/auth?tag=login&k1=${K1}`,
+                    'service.example'
+                ).ok
+            ).toBe(true);
+        });
+
+        it('allows http for onion services', () => {
+            expect(
+                verifyLnurlAuthCallback(
+                    `http://abcdef.onion/auth?tag=login&k1=${K1}`,
+                    'abcdef.onion'
+                ).ok
+            ).toBe(true);
+        });
+
+        it('rejects the backslash-userinfo parser-confusion PoC', () => {
+            // js-lnurl getDomain sees victim.example (signing/display);
+            // url.parse and native HTTP stacks contact attacker.example
+            const result = verifyLnurlAuthCallback(
+                `https://attacker.example\\@victim.example/?tag=login&k1=${K1}`,
+                'victim.example'
+            );
+            expect(result.ok).toBe(false);
+            expect(result.reason).toContain('backslash');
+        });
+
+        it('rejects a callback whose host differs from the signing domain', () => {
+            expect(
+                verifyLnurlAuthCallback(
+                    `https://attacker.example/auth?tag=login&k1=${K1}`,
+                    'victim.example'
+                ).ok
+            ).toBe(false);
+        });
+
+        it('rejects userinfo even when the host matches', () => {
+            const result = verifyLnurlAuthCallback(
+                `https://user@service.example/auth?tag=login&k1=${K1}`,
+                'service.example'
+            );
+            expect(result.ok).toBe(false);
+            expect(result.reason).toContain('userinfo');
+        });
+
+        it('rejects cleartext http to non-onion hosts', () => {
+            expect(
+                verifyLnurlAuthCallback(
+                    `http://service.example/auth?tag=login&k1=${K1}`,
+                    'service.example'
+                ).ok
+            ).toBe(false);
+        });
+
+        it('rejects an empty expected domain', () => {
+            expect(
+                verifyLnurlAuthCallback(
+                    `https://service.example/auth?tag=login&k1=${K1}`,
+                    ''
+                ).ok
+            ).toBe(false);
+        });
+
+        it('rejects missing callbacks', () => {
+            expect(
+                verifyLnurlAuthCallback(undefined as any, 'service.example').ok
+            ).toBe(false);
         });
     });
 });
