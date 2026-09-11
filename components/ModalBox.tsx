@@ -762,4 +762,54 @@ export default class ModalBox extends React.PureComponent<
             }
         }
     }
+
+    /*
+     * Close without animating. The animated close only dismisses the
+     * underlying RN Modal once the slide-down finishes, and on Android that
+     * animation stops advancing when the dialog window is occluded (e.g. by
+     * a navigation push), leaving an invisible dialog that swallows every
+     * tap on the screen below. Callers that navigate right after closing
+     * must use this instead of close(); onDone fires once the closed state
+     * has been committed, so navigation can safely start. Ignores
+     * isDisabled: that prop guards user-initiated open/close, and a caller
+     * navigating away needs the dialog torn down unconditionally.
+     */
+    closeImmediate(onDone?: () => void) {
+        if (
+            !this.state.isOpen &&
+            !this.state.isAnimateOpen &&
+            !this.state.isAnimateClose
+        ) {
+            if (onDone) onDone();
+            return;
+        }
+        this.stopAnimateOpen();
+        this.stopAnimateClose();
+        // stopAnimateOpen/Close only stop the position animation; an
+        // in-flight backdrop fade-in would keep driving backdropOpacity
+        // past the setValue(0) below and park it at 1
+        if (this.state.animBackdrop) this.state.animBackdrop.stop();
+        if (this.backHandlerSubscription) {
+            this.backHandlerSubscription.remove();
+            this.backHandlerSubscription = null;
+        }
+        this.setState(
+            {
+                isOpen: false,
+                isAnimateOpen: false,
+                isAnimateClose: false,
+                isAnimateBackdrop: false
+            },
+            () => {
+                this.state.position.setValue(
+                    this.props.entry === 'top'
+                        ? -this.state.containerHeight
+                        : this.state.containerHeight
+                );
+                this.state.backdropOpacity.setValue(0);
+                if (this.props.onClosed) this.props.onClosed();
+                if (onDone) onDone();
+            }
+        );
+    }
 }
