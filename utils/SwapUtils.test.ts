@@ -23,6 +23,9 @@ jest.mock('@react-native-documents/picker', () => ({
 
 import { Platform } from 'react-native';
 import RNFS from 'react-native-fs';
+import { mnemonicToSeedSync } from '@scure/bip39';
+import { HDKey } from '@scure/bip32';
+import { crypto } from 'bitcoinjs-lib';
 import {
     bigCeil,
     bigFloor,
@@ -36,7 +39,8 @@ import {
     purgeLegacyRescueKeyFiles,
     saveRescueKeyFile,
     unlinkRescueKeyStagingFile,
-    RESCUE_KEY_FILENAME
+    RESCUE_KEY_FILENAME,
+    deriveSwapPreimage
 } from './SwapUtils';
 
 // regtest BOLT11 vector: 123 sats,
@@ -46,6 +50,10 @@ const REVERSE_INVOICE =
 const REVERSE_INVOICE_HASH =
     'f2cbe057ae04a29a28b098de1eea199d8f1802810fb4f0269dac84c6f8c8762d';
 const REVERSE_INVOICE_SATS = 123;
+
+// BIP39 canonical test mnemonic, used as a swap rescue key
+const RESCUE_MNEMONIC =
+    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
 
 describe('SwapUtils', () => {
     describe('bigCeil', () => {
@@ -445,6 +453,52 @@ describe('SwapUtils', () => {
 
             await expect(saveRescueKeyFile(mnemonic)).rejects.toThrow(
                 'write failed'
+            );
+        });
+    });
+
+    describe('deriveSwapPreimage', () => {
+        // Pins the derivation so the creation path and the rescue path can
+        // never drift apart: a swap created under one derivation and
+        // rescued under another produces an unspendable claim, which the
+        // host settles in its own favour at timeout.
+        //
+        // Vectors: BIP39 canonical mnemonic -> m/44/0/0/0/<index> ->
+        // sha256(childPrivKey).
+        const derivedPreimage = (index: number): Buffer => {
+            const hdKey = HDKey.fromMasterSeed(
+                mnemonicToSeedSync(RESCUE_MNEMONIC)
+            );
+            const childKey = hdKey.derive(`m/44/0/0/0/${index}`);
+            return deriveSwapPreimage(childKey.privateKey!);
+        };
+
+        it('derives the pinned preimage for a known rescue key and index', () => {
+            expect(derivedPreimage(0).toString('hex')).toBe(
+                '03c0b3323daab895d806870bd1f050bdca624a24882d3e317b151d537fa75bb7'
+            );
+            expect(derivedPreimage(7).toString('hex')).toBe(
+                '6f2731a6d8db87dfc8cc6d0b2371ae4e2009017016523b7871701a9d51aaae27'
+            );
+        });
+
+        it('derives the payment hash the host committed to at creation', () => {
+            // What ZEUS sends as preimageHash when creating the swap, and
+            // therefore what the rescued claim has to be able to reproduce.
+            expect(crypto.sha256(derivedPreimage(0)).toString('hex')).toBe(
+                '5230e9679c6a67a8ea551827a8072a29d1850b5c26b92f3e1d61602f67314502'
+            );
+        });
+
+        it('is deterministic and index-scoped', () => {
+            expect(derivedPreimage(0).equals(derivedPreimage(0))).toBe(true);
+            expect(derivedPreimage(0).equals(derivedPreimage(1))).toBe(false);
+        });
+
+        it('accepts a Uint8Array private key as bip32 returns it', () => {
+            const privateKey = Uint8Array.from(Array(32).fill(1));
+            expect(deriveSwapPreimage(privateKey)).toEqual(
+                crypto.sha256(Buffer.from(privateKey))
             );
         });
     });

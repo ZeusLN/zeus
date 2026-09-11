@@ -110,6 +110,10 @@ export class ReverseClaimTransaction extends ClaimTransaction {
         const servicePubKey = swap.refundPubKey;
         const lockupAddress = swap.effectiveLockupAddress;
         const { destinationAddress } = swap;
+        // A reverse claim spends the lockup by revealing the preimage, so
+        // an empty one can never produce a valid claim. Fail closed rather
+        // than broadcasting attempts that are guaranteed to be rejected.
+        const preimageHex = preimageHexFrom(swap.preimage);
 
         if (
             !privateKey ||
@@ -117,7 +121,8 @@ export class ReverseClaimTransaction extends ClaimTransaction {
             !refundLeaf ||
             !servicePubKey ||
             !lockupAddress ||
-            !destinationAddress
+            !destinationAddress ||
+            !preimageHex
         ) {
             console.error(
                 'ReverseClaimTransaction: swap is missing required fields'
@@ -132,7 +137,7 @@ export class ReverseClaimTransaction extends ClaimTransaction {
             refundLeaf,
             privateKey,
             servicePubKey,
-            preimageHex: preimageHexFrom(swap.preimage),
+            preimageHex,
             transactionHex,
             lockupAddress,
             destinationAddress,

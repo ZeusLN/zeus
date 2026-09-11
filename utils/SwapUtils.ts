@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import RNFS from 'react-native-fs';
 import { saveDocuments } from '@react-native-documents/picker';
 import { validateMnemonic } from '@scure/bip39';
+import { crypto } from 'bitcoinjs-lib';
 
 import { BIP39_WORD_LIST } from './Bip39Utils';
 
@@ -50,6 +51,24 @@ export const verifyReverseSwapInvoice = (
 
     return { valid: true };
 };
+
+/**
+ * Derives a reverse swap's preimage from the rescue key's child private
+ * key at that swap's key index.
+ *
+ * The preimage is never sent to or stored by the swap host — only
+ * sha256(preimage), as the hold invoice's payment hash — so it exists
+ * nowhere but this derivation. Deriving it deterministically from the
+ * rescue key is what makes a reverse swap claimable after restoring that
+ * key on another device.
+ *
+ * The creation path and the rescue path MUST derive it identically or the
+ * rescued claim is unspendable and the host reclaims the lockup at
+ * timeout, so both share this function rather than repeating the
+ * expression.
+ */
+export const deriveSwapPreimage = (privateKey: Uint8Array): Buffer =>
+    crypto.sha256(Buffer.from(privateKey));
 
 export const bigFloor = (big: BigNumber): BigNumber => {
     return big.integerValue(BigNumber.ROUND_FLOOR);

@@ -24,6 +24,7 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Row } from '../../components/layout/Row';
 import Text from '../../components/Text';
 
+import BackendUtils from '../../utils/BackendUtils';
 import handleAnything from '../../utils/handleAnything';
 import { localeString, pascalToHumanReadable } from '../../utils/LocaleUtils';
 import { sleep } from '../../utils/SleepUtils';
@@ -33,6 +34,7 @@ import { numberWithCommas } from '../../utils/UnitsUtils';
 import { swapWebSocketUrl } from '../../utils/SwapUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
+import InvoicesStore from '../../stores/InvoicesStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SwapStore from '../../stores/SwapStore';
 import { nodeInfoStore, unitsStore } from '../../stores/Stores';
@@ -60,6 +62,7 @@ interface SwapDetailsProps {
             fee: string;
         }
     >;
+    InvoicesStore?: InvoicesStore;
     NodeInfoStore?: NodeInfoStore;
     SwapStore?: SwapStore;
 }
@@ -74,7 +77,7 @@ interface SwapDetailsState {
     swapData: Swap;
 }
 
-@inject('NodeInfoStore', 'SwapStore')
+@inject('InvoicesStore', 'NodeInfoStore', 'SwapStore')
 @observer
 export default class SwapDetails extends React.Component<
     SwapDetailsProps,
@@ -643,6 +646,54 @@ export default class SwapDetails extends React.Component<
     };
 
     /**
+     * Resolve the address a reverse swap's claim should pay out to.
+     *
+     * A swap created on this device carries the destination the user picked.
+     * A rescued one does not: ZEUS attaches the address client-side and
+     * never sends it to the host — only claimPublicKey and preimageHash go
+     * over the wire — so /swap/restore has nothing to return. Fall back to a
+     * fresh address from the wallet in use, which is the same source the
+     * swap creation screen defaults to, and persist it so a later attempt
+     * claims to the same address instead of generating another.
+     */
+    resolveDestinationAddress = async (swapId: string): Promise<string> => {
+        const { InvoicesStore, SwapStore } = this.props;
+
+        const resolved = this.state.swapData?.destinationAddress;
+        if (resolved) return resolved;
+
+        if (!BackendUtils.supportsOnchainReceiving()) {
+            console.error(
+                'Cannot claim swap: this wallet cannot generate an on-chain address'
+            );
+            return '';
+        }
+
+        try {
+            const destinationAddress = await InvoicesStore?.getNewAddress({
+                unified: true
+            });
+            if (!destinationAddress) return '';
+
+            await SwapStore?.updateSwapDestinationAddress(
+                swapId,
+                destinationAddress
+            );
+            this.setState((prevState) => ({
+                swapData: new Swap({
+                    ...prevState.swapData,
+                    destinationAddress
+                })
+            }));
+
+            return destinationAddress;
+        } catch (e) {
+            console.error('Error generating an address to claim swap to', e);
+            return '';
+        }
+    };
+
+    /**
      * Create and send a claim transaction for a reverse swap
      */
     createReverseClaimTransaction = async (
@@ -675,13 +726,26 @@ export default class SwapDetails extends React.Component<
                 }
             }
 
+            // a rescued swap arrives without one, and a claim cannot be
+            // built - let alone paid out - without somewhere to pay to
+            const claimAddress =
+                destinationAddress ||
+                (await this.resolveDestinationAddress(createdResponse.id));
+            if (!claimAddress) {
+                this.setState({
+                    error: localeString('views.SwapDetails.claimAddressFailed'),
+                    loading: false
+                });
+                return false;
+            }
+
             const claim = ReverseClaimTransaction.build({
                 swap: new Swap({
                     ...createdResponse,
                     keys,
                     preimage,
                     lockupAddress,
-                    destinationAddress
+                    destinationAddress: claimAddress
                 }),
                 endpoint,
                 transactionHex,
@@ -689,7 +753,15 @@ export default class SwapDetails extends React.Component<
                 minerFee,
                 isTestnet: !!this.props.NodeInfoStore!.nodeInfo.isTestNet
             });
-            if (!claim) return false;
+            // build fails closed on a swap missing the material a valid
+            // claim needs; say so rather than leaving the screen spinning
+            if (!claim) {
+                this.setState({
+                    error: localeString('views.SwapDetails.claimFailed'),
+                    loading: false
+                });
+                return false;
+            }
 
             // allow some retries in case of alt network
             // tx propagation issues
@@ -711,9 +783,17 @@ export default class SwapDetails extends React.Component<
                     });
                 }
             }
+            this.setState({
+                error: localeString('views.SwapDetails.claimBroadcastFailed'),
+                loading: false
+            });
             return false;
         } catch (e) {
             console.log('Error creating reverse claim tx ', e);
+            this.setState({
+                error: localeString('views.SwapDetails.claimFailed'),
+                loading: false
+            });
             return false;
         }
     };
