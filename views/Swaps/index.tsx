@@ -236,7 +236,13 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
         const { flowLspNotConfigured } = NodeInfoStore.flowLspNotConfigured();
 
-        this.props.SwapStore.getSwapFees();
+        // Swaps are mainnet only: no Boltz-compatible testnet provider is
+        // currently available, so there is no host to fetch rates from.
+        // This screen is unreachable from the menu on testnet (Menu.tsx),
+        // but guard here too against deep links and SwapsQRScanner.
+        if (!NodeInfoStore.testnet) {
+            this.props.SwapStore.getSwapFees();
+        }
         this.setState({
             enableLSP: settings?.enableLSP,
             flowLspNotConfigured
@@ -729,10 +735,51 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
     };
 
     render() {
+        const { NodeInfoStore, navigation } = this.props;
+
+        // Defense in depth: this screen is unreachable from the menu on
+        // testnet (Menu.tsx), but a deep link or SwapsQRScanner could still
+        // land here directly.
+        if (NodeInfoStore.testnet) {
+            return (
+                <Screen>
+                    <Header
+                        leftComponent="Back"
+                        centerComponent={{
+                            text: localeString('views.Swaps.title'),
+                            style: {
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book'
+                            }
+                        }}
+                        navigation={navigation}
+                    />
+                    <View
+                        style={{
+                            flex: 1,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            margin: 20
+                        }}
+                    >
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                fontSize: 16,
+                                textAlign: 'center'
+                            }}
+                        >
+                            {localeString('views.Swaps.notAvailableOnTestnet')}
+                        </Text>
+                    </View>
+                </Screen>
+            );
+        }
+
         const {
             SwapStore,
             UnitsStore,
-            navigation,
             InvoicesStore,
             FiatStore,
             SettingsStore,
