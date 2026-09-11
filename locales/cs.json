@@ -2266,6 +2266,7 @@
     "cashu.lockTo": "Uzamknuto pro",
     "cashu.locktime": "Uzamknuto do",
     "cashu.lock": "Uzamknout",
+    "cashu.removeLock": "Remove lock",
     "cashu.noContactsWithCashuPubkey": "Žádné kontakty s Cashu veřejným klíčem",
     "cashu.noDuration": "žádná doba trvání",
     "cashu.duration.1Day": "1 den",
