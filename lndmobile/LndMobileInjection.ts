@@ -254,6 +254,7 @@ export interface ILndMobileInjections {
         listPayments: (params?: {
             maxPayments?: number;
             reversed?: boolean;
+            creationDateStart?: number;
         }) => Promise<lnrpc.ListPaymentsResponse>;
         subscribeChannelGraph: () => Promise<string>;
         sendKeysendPaymentV2: ({
