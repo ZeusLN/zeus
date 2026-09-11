@@ -37,7 +37,7 @@ import {
 import { restartApp } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import {
-    channelDataExists,
+    graphDataExists,
     handleExportChannels
 } from '../../utils/ChannelMigrationUtils';
 
@@ -62,7 +62,7 @@ interface ToolsState {
     isChannelExporting: boolean;
     channelExportMessage: string;
     isClearingData: boolean;
-    channelDataOnDisk: boolean;
+    graphDataOnDisk: boolean;
 }
 
 @inject('SettingsStore', 'NodeInfoStore', 'SyncStore', 'ChannelsStore')
@@ -77,7 +77,7 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
             isChannelExporting: false,
             channelExportMessage: '',
             isClearingData: false,
-            channelDataOnDisk: false
+            graphDataOnDisk: false
         };
     }
 
@@ -91,20 +91,20 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
             this.handleClearStorage();
         }
 
-        this.checkChannelDataOnDisk();
+        this.checkGraphDataOnDisk();
     }
 
     // Fallback for offering channel export when the node isn't running
     // and channels can't be queried
-    checkChannelDataOnDisk = async () => {
+    checkGraphDataOnDisk = async () => {
         const { SettingsStore } = this.props;
         if (SettingsStore.implementation !== 'embedded-lnd') return;
 
-        const channelDataOnDisk = await channelDataExists(
+        const graphDataOnDisk = await graphDataExists(
             SettingsStore.lndDir || 'lnd',
             SettingsStore.embeddedLndNetwork === 'Testnet'
         );
-        this.setState({ channelDataOnDisk });
+        this.setState({ graphDataOnDisk });
     };
 
     componentWillUnmount() {
@@ -116,7 +116,7 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
 
     handleFocus = () => {
         this.props.SettingsStore.getSettings();
-        this.checkChannelDataOnDisk();
+        this.checkGraphDataOnDisk();
     };
 
     handleClearStorage = () => {
@@ -198,7 +198,7 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
         const nodeConnected = !!NodeInfoStore.nodeInfo.identity_pubkey;
         const canExportChannels = nodeConnected
             ? hasChannels
-            : this.state.channelDataOnDisk;
+            : this.state.graphDataOnDisk;
 
         const selectedNode: any =
             (settings &&

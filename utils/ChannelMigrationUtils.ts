@@ -30,10 +30,12 @@ const getGraphDir = (lndDir: string, isTestnet: boolean): string => {
 };
 
 /**
- * Checks whether channel data exists on disk, so export can be offered
- * even when the node isn't running.
+ * Checks whether graph data exists on disk, so export can be offered
+ * even when the node isn't running. Note this can't distinguish
+ * whether the node ever had channels: lnd creates the graph DB files
+ * on first start.
  */
-export const channelDataExists = async (
+export const graphDataExists = async (
     lndDir: string,
     isTestnet: boolean
 ): Promise<boolean> => {
@@ -43,7 +45,7 @@ export const channelDataExists = async (
         const entries = await RNFS.readDir(graphDir);
         return entries.length > 0;
     } catch (e) {
-        console.error('Failed to check for channel data on disk:', e);
+        console.error('Failed to check for graph data on disk:', e);
         return false;
     }
 };

@@ -73,6 +73,7 @@ jest.mock('react-native', () => ({
 }));
 
 import {
+    graphDataExists,
     validateChannelBackupFile,
     importChannelDb
 } from './ChannelMigrationUtils';
@@ -83,6 +84,62 @@ describe('ChannelMigrationUtils', () => {
         mockExists.mockResolvedValue(true);
         mockStat.mockResolvedValue({ size: 1024 });
         mockReadDir.mockResolvedValue([]);
+    });
+
+    describe('graphDataExists', () => {
+        it('returns false when the graph directory does not exist', async () => {
+            mockExists.mockResolvedValue(false);
+
+            expect(await graphDataExists('lnd', false)).toBe(false);
+            expect(mockExists).toHaveBeenCalledWith(
+                expect.stringContaining('lnd/data/graph/mainnet')
+            );
+            expect(mockReadDir).not.toHaveBeenCalled();
+        });
+
+        it('returns false when the graph directory is empty', async () => {
+            mockReadDir.mockResolvedValue([]);
+
+            expect(await graphDataExists('lnd', false)).toBe(false);
+        });
+
+        it('returns true when the graph directory has entries', async () => {
+            mockReadDir.mockResolvedValue([
+                { path: '/graph/mainnet/channel.db', isFile: () => true }
+            ]);
+
+            expect(await graphDataExists('lnd', false)).toBe(true);
+        });
+
+        it('uses the testnet path when isTestnet is true', async () => {
+            mockReadDir.mockResolvedValue([
+                { path: '/graph/testnet/channel.db', isFile: () => true }
+            ]);
+
+            expect(await graphDataExists('lnd', true)).toBe(true);
+            expect(mockExists).toHaveBeenCalledWith(
+                expect.stringContaining('lnd/data/graph/testnet')
+            );
+        });
+
+        it('respects a custom lndDir', async () => {
+            await graphDataExists('lnd2', false);
+
+            expect(mockExists).toHaveBeenCalledWith(
+                expect.stringContaining('lnd2/data/graph/mainnet')
+            );
+        });
+
+        it('returns false when the filesystem check throws', async () => {
+            const consoleError = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
+            mockReadDir.mockRejectedValue(new Error('EACCES'));
+
+            expect(await graphDataExists('lnd', false)).toBe(false);
+
+            consoleError.mockRestore();
+        });
     });
 
     describe('validateChannelBackupFile', () => {
