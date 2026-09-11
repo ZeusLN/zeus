@@ -12,7 +12,8 @@ import CashuDevKit from '../cashu-cdk';
 import CashuUtils, {
     cashuTokenPrefixes,
     CashuSeedOrigin,
-    classifyCashuSeedOrigin
+    classifyCashuSeedOrigin,
+    resolveLockTarget
 } from './CashuUtils';
 
 const mockIsValidToken = CashuDevKit.isValidToken as jest.Mock;
@@ -458,5 +459,45 @@ describe('CashuUtils', () => {
                 CashuSeedOrigin.DerivedFromWalletSeed
             );
         });
+    });
+});
+
+describe('resolveLockTarget', () => {
+    const locked = { pubkey: '02abc', contactName: 'Alice' };
+
+    it('drops the contact when the lock is removed (#4637)', () => {
+        // Lock Settings' Back used to send pubkey: '' without contactName, so
+        // the name survived and reopened Lock Settings with a chip but no pubkey
+        expect(resolveLockTarget({ pubkey: '' }, locked)).toEqual({
+            pubkey: '',
+            contactName: ''
+        });
+    });
+
+    it('keeps the existing lock when no lock fields are sent', () => {
+        expect(resolveLockTarget({}, locked)).toEqual(locked);
+    });
+
+    it('uses the contact sent with a newly saved lock', () => {
+        expect(
+            resolveLockTarget({ pubkey: '03def', contactName: 'Bob' }, locked)
+        ).toEqual({ pubkey: '03def', contactName: 'Bob' });
+    });
+
+    it('drops the old contact name when the pubkey changes without one', () => {
+        expect(resolveLockTarget({ pubkey: '03def' }, locked)).toEqual({
+            pubkey: '03def',
+            contactName: ''
+        });
+    });
+
+    it('keeps the contact name when the same pubkey is re-sent without one', () => {
+        expect(resolveLockTarget({ pubkey: '02abc' }, locked)).toEqual(locked);
+    });
+
+    it('clears a stale contact name left without a pubkey', () => {
+        expect(
+            resolveLockTarget({}, { pubkey: '', contactName: 'Alice' })
+        ).toEqual({ pubkey: '', contactName: '' });
     });
 });

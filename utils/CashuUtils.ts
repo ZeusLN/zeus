@@ -97,6 +97,25 @@ export const classifyCashuSeedOrigin = (
     return CashuSeedOrigin.Independent;
 };
 
+/**
+ * Resolves the lock target SendEcash keeps after returning from Lock
+ * Settings. A contact name only labels the pubkey it was chosen with, so it
+ * is dropped whenever the resolved pubkey is empty (the lock was removed) or
+ * changed without a new name. Otherwise Lock Settings reopens showing a
+ * contact chip with no pubkey behind it and LOCK disabled (#4637).
+ */
+export const resolveLockTarget = (
+    params: { pubkey?: string; contactName?: string },
+    current: { pubkey?: string; contactName?: string }
+): { pubkey: string; contactName: string } => {
+    const pubkey = params.pubkey ?? current.pubkey ?? '';
+    if (!pubkey) return { pubkey: '', contactName: '' };
+    const contactName =
+        params.contactName ??
+        (pubkey === current.pubkey ? current.contactName ?? '' : '');
+    return { pubkey, contactName };
+};
+
 // Limits to mitigate resource exhaustion from malicious P2PK secret payloads
 const MAX_P2PK_SECRET_LENGTH = 2048;
 const MAX_P2PK_SECRET_DEPTH = 10;
