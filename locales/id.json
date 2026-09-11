@@ -2266,6 +2266,7 @@
     "cashu.lockTo": "Terkunci ke",
     "cashu.locktime": "Dikunci hingga",
     "cashu.lock": "Kunci",
+    "cashu.removeLock": "Remove lock",
     "cashu.noContactsWithCashuPubkey": "Tidak ada kontak dengan kunci publik Cashu",
     "cashu.noDuration": "tidak ada durasi",
     "cashu.duration.1Day": "1 Hari",
