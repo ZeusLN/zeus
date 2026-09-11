@@ -22,6 +22,7 @@ import ContactStore from '../../stores/ContactStore';
 
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { resolveLockTarget } from '../../utils/CashuUtils';
 
 export interface SendEcashParams {
     amount?: string;
@@ -131,12 +132,16 @@ export default class SendEcash extends React.Component<
             // Restoring it from params here would instead reapply a stale
             // copy - captured back when the lock button was first pressed -
             // over whatever the user has since typed into the keypad.
+            const { pubkey, contactName } = resolveLockTarget(
+                params,
+                this.state
+            );
             const stateUpdate: Partial<SendEcashState> = {
-                pubkey: params.pubkey ?? this.state.pubkey,
+                pubkey,
                 duration: params.duration ?? this.state.duration,
                 locktime: this.convertDurationToSeconds(params.duration),
                 memo: params.memo ?? this.state.memo,
-                contactName: params.contactName ?? this.state.contactName,
+                contactName,
                 showCustomDuration:
                     params.showCustomDuration ?? this.state.showCustomDuration,
                 customDurationValue:

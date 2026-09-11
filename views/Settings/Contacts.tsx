@@ -122,7 +122,8 @@ export default class Contacts extends React.Component<
             showCustomDuration,
             customDurationValue,
             customDurationUnit,
-            selectedDurationIndex
+            selectedDurationIndex,
+            hasExistingLock
         } = route.params || {};
 
         const isCashuPubkeyAvailable =
@@ -155,7 +156,8 @@ export default class Contacts extends React.Component<
                                     showCustomDuration,
                                     customDurationValue,
                                     customDurationUnit,
-                                    selectedDurationIndex
+                                    selectedDurationIndex,
+                                    hasExistingLock
                                 }
                             });
                         } else {
@@ -172,7 +174,8 @@ export default class Contacts extends React.Component<
                                     showCustomDuration,
                                     customDurationValue,
                                     customDurationUnit,
-                                    selectedDurationIndex
+                                    selectedDurationIndex,
+                                    hasExistingLock
                                 }
                             );
                         }

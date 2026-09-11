@@ -29,6 +29,11 @@ export interface CashuLockSettingsParams extends SendEcashParams {
     destination?: string | null;
     hasCashuPubkey?: boolean;
     selectedDurationIndex?: number;
+    // Whether the flow that opened this screen already had a saved lock.
+    // Forwarded through the contact-picker round trip (CashuLockSettings ->
+    // Contacts/ContactDetails -> CashuLockSettings) since that hop pushes a
+    // second instance whose own currentLockPubkey param is empty - without
+    hasExistingLock?: boolean;
 }
 interface CashuLockSettingsProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -50,6 +55,7 @@ interface CashuLockSettingsState {
     hasClipboardContent: boolean;
     isPubkeyValid: boolean;
     selectedDurationIndex: number;
+    hasExistingLock: boolean;
 }
 
 const TIME_UNITS: string[] = [
@@ -87,7 +93,8 @@ export default class CashuLockSettings extends React.Component<
             customDurationValue,
             customDurationUnit,
             duration,
-            selectedDurationIndex
+            selectedDurationIndex,
+            hasExistingLock
         } = route.params || {};
 
         this.state = {
@@ -111,7 +118,11 @@ export default class CashuLockSettings extends React.Component<
                     ? selectedDurationIndex
                     : currentDuration
                     ? DURATION_OPTIONS.indexOf(currentDuration)
-                    : 0
+                    : 0,
+            // A lock exists either if this instance was opened with one
+            // directly (currentLockPubkey) or if the contact-picker round
+            // trip forwarded that an earlier instance had one.
+            hasExistingLock: !!currentLockPubkey || !!hasExistingLock
         };
         this.handleContactSelection = this.handleContactSelection.bind(this);
     }
@@ -363,12 +374,26 @@ export default class CashuLockSettings extends React.Component<
         return isPubkeyValid && selectedDurationIndex !== undefined;
     };
 
+    // Back cancels: return without params so SendEcash keeps whatever lock
+    // it already has, the same as the hardware/gesture back. popTo (rather
+    // than goBack) also unwinds a second Lock Settings screen pushed by the
+    // contact picker. Removing a lock is the explicit removeLock action.
     onBack = () => {
+        this.props.navigation.popTo('SendEcash');
+    };
+
+    // Clears every lock field, including contactName: leaving the name
+    // behind reopens Lock Settings with a contact chip but no pubkey, and
+    // LOCK disabled (#4637).
+    removeLock = () => {
         const params: SendEcashParams = {
             fromLockSettings: true,
             pubkey: '',
+            contactName: '',
             duration: '',
-            showCustomDuration: false
+            showCustomDuration: false,
+            customDurationValue: '',
+            customDurationUnit: ''
         };
         this.props.navigation.popTo('SendEcash', params);
     };
@@ -384,7 +409,8 @@ export default class CashuLockSettings extends React.Component<
             hasClipboardContent,
             isPubkeyValid,
             contactName,
-            selectedDurationIndex
+            selectedDurationIndex,
+            hasExistingLock
         } = this.state;
         const isFormValid = this.isFormValid();
 
@@ -522,7 +548,8 @@ export default class CashuLockSettings extends React.Component<
                                     showCustomDuration,
                                     customDurationValue,
                                     customDurationUnit,
-                                    selectedDurationIndex
+                                    selectedDurationIndex,
+                                    hasExistingLock
                                 } = this.state;
                                 navigation.navigate('Contacts', {
                                     SendScreen: true,
@@ -534,7 +561,8 @@ export default class CashuLockSettings extends React.Component<
                                     showCustomDuration,
                                     customDurationValue,
                                     customDurationUnit,
-                                    selectedDurationIndex
+                                    selectedDurationIndex,
+                                    hasExistingLock
                                 });
                             }}
                             style={{ position: 'absolute', right: 10 }}
@@ -702,6 +730,14 @@ export default class CashuLockSettings extends React.Component<
                             disabled={!isFormValid}
                             title={localeString('cashu.lock')}
                         />
+                        {hasExistingLock && (
+                            <Button
+                                onPress={this.removeLock}
+                                containerStyle={styles.bottomButton}
+                                title={localeString('cashu.removeLock')}
+                                secondary
+                            />
+                        )}
                     </View>
                 </ScrollView>
             </Screen>
