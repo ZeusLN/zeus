@@ -463,45 +463,52 @@ class MigrationsUtils {
     // consolidation: the retired per-migration EncryptedStorage flags
     // are read once so already-applied migrations are not re-applied
     // over values the user has since changed, the needed mutations run
-    // in memory, and a single setSettings persists the result together
-    // with the stamp — migrated values and migration state can no
-    // longer diverge if we crash mid-way. The retired flags are never
-    // written again; leftover entries are inert and cleared by Clear
-    // All Data.
+    // in memory, and a single write (applySettingsUpdate's persist on
+    // the modern path, storageMigrationV2's on the legacy path) lands
+    // the result together with the stamp, so migrated values and
+    // migration state can no longer diverge if we crash mid-way. The
+    // retired flags are never written again; leftover entries are inert
+    // and cleared by Clear All Data.
     //
     // Adding a future migration: bump SETTINGS_VERSION, gate the new
     // mutation on the blob's prior version (settings.settingsVersion ??
     // 0), and leave the existing blocks untouched.
     // ------------------------------------------------------------------
-    public async runSettingsMigrations(settings: any) {
+    public async runSettingsMigrations(
+        settings: any,
+        inQueue: boolean = false
+    ) {
         if ((settings?.settingsVersion ?? 0) >= SETTINGS_VERSION) {
             return settings;
         }
 
-        if (settingsStore.settingsUpdateInProgress) {
-            // Already inside the updateSettings queue's critical section
-            // (applySettingsUpdate -> getSettings -> here): persisting
-            // directly is serialized with every other update, and
-            // enqueueing would deadlock behind the very task awaiting us.
+        if (inQueue) {
+            // Inside the updateSettings queue's critical section
+            // (applySettingsUpdate -> getSettings(fromQueue) -> here):
+            // mutate in memory only. applySettingsUpdate persists right
+            // after this getSettings returns, so the migrated values and
+            // stamp ride that single serialized write; a write of our own
+            // would be redundant, and enqueueing would deadlock behind
+            // the very task awaiting us. The fact arrives as a parameter
+            // because settingsStore.settingsUpdateInProgress only says
+            // some update is in flight somewhere, not that we are on the
+            // queue's call stack.
             await this.applySettingsMigrations(settings);
-
-            // single write: migrated values and stamp land atomically
-            await settingsStore.setSettings(settings);
             return settings;
         }
 
         // Outside the queue `settings` is a snapshot that can go stale
-        // before the write lands (the blob read and the flag reads all
-        // yield), and setSettings overwrites wholesale, so a concurrent
-        // updateSettings landing in that window would be clobbered.
-        // Route the persist through the queue instead: the enqueued
-        // no-op update re-runs getSettings, which re-enters this method
-        // on fresh state inside the critical section (branch above).
+        // before any write lands (the blob read and the flag reads all
+        // yield), and a concurrent updateSettings landing in that window
+        // would be clobbered by persisting it. Never touch the snapshot;
+        // enqueue a no-op update instead: its critical section re-runs
+        // getSettings on fresh state, which re-enters this method through
+        // the inQueue branch above.
         return await settingsStore.updateSettings({});
     }
 
     // Applies every migration below the current SETTINGS_VERSION in
-    // memory and stamps the blob. Does NOT persist — runSettingsMigrations
+    // memory and stamps the blob. Does NOT persist: applySettingsUpdate
     // (modern path) and storageMigrationV2 (legacy path) own the write.
     public async applySettingsMigrations(settings: any): Promise<boolean> {
         const [rgsDone, olympusDone, swapDone, retiredSwapDone, expiryDone] =

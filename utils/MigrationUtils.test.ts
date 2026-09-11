@@ -706,10 +706,6 @@ describe('MigrationUtils', () => {
             EncryptedStorage.setItem.mockReset();
             settingsStore.setSettings.mockReset();
             settingsStore.updateSettings.mockReset();
-            // most cases exercise the consolidation itself, which in
-            // production runs inside the updateSettings queue's critical
-            // section (applySettingsUpdate -> getSettings -> here)
-            settingsStore.settingsUpdateInProgress = true;
         });
 
         afterEach(() => {
@@ -717,7 +713,6 @@ describe('MigrationUtils', () => {
         });
 
         it('skips everything when the blob is already stamped', async () => {
-            settingsStore.settingsUpdateInProgress = false;
             const settings: any = {
                 settingsVersion: SETTINGS_VERSION,
                 lspMainnet: 'https://0conf.lnolymp.us'
@@ -732,7 +727,6 @@ describe('MigrationUtils', () => {
         });
 
         it('routes the write through the updateSettings queue when outside it', async () => {
-            settingsStore.settingsUpdateInProgress = false;
             settingsStore.updateSettings.mockResolvedValue({
                 settingsVersion: SETTINGS_VERSION
             });
@@ -751,6 +745,27 @@ describe('MigrationUtils', () => {
             expect(result).toEqual({ settingsVersion: SETTINGS_VERSION });
         });
 
+        it('enqueues even while an unrelated update is in flight', async () => {
+            // settingsUpdateInProgress only means some update is in
+            // flight somewhere; being on the queue's call stack arrives
+            // as the inQueue parameter. An outside caller during an
+            // unrelated update is exactly when a direct write would
+            // clobber, so it must still enqueue.
+            settingsStore.settingsUpdateInProgress = true;
+            settingsStore.updateSettings.mockResolvedValue({
+                settingsVersion: SETTINGS_VERSION
+            });
+            const stale: any = {
+                swaps: { hostMainnet: 'https://boltz-api.eldamar.icu/v2' }
+            };
+
+            await MigrationUtils.runSettingsMigrations(stale);
+
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(EncryptedStorage.getItem).not.toHaveBeenCalled();
+            expect(settingsStore.updateSettings).toHaveBeenCalledWith({});
+        });
+
         it('does not clobber a concurrent update when called outside the queue', async () => {
             EncryptedStorage.getItem.mockResolvedValue(null);
 
@@ -765,23 +780,19 @@ describe('MigrationUtils', () => {
                 supportedBiometryType: 'FaceID'
             };
 
-            settingsStore.settingsUpdateInProgress = false;
             settingsStore.updateSettings.mockImplementation(async () => {
                 // emulate applySettingsUpdate: getSettings re-enters
-                // runSettingsMigrations inside the critical section
-                settingsStore.settingsUpdateInProgress = true;
-                try {
-                    return await MigrationUtils.runSettingsMigrations(fresh);
-                } finally {
-                    settingsStore.settingsUpdateInProgress = false;
-                }
+                // runSettingsMigrations inside the critical section and
+                // persists the returned object itself
+                return await MigrationUtils.runSettingsMigrations(fresh, true);
             });
 
             const result = await MigrationUtils.runSettingsMigrations(stale);
 
-            // the stale snapshot must never be persisted
-            expect(settingsStore.setSettings).not.toHaveBeenCalledWith(stale);
-            // the fresh state is migrated, stamped and persisted with the
+            // neither the stale snapshot nor anything else is written
+            // directly; the queue's critical section owns the persist
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            // the fresh state is migrated and stamped with the
             // concurrent update intact
             expect(result).toBe(fresh);
             expect(result.supportedBiometryType).toBe('FaceID');
@@ -789,39 +800,42 @@ describe('MigrationUtils', () => {
                 'https://api.boltz.exchange/v2'
             );
             expect(result.settingsVersion).toBe(SETTINGS_VERSION);
-            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
-            expect(settingsStore.setSettings).toHaveBeenCalledWith(fresh);
         });
 
-        it('consolidates an unstamped blob with a single write and stamps it', async () => {
+        it('consolidates an unstamped blob in memory inside the queue, without writing', async () => {
             EncryptedStorage.getItem.mockResolvedValue(null);
             const settings: any = {
                 lspMainnet: 'https://0conf.lnolymp.us',
                 swaps: { hostMainnet: 'https://swaps.zeuslsp.com/api/v2' }
             };
 
-            await MigrationUtils.runSettingsMigrations(settings);
+            await MigrationUtils.runSettingsMigrations(settings, true);
 
             expect(settings.lspMainnet).toBe('https://flow.zeuslsp.com');
             expect(settings.swaps.hostMainnet).toBe(
                 'https://api.boltz.exchange/v2'
             );
             expect(settings.settingsVersion).toBe(SETTINGS_VERSION);
-            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
+            // applySettingsUpdate persists right after getSettings
+            // returns; a direct write here would be redundant, and
+            // enqueueing would deadlock behind the awaiting task
+            expect(settingsStore.setSettings).not.toHaveBeenCalled();
+            expect(settingsStore.updateSettings).not.toHaveBeenCalled();
             // retired per-migration flags are never written again
             expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
         });
 
-        it('persists the settings object rather than a JSON string', async () => {
+        it('returns the same object so the queue persists the migrated blob', async () => {
             EncryptedStorage.getItem.mockResolvedValue(null);
             const settings: any = {};
 
-            await MigrationUtils.runSettingsMigrations(settings);
+            const result = await MigrationUtils.runSettingsMigrations(
+                settings,
+                true
+            );
 
-            const persistedSettings =
-                settingsStore.setSettings.mock.calls[0][0];
-            expect(typeof persistedSettings).not.toBe('string');
-            expect(persistedSettings).toBe(settings);
+            expect(result).toBe(settings);
+            expect(result.settingsVersion).toBe(SETTINGS_VERSION);
         });
 
         it('honors retired per-migration flags during consolidation', async () => {
@@ -833,9 +847,9 @@ describe('MigrationUtils', () => {
                 swaps: { hostMainnet: 'https://swaps.zeuslsp.com/api/v2' }
             };
 
-            await MigrationUtils.runSettingsMigrations(settings);
+            await MigrationUtils.runSettingsMigrations(settings, true);
 
-            // Olympus host migration already ran on this install — the
+            // Olympus host migration already ran on this install, so the
             // (user-restored) old value must not be rewritten again
             expect(settings.lspMainnet).toBe('https://0conf.lnolymp.us');
             // the un-flagged swap migration still applies
@@ -843,7 +857,6 @@ describe('MigrationUtils', () => {
                 'https://api.boltz.exchange/v2'
             );
             expect(settings.settingsVersion).toBe(SETTINGS_VERSION);
-            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
         });
 
         it('honors rgs-defaults-v2 but ignores the superseded rgs-default-zeus flag', async () => {
@@ -863,7 +876,7 @@ describe('MigrationUtils', () => {
                 ]
             };
 
-            await MigrationUtils.runSettingsMigrations(settings);
+            await MigrationUtils.runSettingsMigrations(settings, true);
 
             expect(settings.nodes[0].ldkRgsServer).toBe(
                 'https://rgs.zeusln.com/snapshot/v2'
@@ -882,7 +895,7 @@ describe('MigrationUtils', () => {
                 ]
             };
 
-            await MigrationUtils.runSettingsMigrations(flagged);
+            await MigrationUtils.runSettingsMigrations(flagged, true);
 
             expect(flagged.nodes[0].ldkRgsServer).toBe(
                 'https://rgs.zeusln.com/snapshot'
@@ -895,13 +908,12 @@ describe('MigrationUtils', () => {
                 swaps: { hostMainnet: 'https://boltz-api.eldamar.icu/v2' }
             };
 
-            await MigrationUtils.runSettingsMigrations(settings);
+            await MigrationUtils.runSettingsMigrations(settings, true);
 
             expect(settings.swaps.hostMainnet).toBe(
                 'https://api.boltz.exchange/v2'
             );
             expect(settings.settingsVersion).toBe(SETTINGS_VERSION);
-            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
 
             EncryptedStorage.getItem.mockImplementation((key: string) =>
                 Promise.resolve(
@@ -912,7 +924,7 @@ describe('MigrationUtils', () => {
                 swaps: { hostMainnet: 'https://boltz-api.eldamar.icu/v2' }
             };
 
-            await MigrationUtils.runSettingsMigrations(flagged);
+            await MigrationUtils.runSettingsMigrations(flagged, true);
 
             // the retirement migration already ran on this install; the
             // (user-restored) host must not be rewritten again
@@ -921,22 +933,21 @@ describe('MigrationUtils', () => {
             );
         });
 
-        it('stamps with one write even when nothing needed migrating, then goes quiet', async () => {
+        it('stamps even when nothing needed migrating, then goes quiet', async () => {
             EncryptedStorage.getItem.mockResolvedValue('true');
             const settings: any = {
                 lspMainnet: 'https://flow.zeuslsp.com'
             };
 
-            await MigrationUtils.runSettingsMigrations(settings);
+            await MigrationUtils.runSettingsMigrations(settings, true);
 
             expect(settings.settingsVersion).toBe(SETTINGS_VERSION);
-            expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
 
-            // second run: stamped — zero storage traffic
+            // second run: stamped, zero storage traffic
             EncryptedStorage.getItem.mockClear();
             settingsStore.setSettings.mockClear();
 
-            await MigrationUtils.runSettingsMigrations(settings);
+            await MigrationUtils.runSettingsMigrations(settings, true);
 
             expect(EncryptedStorage.getItem).not.toHaveBeenCalled();
             expect(settingsStore.setSettings).not.toHaveBeenCalled();

@@ -1969,7 +1969,14 @@ export default class SettingsStore {
         }
     };
 
-    public getSettings = async (silentUpdate: boolean = false) => {
+    // fromQueue is true only for the call inside applySettingsUpdate's
+    // critical section; runSettingsMigrations branches on it to decide
+    // whether a consolidation may piggyback on that update's write or
+    // must enqueue one.
+    public getSettings = async (
+        silentUpdate: boolean = false,
+        fromQueue: boolean = false
+    ) => {
         if (!silentUpdate) this.loading = true;
         try {
             await MigrationsUtils.keychainCloudSyncMigration();
@@ -1985,7 +1992,8 @@ export default class SettingsStore {
                 // queue the authoritative object is the queue's, not this
                 // call's snapshot, so adopt the return value
                 this.settings = await MigrationsUtils.runSettingsMigrations(
-                    parsedSettings
+                    parsedSettings,
+                    fromQueue
                 );
             } else {
                 console.log('attempting to load legacy settings');
@@ -2061,7 +2069,9 @@ export default class SettingsStore {
     ) => {
         this.settingsUpdateInProgress = true;
         try {
-            const existingSettings = await this.getSettings();
+            // fromQueue: this is the queue's critical section, so a
+            // pending consolidation folds into this update's write
+            const existingSettings = await this.getSettings(false, true);
             // Functional updates read the settings inside the critical
             // section, so callers whose new value depends on the current
             // one (delete node X from the array) cannot act on a snapshot
