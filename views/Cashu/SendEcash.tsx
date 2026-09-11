@@ -215,8 +215,10 @@ export default class SendEcash extends React.Component<
             customDurationUnit: ''
         });
 
-        // Reset all params at once
-        this.props.navigation.setParams({} as SendEcashParams);
+        // Reset all params at once. This has to be `replaceParams`:
+        // `setParams` merges into the existing params, so passing `{}` to it
+        // cleared nothing and the pre-mint values stayed on the route.
+        this.props.navigation.replaceParams({});
     }
 
     handleLockSettingsPress = () => {
