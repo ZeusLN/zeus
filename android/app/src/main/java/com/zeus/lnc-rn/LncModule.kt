@@ -62,8 +62,14 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
   }
 
   @ReactMethod
-  fun initLNC(namespace: String) {
-     Lndmobile.initLNC(namespace, "info")
+  fun initLNC(namespace: String, promise: Promise) {
+     try {
+        Lndmobile.initLNC(namespace, "info")
+        promise.resolve(null)
+     } catch(e: Throwable) {
+        Log.e("LncModule", "initLNC error", e)
+        promise.reject("initLNC_error", e)
+     }
   }
 
   @ReactMethod
@@ -128,15 +134,34 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
   }
 
   @ReactMethod
-  fun disconnect(namespace: String) {
-     Lndmobile.disconnect(namespace)
+  fun disconnect(namespace: String, promise: Promise) {
+     try {
+        Lndmobile.disconnect(namespace)
+     } catch(e: Throwable) {
+        // A namespace that was never initialized is already "disconnected";
+        // callers tear down before re-initializing and must not be blocked.
+        Log.e("LncModule", "disconnect error", e)
+     }
+     promise.resolve(null)
   }
 
   @ReactMethod
   fun invokeRPC(namespace: String, route: String, requestData: String, rnCallback: Callback) {
      val gocb = AndroidCallback()
      gocb.setCallback(rnCallback)
-     Lndmobile.invokeRPC(namespace, route, requestData, gocb)
+     try {
+        Lndmobile.invokeRPC(namespace, route, requestData, gocb)
+     } catch(e: Throwable) {
+        // InvokeRPC fails synchronously for "unknown namespace", "RPC
+        // connection not ready" and unknown routes, and never calls the
+        // callback in that case. Letting the exception escape left the JS
+        // promise pending forever, which surfaced as a wallet stuck on
+        // "connecting" instead of a connection error (ZEUS-4278). Route it
+        // through the same fire-once callback the Go side uses: JS treats a
+        // non-JSON payload as an error string.
+        Log.e("LncModule", "invokeRPC error", e)
+        gocb.sendResult(e.message ?: e.toString())
+     }
   }
 
   private fun sendEvent(event: String, data: String) {
@@ -153,7 +178,15 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
      val gocb = AndroidStreamingCallback()
      gocb.setEventName(eventName)
      gocb.setCallback(::sendEvent)
-     Lndmobile.invokeRPC(namespace, eventName, request, gocb)
+     try {
+        Lndmobile.invokeRPC(namespace, eventName, request, gocb)
+     } catch(e: Throwable) {
+        // Same synchronous-failure path as invokeRPC. Emit the message on the
+        // stream's own event so subscribers reject rather than wait forever;
+        // they already treat a non-JSON result as a raw Go error string.
+        Log.e("LncModule", "initListener error", e)
+        gocb.sendResult(e.message ?: e.toString())
+     }
   }
 
    // chantools

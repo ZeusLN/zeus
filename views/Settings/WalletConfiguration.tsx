@@ -733,7 +733,10 @@ export default class WalletConfiguration extends React.Component<
                         }
                     }
                     if (implementation === 'lightning-node-connect') {
-                        BackendUtils.disconnect();
+                        // Awaited: the edited wallet's session must be closed
+                        // and its credential writes flushed before the Wallet
+                        // view reinitializes on the same credentials.
+                        await BackendUtils.disconnect();
                     }
                     setConnectingStatus(true);
                     navigation.popTo('Wallet');

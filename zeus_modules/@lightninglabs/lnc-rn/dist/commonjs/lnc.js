@@ -16,7 +16,8 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
 /** The default values for the LncConfig options */
 const DEFAULT_CONFIG = {
   namespace: 'default',
-  serverHost: 'mailbox.terminal.lightning.today:443'
+  serverHost: 'mailbox.terminal.lightning.today:443',
+  requestTimeoutMs: 60000
 };
 
 // Native event names emitted by LncModule for the persistent register callbacks.
@@ -31,6 +32,13 @@ class LNC {
     _defineProperty(this, "lnd", void 0);
     _defineProperty(this, "_emitter", void 0);
     _defineProperty(this, "_subscriptions", []);
+    _defineProperty(this, "_requestTimeoutMs", void 0);
+    // InitLNC is fired from the constructor, which cannot await. Its outcome
+    // is parked here and rethrown from connect(), so a failed init surfaces
+    // as a connection error instead of a stream of 'unknown namespace'
+    // failures from every subsequent call.
+    _defineProperty(this, "_initPromise", void 0);
+    _defineProperty(this, "_initError", null);
     _defineProperty(this, "onLocalPrivCreate", keyHex => {
       _log.log.debug('local private key created: ' + keyHex);
       this.credentials.localKey = keyHex;
@@ -45,6 +53,7 @@ class LNC {
     // merge the passed in config with the defaults
     const config = Object.assign({}, DEFAULT_CONFIG, lncConfig);
     this._namespace = config.namespace;
+    this._requestTimeoutMs = config.requestTimeoutMs;
     if (config.credentialStore) {
       this.credentials = config.credentialStore;
     } else {
@@ -55,7 +64,9 @@ class LNC {
     }
     this.lnd = new _lncCore.LndApi(_createRpc.createRpc, this);
     this._emitter = new _reactNative.NativeEventEmitter(_reactNative.NativeModules.LncModule);
-    _reactNative.NativeModules.LncModule.initLNC(this._namespace);
+    this._initPromise = Promise.resolve(_reactNative.NativeModules.LncModule.initLNC(this._namespace)).then(() => undefined).catch(e => {
+      this._initError = e instanceof Error ? e : new Error(String((e === null || e === void 0 ? void 0 : e.message) ?? e));
+    });
   }
   async isConnected() {
     return await _reactNative.NativeModules.LncModule.isConnected(this._namespace);
@@ -79,6 +90,9 @@ class LNC {
    * @returns a promise that resolves when the connection is established
    */
   async connect() {
+    await this._initPromise;
+    if (this._initError) throw this._initError;
+
     // do not attempt to connect multiple times
     const connected = await this.isConnected();
     if (connected) return;
@@ -111,11 +125,15 @@ class LNC {
   }
 
   /**
-   * Disconnects from the proxy server
+   * Disconnects from the proxy server.
+   *
+   * Awaitable: callers that immediately re-init the same namespace must
+   * know the previous connection is closed first, because InitLNC replaces
+   * the namespace's mobile client outright without closing what was there.
    */
-  disconnect() {
+  async disconnect() {
     this._removeSubscriptions();
-    _reactNative.NativeModules.LncModule.disconnect(this._namespace);
+    await _reactNative.NativeModules.LncModule.disconnect(this._namespace);
   }
   _removeSubscriptions() {
     for (const sub of this._subscriptions) {
@@ -133,13 +151,29 @@ class LNC {
     return new Promise((resolve, reject) => {
       _log.log.debug(`${method} request`, request);
       const reqJSON = JSON.stringify(request || {});
+
+      // Backstop: the bridge callback is fire-once and has no error
+      // channel of its own, so a dropped invocation would leave this
+      // promise pending forever and wedge whatever awaits it. Every
+      // unary LND route is fast; a minute is generous.
+      let settled = false;
+      const timer = this._requestTimeoutMs > 0 ? setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        reject(new Error(`${method} timed out after ${this._requestTimeoutMs}ms`));
+      }, this._requestTimeoutMs) : undefined;
       _reactNative.NativeModules.LncModule.invokeRPC(this._namespace, method, reqJSON, response => {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
         try {
           const rawRes = JSON.parse(response);
           const res = (0, _lncCore.snakeKeysToCamel)(rawRes);
           _log.log.debug(`${method} response`, res);
           resolve(res);
         } catch {
+          // Not JSON: the native module has no separate error
+          // channel, so a raw Go error string arrives here.
           _log.log.debug(`${method} raw response`, response);
           reject(new Error(response));
           return;

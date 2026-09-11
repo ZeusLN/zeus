@@ -28,6 +28,14 @@ export default class LncCredentialStore implements CredentialStore {
     private _remoteKey = '';
     private _pairingPhrase = '';
 
+    // Serializes every keychain write and gives callers something to await.
+    // Writes are triggered from property setters (which cannot be async) that
+    // the LNC bridge drives from native callbacks, so without this a wallet
+    // switch could tear the store down mid-write. Losing localKey/remoteKey is
+    // unrecoverable: an LNC pairing phrase is single use, so a wallet whose
+    // keys never landed can never reconnect and has to be re-paired.
+    private writeQueue: Promise<void> = Promise.resolve();
+
     /**
      * Constructs a new `LncCredentialStore` instance
      */
@@ -80,6 +88,7 @@ export default class LncCredentialStore implements CredentialStore {
 
     /** Stores the host:port of the Lightning Node Connect proxy server to connect to */
     set serverHost(host: string) {
+        if (this.persisted.serverHost === host) return;
         this.persisted.serverHost = host;
         this._saveServerHost();
     }
@@ -89,11 +98,16 @@ export default class LncCredentialStore implements CredentialStore {
         return this._pairingPhrase;
     }
 
-    /** Stores the LNC pairing phrase used to initialize the connection to the LNC proxy */
+    /**
+     * Stores the LNC pairing phrase used to initialize the connection to the LNC proxy.
+     *
+     * In-memory only: the setter used to kick off an unawaited `load()`, which
+     * raced the awaited `load()` callers make and could resolve after the
+     * connection had already written new keys. Callers must `await load()`.
+     */
     set pairingPhrase(phrase: string) {
         this._pairingPhrase = phrase;
         this.persisted.pairingPhrase = phrase;
-        this.load(phrase);
     }
 
     /** Stores the local private key which LNC uses to reestablish a connection */
@@ -168,13 +182,22 @@ export default class LncCredentialStore implements CredentialStore {
         }
     }
 
+    /**
+     * Resolves once every write queued so far has hit the keychain. Callers
+     * tearing this store down (wallet switch, reconnect) must await it so a
+     * freshly paired wallet's keys are not dropped on the floor.
+     */
+    async flushWrites() {
+        await this.writeQueue;
+    }
+
     //
     // Private functions only used internally
     //
 
     private _saveServerHost() {
         const hostKey = `${LNC_STORAGE_KEY}:${hash(this._pairingPhrase)}:host`;
-        Storage.setItem(hostKey, this.persisted.serverHost);
+        this._enqueue(hostKey, this.persisted.serverHost);
     }
 
     /** Saves persisted data to Storage */
@@ -183,7 +206,30 @@ export default class LncCredentialStore implements CredentialStore {
         if (!this._localKey) return;
         if (!this._remoteKey) return;
         const baseKey = `${LNC_STORAGE_KEY}:${hash(this._pairingPhrase)}`;
-        Storage.setItem(baseKey, this.persisted);
+        this._enqueue(baseKey, { ...this.persisted });
+    }
+
+    private _enqueue(key: string, value: any) {
+        this.writeQueue = this.writeQueue
+            .then(async () => {
+                await Storage.setItem(key, value);
+                // Read back: a silently dropped keychain write is the one
+                // failure mode this store cannot recover from, so make it
+                // loud rather than discovering it on the next launch. An
+                // empty value is a deliberate delete in Storage, so there is
+                // nothing to read back.
+                if (value === '' || value == null) return;
+                const readBack = await Storage.getItem(key);
+                if (!readBack) {
+                    throw new Error(`write to ${key} did not persist`);
+                }
+            })
+            .catch((error) => {
+                console.error(
+                    'LNC credential store: failed to persist credentials',
+                    (error as Error)?.message
+                );
+            });
     }
 }
 

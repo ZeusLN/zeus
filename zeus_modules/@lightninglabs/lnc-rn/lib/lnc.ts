@@ -12,7 +12,8 @@ import { log } from './util/log';
 /** The default values for the LncConfig options */
 const DEFAULT_CONFIG = {
     namespace: 'default',
-    serverHost: 'mailbox.terminal.lightning.today:443'
+    serverHost: 'mailbox.terminal.lightning.today:443',
+    requestTimeoutMs: 60000
 } as Required<LncConfig>;
 
 // Native event names emitted by LncModule for the persistent register callbacks.
@@ -29,12 +30,20 @@ export default class LNC {
 
     private _emitter: NativeEventEmitter;
     private _subscriptions: EmitterSubscription[] = [];
+    private _requestTimeoutMs: number;
+    // InitLNC is fired from the constructor, which cannot await. Its outcome
+    // is parked here and rethrown from connect(), so a failed init surfaces
+    // as a connection error instead of a stream of 'unknown namespace'
+    // failures from every subsequent call.
+    private _initPromise: Promise<void>;
+    private _initError: Error | null = null;
 
     constructor(lncConfig?: LncConfig) {
         // merge the passed in config with the defaults
         const config = Object.assign({}, DEFAULT_CONFIG, lncConfig);
 
         this._namespace = config.namespace;
+        this._requestTimeoutMs = config.requestTimeoutMs;
 
         if (config.credentialStore) {
             this.credentials = config.credentialStore;
@@ -49,7 +58,14 @@ export default class LNC {
 
         this.lnd = new LndApi(createRpc, this);
         this._emitter = new NativeEventEmitter(NativeModules.LncModule);
-        NativeModules.LncModule.initLNC(this._namespace);
+        this._initPromise = Promise.resolve(
+            NativeModules.LncModule.initLNC(this._namespace)
+        )
+            .then(() => undefined)
+            .catch((e: any) => {
+                this._initError =
+                    e instanceof Error ? e : new Error(String(e?.message ?? e));
+            });
     }
 
     onLocalPrivCreate = (keyHex: string) => {
@@ -95,6 +111,9 @@ export default class LNC {
      * @returns a promise that resolves when the connection is established
      */
     async connect() {
+        await this._initPromise;
+        if (this._initError) throw this._initError;
+
         // do not attempt to connect multiple times
         const connected = await this.isConnected();
         if (connected) return;
@@ -151,11 +170,15 @@ export default class LNC {
     }
 
     /**
-     * Disconnects from the proxy server
+     * Disconnects from the proxy server.
+     *
+     * Awaitable: callers that immediately re-init the same namespace must
+     * know the previous connection is closed first, because InitLNC replaces
+     * the namespace's mobile client outright without closing what was there.
      */
-    disconnect() {
+    async disconnect() {
         this._removeSubscriptions();
-        NativeModules.LncModule.disconnect(this._namespace);
+        await NativeModules.LncModule.disconnect(this._namespace);
     }
 
     private _removeSubscriptions() {
@@ -174,17 +197,41 @@ export default class LNC {
         return new Promise((resolve, reject) => {
             log.debug(`${method} request`, request);
             const reqJSON = JSON.stringify(request || {});
+
+            // Backstop: the bridge callback is fire-once and has no error
+            // channel of its own, so a dropped invocation would leave this
+            // promise pending forever and wedge whatever awaits it. Every
+            // unary LND route is fast; a minute is generous.
+            let settled = false;
+            const timer =
+                this._requestTimeoutMs > 0
+                    ? setTimeout(() => {
+                          if (settled) return;
+                          settled = true;
+                          reject(
+                              new Error(
+                                  `${method} timed out after ${this._requestTimeoutMs}ms`
+                              )
+                          );
+                      }, this._requestTimeoutMs)
+                    : undefined;
+
             NativeModules.LncModule.invokeRPC(
                 this._namespace,
                 method,
                 reqJSON,
                 (response: string) => {
+                    if (settled) return;
+                    settled = true;
+                    if (timer) clearTimeout(timer);
                     try {
                         const rawRes = JSON.parse(response);
                         const res = snakeKeysToCamel(rawRes);
                         log.debug(`${method} response`, res);
                         resolve(res as TRes);
                     } catch {
+                        // Not JSON: the native module has no separate error
+                        // channel, so a raw Go error string arrives here.
                         log.debug(`${method} raw response`, response);
                         reject(new Error(response));
                         return;

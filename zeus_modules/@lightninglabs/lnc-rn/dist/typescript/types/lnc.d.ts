@@ -16,6 +16,13 @@ export interface LncConfig {
      */
     pairingPhrase?: string;
     /**
+     * How long a unary `request` waits for the native bridge callback before
+     * rejecting. The callback is fire-once and carries no error channel, so
+     * without this a dropped invocation leaves the promise pending forever.
+     * Defaults to 60000. Set to 0 to wait indefinitely.
+     */
+    requestTimeoutMs?: number;
+    /**
      * Custom store used to save & load the pairing phrase and keys needed to
      * connect to the proxy server.
      */
