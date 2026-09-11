@@ -2266,6 +2266,7 @@
     "cashu.lockTo": "Bloqueado a",
     "cashu.locktime": "Bloqueado hasta",
     "cashu.lock": "Bloquear",
+    "cashu.removeLock": "Remove lock",
     "cashu.noContactsWithCashuPubkey": "No hay contactos con Cashu pubkey",
     "cashu.noDuration": "sin duración",
     "cashu.duration.1Day": "1 Dia",
