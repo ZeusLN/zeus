@@ -73,3 +73,58 @@ describe('BalanceStore error flag', () => {
         expect(store.totalBlockchainBalance).toEqual(50);
     });
 });
+
+// getCombinedBalance awaits lightning, then on-chain, and each success
+// clears the shared error flag. A leg that failed returns undefined and
+// must not zero its balances: with the error pane down, a zeroed balance
+// would render as 0 sats instead of the last known value.
+describe('getCombinedBalance partial failures', () => {
+    it('holds the last lightning balance when only that leg fails', async () => {
+        BackendUtilsMock.getLightningBalance
+            .mockResolvedValueOnce({
+                balance: 500000,
+                pending_open_balance: 100
+            })
+            .mockRejectedValueOnce(new Error('Request timeout'));
+        BackendUtilsMock.getBlockchainBalance.mockResolvedValue({
+            confirmed_balance: 50,
+            unconfirmed_balance: 0
+        });
+        const store = newStore();
+
+        await store.getCombinedBalance();
+        expect(store.lightningBalance).toEqual(500000);
+        expect(store.pendingOpenBalance).toEqual(100);
+
+        await store.getCombinedBalance();
+
+        expect(store.error).toEqual(false);
+        expect(store.lightningBalance).toEqual(500000);
+        expect(store.pendingOpenBalance).toEqual(100);
+        expect(store.totalBlockchainBalance).toEqual(50);
+    });
+
+    it('holds the last on-chain balance when only that leg fails', async () => {
+        BackendUtilsMock.getLightningBalance.mockResolvedValue({
+            balance: 500000,
+            pending_open_balance: 0
+        });
+        BackendUtilsMock.getBlockchainBalance
+            .mockResolvedValueOnce({
+                confirmed_balance: 50,
+                unconfirmed_balance: 0
+            })
+            .mockRejectedValueOnce(new Error('Request timeout'));
+        const store = newStore();
+
+        await store.getCombinedBalance();
+        expect(store.totalBlockchainBalance).toEqual(50);
+
+        await store.getCombinedBalance();
+
+        // on-chain resolves last, so its failure still raises the pane
+        expect(store.error).toEqual(true);
+        expect(store.totalBlockchainBalance).toEqual(50);
+        expect(store.lightningBalance).toEqual(500000);
+    });
+});

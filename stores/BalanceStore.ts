@@ -175,16 +175,21 @@ export default class BalanceStore {
         }
 
         runInAction(() => {
-            // LN
-            this.pendingOpenBalance = lightning?.pendingOpenBalance || 0;
-            this.lightningBalance = lightning?.lightningBalance || 0;
-            // on-chain
-            this.otherAccounts = onChain?.accounts || [];
-            this.unconfirmedBlockchainBalance =
-                onChain?.unconfirmedBlockchainBalance || 0;
-            this.confirmedBlockchainBalance =
-                onChain?.confirmedBlockchainBalance || 0;
-            this.totalBlockchainBalance = onChain?.totalBlockchainBalance || 0;
+            // a failed leg returns undefined; hold its last known values
+            // rather than zeroing them, since a success on the other leg
+            // clears the error pane that used to cover the zeros
+            if (lightning) {
+                this.pendingOpenBalance = lightning.pendingOpenBalance;
+                this.lightningBalance = lightning.lightningBalance;
+            }
+            if (onChain) {
+                this.otherAccounts = onChain.accounts || [];
+                this.unconfirmedBlockchainBalance =
+                    onChain.unconfirmedBlockchainBalance;
+                this.confirmedBlockchainBalance =
+                    onChain.confirmedBlockchainBalance;
+                this.totalBlockchainBalance = onChain.totalBlockchainBalance;
+            }
         });
 
         return {
