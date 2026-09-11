@@ -1310,7 +1310,9 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
 
                     {!isPaid && (
                         <Button
-                            title={localeString('general.pay')}
+                            title={localeString(
+                                'pos.views.Order.requestPayment'
+                            )}
                             containerStyle={{ marginTop: 40 }}
                             onPress={() =>
                                 navigation.navigate(
