@@ -1324,28 +1324,57 @@ class MigrationsUtils {
                 (server) => server.startsWith(KEY_PREFIX)
             );
 
+            // Failures are contained PER KEY: SecItemCopyMatching returns
+            // servers in arbitrary order, so aborting the loop on the first
+            // bad key would leave an arbitrary subset uncopied. Only the
+            // settings blob has a synchronizable-partition read fallback in
+            // getSettings; any other uncopied key that a store writes before
+            // a later retry succeeds is permanently shadowed under
+            // copy-if-missing. Copying the maximum each pass keeps that
+            // window as small as possible and lets retries converge instead
+            // of re-failing at the same arbitrary point.
+            let failedCount = 0;
             for (const server of syncServers) {
-                const localValue = await getRawItem(server, false);
-                if (localValue !== null) continue;
+                try {
+                    const localValue = await getRawItem(server, false);
+                    if (localValue !== null) continue;
 
-                const syncValue = await getRawItem(server, true);
-                // Empty means deleted under Storage semantics; nothing to copy
-                if (!syncValue) continue;
+                    const syncValue = await getRawItem(server, true);
+                    // Empty means deleted under Storage semantics; nothing
+                    // to copy
+                    if (!syncValue) continue;
 
-                if (!settingsStore.isMigrating)
-                    settingsStore.isMigrating = true;
+                    if (!settingsStore.isMigrating)
+                        settingsStore.isMigrating = true;
 
-                await setRawLocalItem(server, syncValue);
+                    await setRawLocalItem(server, syncValue);
 
-                const verify = await getRawItem(server, false);
-                if (verify !== syncValue) {
-                    // Throw so the flag stays unset and the migration retries
-                    // on next boot instead of silently skipping this key
-                    // forever
-                    throw new Error(
-                        `Keychain desync migration verify failed for ${server}`
+                    const verify = await getRawItem(server, false);
+                    if (verify !== syncValue) {
+                        // Counted as a failure so the flag stays unset and
+                        // this key retries on the next boot instead of being
+                        // silently skipped forever
+                        throw new Error(
+                            `Keychain desync migration verify failed for ${server}`
+                        );
+                    }
+                } catch (error) {
+                    console.error(
+                        `Keychain desync migration failed for ${server}`,
+                        error
                     );
+                    failedCount++;
                 }
+            }
+
+            if (failedCount > 0) {
+                // Flag stays unset so the migration retries on the next
+                // boot; keys copied above are then skipped by the
+                // copy-if-missing guard and only the failed ones re-run
+                console.error(
+                    `Keychain desync migration incomplete (${failedCount} of ${syncServers.length} synchronizable zeus: entries failed)`
+                );
+                return;
             }
 
             await EncryptedStorage.setItem(KEYCHAIN_DESYNC_KEY, 'true');

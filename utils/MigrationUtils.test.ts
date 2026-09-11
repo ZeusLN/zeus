@@ -1350,7 +1350,7 @@ describe('MigrationUtils', () => {
             );
         });
 
-        it('aborts on verify mismatch without setting the flag or throwing', async () => {
+        it('holds the flag on verify mismatch without throwing', async () => {
             EncryptedStorage.getItem.mockResolvedValue(null);
             StorageModule.getInternetPasswordServers.mockResolvedValue([
                 'zeus:zeus-settings-v2'
@@ -1371,10 +1371,97 @@ describe('MigrationUtils', () => {
 
             expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
             expect(consoleErrorSpy).toHaveBeenCalledWith(
-                'Keychain desync migration failed',
+                'Keychain desync migration failed for zeus:zeus-settings-v2',
                 expect.objectContaining({
                     message: expect.stringContaining('verify failed')
                 })
+            );
+        });
+
+        it('contains per-key failures so remaining keys still copy, flag stays unset', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            StorageModule.getInternetPasswordServers.mockResolvedValue([
+                'zeus:zeus-contacts',
+                'zeus:zeus-settings-v2',
+                'zeus:zeus-notes-v2'
+            ]);
+            const partitions: Record<string, Record<string, string>> = {
+                sync: {
+                    'zeus:zeus-contacts': '[]',
+                    'zeus:zeus-settings-v2': '{"nodes":[]}',
+                    'zeus:zeus-notes-v2': '["note1"]'
+                },
+                local: {}
+            };
+            StorageModule.getRawItem.mockImplementation(
+                async (server: string, cloudSync: boolean) =>
+                    partitions[cloudSync ? 'sync' : 'local'][server] ?? null
+            );
+            StorageModule.setRawLocalItem.mockImplementation(
+                async (server: string, value: string) => {
+                    if (server === 'zeus:zeus-contacts')
+                        throw new Error('errSecInteractionNotAllowed');
+                    partitions.local[server] = value;
+                    return true;
+                }
+            );
+
+            await MigrationUtils.keychainDesyncMigration();
+
+            // Enumeration order is arbitrary, so the first key's failure
+            // must not abort the keys after it
+            expect(partitions.local['zeus:zeus-settings-v2']).toBe(
+                '{"nodes":[]}'
+            );
+            expect(partitions.local['zeus:zeus-notes-v2']).toBe('["note1"]');
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                'Keychain desync migration failed for zeus:zeus-contacts',
+                expect.any(Error)
+            );
+        });
+
+        it('retry after a partial failure copies only the failed key, then flags', async () => {
+            // State left by the previous test's scenario: two keys made it
+            // local, zeus:zeus-contacts did not, and the flag is unset
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            StorageModule.getInternetPasswordServers.mockResolvedValue([
+                'zeus:zeus-contacts',
+                'zeus:zeus-settings-v2',
+                'zeus:zeus-notes-v2'
+            ]);
+            const partitions: Record<string, Record<string, string>> = {
+                sync: {
+                    'zeus:zeus-contacts': '[]',
+                    'zeus:zeus-settings-v2': '{"nodes":[]}',
+                    'zeus:zeus-notes-v2': '["note1"]'
+                },
+                local: {
+                    'zeus:zeus-settings-v2': '{"nodes":[]}',
+                    'zeus:zeus-notes-v2': '["note1"]'
+                }
+            };
+            StorageModule.getRawItem.mockImplementation(
+                async (server: string, cloudSync: boolean) =>
+                    partitions[cloudSync ? 'sync' : 'local'][server] ?? null
+            );
+            StorageModule.setRawLocalItem.mockImplementation(
+                async (server: string, value: string) => {
+                    partitions.local[server] = value;
+                    return true;
+                }
+            );
+
+            await MigrationUtils.keychainDesyncMigration();
+
+            expect(StorageModule.setRawLocalItem).toHaveBeenCalledTimes(1);
+            expect(StorageModule.setRawLocalItem).toHaveBeenCalledWith(
+                'zeus:zeus-contacts',
+                '[]'
+            );
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'keychain-desync-v1',
+                'true'
             );
         });
 

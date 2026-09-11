@@ -1958,9 +1958,13 @@ export default class SettingsStore {
             if (!modernSettings && Platform.OS === 'ios') {
                 // An empty local partition is indistinguishable from a failed
                 // desync migration: the blob may still live only in the
-                // synchronizable partition. Read it there for this boot, but
-                // never write it back; all writes stay device-local, and the
-                // desync migration retries on the next launch.
+                // synchronizable partition. Read it there for this boot;
+                // nothing is ever written back to the synchronizable
+                // partition. The settings migrations below may persist the
+                // blob device-local via setSettings, which is fine: that
+                // content derives from this same read, so the desync retry
+                // skipping it under copy-if-missing loses nothing. All other
+                // keys still retry on the next launch.
                 try {
                     modernSettings = await getRawItem(
                         `${KEY_PREFIX}${STORAGE_KEY}`,
