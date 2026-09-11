@@ -35,6 +35,8 @@ import {
     CURRENCY_CODES_KEY
 } from '../stores/SettingsStore';
 
+import { SETTINGS_VERSION } from './SettingsVersion';
+
 import { LEGACY_NOTES_KEY, NOTES_KEY } from '../stores/NotesStore';
 import { LEGACY_CONTACTS_KEY, CONTACTS_KEY } from '../stores/ContactStore';
 import {
@@ -311,16 +313,30 @@ class MigrationsUtils {
             newSettings.locale = localeMigrationMapping[newSettings.locale];
         }
 
-        const MOD_KEY = 'lsp-taproot-mod';
-        const mod = await EncryptedStorage.getItem(MOD_KEY);
+        // One-shot MOD_KEY migrations. The flags are still read (once —
+        // this path only runs while a legacy blob exists) so migrations a
+        // previous app version already applied are not re-applied over
+        // values the user has since changed. They are no longer written,
+        // and no intermediate setSettings calls are made: the migrated
+        // blob is persisted once by storageMigrationV2 and stamped with
+        // settingsVersion, which the modern load path checks instead
+        // (#4470: fewer keystore ops).
+        const [mod, mod2, mod3, mod4, mod5, mod6, mod7, mod8] =
+            await Promise.all([
+                EncryptedStorage.getItem('lsp-taproot-mod'),
+                EncryptedStorage.getItem('lsp-preview-mod'),
+                EncryptedStorage.getItem('neutrino-peers-mod1'),
+                EncryptedStorage.getItem('lsps1-hosts1'),
+                EncryptedStorage.getItem('millisat_amounts'),
+                EncryptedStorage.getItem('egs-host'),
+                EncryptedStorage.getItem('bimodal-bug-9085'),
+                EncryptedStorage.getItem('nostr-relays-2024')
+            ]);
+
         if (!mod) {
             newSettings.requestSimpleTaproot = true;
-            await settingsStore.setSettings(newSettings);
-            await EncryptedStorage.setItem(MOD_KEY, 'true');
         }
 
-        const MOD_KEY2 = 'lsp-preview-mod';
-        const mod2 = await EncryptedStorage.getItem(MOD_KEY2);
         if (!mod2) {
             if (newSettings?.lspMainnet === 'https://lsp-preview.lnolymp.us') {
                 newSettings.lspMainnet = DEFAULT_LSP_MAINNET;
@@ -328,12 +344,8 @@ class MigrationsUtils {
             if (newSettings?.lspTestnet === 'https://testnet-lsp.lnolymp.us') {
                 newSettings.lspTestnet = DEFAULT_LSP_TESTNET;
             }
-            await settingsStore.setSettings(newSettings);
-            await EncryptedStorage.setItem(MOD_KEY2, 'true');
         }
 
-        const MOD_KEY3 = 'neutrino-peers-mod1';
-        const mod3 = await EncryptedStorage.getItem(MOD_KEY3);
         if (!mod3) {
             const neutrinoPeersMainnetOld = [
                 'btcd1.lnolymp.us',
@@ -349,12 +361,8 @@ class MigrationsUtils {
                 newSettings.neutrinoPeersMainnet =
                     DEFAULT_NEUTRINO_PEERS_MAINNET;
             }
-            await settingsStore.setSettings(newSettings);
-            await EncryptedStorage.setItem(MOD_KEY3, 'true');
         }
 
-        const MOD_KEY4 = 'lsps1-hosts1';
-        const mod4 = await EncryptedStorage.getItem(MOD_KEY4);
         if (!mod4) {
             if (!newSettings?.lsps1HostMainnet) {
                 newSettings.lsps1HostMainnet = DEFAULT_LSPS1_HOST_MAINNET;
@@ -378,13 +386,8 @@ class MigrationsUtils {
             if (!newSettings?.lsps1Token) {
                 newSettings.lsps1Token = '';
             }
-
-            await settingsStore.setSettings(newSettings);
-            await EncryptedStorage.setItem(MOD_KEY4, 'true');
         }
 
-        const MOD_KEY5 = 'millisat_amounts';
-        const mod5 = await EncryptedStorage.getItem(MOD_KEY5);
         if (!mod5) {
             if (!newSettings?.display?.showMillisatoshiAmounts) {
                 if (!newSettings.display) {
@@ -395,38 +398,23 @@ class MigrationsUtils {
                     newSettings.display.showMillisatoshiAmounts = true;
                 }
             }
-
-            await settingsStore.setSettings(newSettings);
-            await EncryptedStorage.setItem(MOD_KEY5, 'true');
         }
 
-        const MOD_KEY6 = 'egs-host';
-        const mod6 = await EncryptedStorage.getItem(MOD_KEY6);
         if (!mod6) {
             if (!newSettings?.speedloader) {
                 newSettings.speedloader = DEFAULT_SPEEDLOADER;
                 newSettings.customSpeedloader = '';
             }
-
-            await settingsStore.setSettings(newSettings);
-            await EncryptedStorage.setItem(MOD_KEY6, 'true');
         }
 
         // switch off bimodal pathfinding while bug exists
         // https://github.com/lightningnetwork/lnd/issues/9085
-        const MOD_KEY7 = 'bimodal-bug-9085';
-        const mod7 = await EncryptedStorage.getItem(MOD_KEY7);
         if (!mod7) {
             if (newSettings?.bimodalPathfinding) {
                 newSettings.bimodalPathfinding = false;
             }
-
-            await settingsStore.setSettings(newSettings);
-            await EncryptedStorage.setItem(MOD_KEY7, 'true');
         }
 
-        const MOD_KEY8 = 'nostr-relays-2024';
-        const mod8 = await EncryptedStorage.getItem(MOD_KEY8);
         if (!mod8) {
             if (
                 JSON.stringify(newSettings?.lightningAddress?.nostrRelays) ===
@@ -434,12 +422,7 @@ class MigrationsUtils {
             ) {
                 newSettings.lightningAddress.nostrRelays = DEFAULT_NOSTR_RELAYS;
             }
-
-            await settingsStore.setSettings(newSettings);
-            await EncryptedStorage.setItem(MOD_KEY8, 'true');
         }
-
-        await this.migrateInvoiceExpiryDisplay(newSettings);
 
         // migrate old POS squareEnabled setting to posEnabled
         if (newSettings?.pos?.squareEnabled) {
@@ -463,19 +446,99 @@ class MigrationsUtils {
                 DEFAULT_SLIDE_TO_PAY_THRESHOLD;
         }
 
-        // migrate retired v1 RGS endpoints to v2 (BOLT 12 offer support)
-        await this.migrateRgsDefaultsToV2(newSettings);
-
-        // migrate old default Olympus LSP hosts to new zeuslsp.com hosts
-        await this.migrateOlympusHostsToZeusLsp(newSettings);
-
-        // migrate retired ZEUS swap server hosts to Boltz
-        await this.migrateSwapHostsToBoltz(newSettings);
-
-        // move users off swap providers that have shut down
-        await this.migrateRetiredSwapHosts(newSettings);
+        // shared one-shot migrations + settingsVersion stamp; the result
+        // is persisted once by storageMigrationV2
+        await this.applySettingsMigrations(newSettings);
 
         return newSettings;
+    }
+
+    // ------------------------------------------------------------------
+    // Consolidated settings migrations (#4470)
+    //
+    // The blob carries a settingsVersion stamp (SETTINGS_VERSION in
+    // SettingsStore). A stamped blob skips migrations entirely, so the
+    // modern load path performs zero migration keystore reads per boot.
+    // Blobs without the stamp (installs predating it) get a one-time
+    // consolidation: the retired per-migration EncryptedStorage flags
+    // are read once so already-applied migrations are not re-applied
+    // over values the user has since changed, the needed mutations run
+    // in memory, and a single write (applySettingsUpdate's persist on
+    // the modern path, storageMigrationV2's on the legacy path) lands
+    // the result together with the stamp, so migrated values and
+    // migration state can no longer diverge if we crash mid-way. The
+    // retired flags are never written again; leftover entries are inert
+    // and cleared by Clear All Data.
+    //
+    // Adding a future migration: bump SETTINGS_VERSION, gate the new
+    // mutation on the blob's prior version (settings.settingsVersion ??
+    // 0), and leave the existing blocks untouched.
+    // ------------------------------------------------------------------
+    public async runSettingsMigrations(
+        settings: any,
+        inQueue: boolean = false
+    ) {
+        if ((settings?.settingsVersion ?? 0) >= SETTINGS_VERSION) {
+            return settings;
+        }
+
+        if (inQueue) {
+            // Inside the updateSettings queue's critical section
+            // (applySettingsUpdate -> getSettings(fromQueue) -> here):
+            // mutate in memory only. applySettingsUpdate persists right
+            // after this getSettings returns, so the migrated values and
+            // stamp ride that single serialized write; a write of our own
+            // would be redundant, and enqueueing would deadlock behind
+            // the very task awaiting us. The fact arrives as a parameter
+            // because settingsStore.settingsUpdateInProgress only says
+            // some update is in flight somewhere, not that we are on the
+            // queue's call stack.
+            await this.applySettingsMigrations(settings);
+            return settings;
+        }
+
+        // Outside the queue `settings` is a snapshot that can go stale
+        // before any write lands (the blob read and the flag reads all
+        // yield), and a concurrent updateSettings landing in that window
+        // would be clobbered by persisting it. Never touch the snapshot;
+        // enqueue a no-op update instead: its critical section re-runs
+        // getSettings on fresh state, which re-enters this method through
+        // the inQueue branch above.
+        return await settingsStore.updateSettings({});
+    }
+
+    // Applies every migration below the current SETTINGS_VERSION in
+    // memory and stamps the blob. Does NOT persist: applySettingsUpdate
+    // (modern path) and storageMigrationV2 (legacy path) own the write.
+    public async applySettingsMigrations(settings: any): Promise<boolean> {
+        const [rgsDone, olympusDone, swapDone, retiredSwapDone, expiryDone] =
+            await Promise.all([
+                EncryptedStorage.getItem('rgs-defaults-v2'),
+                EncryptedStorage.getItem('zeuslsp-hosts-2026'),
+                EncryptedStorage.getItem('swap-hosts-boltz'),
+                EncryptedStorage.getItem('swap-hosts-retired-eldamar'),
+                EncryptedStorage.getItem('invoices-expiry-display-fix-v2')
+            ]);
+
+        let changed = false;
+        if (!rgsDone) {
+            changed = this.applyRgsDefaultsToV2(settings) || changed;
+        }
+        if (!olympusDone) {
+            changed = this.applyOlympusHostsToZeusLsp(settings) || changed;
+        }
+        if (!swapDone) {
+            changed = this.applySwapHostsToBoltz(settings) || changed;
+        }
+        if (!retiredSwapDone) {
+            changed = this.applyRetiredSwapHosts(settings) || changed;
+        }
+        if (!expiryDone) {
+            changed = this.applyInvoiceExpiryDisplay(settings) || changed;
+        }
+
+        settings.settingsVersion = SETTINGS_VERSION;
+        return changed;
     }
 
     // Rewrite persisted v1 RGS endpoints to their v2 equivalents in a
@@ -490,13 +553,8 @@ class MigrationsUtils {
     // ('rgs-default-zeus'), which pinned the then-default into every
     // mainnet node; the values it wrote are matched here, so its flag is
     // no longer consulted and unset values are no longer pinned (#4470:
-    // fewer keystore ops). Must run on both the legacy and modern
-    // (zeus-settings-v2) paths.
-    public async migrateRgsDefaultsToV2(settings: any) {
-        const MOD_KEY_RGS_V2 = 'rgs-defaults-v2';
-        const modRgsV2 = await EncryptedStorage.getItem(MOD_KEY_RGS_V2);
-        if (modRgsV2) return settings;
-
+    // fewer keystore ops).
+    public applyRgsDefaultsToV2(settings: any): boolean {
         const urlMigrationsByNetwork: {
             [network: string]: { [oldUrl: string]: string };
         } = {
@@ -527,22 +585,14 @@ class MigrationsUtils {
                 }
             }
         }
-
-        if (changed) await settingsStore.setSettings(settings);
-        await EncryptedStorage.setItem(MOD_KEY_RGS_V2, 'true');
-        return settings;
+        return changed;
     }
 
     // Rewrite persisted old-default Olympus LSP hosts (lnolymp.us) to the
     // new zeuslsp.com hosts. Only values still equal to an old default are
     // touched; custom hosts are left alone. Unset values need no migration —
-    // runtime falls back to the (updated) DEFAULT_* constants. Must run on
-    // both the legacy and modern (zeus-settings-v2) paths.
-    public async migrateOlympusHostsToZeusLsp(settings: any) {
-        const MOD_KEY_ZEUSLSP = 'zeuslsp-hosts-2026';
-        const mod = await EncryptedStorage.getItem(MOD_KEY_ZEUSLSP);
-        if (mod) return settings;
-
+    // runtime falls back to the (updated) DEFAULT_* constants.
+    public applyOlympusHostsToZeusLsp(settings: any): boolean {
         const hostMigrations: Array<{
             settingsKey: string;
             oldHost: string;
@@ -587,21 +637,11 @@ class MigrationsUtils {
                 changed = true;
             }
         }
-
-        if (changed) {
-            await settingsStore.setSettings(settings);
-        }
-        await EncryptedStorage.setItem(MOD_KEY_ZEUSLSP, 'true');
-        return settings;
+        return changed;
     }
 
-    // migrate users pointed at the retired ZEUS swap server to Boltz.
-    // Must run on both the legacy and modern (zeus-settings-v2) paths.
-    public async migrateSwapHostsToBoltz(settings: any) {
-        const MOD_KEY_SWAP_HOSTS = 'swap-hosts-boltz';
-        const modSwapHosts = await EncryptedStorage.getItem(MOD_KEY_SWAP_HOSTS);
-        if (modSwapHosts) return settings;
-
+    // migrate users pointed at the retired ZEUS swap server to Boltz
+    public applySwapHostsToBoltz(settings: any): boolean {
         let changed = false;
         if (settings?.swaps) {
             if (settings.swaps.hostMainnet === LEGACY_ZEUS_SWAP_HOST_MAINNET) {
@@ -614,9 +654,7 @@ class MigrationsUtils {
             }
         }
 
-        if (changed) await settingsStore.setSettings(settings);
-        await EncryptedStorage.setItem(MOD_KEY_SWAP_HOSTS, 'true');
-        return settings;
+        return changed;
     }
 
     // Move users pinned to a swap provider that has shut down back to the
@@ -624,13 +662,11 @@ class MigrationsUtils {
     // entry in SWAP_HOST_KEYS_MAINNET, so the provider dropdown renders no
     // selection while every swap request goes to a dead endpoint. Custom
     // hosts are left alone: a retired host is only rewritten when it was
-    // picked from the dropdown, not typed in as a custom host. Must run on
-    // both the legacy and modern (zeus-settings-v2) paths.
-    public async migrateRetiredSwapHosts(settings: any) {
-        const MOD_KEY_RETIRED_SWAP_HOSTS = 'swap-hosts-retired-eldamar';
-        const mod = await EncryptedStorage.getItem(MOD_KEY_RETIRED_SWAP_HOSTS);
-        if (mod) return settings;
-
+    // picked from the dropdown, not typed in as a custom host. Retired
+    // flag: 'swap-hosts-retired-eldamar' (honored in
+    // applySettingsMigrations; installs that ran the migration before the
+    // stamp existed are not re-migrated over a since-changed value).
+    public applyRetiredSwapHosts(settings: any): boolean {
         let changed = false;
         if (
             settings?.swaps?.hostMainnet &&
@@ -639,10 +675,7 @@ class MigrationsUtils {
             settings.swaps.hostMainnet = DEFAULT_SWAP_HOST_MAINNET;
             changed = true;
         }
-
-        if (changed) await settingsStore.setSettings(settings);
-        await EncryptedStorage.setItem(MOD_KEY_RETIRED_SWAP_HOSTS, 'true');
-        return settings;
+        return changed;
     }
 
     // Repair invoice expiry display fields when out of sync with
@@ -652,47 +685,39 @@ class MigrationsUtils {
     // "3600 hours" while invoices still expired in one hour. Derive a
     // canonical seconds value (stored → derived from expiry+timePeriod
     // → '3600') and rewrite all three fields from it when anything is
-    // missing or inconsistent. Must run on both the legacy and modern
-    // (zeus-settings-v2) paths.
-    public async migrateInvoiceExpiryDisplay(settings: any) {
-        const MOD_KEY_INVOICE_EXPIRY = 'invoices-expiry-display-fix-v2';
-        const modInvoiceExpiry = await EncryptedStorage.getItem(
-            MOD_KEY_INVOICE_EXPIRY
-        );
-        if (modInvoiceExpiry) return settings;
-
+    // missing or inconsistent (#4149). Value-conditional: consistent
+    // settings are left untouched.
+    public applyInvoiceExpiryDisplay(settings: any): boolean {
         const invoices: any = settings?.invoices;
-        if (invoices) {
-            const storedValid = Number(invoices.expirySeconds) > 0;
-            const derivable = invoices.expiry && invoices.timePeriod;
-            const canonical = storedValid
-                ? invoices.expirySeconds
-                : derivable
-                ? expirySecondsFromInput(
-                      invoices.expiry,
-                      invoices.timePeriod as TimePeriod
-                  )
-                : '3600';
+        if (!invoices) return false;
 
-            const inconsistent =
-                !invoices.expiry ||
-                !invoices.timePeriod ||
-                invoices.expirySeconds !== canonical ||
-                expirySecondsFromInput(
-                    invoices.expiry,
-                    invoices.timePeriod as TimePeriod
-                ) !== canonical;
+        const storedValid = Number(invoices.expirySeconds) > 0;
+        const derivable = invoices.expiry && invoices.timePeriod;
+        const canonical = storedValid
+            ? invoices.expirySeconds
+            : derivable
+            ? expirySecondsFromInput(
+                  invoices.expiry,
+                  invoices.timePeriod as TimePeriod
+              )
+            : '3600';
 
-            if (inconsistent) {
-                const repaired = displayFromExpirySeconds(canonical);
-                invoices.expiry = repaired.expiry;
-                invoices.timePeriod = repaired.timePeriod;
-                invoices.expirySeconds = canonical;
-                await settingsStore.setSettings(settings);
-            }
-        }
-        await EncryptedStorage.setItem(MOD_KEY_INVOICE_EXPIRY, 'true');
-        return settings;
+        const inconsistent =
+            !invoices.expiry ||
+            !invoices.timePeriod ||
+            invoices.expirySeconds !== canonical ||
+            expirySecondsFromInput(
+                invoices.expiry,
+                invoices.timePeriod as TimePeriod
+            ) !== canonical;
+
+        if (!inconsistent) return false;
+
+        const repaired = displayFromExpirySeconds(canonical);
+        invoices.expiry = repaired.expiry;
+        invoices.timePeriod = repaired.timePeriod;
+        invoices.expirySeconds = canonical;
+        return true;
     }
 
     // Rescue-key export file cleanup, in two parts with different cadences.

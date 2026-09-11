@@ -8,6 +8,7 @@ import BackendUtils from '../utils/BackendUtils';
 import { getSupportedBiometryType } from '../utils/BiometricUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
+import { SETTINGS_VERSION } from '../utils/SettingsVersion';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import {
     DEFAULT_SCORER_URL,
@@ -24,6 +25,12 @@ import LoginRequest from '../models/LoginRequest';
 
 const LEGACY_STORAGE_KEY = 'zeus-settings';
 export const STORAGE_KEY = 'zeus-settings-v2';
+
+// Version stamp for the CONTENT of the settings blob (the storage key's
+// -v2 suffix versions the key namespace, not the content). Defined in a
+// dependency-free module so version-gating tests exercise the real
+// value; re-exported here for consumers of the settings schema.
+export { SETTINGS_VERSION };
 
 export const LEGACY_CURRENCY_CODES_KEY = 'currency-codes';
 export const CURRENCY_CODES_KEY = 'zeus-currency-codes';
@@ -188,6 +195,8 @@ interface SwapsSettings {
 }
 
 export interface Settings {
+    // see SETTINGS_VERSION; absent on blobs predating the stamp
+    settingsVersion?: number;
     nodes?: Array<Node>;
     selectedNode?: number;
     justDeletedWallet?: boolean;
@@ -1390,7 +1399,7 @@ export const LEGACY_ZEUS_SWAP_HOST_MAINNET = 'https://swaps.zeuslsp.com/api/v2';
 export const LEGACY_ZEUS_SWAP_HOST_TESTNET =
     'https://testnet-swaps.zeuslsp.com/api/v2';
 // Swap providers that have shut down; users pinned to one are moved
-// back to the default host by MigrationUtils.migrateRetiredSwapHosts
+// back to the default host by MigrationUtils.applyRetiredSwapHosts
 export const RETIRED_SWAP_HOSTS_MAINNET = ['https://boltz-api.eldamar.icu/v2'];
 
 export const DEFAULT_NOSTR_RELAYS_2023 = [
@@ -1486,6 +1495,7 @@ export const DEFAULT_SLIDE_TO_PAY_THRESHOLD = 10000;
 
 export default class SettingsStore {
     @observable settings: Settings = {
+        settingsVersion: SETTINGS_VERSION,
         privacy: {
             defaultBlockExplorer: 'mempool.space',
             customBlockExplorer: '',
@@ -1959,7 +1969,14 @@ export default class SettingsStore {
         }
     };
 
-    public getSettings = async (silentUpdate: boolean = false) => {
+    // fromQueue is true only for the call inside applySettingsUpdate's
+    // critical section; runSettingsMigrations branches on it to decide
+    // whether a consolidation may piggyback on that update's write or
+    // must enqueue one.
+    public getSettings = async (
+        silentUpdate: boolean = false,
+        fromQueue: boolean = false
+    ) => {
         if (!silentUpdate) this.loading = true;
         try {
             await MigrationsUtils.keychainCloudSyncMigration();
@@ -1971,16 +1988,13 @@ export default class SettingsStore {
                 console.log('attempting to load modern settings');
                 const parsedSettings = JSON.parse(modernSettings);
                 this.settings = parsedSettings;
-                await MigrationsUtils.migrateRgsDefaultsToV2(parsedSettings);
-                await MigrationsUtils.migrateSwapHostsToBoltz(parsedSettings);
-                await MigrationsUtils.migrateRetiredSwapHosts(parsedSettings);
-                await MigrationsUtils.migrateInvoiceExpiryDisplay(
-                    parsedSettings
+                // when consolidation routes through the updateSettings
+                // queue the authoritative object is the queue's, not this
+                // call's snapshot, so adopt the return value
+                this.settings = await MigrationsUtils.runSettingsMigrations(
+                    parsedSettings,
+                    fromQueue
                 );
-                await MigrationsUtils.migrateOlympusHostsToZeusLsp(
-                    parsedSettings
-                );
-                this.settings = parsedSettings;
             } else {
                 console.log('attempting to load legacy settings');
 
@@ -2055,7 +2069,9 @@ export default class SettingsStore {
     ) => {
         this.settingsUpdateInProgress = true;
         try {
-            const existingSettings = await this.getSettings();
+            // fromQueue: this is the queue's critical section, so a
+            // pending consolidation folds into this update's write
+            const existingSettings = await this.getSettings(false, true);
             // Functional updates read the settings inside the critical
             // section, so callers whose new value depends on the current
             // one (delete node X from the array) cannot act on a snapshot
