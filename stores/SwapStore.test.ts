@@ -46,8 +46,34 @@ jest.mock('./SettingsStore', () => ({
     default: class {},
     DEFAULT_SWAP_HOST_MAINNET: 'https://satsrouting.exchange/v2',
     DEFAULT_SWAP_HOST_TESTNET: 'https://api.testnet.boltz.exchange/v2',
-    SWAP_HOST_KEYS_MAINNET: [],
-    SWAP_HOST_KEYS_TESTNET: []
+    SWAP_HOST_KEYS_MAINNET: [
+        {
+            key: 'SATS Routing',
+            value: 'https://satsrouting.exchange/v2',
+            pro: false,
+            supportsRescue: true
+        },
+        {
+            key: 'Custom',
+            value: 'Custom',
+            pro: true,
+            supportsRescue: true
+        }
+    ],
+    SWAP_HOST_KEYS_TESTNET: [
+        {
+            key: 'Boltz',
+            value: 'https://api.testnet.boltz.exchange/v2',
+            pro: false,
+            supportsRescue: true
+        },
+        {
+            key: 'Custom',
+            value: 'Custom',
+            pro: true,
+            supportsRescue: true
+        }
+    ]
 }));
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -187,5 +213,69 @@ describe('SwapStore.getLockupTransaction', () => {
                 'https://host.example/v2'
             )
         ).resolves.toEqual(LOCKUP);
+    });
+});
+
+describe('SwapStore Pro referral gating', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    const store = (swaps: any, isTestNet = false) =>
+        new SwapStore(
+            { nodeInfo: { isTestNet } } as any,
+            { settings: { swaps } } as any
+        );
+
+    it('sends the Referral header on a pro host', () => {
+        const s = store({ hostMainnet: 'Custom', proEnabled: true });
+
+        expect(s.isProHost).toBe(true);
+        expect(s.getHeaders).toEqual({
+            'Content-Type': 'application/json',
+            Referral: 'pro'
+        });
+        expect(s.referralId).toBe('pro');
+    });
+
+    it('withholds the Referral header when the selected host has no pro tier', () => {
+        // A migration can move a user onto a non-pro host without clearing
+        // proEnabled, and the Pro switch only renders for pro hosts, so the
+        // stale flag would otherwise be both live and unreachable.
+        const s = store({
+            hostMainnet: 'https://satsrouting.exchange/v2',
+            proEnabled: true
+        });
+
+        expect(s.isProHost).toBe(false);
+        expect(s.getHeaders).toBeUndefined();
+        expect(s.referralId).toBeUndefined();
+    });
+
+    it('resolves an unset host to the default, which has no pro tier', () => {
+        const s = store({ proEnabled: true });
+
+        expect(s.isProHost).toBe(false);
+        expect(s.getHeaders).toBeUndefined();
+    });
+
+    it('keeps Pro on a testnet custom host while mainnet sits on a non-pro one', () => {
+        // proEnabled is one flag shared across networks, so the mainnet
+        // selection must not decide the testnet header.
+        const swaps = {
+            hostMainnet: 'https://satsrouting.exchange/v2',
+            hostTestnet: 'Custom',
+            customHost: 'https://my-boltz.local/v2',
+            proEnabled: true
+        };
+
+        expect(store(swaps, true).isProHost).toBe(true);
+        expect(store(swaps, false).isProHost).toBe(false);
+    });
+
+    it('withholds the header when proEnabled is off, pro host or not', () => {
+        const s = store({ hostMainnet: 'Custom', proEnabled: false });
+
+        expect(s.isProHost).toBe(true);
+        expect(s.getHeaders).toBeUndefined();
+        expect(s.referralId).toBeUndefined();
     });
 });
