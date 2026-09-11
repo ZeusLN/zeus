@@ -33,8 +33,6 @@ export interface CashuLockSettingsParams extends SendEcashParams {
     // Forwarded through the contact-picker round trip (CashuLockSettings ->
     // Contacts/ContactDetails -> CashuLockSettings) since that hop pushes a
     // second instance whose own currentLockPubkey param is empty - without
-    // this, "Remove lock" would wrongly disappear on that instance (#4637
-    // follow-up flagged in review).
     hasExistingLock?: boolean;
 }
 interface CashuLockSettingsProps {
@@ -550,7 +548,8 @@ export default class CashuLockSettings extends React.Component<
                                     showCustomDuration,
                                     customDurationValue,
                                     customDurationUnit,
-                                    selectedDurationIndex
+                                    selectedDurationIndex,
+                                    hasExistingLock
                                 } = this.state;
                                 navigation.navigate('Contacts', {
                                     SendScreen: true,
@@ -563,7 +562,7 @@ export default class CashuLockSettings extends React.Component<
                                     customDurationValue,
                                     customDurationUnit,
                                     selectedDurationIndex,
-                                    hasExistingLock: this.state.hasExistingLock
+                                    hasExistingLock
                                 });
                             }}
                             style={{ position: 'absolute', right: 10 }}
