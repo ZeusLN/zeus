@@ -937,7 +937,7 @@
     "views.Send.payBolt12.offersNotSupported": "Il backend non supporta BOLT 12",
     "views.ClinkPay.title": "Paga offerta CLINK",
     "views.ClinkPay.invalidOffer": "Offerta CLINK non valida",
-    "views.ClinkPay.specifyAmount": "Per questo offerta, deve essere specificato un importo",
+    "views.ClinkPay.specifyAmount": "Per questa offerta, deve essere specificato un importo",
     "views.ClinkPay.fixedAmount": "Importo fisso",
     "views.ClinkPay.variableAmount": "Importo variabile",
     "views.ClinkPay.spontaneousAmount": "Paga un importo qualsiasi",
