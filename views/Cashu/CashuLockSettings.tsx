@@ -156,7 +156,12 @@ export default class CashuLockSettings extends React.Component<
                 error: ''
             });
         }
-        this.props.navigation.setParams({} as SendEcashParams);
+        // Clear all route params: the constructor and componentDidMount read
+        // theirs on mount, and the block above reads what the contact picker
+        // sends back. `setParams({})` merged into the existing params and left
+        // `destination` in place, so this restore re-ran on every later focus
+        // and brought back a contact the user had already cleared.
+        this.props.navigation.replaceParams({});
     };
 
     handleContactSelection(pubkey: string) {
