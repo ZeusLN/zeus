@@ -234,8 +234,26 @@ class CashuDevKitModule: RCTEventEmitter {
             try await repo.createWallet(mintUrl: url, unit: unit, targetProofCount: nil)
             wallet = try await repo.getWallet(mintUrl: url, unit: unit)
         }
-        walletQueue.sync { wallets[normalized] = wallet }
-        return wallet
+        // Insert under the queue with a staleness check: this is the one map
+        // write that can land after a teardown drained the map (the repo was
+        // read before the create above, outside the queue), and an
+        // unconditional insert would park an orphaned Wallet - keeping the
+        // closed database alive via its own reference - in the map until the
+        // next initializeWallet drains it. The insert is also first-wins:
+        // two callers racing the first access to the same mint both reach
+        // here with a fresh handle, and an overwrite would drop the earlier
+        // one out of teardown's reach (the loser here is simply released by
+        // ARC)
+        let winner = walletQueue.sync { () -> Wallet? in
+            guard self.repo === repo else { return nil }
+            if let existing = wallets[normalized] { return existing }
+            wallets[normalized] = wallet
+            return wallet
+        }
+        guard let winner = winner else {
+            throw FfiError.Internal(errorMessage: "Wallet not initialized")
+        }
+        return winner
     }
 
     private var currentDbPath: String?
@@ -508,7 +526,6 @@ class CashuDevKitModule: RCTEventEmitter {
         Task {
             do {
                 let dbPath = getDatabasePath(for: mnemonic)
-                self.currentDbPath = dbPath
                 let sqliteDb = try WalletSqliteDatabase(filePath: dbPath)
 
                 let currencyUnit = parseCurrencyUnit(unit)
@@ -521,11 +538,24 @@ class CashuDevKitModule: RCTEventEmitter {
                     store: .custom(db: sqliteDb)
                 )
 
+                // ARC releases the outgoing wallet's handles as soon as these
+                // assignments drop the last reference, so the previous
+                // SQLite connection closes here (the Kotlin module has to
+                // destroy() its uniffi handles by hand - see disposeHandles).
+                // preparedSends is cleared for the same reason: a send
+                // prepared against the previous wallet must not outlive it.
                 walletQueue.sync {
                     self.db = sqliteDb
                     self.repo = newRepo
                     self.walletUnit = currencyUnit
                     self.wallets.removeAll()
+                    self.preparedSends.removeAll()
+                    // Publish the path only now that these are the handles
+                    // actually open: closeWalletDatabase keys its
+                    // dispose-before-unlink decision off this path, so one
+                    // published before construction succeeded would point
+                    // the guard at a database never opened here
+                    self.currentDbPath = dbPath
                     self.isInitialized = true
                 }
 
@@ -1702,13 +1732,19 @@ class CashuDevKitModule: RCTEventEmitter {
     @objc(deleteWalletDatabase:rejecter:)
     func deleteWalletDatabase(_ resolve: @escaping RCTPromiseResolveBlock,
                               reject: @escaping RCTPromiseRejectBlock) {
-        let path = self.currentDbPath
-        walletQueue.sync {
+        // Read the path in the same queue block that drops the handles:
+        // read outside it, a concurrent initializeWallet could swap wallets
+        // in between, disposing one wallet's handles and unlinking another's
+        // files
+        let path: String? = walletQueue.sync {
+            let open = self.currentDbPath
             self.repo = nil
             self.db = nil
             self.wallets.removeAll()
             self.preparedSends.removeAll()
             self.isInitialized = false
+            self.currentDbPath = nil
+            return open
         }
         guard let dbPath = path else {
             resolve(false)
@@ -1724,8 +1760,38 @@ class CashuDevKitModule: RCTEventEmitter {
                 }
             }
         }
-        self.currentDbPath = nil
         resolve(true)
+    }
+
+    /// Disposes the open CDK handles if, and only if, the database currently
+    /// open is `dbFileName`, compared by basename because the JS side cannot
+    /// reconstruct the absolute path this module resolves. The compare and
+    /// the teardown happen inside one walletQueue block, so a wallet switch
+    /// cannot land between the check and the act - the check-then-act gap a
+    /// JS-side getDatabasePath() + deleteWalletDatabase() pair has, where a
+    /// switch in the gap retargets the dispose (and its unlink) at the newly
+    /// opened wallet's database. Unlinks nothing: the caller owns file
+    /// deletion. ARC closes the SQLite connection as the last references
+    /// drop. Resolves true if the handles were disposed, false when no
+    /// database or a different wallet's is open.
+    @objc(closeWalletDatabase:resolver:rejecter:)
+    func closeWalletDatabase(_ dbFileName: String,
+                             resolve: @escaping RCTPromiseResolveBlock,
+                             reject: @escaping RCTPromiseRejectBlock) {
+        let disposed: Bool = walletQueue.sync {
+            guard let open = self.currentDbPath,
+                  (open as NSString).lastPathComponent == dbFileName else {
+                return false
+            }
+            self.repo = nil
+            self.db = nil
+            self.wallets.removeAll()
+            self.preparedSends.removeAll()
+            self.isInitialized = false
+            self.currentDbPath = nil
+            return true
+        }
+        resolve(disposed)
     }
 
     // MARK: - Cleanup

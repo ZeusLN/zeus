@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { BackHandler, Platform } from 'react-native';
+import CashuDevKit from '../cashu-cdk';
 import Storage from '../storage';
 
 import {
@@ -287,6 +288,21 @@ function cdkDatabaseDir(): string {
  * this destroys every wallet's ecash state.
  */
 export async function clearCDKDatabase(): Promise<void> {
+    // Close any live CDK handles (and delete the currently tracked db)
+    // before sweeping by filename, mirroring deleteCashuData's
+    // dispose-then-unlink order: unlinking under an open handle succeeds on
+    // POSIX but leaves the proof data reachable through the still-open
+    // connection until restart. Best effort: the sweep below is strictly
+    // broader (it catches every wallet's hashed db, not just the tracked
+    // one) and must run regardless.
+    try {
+        if (CashuDevKit.isAvailable()) {
+            await CashuDevKit.deleteWalletDatabase();
+        }
+    } catch (e) {
+        console.warn('[ClearData] Error disposing CDK database handles:', e);
+    }
+
     try {
         const dbDir = cdkDatabaseDir();
         const entries: string[] = await ReactNativeBlobUtil.fs.ls(dbDir);
@@ -321,6 +337,9 @@ export async function clearCDKDatabase(): Promise<void> {
  * rules match clearNodeKeychainData: only embedded-lnd and ldk-node have an
  * unambiguous namespace; remote nodes share the 'lnd' default, so deleting
  * "their" database could destroy another wallet's proofs.
+ *
+ * Disposes the native CDK handles first, but only when the open database is
+ * this wallet's - see the path-match guard below.
  */
 export async function clearCDKDatabaseForNode(node: any): Promise<void> {
     if (!node) return;
@@ -355,8 +374,44 @@ export async function clearCDKDatabaseForNode(node: any): Promise<void> {
             .digest('hex')
             .slice(0, 16);
         const dbDir = cdkDatabaseDir();
+        const dbFile = `cashu_wallet_${hash}.db`;
+
+        // Close the live CDK handle before unlinking, same reason as
+        // clearCDKDatabase: this runs for the ACTIVE wallet too
+        // (WalletConfiguration.deleteNodeConfig stops LND/LDK first, neither
+        // of which touches CDK), and a POSIX unlink under an open handle
+        // leaves the proofs readable through that connection for the rest of
+        // the session.
+        //
+        // closeWalletDatabase(dbFile) disposes the handles only if the
+        // database the native module currently has open IS this one, with
+        // the check and the teardown atomic under the native module's lock
+        // (CashuDevKitModule.kt/.swift). An unconditional dispose here would
+        // be a data-loss bug: deleteWalletDatabase() takes no argument and
+        // unlinks whatever database is open, so deleting wallet B while A is
+        // warm would destroy A's ecash. A JS-side getDatabasePath() check
+        // has the same flaw one window narrower: a wallet switch landing
+        // between the check and the dispose retargets the teardown at the
+        // newly opened wallet's database. The native compare is on basename
+        // because dbDir here is `${DocumentDir}/../files` on Android while
+        // native tracks the resolved absolute filesDir, so full paths never
+        // string-match. CDK holds one database open at a time and destroys
+        // the outgoing wallet's handles on switch (initializeWallet), so a
+        // non-match resolves false without touching anything: no connection
+        // is open on this file and the plain unlink below is already safe.
+        try {
+            if (CashuDevKit.isAvailable()) {
+                await CashuDevKit.closeWalletDatabase(dbFile);
+            }
+        } catch (e) {
+            console.warn(
+                '[ClearData] Error disposing CDK database handles for node:',
+                e
+            );
+        }
+
         for (const suffix of ['', '-wal', '-shm']) {
-            const path = `${dbDir}/cashu_wallet_${hash}.db${suffix}`;
+            const path = `${dbDir}/${dbFile}${suffix}`;
             try {
                 if (await ReactNativeBlobUtil.fs.exists(path)) {
                     await ReactNativeBlobUtil.fs.unlink(path);

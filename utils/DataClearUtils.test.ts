@@ -31,6 +31,20 @@ jest.mock('../storage', () => ({
     blockWrites: jest.fn()
 }));
 
+// Native CDK bridge. Both wipe paths must drop the SQLite handles before
+// unlinking, so isAvailable() defaults to true here: with the real (absent)
+// native module it returns false and the dispose branches would never run in
+// this suite.
+jest.mock('../cashu-cdk', () => ({
+    __esModule: true,
+    default: {
+        isAvailable: jest.fn().mockReturnValue(true),
+        getDatabasePath: jest.fn().mockResolvedValue(''),
+        deleteWalletDatabase: jest.fn().mockResolvedValue(true),
+        closeWalletDatabase: jest.fn().mockResolvedValue(true)
+    }
+}));
+
 // The functions under regression - assert clearAllData delegates to them.
 jest.mock('./LndMobileUtils', () => ({
     deleteLndWallet: jest.fn().mockResolvedValue(true)
@@ -143,6 +157,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import fs from 'fs';
 import path from 'path';
 
+import CashuDevKit from '../cashu-cdk';
 import Storage from '../storage';
 import { deriveEmbeddedNodeId } from './AezeedUtils';
 import {
@@ -810,12 +825,27 @@ describe('CDK database deletion', () => {
     const mockedUnlink = ReactNativeBlobUtil.fs.unlink as jest.Mock;
     const unlinkedPaths = () => mockedUnlink.mock.calls.map((call) => call[0]);
 
+    const mockedIsAvailable = CashuDevKit.isAvailable as jest.Mock;
+    const mockedDeleteWalletDatabase =
+        CashuDevKit.deleteWalletDatabase as jest.Mock;
+    const mockedCloseWalletDatabase =
+        CashuDevKit.closeWalletDatabase as jest.Mock;
+
+    // Dispose must precede every unlink: a POSIX unlink under a live handle
+    // succeeds while leaving the proofs readable through that connection.
+    const disposedBeforeFirstUnlink = (disposeMock: jest.Mock) =>
+        disposeMock.mock.invocationCallOrder[0] <
+        mockedUnlink.mock.invocationCallOrder[0];
+
     beforeEach(() => {
         jest.clearAllMocks();
         mockedStorageGetItem.mockResolvedValue(null);
         mockedLs.mockResolvedValue([]);
         mockedExists.mockResolvedValue(false);
         mockedUnlink.mockResolvedValue(undefined);
+        mockedIsAvailable.mockReturnValue(true);
+        mockedDeleteWalletDatabase.mockResolvedValue(true);
+        mockedCloseWalletDatabase.mockResolvedValue(true);
     });
 
     describe('clearCDKDatabase (full-wipe sweep)', () => {
@@ -848,6 +878,44 @@ describe('CDK database deletion', () => {
             await clearCDKDatabase();
 
             expect(mockedUnlink).toHaveBeenCalledTimes(2);
+        });
+
+        it('drops the live CDK handles before unlinking anything', async () => {
+            mockedLs.mockResolvedValue(['cashu_wallet_a.db']);
+
+            await clearCDKDatabase();
+
+            expect(mockedDeleteWalletDatabase).toHaveBeenCalled();
+            expect(disposedBeforeFirstUnlink(mockedDeleteWalletDatabase)).toBe(
+                true
+            );
+        });
+
+        // The prefix sweep is strictly broader than the native delete (it
+        // catches every wallet's hashed db, not just the tracked one), so a
+        // dispose failure must never abort it.
+        it('still sweeps when disposing the handles throws', async () => {
+            mockedDeleteWalletDatabase.mockRejectedValue(
+                new Error('NO_WALLET')
+            );
+            mockedLs.mockResolvedValue([
+                'cashu_wallet_a.db',
+                'cashu_wallet_b.db'
+            ]);
+
+            await clearCDKDatabase();
+
+            expect(mockedUnlink).toHaveBeenCalledTimes(2);
+        });
+
+        it('sweeps without disposing when the native module is absent', async () => {
+            mockedIsAvailable.mockReturnValue(false);
+            mockedLs.mockResolvedValue(['cashu_wallet_a.db']);
+
+            await clearCDKDatabase();
+
+            expect(mockedDeleteWalletDatabase).not.toHaveBeenCalled();
+            expect(mockedUnlink).toHaveBeenCalledTimes(1);
         });
     });
 
@@ -972,6 +1040,206 @@ describe('CDK database deletion', () => {
             });
 
             expect(mockedUnlink).not.toHaveBeenCalled();
+            expect(mockedCloseWalletDatabase).not.toHaveBeenCalled();
+        });
+
+        // This runs for the ACTIVE wallet too: deleteNodeConfig stops
+        // LND/LDK first, neither of which closes the CDK connection. The
+        // "is this the open database" check lives in closeWalletDatabase on
+        // the native side, atomic with the teardown under the module's lock:
+        // a JS-side getDatabasePath() check would leave a window where a
+        // wallet switch retargets the dispose at the newly opened wallet's
+        // database. What this suite can prove is the call shape - the
+        // basename argument, the ordering against the unlinks, and the
+        // failure paths; the atomicity itself is native.
+        describe('native handle disposal', () => {
+            const seedWords = ['abandon', 'ability', 'able', 'about'];
+            const seedDbFile = `cashu_wallet_${walletDbHash(
+                seedWords.join(' ')
+            )}.db`;
+
+            const deleteThisWallet = () =>
+                clearCDKDatabaseForNode({
+                    implementation: 'embedded-lnd',
+                    lndDir: 'lnd-abc'
+                });
+
+            beforeEach(() => {
+                mockedStorageGetItem.mockImplementation((key: string) =>
+                    key === 'lnd-abc-cashu-seed-phrase'
+                        ? Promise.resolve(JSON.stringify(seedWords))
+                        : Promise.resolve(null)
+                );
+                mockedExists.mockResolvedValue(true);
+            });
+
+            // Basename, not a path: native tracks the resolved absolute
+            // filesDir while JS builds `${DocumentDir}/../files`, so any
+            // path form would never match on the native side.
+            it('disposes via the atomic check-and-close, basename only, before unlinking', async () => {
+                await deleteThisWallet();
+
+                expect(mockedCloseWalletDatabase).toHaveBeenCalledWith(
+                    seedDbFile
+                );
+                expect(
+                    disposedBeforeFirstUnlink(mockedCloseWalletDatabase)
+                ).toBe(true);
+                // The blunt instrument stays reserved for the full wipe: it
+                // unlinks whatever db is open, so calling it here while a
+                // different wallet is warm would destroy that wallet's proofs
+                expect(mockedDeleteWalletDatabase).not.toHaveBeenCalled();
+            });
+
+            it('still unlinks when nothing was disposed (different or no wallet open)', async () => {
+                mockedCloseWalletDatabase.mockResolvedValue(false);
+
+                await deleteThisWallet();
+
+                expect(
+                    unlinkedPaths().some((p) => p.endsWith(seedDbFile))
+                ).toBe(true);
+            });
+
+            it('still unlinks when the dispose call throws', async () => {
+                mockedCloseWalletDatabase.mockRejectedValue(
+                    new Error('NO_WALLET')
+                );
+
+                await deleteThisWallet();
+
+                expect(
+                    unlinkedPaths().some((p) => p.endsWith(seedDbFile))
+                ).toBe(true);
+            });
+
+            it('unlinks without disposing when the native module is absent', async () => {
+                mockedIsAvailable.mockReturnValue(false);
+
+                await deleteThisWallet();
+
+                expect(mockedCloseWalletDatabase).not.toHaveBeenCalled();
+                expect(
+                    unlinkedPaths().some((p) => p.endsWith(seedDbFile))
+                ).toBe(true);
+            });
+
+            // Lockstep guards in the style of the filename-hashing scans
+            // above: the wrapper calls closeWalletDatabase, so its absence
+            // from either native module (or the ObjC bridge) would fail only
+            // on-device. Assert the atomicity carrier too - the compare must
+            // sit inside the same synchronized/queue block as the teardown.
+            it('is implemented atomically in the Android module', () => {
+                const source = fs.readFileSync(
+                    path.join(
+                        __dirname,
+                        '../android/app/src/main/java/com/zeus/cashudevkit/CashuDevKitModule.kt'
+                    ),
+                    'utf8'
+                );
+                expect(source).toContain('fun closeWalletDatabase');
+                const body = source.slice(
+                    source.indexOf('fun closeWalletDatabase')
+                );
+                expect(
+                    body.indexOf('synchronized(handleLock)')
+                ).toBeGreaterThan(-1);
+                expect(body.indexOf('synchronized(handleLock)')).toBeLessThan(
+                    body.indexOf('takeHandlesLocked()')
+                );
+            });
+
+            it('is implemented atomically in the iOS module and bridged', () => {
+                const source = fs.readFileSync(
+                    path.join(
+                        __dirname,
+                        '../ios/CashuDevKit/CashuDevKitModule.swift'
+                    ),
+                    'utf8'
+                );
+                expect(source).toContain('func closeWalletDatabase');
+                const body = source.slice(
+                    source.indexOf('func closeWalletDatabase')
+                );
+                expect(body.indexOf('walletQueue.sync')).toBeGreaterThan(-1);
+                expect(body.indexOf('walletQueue.sync')).toBeLessThan(
+                    body.indexOf('lastPathComponent')
+                );
+
+                const bridge = fs.readFileSync(
+                    path.join(
+                        __dirname,
+                        '../ios/CashuDevKit/CashuDevKitModule.m'
+                    ),
+                    'utf8'
+                );
+                expect(bridge).toContain('closeWalletDatabase:');
+            });
+
+            // getWallet's lazy insert is the one wallet-map write outside
+            // the locked teardown/init paths: created from a repo read taken
+            // before the lock, it can land after a teardown drained the map
+            // and park an undestroyed handle that keeps the unlinked
+            // database open until the next init. Assert the insert sits
+            // behind a same-repo check inside the lock/queue, and that it is
+            // first-wins: two callers racing the first access to the same
+            // mint must not overwrite (and thereby orphan) the earlier
+            // handle.
+            it('guards the lazy wallet-map insert in the Android module', () => {
+                const source = fs.readFileSync(
+                    path.join(
+                        __dirname,
+                        '../android/app/src/main/java/com/zeus/cashudevkit/CashuDevKitModule.kt'
+                    ),
+                    'utf8'
+                );
+                const body = source.slice(
+                    source.indexOf('suspend fun getWallet')
+                );
+                expect(
+                    body.indexOf('synchronized(handleLock)')
+                ).toBeGreaterThan(-1);
+                expect(body.indexOf('repo === currentRepo')).toBeGreaterThan(
+                    -1
+                );
+                expect(body.indexOf('synchronized(handleLock)')).toBeLessThan(
+                    body.indexOf('wallets[normalized] = wallet')
+                );
+                expect(body.indexOf('repo === currentRepo')).toBeLessThan(
+                    body.indexOf('wallets[normalized] = wallet')
+                );
+                const recheck = body.indexOf('wallets[normalized] ?:');
+                expect(recheck).toBeGreaterThan(
+                    body.indexOf('synchronized(handleLock)')
+                );
+                expect(recheck).toBeLessThan(
+                    body.indexOf('wallets[normalized] = wallet')
+                );
+            });
+
+            it('guards the lazy wallet-map insert in the iOS module', () => {
+                const source = fs.readFileSync(
+                    path.join(
+                        __dirname,
+                        '../ios/CashuDevKit/CashuDevKitModule.swift'
+                    ),
+                    'utf8'
+                );
+                const body = source.slice(source.indexOf('func getWallet'));
+                expect(body.indexOf('self.repo === repo')).toBeGreaterThan(-1);
+                expect(body.indexOf('self.repo === repo')).toBeLessThan(
+                    body.indexOf('wallets[normalized] = wallet')
+                );
+                const recheck = body.indexOf(
+                    'if let existing = wallets[normalized]'
+                );
+                expect(recheck).toBeGreaterThan(
+                    body.indexOf('self.repo === repo')
+                );
+                expect(recheck).toBeLessThan(
+                    body.indexOf('wallets[normalized] = wallet')
+                );
+            });
         });
     });
 });

@@ -850,6 +850,26 @@ class CashuDevKit {
             throw mapCDKError(error);
         }
     }
+
+    /**
+     * Close the wallet/database handles if, and only if, the database the
+     * native module currently has open is `dbFileName`. The basename compare
+     * and the handle teardown are atomic under the native module's lock, so a
+     * concurrent wallet switch cannot land between the check and the
+     * disposal. Never deletes files: the caller owns the unlink. Resolves
+     * whether the handles were disposed.
+     */
+    async closeWalletDatabase(dbFileName: string): Promise<boolean> {
+        try {
+            const disposed = await CashuDevKitModule.closeWalletDatabase(
+                dbFileName
+            );
+            if (disposed) this.initialized = false;
+            return disposed;
+        } catch (error) {
+            throw mapCDKError(error);
+        }
+    }
 }
 
 // Export singleton instance
