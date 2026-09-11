@@ -229,7 +229,7 @@ const QRScannerApp: React.FC<QRScannerAppProps> = ({
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#000" />
+            <StatusBar barStyle="light-content" />
 
             {/* Scanner View */}
             <View style={styles.scannerContainer}>
