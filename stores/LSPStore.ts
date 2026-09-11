@@ -1,5 +1,4 @@
 import { action, observable, reaction, runInAction } from 'mobx';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import { v4 as uuidv4 } from 'uuid';
 
 import SettingsStore, { getLspConfigForNetwork } from './SettingsStore';
@@ -17,6 +16,7 @@ import { getClientInfo } from '../utils/ClientInfoUtils';
 import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
+import { networkFetch } from '../utils/NetworkUtils';
 
 import Storage from '../storage';
 
@@ -271,11 +271,12 @@ export default class LSPStore {
 
     public getLSPInfo = () => {
         return new Promise((resolve, reject) => {
-            ReactNativeBlobUtil.fetch(
-                'get',
-                `${this.getFlowHost()}/api/v1/info`,
-                { 'Content-Type': 'application/json' }
-            )
+            networkFetch({
+                method: 'get',
+                url: `${this.getFlowHost()}/api/v1/info`,
+                headers: { 'Content-Type': 'application/json' },
+                enableTor: this.settingsStore.enableTor
+            })
                 .then(async (response: any) => {
                     const status = response.info().status;
                     let data: any;
@@ -349,20 +350,21 @@ export default class LSPStore {
         const { settings } = this.settingsStore;
 
         return new Promise((resolve, reject) => {
-            ReactNativeBlobUtil.fetch(
-                'post',
-                `${this.getFlowHost()}/api/v1/fee`,
-                settings.lspAccessKey
+            networkFetch({
+                method: 'post',
+                url: `${this.getFlowHost()}/api/v1/fee`,
+                headers: settings.lspAccessKey
                     ? {
                           'Content-Type': 'application/json',
                           'x-auth-token': settings.lspAccessKey
                       }
                     : { 'Content-Type': 'application/json' },
-                JSON.stringify({
+                body: JSON.stringify({
                     amount_msat,
                     pubkey: this.nodeInfoStore.nodeInfo.nodeId
-                })
-            )
+                }),
+                enableTor: this.settingsStore.enableTor
+            })
                 .then((response: any) => {
                     const status = response.info().status;
                     let data: any;
@@ -491,24 +493,25 @@ export default class LSPStore {
         const { settings } = this.settingsStore;
 
         return new Promise((resolve, reject) => {
-            ReactNativeBlobUtil.fetch(
-                'post',
-                `${this.getFlowHost()}/api/v1/proposal`,
-                settings.lspAccessKey
+            networkFetch({
+                method: 'post',
+                url: `${this.getFlowHost()}/api/v1/proposal`,
+                headers: settings.lspAccessKey
                     ? {
                           'Content-Type': 'application/json',
                           'x-auth-token': settings.lspAccessKey
                       }
                     : { 'Content-Type': 'application/json' },
-                JSON.stringify({
+                body: JSON.stringify({
                     bolt11,
                     fee_id: this.feeId,
                     simpleTaproot:
                         settings.requestSimpleTaproot &&
                         BackendUtils.supportsSimpleTaprootChannels(),
                     client_info: this.getClientInfo()
-                })
-            )
+                }),
+                enableTor: this.settingsStore.enableTor
+            })
                 .then(async (response: any) => {
                     const status = response.info().status;
                     let data: any;
@@ -739,7 +742,11 @@ export default class LSPStore {
 
         console.log('Fetching data from:', endpoint);
 
-        return ReactNativeBlobUtil.fetch('GET', endpoint)
+        return networkFetch({
+            method: 'GET',
+            url: endpoint,
+            enableTor: this.settingsStore.enableTor
+        })
             .then((response) => {
                 runInAction(() => {
                     if (response.info().status === 200) {
@@ -824,12 +831,13 @@ export default class LSPStore {
         const endpoint = `${this.getLSPS1Rest()}/api/v1/create_order`;
         console.log('Sending data to:', endpoint);
 
-        return ReactNativeBlobUtil.fetch(
-            'POST',
-            endpoint,
-            { 'Content-Type': 'application/json' },
-            data
-        )
+        return networkFetch({
+            method: 'POST',
+            url: endpoint,
+            headers: { 'Content-Type': 'application/json' },
+            body: data,
+            enableTor: this.settingsStore.enableTor
+        })
             .then((response) => {
                 const responseData = JSON.parse(response.data);
                 if (responseData.error) {
@@ -914,8 +922,13 @@ export default class LSPStore {
 
         console.log('Sending data to:', endpoint);
 
-        return ReactNativeBlobUtil.fetch('GET', endpoint, {
-            'Content-Type': 'application/json'
+        return networkFetch({
+            method: 'GET',
+            url: endpoint,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            enableTor: this.settingsStore.enableTor
         })
             .then((response) => {
                 const responseData = JSON.parse(response.data);
