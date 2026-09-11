@@ -1,3 +1,4 @@
+import { Platform } from 'react-native';
 import RNFS from 'react-native-fs';
 import { saveDocuments } from '@react-native-documents/picker';
 import * as CryptoJS from 'crypto-js';
@@ -22,6 +23,8 @@ export const MIN_EXPORT_PASSWORD_LENGTH = 8;
 // with a leading space would no longer open.
 export const isValidExportPassword = (password: string): boolean =>
     !!password && password.trim().length >= MIN_EXPORT_PASSWORD_LENGTH;
+
+export const NODE_CONFIG_EXPORT_EXT = '.zeus-wallet-config-backup';
 
 interface NodeConfigExport {
     version: number;
@@ -76,7 +79,7 @@ export const exportNodeConfigs = async (
     }
 
     const timestamp = moment().format('YYYYMMDD-HHmmss');
-    const filename = `${timestamp}.zeus-wallet-config-backup`;
+    const filename = `${timestamp}${NODE_CONFIG_EXPORT_EXT}`;
 
     const cacheDir = RNFS.CachesDirectoryPath;
     const plainPath = `${cacheDir}/zeus-nodeconfig-plain.tmp`;
@@ -131,6 +134,40 @@ export const exportNodeConfigs = async (
         await safeUnlink(plainPath);
         await safeUnlink(encPath);
         await safeUnlink(stagingPath);
+    }
+};
+
+// Best-effort removal of wallet config exports that older builds wrote to
+// shared storage (Android public Downloads, iOS Files-visible Documents).
+// They carry connection credentials, are optionally encrypted, and nothing
+// ever deleted them. Best-effort only: under Android scoped storage the file
+// can only be removed by the install that created it, and a failed unlink
+// can never succeed on a later retry.
+export const purgeLegacyNodeConfigExports = async (): Promise<void> => {
+    const dir =
+        Platform.OS === 'android'
+            ? RNFS.DownloadDirectoryPath
+            : RNFS.DocumentDirectoryPath;
+    try {
+        const entries = await RNFS.readDir(dir);
+        for (const entry of entries) {
+            if (entry.isFile() && entry.name.endsWith(NODE_CONFIG_EXPORT_EXT)) {
+                try {
+                    await RNFS.unlink(entry.path);
+                    console.log(
+                        'Legacy wallet config export deleted:',
+                        entry.path
+                    );
+                } catch (e) {
+                    console.warn(
+                        'Error deleting legacy wallet config export:',
+                        e
+                    );
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('Error purging legacy wallet config exports:', e);
     }
 };
 
