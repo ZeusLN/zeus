@@ -392,11 +392,12 @@ export default class LND {
         );
 
     getNewAddress = (data: any) => {
-        const params: any = { ...data };
-        const type = toLnrpcAddressType(params.type);
-        if (type !== undefined) params.type = type;
-        else delete params.type;
-        return this.getRequest('/v1/newaddress', params);
+        const { type, ...rest } = data;
+        const lnrpcType = toLnrpcAddressType(type);
+        return this.getRequest(
+            '/v1/newaddress',
+            lnrpcType === undefined ? rest : { ...rest, type: lnrpcType }
+        );
     };
     getNewChangeAddress = (data: any) =>
         this.postRequest('/v2/wallet/address/next', data);
@@ -1025,6 +1026,9 @@ export default class LND {
     supportsChannelCoinControl = () => this.supports('v0.17.0');
     supportsHopPicking = () => this.supports('v0.11.0');
     supportsAccounts = () => this.supports('v0.13.0');
+    // ImportAccountRequest.birthday_height and the rescan RPC are Zeus
+    // lnd-fork extensions; upstream lnd has neither
+    supportsAccountImportRescan = () => false;
     supportsRouting = () => true;
     supportsNodeInfo = () => true;
     supportsWithdrawalRequests = () => false;

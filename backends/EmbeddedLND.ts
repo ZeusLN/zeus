@@ -82,7 +82,10 @@ import {
     verifyMessageWithAddr as verifyMsgWithAddr
 } from '../lndmobile/wallet';
 
-import { toLnrpcAddressTypeNum } from '../utils/LndUtils';
+import {
+    toLnrpcAddressTypeNum,
+    toWalletrpcAddressTypeNum
+} from '../utils/LndUtils';
 
 export default class EmbeddedLND extends LND {
     openChannelListener: any;
@@ -132,7 +135,12 @@ export default class EmbeddedLND extends LND {
             data?.account
         );
     getNewChangeAddress = async (data: any) =>
-        await newChangeAddress(data.type, data.account);
+        // NextAddr takes walletrpc.AddressType numbering, which differs
+        // from lnrpc numbering; protobufjs would encode a name string as 0
+        await newChangeAddress(
+            toWalletrpcAddressTypeNum(data.type) as any,
+            data.account
+        );
     openChannelSync = async (data: OpenChannelRequest) =>
         await openChannelSync(
             data.node_pubkey_string,
@@ -567,6 +575,7 @@ export default class EmbeddedLND extends LND {
     supportsChannelCoinControl = () => this.supports('v0.17.0');
     supportsHopPicking = () => this.supports('v0.11.0');
     supportsAccounts = () => true;
+    supportsAccountImportRescan = () => true;
     supportsRouting = () => false;
     supportsNodeInfo = () => true;
     supportsWithdrawalRequests = () => false;

@@ -5,11 +5,10 @@ import SettingsStore from './SettingsStore';
 import SyncStore from './SyncStore';
 
 import BackendUtils from '../utils/BackendUtils';
+import { toWalletrpcAddressTypeName } from '../utils/LndUtils';
 
 import Account from '../models/Account';
 import Utxo from '../models/Utxo';
-
-import { walletrpc } from '../proto/lightning';
 
 export const LEGACY_HIDDEN_ACCOUNTS_KEY = 'hidden-accounts';
 export const HIDDEN_ACCOUNTS_KEY = 'zeus-hidden-accounts';
@@ -201,6 +200,29 @@ export default class UTXOsStore {
             });
     };
 
+    // Resolves an imported account's address type (as the walletrpc enum
+    // name) so address requests can match the account's key scope; lnd
+    // rejects requests whose type doesn't match it (ZEUS-2223 / ZEUS-2932).
+    public getAccountAddressType = async (
+        name: string
+    ): Promise<string | undefined> => {
+        const cached = this.accounts.find(
+            (account: any) => account.name === name
+        );
+        const cachedType = toWalletrpcAddressTypeName(cached?.address_type);
+        if (cachedType) return cachedType;
+        try {
+            const data = await BackendUtils.listAccounts();
+            const match = (data?.accounts || []).find(
+                (account: any) => account.name === name
+            );
+            return toWalletrpcAddressTypeName(match?.address_type);
+        } catch (e) {
+            console.error('error resolving account address type', e);
+            return undefined;
+        }
+    };
+
     @action
     public importAccount = (data: any) => {
         this.errorMsg = '';
@@ -220,13 +242,27 @@ export default class UTXOsStore {
             this.addresses_to_generate = data.addresses_to_generate || 50;
         }
 
-        if (this.start_height && !data.birthday_height) {
-            data.birthday_height = this.start_height;
+        // the dry run captures the birthday into start_height; the real
+        // import from ImportingAccount doesn't resend it
+        const birthday_height = data.birthday_height || this.start_height;
+
+        // addresses_to_generate only drives the Zeus-side address
+        // pre-generation above; no backend knows it. birthday_height is a
+        // Zeus lnd-fork extension (walletrpc ImportAccountRequest field 6)
+        // the embedded node uses to move the wallet birthday back to the
+        // account's; upstream lnd stops at dry_run = 5, and while REST
+        // silently drops unknown fields, LNC's proto JSON unmarshaler
+        // rejects the whole request over them.
+        const {
+            birthday_height: _birthdayHeight,
+            addresses_to_generate: _addressesToGenerate,
+            ...importRequest
+        } = data;
+        if (birthday_height && BackendUtils.supportsAccountImportRescan()) {
+            importRequest.birthday_height = birthday_height;
         }
 
-        console.log('importAccount req', data);
-
-        return BackendUtils.importAccount(data)
+        return BackendUtils.importAccount(importRequest)
             .then(async (response: any) => {
                 if (!data.dry_run) {
                     if (this.start_height) {
@@ -235,9 +271,9 @@ export default class UTXOsStore {
                             this.addresses_to_generate_progress = i + 1;
                             await BackendUtils.getNewAddress({
                                 account: this.accountToImport.account.name,
-                                type: walletrpc.AddressType[
+                                type: toWalletrpcAddressTypeName(
                                     this.accountToImport.account.address_type
-                                ]
+                                )
                             }).then((response: any) => {
                                 console.log(
                                     `generated address ${i}`,
@@ -246,9 +282,9 @@ export default class UTXOsStore {
                             });
                             await BackendUtils.getNewChangeAddress({
                                 account: this.accountToImport.account.name,
-                                type: walletrpc.AddressType[
+                                type: toWalletrpcAddressTypeName(
                                     this.accountToImport.account.address_type
-                                ],
+                                ),
                                 change: true
                             }).then((response: any) => {
                                 console.log(
@@ -258,20 +294,26 @@ export default class UTXOsStore {
                             });
                         }
 
-                        console.log(
-                            'Starting rescan at height',
-                            this.start_height
-                        );
+                        // rescan is a Zeus lnd-fork RPC; on backends
+                        // without it BackendUtils.call returns false and
+                        // the .then would throw into the outer catch,
+                        // reporting a successful import as failed
+                        if (BackendUtils.supportsAccountImportRescan()) {
+                            console.log(
+                                'Starting rescan at height',
+                                this.start_height
+                            );
 
-                        BackendUtils.rescan({
-                            start_height: this.start_height
-                        })
-                            .then((response: any) => {
-                                console.log('rescan resp', response);
+                            BackendUtils.rescan({
+                                start_height: this.start_height
                             })
-                            .catch((err: Error) => {
-                                console.log('rescan err', err);
-                            });
+                                .then((response: any) => {
+                                    console.log('rescan resp', response);
+                                })
+                                .catch((err: Error) => {
+                                    console.log('rescan err', err);
+                                });
+                        }
                     }
 
                     runInAction(() => {
@@ -279,6 +321,9 @@ export default class UTXOsStore {
                         this.error = false;
                         this.success = true;
                     });
+                    // refresh so the new account shows up on the balance
+                    // pane without a manual pull-to-refresh
+                    this.listAccounts();
                     return;
                 } else {
                     runInAction(() => {

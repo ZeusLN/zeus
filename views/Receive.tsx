@@ -69,9 +69,11 @@ import LightningAddressStore from '../stores/LightningAddressStore';
 import LSPStore from '../stores/LSPStore';
 import UnitsStore from '../stores/UnitsStore';
 import BalanceStore from '../stores/BalanceStore';
+import UTXOsStore from '../stores/UTXOsStore';
 
 import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
+import { toWalletrpcAddressTypeName } from '../utils/LndUtils';
 import { scanNfcTag } from '../utils/NFCUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
@@ -107,6 +109,7 @@ interface ReceiveProps {
     LSPStore: LSPStore;
     LightningAddressStore: LightningAddressStore;
     BalanceStore: BalanceStore;
+    UTXOsStore: UTXOsStore;
     route: Route<
         'Receive',
         {
@@ -149,6 +152,9 @@ interface ReceiveState {
     ampInvoice: boolean;
     routeHints: boolean;
     account: string;
+    // walletrpc address type name matching the non-default account's key
+    // scope, resolved from ListAccounts (undefined until resolved)
+    accountAddressType?: string;
     blindedPaths: boolean;
     nfcSupported: boolean;
     // POS
@@ -189,7 +195,8 @@ const LSP_MIN_CHANNEL_OPEN_FEE_SATS = 1000;
     'NodeInfoStore',
     'LightningAddressStore',
     'LSPStore',
-    'BalanceStore'
+    'BalanceStore',
+    'UTXOsStore'
 )
 @observer
 export default class Receive extends React.Component<
@@ -311,10 +318,15 @@ export default class Receive extends React.Component<
 
         const forceLsp = !!route.params?.forceLsp;
 
+        const { lnOnly, onChainOnly } = this.getReceiveModeFlags();
+
+        // In on-chain-only mode the lightning leg is never displayed, so
+        // the LSP must not wrap it (or surface fee UI for it)
         const lspIsActive =
             (settings?.enableLSP || forceLsp) &&
             BackendUtils.supportsFlowLSP() &&
-            !flowLspNotConfigured;
+            !flowLspNotConfigured &&
+            !onChainOnly;
 
         // Calculate invoice options once to avoid duplication
         const routeHints =
@@ -354,8 +366,6 @@ export default class Receive extends React.Component<
             LSPStore.getLSPInfo().catch(() => {});
         }
 
-        const { lnOnly, onChainOnly } = this.getReceiveModeFlags();
-
         reset();
 
         const {
@@ -384,6 +394,17 @@ export default class Receive extends React.Component<
         }
 
         const addressType = this.getAddressType();
+
+        // Non-default accounts exist under a single key scope; address
+        // requests must carry the matching type or lnd rejects them with
+        // "account not found" (ZEUS-2223 / ZEUS-2932)
+        let accountAddressType: string | undefined;
+        if (account && account !== 'default') {
+            accountAddressType =
+                toWalletrpcAddressTypeName(route.params?.addressType) ||
+                (await this.props.UTXOsStore.getAccountAddressType(account));
+            if (accountAddressType) this.setState({ accountAddressType });
+        }
 
         // POS
         const memo = route.params?.memo ?? this.state.memo;
@@ -462,10 +483,12 @@ export default class Receive extends React.Component<
             );
         }
 
+        const onChainType =
+            account && account !== 'default' ? accountAddressType : addressType;
         if (autoGenerateChange) {
-            this.autoGenerateChange(account, addressType);
+            this.autoGenerateChange(account, onChainType);
         } else if (autoGenerateOnChain) {
-            this.autoGenerateOnChainAddress(account, addressType);
+            this.autoGenerateOnChainAddress(account, onChainType);
         }
 
         this.setState({
@@ -646,7 +669,8 @@ export default class Receive extends React.Component<
                     : undefined,
                 noLsp: !effectiveLspIsActive,
                 forceLsp: !!this.props.route.params?.forceLsp,
-                skipOnchain
+                skipOnchain,
+                ...this.getUnifiedAccountParams()
             })
                 .then(
                     ({
@@ -678,36 +702,45 @@ export default class Receive extends React.Component<
         });
     };
 
-    autoGenerateOnChainAddress = (account?: string, address_type?: string) => {
-        const { InvoicesStore } = this.props;
-        const { getNewAddress } = InvoicesStore;
+    // For non-default accounts the on-chain leg of a unified invoice must
+    // come from that account, with its own address type (ZEUS-2223)
+    private getUnifiedAccountParams = () => {
+        const { account, accountAddressType } = this.state;
+        return account !== 'default'
+            ? { account, addressType: accountAddressType }
+            : {};
+    };
 
-        let request: any = {
-            type: address_type || this.state.addressType
-        };
-
-        if (account) {
+    // For non-default accounts, only an account-derived address type may be
+    // sent; the picker/settings default can point at the wrong key scope
+    private buildAddressRequest = (account?: string, address_type?: string) => {
+        const request: any = {};
+        if (account && account !== 'default') {
             request.account = account;
+            if (address_type) request.type = address_type;
+        } else {
+            request.type = address_type || this.state.addressType;
+            if (account) request.account = account;
         }
+        return request;
+    };
 
-        getNewAddress(request).then((onChainAddress: string) => {
-            this.subscribeInvoice(undefined, onChainAddress);
-        });
+    autoGenerateOnChainAddress = (account?: string, address_type?: string) => {
+        const { getNewAddress } = this.props.InvoicesStore;
+
+        getNewAddress(this.buildAddressRequest(account, address_type)).then(
+            (onChainAddress: string) => {
+                this.subscribeInvoice(undefined, onChainAddress);
+            }
+        );
     };
 
     autoGenerateChange = (account?: string, address_type?: string) => {
-        const { InvoicesStore } = this.props;
-        const { getNewChangeAddress } = InvoicesStore;
+        const { getNewChangeAddress } = this.props.InvoicesStore;
 
-        let request: any = {
-            type: address_type || this.state.addressType
-        };
-
-        if (account) {
-            request.account = account;
-        }
-
-        getNewChangeAddress(request).then((onChainAddress: string) => {
+        getNewChangeAddress(
+            this.buildAddressRequest(account, address_type)
+        ).then((onChainAddress: string) => {
             this.subscribeInvoice(undefined, onChainAddress);
         });
     };
@@ -746,7 +779,8 @@ export default class Receive extends React.Component<
                             lnurl: lnurlParams,
                             noLsp: !lspIsActive,
                             forceLsp: !!this.props.route.params?.forceLsp,
-                            skipOnchain
+                            skipOnchain,
+                            ...this.getUnifiedAccountParams()
                         })
                             .then(
                                 ({
@@ -873,11 +907,6 @@ export default class Receive extends React.Component<
         }
     };
 
-    getNewAddress = (params: any) => {
-        const { InvoicesStore } = this.props;
-        InvoicesStore.getNewAddress(params);
-    };
-
     updateExpirationIndex = (expirationIndex: number) => {
         if (expirationIndex === 0) {
             this.setState({
@@ -914,7 +943,7 @@ export default class Receive extends React.Component<
         const { InvoicesStore } = this.props;
         const { onChainAddress, payment_request, getNewAddress } =
             InvoicesStore;
-        const { addressType, account } = this.state;
+        const { addressType, account, accountAddressType } = this.state;
 
         this.setState({
             selectedIndex
@@ -928,10 +957,12 @@ export default class Receive extends React.Component<
             !onChainAddress &&
             BackendUtils.supportsOnchainReceiving()
         ) {
-            await getNewAddress({
-                type: addressType,
-                account: account !== 'default' ? account : 'default'
-            });
+            await getNewAddress(
+                this.buildAddressRequest(
+                    account,
+                    account !== 'default' ? accountAddressType : addressType
+                )
+            );
         }
     };
 
@@ -1028,7 +1059,12 @@ export default class Receive extends React.Component<
         const showCustomPreimageField =
             settings?.invoices?.showCustomPreimageField;
 
-        const skipOnchain = this.getSkipOnchain();
+        // The defaultInvoiceType preference must not suppress the on-chain
+        // leg while the user is looking at the on-chain pane: in forced
+        // on-chain mode (account receive, on-chain slider action) there are
+        // no tabs whose switch would trigger generation later, leaving the
+        // pane permanently blank
+        const skipOnchain = this.getSkipOnchain() && selectedIndex !== 2;
 
         const { lnOnly, onChainOnly } = this.getReceiveModeFlags();
 
@@ -1359,12 +1395,15 @@ export default class Receive extends React.Component<
 
         const enablePrinter: boolean = settings?.pos?.enablePrinter || false;
 
+        // Advanced settings only affect the lightning invoice, which is
+        // never displayed in on-chain-only mode
         const showAdvancedSettingsToggle =
-            (BackendUtils.supportsCustomPreimages() &&
+            !onChainOnly &&
+            ((BackendUtils.supportsCustomPreimages() &&
                 showCustomPreimageField) ||
-            (BackendUtils.isLNDBased() && !lspIsActive) ||
-            (BackendUtils.supportsAMP() && !lspIsActive) ||
-            (BackendUtils.supportsBolt11BlindedRoutes() && !lspIsActive);
+                (BackendUtils.isLNDBased() && !lspIsActive) ||
+                (BackendUtils.supportsAMP() && !lspIsActive) ||
+                (BackendUtils.supportsBolt11BlindedRoutes() && !lspIsActive));
 
         const baseModalHeight = 300;
         const itemHeight = ADDRESS_TYPES.length <= 2 ? 25 : 50;
@@ -2046,7 +2085,8 @@ export default class Receive extends React.Component<
                                     !loading &&
                                     route.params?.selectedIndex !== 2 && (
                                         <>
-                                            {BackendUtils.supportsFlowLSP() &&
+                                            {!onChainOnly &&
+                                                BackendUtils.supportsFlowLSP() &&
                                                 !flowLspNotConfigured && (
                                                     <View
                                                         style={{
@@ -2291,155 +2331,126 @@ export default class Receive extends React.Component<
                                                 </TouchableOpacity>
                                             )}
 
-                                            {BackendUtils.supportsSettingInvoiceExpiration() && (
-                                                <Accordion
-                                                    headerLayout="form"
-                                                    key={`receive-expiration-${lspIsActive}`}
-                                                    id="receive-expiration"
-                                                    title={localeString(
-                                                        'views.Receive.expiration'
-                                                    )}
-                                                    disabled={lspIsActive}
-                                                    renderHeader={(isOpen) => (
-                                                        <Row
-                                                            justify="space-between"
-                                                            style={{
-                                                                alignItems:
-                                                                    'center'
-                                                            }}
-                                                        >
-                                                            <View
+                                            {!onChainOnly &&
+                                                BackendUtils.supportsSettingInvoiceExpiration() && (
+                                                    <Accordion
+                                                        headerLayout="form"
+                                                        key={`receive-expiration-${lspIsActive}`}
+                                                        id="receive-expiration"
+                                                        title={localeString(
+                                                            'views.Receive.expiration'
+                                                        )}
+                                                        disabled={lspIsActive}
+                                                        renderHeader={(
+                                                            isOpen
+                                                        ) => (
+                                                            <Row
+                                                                justify="space-between"
                                                                 style={{
-                                                                    flex: 1
+                                                                    alignItems:
+                                                                        'center'
                                                                 }}
                                                             >
-                                                                <Row
-                                                                    justify="space-between"
+                                                                <View
                                                                     style={{
-                                                                        alignItems:
-                                                                            'center'
+                                                                        flex: 1
                                                                     }}
                                                                 >
-                                                                    <View
+                                                                    <Row
+                                                                        justify="space-between"
                                                                         style={{
-                                                                            flex: 1
+                                                                            alignItems:
+                                                                                'center'
                                                                         }}
                                                                     >
-                                                                        <KeyValue
-                                                                            keyValue={localeString(
-                                                                                'views.Receive.expiration'
-                                                                            )}
-                                                                        />
-                                                                    </View>
-
-                                                                    {!isOpen && (
-                                                                        <Text
+                                                                        <View
                                                                             style={{
-                                                                                ...styles.secondaryText,
-                                                                                color: themeColor(
-                                                                                    'secondaryText'
-                                                                                ),
-                                                                                textAlign:
-                                                                                    'center',
-                                                                                fontSize: 14
+                                                                                flex: 1
                                                                             }}
                                                                         >
-                                                                            {this.getFormattedDuration()}
-                                                                        </Text>
-                                                                    )}
-                                                                </Row>
-                                                            </View>
+                                                                            <KeyValue
+                                                                                keyValue={localeString(
+                                                                                    'views.Receive.expiration'
+                                                                                )}
+                                                                            />
+                                                                        </View>
 
-                                                            {lspIsActive ? (
-                                                                <LockIcon
-                                                                    fill={themeColor(
-                                                                        'secondaryText'
-                                                                    )}
-                                                                    width="20"
-                                                                    height="20"
-                                                                />
-                                                            ) : isOpen ? (
-                                                                <CaretDown
-                                                                    fill={themeColor(
-                                                                        'text'
-                                                                    )}
-                                                                    width="20"
-                                                                    height="20"
-                                                                />
-                                                            ) : (
-                                                                <CaretRight
-                                                                    fill={themeColor(
-                                                                        'text'
-                                                                    )}
-                                                                    width="20"
-                                                                    height="20"
-                                                                />
-                                                            )}
-                                                        </Row>
-                                                    )}
-                                                >
-                                                    <>
-                                                        <Row
-                                                            style={{
-                                                                width: '100%'
-                                                            }}
-                                                        >
-                                                            <TextInput
-                                                                keyboardType="numeric"
-                                                                value={expiry}
+                                                                        {!isOpen && (
+                                                                            <Text
+                                                                                style={{
+                                                                                    ...styles.secondaryText,
+                                                                                    color: themeColor(
+                                                                                        'secondaryText'
+                                                                                    ),
+                                                                                    textAlign:
+                                                                                        'center',
+                                                                                    fontSize: 14
+                                                                                }}
+                                                                            >
+                                                                                {this.getFormattedDuration()}
+                                                                            </Text>
+                                                                        )}
+                                                                    </Row>
+                                                                </View>
+
+                                                                {lspIsActive ? (
+                                                                    <LockIcon
+                                                                        fill={themeColor(
+                                                                            'secondaryText'
+                                                                        )}
+                                                                        width="20"
+                                                                        height="20"
+                                                                    />
+                                                                ) : isOpen ? (
+                                                                    <CaretDown
+                                                                        fill={themeColor(
+                                                                            'text'
+                                                                        )}
+                                                                        width="20"
+                                                                        height="20"
+                                                                    />
+                                                                ) : (
+                                                                    <CaretRight
+                                                                        fill={themeColor(
+                                                                            'text'
+                                                                        )}
+                                                                        width="20"
+                                                                        height="20"
+                                                                    />
+                                                                )}
+                                                            </Row>
+                                                        )}
+                                                    >
+                                                        <>
+                                                            <Row
                                                                 style={{
-                                                                    width: '58%'
-                                                                }}
-                                                                onChangeText={(
-                                                                    text: string
-                                                                ) => {
-                                                                    const digits =
-                                                                        text.replace(
-                                                                            /[^0-9]/g,
-                                                                            ''
-                                                                        );
-                                                                    const expirySeconds =
-                                                                        expirySecondsFromInput(
-                                                                            digits,
-                                                                            timePeriod as TimePeriod
-                                                                        );
-                                                                    this.setState(
-                                                                        {
-                                                                            expiry: digits,
-                                                                            expirySeconds,
-                                                                            expirationIndex:
-                                                                                expirationIndexFromSeconds(
-                                                                                    expirySeconds
-                                                                                )
-                                                                        }
-                                                                    );
-                                                                }}
-                                                            />
-                                                            <Spacer width={4} />
-                                                            <View
-                                                                style={{
-                                                                    flex: 1
+                                                                    width: '100%'
                                                                 }}
                                                             >
-                                                                <DropdownSetting
-                                                                    selectedValue={
-                                                                        timePeriod
+                                                                <TextInput
+                                                                    keyboardType="numeric"
+                                                                    value={
+                                                                        expiry
                                                                     }
-                                                                    values={
-                                                                        TIME_PERIOD_KEYS
-                                                                    }
-                                                                    onValueChange={async (
-                                                                        value: string
+                                                                    style={{
+                                                                        width: '58%'
+                                                                    }}
+                                                                    onChangeText={(
+                                                                        text: string
                                                                     ) => {
+                                                                        const digits =
+                                                                            text.replace(
+                                                                                /[^0-9]/g,
+                                                                                ''
+                                                                            );
                                                                         const expirySeconds =
                                                                             expirySecondsFromInput(
-                                                                                expiry,
-                                                                                value as TimePeriod
+                                                                                digits,
+                                                                                timePeriod as TimePeriod
                                                                             );
                                                                         this.setState(
                                                                             {
-                                                                                timePeriod:
-                                                                                    value,
+                                                                                expiry: digits,
                                                                                 expirySeconds,
                                                                                 expirationIndex:
                                                                                     expirationIndexFromSeconds(
@@ -2449,50 +2460,86 @@ export default class Receive extends React.Component<
                                                                         );
                                                                     }}
                                                                 />
-                                                            </View>
-                                                        </Row>
+                                                                <Spacer
+                                                                    width={4}
+                                                                />
+                                                                <View
+                                                                    style={{
+                                                                        flex: 1
+                                                                    }}
+                                                                >
+                                                                    <DropdownSetting
+                                                                        selectedValue={
+                                                                            timePeriod
+                                                                        }
+                                                                        values={
+                                                                            TIME_PERIOD_KEYS
+                                                                        }
+                                                                        onValueChange={async (
+                                                                            value: string
+                                                                        ) => {
+                                                                            const expirySeconds =
+                                                                                expirySecondsFromInput(
+                                                                                    expiry,
+                                                                                    value as TimePeriod
+                                                                                );
+                                                                            this.setState(
+                                                                                {
+                                                                                    timePeriod:
+                                                                                        value,
+                                                                                    expirySeconds,
+                                                                                    expirationIndex:
+                                                                                        expirationIndexFromSeconds(
+                                                                                            expirySeconds
+                                                                                        )
+                                                                                }
+                                                                            );
+                                                                        }}
+                                                                    />
+                                                                </View>
+                                                            </Row>
 
-                                                        <ButtonGroup
-                                                            onPress={
-                                                                this
-                                                                    .updateExpirationIndex
-                                                            }
-                                                            selectedIndex={
-                                                                expirationIndex
-                                                            }
-                                                            buttons={
-                                                                expirationButtons
-                                                            }
-                                                            selectedButtonStyle={{
-                                                                backgroundColor:
-                                                                    themeColor(
-                                                                        'highlight'
-                                                                    ),
-                                                                borderRadius: 12
-                                                            }}
-                                                            containerStyle={{
-                                                                backgroundColor:
-                                                                    themeColor(
+                                                            <ButtonGroup
+                                                                onPress={
+                                                                    this
+                                                                        .updateExpirationIndex
+                                                                }
+                                                                selectedIndex={
+                                                                    expirationIndex
+                                                                }
+                                                                buttons={
+                                                                    expirationButtons
+                                                                }
+                                                                selectedButtonStyle={{
+                                                                    backgroundColor:
+                                                                        themeColor(
+                                                                            'highlight'
+                                                                        ),
+                                                                    borderRadius: 12
+                                                                }}
+                                                                containerStyle={{
+                                                                    backgroundColor:
+                                                                        themeColor(
+                                                                            'secondary'
+                                                                        ),
+                                                                    borderRadius: 12,
+                                                                    borderWidth: 0,
+                                                                    height: 30,
+                                                                    marginBottom:
+                                                                        Platform.OS ===
+                                                                        'ios'
+                                                                            ? 16
+                                                                            : 0
+                                                                }}
+                                                                innerBorderStyle={{
+                                                                    color: themeColor(
                                                                         'secondary'
-                                                                    ),
-                                                                borderRadius: 12,
-                                                                borderWidth: 0,
-                                                                height: 30,
-                                                                marginBottom:
-                                                                    Platform.OS ===
-                                                                    'ios'
-                                                                        ? 16
-                                                                        : 0
-                                                            }}
-                                                            innerBorderStyle={{
-                                                                color: themeColor(
-                                                                    'secondary'
-                                                                )
-                                                            }}
-                                                        />
-                                                    </>
-                                                </Accordion>
-                                            )}
+                                                                    )
+                                                                }}
+                                                            />
+                                                        </>
+                                                    </Accordion>
+                                                )}
 
                                             {showAdvancedSettingsToggle && (
                                                 <Accordion
@@ -2933,7 +2980,8 @@ export default class Receive extends React.Component<
                                                             forceLsp:
                                                                 !!route.params
                                                                     ?.forceLsp,
-                                                            skipOnchain
+                                                            skipOnchain,
+                                                            ...this.getUnifiedAccountParams()
                                                         })
                                                             .then(
                                                                 ({
