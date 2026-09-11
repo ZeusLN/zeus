@@ -551,12 +551,13 @@ describe('MigrationUtils', () => {
             expect(settingsStore.setSettings).toHaveBeenCalledTimes(1);
         });
 
-        it('clears proEnabled when the new default is not a pro host', async () => {
+        it('preserves proEnabled, which is shared with the testnet host', async () => {
             EncryptedStorage.getItem.mockResolvedValue(null);
             const settings: any = {
                 swaps: {
                     hostMainnet: 'https://api.boltz.exchange/v2',
-                    customHost: '',
+                    hostTestnet: 'Custom',
+                    customHost: 'https://my-boltz.local/v2',
                     proEnabled: true
                 }
             };
@@ -566,10 +567,10 @@ describe('MigrationUtils', () => {
             expect(settings.swaps.hostMainnet).toBe(
                 'https://satsrouting.exchange/v2'
             );
-            // SwapStore sends `Referral: pro` off proEnabled with no host
-            // check, and the Pro switch only renders for `pro` hosts, so a
-            // stale flag here would be both live and unreachable
-            expect(settings.swaps.proEnabled).toBe(false);
+            // clearing the flag here would also disable Pro for the testnet
+            // host this migration never touched; SwapStore.isProHost gates the
+            // header on the selected provider instead
+            expect(settings.swaps.proEnabled).toBe(true);
         });
 
         it('leaves proEnabled alone when the host is not retired', async () => {
