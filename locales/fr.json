@@ -2266,6 +2266,7 @@
     "cashu.lockTo": "Verrouillé sur",
     "cashu.locktime": "Verrouillé jusqu'à",
     "cashu.lock": "Verrouillage",
+    "cashu.removeLock": "Remove lock",
     "cashu.noContactsWithCashuPubkey": "Aucun contact avec la clé publique Cashu",
     "cashu.noDuration": "aucune durée",
     "cashu.duration.1Day": "1 jour",
