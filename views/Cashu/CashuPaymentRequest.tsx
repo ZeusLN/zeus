@@ -36,6 +36,7 @@ import TransactionsStore, {
 import UnitsStore from '../../stores/UnitsStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
 import SettingsStore from '../../stores/SettingsStore';
+import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
@@ -44,7 +45,9 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
 import {
     calculateDonationAmount,
-    findDonationPercentageIndex
+    calculateTotalWithDonation,
+    findDonationPercentageIndex,
+    getDonationToSend
 } from '../../utils/DonationUtils';
 
 import { Row } from '../../components/layout/Row';
@@ -68,6 +71,7 @@ interface CashuPaymentRequestProps {
     UnitsStore: UnitsStore;
     LnurlPayStore: LnurlPayStore;
     SettingsStore: SettingsStore;
+    NodeInfoStore: NodeInfoStore;
 }
 
 interface CashuPaymentRequestState {
@@ -88,7 +92,8 @@ interface CashuPaymentRequestState {
     'TransactionsStore',
     'UnitsStore',
     'LnurlPayStore',
-    'SettingsStore'
+    'SettingsStore',
+    'NodeInfoStore'
 )
 @observer
 export default class CashuPaymentRequest extends React.Component<
@@ -222,28 +227,42 @@ export default class CashuPaymentRequest extends React.Component<
         }
     }
 
-    sendPayment = ({ amount }: SendPaymentReq) => {
-        const { SettingsStore, navigation } = this.props;
-        const { settings } = SettingsStore;
-
-        const enableDonations =
-            Platform.OS !== 'ios' && settings?.payments?.enableDonations;
+    // The donation that will actually be sent with this payment. Resolved in
+    // one place so the coverage check below and the amount handed to the
+    // sending views cannot disagree: those views take this as decided rather
+    // than re-reading the store, which is what stops a donation the check
+    // never counted from going out once nodeInfo arrives mid-payment.
+    resolveDonationToSend = () => {
+        const { CashuStore, SettingsStore, NodeInfoStore } = this.props;
         const { donationAmount } = this.state;
 
+        const donationsAllowed =
+            Platform.OS !== 'ios' &&
+            !!CashuStore.payReq?.getRequestAmount &&
+            SettingsStore.settings?.payments?.enableDonations;
+
+        return getDonationToSend(
+            NodeInfoStore?.nodeInfo?.isMainNet,
+            donationsAllowed,
+            donationAmount
+        );
+    };
+
+    sendPayment = ({ amount }: SendPaymentReq) => {
+        const { navigation } = this.props;
+        const donationToSend = this.resolveDonationToSend();
+
         navigation.navigate('CashuSendingLightning', {
-            enableDonations,
-            ...(enableDonations &&
-                donationAmount > 0 && {
-                    donationAmount: donationAmount.toString()
-                }),
+            ...(donationToSend > 0 && {
+                donationAmount: donationToSend.toString()
+            }),
             paymentAmount: amount ? amount : undefined
         });
     };
 
     triggerPayment = () => {
-        const { CashuStore, LnurlPayStore, SettingsStore, navigation } =
-            this.props;
-        const { multiMintEnabled, donationAmount } = this.state;
+        const { CashuStore, LnurlPayStore, navigation } = this.props;
+        const { multiMintEnabled } = this.state;
 
         // Fail closed: if the invoice in the store no longer matches the one
         // the user reviewed, it was swapped out from under the review screen.
@@ -278,23 +297,18 @@ export default class CashuPaymentRequest extends React.Component<
             ? requestAmount.toString()
             : undefined;
 
-        const enableDonations =
-            Platform.OS !== 'ios' &&
-            SettingsStore.settings?.payments?.enableDonations;
-
         const isMultiMint =
             multiMintEnabled &&
             Array.isArray(CashuStore?.multiMintSelectedUrls) &&
             CashuStore!.multiMintSelectedUrls.length > 1;
 
         if (isMultiMint) {
+            const donationToSend = this.resolveDonationToSend();
             navigation.navigate('MultimintPayment', {
                 paymentAmount,
-                enableDonations,
-                ...(enableDonations &&
-                    donationAmount > 0 && {
-                        donationAmount: donationAmount.toString()
-                    })
+                ...(donationToSend > 0 && {
+                    donationAmount: donationToSend.toString()
+                })
             });
             return;
         }
@@ -375,7 +389,9 @@ export default class CashuPaymentRequest extends React.Component<
             loadingFeeEstimate,
             feeEstimate,
             clearPayReq,
-            totalBalanceSats
+            totalBalanceSats,
+            payReqMintBalance,
+            payReqAmount
         } = CashuStore;
 
         // Zaplocker
@@ -409,7 +425,6 @@ export default class CashuPaymentRequest extends React.Component<
         const showMultiMintToggle = !!settings?.ecash?.enableMultiMint;
 
         const noBalance = totalBalanceSats === 0;
-        const hasPayReqError = !!getPayReqError;
 
         // The screen renders whatever invoice is in the shared CashuStore, so
         // when the store no longer matches the pinned invoice the user has a
@@ -426,6 +441,30 @@ export default class CashuPaymentRequest extends React.Component<
             Platform.OS !== 'ios' &&
             !isNoAmountInvoice &&
             settings?.payments?.enableDonations;
+
+        // The donation is a second payment drawn from the same mint right
+        // after this one, so the balance has to cover both. This is the same
+        // value the sending views are handed, so what is checked here and
+        // what is sent are the same number.
+        const donationToCover = this.resolveDonationToSend();
+        // payReqMintBalance is 0 when the single-mint check did not run, and
+        // getPayReqError already covers the invoice falling short on its own.
+        const donationLeavesTooLittle =
+            !getPayReqError &&
+            donationToCover > 0 &&
+            payReqMintBalance > 0 &&
+            payReqMintBalance <
+                calculateTotalWithDonation(
+                    payReqAmount,
+                    feeEstimate || 0,
+                    donationToCover
+                );
+        const payReqWarning = getPayReqError
+            ? getPayReqError
+            : donationLeavesTooLittle
+            ? localeString('stores.CashuStore.notEnoughFunds')
+            : undefined;
+        const hasPayReqError = !!payReqWarning;
 
         const showZaplockerWarning =
             isZaplocker ||
@@ -607,7 +646,7 @@ export default class CashuPaymentRequest extends React.Component<
                                                 />
                                             </View>
                                         )}
-                                    {!!getPayReqError && (
+                                    {!!payReqWarning && (
                                         <View
                                             style={{
                                                 paddingTop: 10,
@@ -615,7 +654,7 @@ export default class CashuPaymentRequest extends React.Component<
                                             }}
                                         >
                                             <WarningMessage
-                                                message={getPayReqError}
+                                                message={payReqWarning}
                                             />
                                         </View>
                                     )}
