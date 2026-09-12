@@ -796,6 +796,7 @@
     "views.OpenChannel.nodePubkey": "Node pubkey",
     "views.OpenChannel.host": "Host",
     "views.OpenChannel.hostPort": "Hostname:Port",
+    "views.OpenChannel.hostRequired": "A host is required to connect to a peer",
     "views.OpenChannel.localAmt": "Local amount",
     "views.OpenChannel.numConf": "Number of Confirmations",
     "views.OpenChannel.satsPerVbyte": "Satoshis per vByte",

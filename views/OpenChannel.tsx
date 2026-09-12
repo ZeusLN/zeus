@@ -682,13 +682,23 @@ export default class OpenChannel extends React.Component<
                                                 'Olympus by ZEUS',
                                             node_pubkey_string:
                                                 config.lsps1Pubkey,
-                                            host: config.lsps1Host
+                                            host: config.lsps1Host,
+                                            isNodePubkeyValid:
+                                                ValidationUtils.validateNodePubkey(
+                                                    config.lsps1Pubkey
+                                                ),
+                                            isNodeHostValid:
+                                                ValidationUtils.validateNodeHost(
+                                                    config.lsps1Host
+                                                )
                                         });
                                     } else {
                                         this.setState({
                                             channelDestination: 'Custom',
                                             node_pubkey_string: '',
-                                            host: ''
+                                            host: '',
+                                            isNodePubkeyValid: false,
+                                            isNodeHostValid: false
                                         });
                                     }
                                 }}
