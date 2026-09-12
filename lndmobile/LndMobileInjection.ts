@@ -144,12 +144,10 @@ export interface ILndMobileInjections {
         startLnd: ({
             args,
             lndDir,
-            isTorEnabled,
             isTestnet
         }: {
             args: string;
             lndDir: string;
-            isTorEnabled?: boolean;
             isTestnet?: boolean;
         }) => Promise<string>;
         stopLnd: () => Promise<string>;
