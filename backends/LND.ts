@@ -1012,6 +1012,7 @@ export default class LND {
     supportsOnchainBalance = () => true;
     supportsOnchainSends = () => true;
     supportsOnchainReceiving = () => true;
+    supportsUnconfirmedTransactionOrigin = () => true;
     supportsLightningSends = () => true;
     supportsKeysend = () => true;
     supportsChannelManagement = () => true;

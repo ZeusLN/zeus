@@ -876,6 +876,7 @@ export default class LightningNodeConnect {
     supportsOnchainBalance = () => true;
     supportsOnchainSends = () => this.permSendCoins;
     supportsOnchainReceiving = () => this.permNewAddress;
+    supportsUnconfirmedTransactionOrigin = () => true;
     supportsLightningSends = () => this.permSendLN;
     supportsKeysend = () => true;
     supportsChannelManagement = () => this.permOpenChannel;

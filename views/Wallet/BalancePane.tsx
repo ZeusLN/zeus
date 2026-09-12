@@ -181,7 +181,7 @@ export default class BalancePane extends React.PureComponent<
         } = this.state;
         const {
             totalBlockchainBalance,
-            unconfirmedBlockchainBalance,
+            externalUnconfirmedBalance,
             lightningBalance,
             pendingOpenBalance,
             pendingCloseBalance
@@ -195,11 +195,15 @@ export default class BalancePane extends React.PureComponent<
             .toNumber();
         const hasLightningPending = lightningPendingTotal > 0;
 
+        // the pending balance sits on top of the total balance: external
+        // unconfirmed deposits count toward pending only, while unconfirmed
+        // change from the wallet's own spends counts toward the total only
         const pendingUnconfirmedBalance = new BigNumber(lightningPendingTotal)
-            .plus(unconfirmedBlockchainBalance)
+            .plus(externalUnconfirmedBalance || 0)
             .toNumber()
             .toFixed(3);
         const combinedBalanceValue = new BigNumber(totalBlockchainBalance)
+            .minus(externalUnconfirmedBalance || 0)
             .plus(lightningBalance)
             .plus(settings?.ecash?.enableCashu ? cashuBalance : 0)
             .toNumber()
@@ -259,7 +263,7 @@ export default class BalancePane extends React.PureComponent<
         );
         const BalanceViewCombined = () => {
             const hasOnchainPending = Boolean(
-                Number(unconfirmedBlockchainBalance ?? 0) ||
+                Number(externalUnconfirmedBalance ?? 0) ||
                     Number(pendingOpenBalance ?? 0) ||
                     Number(pendingCloseBalance ?? 0)
             );

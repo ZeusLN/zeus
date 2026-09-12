@@ -3,6 +3,7 @@ import BigNumber from 'bignumber.js';
 
 import SettingsStore from './SettingsStore';
 import BackendUtils from './../utils/BackendUtils';
+import { getExternalUnconfirmedBalance } from './../utils/BalanceUtils';
 
 export default class BalanceStore {
     @observable public totalBlockchainBalance: number | string;
@@ -10,6 +11,11 @@ export default class BalanceStore {
     @observable public totalBlockchainBalanceAccounts: number | string;
     @observable public confirmedBlockchainBalance: number | string;
     @observable public unconfirmedBlockchainBalance: number | string;
+    // portion of unconfirmedBlockchainBalance that came from transactions
+    // the wallet did not create itself (external deposits). Change from the
+    // wallet's own spends (e.g. channel funding change) is excluded so it
+    // isn't shown as pending on top of a total that already includes it (#2167)
+    @observable public externalUnconfirmedBalance: number;
     @observable public loadingBlockchainBalance = false;
     @observable public loadingLightningBalance = false;
     @observable public error = false;
@@ -47,6 +53,7 @@ export default class BalanceStore {
     @action
     public resetBlockchainBalance = () => {
         this.unconfirmedBlockchainBalance = 0;
+        this.externalUnconfirmedBalance = 0;
         this.confirmedBlockchainBalance = 0;
         this.totalBlockchainBalance = 0;
         this.otherAccounts = {};
@@ -103,6 +110,28 @@ export default class BalanceStore {
                 data.total_balance || 0
             );
 
+            // where the backend can tell where unconfirmed funds came from,
+            // split out external deposits so the view can show them as
+            // pending on top of the total instead of counting them twice.
+            // Change from the wallet's own spends stays in the total (#2167)
+            let externalUnconfirmedBalance = 0;
+            if (
+                unconfirmedBlockchainBalance > 0 &&
+                BackendUtils.supportsUnconfirmedTransactionOrigin()
+            ) {
+                try {
+                    const txData = await BackendUtils.getTransactions();
+                    externalUnconfirmedBalance = getExternalUnconfirmedBalance(
+                        txData?.transactions || [],
+                        unconfirmedBlockchainBalance
+                    );
+                } catch {
+                    // if classification fails, treat unconfirmed funds as
+                    // the wallet's own: they stay in the total balance and
+                    // off the pending line
+                }
+            }
+
             runInAction(() => {
                 if (set) {
                     if (accounts && accounts.default && data.confirmed_balance)
@@ -111,6 +140,8 @@ export default class BalanceStore {
 
                     this.unconfirmedBlockchainBalance =
                         unconfirmedBlockchainBalance;
+                    this.externalUnconfirmedBalance =
+                        externalUnconfirmedBalance;
                     this.confirmedBlockchainBalance =
                         confirmedBlockchainBalance;
                     this.totalBlockchainBalance = totalBlockchainBalance;
@@ -121,6 +152,7 @@ export default class BalanceStore {
             });
             return {
                 unconfirmedBlockchainBalance,
+                externalUnconfirmedBalance,
                 confirmedBlockchainBalance,
                 totalBlockchainBalance,
                 accounts
@@ -174,6 +206,8 @@ export default class BalanceStore {
             this.otherAccounts = onChain?.accounts || [];
             this.unconfirmedBlockchainBalance =
                 onChain?.unconfirmedBlockchainBalance || 0;
+            this.externalUnconfirmedBalance =
+                onChain?.externalUnconfirmedBalance || 0;
             this.confirmedBlockchainBalance =
                 onChain?.confirmedBlockchainBalance || 0;
             this.totalBlockchainBalance = onChain?.totalBlockchainBalance || 0;
