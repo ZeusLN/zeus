@@ -56,10 +56,10 @@ export default class FeeLimit extends React.Component<
     }
 
     async componentDidMount(): Promise<void> {
-        const { SettingsStore, feeOption, satAmount, onFeeLimitSatChange } =
-            this.props;
+        const { SettingsStore } = this.props;
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
+        const { satAmount, onFeeLimitSatChange } = this.props;
 
         const feeLimitSat = settings?.payments?.defaultFeeFixed || '100';
 
@@ -76,6 +76,7 @@ export default class FeeLimit extends React.Component<
                     percentAmount
                 });
 
+                const feeOption = this.props.feeOption;
                 if (feeOption) {
                     this.setState(
                         {
@@ -106,7 +107,21 @@ export default class FeeLimit extends React.Component<
         const { satAmount, onFeeLimitSatChange } = this.props;
         const { feeLimitSat, feeOption } = this.state;
 
-        if (satAmount !== prevProps.satAmount) {
+        const feeOptionChanged =
+            this.props.feeOption !== prevProps.feeOption &&
+            !!this.props.feeOption;
+        if (feeOptionChanged) {
+            const nextFeeOption = this.props.feeOption!;
+            const percentAmount = this.calculatePercentAmount(satAmount);
+            this.setState({ feeOption: nextFeeOption, percentAmount }, () => {
+                onFeeLimitSatChange(
+                    BackendUtils.supportsCustomFeeLimit() &&
+                        nextFeeOption === 'percent'
+                        ? percentAmount
+                        : this.state.feeLimitSat
+                );
+            });
+        } else if (satAmount !== prevProps.satAmount) {
             const percentAmount = this.calculatePercentAmount(satAmount);
             const percentUpdated = percentAmount !== this.state.percentAmount;
 
