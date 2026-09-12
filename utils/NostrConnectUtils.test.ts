@@ -1353,4 +1353,101 @@ describe('NostrConnectUtils', () => {
             ).toBe(false);
         });
     });
+
+    describe('isPendingPayInvoiceExpired', () => {
+        const now = 1_700_000_000_000;
+        const days = (n: number) => n * 24 * 60 * 60 * 1000;
+
+        it('does not expire fresh or sub-threshold activities', () => {
+            expect(
+                NostrConnectUtils.isPendingPayInvoiceExpired(
+                    { createdAt: new Date(now) },
+                    now
+                )
+            ).toBe(false);
+            expect(
+                NostrConnectUtils.isPendingPayInvoiceExpired(
+                    { createdAt: new Date(now - days(13)) },
+                    now
+                )
+            ).toBe(false);
+        });
+
+        it('expires at and beyond the 14-day bound', () => {
+            expect(
+                NostrConnectUtils.isPendingPayInvoiceExpired(
+                    { createdAt: new Date(now - days(14)) },
+                    now
+                )
+            ).toBe(true);
+            expect(
+                NostrConnectUtils.isPendingPayInvoiceExpired(
+                    { createdAt: new Date(now - days(60)) },
+                    now
+                )
+            ).toBe(true);
+        });
+
+        it('never expires an activity of unknown age', () => {
+            expect(NostrConnectUtils.isPendingPayInvoiceExpired({}, now)).toBe(
+                false
+            );
+        });
+
+        it('expiry message is not an ignorable error (would be pruned)', () => {
+            // The activity-cleanup filter drops failed activities whose
+            // error matches isIgnorableError; the expiry message must
+            // survive it to preserve the audit trail.
+            expect(
+                NostrConnectUtils.isIgnorableError(
+                    'Payment was unresolved for 14 days and could not be found on the node; it was marked failed and its reserved budget was released.'
+                )
+            ).toBe(false);
+        });
+    });
+
+    describe('getExpiryCheckCreationDateStart', () => {
+        const now = 1_700_000_000_000;
+        const days = (n: number) => n * 24 * 60 * 60 * 1000;
+
+        it('covers the oldest candidate minus the clock-skew margin', () => {
+            const start = NostrConnectUtils.getExpiryCheckCreationDateStart([
+                { createdAt: new Date(now - days(14)) },
+                { createdAt: new Date(now - days(20)) }
+            ]);
+            expect(start).toBe(
+                Math.floor(
+                    (now -
+                        days(20) -
+                        NostrConnectUtils.EXPIRY_CHECK_DATE_MARGIN_MS) /
+                        1000
+                )
+            );
+        });
+
+        it('returns null with no candidates', () => {
+            expect(NostrConnectUtils.getExpiryCheckCreationDateStart([])).toBe(
+                null
+            );
+        });
+
+        it('returns null when any candidate age is unknown', () => {
+            // A window that cannot provably contain every candidate must
+            // not be used as evidence of absence.
+            expect(
+                NostrConnectUtils.getExpiryCheckCreationDateStart([
+                    { createdAt: new Date(now - days(20)) },
+                    {}
+                ])
+            ).toBe(null);
+        });
+
+        it('never returns a negative timestamp', () => {
+            expect(
+                NostrConnectUtils.getExpiryCheckCreationDateStart([
+                    { createdAt: new Date(1000) }
+                ])
+            ).toBe(0);
+        });
+    });
 });
