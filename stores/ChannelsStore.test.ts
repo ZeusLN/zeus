@@ -4,6 +4,8 @@ jest.mock('react-native-randombytes', () => ({
 jest.mock('../utils/BackendUtils', () => ({
     getChannels: jest.fn(),
     getNodeInfo: jest.fn(() => Promise.resolve(null)),
+    connectPeer: jest.fn(),
+    openChannelSync: jest.fn(),
     supportsClosedChannels: () => false,
     supportsPendingChannels: () => false,
     isLNDBased: () => false
@@ -209,5 +211,71 @@ describe('ChannelsStore.getNodePolicy', () => {
         });
 
         expect(store.getNodePolicy('789')?.last_update).toBeUndefined();
+    });
+});
+
+describe('ChannelsStore.connectPeer', () => {
+    let store: ChannelsStore;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        store = makeStore();
+    });
+
+    it('surfaces an error for an empty host instead of hitting the backend when only connecting a peer', async () => {
+        await store.connectPeer(
+            {
+                node_pubkey_string: 'abc',
+                host: '',
+                local_funding_amount: ''
+            } as any,
+            false,
+            true
+        );
+
+        expect(BackendUtils.connectPeer).not.toHaveBeenCalled();
+        // the empty-host fallthrough used to queue a channel request here,
+        // sending LND an open with an empty funding amount
+        expect(BackendUtils.openChannelSync).not.toHaveBeenCalled();
+        expect(store.channelRequest).toBeFalsy();
+        expect(store.errorPeerConnect).toBe(true);
+        expect(store.errorMsgPeer).toBe('views.OpenChannel.hostRequired');
+        expect(store.connectingToPeer).toBe(false);
+    });
+
+    it('still falls through to the channel open for an empty host in the channel flow', async () => {
+        jest.mocked(BackendUtils.openChannelSync).mockResolvedValue({} as any);
+
+        await store.connectPeer({
+            node_pubkey_string: 'abc',
+            host: '',
+            local_funding_amount: '100000',
+            account: 'default'
+        } as any);
+
+        expect(BackendUtils.connectPeer).not.toHaveBeenCalled();
+        expect(BackendUtils.openChannelSync).toHaveBeenCalled();
+    });
+
+    it('does not queue a channel request when only connecting a peer with a host', async () => {
+        jest.mocked(BackendUtils.connectPeer).mockResolvedValue({} as any);
+
+        await store.connectPeer(
+            {
+                node_pubkey_string: 'abc',
+                host: 'peer.example.com:9735',
+                local_funding_amount: ''
+            } as any,
+            false,
+            true
+        );
+
+        expect(BackendUtils.connectPeer).toHaveBeenCalledWith({
+            addr: { pubkey: 'abc', host: 'peer.example.com:9735' },
+            perm: false
+        });
+        expect(store.peerSuccess).toBe(true);
+        expect(store.channelRequest).toBeFalsy();
+        expect(BackendUtils.openChannelSync).not.toHaveBeenCalled();
     });
 });
