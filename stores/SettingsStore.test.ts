@@ -32,8 +32,11 @@ jest.mock('../utils/LocaleUtils', () => ({
 jest.mock('../utils/MigrationUtils', () => ({
     keychainCloudSyncMigration: jest.fn().mockResolvedValue(undefined),
     purgeRescueKeyFiles: jest.fn().mockResolvedValue(undefined),
-    migrateRgsDefaultToZeus: jest.fn().mockResolvedValue(undefined),
+    migrateRgsDefaultsToV2: jest.fn().mockResolvedValue(undefined),
+    migrateSwapHostsToBoltz: jest.fn().mockResolvedValue(undefined),
+    migrateRetiredSwapHosts: jest.fn().mockResolvedValue(undefined),
     migrateInvoiceExpiryDisplay: jest.fn().mockResolvedValue(undefined),
+    migrateOlympusHostsToZeusLsp: jest.fn().mockResolvedValue(undefined),
     legacySettingsMigrations: jest.fn().mockResolvedValue({}),
     storageMigrationV2: jest.fn().mockResolvedValue(undefined)
 }));
@@ -81,16 +84,22 @@ const seedSettings = (settings: any) => {
 const persistedSettings = () => JSON.parse(StorageMock._backing[STORAGE_KEY]);
 
 let logSpy: jest.SpyInstance;
+let warnSpy: jest.SpyInstance;
+let errorSpy: jest.SpyInstance;
 
 beforeEach(() => {
     for (const key of Object.keys(StorageMock._backing)) {
         delete StorageMock._backing[key];
     }
     logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+    errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 afterEach(() => {
     logSpy.mockRestore();
+    warnSpy.mockRestore();
+    errorSpy.mockRestore();
 });
 
 describe('SettingsStore.updateSettings', () => {
@@ -201,5 +210,170 @@ describe('SettingsStore.updateSettings', () => {
         expect(result.fiat).toEqual('CAD');
         expect(persistedSettings().fiat).toEqual('CAD');
         expect(store.settingsUpdateInProgress).toEqual(false);
+    });
+});
+
+// Regression coverage for #4612: a settings read that FAILS is not the
+// same as a user with no wallets, but getSettings returned the store's
+// defaults for both, and the very next write (the launch-time biometry
+// refresh) merged onto those defaults and persisted a wallet-less blob
+// over the real one. On iOS that write is a delete-then-add of a single
+// keychain item, so the wallet list was gone with no prior copy left.
+describe('SettingsStore write guards', () => {
+    const nodeA = {
+        implementation: 'lnd',
+        host: 'a.example.com',
+        macaroonHex: 'aaaa'
+    };
+    const nodeB = {
+        implementation: 'lnd',
+        host: 'b.example.com',
+        macaroonHex: 'bbbb'
+    };
+
+    it('does not persist defaults over the wallet list when the read fails', async () => {
+        seedSettings({ nodes: [nodeA, nodeB], selectedNode: 0, fiat: 'USD' });
+        // Fresh store, as on app launch: `settings` is still the default
+        // object, which has no `nodes`.
+        const store = new SettingsStore();
+        StorageMock.getItem.mockRejectedValueOnce(
+            new Error('errSecInteractionNotAllowed')
+        );
+
+        const result = await store.updateSettings({
+            supportedBiometryType: 'FaceID'
+        });
+
+        expect(persistedSettings().nodes).toHaveLength(2);
+        expect(persistedSettings().fiat).toEqual('USD');
+        expect(result.supportedBiometryType).toBeUndefined();
+        expect(store.settings.nodes).toBeUndefined();
+        expect(store.settingsLoadFailed).toEqual(true);
+    });
+
+    it('does not persist over a corrupt settings blob', async () => {
+        StorageMock._backing[STORAGE_KEY] = '{"nodes":[{"host":"a.exa';
+        const store = new SettingsStore();
+
+        await store.updateSettings({ fiat: 'EUR' });
+
+        expect(StorageMock._backing[STORAGE_KEY]).toEqual(
+            '{"nodes":[{"host":"a.exa'
+        );
+        expect(store.settingsLoadFailed).toEqual(true);
+    });
+
+    it('resumes writing once a later load succeeds', async () => {
+        seedSettings({ nodes: [nodeA], fiat: 'USD' });
+        const store = new SettingsStore();
+        StorageMock.getItem.mockRejectedValueOnce(
+            new Error('errSecInteractionNotAllowed')
+        );
+
+        await store.updateSettings({ fiat: 'EUR' });
+        expect(persistedSettings().fiat).toEqual('USD');
+
+        const result = await store.updateSettings({ fiat: 'CAD' });
+
+        expect(result.fiat).toEqual('CAD');
+        expect(persistedSettings().fiat).toEqual('CAD');
+        expect(persistedSettings().nodes).toHaveLength(1);
+        expect(store.settingsLoadFailed).toEqual(false);
+    });
+
+    it('refuses to persist an empty wallet list over an existing one', async () => {
+        seedSettings({ nodes: [nodeA, nodeB], selectedNode: 0 });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        const result = await store.updateSettings({ nodes: [] });
+
+        expect(persistedSettings().nodes).toHaveLength(2);
+        expect(store.settings.nodes).toHaveLength(2);
+        expect(result.nodes).toHaveLength(2);
+    });
+
+    it('lets the last wallet be deleted with allowEmptyNodes', async () => {
+        seedSettings({ nodes: [nodeA], selectedNode: 0 });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        await store.updateSettings(
+            { nodes: [], selectedNode: 0, justDeletedWallet: true },
+            { allowEmptyNodes: true }
+        );
+
+        expect(persistedSettings().nodes).toHaveLength(0);
+        expect(StorageMock._backing[STORAGE_KEY]).not.toContain('aaaa');
+    });
+
+    it('still persists on a fresh install with no wallets', async () => {
+        const store = new SettingsStore();
+
+        const result = await store.updateSettings({ fiat: 'EUR' });
+
+        expect(result.fiat).toEqual('EUR');
+        expect(persistedSettings().fiat).toEqual('EUR');
+        expect(store.settingsLoadFailed).toEqual(false);
+    });
+
+    it('keeps writing when the legacy read fails on a fresh install', async () => {
+        // EncryptedStorage rejects persistently when its Android
+        // keystore-backed store cannot initialize, so refusing writes
+        // here would block onboarding forever.
+        const EncryptedStorage = require('react-native-encrypted-storage');
+        EncryptedStorage.getItem.mockRejectedValueOnce(
+            new Error('Could not initialize SharedPreferences')
+        );
+        const store = new SettingsStore();
+
+        const result = await store.updateSettings({ fiat: 'EUR' });
+
+        expect(result.fiat).toEqual('EUR');
+        expect(persistedSettings().fiat).toEqual('EUR');
+        expect(store.settingsLoadFailed).toEqual(false);
+    });
+
+    it('loads the settings blob even when a pre-read migration throws', async () => {
+        seedSettings({ nodes: [nodeA, nodeB], fiat: 'USD' });
+        const MigrationUtils = require('../utils/MigrationUtils');
+        MigrationUtils.purgeRescueKeyFiles.mockRejectedValueOnce(
+            new Error('EncryptedStorage unavailable')
+        );
+        const store = new SettingsStore();
+
+        const result = await store.updateSettings({ fiat: 'EUR' });
+
+        // The blob lives in the keychain and is still readable: a failed
+        // migration flag lookup must not strand the store on defaults.
+        expect(result.nodes).toHaveLength(2);
+        expect(persistedSettings().nodes).toHaveLength(2);
+        expect(persistedSettings().fiat).toEqual('EUR');
+    });
+
+    it('persists an update whose updater mutates settings in place', async () => {
+        seedSettings({ nodes: [nodeA], fiat: 'USD' });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        await store.updateSettings((currentSettings: any) => {
+            currentSettings.nodes[0].macaroonHex = 'cccc';
+            return { nodes: currentSettings.nodes };
+        });
+
+        expect(persistedSettings().nodes[0].macaroonHex).toEqual('cccc');
+    });
+
+    it('skips the write when nothing changed', async () => {
+        seedSettings({ nodes: [nodeA], fiat: 'USD' });
+        const store = new SettingsStore();
+        await store.getSettings();
+        StorageMock.setItem.mockClear();
+
+        const result = await store.updateSettings({ fiat: 'USD' });
+
+        expect(StorageMock.setItem).not.toHaveBeenCalled();
+        expect(result.fiat).toEqual('USD');
+        expect(store.triggerSettingsRefresh).toEqual(false);
     });
 });

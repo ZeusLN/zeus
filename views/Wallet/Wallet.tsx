@@ -324,13 +324,22 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             this.handleAppStateChange
         );
 
-        const {
-            SettingsStore: { updateSettings }
-        } = this.props;
+        const { SettingsStore } = this.props;
+        const { updateSettings } = SettingsStore;
 
         const supportedBiometryType = await getSupportedBiometryType();
 
-        await updateSettings({ supportedBiometryType });
+        // updateSettings is a read-merge-write of the whole settings blob,
+        // which on iOS is a delete-then-add of one keychain item. This runs
+        // on every launch, so skip it unless the value actually changed.
+        // applySettingsUpdate short-circuits equal writes too; this check
+        // also avoids the read when the settings are already loaded.
+        if (
+            SettingsStore.settings?.supportedBiometryType !==
+            supportedBiometryType
+        ) {
+            await updateSettings({ supportedBiometryType });
+        }
 
         this.handleFocus();
     }
