@@ -1767,6 +1767,7 @@
     "stores.LSPStore.error": "LSP error",
     "stores.LSPStore.connectionError": "Could not connect to LSP. Please check your LSP settings or try again later.",
     "stores.LightningAddressStore.preimageNotFound": "Pre-image not found on your device. Did you recently change devices?",
+    "stores.LightningAddressStore.Cashu.mintMismatch": "Payment references a mint that is not approved on this device",
     "stores.LightningAddressStore.Cashu.quoteNotPaid": "Quote not paid",
     "stores.LightningAddressStore.Cashu.quotePaymentErr": "Error checking for quote payment",
     "stores.NostrWalletConnectStore.initializingService": "Initializing Nostr Wallet Connect service...",
