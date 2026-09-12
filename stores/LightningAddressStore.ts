@@ -146,7 +146,9 @@ export default class LightningAddressStore {
     public deleteAndGenerateNewPreimages = async () => {
         this.loading = true;
         await Storage.setItem(HASHES_STORAGE_STRING, '');
-        this.generatePreimages(true);
+        this.generatePreimages(true).catch((e) =>
+            console.log('Error generating preimages', e)
+        );
     };
 
     @action
@@ -684,13 +686,17 @@ export default class LightningAddressStore {
                     this.localHashes === 0 &&
                     this.lightningAddressType === 'zaplocker'
                 ) {
-                    this.generatePreimages(true);
+                    this.generatePreimages(true).catch((e) =>
+                        console.log('Error generating preimages', e)
+                    );
                 } else if (
                     this.lightningAddress &&
                     new BigNumber(this.availableHashes).lt(50) &&
                     this.lightningAddressType === 'zaplocker'
                 ) {
-                    this.generatePreimages();
+                    this.generatePreimages().catch((e) =>
+                        console.log('Error generating preimages', e)
+                    );
                 }
             });
 
@@ -794,7 +800,9 @@ export default class LightningAddressStore {
             runInAction(() => {
                 this.redeeming = false;
             });
-            this.status(true);
+            this.status(true).catch((e) =>
+                console.log('Error fetching Lightning address status', e)
+            );
         } catch (error) {
             const error_msg = error?.toString();
             runInAction(() => {
@@ -886,7 +894,12 @@ export default class LightningAddressStore {
                     }
 
                     if (!skipStatus) {
-                        this.status(true);
+                        this.status(true).catch((e) =>
+                            console.log(
+                                'Error fetching Lightning address status',
+                                e
+                            )
+                        );
                     }
 
                     return true;
@@ -1155,7 +1168,13 @@ export default class LightningAddressStore {
                         ).then((success: any) => {
                             if (success?.success === true && localNotification)
                                 fireLocalNotification();
-                            if (!skipStatus) this.status(true);
+                            if (!skipStatus)
+                                this.status(true).catch((e) =>
+                                    console.log(
+                                        'Error fetching Lightning address status',
+                                        e
+                                    )
+                                );
                             return;
                         });
                     }
@@ -1177,7 +1196,13 @@ export default class LightningAddressStore {
                                         localNotification
                                     )
                                         fireLocalNotification();
-                                    if (!skipStatus) this.status(true);
+                                    if (!skipStatus)
+                                        this.status(true).catch((e) =>
+                                            console.log(
+                                                'Error fetching Lightning address status',
+                                                e
+                                            )
+                                        );
                                     return;
                                 });
                             }
@@ -1191,7 +1216,13 @@ export default class LightningAddressStore {
                         ).then((success) => {
                             if (success?.success === true && localNotification)
                                 fireLocalNotification();
-                            if (!skipStatus) this.status(true);
+                            if (!skipStatus)
+                                this.status(true).catch((e) =>
+                                    console.log(
+                                        'Error fetching Lightning address status',
+                                        e
+                                    )
+                                );
                             return;
                         });
                     }
@@ -1219,8 +1250,9 @@ export default class LightningAddressStore {
                     item.comment,
                     true,
                     localNotification
-                );
-                return;
+                ).catch((e) => {
+                    console.log('Error redeeming payment', e);
+                });
             }
         } else {
             for (const item of this.paid) {
@@ -1244,7 +1276,9 @@ export default class LightningAddressStore {
             }
         }
         runInAction(() => {
-            this.status(true);
+            this.status(true).catch((e) =>
+                console.log('Error fetching Lightning address status', e)
+            );
             this.redeemingAll = false;
         });
     };
@@ -1271,7 +1305,9 @@ export default class LightningAddressStore {
         }
 
         runInAction(() => {
-            this.status(true);
+            this.status(true).catch((e) =>
+                console.log('Error fetching Lightning address status', e)
+            );
             this.redeemingAll = false;
         });
     };
@@ -1304,7 +1340,7 @@ export default class LightningAddressStore {
                     comment,
                     false,
                     true
-                );
+                ).catch((e) => console.log('Error redeeming payment', e));
             } else {
                 this.lookupAttestations(hash, amount_msat)
                     .then(({ status }: { status?: string }) => {
@@ -1318,6 +1354,8 @@ export default class LightningAddressStore {
                             comment,
                             false,
                             true
+                        ).catch((e) =>
+                            console.log('Error redeeming payment', e)
                         );
                     })
                     .catch((e) =>
@@ -1356,8 +1394,15 @@ export default class LightningAddressStore {
                 runInAction(() => {
                     this.readyToAutomaticallyAccept = true;
                     if (this.socket && this.socket.connected) return;
-                    this.redeemAllOpenPaymentsZaplocker(true);
-                    this.subscribeUpdatesZaplocker();
+                    this.redeemAllOpenPaymentsZaplocker(true).catch((e) =>
+                        console.log('Error redeeming payments', e)
+                    );
+                    this.subscribeUpdatesZaplocker().catch((e) =>
+                        console.log(
+                            'Error subscribing to Lightning address updates',
+                            e
+                        )
+                    );
                 });
             }
             await sleep(3000);
@@ -1366,8 +1411,12 @@ export default class LightningAddressStore {
 
     public prepareToAutomaticallyAcceptCashu = () => {
         if (this.socket && this.socket.connected) return;
-        this.redeemAllOpenPaymentsCashu(true);
-        this.subscribeUpdatesCashu();
+        this.redeemAllOpenPaymentsCashu(true).catch((e) =>
+            console.log('Error redeeming payments', e)
+        );
+        this.subscribeUpdatesCashu().catch((e) =>
+            console.log('Error subscribing to Lightning address updates', e)
+        );
     };
 
     @action
