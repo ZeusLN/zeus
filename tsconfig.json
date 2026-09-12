@@ -18,7 +18,10 @@
     "skipLibCheck": true,
     "baseUrl": "./",
     "paths": {
-      "*" : ["typings/*"]
+      "*" : ["typings/*"],
+      "@react-navigation/bottom-tabs/unstable": [
+        "node_modules/@react-navigation/bottom-tabs/lib/typescript/src/unstable/index.d.ts"
+      ]
     }
   },
   "exclude": ["node_modules", "zeus_modules", "android", "ios"],

@@ -9,7 +9,8 @@ import {
 } from 'react-native';
 import BigNumber from 'bignumber.js';
 import { LNURLWithdrawParams } from 'js-lnurl';
-import { ButtonGroup, Icon } from '@rneui/themed';
+import { Icon } from '@rneui/themed';
+import ButtonGroup from '../components/GlassButtonGroup';
 import { inject, observer } from 'mobx-react';
 import _map from 'lodash/map';
 import NfcManager from 'react-native-nfc-manager';
