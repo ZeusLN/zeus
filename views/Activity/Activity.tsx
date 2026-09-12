@@ -22,6 +22,7 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 import { Row } from '../../components/layout/Row';
 import ActivityToCsv from './ActivityToCsv';
+import ActivityIcon, { ActivityImageCache } from './ActivityIcon';
 
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
@@ -92,6 +93,7 @@ interface ActivityListItemProps {
         | 'warningReserve';
     order?: Order;
     swapStore: SwapStore;
+    imageCache: ActivityImageCache;
 }
 
 const ActivityListItem = observer(
@@ -101,9 +103,11 @@ const ActivityListItem = observer(
         onItemPress,
         getRightTitleTheme,
         order,
-        swapStore
+        swapStore,
+        imageCache
     }: ActivityListItemProps) => {
         const note = item.getNote;
+        const amountColor = getRightTitleTheme(item);
         let displayName = item.model;
         let subTitle = item.model;
 
@@ -292,6 +296,11 @@ const ActivityListItem = observer(
                 }}
                 onPress={() => onItemPress(item)}
             >
+                <ActivityIcon
+                    item={item}
+                    imageCache={imageCache}
+                    colorTheme={amountColor}
+                />
                 <ListItem.Content>
                     <View style={styles.row}>
                         <ListItem.Title
@@ -328,7 +337,7 @@ const ActivityListItem = observer(
                                         : item.getAmount
                                 }
                                 sensitive
-                                color={getRightTitleTheme(item)}
+                                color={amountColor}
                             />
                             {!!item.getFee && item.getFee != 0 && (
                                 <>
@@ -343,7 +352,7 @@ const ActivityListItem = observer(
                                     <Amount
                                         sats={item.getFee}
                                         sensitive
-                                        color={getRightTitleTheme(item)}
+                                        color={amountColor}
                                         fee
                                         roundAmount
                                     />
@@ -467,6 +476,7 @@ export default class Activity extends React.PureComponent<
     private transactionListener: EmitterSubscription;
     private invoicesListener: EmitterSubscription;
     private focusListener?: () => void;
+    private activityImageCache: ActivityImageCache = new Map();
 
     state = {
         loading: false,
@@ -859,6 +869,7 @@ export default class Activity extends React.PureComponent<
                                 getRightTitleTheme={this.getRightTitleTheme}
                                 order={route.params?.order}
                                 swapStore={SwapStore}
+                                imageCache={this.activityImageCache}
                             />
                         )}
                         keyExtractor={(item, index) => `${item.model}-${index}`}
