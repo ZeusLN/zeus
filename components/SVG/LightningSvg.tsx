@@ -6,7 +6,8 @@ export default function LightningSvg({
     width = 70,
     height = 70,
     circle = true,
-    selected = false
+    selected = false,
+    color = ''
 }) {
     const svgProps = {
         width: `${width}`,
@@ -25,12 +26,14 @@ export default function LightningSvg({
 
     const polygon1Props = {
         points: '20.802,29.826 23.896,36.001 25.676,32.449 24.362,29.826 25.676,27.2 23.896,23.651',
-        fill: selected ? themeColor('background') : themeColor('bolt')
+        fill:
+            color || (selected ? themeColor('background') : themeColor('bolt'))
     };
 
     const polygon2Props = {
         points: '29.197,20.173 26.103,14 24.323,17.55 25.637,20.173 24.323,22.799 26.103,26.351',
-        fill: selected ? themeColor('background') : themeColor('bolt')
+        fill:
+            color || (selected ? themeColor('background') : themeColor('bolt'))
     };
 
     return React.createElement(
