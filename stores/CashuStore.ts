@@ -1,5 +1,5 @@
 import { action, observable, runInAction } from 'mobx';
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import url from 'url';
 import querystring from 'querystring-es3';
@@ -42,7 +42,7 @@ import CashuInvoice from '../models/CashuInvoice';
 import CashuPayment from '../models/CashuPayment';
 import CashuToken from '../models/CashuToken';
 
-import Storage from '../storage';
+import Storage, { getRawItem, KEY_PREFIX } from '../storage';
 
 import { activityStore, connectivityStore } from './Stores';
 import InvoicesStore from './InvoicesStore';
@@ -353,7 +353,16 @@ export default class CashuStore {
             // Get mnemonic from seed derivation
             let mnemonic = this.getCDKMnemonic();
             if (!mnemonic) {
-                // Remote nodes have no wallet seed to derive from.
+                // Remote nodes have no wallet seed to derive from, so a
+                // missing stored seed normally means a fresh wallet. But on
+                // iOS it can also mean keychainDesyncMigration failed for
+                // this key and the real seed still sits in the
+                // synchronizable partition; generating a new one here would
+                // permanently shadow it under copy-if-missing. Check there
+                // before generating.
+                mnemonic = await this.recoverSeedFromSyncPartition();
+            }
+            if (!mnemonic) {
                 // Generate and persist a mnemonic so CDK can operate
                 // and recover funds if a flow is interrupted.
                 mnemonic = bip39scure.generateMnemonic(BIP39_WORD_LIST, 128);
@@ -548,6 +557,61 @@ export default class CashuStore {
 
         console.log('CDK: Derived and stored cashu seed from wallet seed');
         return cashuSeedPhrase;
+    };
+
+    /**
+     * Last-resort read of the cashu seed from the synchronizable keychain
+     * partition, for the case where keychainDesyncMigration failed for this
+     * key (oblador/react-native-keychain#800; ZeusLN/zeus#4403). Adopts and
+     * persists the recovered seed device-locally so subsequent boots read it
+     * through Storage.
+     */
+    private recoverSeedFromSyncPartition = async (): Promise<string | null> => {
+        if (Platform.OS !== 'ios') return null;
+        const nodeDir = this.getNodeDir();
+        try {
+            const syncJson = await getRawItem(
+                `${KEY_PREFIX}${nodeDir}-cashu-seed-phrase`,
+                true
+            );
+            if (!syncJson) return null;
+            const words = JSON.parse(syncJson);
+            if (!Array.isArray(words) || words.length === 0) return null;
+            const mnemonic = words.join(' ');
+            if (!bip39scure.validateMnemonic(mnemonic, BIP39_WORD_LIST)) {
+                console.warn(
+                    'CDK: Synchronizable-partition cashu seed is not valid BIP-39'
+                );
+                return null;
+            }
+
+            // Mirror the generate path: in-memory state first, persistence
+            // failures retry via the desync migration on the next launch
+            runInAction(() => {
+                this.seedPhrase = words;
+                this.seedVersion = 'v2-bip39';
+            });
+            try {
+                await Storage.setItem(`${nodeDir}-cashu-seed-phrase`, words);
+                await Storage.setItem(
+                    `${nodeDir}-cashu-seed-version`,
+                    'v2-bip39'
+                );
+            } catch (storageErr) {
+                console.warn(
+                    'CDK: Failed to persist recovered mnemonic to Keychain:',
+                    storageErr
+                );
+            }
+
+            console.log(
+                'CDK: Recovered cashu seed from synchronizable keychain partition'
+            );
+            return mnemonic;
+        } catch (e) {
+            console.warn('CDK: Synchronizable-partition seed check failed:', e);
+            return null;
+        }
     };
 
     /**
