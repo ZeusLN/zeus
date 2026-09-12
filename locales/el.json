@@ -2266,6 +2266,7 @@
     "cashu.lockTo": "Κλείδωμα για",
     "cashu.locktime": "Κλείδωμα μέχρι",
     "cashu.lock": "Κλείδωμα",
+    "cashu.removeLock": "Remove lock",
     "cashu.noContactsWithCashuPubkey": "No contacts with Cashu pubkey",
     "cashu.noDuration": "no duration",
     "cashu.duration.1Day": "1 Μέρα",

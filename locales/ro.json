@@ -2266,6 +2266,7 @@
     "cashu.lockTo": "Blocat la",
     "cashu.locktime": "Blocat până la",
     "cashu.lock": "Blocare",
+    "cashu.removeLock": "Remove lock",
     "cashu.noContactsWithCashuPubkey": "Niciun contact cu cheia publică Cashu",
     "cashu.noDuration": "fără durată",
     "cashu.duration.1Day": "1 zi",

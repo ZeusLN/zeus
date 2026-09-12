@@ -2266,6 +2266,7 @@
     "cashu.lockTo": "锁定对象",
     "cashu.locktime": "锁定至",
     "cashu.lock": "锁定",
+    "cashu.removeLock": "Remove lock",
     "cashu.noContactsWithCashuPubkey": "暂无拥有 Cashu 公钥的联系人",
     "cashu.noDuration": "无期限",
     "cashu.duration.1Day": "1 天",
