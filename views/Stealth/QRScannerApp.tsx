@@ -18,8 +18,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
     Camera,
     useCameraDevice,
-    useCodeScanner
+    useCameraPermission
 } from 'react-native-vision-camera';
+import { useBarcodeScannerOutput } from 'react-native-vision-camera-barcode-scanner';
+import type { TargetBarcodeFormat } from 'react-native-vision-camera-barcode-scanner';
 import { useStealthTapDetector } from './StealthTapDetector';
 
 interface QRScannerAppProps {
@@ -35,18 +37,26 @@ interface ScanResult {
 
 const STORAGE_KEY = '@stealth_qrscanner_history';
 
+// Hoisted: useBarcodeScannerOutput memoizes on the identity of this array, so
+// an inline literal would tear down and recreate the native output every render.
+const BARCODE_FORMATS: TargetBarcodeFormat[] = ['qr-code'];
+
 const QRScannerApp: React.FC<QRScannerAppProps> = ({
     onUnlock,
     requiredTaps = 5
 }) => {
     const [scanHistory, setScanHistory] = React.useState<ScanResult[]>([]);
     const [showHistory, setShowHistory] = React.useState(false);
-    const [cameraAuthorized, setCameraAuthorized] = React.useState(false);
     const [cameraActive, setCameraActive] = React.useState(true);
     const lastScannedRef = React.useRef<string | null>(null);
 
     const scanLineAnim = React.useRef(new Animated.Value(0)).current;
     const device = useCameraDevice('back');
+
+    // useCameraPermission re-reads the status whenever the app returns to the
+    // foreground, so returning from the system settings picks up a new grant.
+    const { hasPermission, canRequestPermission, requestPermission } =
+        useCameraPermission();
 
     // Secret unlock: tap "QR Scanner" title requiredTaps times within 4 seconds
     const { handleTap: handleSecretTap } = useStealthTapDetector({
@@ -58,28 +68,18 @@ const QRScannerApp: React.FC<QRScannerAppProps> = ({
     React.useEffect(() => {
         loadHistory();
 
-        (async () => {
-            const status = Camera.getCameraPermissionStatus();
-            if (status === 'granted') {
-                setCameraAuthorized(true);
-            } else {
-                const result = await Camera.requestCameraPermission();
-                setCameraAuthorized(result === 'granted');
-            }
-        })();
-
-        const sub = AppState.addEventListener('change', (state) => {
-            setCameraActive(state === 'active');
-            if (state === 'active') {
-                const status = Camera.getCameraPermissionStatus();
-                if (status === 'granted') {
-                    setCameraAuthorized(true);
-                }
-            }
-        });
+        const sub = AppState.addEventListener('change', (state) =>
+            setCameraActive(state === 'active')
+        );
 
         return () => sub.remove();
     }, []);
+
+    React.useEffect(() => {
+        if (!hasPermission && canRequestPermission) {
+            requestPermission();
+        }
+    }, [hasPermission, canRequestPermission, requestPermission]);
 
     const historyLoaded = React.useRef(false);
     React.useEffect(() => {
@@ -169,14 +169,16 @@ const QRScannerApp: React.FC<QRScannerAppProps> = ({
         Alert.alert('Scanned', data, buttons);
     }, []);
 
-    const codeScanner = useCodeScanner({
-        codeTypes: ['qr'],
-        onCodeScanned: (codes) => {
-            const code = codes.find((c) => c.value != null)?.value;
+    const codeScannerOutput = useBarcodeScannerOutput({
+        barcodeFormats: BARCODE_FORMATS,
+        outputResolution: 'full',
+        onBarcodeScanned: (barcodes) => {
+            const code = barcodes.find((b) => b.rawValue != null)?.rawValue;
             if (code != null) {
                 handleScan(code);
             }
-        }
+        },
+        onError: (error) => console.error('Barcode scanner error:', error)
     });
 
     const handleHistoryItemPress = (content: string) => {
@@ -233,16 +235,16 @@ const QRScannerApp: React.FC<QRScannerAppProps> = ({
 
             {/* Scanner View */}
             <View style={styles.scannerContainer}>
-                {device && cameraAuthorized ? (
+                {device && hasPermission ? (
                     <Camera
                         style={StyleSheet.absoluteFill}
                         device={device}
-                        codeScanner={codeScanner}
+                        outputs={[codeScannerOutput]}
                         isActive={cameraActive && !showHistory}
                     />
                 ) : (
                     <View style={styles.cameraFallback}>
-                        {!cameraAuthorized ? (
+                        {!hasPermission ? (
                             <>
                                 <Text style={styles.fallbackText}>
                                     Camera access required
