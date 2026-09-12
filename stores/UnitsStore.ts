@@ -19,7 +19,7 @@ export default class UnitsStore {
         this.getUnits();
     }
 
-    private getUnits = async () => {
+    public getUnits = async () => {
         const units = await Storage.getItem(UNIT_KEY);
         if (units) this.units = units;
     };

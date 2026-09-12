@@ -600,7 +600,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LnurlPayStore,
             NotesStore,
             SwapStore,
-            NostrWalletConnectStore
+            NostrWalletConnectStore,
+            UnitsStore
         } = this.props;
         const {
             settings,
@@ -657,6 +658,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             UTXOsStore.reset();
             ContactStore.loadContacts();
             NotesStore.loadNoteKeys();
+            // Units are first read at store construction, which on iOS can
+            // precede keychainDesyncMigration populating the device-local
+            // partition; re-read now that getSettings has completed
+            UnitsStore.getUnits();
             CashuStore.reset();
         }
 
