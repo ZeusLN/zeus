@@ -1,4 +1,5 @@
 import { action, observable, runInAction } from 'mobx';
+import { Platform } from 'react-native';
 import { BiometryType } from 'react-native-biometrics';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import EncryptedStorage from 'react-native-encrypted-storage';
@@ -17,7 +18,7 @@ import {
     SupportedNetwork
 } from '../utils/LdkNodeUtils';
 
-import Storage from '../storage';
+import Storage, { getRawItem, KEY_PREFIX } from '../storage';
 
 // lndhub
 import LoginRequest from '../models/LoginRequest';
@@ -1962,10 +1963,43 @@ export default class SettingsStore {
     public getSettings = async (silentUpdate: boolean = false) => {
         if (!silentUpdate) this.loading = true;
         try {
+            // ORDER IS LOAD-BEARING. keychainDesyncMigration must run BEFORE
+            // keychainCloudSyncMigration: migrateKey() short-circuits on a
+            // truthy Storage.getItem(), which (with the patched
+            // react-native-keychain) reads the device-local partition. For a
+            // pre-2026 install that partition starts empty, so running the
+            // legacy migration first would repopulate it with STALE unprefixed
+            // data and permanently shadow the fresher iCloud-partition copy of
+            // zeus:* data. Desync first guarantees the local partition is
+            // populated before any legacy fallback can win.
+            await MigrationsUtils.keychainDesyncMigration();
             await MigrationsUtils.keychainCloudSyncMigration();
             await MigrationsUtils.purgeRescueKeyFiles();
 
-            const modernSettings: any = await Storage.getItem(STORAGE_KEY);
+            let modernSettings: any = await Storage.getItem(STORAGE_KEY);
+
+            if (!modernSettings && Platform.OS === 'ios') {
+                // An empty local partition is indistinguishable from a failed
+                // desync migration: the blob may still live only in the
+                // synchronizable partition. Read it there for this boot;
+                // nothing is ever written back to the synchronizable
+                // partition. The settings migrations below may persist the
+                // blob device-local via setSettings, which is fine: that
+                // content derives from this same read, so the desync retry
+                // skipping it under copy-if-missing loses nothing. All other
+                // keys still retry on the next launch.
+                try {
+                    modernSettings = await getRawItem(
+                        `${KEY_PREFIX}${STORAGE_KEY}`,
+                        true
+                    );
+                } catch (error) {
+                    console.error(
+                        'Could not read synchronizable settings fallback',
+                        error
+                    );
+                }
+            }
 
             if (modernSettings) {
                 console.log('attempting to load modern settings');

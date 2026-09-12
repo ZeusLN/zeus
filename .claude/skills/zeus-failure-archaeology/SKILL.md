@@ -73,6 +73,8 @@ Background terms: the **keychain** is the OS secure credential store (accessed v
 
 **Lesson:** never delete keychain data in a migration — namespace new data (`zeus:` prefix), leave orphans, and treat any keychain deletion as a maintainer-gated change (see zeus-change-control).
 
+**Final chapter (2026-08, KEY-004 remediation):** the saga's actual root cause turned out to be an upstream bug, not iCloud semantics: react-native-keychain's `cloudSyncValue()` treats a PRESENT `cloudSync: false` as true (`@NO` is a non-nil, truthy ObjC pointer), so every "exclude from iCloud" attempt above, and all `zeus:*` writes since, actually wrote `kSecAttrSynchronizable = true`. All wallet seeds were syncing to iCloud Keychain the entire time. Remediation (branch `fix/keychain-cloudsync-key004`): (1) `patches/patch-keychain-cloudsync.mjs` fixes the check and throws at postinstall if it stops matching; (2) `keychainDesyncMigration` (one-shot, non-destructive, runs FIRST in `getSettings`) copies synchronizable `zeus:*` items to the now-truly-local partition; (3) deletion exists but ONLY as the user-consented, preflight-verified Tools > Keychain Cleanup purge (`utils/KeychainPurgeUtils.ts`). The "never delete in a migration" lesson stands: the purge is not a migration, is never automatic, and requires the user to attest all their devices are updated because deleting synchronizable items still propagates (the #3625 mode, now disclosed and opt-in).
+
 ---
 
 ## FA-2 — React Native upgrade / New Architecture saga (~19-month freeze, then Fabric fallout)

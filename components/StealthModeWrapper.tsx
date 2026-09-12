@@ -39,7 +39,10 @@ const StealthModeWrapper: React.FC<StealthModeWrapperProps> = ({
     }, []);
 
     const checkStealthStatus = async () => {
-        // Only check on Android
+        // Only check on Android. This gate is also load-bearing for iOS
+        // keychain migrations: it keeps this pre-getSettings Storage read off
+        // iOS, where reading before keychainDesyncMigration has populated the
+        // device-local partition would see empty data (see SettingsStore).
         if (Platform.OS !== 'android') {
             setIsLoading(false);
             return;

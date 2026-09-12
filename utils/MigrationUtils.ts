@@ -98,7 +98,14 @@ const KEYCHAIN_MIGRATION_KEY = 'ios-keychain-cloud-sync-migration-v1';
 const CASHU_MIGRATION_KEY = 'ios-keychain-cashu-fix-v1';
 
 import EncryptedStorage from 'react-native-encrypted-storage';
-import Storage from '../storage';
+import Storage, {
+    KEY_PREFIX,
+    getInternetPasswordServers,
+    getRawItem,
+    setRawLocalItem
+} from '../storage';
+
+export const KEYCHAIN_DESYNC_KEY = 'keychain-desync-v1';
 
 class MigrationsUtils {
     /**
@@ -1276,6 +1283,112 @@ class MigrationsUtils {
             if (legacyValue !== null && legacyValue !== undefined) {
                 await Storage.setItem(nodeKey, legacyValue);
             }
+        }
+    }
+
+    /**
+     * One-shot iOS repair for the react-native-keychain cloudSync bug
+     * (oblador/react-native-keychain#800; tracked for removal in
+     * ZeusLN/zeus#4403): every Storage write passed { cloudSync: false },
+     * which the unpatched library treated as true, so all zeus:-prefixed
+     * data (including the settings blob with wallet seeds) lived in the
+     * SYNCHRONIZABLE keychain partition and synced to iCloud Keychain. With the patched library, Storage reads
+     * the device-local partition, which is empty for existing users; this
+     * migration copies every zeus:* item from the synchronizable partition
+     * into the local one. It never deletes anything (the multi-device wipe
+     * of issue #3625 is why); removal of the synchronizable copies is the
+     * separate, user-consented purge in KeychainPurgeUtils.
+     *
+     * Only zeus:* servers are copied: unprefixed synchronizable entries are
+     * stale pre-2026 legacy data, and copying them would resurrect old state
+     * into partitions the Keychain Recovery tool treats as meaningful.
+     *
+     * Copy-if-missing on purpose: if a crash interrupts the run and the user
+     * then writes settings (patched build writes locally), a retry must not
+     * clobber that fresh local data with the older synchronizable copy.
+     *
+     * No 500ms pacing sleeps here, unlike migrateKey: those mitigate iCloud
+     * latency around cross-device deletes (35aaf8897), and this migration
+     * performs local-only reads and writes.
+     */
+    public async keychainDesyncMigration() {
+        if (Platform.OS !== 'ios') return;
+
+        try {
+            const hasRun = await EncryptedStorage.getItem(KEYCHAIN_DESYNC_KEY);
+            if (hasRun === 'true') return;
+
+            console.log('Attempting keychain desync migration...');
+
+            const syncServers = (await getInternetPasswordServers(true)).filter(
+                (server) => server.startsWith(KEY_PREFIX)
+            );
+
+            // Failures are contained PER KEY: SecItemCopyMatching returns
+            // servers in arbitrary order, so aborting the loop on the first
+            // bad key would leave an arbitrary subset uncopied. Only the
+            // settings blob has a synchronizable-partition read fallback in
+            // getSettings; any other uncopied key that a store writes before
+            // a later retry succeeds is permanently shadowed under
+            // copy-if-missing. Copying the maximum each pass keeps that
+            // window as small as possible and lets retries converge instead
+            // of re-failing at the same arbitrary point.
+            let failedCount = 0;
+            for (const server of syncServers) {
+                try {
+                    const localValue = await getRawItem(server, false);
+                    if (localValue !== null) continue;
+
+                    const syncValue = await getRawItem(server, true);
+                    // Empty means deleted under Storage semantics; nothing
+                    // to copy
+                    if (!syncValue) continue;
+
+                    if (!settingsStore.isMigrating)
+                        settingsStore.isMigrating = true;
+
+                    await setRawLocalItem(server, syncValue);
+
+                    const verify = await getRawItem(server, false);
+                    if (verify !== syncValue) {
+                        // Counted as a failure so the flag stays unset and
+                        // this key retries on the next boot instead of being
+                        // silently skipped forever
+                        throw new Error(
+                            `Keychain desync migration verify failed for ${server}`
+                        );
+                    }
+                } catch (error) {
+                    console.error(
+                        `Keychain desync migration failed for ${server}`,
+                        error
+                    );
+                    failedCount++;
+                }
+            }
+
+            if (failedCount > 0) {
+                // Flag stays unset so the migration retries on the next
+                // boot; keys copied above are then skipped by the
+                // copy-if-missing guard and only the failed ones re-run
+                console.error(
+                    `Keychain desync migration incomplete (${failedCount} of ${syncServers.length} synchronizable zeus: entries failed)`
+                );
+                return;
+            }
+
+            await EncryptedStorage.setItem(KEYCHAIN_DESYNC_KEY, 'true');
+            console.log(
+                `Keychain desync migration completed (${syncServers.length} synchronizable zeus: entries)`
+            );
+        } catch (error) {
+            // Swallowed WITHOUT setting the flag: the migration retries on
+            // the next boot. Propagating would abort getSettings before the
+            // blob read; the in-memory defaults it falls back to render the
+            // onboarding flow, and a wallet created there would permanently
+            // shadow the real blob under copy-if-missing. getSettings'
+            // synchronizable-partition fallback covers this boot instead.
+            console.error('Keychain desync migration failed', error);
         }
     }
 

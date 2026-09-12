@@ -30,9 +30,14 @@ jest.mock('../utils/LocaleUtils', () => ({
     localeString: (s: string) => s
 }));
 jest.mock('../utils/MigrationUtils', () => ({
+    keychainDesyncMigration: jest.fn().mockResolvedValue(undefined),
     keychainCloudSyncMigration: jest.fn().mockResolvedValue(undefined),
     purgeRescueKeyFiles: jest.fn().mockResolvedValue(undefined),
     migrateRgsDefaultToZeus: jest.fn().mockResolvedValue(undefined),
+    migrateRgsDefaultsToV2: jest.fn().mockResolvedValue(undefined),
+    migrateSwapHostsToBoltz: jest.fn().mockResolvedValue(undefined),
+    migrateRetiredSwapHosts: jest.fn().mockResolvedValue(undefined),
+    migrateOlympusHostsToZeusLsp: jest.fn().mockResolvedValue(undefined),
     migrateInvoiceExpiryDisplay: jest.fn().mockResolvedValue(undefined),
     legacySettingsMigrations: jest.fn().mockResolvedValue({}),
     storageMigrationV2: jest.fn().mockResolvedValue(undefined)
@@ -66,7 +71,9 @@ jest.mock('../storage', () => {
         removeItem: jest.fn(async (key: string) => {
             delete backing[key];
             return true;
-        })
+        }),
+        KEY_PREFIX: 'zeus:',
+        getRawItem: jest.fn(async () => null)
     };
 });
 
@@ -201,5 +208,38 @@ describe('SettingsStore.updateSettings', () => {
         expect(result.fiat).toEqual('CAD');
         expect(persistedSettings().fiat).toEqual('CAD');
         expect(store.settingsUpdateInProgress).toEqual(false);
+    });
+});
+
+describe('SettingsStore.getSettings', () => {
+    afterEach(() => {
+        StorageMock.getRawItem.mockReset();
+        StorageMock.getRawItem.mockResolvedValue(null);
+    });
+
+    it('falls back to the synchronizable blob when the local partition is empty', async () => {
+        // Desync migration not yet complete: nothing in local storage, the
+        // real blob still lives only in the synchronizable partition. A user
+        // with wallets must never be routed to onboarding on such a boot.
+        const node = {
+            implementation: 'lnd',
+            host: 'example.com',
+            certVerification: true,
+            dismissCustodialWarning: true
+        };
+        StorageMock.getRawItem.mockImplementation(
+            async (server: string, cloudSync: boolean) =>
+                cloudSync && server === `zeus:${STORAGE_KEY}`
+                    ? JSON.stringify({ nodes: [node], selectedNode: 0 })
+                    : null
+        );
+        const store = new SettingsStore();
+
+        const settings = await store.getSettings();
+
+        expect(settings.nodes?.length).toEqual(1);
+        expect(settings.nodes?.[0].host).toEqual('example.com');
+        // Read-only fallback: the local partition must not be written
+        expect(StorageMock._backing[STORAGE_KEY]).toBeUndefined();
     });
 });

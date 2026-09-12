@@ -7,6 +7,7 @@ import { patchReactNativeNotifications } from './patch-react-native-notification
 import { patchNobleHashes } from './patch-noble-hashes.mjs';
 import { patchReanimatedBoundaryAndroid } from './patch-reanimated-boundary-android.mjs';
 import { patchReanimatedSetFixes } from './patch-reanimated-set-fixes.mjs';
+import { patchKeychainCloudSync } from './patch-keychain-cloudsync.mjs';
 
 console.log('Running postinstall patches...\n');
 
@@ -17,6 +18,7 @@ console.log('Running postinstall patches...\n');
     patchNobleHashes();
     patchReanimatedBoundaryAndroid();
     patchReanimatedSetFixes();
+    patchKeychainCloudSync();
 
     console.log('\nAll patches applied successfully.');
 })();
