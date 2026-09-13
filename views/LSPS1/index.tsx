@@ -343,7 +343,9 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         const payment = result?.payment;
         const isFreeOrder = isOrderFree(payment);
         const isGetInfoError =
-            LSPStore.error && Object.keys(getInfoData).length === 0;
+            LSPStore.error &&
+            !!LSPStore.error_msg &&
+            Object.keys(getInfoData ?? {}).length === 0;
 
         const HistoryBtn = () => (
             <TouchableOpacity
