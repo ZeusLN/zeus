@@ -41,7 +41,7 @@ import {
 // Not exported by SettingsStore; same local definition as KeychainRecoveryUtils
 const LEGACY_STORAGE_KEY = 'zeus-settings';
 
-const PURGE_OFFER_KEY = 'keychain-purge-offer-v1';
+const AUTO_PURGE_KEY = 'keychain-autopurge-v1';
 
 const CASHU_KEY_SUFFIXES = [
     'cashu-mintUrls',
@@ -212,9 +212,9 @@ const deriveDynamicLegacyKeys = async (): Promise<string[]> => {
  * partition, candidates come from the reconstructed legacy key catalog.
  *
  * The iCloud-synced copies exist because of the react-native-keychain
- * cloudSync bug (oblador/react-native-keychain#800). This consent-gated
- * purge, the desync migration, and the patch are transitional; retirement
- * is tracked in ZeusLN/zeus#4403.
+ * cloudSync bug (oblador/react-native-keychain#800). This purge, the desync
+ * migration, and the patch are transitional; retirement is tracked in
+ * ZeusLN/zeus#4403.
  */
 export const scanPurgeCandidates = async (): Promise<PurgeScan> => {
     const hasLegacyEncryptedSettings = !!(await EncryptedStorage.getItem(
@@ -284,37 +284,6 @@ export const verifyPurgePreflight = async (
     }
 
     return { ok: true };
-};
-
-/**
- * Decides whether to show the one-time keychain cleanup offer: iOS only,
- * only after the desync migration has completed, and only once ever (the
- * offer flag is set as soon as a scan completes, so a dismissal is final;
- * the Tools screen remains permanently available). Returns false when a
- * scan finds nothing to clean, silently consuming the offer.
- */
-export const shouldOfferKeychainPurge = async (): Promise<boolean> => {
-    if (Platform.OS !== 'ios') return false;
-    try {
-        const desyncDone = await EncryptedStorage.getItem(KEYCHAIN_DESYNC_KEY);
-        if (desyncDone !== 'true') return false;
-        const offered = await EncryptedStorage.getItem(PURGE_OFFER_KEY);
-        if (offered === 'true') return false;
-        const scan = await scanPurgeCandidates();
-        // Consumed only after a successful scan: a scan that throws must not
-        // burn the one-time offer for a user who does have candidates (the
-        // catch below returns false and the next boot retries).
-        await EncryptedStorage.setItem(PURGE_OFFER_KEY, 'true');
-        return (
-            scan.syncServers.length +
-                scan.legacyLocalServers.length +
-                (scan.hasLegacyEncryptedSettings ? 1 : 0) >
-            0
-        );
-    } catch (e) {
-        console.error('Keychain purge offer check failed', e);
-        return false;
-    }
 };
 
 /**
@@ -401,4 +370,69 @@ export const executePurge = async (scan: PurgeScan): Promise<PurgeResult> => {
     }
 
     return { deleted, failures, skipped };
+};
+
+let autoPurgeInFlight = false;
+
+/**
+ * One-shot automatic cleanup of the legacy and iCloud-synced keychain
+ * copies: iOS only, and only after the desync migration has completed, so
+ * every zeus:* entry already has a device-local copy before its
+ * synchronizable twin is deleted. Runs the same scan, preflight, and purge
+ * as the manual Tools > Keychain Cleanup screen.
+ *
+ * The done flag is set only when a pass ends with zero failures, so a
+ * partial pass retries on the next boot. Entries skipped by the safety
+ * checks (no migrated counterpart, or sole surviving copy) do not block the
+ * flag: they are deliberate refusals, and the Tools screen remains
+ * available for them.
+ *
+ * Deleting synchronizable entries propagates through the Apple ID to every
+ * device, including ones still running a pre-desync build, and ends the
+ * unintended iCloud auto-restore of wallet data on new devices. That
+ * tradeoff is accepted deliberately: the sync copies are the KEY-004
+ * exposure, node-bound wallets never survived device transfer anyway, and
+ * the behavior change is called out in the release notes.
+ */
+export const autoPurgeLegacyKeychain = async (): Promise<void> => {
+    if (Platform.OS !== 'ios') return;
+    if (autoPurgeInFlight) return;
+    autoPurgeInFlight = true;
+    try {
+        const desyncDone = await EncryptedStorage.getItem(KEYCHAIN_DESYNC_KEY);
+        if (desyncDone !== 'true') return;
+        const done = await EncryptedStorage.getItem(AUTO_PURGE_KEY);
+        if (done === 'true') return;
+
+        const scan = await scanPurgeCandidates();
+        const candidates =
+            scan.syncServers.length +
+            scan.legacyLocalServers.length +
+            (scan.hasLegacyEncryptedSettings ? 1 : 0);
+        if (candidates === 0) {
+            await EncryptedStorage.setItem(AUTO_PURGE_KEY, 'true');
+            return;
+        }
+
+        const preflight = await verifyPurgePreflight(scan);
+        if (!preflight.ok) {
+            // Covers post-wipe installs (missing-settings) and copy
+            // failures; both retry on a later boot
+            console.log(`Keychain auto-purge deferred: ${preflight.reason}`);
+            return;
+        }
+
+        const result = await executePurge(scan);
+        console.log(
+            `Keychain auto-purge: ${result.deleted} deleted, ` +
+                `${result.failures.length} failed, ${result.skipped.length} kept`
+        );
+        if (result.failures.length === 0) {
+            await EncryptedStorage.setItem(AUTO_PURGE_KEY, 'true');
+        }
+    } catch (e) {
+        console.error('Keychain auto-purge failed', e);
+    } finally {
+        autoPurgeInFlight = false;
+    }
 };
