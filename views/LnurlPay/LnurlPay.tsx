@@ -121,7 +121,10 @@ export default class LnurlPay extends React.Component<
                 satAmount,
                 fiatError ? 'sats' : undefined
             );
-            if (displayAmount !== this.state.amount) {
+            // a sats fallback can equal the amount already shown (e.g. the
+            // unit was switched to fiat in the keypad without confirming),
+            // so a new error has to pin the input on its own
+            if (displayAmount !== this.state.amount || (error && !fiatError)) {
                 this.setState({
                     amount: displayAmount,
                     ...(error && { fiatError: error })
