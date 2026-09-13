@@ -753,7 +753,9 @@ export default class LSPStore {
                         this.loadingLSPS1 = false;
                     } else {
                         this.error = true;
-                        this.error_msg = 'Error fetching get_info data';
+                        this.error_msg = localeString(
+                            'stores.LSPStore.getInfoResponseError'
+                        );
                         this.loadingLSPS1 = false;
                     }
                 });
@@ -761,7 +763,9 @@ export default class LSPStore {
             .catch(() => {
                 runInAction(() => {
                     this.error = true;
-                    this.error_msg = 'Error fetching get_info data';
+                    this.error_msg = localeString(
+                        'stores.LSPStore.getInfoNetworkError'
+                    );
                     this.loadingLSPS1 = false;
                 });
             });
