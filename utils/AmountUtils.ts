@@ -148,7 +148,8 @@ export function getUnformattedAmount({
             return {
                 amount: localeString('general.disabled'),
                 unit: 'fiat',
-                symbol: '$'
+                symbol: '$',
+                error: localeString('general.fiatRateNotAvailable')
             };
         }
 
@@ -193,20 +194,41 @@ export function getUnformattedAmount({
     }
 }
 
+export interface RawAmount {
+    amount: string;
+    // Set when the unit is fiat but there is no rate to convert with. The
+    // amount is then in sats, and the input has to be pinned to sats, or
+    // getSatAmount would read it back as fiat.
+    forceUnit?: 'sats';
+    // Why the fiat conversion failed, to show next to the input.
+    error?: string;
+}
+
 /**
- * Converts satoshis to the raw, unformatted amount string in the active unit,
- * fit for editable inputs like AmountInput's `amount` prop. That prop is
- * parsed back into satoshis with getSatAmount, so it must never receive a
- * display-formatted string from getAmountFromSats (e.g. '12,618 sats').
+ * Converts satoshis to the raw, unformatted amount in the active unit, fit
+ * for editable inputs like AmountInput's `amount` prop. That prop is parsed
+ * back into satoshis with getSatAmount, so it must never receive a
+ * display-formatted string from getAmountFromSats (e.g. '12,618 sats'), nor
+ * the 'Disabled' placeholder getUnformattedAmount returns when a fiat
+ * conversion fails. In that case the amount is returned in sats instead,
+ * with `forceUnit: 'sats'` and the reason in `error`.
  * @param sats - The amount in satoshis (string or number)
  * @param fixedUnits - Optional unit override ('sats', 'BTC', or 'fiat')
- * @returns Raw amount string like "0.00012618", "12618", or "6.31"
+ * @returns Raw amount like "0.00012618", "12618", or "6.31"
  */
 export function getRawAmountFromSats(
     sats: string | number,
     fixedUnits?: string
-): string {
-    return getUnformattedAmount({ sats, fixedUnits }).amount || sats.toString();
+): RawAmount {
+    const { amount, error } = getUnformattedAmount({ sats, fixedUnits });
+    if (error) {
+        return {
+            amount: getUnformattedAmount({ sats, fixedUnits: 'sats' }).amount,
+            forceUnit: 'sats',
+            error
+        };
+    }
+    return { amount };
 }
 
 /**

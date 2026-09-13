@@ -29,7 +29,11 @@ import LnurlPayMetadata from './Metadata';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import { getUnformattedAmount, getSatAmount } from '../../utils/AmountUtils';
+import {
+    getUnformattedAmount,
+    getRawAmountFromSats,
+    getSatAmount
+} from '../../utils/AmountUtils';
 import {
     verifyLnurlPayInvoice,
     isLnurlCallbackAllowed
@@ -58,6 +62,9 @@ interface LnurlPayProps {
 interface LnurlPayState {
     amount: string;
     satAmount: string | number;
+    // Set once the amount could not be converted to fiat. The amount input
+    // then stays pinned to sats until the screen is closed.
+    fiatError?: string;
     domain: string;
     lightningAddress: string;
     matchedContact: Contact | null;
@@ -108,13 +115,17 @@ export default class LnurlPay extends React.Component<
     // Recalculate the displayed amount in the current unit when the user
     // navigates back (e.g. from AmountKeypad after switching units).
     recalculateDisplayAmount = () => {
-        const { satAmount } = this.state;
+        const { satAmount, fiatError } = this.state;
         if (satAmount && satAmount != 0) {
-            const { amount: displayAmount } = getUnformattedAmount({
-                sats: satAmount
-            });
+            const { amount: displayAmount, error } = getRawAmountFromSats(
+                satAmount,
+                fiatError ? 'sats' : undefined
+            );
             if (displayAmount !== this.state.amount) {
-                this.setState({ amount: displayAmount });
+                this.setState({
+                    amount: displayAmount,
+                    ...(error && { fiatError: error })
+                });
             }
         }
     };
@@ -154,15 +165,16 @@ export default class LnurlPay extends React.Component<
 
         let finalAmount: string;
         let finalSatAmount: string | number;
+        let fiatError: string | undefined;
 
         if (satAmount && satAmount != 0) {
             // If satAmount is provided, always derive display amount from it
             // (ignore any `amount` param as it may be in a different unit)
-            const { amount: displayAmount } = getUnformattedAmount({
-                sats: satAmount
-            });
+            const { amount: displayAmount, error } =
+                getRawAmountFromSats(satAmount);
             finalAmount = displayAmount;
             finalSatAmount = satAmount;
+            fiatError = error;
         } else if (amount && amount != 0) {
             // If only amount is provided, use it and derive satAmount
             finalAmount = amount;
@@ -202,6 +214,7 @@ export default class LnurlPay extends React.Component<
         return {
             amount: finalAmount,
             satAmount: finalSatAmount,
+            fiatError,
             domain: lnurl.domain,
             lightningAddress: lightningAddress || '',
             matchedContact,
@@ -467,7 +480,8 @@ export default class LnurlPay extends React.Component<
             lightningAddress,
             matchedContact,
             comment,
-            loading
+            loading,
+            fiatError
         } = this.state;
 
         const lnurl = route.params?.lnurlParams;
@@ -624,6 +638,9 @@ export default class LnurlPay extends React.Component<
                         <View style={{ marginTop: 0 }}>
                             <AmountInput
                                 amount={amount}
+                                forceUnit={fiatError ? 'sats' : undefined}
+                                hideUnitChangeButton={!!fiatError}
+                                fiatError={fiatError}
                                 locked={
                                     loading ||
                                     (lnurl &&
