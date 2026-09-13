@@ -29,15 +29,21 @@ class CashuDevKitModule: RCTEventEmitter {
     // High-signal file logging for diagnostics. cdk-ffi exposes no logger hook
     // and its Rust internals emit nothing capturable, so we record ZEUS-side
     // events (which op ran + mapped FFI errors) to a file the Diagnostics tool
-    // can tail. Reuses the generic LogFileObserver helper from the LDK module.
-    private var logFileObserver: LogFileObserver?
+    // can tail. Reuses the LogFileObserver tail helper from the LDK module.
     private let logQueue = DispatchQueue(label: "app.zeusln.cashudevkit.log")
+    private var logTrimChecked = false
     private let logDateFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"
         f.locale = Locale(identifier: "en_US_POSIX")
         return f
     }()
+
+    // Cap the log's disk footprint: trimmed back to trimToBytes once the file
+    // passes maxLogBytes, checked once per process. The tail readers only
+    // ever look at the last 256KB anyway.
+    private static let maxLogBytes: UInt64 = 2 * 1024 * 1024
+    private static let trimToBytes: UInt64 = 256 * 1024
 
     // MARK: - Module Setup
 
@@ -49,11 +55,6 @@ class CashuDevKitModule: RCTEventEmitter {
     @objc
     override static func requiresMainQueueSetup() -> Bool {
         return false
-    }
-
-    @objc
-    override func supportedEvents() -> [String]! {
-        return ["cashulog"]
     }
 
     // MARK: - Helper Methods
@@ -399,6 +400,27 @@ class CashuDevKitModule: RCTEventEmitter {
         return appSupport.appendingPathComponent("cashu.log").path
     }
 
+    // Runs on logQueue only, which also confines logTrimChecked. Trims in
+    // place (seek/write/truncate) rather than rewriting the file so the
+    // resource values set below survive.
+    private func trimLogIfNeeded(atPath path: String) {
+        if logTrimChecked { return }
+        logTrimChecked = true
+        guard
+            let attrs = try? FileManager.default.attributesOfItem(
+                atPath: path),
+            let size = (attrs[.size] as? NSNumber)?.uint64Value,
+            size > Self.maxLogBytes,
+            let fh = FileHandle(forUpdatingAtPath: path)
+        else { return }
+        defer { fh.closeFile() }
+        fh.seek(toFileOffset: size - Self.trimToBytes)
+        let keep = fh.readDataToEndOfFile()
+        fh.seek(toFileOffset: 0)
+        fh.write(keep)
+        fh.truncateFile(atOffset: UInt64(keep.count))
+    }
+
     private func logToFile(_ message: String) {
         logQueue.async {
             let line = "\(self.logDateFormatter.string(from: Date())) \(message)\n"
@@ -407,8 +429,12 @@ class CashuDevKitModule: RCTEventEmitter {
             let fm = FileManager.default
             if !fm.fileExists(atPath: path) {
                 fm.createFile(atPath: path, contents: data)
+                // Same at-rest posture as the wallet databases: excluded
+                // from iCloud/iTunes backup, encrypted until first unlock.
+                self.secureDatabaseFile(atPath: path)
                 return
             }
+            self.trimLogIfNeeded(atPath: path)
             if let fh = FileHandle(forWritingAtPath: path) {
                 defer { fh.closeFile() }
                 fh.seekToEndOfFile()
@@ -2035,25 +2061,9 @@ class CashuDevKitModule: RCTEventEmitter {
         resolve(content)
     }
 
-    @objc(observeCashuLogFile:rejecter:)
-    func observeCashuLogFile(resolve: @escaping RCTPromiseResolveBlock,
-                             reject: @escaping RCTPromiseRejectBlock) {
-        if logFileObserver == nil {
-            let observer = LogFileObserver(filePath: getCashuLogPath()) {
-                [weak self] data in
-                self?.sendEvent(withName: "cashulog", body: data)
-            }
-            observer.startObserving()
-            logFileObserver = observer
-        }
-        resolve(true)
-    }
-
     // MARK: - Cleanup
 
     override func invalidate() {
-        logFileObserver?.stopObserving()
-        logFileObserver = nil
         walletQueue.sync {
             repo = nil
             db = nil

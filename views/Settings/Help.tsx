@@ -60,10 +60,6 @@ function Help(props: HelpProps) {
             url: 'https://github.com/ZeusLN/zeus/issues'
         },
         {
-            label: localeString('views.Settings.Help.diagnostics'),
-            path: 'Diagnostics'
-        },
-        {
             // Email support routes through Diagnostics so the user is prompted
             // to attach version/logs/settings before composing the email.
             label: localeString('views.Settings.Help.email'),

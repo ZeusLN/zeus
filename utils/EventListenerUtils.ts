@@ -22,9 +22,3 @@ export const LdkNodeEventEmitter =
         ? DeviceEventEmitter
         : // @ts-ignore:next-line
           new NativeEventEmitter(NativeModules.LdkNodeModule);
-
-export const CashuDevKitEventEmitter =
-    Platform.OS == 'android'
-        ? DeviceEventEmitter
-        : // @ts-ignore:next-line
-          new NativeEventEmitter(NativeModules.CashuDevKitModule);

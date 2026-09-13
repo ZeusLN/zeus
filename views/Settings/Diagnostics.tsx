@@ -200,7 +200,7 @@ export default function Diagnostics(props: DiagnosticsProps) {
                     {localeString('views.Settings.Diagnostics.explainer')}
                 </ListItem.Subtitle>
 
-                {/* Version — always included */}
+                {/* Version: always included */}
                 <ListItem
                     containerStyle={{
                         borderBottomWidth: 0,

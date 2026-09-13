@@ -18,6 +18,26 @@ describe('redactSettings', () => {
             enabled: true,
             nostrPrivateKey: 'nsec-hex-zaplocker-key'
         },
+        privacy: {
+            defaultBlockExplorer: 'mempool.space',
+            customBlockExplorer: 'https://my-explorer.example.com',
+            customMempoolInstance: 'https://my-mempool.example.com',
+            stealthMode: true,
+            stealthVpnCountry: 'Iceland',
+            stealthVpnServer: 'is-rey-wg-001'
+        },
+        swaps: {
+            hostMainnet: 'https://api.boltz.exchange',
+            customHost: 'https://my-boltz.example.com',
+            proEnabled: false
+        },
+        feeEstimator: 'Custom',
+        customFeeEstimator: 'https://my-fees.example.com',
+        customSpeedloader: 'https://my-speedloader.example.com',
+        neutrinoPeersMainnet: [
+            'btcd-mainnet.lightning.computer',
+            'my-own-node.example.com'
+        ],
         fiatEnabled: true,
         selectedNode: 0,
         nodes: [
@@ -111,6 +131,38 @@ describe('redactSettings', () => {
         const out = redactSettings(buildSettings());
 
         expect(out.nodes[4].mailboxServer).toBe(REDACTED_HOST);
+    });
+
+    it('masks custom endpoints outside the nodes array', () => {
+        const out = redactSettings(buildSettings());
+
+        expect(out.privacy.customBlockExplorer).toBe(REDACTED_HOST);
+        expect(out.privacy.customMempoolInstance).toBe(REDACTED_HOST);
+        expect(out.swaps.customHost).toBe(REDACTED_HOST);
+        expect(out.customFeeEstimator).toBe(REDACTED_HOST);
+        expect(out.customSpeedloader).toBe(REDACTED_HOST);
+
+        // built-in picks stay intact: they carry signal and identify nothing
+        expect(out.privacy.defaultBlockExplorer).toBe('mempool.space');
+        expect(out.swaps.hostMainnet).toBe('https://api.boltz.exchange');
+        expect(out.feeEstimator).toBe('Custom');
+    });
+
+    it('masks neutrino peer entries but keeps the count', () => {
+        const out = redactSettings(buildSettings());
+
+        expect(out.neutrinoPeersMainnet).toEqual([
+            REDACTED_HOST,
+            REDACTED_HOST
+        ]);
+    });
+
+    it('redacts the stealth-unlock VPN trigger configuration', () => {
+        const out = redactSettings(buildSettings());
+
+        expect(out.privacy.stealthVpnCountry).toBe(REDACTED);
+        expect(out.privacy.stealthVpnServer).toBe(REDACTED);
+        expect(out.privacy.stealthMode).toBe(true);
     });
 
     it('does not mutate the original settings object', () => {

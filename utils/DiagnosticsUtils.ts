@@ -100,7 +100,9 @@ const collectActivity = (): Promise<string> =>
         await activityStore.getActivityAndFilter(
             settingsStore.settings?.locale
         );
-        const items: any[] = activityStore.filteredActivity || [];
+        // Read the unfiltered list: filteredActivity honors whatever activity
+        // filters the user has saved, which would silently trim the report.
+        const items: any[] = activityStore.activity || [];
 
         const invoices = items.filter(
             (i) => i instanceof Invoice || i instanceof CashuInvoice
@@ -209,15 +211,19 @@ export const shareDiagnostics = async (report: string): Promise<void> => {
     const url = `file://${filePath}`;
 
     try {
+        // No filename here on purpose: the iOS email composer appends the
+        // URL's extension to a provided filename (yielding .txt.txt), and
+        // without one it falls back to the URL's own last path component.
         await Share.shareSingle({
             social: Social.Email,
             email: SUPPORT_EMAIL,
             subject,
             message: body,
-            urls: [url]
+            urls: [url],
+            type: 'text/plain'
         });
     } catch (e) {
-        // No email app / share failed — fall back to the generic share sheet.
+        // No email app or the share failed: fall back to the share sheet.
         try {
             await Share.open({
                 title: subject,
@@ -230,7 +236,7 @@ export const shareDiagnostics = async (report: string): Promise<void> => {
                 failOnCancel: false
             });
         } catch (err) {
-            // user cancelled or share unavailable — nothing to do
+            // user cancelled or share unavailable; nothing to do
         }
     }
 };

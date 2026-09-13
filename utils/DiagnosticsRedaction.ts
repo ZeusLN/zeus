@@ -10,9 +10,9 @@ export const REDACTED_HOST = '[REDACTED_HOST]';
 // Secret fields that must never leave the device. Matched case-insensitively
 // against every key at any depth of the settings blob. Includes the three
 // node fields (username, password, lndhubUrl) that are persisted but NOT
-// declared on the `Node` interface in stores/SettingsStore.ts — do not rely on
-// that interface alone. Note: lndhubUrl is intentionally NOT in this list; it
-// is handled by the host policy (kept for known custodial hosts).
+// declared on the `Node` interface in stores/SettingsStore.ts, so do not rely
+// on that interface alone. Note: lndhubUrl is intentionally NOT in this list;
+// it is handled by the host policy (kept for known custodial hosts).
 export const SENSITIVE_KEYS: string[] = [
     'macaroonHex',
     'adminMacaroon',
@@ -34,7 +34,26 @@ export const SENSITIVE_KEYS: string[] = [
     'duressPin',
     'lspAccessKey',
     'lsps1Token',
-    'squareAccessToken'
+    'squareAccessToken',
+    // stealth-unlock trigger configuration (privacy settings): revealing
+    // which VPN country/server unlocks the app defeats stealth mode
+    'stealthVpnCountry',
+    'stealthVpnServer'
+].map((k) => k.toLowerCase());
+
+// User-configured endpoints that live OUTSIDE the nodes array. These identify
+// user-run infrastructure just like a node host does, so they get the same
+// treatment: masked wherever they appear. Values chosen from ZEUS's built-in
+// lists (defaultBlockExplorer, mempoolInstance, feeEstimator, speedloader)
+// are left intact since they carry diagnostic signal and identify nothing.
+export const CUSTOM_ENDPOINT_KEYS: string[] = [
+    'customBlockExplorer', // settings.privacy
+    'customMempoolInstance', // settings.privacy
+    'customFeeEstimator',
+    'customSpeedloader',
+    'customHost', // settings.swaps
+    'neutrinoPeersMainnet', // may contain the user's own node IPs
+    'neutrinoPeersTestnet'
 ].map((k) => k.toLowerCase());
 
 // Connection endpoint fields. Redacted for remote nodes; dropped for local
@@ -56,7 +75,11 @@ const HOST_KEYS: string[] = [
 const isSensitiveKey = (key: string): boolean =>
     SENSITIVE_KEYS.includes(key.toLowerCase());
 
-// Recursively replace any sensitive value with a redaction marker.
+const isCustomEndpointKey = (key: string): boolean =>
+    CUSTOM_ENDPOINT_KEYS.includes(key.toLowerCase());
+
+// Recursively replace any sensitive value with a redaction marker and mask
+// custom endpoints (scalar values and string arrays like neutrino peer lists).
 const redactSecrets = (obj: any): void => {
     if (Array.isArray(obj)) {
         obj.forEach(redactSecrets);
@@ -66,6 +89,12 @@ const redactSecrets = (obj: any): void => {
         for (const key of Object.keys(obj)) {
             if (isSensitiveKey(key)) {
                 obj[key] = REDACTED;
+            } else if (isCustomEndpointKey(key)) {
+                if (Array.isArray(obj[key])) {
+                    obj[key] = obj[key].map(() => REDACTED_HOST);
+                } else if (obj[key]) {
+                    obj[key] = REDACTED_HOST;
+                }
             } else {
                 redactSecrets(obj[key]);
             }
@@ -96,7 +125,7 @@ const redactNodeHosts = (node: any): void => {
             return;
         }
 
-        // Local nodes have no meaningful remote endpoint — drop it.
+        // Local nodes have no meaningful remote endpoint, so drop it.
         if (isLocal && ['host', 'port', 'url'].includes(lower)) {
             delete node[key];
             return;
@@ -108,7 +137,7 @@ const redactNodeHosts = (node: any): void => {
 
 /**
  * Produce a privacy-safe copy of the settings blob: secrets removed and
- * connection hosts masked/dropped per the host policy. Pure — takes a settings
+ * connection hosts masked/dropped per the host policy. Pure: takes a settings
  * object and returns a new redacted object without touching the original.
  */
 export const redactSettings = (settings: any): any => {
