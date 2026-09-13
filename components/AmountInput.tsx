@@ -299,9 +299,11 @@ export default class AmountInput extends React.Component<
                                 </Text>
                             )
                         )}
-                        {fiatEnabled && effectiveUnits !== 'fiat' && (
-                            <Amount sats={satAmount} fixedUnits="fiat" />
-                        )}
+                        {fiatEnabled &&
+                            !fiatError &&
+                            effectiveUnits !== 'fiat' && (
+                                <Amount sats={satAmount} fixedUnits="fiat" />
+                            )}
                         {effectiveUnits !== 'BTC' && (
                             <Amount sats={satAmount} fixedUnits="BTC" />
                         )}

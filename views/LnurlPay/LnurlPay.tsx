@@ -29,11 +29,7 @@ import LnurlPayMetadata from './Metadata';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
-import {
-    getUnformattedAmount,
-    getRawAmountFromSats,
-    getSatAmount
-} from '../../utils/AmountUtils';
+import { getRawAmountFromSats, getSatAmount } from '../../utils/AmountUtils';
 import {
     verifyLnurlPayInvoice,
     isLnurlCallbackAllowed
@@ -150,7 +146,7 @@ export default class LnurlPay extends React.Component<
 
     stateFromProps(props: LnurlPayProps) {
         const { route, UnitsStore, ContactStore } = props;
-        const { resetUnits, units } = UnitsStore;
+        const { resetUnits } = UnitsStore;
         const {
             lnurlParams: lnurl,
             amount,
@@ -184,14 +180,11 @@ export default class LnurlPay extends React.Component<
             finalSatAmount = getSatAmount(amount);
         } else if (lnurl.minSendable === lnurl.maxSendable) {
             // Fixed amount: prefill the locked input with the required amount
-            const { amount: unformattedAmount } = getUnformattedAmount({
-                sats: minSendableSats
-            });
-            finalAmount =
-                units === 'sats'
-                    ? minSendableSats.toString()
-                    : unformattedAmount;
+            const { amount: displayAmount, error } =
+                getRawAmountFromSats(minSendableSats);
+            finalAmount = displayAmount;
             finalSatAmount = minSendableSats;
+            fiatError = error;
         } else {
             // Variable amount: start empty so the user doesn't have to
             // delete a prefilled value

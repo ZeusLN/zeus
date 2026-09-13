@@ -1126,6 +1126,15 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                             newOutputs
                                                     });
                                                 }}
+                                                forceUnit={
+                                                    fiatError
+                                                        ? 'sats'
+                                                        : undefined
+                                                }
+                                                hideUnitChangeButton={
+                                                    !!fiatError
+                                                }
+                                                fiatError={fiatError}
                                             />
                                             <View
                                                 style={{
