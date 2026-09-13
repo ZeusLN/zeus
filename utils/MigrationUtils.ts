@@ -1343,9 +1343,10 @@ class MigrationsUtils {
      * SYNCHRONIZABLE keychain partition and synced to iCloud Keychain. With the patched library, Storage reads
      * the device-local partition, which is empty for existing users; this
      * migration copies every zeus:* item from the synchronizable partition
-     * into the local one. It never deletes anything (the multi-device wipe
-     * of issue #3625 is why); removal of the synchronizable copies is the
-     * separate, user-consented purge in KeychainPurgeUtils.
+     * into the local one. It never deletes anything (migrations must stay
+     * non-destructive); removal of the synchronizable copies is the
+     * separate one-shot purge in KeychainPurgeUtils, which only runs after
+     * this migration's flag proves the local copies exist.
      *
      * Only zeus:* servers are copied: unprefixed synchronizable entries are
      * stale pre-2026 legacy data, and copying them would resurrect old state

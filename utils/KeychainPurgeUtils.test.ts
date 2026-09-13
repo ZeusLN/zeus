@@ -67,7 +67,7 @@ import {
     scanPurgeCandidates,
     verifyPurgePreflight,
     executePurge,
-    shouldOfferKeychainPurge
+    autoPurgeLegacyKeychain
 } from './KeychainPurgeUtils';
 
 const EncryptedStorage = require('react-native-encrypted-storage');
@@ -393,38 +393,53 @@ describe('KeychainPurgeUtils', () => {
         });
     });
 
-    describe('shouldOfferKeychainPurge', () => {
-        it('never offers off iOS', async () => {
+    describe('autoPurgeLegacyKeychain', () => {
+        it('never runs off iOS', async () => {
             Platform.OS = 'android';
 
-            expect(await shouldOfferKeychainPurge()).toBe(false);
+            await autoPurgeLegacyKeychain();
+
             expect(EncryptedStorage.getItem).not.toHaveBeenCalled();
+            expect(StorageModule.removeRawItem).not.toHaveBeenCalled();
         });
 
         it('waits for the desync migration to complete', async () => {
             EncryptedStorage.getItem.mockResolvedValue(null);
 
-            expect(await shouldOfferKeychainPurge()).toBe(false);
+            await autoPurgeLegacyKeychain();
+
+            expect(
+                StorageModule.getInternetPasswordServers
+            ).not.toHaveBeenCalled();
             expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
         });
 
-        it('offers exactly once when candidates exist', async () => {
+        it('does not rescan once the done flag is set', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+
+            await autoPurgeLegacyKeychain();
+
+            expect(
+                StorageModule.getInternetPasswordServers
+            ).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+        });
+
+        it('sets the done flag without deleting when nothing is found', async () => {
             EncryptedStorage.getItem.mockImplementation(async (key: string) =>
                 key === 'keychain-desync-v1' ? 'true' : null
             );
-            StorageModule.getInternetPasswordServers.mockImplementation(
-                async (synchronizable: boolean) =>
-                    synchronizable ? ['zeus:zeus-settings-v2'] : []
-            );
 
-            expect(await shouldOfferKeychainPurge()).toBe(true);
+            await autoPurgeLegacyKeychain();
+
+            expect(StorageModule.removeRawItem).not.toHaveBeenCalled();
             expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
-                'keychain-purge-offer-v1',
+                'keychain-autopurge-v1',
                 'true'
             );
         });
 
-        it('leaves the offer unconsumed when the scan throws', async () => {
+        it('retries on a later boot when the scan throws', async () => {
             EncryptedStorage.getItem.mockImplementation(async (key: string) =>
                 key === 'keychain-desync-v1' ? 'true' : null
             );
@@ -432,20 +447,80 @@ describe('KeychainPurgeUtils', () => {
                 new Error('boom')
             );
 
-            expect(await shouldOfferKeychainPurge()).toBe(false);
+            await autoPurgeLegacyKeychain();
+
+            expect(StorageModule.removeRawItem).not.toHaveBeenCalled();
             expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
         });
 
-        it('consumes the offer silently when nothing is found', async () => {
+        it('defers without deleting when the preflight fails', async () => {
             EncryptedStorage.getItem.mockImplementation(async (key: string) =>
                 key === 'keychain-desync-v1' ? 'true' : null
             );
+            StorageModule.getInternetPasswordServers.mockImplementation(
+                async (synchronizable: boolean) =>
+                    synchronizable ? ['zeus:zeus-settings-v2'] : []
+            );
+            StorageModule.getItem.mockResolvedValue(null); // no live blob
 
-            expect(await shouldOfferKeychainPurge()).toBe(false);
+            await autoPurgeLegacyKeychain();
+
+            expect(StorageModule.removeRawItem).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+        });
+
+        it('purges candidates and sets the done flag on a clean pass', async () => {
+            EncryptedStorage.getItem.mockImplementation(async (key: string) =>
+                key === 'keychain-desync-v1' ? 'true' : null
+            );
+            StorageModule.getInternetPasswordServers.mockImplementation(
+                async (synchronizable: boolean) =>
+                    synchronizable ? ['zeus:zeus-settings-v2'] : []
+            );
+            StorageModule.getItem.mockResolvedValue('{"nodes":[]}');
+            StorageModule.getRawItem.mockImplementation(
+                async (server: string, cloudSync: boolean) =>
+                    server === 'zeus:zeus-settings-v2'
+                        ? cloudSync
+                            ? 'sync-blob'
+                            : 'local-blob'
+                        : null
+            );
+
+            await autoPurgeLegacyKeychain();
+
+            expect(StorageModule.removeRawItem).toHaveBeenCalledWith(
+                'zeus:zeus-settings-v2',
+                true
+            );
             expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
-                'keychain-purge-offer-v1',
+                'keychain-autopurge-v1',
                 'true'
             );
+        });
+
+        it('leaves the done flag unset when a deletion fails', async () => {
+            EncryptedStorage.getItem.mockImplementation(async (key: string) =>
+                key === 'keychain-desync-v1' ? 'true' : null
+            );
+            StorageModule.getInternetPasswordServers.mockImplementation(
+                async (synchronizable: boolean) =>
+                    synchronizable ? ['zeus:zeus-settings-v2'] : []
+            );
+            StorageModule.getItem.mockResolvedValue('{"nodes":[]}');
+            StorageModule.getRawItem.mockImplementation(
+                async (server: string, cloudSync: boolean) =>
+                    server === 'zeus:zeus-settings-v2'
+                        ? cloudSync
+                            ? 'sync-blob'
+                            : 'local-blob'
+                        : null
+            );
+            StorageModule.removeRawItem.mockRejectedValue(new Error('boom'));
+
+            await autoPurgeLegacyKeychain();
+
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
         });
     });
 

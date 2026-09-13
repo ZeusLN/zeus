@@ -81,7 +81,7 @@ import { CHANNEL_MIGRATION_ACTIVE } from '../../utils/ChannelMigrationUtils';
 import { processSharedQRImageFast } from '../../utils/ShareIntentProcessor';
 
 import Storage from '../../storage';
-import { shouldOfferKeychainPurge } from '../../utils/KeychainPurgeUtils';
+import { autoPurgeLegacyKeychain } from '../../utils/KeychainPurgeUtils';
 
 import AlertStore from '../../stores/AlertStore';
 import BalanceStore from '../../stores/BalanceStore';
@@ -398,33 +398,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         );
     }
 
-    maybeOfferKeychainCleanup = async () => {
-        try {
-            if (!(await shouldOfferKeychainPurge())) return;
-            Alert.alert(
-                localeString('views.Tools.keychainCleanup.offerTitle'),
-                localeString('views.Tools.keychainCleanup.offerMessage'),
-                [
-                    {
-                        text: localeString(
-                            'views.Tools.keychainCleanup.offerLater'
-                        ),
-                        style: 'cancel'
-                    },
-                    {
-                        text: localeString(
-                            'views.Tools.keychainCleanup.offerReview'
-                        ),
-                        onPress: () =>
-                            this.props.navigation.navigate('KeychainCleanup')
-                    }
-                ]
-            );
-        } catch (e) {
-            console.error('Keychain cleanup offer failed', e);
-        }
-    };
-
     async getSettingsAndNavigate(
         explicitShareIntentData?: any,
         transientRetryCount = 0
@@ -536,9 +509,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 if (shareIntentData) {
                     this.setState({ pendingShareIntent: shareIntentData });
                 }
-                // Fire-and-forget: one-time offer to remove legacy and
+                // Fire-and-forget: one-shot removal of legacy and
                 // iCloud-synced keychain copies of wallet data
-                this.maybeOfferKeychainCleanup();
+                autoPurgeLegacyKeychain();
                 await this.fetchData(transientRetryCount);
             } else {
                 // Only navigate to IntroSplash if Wallet screen is focused
