@@ -1023,7 +1023,8 @@ export default class Receive extends React.Component<
         const { lightningAddress } = LightningAddressStore;
         const lightningAddressLoading = LightningAddressStore.loading;
 
-        const error_msg = LSPStore.flow_error_msg || InvoicesStore.error_msg;
+        const lspErrorMsg = LSPStore.flow_error_msg;
+        const invoiceErrorMsg = InvoicesStore.error_msg;
 
         const showCustomPreimageField =
             settings?.invoices?.showCustomPreimageField;
@@ -1526,22 +1527,40 @@ export default class Receive extends React.Component<
                                     )}
                                 />
                             )}
-                            {error_msg && (
-                                <ErrorMessage message={error_msg} dismissable />
+                            {invoiceErrorMsg && (
+                                <ErrorMessage
+                                    message={invoiceErrorMsg}
+                                    dismissable
+                                />
                             )}
 
-                            {showLspSettings && (
-                                <View style={{ margin: 10 }}>
-                                    <Button
-                                        title={localeString(
-                                            'views.Receive.goToLspSettings'
-                                        )}
-                                        onPress={() =>
-                                            navigation.navigate('LSPSettings')
-                                        }
+                            {lspErrorMsg &&
+                                lspIsActive &&
+                                (selectedIndex === 0 ||
+                                    selectedIndex === 1) && (
+                                    <ErrorMessage
+                                        message={lspErrorMsg}
+                                        dismissable
                                     />
-                                </View>
-                            )}
+                                )}
+
+                            {showLspSettings &&
+                                lspIsActive &&
+                                (selectedIndex === 0 ||
+                                    selectedIndex === 1) && (
+                                    <View style={{ margin: 10 }}>
+                                        <Button
+                                            title={localeString(
+                                                'views.Receive.goToLspSettings'
+                                            )}
+                                            onPress={() =>
+                                                navigation.navigate(
+                                                    'LSPSettings'
+                                                )
+                                            }
+                                        />
+                                    </View>
+                                )}
 
                             <View>
                                 {!!payment_request && (
