@@ -23,6 +23,7 @@ import NodeInfoStore from '../../../stores/NodeInfoStore';
 import SettingsStore from '../../../stores/SettingsStore';
 
 import Base64Utils from '../../../utils/Base64Utils';
+import BackendUtils from '../../../utils/BackendUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
@@ -170,6 +171,8 @@ export default class ImportAccount extends React.Component<
             !!trimmedMasterKeyFingerprint &&
             !/^[0-9a-fA-F]{8}$/.test(trimmedMasterKeyFingerprint);
 
+        const supportsRescan = BackendUtils.supportsAccountImportRescan();
+
         // lnd needs both a name and a key to import an account, and a zero
         // birthday height would kick off a rescan from the genesis block
         const importDisabled =
@@ -177,7 +180,7 @@ export default class ImportAccount extends React.Component<
             !trimmedName ||
             !trimmedExtendedPublicKey ||
             masterKeyFingerprintInvalid ||
-            (existing_account && block_height < 1);
+            (existing_account && supportsRescan && block_height < 1);
 
         const ScanBadge = () => (
             <TouchableOpacity
@@ -400,52 +403,75 @@ export default class ImportAccount extends React.Component<
                                         'general.experimental'
                                     ).toUpperCase()}
                                 </Text>
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        marginBottom: 10
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.ImportAccount.existingAccountNote'
-                                    )}
-                                    .
-                                </Text>
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        marginBottom: 10
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.ImportAccount.existingAccountNote2'
-                                    )}
-                                </Text>
-                                <>
+                                {supportsRescan ? (
+                                    <>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                marginBottom: 10
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.ImportAccount.existingAccountNote'
+                                            )}
+                                            .
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                marginBottom: 10
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.ImportAccount.existingAccountNote2'
+                                            )}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                ...styles.label,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.NodeInfo.blockHeight'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            value={block_height.toString()}
+                                            onChangeText={(text: string) => {
+                                                const block_height =
+                                                    Number(text);
+                                                if (isNaN(block_height)) return;
+                                                this.setState({
+                                                    block_height
+                                                });
+                                            }}
+                                            keyboardType="numeric"
+                                        />
+                                    </>
+                                ) : (
                                     <Text
                                         style={{
-                                            ...styles.label,
-                                            color: themeColor('secondaryText')
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            marginBottom: 10
                                         }}
                                     >
                                         {localeString(
-                                            'views.NodeInfo.blockHeight'
+                                            'views.ImportAccount.existingAccountNoteNoRescan'
                                         )}
                                     </Text>
-                                    <TextInput
-                                        value={block_height.toString()}
-                                        onChangeText={(text: string) => {
-                                            const block_height = Number(text);
-                                            if (isNaN(block_height)) return;
-                                            this.setState({
-                                                block_height
-                                            });
-                                        }}
-                                        keyboardType="numeric"
-                                    />
-                                </>
+                                )}
                                 <>
                                     <Text
                                         style={{
@@ -497,6 +523,12 @@ export default class ImportAccount extends React.Component<
                                           )
                                         : undefined,
                                 dry_run: true,
+                                // still sent when the height field is
+                                // hidden: it latches start_height in the
+                                // store, which drives address
+                                // pre-generation; the store strips it
+                                // before backends without the fork
+                                // extension
                                 birthday_height: existing_account
                                     ? block_height
                                     : undefined,
