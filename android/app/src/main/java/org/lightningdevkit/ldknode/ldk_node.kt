@@ -1758,6 +1758,7 @@ internal interface UniffiLib : Library {
         `channelAmountSats`: Long,
         `pushToCounterpartyMsat`: RustBuffer.ByValue,
         `channelConfig`: RustBuffer.ByValue,
+        `feeRate`: RustBuffer.ByValue,
         uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
 
@@ -1768,6 +1769,7 @@ internal interface UniffiLib : Library {
         `pushToCounterpartyMsat`: RustBuffer.ByValue,
         `channelConfig`: RustBuffer.ByValue,
         `utxos`: RustBuffer.ByValue,
+        `feeRate`: RustBuffer.ByValue,
         uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
 
@@ -1779,6 +1781,7 @@ internal interface UniffiLib : Library {
         `pushToCounterpartyMsat`: RustBuffer.ByValue,
         `channelConfig`: RustBuffer.ByValue,
         `utxos`: RustBuffer.ByValue,
+        `feeRate`: RustBuffer.ByValue,
         uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
 
@@ -1789,6 +1792,7 @@ internal interface UniffiLib : Library {
         `channelAmountSats`: Long,
         `pushToCounterpartyMsat`: RustBuffer.ByValue,
         `channelConfig`: RustBuffer.ByValue,
+        `feeRate`: RustBuffer.ByValue,
         uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
 
@@ -1799,6 +1803,7 @@ internal interface UniffiLib : Library {
         `pushToCounterpartyMsat`: RustBuffer.ByValue,
         `channelConfig`: RustBuffer.ByValue,
         `utxos`: RustBuffer.ByValue,
+        `feeRate`: RustBuffer.ByValue,
         uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
 
@@ -1810,6 +1815,7 @@ internal interface UniffiLib : Library {
         `pushToCounterpartyMsat`: RustBuffer.ByValue,
         `channelConfig`: RustBuffer.ByValue,
         `utxos`: RustBuffer.ByValue,
+        `feeRate`: RustBuffer.ByValue,
         uniffi_out_err: UniffiRustCallStatus,
     ): RustBuffer.ByValue
 
@@ -3279,22 +3285,22 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_node_onchain_payment() != 6092.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_node_open_announced_channel() != 36623.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_open_announced_channel() != 41440.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_node_open_announced_channel_fund_max() != 53906.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_open_announced_channel_fund_max() != 60399.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_node_open_announced_channel_with_utxos() != 5133.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_open_announced_channel_with_utxos() != 8290.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_node_open_channel() != 40283.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_open_channel() != 57207.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_node_open_channel_fund_max() != 61872.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_open_channel_fund_max() != 26092.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_node_open_channel_with_utxos() != 63529.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_node_open_channel_with_utxos() != 35326.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_node_payment() != 60296.toShort()) {
@@ -7939,6 +7945,7 @@ public interface NodeInterface {
         `channelAmountSats`: kotlin.ULong,
         `pushToCounterpartyMsat`: kotlin.ULong?,
         `channelConfig`: ChannelConfig?,
+        `feeRate`: FeeRate?,
     ): UserChannelId
 
     fun `openAnnouncedChannelFundMax`(
@@ -7947,6 +7954,7 @@ public interface NodeInterface {
         `pushToCounterpartyMsat`: kotlin.ULong?,
         `channelConfig`: ChannelConfig?,
         `utxos`: List<OutPoint>?,
+        `feeRate`: FeeRate?,
     ): UserChannelId
 
     fun `openAnnouncedChannelWithUtxos`(
@@ -7956,6 +7964,7 @@ public interface NodeInterface {
         `pushToCounterpartyMsat`: kotlin.ULong?,
         `channelConfig`: ChannelConfig?,
         `utxos`: List<OutPoint>,
+        `feeRate`: FeeRate?,
     ): UserChannelId
 
     fun `openChannel`(
@@ -7964,6 +7973,7 @@ public interface NodeInterface {
         `channelAmountSats`: kotlin.ULong,
         `pushToCounterpartyMsat`: kotlin.ULong?,
         `channelConfig`: ChannelConfig?,
+        `feeRate`: FeeRate?,
     ): UserChannelId
 
     fun `openChannelFundMax`(
@@ -7972,6 +7982,7 @@ public interface NodeInterface {
         `pushToCounterpartyMsat`: kotlin.ULong?,
         `channelConfig`: ChannelConfig?,
         `utxos`: List<OutPoint>?,
+        `feeRate`: FeeRate?,
     ): UserChannelId
 
     fun `openChannelWithUtxos`(
@@ -7981,6 +7992,7 @@ public interface NodeInterface {
         `pushToCounterpartyMsat`: kotlin.ULong?,
         `channelConfig`: ChannelConfig?,
         `utxos`: List<OutPoint>,
+        `feeRate`: FeeRate?,
     ): UserChannelId
 
     fun `payment`(`paymentId`: PaymentId): PaymentDetails?
@@ -8383,6 +8395,7 @@ open class Node :
         `channelAmountSats`: kotlin.ULong,
         `pushToCounterpartyMsat`: kotlin.ULong?,
         `channelConfig`: ChannelConfig?,
+        `feeRate`: FeeRate?,
     ): UserChannelId =
         FfiConverterTypeUserChannelId.lift(
             callWithPointer {
@@ -8394,6 +8407,7 @@ open class Node :
                         FfiConverterULong.lower(`channelAmountSats`),
                         FfiConverterOptionalULong.lower(`pushToCounterpartyMsat`),
                         FfiConverterOptionalTypeChannelConfig.lower(`channelConfig`),
+                        FfiConverterOptionalTypeFeeRate.lower(`feeRate`),
                         _status,
                     )
                 }
@@ -8407,6 +8421,7 @@ open class Node :
         `pushToCounterpartyMsat`: kotlin.ULong?,
         `channelConfig`: ChannelConfig?,
         `utxos`: List<OutPoint>?,
+        `feeRate`: FeeRate?,
     ): UserChannelId =
         FfiConverterTypeUserChannelId.lift(
             callWithPointer {
@@ -8418,6 +8433,7 @@ open class Node :
                         FfiConverterOptionalULong.lower(`pushToCounterpartyMsat`),
                         FfiConverterOptionalTypeChannelConfig.lower(`channelConfig`),
                         FfiConverterOptionalSequenceTypeOutPoint.lower(`utxos`),
+                        FfiConverterOptionalTypeFeeRate.lower(`feeRate`),
                         _status,
                     )
                 }
@@ -8432,6 +8448,7 @@ open class Node :
         `pushToCounterpartyMsat`: kotlin.ULong?,
         `channelConfig`: ChannelConfig?,
         `utxos`: List<OutPoint>,
+        `feeRate`: FeeRate?,
     ): UserChannelId =
         FfiConverterTypeUserChannelId.lift(
             callWithPointer {
@@ -8444,6 +8461,7 @@ open class Node :
                         FfiConverterOptionalULong.lower(`pushToCounterpartyMsat`),
                         FfiConverterOptionalTypeChannelConfig.lower(`channelConfig`),
                         FfiConverterSequenceTypeOutPoint.lower(`utxos`),
+                        FfiConverterOptionalTypeFeeRate.lower(`feeRate`),
                         _status,
                     )
                 }
@@ -8457,6 +8475,7 @@ open class Node :
         `channelAmountSats`: kotlin.ULong,
         `pushToCounterpartyMsat`: kotlin.ULong?,
         `channelConfig`: ChannelConfig?,
+        `feeRate`: FeeRate?,
     ): UserChannelId =
         FfiConverterTypeUserChannelId.lift(
             callWithPointer {
@@ -8468,6 +8487,7 @@ open class Node :
                         FfiConverterULong.lower(`channelAmountSats`),
                         FfiConverterOptionalULong.lower(`pushToCounterpartyMsat`),
                         FfiConverterOptionalTypeChannelConfig.lower(`channelConfig`),
+                        FfiConverterOptionalTypeFeeRate.lower(`feeRate`),
                         _status,
                     )
                 }
@@ -8481,6 +8501,7 @@ open class Node :
         `pushToCounterpartyMsat`: kotlin.ULong?,
         `channelConfig`: ChannelConfig?,
         `utxos`: List<OutPoint>?,
+        `feeRate`: FeeRate?,
     ): UserChannelId =
         FfiConverterTypeUserChannelId.lift(
             callWithPointer {
@@ -8492,6 +8513,7 @@ open class Node :
                         FfiConverterOptionalULong.lower(`pushToCounterpartyMsat`),
                         FfiConverterOptionalTypeChannelConfig.lower(`channelConfig`),
                         FfiConverterOptionalSequenceTypeOutPoint.lower(`utxos`),
+                        FfiConverterOptionalTypeFeeRate.lower(`feeRate`),
                         _status,
                     )
                 }
@@ -8506,6 +8528,7 @@ open class Node :
         `pushToCounterpartyMsat`: kotlin.ULong?,
         `channelConfig`: ChannelConfig?,
         `utxos`: List<OutPoint>,
+        `feeRate`: FeeRate?,
     ): UserChannelId =
         FfiConverterTypeUserChannelId.lift(
             callWithPointer {
@@ -8518,6 +8541,7 @@ open class Node :
                         FfiConverterOptionalULong.lower(`pushToCounterpartyMsat`),
                         FfiConverterOptionalTypeChannelConfig.lower(`channelConfig`),
                         FfiConverterSequenceTypeOutPoint.lower(`utxos`),
+                        FfiConverterOptionalTypeFeeRate.lower(`feeRate`),
                         _status,
                     )
                 }
