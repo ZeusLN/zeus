@@ -502,15 +502,17 @@ export interface ILdkNodeModule {
         nodeId: string,
         address: string,
         channelAmountSats: number,
-        pushToCounterpartyMsat?: number | null,
-        announceChannel?: boolean
+        pushToCounterpartyMsat: number,
+        announceChannel: boolean,
+        satPerVbyte: number
     ): Promise<string>;
     openChannelFundMax(
         nodeId: string,
         address: string,
         pushToCounterpartyMsat: number,
         announceChannel: boolean,
-        utxos: Array<{ txid: string; vout: number }> | null
+        utxos: Array<{ txid: string; vout: number }> | null,
+        satPerVbyte: number
     ): Promise<{ userChannelId: string }>;
     openChannelWithUtxos(
         nodeId: string,
@@ -518,7 +520,8 @@ export interface ILdkNodeModule {
         channelAmountSats: number,
         pushToCounterpartyMsat: number,
         announceChannel: boolean,
-        utxos: Array<{ txid: string; vout: number }>
+        utxos: Array<{ txid: string; vout: number }>,
+        satPerVbyte: number
     ): Promise<{ userChannelId: string }>;
     closeChannel(
         userChannelId: string,
