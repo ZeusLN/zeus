@@ -50,7 +50,7 @@ interface CurrencyConverterContentProps {
     showToolbar?: boolean;
     fromModal?: boolean;
     onInputValuesChanged?: (count: number) => void;
-    onNavigateAway?: () => void;
+    onNavigateAway?: (navigate: () => void) => void;
 }
 
 interface CurrencyConverterContentState {
@@ -402,11 +402,19 @@ export default class CurrencyConverterContent extends React.Component<
 
     handleAddPress = () => {
         const { navigation, fromModal, onNavigateAway } = this.props;
-        if (onNavigateAway) onNavigateAway();
-        navigation.navigate('SelectCurrency', {
-            currencyConverter: true,
-            fromModal: fromModal || false
-        });
+        const navigate = () =>
+            navigation.navigate('SelectCurrency', {
+                currencyConverter: true,
+                fromModal: fromModal || false
+            });
+        // In the modal, let the host dismiss its window first and navigate
+        // from its callback; navigating while the window is still up strands
+        // an invisible dialog over the pushed screen on Android (#4451).
+        if (onNavigateAway) {
+            onNavigateAway(navigate);
+        } else {
+            navigate();
+        }
     };
 
     render() {
