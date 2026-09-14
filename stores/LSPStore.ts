@@ -605,7 +605,14 @@ export default class LSPStore {
         console.log('Received custom message', { peer, data });
 
         if (data.id === this.getInfoId) {
-            this.getInfoData = data;
+            if (data.error) {
+                this.error = true;
+                this.error_msg = data?.error?.data?.message
+                    ? errorToUserFriendly(data?.error?.data?.message)
+                    : localeString('stores.LSPStore.getInfoResponseError');
+            } else {
+                this.getInfoData = data;
+            }
             this.loadingLSPS1 = false;
             return true;
         } else if (data.id === this.createOrderId) {
@@ -734,6 +741,8 @@ export default class LSPStore {
 
     public lsps1GetInfoREST = () => {
         this.loadingLSPS1 = true;
+        this.error = false;
+        this.error_msg = '';
 
         const endpoint = `${this.getLSPS1Rest()}/api/v1/get_info`;
 
@@ -752,10 +761,20 @@ export default class LSPStore {
                         } catch (e) {}
                         this.loadingLSPS1 = false;
                     } else {
+                        let serverMessage;
+                        try {
+                            const responseData = JSON.parse(response.data);
+                            serverMessage =
+                                responseData?.message ||
+                                responseData?.error?.message;
+                        } catch (e) {}
+
                         this.error = true;
-                        this.error_msg = localeString(
-                            'stores.LSPStore.getInfoResponseError'
-                        );
+                        this.error_msg =
+                            serverMessage ||
+                            localeString(
+                                'stores.LSPStore.getInfoResponseError'
+                            );
                         this.loadingLSPS1 = false;
                     }
                 });
