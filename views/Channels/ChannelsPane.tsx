@@ -39,9 +39,14 @@ import SettingsStore, {
     getLspConfigForNetwork
 } from '../../stores/SettingsStore';
 
+import {
+    LiquidGlassView,
+    isLiquidGlassSupported
+} from '@callstack/liquid-glass';
+
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
+import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
 
 import Channel from '../../models/Channel';
 import { Status, ExpirationStatus } from '../../models/Status';
@@ -459,18 +464,53 @@ export default class ChannelsPane extends React.PureComponent<
                 tabBarActiveTintColor: themeColor('text'),
                 tabBarInactiveTintColor: 'gray',
                 tabBarShowLabel: true,
-                tabBarStyle: {
-                    backgroundColor: 'transparent',
-                    elevation: 0,
-                    borderTopWidth: 0.2,
-                    borderTopColor: themeColor('secondaryText'),
-                    paddingTop: 10,
-                    paddingBottom: 10,
-                    height: 70
-                },
-                tabBarItemStyle: {
-                    justifyContent: 'center' as const
-                },
+                ...(isLiquidGlassSupported
+                    ? {
+                          tabBarBackground: () => (
+                              <LiquidGlassView
+                                  style={{ flex: 1, borderRadius: 25 }}
+                                  effect="regular"
+                                  colorScheme={
+                                      isLightTheme() ? 'light' : 'dark'
+                                  }
+                              />
+                          ),
+                          tabBarStyle: {
+                              backgroundColor: 'transparent',
+                              borderTopWidth: 0,
+                              // match the native tab bar platter's margins
+                              marginHorizontal: 21,
+                              marginBottom: 0,
+                              height: 50,
+                              borderRadius: 25,
+                              // override the safe-area padding the tab bar
+                              // bakes in; this bar isn't at the screen edge
+                              paddingTop: 0,
+                              paddingBottom: 0
+                          },
+                          tabBarActiveBackgroundColor: themeColor('secondary'),
+                          // the active background fills the item as a
+                          // square; margin + radius + clip make a capsule
+                          tabBarItemStyle: {
+                              margin: 5,
+                              borderRadius: 20,
+                              overflow: 'hidden' as const
+                          }
+                      }
+                    : {
+                          tabBarStyle: {
+                              backgroundColor: 'transparent',
+                              elevation: 0,
+                              borderTopWidth: 0.2,
+                              borderTopColor: themeColor('secondaryText'),
+                              paddingTop: 10,
+                              paddingBottom: 10,
+                              height: 70
+                          },
+                          tabBarItemStyle: {
+                              justifyContent: 'center' as const
+                          }
+                      }),
                 tabBarIconStyle: {
                     display: 'none' as const
                 },
@@ -480,19 +520,30 @@ export default class ChannelsPane extends React.PureComponent<
                 }: {
                     focused: boolean;
                     color: string;
-                }) => (
-                    <Text
-                        style={{
-                            fontSize: 16,
-                            fontFamily: focused
-                                ? 'PPNeueMontreal-Medium'
-                                : 'PPNeueMontreal-Book',
-                            color
-                        }}
-                    >
-                        {label}
-                    </Text>
-                ),
+                }) => {
+                    const labelText = (
+                        <Text
+                            style={{
+                                fontSize: 16,
+                                fontFamily: focused
+                                    ? 'PPNeueMontreal-Medium'
+                                    : 'PPNeueMontreal-Book',
+                                color
+                            }}
+                        >
+                            {label}
+                        </Text>
+                    );
+                    // the item's pressable is top-aligned internally;
+                    // stretch and center the label within it
+                    return isLiquidGlassSupported ? (
+                        <View style={{ flex: 1, justifyContent: 'center' }}>
+                            {labelText}
+                        </View>
+                    ) : (
+                        labelText
+                    );
+                },
                 animation: 'shift' as const
             };
         };

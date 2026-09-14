@@ -5,6 +5,28 @@ PODS:
   - hermes-engine (250829098.0.14):
     - hermes-engine/Pre-built (= 250829098.0.14)
   - hermes-engine/Pre-built (250829098.0.14)
+  - LiquidGlass (0.8.1):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - lottie-ios (4.6.0)
   - lottie-react-native (7.5.0):
     - hermes-engine
@@ -1500,8 +1522,28 @@ PODS:
     - Yoga
   - react-native-encrypted-storage (4.0.3):
     - React-Core
-  - react-native-get-random-values (1.9.0):
+  - react-native-get-random-values (2.0.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
     - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - react-native-hce (0.3.0):
     - React
   - react-native-image-picker (8.2.1):
@@ -2581,6 +2623,7 @@ DEPENDENCIES:
   - CashuDevKit (from `.`)
   - FBLazyVector (from `../node_modules/react-native/Libraries/FBLazyVector`)
   - hermes-engine (from `../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec`)
+  - "LiquidGlass (from `../node_modules/@callstack/liquid-glass`)"
   - lottie-react-native (from `../node_modules/lottie-react-native`)
   - RCTDeprecation (from `../node_modules/react-native/ReactApple/Libraries/RCTFoundation/RCTDeprecation`)
   - RCTRequired (from `../node_modules/react-native/Libraries/Required`)
@@ -2712,6 +2755,8 @@ EXTERNAL SOURCES:
   hermes-engine:
     :podspec: "../node_modules/react-native/sdks/hermes-engine/hermes-engine.podspec"
     :tag: hermes-v250829098.0.14
+  LiquidGlass:
+    :path: "../node_modules/@callstack/liquid-glass"
   lottie-react-native:
     :path: "../node_modules/lottie-react-native"
   RCTDeprecation:
@@ -2945,7 +2990,8 @@ SPEC CHECKSUMS:
   CashuDevKit: aca7feab2317e80d84a980f3f5ab5f174f18e8ee
   CocoaAsyncSocket: 065fd1e645c7abab64f7a6a2007a48038fdc6a99
   FBLazyVector: b3e7ad108f0d882e30445c5527d774e3fd432f3d
-  hermes-engine: 21af757fa4a1057c2de9dbb4da7b3880f61ef7f3
+  hermes-engine: 8ab911e62213012bb44e091c2f21e7c529ce4804
+  LiquidGlass: 4418f983225b9cfd8ae81b2196088d91ef7b973d
   lottie-ios: 8f959969761e9c45d70353667d00af0e5b9cadb3
   lottie-react-native: 15890be59c58bf4fbdac4c93fa5759c84ee79f7f
   RCTDeprecation: 2a74a2c57675e64419bd89078efde81f7c1de90b
@@ -2989,7 +3035,7 @@ SPEC CHECKSUMS:
   react-native-blob-util: 13e70f811eb34f14864622c4afa37cc20fe8100e
   react-native-document-picker: c3a7536f3ee52525b4714c3720537f941d0cb094
   react-native-encrypted-storage: 569d114e329b1c2c2d9f8c84bcdbe4478dda2258
-  react-native-get-random-values: 419569b6ed3d15bfb9b6781b2f2e058f8e8d2698
+  react-native-get-random-values: 68792987aef40e8aa72dc448d97e009d1f440c88
   react-native-hce: ad5462e792d84e87924308dda1ee516757f1c0eb
   react-native-image-picker: 23540feacc79c63c60857f318fdfa8477c26e70a
   react-native-netinfo: cec9c4e86083cb5b6aba0e0711f563e2fbbff187

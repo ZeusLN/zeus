@@ -17,6 +17,7 @@ import {
     AlertButton
 } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeBottomTabNavigator } from '@react-navigation/bottom-tabs/unstable';
 import {
     DefaultTheme,
     NavigationContainer,
@@ -24,6 +25,7 @@ import {
     NavigationIndependentTree
 } from '@react-navigation/native';
 import { inject, observer } from 'mobx-react';
+import { initialWindowMetrics } from 'react-native-safe-area-context';
 import RNRestart from 'react-native-restart';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import SystemNavigationBar from 'react-native-system-navigation-bar';
@@ -118,7 +120,63 @@ import Scan from '../../assets/images/SVG/Scan.svg';
 
 import { version } from '../../package.json';
 
-const Tab = createBottomTabNavigator();
+// On iOS the native tab bar gets Liquid Glass on iOS 26+ when built with
+// Xcode 26. Android keeps the JS implementation: the native one caps tabs
+// at 5 and drops the custom styling below.
+const isIOS = Platform.OS === 'ios';
+const Tab: any = isIOS
+    ? createNativeBottomTabNavigator()
+    : createBottomTabNavigator();
+
+const getNativeTabIcon = (
+    routeName: string,
+    focused: boolean
+): { type: 'sfSymbol'; name: string } => {
+    switch (routeName) {
+        case 'Keypad':
+        case 'POS Keypad':
+            return {
+                type: 'sfSymbol',
+                name: focused ? 'bitcoinsign.circle.fill' : 'bitcoinsign.circle'
+            };
+        case 'Balance':
+            return {
+                type: 'sfSymbol',
+                name: focused ? 'building.columns.fill' : 'building.columns'
+            };
+        case 'Products':
+            return {
+                type: 'sfSymbol',
+                name: focused ? 'cart.fill' : 'cart'
+            };
+        case 'Camera':
+            return { type: 'sfSymbol', name: 'qrcode.viewfinder' };
+        default:
+            // Channels (route name is localized)
+            return {
+                type: 'sfSymbol',
+                name: 'point.3.connected.trianglepath.dotted'
+            };
+    }
+};
+
+// The native iOS tab bar floats over the screen instead of reserving
+// layout space like the JS tab bar does; pad tab screens so their
+// bottom-anchored controls stay above the bar
+const NATIVE_TAB_BAR_CLEARANCE = isIOS
+    ? (initialWindowMetrics?.insets.bottom ?? 0) + 60
+    : 0;
+
+const TabScreenContent: React.FC<{ children?: React.ReactNode }> = ({
+    children
+}) => {
+    if (!isIOS) return <>{children}</>;
+    return (
+        <View style={{ flex: 1, paddingBottom: NATIVE_TAB_BAR_CLEARANCE }}>
+            {children}
+        </View>
+    );
+};
 
 interface WalletProps {
     enterSetup: any;
@@ -1516,134 +1574,147 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const BalanceScreen = () => {
             return (
                 <Screen>
-                    <BalancePane
-                        navigation={navigation}
-                        NodeInfoStore={NodeInfoStore}
-                        BalanceStore={BalanceStore}
-                        CashuStore={CashuStore}
-                        SettingsStore={SettingsStore}
-                        SyncStore={SyncStore}
-                        ModalStore={ModalStore}
-                        loading={loading}
-                        isChannelMigrating={isChannelMigrating}
-                        onUnlock={() => {
-                            this.setState({ isChannelMigrating: false });
-                            SettingsStore.setChannelMigrating(false);
-                        }}
-                    />
+                    <TabScreenContent>
+                        <BalancePane
+                            navigation={navigation}
+                            NodeInfoStore={NodeInfoStore}
+                            BalanceStore={BalanceStore}
+                            CashuStore={CashuStore}
+                            SettingsStore={SettingsStore}
+                            SyncStore={SyncStore}
+                            ModalStore={ModalStore}
+                            loading={loading}
+                            isChannelMigrating={isChannelMigrating}
+                            onUnlock={() => {
+                                this.setState({ isChannelMigrating: false });
+                                SettingsStore.setChannelMigrating(false);
+                            }}
+                        />
 
-                    {error && (
-                        <View style={{ backgroundColor: themeColor('error') }}>
-                            <Text
-                                style={{
-                                    fontFamily: 'PPNeueMontreal-Book',
-                                    color: '#fff',
-                                    fontSize: 12,
-                                    marginBottom: 15,
-                                    textAlign: 'center'
-                                }}
+                        {error && (
+                            <View
+                                style={{ backgroundColor: themeColor('error') }}
                             >
-                                {`v${version} | ${implementationDisplayValue[implementation]}`}
-                            </Text>
-                            <Button
-                                icon={{
-                                    name: 'settings',
-                                    size: 25,
-                                    color: '#fff'
-                                }}
-                                title={localeString(
-                                    'views.Wallet.BalancePane.goToWalletConfig'
-                                )}
-                                buttonStyle={{
-                                    backgroundColor: 'gray',
-                                    marginBottom: 20
-                                }}
-                                onPress={() => {
-                                    const { settings } = SettingsStore;
-                                    const selectedNode =
-                                        settings.selectedNode || 0;
-                                    const node = settings.nodes?.[selectedNode];
-                                    protectedNavigation(
-                                        navigation,
-                                        'WalletConfiguration',
-                                        false,
-                                        {
-                                            node,
-                                            index: selectedNode,
-                                            active: true,
-                                            newEntry: false
-                                        }
-                                    );
-                                }}
-                            />
-                            <Button
-                                title={localeString('views.Wallet.restart')}
-                                icon={{
-                                    name: 'sync',
-                                    size: 25
-                                }}
-                                onPress={() => {
-                                    if (Platform.OS === 'android') {
-                                        RNRestart.Restart();
-                                    } else {
-                                        setConnectingStatus(true);
-                                        this.getSettingsAndNavigate();
-                                    }
-                                }}
-                            />
-                        </View>
-                    )}
-
-                    {dataAvailable && !error && !isChannelMigrating && (
-                        <>
-                            <LayerBalances
-                                navigation={navigation}
-                                onRefresh={() => this.getSettingsAndNavigate()}
-                                consolidated
-                            />
-
-                            <Animated.View
-                                style={{
-                                    position: 'absolute',
-                                    bottom: 10,
-                                    width: '100%',
-                                    height: 80,
-                                    transform: [{ translateY: this.pan.y }],
-                                    justifyContent: 'center',
-                                    alignItems: 'center'
-                                }}
-                                {...this.panResponder.panHandlers}
-                            >
-                                <TouchableOpacity
-                                    onPress={() =>
-                                        this.props.navigation.navigate(
-                                            'Activity',
-                                            { animation: 'slide_from_bottom' }
-                                        )
-                                    }
-                                    accessibilityLabel={localeString(
-                                        'general.activity'
-                                    )}
+                                <Text
                                     style={{
-                                        alignItems: 'center',
-                                        padding: 10
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        color: '#fff',
+                                        fontSize: 12,
+                                        marginBottom: 15,
+                                        textAlign: 'center'
                                     }}
                                 >
-                                    <CaretUp fill={themeColor('text')} />
-                                    <Text
+                                    {`v${version} | ${implementationDisplayValue[implementation]}`}
+                                </Text>
+                                <Button
+                                    icon={{
+                                        name: 'settings',
+                                        size: 25,
+                                        color: '#fff'
+                                    }}
+                                    title={localeString(
+                                        'views.Wallet.BalancePane.goToWalletConfig'
+                                    )}
+                                    buttonStyle={{
+                                        backgroundColor: 'gray',
+                                        marginBottom: 20
+                                    }}
+                                    onPress={() => {
+                                        const { settings } = SettingsStore;
+                                        const selectedNode =
+                                            settings.selectedNode || 0;
+                                        const node =
+                                            settings.nodes?.[selectedNode];
+                                        protectedNavigation(
+                                            navigation,
+                                            'WalletConfiguration',
+                                            false,
+                                            {
+                                                node,
+                                                index: selectedNode,
+                                                active: true,
+                                                newEntry: false
+                                            }
+                                        );
+                                    }}
+                                />
+                                <Button
+                                    title={localeString('views.Wallet.restart')}
+                                    icon={{
+                                        name: 'sync',
+                                        size: 25
+                                    }}
+                                    onPress={() => {
+                                        if (Platform.OS === 'android') {
+                                            RNRestart.Restart();
+                                        } else {
+                                            setConnectingStatus(true);
+                                            this.getSettingsAndNavigate();
+                                        }
+                                    }}
+                                />
+                            </View>
+                        )}
+
+                        {dataAvailable && !error && !isChannelMigrating && (
+                            <>
+                                <LayerBalances
+                                    navigation={navigation}
+                                    onRefresh={() =>
+                                        this.getSettingsAndNavigate()
+                                    }
+                                    consolidated
+                                />
+
+                                <Animated.View
+                                    style={{
+                                        position: 'absolute',
+                                        // absolute children aren't inset by
+                                        // the TabScreenContent padding
+                                        bottom: 4 + NATIVE_TAB_BAR_CLEARANCE,
+                                        width: '100%',
+                                        height: 80,
+                                        transform: [{ translateY: this.pan.y }],
+                                        justifyContent: 'center',
+                                        alignItems: 'center'
+                                    }}
+                                    {...this.panResponder.panHandlers}
+                                >
+                                    <TouchableOpacity
+                                        onPress={() =>
+                                            this.props.navigation.navigate(
+                                                'Activity',
+                                                {
+                                                    animation:
+                                                        'slide_from_bottom'
+                                                }
+                                            )
+                                        }
+                                        accessibilityLabel={localeString(
+                                            'general.activity'
+                                        )}
                                         style={{
-                                            marginTop: 7,
-                                            textAlign: 'center',
-                                            fontFamily: 'PPNeueMontreal-Book',
-                                            color: themeColor('text')
+                                            alignItems: 'center',
+                                            padding: 10
                                         }}
                                     >
-                                        {localeString('general.activity')}
-                                    </Text>
-                                </TouchableOpacity>
-                            </Animated.View>
-                        </>
-                    )}
+                                        <CaretUp fill={themeColor('text')} />
+                                        <Text
+                                            style={{
+                                                marginTop: 7,
+                                                textAlign: 'center',
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString('general.activity')}
+                                        </Text>
+                                    </TouchableOpacity>
+                                </Animated.View>
+                            </>
+                        )}
+                    </TabScreenContent>
                 </Screen>
             );
         };
@@ -1651,12 +1722,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const PosScreen = () => {
             return (
                 <Screen>
-                    {posEnabled === PosEnabled.Square && (
-                        <SquarePosPane navigation={navigation} />
-                    )}
-                    {posEnabled === PosEnabled.Standalone && (
-                        <StandalonePosPane navigation={navigation} />
-                    )}
+                    <TabScreenContent>
+                        {posEnabled === PosEnabled.Square && (
+                            <SquarePosPane navigation={navigation} />
+                        )}
+                        {posEnabled === PosEnabled.Standalone && (
+                            <StandalonePosPane navigation={navigation} />
+                        )}
+                    </TabScreenContent>
                 </Screen>
             );
         };
@@ -1664,7 +1737,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const PosKeypadScreen = () => {
             return (
                 <Screen>
-                    <StandalonePosKeypadPane navigation={navigation} />
+                    <TabScreenContent>
+                        <StandalonePosKeypadPane navigation={navigation} />
+                    </TabScreenContent>
                 </Screen>
             );
         };
@@ -1672,7 +1747,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const KeypadScreen = () => {
             return (
                 <Screen>
-                    <KeypadPane navigation={navigation} loading={loading} />
+                    <TabScreenContent>
+                        <KeypadPane navigation={navigation} loading={loading} />
+                    </TabScreenContent>
                 </Screen>
             );
         };
@@ -1682,7 +1759,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const ChannelsScreen = () => {
             return (
                 <Screen>
-                    <ChannelsPane navigation={navigation} />
+                    <TabScreenContent>
+                        <ChannelsPane navigation={navigation} />
+                    </TabScreenContent>
                 </Screen>
             );
         };
@@ -1727,67 +1806,121 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                               'Keypad'
                                     }
                                     backBehavior="none"
-                                    screenOptions={({ route }) => ({
-                                        tabBarIcon: ({ color }) => {
-                                            if (
-                                                isSyncing &&
-                                                !settings?.ecash?.enableCashu &&
-                                                route.name === 'Keypad'
-                                            ) {
-                                                return;
-                                            }
-                                            if (route.name === 'Keypad') {
-                                                return <Bitcoin fill={color} />;
-                                            }
-                                            if (route.name === 'Balance') {
-                                                return <Temple fill={color} />;
-                                            }
-                                            if (route.name === 'Products') {
-                                                return <POS stroke={color} />;
-                                            }
-                                            if (route.name === 'POS Keypad') {
-                                                return <Bitcoin fill={color} />;
-                                            }
-                                            if (route.name === 'Camera') {
-                                                return (
-                                                    <Scan
-                                                        fill={color}
-                                                        width={20}
-                                                    />
-                                                );
-                                            }
-                                            if (
-                                                BackendUtils.supportsChannelManagement()
-                                            ) {
-                                                return (
-                                                    <ChannelsIcon
-                                                        height={26}
-                                                        width={26}
-                                                        fill={color}
-                                                    />
-                                                );
-                                            }
-                                        },
-                                        headerShown: false,
-                                        tabBarActiveTintColor: error
-                                            ? themeColor('error')
-                                            : themeColor('text'),
-                                        tabBarInactiveTintColor: error
-                                            ? themeColor('error')
-                                            : 'gray',
-                                        tabBarShowLabel: false,
-                                        tabBarStyle: {
-                                            paddingBottom: 12,
-                                            height: 55
-                                        },
-                                        // Disable top safe area - WalletHeader handles it
-                                        safeAreaInsets: { top: 0 },
-                                        // TODO re-enable for iOS once ZEUS-3514 is resolved
-                                        animation:
-                                            Platform.OS === 'android'
-                                                ? 'shift'
-                                                : undefined
-                                    })}
+                                    screenOptions={({ route }: any) =>
+                                        isIOS
+                                            ? {
+                                                  headerShown: false,
+                                                  tabBarActiveTintColor: error
+                                                      ? themeColor('error')
+                                                      : themeColor('text'),
+                                                  tabBarLabel: '',
+                                                  tabBarIcon: ({
+                                                      focused
+                                                  }: {
+                                                      focused: boolean;
+                                                  }) =>
+                                                      getNativeTabIcon(
+                                                          route.name,
+                                                          focused
+                                                      ),
+                                                  tabBarMinimizeBehavior:
+                                                      'onScrollDown'
+                                              }
+                                            : {
+                                                  tabBarIcon: ({
+                                                      color
+                                                  }: {
+                                                      color: string;
+                                                  }) => {
+                                                      if (
+                                                          isSyncing &&
+                                                          !settings?.ecash
+                                                              ?.enableCashu &&
+                                                          route.name ===
+                                                              'Keypad'
+                                                      ) {
+                                                          return;
+                                                      }
+                                                      if (
+                                                          route.name ===
+                                                          'Keypad'
+                                                      ) {
+                                                          return (
+                                                              <Bitcoin
+                                                                  fill={color}
+                                                              />
+                                                          );
+                                                      }
+                                                      if (
+                                                          route.name ===
+                                                          'Balance'
+                                                      ) {
+                                                          return (
+                                                              <Temple
+                                                                  fill={color}
+                                                              />
+                                                          );
+                                                      }
+                                                      if (
+                                                          route.name ===
+                                                          'Products'
+                                                      ) {
+                                                          return (
+                                                              <POS
+                                                                  stroke={color}
+                                                              />
+                                                          );
+                                                      }
+                                                      if (
+                                                          route.name ===
+                                                          'POS Keypad'
+                                                      ) {
+                                                          return (
+                                                              <Bitcoin
+                                                                  fill={color}
+                                                              />
+                                                          );
+                                                      }
+                                                      if (
+                                                          route.name ===
+                                                          'Camera'
+                                                      ) {
+                                                          return (
+                                                              <Scan
+                                                                  fill={color}
+                                                                  width={20}
+                                                              />
+                                                          );
+                                                      }
+                                                      if (
+                                                          BackendUtils.supportsChannelManagement()
+                                                      ) {
+                                                          return (
+                                                              <ChannelsIcon
+                                                                  height={26}
+                                                                  width={26}
+                                                                  fill={color}
+                                                              />
+                                                          );
+                                                      }
+                                                  },
+                                                  headerShown: false,
+                                                  tabBarActiveTintColor: error
+                                                      ? themeColor('error')
+                                                      : themeColor('text'),
+                                                  tabBarInactiveTintColor: error
+                                                      ? themeColor('error')
+                                                      : 'gray',
+                                                  tabBarShowLabel: false,
+                                                  tabBarStyle: {
+                                                      paddingBottom: 12,
+                                                      height: 55
+                                                  },
+                                                  // Disable top safe area - WalletHeader handles it
+                                                  safeAreaInsets: { top: 0 },
+                                                  animation: 'shift'
+                                              }
+                                    }
                                 >
                                     {!isChannelMigrating &&
                                     posEnabled !== PosEnabled.Disabled &&
@@ -1839,10 +1972,23 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         !error && (
                                             <Tab.Screen
                                                 name="Camera"
+                                                options={
+                                                    isIOS
+                                                        ? {
+                                                              // native tabPress can't be
+                                                              // prevented; this keeps the
+                                                              // tab from being selected
+                                                              tabBarSelectionEnabled:
+                                                                  false
+                                                          }
+                                                        : undefined
+                                                }
                                                 listeners={{
-                                                    tabPress: (e) => {
-                                                        // Prevent default action
-                                                        e.preventDefault();
+                                                    tabPress: (e: any) => {
+                                                        if (!isIOS) {
+                                                            // Prevent default action
+                                                            e.preventDefault();
+                                                        }
                                                         navigation.navigate(
                                                             'HandleAnythingQRScanner'
                                                         );
