@@ -914,6 +914,11 @@ export default class LdkNode {
                   })
                 : null;
 
+        // The fee rate the user set in the UI. Anything unusable becomes the
+        // "no rate" sentinel so ldk-node falls back to its own estimation
+        // rather than being handed a nonsense FeeRate.
+        const satPerKwu = satPerVbyteToSatPerKwu(data.sat_per_vbyte);
+
         if (data.fundMax) {
             userChannelId = await LdkNodeInjection.channel.openChannelFundMax({
                 nodeId: data.node_pubkey_string,
@@ -922,7 +927,8 @@ export default class LdkNode {
                     ? Number(data.push_sat) * 1000
                     : undefined,
                 announceChannel: !data.privateChannel,
-                utxos: utxoOutpoints
+                utxos: utxoOutpoints,
+                satPerKwu
             });
         } else if (utxoOutpoints) {
             userChannelId = await LdkNodeInjection.channel.openChannelWithUtxos(
@@ -934,7 +940,8 @@ export default class LdkNode {
                         ? Number(data.push_sat) * 1000
                         : undefined,
                     announceChannel: !data.privateChannel,
-                    utxos: utxoOutpoints
+                    utxos: utxoOutpoints,
+                    satPerKwu
                 }
             );
         } else {
@@ -945,7 +952,8 @@ export default class LdkNode {
                 pushToCounterpartyMsat: data.push_sat
                     ? Number(data.push_sat) * 1000
                     : undefined,
-                announceChannel: !data.privateChannel
+                announceChannel: !data.privateChannel,
+                satPerKwu
             });
         }
 

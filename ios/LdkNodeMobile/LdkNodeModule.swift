@@ -881,8 +881,8 @@ class LdkNodeModule: RCTEventEmitter {
         resolve(["channels": channelList])
     }
 
-    @objc(openChannel:address:channelAmountSats:pushToCounterpartyMsat:announceChannel:resolver:rejecter:)
-    func openChannel(_ nodeId: String, address: String, channelAmountSats: NSNumber, pushToCounterpartyMsat: NSNumber, announceChannel: Bool, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    @objc(openChannel:address:channelAmountSats:pushToCounterpartyMsat:announceChannel:satPerKwu:resolver:rejecter:)
+    func openChannel(_ nodeId: String, address: String, channelAmountSats: NSNumber, pushToCounterpartyMsat: NSNumber, announceChannel: Bool, satPerKwu: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
@@ -907,7 +907,8 @@ class LdkNodeModule: RCTEventEmitter {
                     address: address,
                     channelAmountSats: amount,
                     pushToCounterpartyMsat: pushMsat,
-                    channelConfig: nil
+                    channelConfig: nil,
+                    feeRate: self.parseFeeRate(satPerKwu)
                 )
             } else {
                 userChannelId = try node.openChannel(
@@ -915,7 +916,8 @@ class LdkNodeModule: RCTEventEmitter {
                     address: address,
                     channelAmountSats: amount,
                     pushToCounterpartyMsat: pushMsat,
-                    channelConfig: nil
+                    channelConfig: nil,
+                    feeRate: self.parseFeeRate(satPerKwu)
                 )
             }
             resolve(["userChannelId": userChannelId])
@@ -924,8 +926,8 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
-    @objc(openChannelFundMax:address:pushToCounterpartyMsat:announceChannel:utxos:resolver:rejecter:)
-    func openChannelFundMax(_ nodeId: String, address: String, pushToCounterpartyMsat: NSNumber, announceChannel: Bool, utxos: NSArray?, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    @objc(openChannelFundMax:address:pushToCounterpartyMsat:announceChannel:utxos:satPerKwu:resolver:rejecter:)
+    func openChannelFundMax(_ nodeId: String, address: String, pushToCounterpartyMsat: NSNumber, announceChannel: Bool, utxos: NSArray?, satPerKwu: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
@@ -955,7 +957,8 @@ class LdkNodeModule: RCTEventEmitter {
                     address: address,
                     pushToCounterpartyMsat: pushMsat,
                     channelConfig: nil,
-                    utxos: outpoints
+                    utxos: outpoints,
+                    feeRate: self.parseFeeRate(satPerKwu)
                 )
             } else {
                 userChannelId = try node.openChannelFundMax(
@@ -963,7 +966,8 @@ class LdkNodeModule: RCTEventEmitter {
                     address: address,
                     pushToCounterpartyMsat: pushMsat,
                     channelConfig: nil,
-                    utxos: outpoints
+                    utxos: outpoints,
+                    feeRate: self.parseFeeRate(satPerKwu)
                 )
             }
             resolve(["userChannelId": userChannelId])
@@ -972,8 +976,8 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
-    @objc(openChannelWithUtxos:address:channelAmountSats:pushToCounterpartyMsat:announceChannel:utxos:resolver:rejecter:)
-    func openChannelWithUtxos(_ nodeId: String, address: String, channelAmountSats: NSNumber, pushToCounterpartyMsat: NSNumber, announceChannel: Bool, utxos: NSArray, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+    @objc(openChannelWithUtxos:address:channelAmountSats:pushToCounterpartyMsat:announceChannel:utxos:satPerKwu:resolver:rejecter:)
+    func openChannelWithUtxos(_ nodeId: String, address: String, channelAmountSats: NSNumber, pushToCounterpartyMsat: NSNumber, announceChannel: Bool, utxos: NSArray, satPerKwu: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let node = self.getNode() else {
             reject("error", "Node not initialized", nil)
             return
@@ -1003,7 +1007,8 @@ class LdkNodeModule: RCTEventEmitter {
                     channelAmountSats: amount,
                     pushToCounterpartyMsat: pushMsat,
                     channelConfig: nil,
-                    utxos: outpoints
+                    utxos: outpoints,
+                    feeRate: self.parseFeeRate(satPerKwu)
                 )
             } else {
                 userChannelId = try node.openChannelWithUtxos(
@@ -1012,7 +1017,8 @@ class LdkNodeModule: RCTEventEmitter {
                     channelAmountSats: amount,
                     pushToCounterpartyMsat: pushMsat,
                     channelConfig: nil,
-                    utxos: outpoints
+                    utxos: outpoints,
+                    feeRate: self.parseFeeRate(satPerKwu)
                 )
             }
             resolve(["userChannelId": userChannelId])
