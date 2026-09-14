@@ -77,7 +77,7 @@
     "bitcoinjs-lib": "6.1.5",
     "bolt07": "1.9.5",
     "bs58check": "2.1.2",
-    "buffer": "5.6.0",
+    "buffer": "6.0.3",
     "create-hash": "1.2.0",
     "crypto-js": "4.2.0",
     "dateformat": "5.0.3",
