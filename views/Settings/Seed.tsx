@@ -43,7 +43,10 @@ import {
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
-import { handleExportChannels } from '../../utils/ChannelMigrationUtils';
+import {
+    graphDataExists,
+    handleExportChannels
+} from '../../utils/ChannelMigrationUtils';
 
 import Storage from '../../storage';
 
@@ -79,6 +82,7 @@ interface SeedState {
     isChannelExporting: boolean;
     channelExportMessage: string;
     revealResetKey: number;
+    graphDataOnDisk: boolean;
 }
 
 const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
@@ -138,7 +142,8 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         isDeleteModalVisible: false,
         isChannelExporting: false,
         channelExportMessage: '',
-        revealResetKey: 0
+        revealResetKey: 0,
+        graphDataOnDisk: false
     };
 
     private appStateSubscription: NativeEventSubscription | undefined;
@@ -153,6 +158,8 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
             'change',
             this.handleAppStateChange
         );
+
+        this.checkGraphDataOnDisk();
     }
 
     componentWillUnmount() {
@@ -167,6 +174,19 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                 revealResetKey: prevState.revealResetKey + 1
             }));
         }
+    };
+
+    // Fallback for offering channel export when the node isn't running
+    // and channels can't be queried
+    checkGraphDataOnDisk = async () => {
+        const { SettingsStore } = this.props;
+        if (SettingsStore.implementation !== 'embedded-lnd') return;
+
+        const graphDataOnDisk = await graphDataExists(
+            SettingsStore.lndDir || 'lnd',
+            SettingsStore.embeddedLndNetwork === 'Testnet'
+        );
+        this.setState({ graphDataOnDisk });
     };
 
     renderDeleteModal = () => {
@@ -254,9 +274,12 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         handleExportChannels({
             isSqlite: SettingsStore.isSqlite ?? true,
             lndDir: SettingsStore.lndDir || 'lnd',
-            isTestnet: NodeInfoStore.nodeInfo.isTestNet,
+            // nodeInfo is empty when the node isn't running, so read the
+            // network from the persisted wallet config instead
+            isTestnet: SettingsStore.embeddedLndNetwork === 'Testnet',
             pubkey: NodeInfoStore.nodeInfo.identity_pubkey,
-            seedPhrase: SettingsStore.seedPhrase.join(' '),
+            seedPhrase: (SettingsStore.seedPhrase || []).join(' '),
+            canUploadToOlympus: !!NodeInfoStore.nodeInfo.identity_pubkey,
             setStatus: (msg: string | null) =>
                 this.setState({
                     isChannelExporting: msg !== null,
@@ -266,7 +289,13 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
     };
 
     render() {
-        const { navigation, SettingsStore, ChannelsStore, route } = this.props;
+        const {
+            navigation,
+            SettingsStore,
+            NodeInfoStore,
+            ChannelsStore,
+            route
+        } = this.props;
         const {
             understood,
             showModal,
@@ -301,6 +330,14 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
             ChannelsStore.channels.length > 0 ||
             ChannelsStore.pendingChannels.length > 0 ||
             ChannelsStore.closedChannels.length > 0;
+
+        // If the node is up, trust its channel list; if it won't start,
+        // fall back to graph data found on disk so migration remains
+        // reachable before disaster recovery
+        const nodeConnected = !!NodeInfoStore.nodeInfo.identity_pubkey;
+        const canExportChannels = nodeConnected
+            ? hasChannels
+            : this.state.graphDataOnDisk;
 
         const DangerouslyCopySeed = () => (
             <TouchableOpacity
@@ -665,7 +702,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                     } else if (
                                         SettingsStore.implementation ===
                                             'embedded-lnd' &&
-                                        hasChannels
+                                        canExportChannels
                                     ) {
                                         Alert.alert(
                                             localeString(
@@ -726,7 +763,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                             />
                             {!isRefundRescueKey &&
                                 !isViewingInactiveWalletSeed &&
-                                hasChannels &&
+                                canExportChannels &&
                                 SettingsStore.implementation ==
                                     'embedded-lnd' && (
                                     <Button
