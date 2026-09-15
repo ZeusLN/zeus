@@ -388,11 +388,20 @@ let autoPurgeInFlight = false;
  * available for them.
  *
  * Deleting synchronizable entries propagates through the Apple ID to every
- * device, including ones still running a pre-desync build, and ends the
- * unintended iCloud auto-restore of wallet data on new devices. That
- * tradeoff is accepted deliberately: the sync copies are the KEY-004
- * exposure, node-bound wallets never survived device transfer anyway, and
- * the behavior change is called out in the release notes.
+ * device that has not run the desync migration yet, and desync only runs
+ * when a device is OPENED on a patched build. The purge can fire on the
+ * very boot desync completes, so a second device that merely auto-updated
+ * in the background is exposed the same way as one still on an old build:
+ * its wallets disappear when it is next opened. A grace period between
+ * desync and purge was considered and rejected: it would keep the KEY-004
+ * seeds in iCloud longer for every user in order to soften a sync behavior
+ * that was never advertised and never actually transferred node-bound
+ * wallets. Accepted deliberately, with no user-facing ceremony (whichever
+ * device opens first purges, so no warning gives users an ordering they
+ * could act on); the release notes disclose the outcome and the recovery
+ * path (the purging device retains local copies of everything that was in
+ * the sync partition, so restore from seed or a wallet-config export) and
+ * that the unintended iCloud auto-restore on new devices ends.
  */
 export const autoPurgeLegacyKeychain = async (): Promise<void> => {
     if (Platform.OS !== 'ios') return;
