@@ -62,7 +62,12 @@ const ensureTorStarted = (): Promise<void> => {
     return startPromise;
 };
 
-const doTorRequest = async (
+// Low-level Tor request: performs the HTTP call over the Tor daemon and
+// returns the raw status and body verbatim. Unlike doTorRequest it does
+// NOT parse the body and does NOT throw on a non-2xx status — it only
+// rejects on a transport-level failure. Callers that want status-based
+// branching (mirroring a ReactNativeBlobUtil response) build on this.
+const doTorRequestRaw = async (
     url: string,
     method: RequestMethod,
     data?: string,
@@ -72,7 +77,7 @@ const doTorRequest = async (
     // node holds the connection open for timeout_seconds) must pass a
     // longer timeout or the request dies before the node can answer.
     timeoutMs: number = REQUEST_TIMEOUT_MS
-) => {
+): Promise<{ status: number; body: string }> => {
     await ensureTorStarted();
     const headerStr = headersToString(headers);
 
@@ -123,16 +128,39 @@ const doTorRequest = async (
         throw new Error(response.error);
     }
 
+    return { status: response.status_code, body: response.body };
+};
+
+const doTorRequest = async (
+    url: string,
+    method: RequestMethod,
+    data?: string,
+    headers?: any,
+    trustInvalidCerts: boolean = false,
+    // Callers with a request-scoped deadline (e.g. payments, where the
+    // node holds the connection open for timeout_seconds) must pass a
+    // longer timeout or the request dies before the node can answer.
+    timeoutMs: number = REQUEST_TIMEOUT_MS
+) => {
+    const { status, body } = await doTorRequestRaw(
+        url,
+        method,
+        data,
+        headers,
+        trustInvalidCerts,
+        timeoutMs
+    );
+
     let parsedBody: any;
-    if (response.body) {
+    if (body) {
         try {
-            parsedBody = JSON.parse(response.body);
+            parsedBody = JSON.parse(body);
         } catch {
-            parsedBody = response.body;
+            parsedBody = body;
         }
     }
 
-    if (response.status_code >= 300) {
+    if (status >= 300) {
         const message =
             (parsedBody &&
                 typeof parsedBody === 'object' &&
@@ -140,7 +168,7 @@ const doTorRequest = async (
                     parsedBody.message ||
                     parsedBody.error)) ||
             (typeof parsedBody === 'string' && parsedBody) ||
-            `HTTP ${response.status_code}`;
+            `HTTP ${status}`;
         throw new Error(message);
     }
 
@@ -153,4 +181,10 @@ const restartTor = async () => {
     await ensureTorStarted();
 };
 
-export { doTorRequest, restartTor, isOnionHttpsUrl, RequestMethod };
+export {
+    doTorRequest,
+    doTorRequestRaw,
+    restartTor,
+    isOnionHttpsUrl,
+    RequestMethod
+};
