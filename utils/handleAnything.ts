@@ -797,7 +797,7 @@ const handleAnything = async (
                             'Send',
                             {
                                 destination: b12Offer,
-                                bolt12,
+                                bolt12: b12Offer,
                                 transactionType: 'BOLT 12',
                                 isValid: true
                             }

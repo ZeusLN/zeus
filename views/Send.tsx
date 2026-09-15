@@ -44,6 +44,7 @@ import Switch from '../components/Switch';
 import TextInput from '../components/TextInput';
 import UTXOPicker from '../components/UTXOPicker';
 
+import AddressUtils from '../utils/AddressUtils';
 import BackendUtils from '../utils/BackendUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { scanNfcTag } from '../utils/NFCUtils';
@@ -430,15 +431,19 @@ export default class Send extends React.Component<SendProps, SendState> {
             return;
         }
         try {
-            const split = bolt12.split('=');
+            // The offer may arrive as a bare lno1... or wrapped in a Bitcoin
+            // URI, eg. bitcoin:?lno=lno1qgsyxjtl6... Pull the lno parameter
+            // out properly rather than splitting on '=', which mangles URIs
+            // carrying more than one parameter (BIP 353 records commonly
+            // pair an offer with a silent payment address, eg.
+            // bitcoin:?sp=sp1q...&lno=lno1...).
+            const { offer } = AddressUtils.processBIP21Uri(bolt12);
             this.setState({
                 loading: true,
                 error_msg: ''
             });
             const res = await BackendUtils.fetchInvoiceFromOffer(
-                // grok out overstring from Bitcoin URI
-                // eg. bitcoin:?lno=lno1qgsyxjtl6luzd9t3pr62xr7eemp6awnejusgf6gw45q75vcfqqqqqqq2zapy7nz5yqcnygzsv9uk6etwwssyzerywfjhxuckyypvm779pgy7grg2m0j55f67e2du7359h4nad964309j93kqa0xshcs
-                split[1] || bolt12,
+                offer || bolt12,
                 satAmount,
                 timeoutSeconds
             );
