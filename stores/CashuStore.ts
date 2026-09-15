@@ -1891,34 +1891,84 @@ export default class CashuStore {
     };
 
     /**
-     * Helper: Subscribe to NDK and collect events with EOSE handling and timeout.
+     * NDK's fetchEvents()/subscription 'eose' is NOT a reliable "no data
+     * exists" signal: NDKSubscription.eoseReceived() (see the vendored
+     * source in node_modules/@nostr-dev-kit/ndk) declares a subscription
+     * done once >=50% of whichever relays are CONNECTED AT THAT INSTANT
+     * have replied EOSE — not 50% of the full relay list. On a cold start,
+     * relay connect order is effectively random; if the first two relays
+     * to finish their handshake simply don't have the requested event
+     * cached, NDK ends the query instantly, before the other relays (one
+     * of which may have the data) even finish connecting. This is more
+     * visible on Android because relay connect timing there is less
+     * consistent than iOS, but the underlying race exists on both.
+     *
+     * For a query expecting a single event (e.g. limit: 1), the fix is to
+     * not use NDK's completion heuristic at all: resolve as soon as the
+     * actual event arrives from ANY relay, and only treat "nothing arrived"
+     * as failure after a fixed real-world wait. This can't be fooled by a
+     * lucky/unlucky pair of fast-connecting relays, because it never asks
+     * "is everyone done" — only "has anyone answered".
+     */
+    private fetchFirstEvent = (
+        filter: NDKFilter,
+        logPrefix: string,
+        timeoutMs: number = 15000
+    ): Promise<NDKEvent | undefined> => {
+        return new Promise((resolve) => {
+            const sub = this.ndk.subscribe(filter, { closeOnEose: false });
+            let settled = false;
+
+            const finish = (event?: NDKEvent) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                sub.stop();
+                resolve(event);
+            };
+
+            sub.on('event', (event: NDKEvent) => {
+                console.log(`${logPrefix}: event received`);
+                finish(event);
+            });
+
+            const timer = setTimeout(() => {
+                console.log(`${logPrefix}: no event within ${timeoutMs}ms`);
+                finish(undefined);
+            }, timeoutMs);
+        });
+    };
+
+    /**
+     * Helper: Subscribe to NDK and collect events with EOSE handling and
+     * timeout. Unlike fetchFirstEvent, this is used for queries that expect
+     * a variable number of events (e.g. mint recommendations from many
+     * authors), where an early 'eose' is a useful (if imperfect) signal to
+     * stop waiting rather than the sole basis for a found/not-found result
+     * — an incomplete list here is still useful, unlike a missing follow list.
      */
     private subscribeAndCollectEvents = async (
         filter: NDKFilter,
         logPrefix: string
     ): Promise<Set<NDKEvent>> => {
         const events = new Set<NDKEvent>();
-        let eoseCount = 0;
-        const totalRelays = DEFAULT_NOSTR_RELAYS.length;
         const sub = this.ndk.subscribe(filter, { closeOnEose: true });
 
         await new Promise<void>((resolve) => {
             sub.on('event', (event: NDKEvent) => {
                 events.add(event);
             });
+            // Fires once per subscription (not once per relay) once NDK's
+            // own quorum heuristic is satisfied — see fetchFirstEvent's
+            // comment above for why that's an early-exit, not a guarantee.
             sub.on('eose', () => {
-                eoseCount++;
-                if (eoseCount >= Math.ceil(totalRelays / 2)) {
-                    console.log(
-                        `${logPrefix}: EOSE received from majority of relays`
-                    );
-                    resolve();
-                }
+                console.log(`${logPrefix}: EOSE received`);
+                resolve();
             });
             setTimeout(() => {
                 console.log(`${logPrefix}: Timeout reached`);
                 resolve();
-            }, 10000);
+            }, 15000);
         });
 
         sub.stop();
@@ -2172,8 +2222,10 @@ export default class CashuStore {
                 limit: 1
             };
 
-            const followEvents = await this.ndk.fetchEvents(followFilter);
-            const followEvent = Array.from(followEvents)[0];
+            const followEvent = await this.fetchFirstEvent(
+                followFilter,
+                'Follow list fetch'
+            );
 
             if (!followEvent) {
                 console.log('No follow list found for npub');
