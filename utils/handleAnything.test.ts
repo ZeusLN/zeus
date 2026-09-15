@@ -1158,6 +1158,37 @@ describe('handleAnything', () => {
             expect(bitcoinUriCalls()).toHaveLength(0);
             expect(result[0]).toBe('LnurlPay');
         });
+
+        // A record carrying no on-chain address -- eg. a silent payment
+        // address paired with an offer -- leaves BOLT 12 as the only method
+        // ZEUS can use, so it routes straight to Send. Send must receive the
+        // bare offer: handing it the whole URI made it ship
+        // 'sp1...&lno' to the backend, which CLN rejects with
+        // 'unparsable offer: invalid bech32 string: invalid token'.
+        it('passes the bare offer to Send for a record with no on-chain address', async () => {
+            const SP_LNO_URI =
+                'bitcoin:?sp=sp1qqgste7k9hx0qftg6qmwlkqtwuy6cycyavzmzj85c6qdfhjdpdjtdgqjuexzk6murw56suy3e0rd2cgqvycxttddwsvgxe2usfpxumr70xc9pkqwv&lno=lno1zr5qyugqgskrk70kqmuq';
+            mockProcessBIP21Uri.mockImplementation((input: string) => {
+                if (input === SP_LNO_URI) {
+                    // no `value`: sp= is not an address ZEUS can pay
+                    return { offer: 'lno1zr5qyugqgskrk70kqmuq' };
+                }
+                return { value: input };
+            });
+            mockDoHResponse({
+                Status: 0,
+                AD: true,
+                Answer: [txt(`"${SP_LNO_URI}"`)]
+            });
+            // no LNURL endpoint on the domain
+            mockBlobUtilFetch.mockRejectedValue(new Error('404'));
+
+            const result = await handleAnything(ADDRESS);
+
+            expect(result[0]).toBe('Send');
+            expect(result[1].destination).toBe('lno1zr5qyugqgskrk70kqmuq');
+            expect(result[1].bolt12).toBe('lno1zr5qyugqgskrk70kqmuq');
+        });
     });
 
     describe('node configuration handling', () => {
