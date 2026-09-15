@@ -470,9 +470,16 @@ class MigrationsUtils {
     // retired flags are never written again; leftover entries are inert
     // and cleared by Clear All Data.
     //
-    // Adding a future migration: bump SETTINGS_VERSION, gate the new
-    // mutation on the blob's prior version (settings.settingsVersion ??
-    // 0), and leave the existing blocks untouched.
+    // Adding a future migration: bump SETTINGS_VERSION, add a pure
+    // mutation, and gate its block in applySettingsMigrations on
+    // `priorVersion < N` (N = the bumped version), leaving the existing
+    // blocks untouched. The gate-consistency test in
+    // MigrationUtils.test.ts fails whenever the highest gate and
+    // SETTINGS_VERSION diverge, in either direction. A version number is
+    // FROZEN the moment any public build (alphas and TestFlight included)
+    // ships stamping it: blobs already stamped N skip every `< N` block
+    // forever, so a migration added after that point must take a fresh
+    // bump, never share a shipped one.
     // ------------------------------------------------------------------
     public async runSettingsMigrations(
         settings: any,
@@ -507,12 +514,28 @@ class MigrationsUtils {
         return await settingsStore.updateSettings({});
     }
 
-    // Applies every migration below the current SETTINGS_VERSION in
-    // memory and stamps the blob. Does NOT persist: applySettingsUpdate
-    // (modern path) and storageMigrationV2 (legacy path) own the write.
+    // Applies every migration between the blob's prior version and the
+    // current SETTINGS_VERSION in memory and stamps the blob. Does NOT
+    // persist: applySettingsUpdate (modern path) and storageMigrationV2
+    // (legacy path) own the write.
     public async applySettingsMigrations(settings: any): Promise<boolean> {
-        const [rgsDone, olympusDone, swapDone, retiredSwapDone, expiryDone] =
-            await Promise.all([
+        const priorVersion = settings?.settingsVersion ?? 0;
+
+        let changed = false;
+        if (priorVersion < 1) {
+            // v0 -> v1 consolidation. The version gate keeps these blocks
+            // exactly-once: a blob stamped at 1+ already ran them when it
+            // was stamped, but the retired flags below are never written
+            // under the stamp system, so without the gate a later version
+            // bump would re-apply them over values the user has since
+            // restored (and pay the five flag reads again).
+            const [
+                rgsDone,
+                olympusDone,
+                swapDone,
+                retiredSwapDone,
+                expiryDone
+            ] = await Promise.all([
                 EncryptedStorage.getItem('rgs-defaults-v2'),
                 EncryptedStorage.getItem('zeuslsp-hosts-2026'),
                 EncryptedStorage.getItem('swap-hosts-boltz'),
@@ -520,21 +543,21 @@ class MigrationsUtils {
                 EncryptedStorage.getItem('invoices-expiry-display-fix-v2')
             ]);
 
-        let changed = false;
-        if (!rgsDone) {
-            changed = this.applyRgsDefaultsToV2(settings) || changed;
-        }
-        if (!olympusDone) {
-            changed = this.applyOlympusHostsToZeusLsp(settings) || changed;
-        }
-        if (!swapDone) {
-            changed = this.applySwapHostsToBoltz(settings) || changed;
-        }
-        if (!retiredSwapDone) {
-            changed = this.applyRetiredSwapHosts(settings) || changed;
-        }
-        if (!expiryDone) {
-            changed = this.applyInvoiceExpiryDisplay(settings) || changed;
+            if (!rgsDone) {
+                changed = this.applyRgsDefaultsToV2(settings) || changed;
+            }
+            if (!olympusDone) {
+                changed = this.applyOlympusHostsToZeusLsp(settings) || changed;
+            }
+            if (!swapDone) {
+                changed = this.applySwapHostsToBoltz(settings) || changed;
+            }
+            if (!retiredSwapDone) {
+                changed = this.applyRetiredSwapHosts(settings) || changed;
+            }
+            if (!expiryDone) {
+                changed = this.applyInvoiceExpiryDisplay(settings) || changed;
+            }
         }
 
         settings.settingsVersion = SETTINGS_VERSION;

@@ -954,6 +954,63 @@ describe('MigrationUtils', () => {
         });
     });
 
+    describe('settings version gates', () => {
+        const EncryptedStorage = require('react-native-encrypted-storage');
+
+        beforeEach(() => {
+            EncryptedStorage.getItem.mockReset();
+        });
+
+        it('keeps the highest version gate equal to SETTINGS_VERSION', () => {
+            // Adding a block gated above SETTINGS_VERSION (forgotten
+            // bump) makes it unreachable: stamped blobs short-circuit in
+            // runSettingsMigrations before the gate is consulted. Bumping
+            // without adding a gated block is the same mistake mirrored.
+            // No runtime assertion can see either, so scan the source.
+            const fs = require('fs');
+            const path = require('path');
+            const source = fs.readFileSync(
+                path.join(__dirname, 'MigrationUtils.ts'),
+                'utf8'
+            );
+
+            const gates = Array.from(
+                source.matchAll(/priorVersion < (\d+)/g),
+                (match: any) => Number(match[1])
+            );
+
+            expect(gates.length).toBeGreaterThan(0);
+            expect(Math.max(...gates)).toBe(SETTINGS_VERSION);
+        });
+
+        it('skips the v1 blocks for a blob already stamped at 1', async () => {
+            // Simulates a future SETTINGS_VERSION bump: a v1-stamped blob
+            // re-enters applySettingsMigrations on its way to v2. The v1
+            // blocks must be exactly-once, not merely idempotent: this
+            // user re-created old-default-looking values after stamping,
+            // and no flags exist to protect them (they are never written
+            // under the stamp system).
+            const settings: any = {
+                settingsVersion: 1,
+                lspMainnet: 'https://0conf.lnolymp.us',
+                swaps: { hostMainnet: 'https://boltz-api.eldamar.icu/v2' }
+            };
+
+            const changed = await MigrationUtils.applySettingsMigrations(
+                settings
+            );
+
+            expect(changed).toBe(false);
+            expect(settings.lspMainnet).toBe('https://0conf.lnolymp.us');
+            expect(settings.swaps.hostMainnet).toBe(
+                'https://boltz-api.eldamar.icu/v2'
+            );
+            // the retired-flag reads are skipped along with the blocks
+            expect(EncryptedStorage.getItem).not.toHaveBeenCalled();
+            expect(settings.settingsVersion).toBe(SETTINGS_VERSION);
+        });
+    });
+
     describe('purgeRescueKeyFiles', () => {
         const RNFS = require('react-native-fs');
         const EncryptedStorage = require('react-native-encrypted-storage');
