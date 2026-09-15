@@ -53,7 +53,17 @@ class Storage {
             prefixedKey,
             stringValue,
             {
-                cloudSync: false
+                cloudSync: false,
+                // iOS: keep keychain items on this device only. The default
+                // (AFTER_FIRST_UNLOCK) migrates to a new device through
+                // encrypted iCloud/Finder backups, carrying the settings blob
+                // (wallet seeds, LND password, macaroons, lock verifiers) with
+                // it. THIS_DEVICE_ONLY blocks that migration while staying
+                // readable at boot after first unlock, and (unlike
+                // WHEN_PASSCODE_SET) never requires a device passcode, so it
+                // cannot lock a user out of their own wallet. No-op on Android.
+                accessible:
+                    Keychain.ACCESSIBLE.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY
             }
         );
         return response;

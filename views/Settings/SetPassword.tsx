@@ -11,6 +11,11 @@ import TextInput from '../../components/TextInput';
 
 import { confirmAction } from '../../utils/ActionUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import {
+    deriveVerifier,
+    verifySecret,
+    hasVerifier
+} from '../../utils/LockVerifierUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import SettingsStore from '../../stores/SettingsStore';
 import ModalStore from '../../stores/ModalStore';
@@ -25,7 +30,7 @@ interface SetPassphraseProps {
 interface SetPassphraseState {
     passphrase: string;
     passphraseConfirm: string;
-    savedPassphrase: string;
+    hasSavedPassphrase: boolean;
     passphraseMismatchError: boolean;
     passphraseInvalidError: boolean;
     passphraseEmptyError: boolean;
@@ -41,7 +46,7 @@ export default class SetPassphrase extends React.Component<
     state = {
         passphrase: '',
         passphraseConfirm: '',
-        savedPassphrase: '',
+        hasSavedPassphrase: false,
         passphraseMismatchError: false,
         passphraseInvalidError: false,
         passphraseEmptyError: false,
@@ -56,11 +61,9 @@ export default class SetPassphrase extends React.Component<
         const settings = await SettingsStore.getSettings();
 
         this.setState({
-            isBiometryEnabled: settings.isBiometryEnabled
+            isBiometryEnabled: settings.isBiometryEnabled,
+            hasSavedPassphrase: hasVerifier(settings.passphraseVerifier)
         });
-        if (settings.passphrase) {
-            this.setState({ savedPassphrase: settings.passphrase });
-        }
 
         this.firstInput.current?.focus();
     }
@@ -89,14 +92,6 @@ export default class SetPassphrase extends React.Component<
 
         const settings = await getSettings();
 
-        if (passphrase !== '' && passphrase === settings.duressPassphrase) {
-            this.setState({
-                passphraseInvalidError: true
-            });
-
-            return;
-        }
-
         if (passphrase === '') {
             this.setState({
                 passphraseEmptyError: true
@@ -104,7 +99,16 @@ export default class SetPassphrase extends React.Component<
             return;
         }
 
-        await updateSettings({ passphrase }).then(() => {
+        if (await verifySecret(passphrase, settings.duressPassphraseVerifier)) {
+            this.setState({
+                passphraseInvalidError: true
+            });
+
+            return;
+        }
+
+        const passphraseVerifier = await deriveVerifier(passphrase);
+        await updateSettings({ passphraseVerifier }).then(() => {
             setLoginStatus(true);
             getSettings();
             navigation.popTo('Security', {
@@ -120,8 +124,8 @@ export default class SetPassphrase extends React.Component<
         const { updateSettings } = SettingsStore;
 
         await updateSettings({
-            duressPassphrase: '',
-            passphrase: '',
+            duressPassphraseVerifier: undefined,
+            passphraseVerifier: undefined,
             isBiometryEnabled: false
         });
         navigation.popTo('Security');
@@ -132,7 +136,7 @@ export default class SetPassphrase extends React.Component<
         const {
             passphrase,
             passphraseConfirm,
-            savedPassphrase,
+            hasSavedPassphrase,
             passphraseMismatchError,
             passphraseInvalidError,
             passphraseEmptyError
@@ -144,7 +148,7 @@ export default class SetPassphrase extends React.Component<
                     leftComponent="Back"
                     centerComponent={{
                         text: localeString(
-                            savedPassphrase
+                            hasSavedPassphrase
                                 ? 'views.Settings.ChangePassword.title'
                                 : 'views.Settings.SetPassword.title'
                         ),
@@ -255,7 +259,7 @@ export default class SetPassphrase extends React.Component<
                             onPress={() => this.saveSettings()}
                         />
                     </View>
-                    {!!savedPassphrase && (
+                    {hasSavedPassphrase && (
                         <View style={{ paddingTop: 10, margin: 10 }}>
                             <Button
                                 title={localeString(
