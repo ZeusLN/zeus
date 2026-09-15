@@ -125,6 +125,7 @@ export default class EmbeddedLND extends LND {
     getPayments = async (params?: {
         maxPayments?: number;
         reversed?: boolean;
+        creationDateStart?: number;
     }) => await listPayments(params);
     getNewAddress = async (data: any) =>
         await newAddress(
