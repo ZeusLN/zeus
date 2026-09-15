@@ -921,6 +921,7 @@
     "views.Send.message": "Message",
     "views.Send.feeSats": "Fee (satoshis per byte)",
     "views.Send.feeSatsVbyte": "Fee (satoshis per vByte)",
+    "views.Send.feeRateSetAutomatically": "The fee rate will be set automatically by your node.",
     "views.Send.sendCoins": "Send Coins",
     "views.Send.sorry": "Sorry",
     "views.Send.editNetworkFees": "Edit network fees",

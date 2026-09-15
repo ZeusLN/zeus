@@ -682,6 +682,11 @@ export default class Send extends React.Component<SendProps, SendState> {
             !amount ||
             amount === '0';
 
+        const supportsOnchainSendFeeRate =
+            BackendUtils.supportsOnchainSendFeeRate();
+        const isInvalidFee =
+            supportsOnchainSendFeeRate && (fee === '0' || !fee);
+
         return (
             <Screen>
                 <Header
@@ -1186,22 +1191,41 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         </View>
                                     )}
 
-                                <Text
-                                    style={{
-                                        ...styles.text,
-                                        color: themeColor('secondaryText')
-                                    }}
-                                >
-                                    {localeString('views.Send.feeSatsVbyte')}
-                                </Text>
+                                {supportsOnchainSendFeeRate ? (
+                                    <>
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Send.feeSatsVbyte'
+                                            )}
+                                        </Text>
 
-                                <OnchainFeeInput
-                                    fee={fee}
-                                    onChangeFee={(text: string) =>
-                                        this.setState({ fee: text })
-                                    }
-                                    navigation={navigation}
-                                />
+                                        <OnchainFeeInput
+                                            fee={fee}
+                                            onChangeFee={(text: string) =>
+                                                this.setState({ fee: text })
+                                            }
+                                            navigation={navigation}
+                                        />
+                                    </>
+                                ) : (
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Send.feeRateSetAutomatically'
+                                        )}
+                                    </Text>
+                                )}
 
                                 <View
                                     style={{
@@ -1217,8 +1241,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             color:
                                                 totalBlockchainBalanceAccounts ===
                                                     0 ||
-                                                fee === '0' ||
-                                                !fee ||
+                                                isInvalidFee ||
                                                 this.hasInvalidAdditionalOutputs() ||
                                                 (fundMax &&
                                                     (!satAmount ||
@@ -1254,8 +1277,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         disabled={
                                             totalBlockchainBalanceAccounts ===
                                                 0 ||
-                                            fee === '0' ||
-                                            !fee ||
+                                            isInvalidFee ||
                                             this.hasInvalidAdditionalOutputs() ||
                                             (fundMax &&
                                                 (!satAmount ||

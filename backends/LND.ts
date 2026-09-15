@@ -1037,6 +1037,8 @@ export default class LND {
     supportsNestedSegWit = () => true;
     supportsTaproot = () => this.supports('v0.15.0');
     supportsBumpFee = () => true;
+    supportsOnchainSendFeeRate = () => true;
+    supportsChannelOpenFeeRate = () => true;
     supportsFlowLSP = () => true;
     supportsNetworkInfo = () => true;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');

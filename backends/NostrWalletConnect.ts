@@ -108,6 +108,8 @@ export default class NostrWalletConnect {
     supportsNestedSegWit = () => false;
     supportsTaproot = () => false;
     supportsBumpFee = () => false;
+    supportsOnchainSendFeeRate = () => false;
+    supportsChannelOpenFeeRate = () => false;
     supportsFlowLSP = () => false;
     supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => false;

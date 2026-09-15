@@ -366,10 +366,12 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
                         fundMax ? '0' : satAmount || amount || '0'
                     )}
 
-                    <KeyValue
-                        keyValue={localeString('views.Send.feeSatsVbyte')}
-                        value={fee}
-                    />
+                    {!!fee && (
+                        <KeyValue
+                            keyValue={localeString('views.Send.feeSatsVbyte')}
+                            value={fee}
+                        />
+                    )}
 
                     {this.renderInputs()}
 
