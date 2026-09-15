@@ -29,6 +29,11 @@ export default class LnurlPayHistorical extends React.Component<
         const { navigation, lnurlpaytx, preimage } = this.props;
         const { showLnurlSuccess } = this.state;
         const { lnurl, domain, successAction } = lnurlpaytx;
+        // Do not collapse metadata into an empty, untappable success panel.
+        const hasSuccessDetails = Boolean(
+            domain ||
+                ['message', 'url', 'aes'].includes(successAction?.tag || '')
+        );
         const metadata =
             (lnurlpaytx.metadata && lnurlpaytx.metadata.metadata) ||
             'No metadata available';
@@ -54,20 +59,24 @@ export default class LnurlPayHistorical extends React.Component<
                     </TouchableOpacity>
                 )}
                 <TouchableOpacity
+                    disabled={!hasSuccessDetails}
                     onPress={() => {
-                        this.setState({
+                        this.setState(({ showLnurlSuccess }) => ({
                             showLnurlSuccess: !showLnurlSuccess
-                        });
+                        }));
                     }}
                 >
-                    {showLnurlSuccess ? (
+                    {showLnurlSuccess && hasSuccessDetails ? (
                         <LnurlPaySuccess
                             domain={domain}
                             successAction={successAction}
                             preimage={preimage}
                         />
                     ) : (
-                        <LnurlPayMetadata metadata={metadata} />
+                        <LnurlPayMetadata
+                            metadata={metadata}
+                            showArrow={hasSuccessDetails}
+                        />
                     )}
                 </TouchableOpacity>
             </View>
