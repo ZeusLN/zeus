@@ -5,7 +5,8 @@ jest.mock('react-native-fs', () => ({
     CachesDirectoryPath: '/cache',
     exists: jest.fn().mockResolvedValue(false),
     unlink: jest.fn().mockResolvedValue(undefined),
-    writeFile: jest.fn().mockResolvedValue(undefined)
+    writeFile: jest.fn().mockResolvedValue(undefined),
+    readDir: jest.fn().mockResolvedValue([])
 }));
 jest.mock('@react-native-documents/picker', () => ({
     saveDocuments: jest.fn()
@@ -894,6 +895,84 @@ describe('MigrationUtils', () => {
 
             expect(RNFS.unlink).not.toHaveBeenCalledWith(LEGACY_PATH);
             expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('purgeChannelExportFiles', () => {
+        const RNFS = require('react-native-fs');
+        const EncryptedStorage = require('react-native-encrypted-storage');
+        // Platform.OS is 'ios' under the RN jest preset, so the legacy zips
+        // are in the Documents dir. Staging is the cache dir on both.
+        const STAGING_DIR = '/cache/channel-export-staging';
+        const LEGACY_ZIP = '/docs/zeus-lnd-mainnet-1736899200000.zip';
+
+        const stagingUnlinks = () =>
+            RNFS.unlink.mock.calls.filter(
+                (call: any[]) => call[0] === STAGING_DIR
+            );
+
+        beforeEach(() => {
+            RNFS.exists.mockReset().mockResolvedValue(true);
+            RNFS.unlink.mockReset().mockResolvedValue(undefined);
+            RNFS.readDir.mockReset().mockResolvedValue([
+                {
+                    name: 'zeus-lnd-mainnet-1736899200000.zip',
+                    path: LEGACY_ZIP,
+                    isFile: () => true
+                }
+            ]);
+            EncryptedStorage.getItem.mockReset();
+            EncryptedStorage.setItem.mockReset();
+        });
+
+        it('sweeps the staging dir at most once per process', async () => {
+            // Same hazard as the rescue key staging file: getSettings() runs
+            // on every transition to the background, and the iOS share sheet
+            // backgrounds the app while the staged zip must stay readable.
+            EncryptedStorage.getItem.mockResolvedValue('true');
+
+            await MigrationUtils.purgeChannelExportFiles();
+            await MigrationUtils.purgeChannelExportFiles();
+            await MigrationUtils.purgeChannelExportFiles();
+
+            expect(stagingUnlinks()).toHaveLength(1);
+        });
+
+        it('purges legacy Documents zips once and sets the flag', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+
+            await MigrationUtils.purgeChannelExportFiles();
+
+            expect(RNFS.unlink).toHaveBeenCalledWith(LEGACY_ZIP);
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'channel-export-file-cleanup',
+                'true'
+            );
+        });
+
+        it('skips the legacy purge when the flag is already set', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+
+            await MigrationUtils.purgeChannelExportFiles();
+
+            expect(RNFS.readDir).not.toHaveBeenCalled();
+            expect(RNFS.unlink).not.toHaveBeenCalledWith(LEGACY_ZIP);
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+        });
+
+        it('sets the flag even when the legacy unlink fails', async () => {
+            // A failed unlink can never succeed on a later retry, so a
+            // one-shot that retried forever would just burn a keystore read
+            // and a readDir on every launch
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            RNFS.unlink.mockRejectedValue(new Error('EPERM'));
+
+            await MigrationUtils.purgeChannelExportFiles();
+
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'channel-export-file-cleanup',
+                'true'
+            );
         });
     });
 
