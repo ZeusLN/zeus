@@ -1,5 +1,12 @@
 import React from 'react';
-import { BackHandler, View, StyleSheet, ScrollView, Text } from 'react-native';
+import {
+    BackHandler,
+    View,
+    StyleSheet,
+    ScrollView,
+    Text,
+    TouchableOpacity
+} from 'react-native';
 import { ButtonGroup } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -151,6 +158,19 @@ export default class AddOrEditNWCConnection extends React.Component<
             maxBudgetLimit: Math.max(0, maxLimit),
             budgetValue: existingBudgetValue
         });
+    };
+
+    // True when the backend has a Cashu balance the user hasn't opted
+    // into yet for NWC — used to point an empty-budget dead end at the
+    // one setting that would unblock it.
+    canEnableCashu = (): boolean => {
+        const { NostrWalletConnectStore } = this.props;
+        return (
+            BackendUtils.supportsCashuWallet() &&
+            NostrWalletConnectStore?.settingsStore?.settings?.ecash
+                ?.enableCashu === true &&
+            !NostrWalletConnectStore.cashuEnabled
+        );
     };
 
     componentWillUnmount() {
@@ -1214,13 +1234,39 @@ export default class AddOrEditNWCConnection extends React.Component<
                                                     ),
                                                     fontFamily:
                                                         'PPNeueMontreal-Book',
-                                                    fontSize: 14
+                                                    fontSize: 14,
+                                                    textAlign: 'center'
                                                 }}
                                             >
                                                 {localeString(
                                                     'views.Settings.NostrWalletConnect.noBalanceAvailable'
                                                 )}
                                             </Text>
+                                            {this.canEnableCashu() && (
+                                                <TouchableOpacity
+                                                    onPress={() =>
+                                                        navigation.navigate(
+                                                            'NWCSettings'
+                                                        )
+                                                    }
+                                                >
+                                                    <Text
+                                                        style={{
+                                                            color: themeColor(
+                                                                'highlight'
+                                                            ),
+                                                            fontFamily:
+                                                                'PPNeueMontreal-Book',
+                                                            fontSize: 16,
+                                                            marginTop: 10
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.Settings.NostrWalletConnect.enableCashuInSettings'
+                                                        )}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            )}
                                         </View>
                                     )}
                                 </View>
