@@ -1,6 +1,5 @@
 import * as React from 'react';
-import { Alert, Platform, ScrollView, StyleSheet, View } from 'react-native';
-import { CheckBox } from '@rneui/themed';
+import { Alert, ScrollView, StyleSheet, View } from 'react-native';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
@@ -27,7 +26,6 @@ interface KeychainCleanupState {
     loading: boolean;
     purging: boolean;
     scan: PurgeScan | null;
-    allDevicesConfirmed: boolean;
     result: string | null;
 }
 
@@ -39,7 +37,6 @@ export default class KeychainCleanup extends React.Component<
         loading: true,
         purging: false,
         scan: null,
-        allDevicesConfirmed: false,
         result: null
     };
 
@@ -130,11 +127,9 @@ export default class KeychainCleanup extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const { loading, purging, scan, allDevicesConfirmed, result } =
-            this.state;
+        const { loading, purging, scan, result } = this.state;
 
         const candidates = scan ? this.candidateCount(scan) : 0;
-        const requiresDeviceConfirm = Platform.OS === 'ios';
 
         return (
             <Screen>
@@ -155,27 +150,6 @@ export default class KeychainCleanup extends React.Component<
                     >
                         {localeString('views.Tools.keychainCleanup.explainer1')}
                     </Text>
-                    {Platform.OS === 'ios' && (
-                        <Text
-                            style={{
-                                ...styles.paragraph,
-                                color: themeColor('warning')
-                            }}
-                        >
-                            {localeString(
-                                'views.Tools.keychainCleanup.explainer2'
-                            )}
-                        </Text>
-                    )}
-                    <Text
-                        style={{
-                            ...styles.paragraph,
-                            color: themeColor('secondaryText')
-                        }}
-                    >
-                        {localeString('views.Tools.keychainCleanup.explainer3')}
-                    </Text>
-
                     {loading && <LoadingIndicator />}
 
                     {!loading && scan && candidates === 0 && !result && (
@@ -243,43 +217,15 @@ export default class KeychainCleanup extends React.Component<
                     )}
 
                     {!loading && scan && candidates > 0 && (
-                        <>
-                            {requiresDeviceConfirm && (
-                                <CheckBox
-                                    title={localeString(
-                                        'views.Tools.keychainCleanup.allDevicesConfirm'
-                                    )}
-                                    checked={allDevicesConfirmed}
-                                    onPress={() =>
-                                        this.setState({
-                                            allDevicesConfirmed:
-                                                !allDevicesConfirmed
-                                        })
-                                    }
-                                    containerStyle={{
-                                        backgroundColor: 'transparent',
-                                        borderWidth: 0
-                                    }}
-                                    textStyle={{
-                                        color: themeColor('text')
-                                    }}
-                                    checkedColor={themeColor('highlight')}
-                                />
+                        <Button
+                            title={localeString(
+                                'views.Tools.keychainCleanup.purgeButton'
                             )}
-                            <Button
-                                title={localeString(
-                                    'views.Tools.keychainCleanup.purgeButton'
-                                )}
-                                onPress={this.confirmPurge}
-                                warning
-                                disabled={
-                                    purging ||
-                                    (requiresDeviceConfirm &&
-                                        !allDevicesConfirmed)
-                                }
-                                containerStyle={styles.button}
-                            />
-                        </>
+                            onPress={this.confirmPurge}
+                            warning
+                            disabled={purging}
+                            containerStyle={styles.button}
+                        />
                     )}
 
                     {purging && <LoadingIndicator />}
