@@ -32,8 +32,11 @@ jest.mock('../utils/LocaleUtils', () => ({
 jest.mock('../utils/MigrationUtils', () => ({
     keychainCloudSyncMigration: jest.fn().mockResolvedValue(undefined),
     purgeRescueKeyFiles: jest.fn().mockResolvedValue(undefined),
-    migrateRgsDefaultToZeus: jest.fn().mockResolvedValue(undefined),
+    migrateRgsDefaultsToV2: jest.fn().mockResolvedValue(undefined),
+    migrateSwapHostsToBoltz: jest.fn().mockResolvedValue(undefined),
+    migrateRetiredSwapHosts: jest.fn().mockResolvedValue(undefined),
     migrateInvoiceExpiryDisplay: jest.fn().mockResolvedValue(undefined),
+    migrateOlympusHostsToZeusLsp: jest.fn().mockResolvedValue(undefined),
     legacySettingsMigrations: jest.fn().mockResolvedValue({}),
     storageMigrationV2: jest.fn().mockResolvedValue(undefined)
 }));
@@ -69,6 +72,8 @@ jest.mock('../storage', () => {
         })
     };
 });
+
+import { reaction } from 'mobx';
 
 import SettingsStore, { STORAGE_KEY } from './SettingsStore';
 
@@ -201,5 +206,48 @@ describe('SettingsStore.updateSettings', () => {
         expect(result.fiat).toEqual('CAD');
         expect(persistedSettings().fiat).toEqual('CAD');
         expect(store.settingsUpdateInProgress).toEqual(false);
+    });
+});
+
+// Regression coverage for issue #4593: getSettings reassigned
+// this.settings with a fresh JSON.parse result on every call, so MobX
+// reactions on the settings reference (BalanceStore's fires a pair of
+// node requests) re-ran on each of the several loads per boot/focus even
+// though nothing changed. On a slow network those no-op probes were the
+// requests that timed out and raised the connection error pane.
+describe('SettingsStore.getSettings', () => {
+    it('does not refire settings reactions when the stored blob is unchanged', async () => {
+        seedSettings({ fiat: 'USD', locale: 'en' });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        let fired = 0;
+        const dispose = reaction(
+            () => store.settings,
+            () => fired++
+        );
+        await store.getSettings();
+        await store.getSettings();
+        dispose();
+
+        expect(fired).toEqual(0);
+    });
+
+    it('still swaps the settings when the stored blob changed', async () => {
+        seedSettings({ fiat: 'USD' });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        let fired = 0;
+        const dispose = reaction(
+            () => store.settings,
+            () => fired++
+        );
+        seedSettings({ fiat: 'EUR' });
+        await store.getSettings();
+        dispose();
+
+        expect(fired).toEqual(1);
+        expect(store.settings.fiat).toEqual('EUR');
     });
 });
