@@ -42,7 +42,7 @@ import CashuInvoice from '../models/CashuInvoice';
 import CashuPayment from '../models/CashuPayment';
 import CashuToken from '../models/CashuToken';
 
-import Storage, { getRawItem, KEY_PREFIX } from '../storage';
+import Storage, { getRawItem, removeRawItem, KEY_PREFIX } from '../storage';
 
 import { activityStore, connectivityStore } from './Stores';
 import InvoicesStore from './InvoicesStore';
@@ -5785,6 +5785,25 @@ export default class CashuStore {
             await Storage.removeItem(`${lndDir}-cashu-offline-pending-tokens`);
             await Storage.removeItem(`${lndDir}-cashu-offline-spent-tokens`);
             await Storage.removeItem(`${lndDir}-cashu-sent-tokens`);
+
+            // Storage.removeItem clears only the device-local partition. A
+            // pre-desync synchronizable twin of the seed survives until the
+            // auto-purge completes, and recoverSeedFromSyncPartition would
+            // re-adopt the deliberately deleted seed on the next
+            // initializeCDK. Clear the twins first (before the local
+            // copies), so a failure here leaves the local seed in place and
+            // the whole deletion retryable instead of resurrectable.
+            if (Platform.OS === 'ios') {
+                await removeRawItem(
+                    `${KEY_PREFIX}${lndDir}-cashu-seed-phrase`,
+                    true
+                );
+                await removeRawItem(
+                    `${KEY_PREFIX}${lndDir}-cashu-seed-version`,
+                    true
+                );
+                await removeRawItem(`${KEY_PREFIX}${lndDir}-cashu-seed`, true);
+            }
             await Storage.removeItem(`${lndDir}-cashu-seed-version`);
             await Storage.removeItem(`${lndDir}-cashu-seed-phrase`);
             await Storage.removeItem(`${lndDir}-cashu-seed`);
