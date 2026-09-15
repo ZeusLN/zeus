@@ -6,7 +6,6 @@ import {
     TouchableOpacity,
     View
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -24,6 +23,7 @@ import NodeInfoStore from '../../../stores/NodeInfoStore';
 import SettingsStore from '../../../stores/SettingsStore';
 
 import Base64Utils from '../../../utils/Base64Utils';
+import BackendUtils from '../../../utils/BackendUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
@@ -157,8 +157,30 @@ export default class ImportAccount extends React.Component<
             addresses_to_generate,
             understood
         } = this.state;
-        const { errorMsg } = UTXOsStore;
+        const { errorMsg, importingAccount } = UTXOsStore;
         const { implementation } = SettingsStore;
+
+        const trimmedName = name.trim();
+        const trimmedExtendedPublicKey = extended_public_key.trim();
+        const trimmedMasterKeyFingerprint = master_key_fingerprint.trim();
+
+        // the fingerprint is optional, but when one is supplied it has to be
+        // exactly four bytes - reverseMfpBytes drops any trailing nibble, so
+        // a malformed value would be imported as a silently wrong fingerprint
+        const masterKeyFingerprintInvalid =
+            !!trimmedMasterKeyFingerprint &&
+            !/^[0-9a-fA-F]{8}$/.test(trimmedMasterKeyFingerprint);
+
+        const supportsRescan = BackendUtils.supportsAccountImportRescan();
+
+        // lnd needs both a name and a key to import an account, and a zero
+        // birthday height would kick off a rescan from the genesis block
+        const importDisabled =
+            importingAccount ||
+            !trimmedName ||
+            !trimmedExtendedPublicKey ||
+            masterKeyFingerprintInvalid ||
+            (existing_account && supportsRescan && block_height < 1);
 
         const ScanBadge = () => (
             <TouchableOpacity
@@ -177,67 +199,67 @@ export default class ImportAccount extends React.Component<
         if (!understood) {
             return (
                 <Screen>
-                    <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-                        <ScrollView showsVerticalScrollIndicator={false}>
-                            <View style={{ marginHorizontal: 10 }}>
-                                <ErrorMessage
-                                    message={localeString(
-                                        'general.warning'
-                                    ).toUpperCase()}
-                                />
-                            </View>
-                            <Text
-                                style={{
-                                    ...styles.warningText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString(
-                                    'views.ImportAccount.Warning.text1'
-                                )}
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.warningText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString(
-                                    'views.ImportAccount.Warning.text2'
-                                )}
-                            </Text>
-                            <Text
-                                style={{
-                                    ...styles.warningText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString(
-                                    'views.ImportAccount.Warning.text3'
-                                ).replace('Zeus', 'ZEUS')}
-                            </Text>
-                            {implementation !== 'embedded-lnd' && (
-                                <Text
-                                    style={{
-                                        ...styles.warningText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.ImportAccount.note'
-                                    ).replace('Zeus', 'ZEUS')}
-                                </Text>
-                            )}
-                        </ScrollView>
-                        <View style={{ paddingVertical: 10 }}>
-                            <Button
-                                onPress={() =>
-                                    this.setState({ understood: true })
-                                }
-                                title={localeString('general.iUnderstand')}
+                    <Header
+                        leftComponent="Back"
+                        centerComponent={{
+                            text: localeString('views.ImportAccount.title'),
+                            style: { color: themeColor('text') }
+                        }}
+                        navigation={navigation}
+                    />
+                    <ScrollView showsVerticalScrollIndicator={false}>
+                        <View style={{ marginHorizontal: 10 }}>
+                            <ErrorMessage
+                                message={localeString(
+                                    'general.warning'
+                                ).toUpperCase()}
                             />
                         </View>
-                    </SafeAreaView>
+                        <Text
+                            style={{
+                                ...styles.warningText,
+                                color: themeColor('text')
+                            }}
+                        >
+                            {localeString('views.ImportAccount.Warning.text1')}
+                        </Text>
+                        <Text
+                            style={{
+                                ...styles.warningText,
+                                color: themeColor('text')
+                            }}
+                        >
+                            {localeString('views.ImportAccount.Warning.text2')}
+                        </Text>
+                        <Text
+                            style={{
+                                ...styles.warningText,
+                                color: themeColor('text')
+                            }}
+                        >
+                            {localeString(
+                                'views.ImportAccount.Warning.text3'
+                            ).replace('Zeus', 'ZEUS')}
+                        </Text>
+                        {implementation !== 'embedded-lnd' && (
+                            <Text
+                                style={{
+                                    ...styles.warningText,
+                                    color: themeColor('text')
+                                }}
+                            >
+                                {localeString(
+                                    'views.ImportAccount.note'
+                                ).replace('Zeus', 'ZEUS')}
+                            </Text>
+                        )}
+                    </ScrollView>
+                    <View style={{ bottom: 10 }}>
+                        <Button
+                            onPress={() => this.setState({ understood: true })}
+                            title={localeString('general.iUnderstand')}
+                        />
+                    </View>
                 </Screen>
             );
         }
@@ -299,6 +321,8 @@ export default class ImportAccount extends React.Component<
                             numberOfLines={4}
                             multiline
                             style={{ paddingBottom: 10 }}
+                            autoCapitalize="none"
+                            autoCorrect={false}
                         />
                         <>
                             <Text
@@ -319,6 +343,9 @@ export default class ImportAccount extends React.Component<
                                         master_key_fingerprint: text
                                     })
                                 }
+                                error={masterKeyFingerprintInvalid}
+                                autoCapitalize="none"
+                                autoCorrect={false}
                             />
                         </>
                         <DropdownSetting
@@ -376,52 +403,75 @@ export default class ImportAccount extends React.Component<
                                         'general.experimental'
                                     ).toUpperCase()}
                                 </Text>
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        marginBottom: 10
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.ImportAccount.existingAccountNote'
-                                    )}
-                                    .
-                                </Text>
-                                <Text
-                                    style={{
-                                        color: themeColor('secondaryText'),
-                                        fontFamily: 'PPNeueMontreal-Book',
-                                        marginBottom: 10
-                                    }}
-                                >
-                                    {localeString(
-                                        'views.ImportAccount.existingAccountNote2'
-                                    )}
-                                </Text>
-                                <>
+                                {supportsRescan ? (
+                                    <>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                marginBottom: 10
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.ImportAccount.existingAccountNote'
+                                            )}
+                                            .
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                marginBottom: 10
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.ImportAccount.existingAccountNote2'
+                                            )}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                ...styles.label,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.NodeInfo.blockHeight'
+                                            )}
+                                        </Text>
+                                        <TextInput
+                                            value={block_height.toString()}
+                                            onChangeText={(text: string) => {
+                                                const block_height =
+                                                    Number(text);
+                                                if (isNaN(block_height)) return;
+                                                this.setState({
+                                                    block_height
+                                                });
+                                            }}
+                                            keyboardType="numeric"
+                                        />
+                                    </>
+                                ) : (
                                     <Text
                                         style={{
-                                            ...styles.label,
-                                            color: themeColor('secondaryText')
+                                            color: themeColor('secondaryText'),
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            marginBottom: 10
                                         }}
                                     >
                                         {localeString(
-                                            'views.NodeInfo.blockHeight'
+                                            'views.ImportAccount.existingAccountNoteNoRescan'
                                         )}
                                     </Text>
-                                    <TextInput
-                                        value={block_height.toString()}
-                                        onChangeText={(text: string) => {
-                                            const block_height = Number(text);
-                                            if (isNaN(block_height)) return;
-                                            this.setState({
-                                                block_height
-                                            });
-                                        }}
-                                        keyboardType="numeric"
-                                    />
-                                </>
+                                )}
                                 <>
                                     <Text
                                         style={{
@@ -456,21 +506,29 @@ export default class ImportAccount extends React.Component<
                         title={localeString(
                             'views.ImportAccount.importAccount'
                         )}
+                        disabled={importDisabled}
                         onPress={() =>
                             this.props.UTXOsStore.importAccount({
-                                name,
-                                extended_public_key,
+                                name: trimmedName,
+                                extended_public_key: trimmedExtendedPublicKey,
                                 address_type: address_type
                                     ? Number(address_type)
                                     : undefined,
-                                master_key_fingerprint: master_key_fingerprint
-                                    ? Base64Utils.hexToBase64(
-                                          Base64Utils.reverseMfpBytes(
-                                              master_key_fingerprint
+                                master_key_fingerprint:
+                                    trimmedMasterKeyFingerprint
+                                        ? Base64Utils.hexToBase64(
+                                              Base64Utils.reverseMfpBytes(
+                                                  trimmedMasterKeyFingerprint
+                                              )
                                           )
-                                      )
-                                    : undefined,
+                                        : undefined,
                                 dry_run: true,
+                                // still sent when the height field is
+                                // hidden: it latches start_height in the
+                                // store, which drives address
+                                // pre-generation; the store strips it
+                                // before backends without the fork
+                                // extension
                                 birthday_height: existing_account
                                     ? block_height
                                     : undefined,

@@ -566,6 +566,8 @@ export default class OnChainAddresses extends React.Component<
                         // @ts-ignore:next-line
                         onChangeText={this.updateSearch}
                         value={searchText}
+                        autoCorrect={false}
+                        autoCapitalize="none"
                         inputStyle={{
                             color: themeColor('text')
                         }}
