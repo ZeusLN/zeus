@@ -88,7 +88,12 @@ jest.mock('../storage', () => ({
     setItem: jest.fn().mockResolvedValue(true),
     getItem: jest.fn(),
     removeItem: jest.fn(),
-    clear: jest.fn()
+    clear: jest.fn(),
+    KEY_PREFIX: 'zeus:',
+    getInternetPasswordServers: jest.fn().mockResolvedValue([]),
+    getRawItem: jest.fn().mockResolvedValue(null),
+    setRawLocalItem: jest.fn().mockResolvedValue(true),
+    removeRawItem: jest.fn().mockResolvedValue(undefined)
 }));
 
 import MigrationUtils from './MigrationUtils';
@@ -1208,6 +1213,279 @@ describe('MigrationUtils', () => {
             expect(mockConsoleError).toHaveBeenCalledWith(
                 'Error saving migrated Cashu seed version:',
                 expect.any(Error)
+            );
+        });
+    });
+
+    describe('keychainDesyncMigration', () => {
+        const EncryptedStorage = require('react-native-encrypted-storage');
+        const StorageModule = require('../storage');
+        const { Platform } = require('react-native');
+
+        // The file-level console.error spy is restored by an earlier
+        // describe's afterAll, so this describe needs its own
+        let consoleErrorSpy: jest.SpyInstance;
+
+        beforeEach(() => {
+            EncryptedStorage.getItem.mockReset();
+            EncryptedStorage.setItem.mockReset();
+            StorageModule.getInternetPasswordServers.mockReset();
+            StorageModule.getRawItem.mockReset();
+            StorageModule.setRawLocalItem.mockReset();
+            StorageModule.setRawLocalItem.mockResolvedValue(true);
+            Platform.OS = 'ios';
+            consoleErrorSpy = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
+        });
+
+        afterEach(() => {
+            consoleErrorSpy.mockRestore();
+        });
+
+        it('is a no-op off iOS', async () => {
+            Platform.OS = 'android';
+
+            await MigrationUtils.keychainDesyncMigration();
+
+            expect(EncryptedStorage.getItem).not.toHaveBeenCalled();
+            expect(
+                StorageModule.getInternetPasswordServers
+            ).not.toHaveBeenCalled();
+        });
+
+        it('skips entirely when the flag is set', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+
+            await MigrationUtils.keychainDesyncMigration();
+
+            expect(
+                StorageModule.getInternetPasswordServers
+            ).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+        });
+
+        it('copies missing zeus: servers and ignores unprefixed sync entries', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            StorageModule.getInternetPasswordServers.mockResolvedValue([
+                'zeus:zeus-settings-v2',
+                'zeus-settings-v2', // unprefixed legacy relic, must be skipped
+                'zeus:zeus-notes-v2'
+            ]);
+            const partitions: Record<string, Record<string, string>> = {
+                sync: {
+                    'zeus:zeus-settings-v2': '{"nodes":[]}',
+                    'zeus:zeus-notes-v2': '["note1"]'
+                },
+                local: {}
+            };
+            StorageModule.getRawItem.mockImplementation(
+                async (server: string, cloudSync: boolean) =>
+                    partitions[cloudSync ? 'sync' : 'local'][server] ?? null
+            );
+            StorageModule.setRawLocalItem.mockImplementation(
+                async (server: string, value: string) => {
+                    partitions.local[server] = value;
+                    return true;
+                }
+            );
+
+            await MigrationUtils.keychainDesyncMigration();
+
+            expect(StorageModule.setRawLocalItem).toHaveBeenCalledTimes(2);
+            expect(StorageModule.setRawLocalItem).toHaveBeenCalledWith(
+                'zeus:zeus-settings-v2',
+                '{"nodes":[]}'
+            );
+            expect(StorageModule.setRawLocalItem).toHaveBeenCalledWith(
+                'zeus:zeus-notes-v2',
+                '["note1"]'
+            );
+            // Never asked for the unprefixed relic's value
+            expect(StorageModule.getRawItem).not.toHaveBeenCalledWith(
+                'zeus-settings-v2',
+                expect.anything()
+            );
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'keychain-desync-v1',
+                'true'
+            );
+        });
+
+        it('leaves existing local copies untouched (copy-if-missing)', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            StorageModule.getInternetPasswordServers.mockResolvedValue([
+                'zeus:zeus-settings-v2'
+            ]);
+            StorageModule.getRawItem.mockImplementation(
+                async (_server: string, cloudSync: boolean) =>
+                    cloudSync ? '{"stale":true}' : '{"fresh":true}'
+            );
+
+            await MigrationUtils.keychainDesyncMigration();
+
+            expect(StorageModule.setRawLocalItem).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'keychain-desync-v1',
+                'true'
+            );
+        });
+
+        it('skips empty synchronizable values', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            StorageModule.getInternetPasswordServers.mockResolvedValue([
+                'zeus:empty-key'
+            ]);
+            StorageModule.getRawItem.mockImplementation(
+                async (_server: string, cloudSync: boolean) =>
+                    cloudSync ? '' : null
+            );
+
+            await MigrationUtils.keychainDesyncMigration();
+
+            expect(StorageModule.setRawLocalItem).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'keychain-desync-v1',
+                'true'
+            );
+        });
+
+        it('holds the flag on verify mismatch without throwing', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            StorageModule.getInternetPasswordServers.mockResolvedValue([
+                'zeus:zeus-settings-v2'
+            ]);
+            let localWritten: string | null = null;
+            StorageModule.getRawItem.mockImplementation(
+                async (_server: string, cloudSync: boolean) =>
+                    cloudSync ? '{"nodes":[]}' : localWritten
+            );
+            StorageModule.setRawLocalItem.mockImplementation(async () => {
+                localWritten = '{"corrupted"'; // read-back differs from source
+                return true;
+            });
+
+            // Must resolve: a propagated error would abort getSettings
+            // before the blob read and strand the user on onboarding
+            await MigrationUtils.keychainDesyncMigration();
+
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                'Keychain desync migration failed for zeus:zeus-settings-v2',
+                expect.objectContaining({
+                    message: expect.stringContaining('verify failed')
+                })
+            );
+        });
+
+        it('contains per-key failures so remaining keys still copy, flag stays unset', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            StorageModule.getInternetPasswordServers.mockResolvedValue([
+                'zeus:zeus-contacts',
+                'zeus:zeus-settings-v2',
+                'zeus:zeus-notes-v2'
+            ]);
+            const partitions: Record<string, Record<string, string>> = {
+                sync: {
+                    'zeus:zeus-contacts': '[]',
+                    'zeus:zeus-settings-v2': '{"nodes":[]}',
+                    'zeus:zeus-notes-v2': '["note1"]'
+                },
+                local: {}
+            };
+            StorageModule.getRawItem.mockImplementation(
+                async (server: string, cloudSync: boolean) =>
+                    partitions[cloudSync ? 'sync' : 'local'][server] ?? null
+            );
+            StorageModule.setRawLocalItem.mockImplementation(
+                async (server: string, value: string) => {
+                    if (server === 'zeus:zeus-contacts')
+                        throw new Error('errSecInteractionNotAllowed');
+                    partitions.local[server] = value;
+                    return true;
+                }
+            );
+
+            await MigrationUtils.keychainDesyncMigration();
+
+            // Enumeration order is arbitrary, so the first key's failure
+            // must not abort the keys after it
+            expect(partitions.local['zeus:zeus-settings-v2']).toBe(
+                '{"nodes":[]}'
+            );
+            expect(partitions.local['zeus:zeus-notes-v2']).toBe('["note1"]');
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                'Keychain desync migration failed for zeus:zeus-contacts',
+                expect.any(Error)
+            );
+        });
+
+        it('retry after a partial failure copies only the failed key, then flags', async () => {
+            // State left by the previous test's scenario: two keys made it
+            // local, zeus:zeus-contacts did not, and the flag is unset
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            StorageModule.getInternetPasswordServers.mockResolvedValue([
+                'zeus:zeus-contacts',
+                'zeus:zeus-settings-v2',
+                'zeus:zeus-notes-v2'
+            ]);
+            const partitions: Record<string, Record<string, string>> = {
+                sync: {
+                    'zeus:zeus-contacts': '[]',
+                    'zeus:zeus-settings-v2': '{"nodes":[]}',
+                    'zeus:zeus-notes-v2': '["note1"]'
+                },
+                local: {
+                    'zeus:zeus-settings-v2': '{"nodes":[]}',
+                    'zeus:zeus-notes-v2': '["note1"]'
+                }
+            };
+            StorageModule.getRawItem.mockImplementation(
+                async (server: string, cloudSync: boolean) =>
+                    partitions[cloudSync ? 'sync' : 'local'][server] ?? null
+            );
+            StorageModule.setRawLocalItem.mockImplementation(
+                async (server: string, value: string) => {
+                    partitions.local[server] = value;
+                    return true;
+                }
+            );
+
+            await MigrationUtils.keychainDesyncMigration();
+
+            expect(StorageModule.setRawLocalItem).toHaveBeenCalledTimes(1);
+            expect(StorageModule.setRawLocalItem).toHaveBeenCalledWith(
+                'zeus:zeus-contacts',
+                '[]'
+            );
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'keychain-desync-v1',
+                'true'
+            );
+        });
+
+        it('aborts on enumeration failure without setting the flag or throwing', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            StorageModule.getInternetPasswordServers.mockRejectedValue(
+                new Error('SecItemCopyMatching failed: -25308')
+            );
+
+            await MigrationUtils.keychainDesyncMigration();
+
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+        });
+
+        it('sets the flag exactly once after a clean full pass', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            StorageModule.getInternetPasswordServers.mockResolvedValue([]);
+
+            await MigrationUtils.keychainDesyncMigration();
+
+            expect(EncryptedStorage.setItem).toHaveBeenCalledTimes(1);
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'keychain-desync-v1',
+                'true'
             );
         });
     });

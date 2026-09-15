@@ -81,6 +81,7 @@ import { CHANNEL_MIGRATION_ACTIVE } from '../../utils/ChannelMigrationUtils';
 import { processSharedQRImageFast } from '../../utils/ShareIntentProcessor';
 
 import Storage from '../../storage';
+import { autoPurgeLegacyKeychain } from '../../utils/KeychainPurgeUtils';
 
 import AlertStore from '../../stores/AlertStore';
 import BalanceStore from '../../stores/BalanceStore';
@@ -508,6 +509,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 if (shareIntentData) {
                     this.setState({ pendingShareIntent: shareIntentData });
                 }
+                // Fire-and-forget: one-shot removal of legacy and
+                // iCloud-synced keychain copies of wallet data
+                autoPurgeLegacyKeychain();
                 await this.fetchData(transientRetryCount);
             } else {
                 // Only navigate to IntroSplash if Wallet screen is focused
@@ -569,7 +573,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             LnurlPayStore,
             NotesStore,
             SwapStore,
-            NostrWalletConnectStore
+            NostrWalletConnectStore,
+            UnitsStore
         } = this.props;
         const {
             settings,
@@ -626,6 +631,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             UTXOsStore.reset();
             ContactStore.loadContacts();
             NotesStore.loadNoteKeys();
+            // Units are first read at store construction, which on iOS can
+            // precede keychainDesyncMigration populating the device-local
+            // partition; re-read now that getSettings has completed
+            UnitsStore.getUnits();
             CashuStore.reset();
         }
 
