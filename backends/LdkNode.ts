@@ -2174,6 +2174,10 @@ export default class LdkNode {
     supportsNestedSegWit = () => false;
     supportsTaproot = () => false; // LDK Node's BDK wallet uses BIP-84 descriptors, so it can only hand out P2WPKH addresses
     supportsBumpFee = () => false;
+    // TODO: flip to true when the user's fee rate is applied to on-chain sends (#4354)
+    supportsOnchainSendFeeRate = () => false;
+    // TODO: flip to true when the user's fee rate is applied to channel opens (#4657)
+    supportsChannelOpenFeeRate = () => false;
     supportsFlowLSP = () => true;
     supportsNetworkInfo = () => true;
     supportsSimpleTaprootChannels = () => false;

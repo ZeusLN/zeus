@@ -835,6 +835,8 @@ export default class CLNRest {
     supportsNestedSegWit = () => false;
     supportsTaproot = () => true;
     supportsBumpFee = () => false;
+    supportsOnchainSendFeeRate = () => true;
+    supportsChannelOpenFeeRate = () => true;
     supportsFlowLSP = () => false;
     supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => false;

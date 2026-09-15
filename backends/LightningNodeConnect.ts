@@ -898,6 +898,8 @@ export default class LightningNodeConnect {
     supportsNestedSegWit = () => true;
     supportsTaproot = () => this.supports('v0.15.0');
     supportsBumpFee = () => true;
+    supportsOnchainSendFeeRate = () => true;
+    supportsChannelOpenFeeRate = () => true;
     supportsFlowLSP = () => false;
     supportsNetworkInfo = () => true;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');

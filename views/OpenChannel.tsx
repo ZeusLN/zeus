@@ -315,7 +315,11 @@ export default class OpenChannel extends React.Component<
         const loading = connectingToPeer || openingChannel;
 
         const isInvalidPeer = !isNodePubkeyValid || !isNodeHostValid;
-        const isInvalidFeeRate = sat_per_vbyte === '0' || !sat_per_vbyte;
+        const supportsChannelOpenFeeRate =
+            BackendUtils.supportsChannelOpenFeeRate();
+        const isInvalidFeeRate =
+            supportsChannelOpenFeeRate &&
+            (sat_per_vbyte === '0' || !sat_per_vbyte);
 
         const peerAlias =
             ChannelsStore.aliasesByPubkey[node_pubkey_string] ||
@@ -1030,29 +1034,46 @@ export default class OpenChannel extends React.Component<
                                             </View>
                                         )}
 
-                                    <View style={{ marginTop: 10 }}>
-                                        <Text
-                                            style={{
-                                                ...styles.text,
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.OpenChannel.satsPerVbyte'
-                                            )}
-                                        </Text>
-                                        <OnchainFeeInput
-                                            fee={sat_per_vbyte}
-                                            onChangeFee={(text: string) => {
-                                                this.setState({
-                                                    sat_per_vbyte: text
-                                                });
-                                            }}
-                                            navigation={navigation}
-                                        />
-                                    </View>
+                                    {supportsChannelOpenFeeRate ? (
+                                        <View style={{ marginTop: 10 }}>
+                                            <Text
+                                                style={{
+                                                    ...styles.text,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.OpenChannel.satsPerVbyte'
+                                                )}
+                                            </Text>
+                                            <OnchainFeeInput
+                                                fee={sat_per_vbyte}
+                                                onChangeFee={(text: string) => {
+                                                    this.setState({
+                                                        sat_per_vbyte: text
+                                                    });
+                                                }}
+                                                navigation={navigation}
+                                            />
+                                        </View>
+                                    ) : (
+                                        <View style={{ marginTop: 10 }}>
+                                            <Text
+                                                style={{
+                                                    ...styles.text,
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Send.feeRateSetAutomatically'
+                                                )}
+                                            </Text>
+                                        </View>
+                                    )}
 
                                     <Accordion
                                         headerLayout="form"

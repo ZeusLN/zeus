@@ -331,6 +331,7 @@ export default class ChoosePaymentMethod extends React.Component<
             !!satAmount && (hasLightningPayment || hasOnchainPayment);
         const showOnchainFeeInput =
             hasOnchainPayment &&
+            BackendUtils.supportsOnchainSendFeeRate() &&
             !hasInsufficientFunds &&
             showFees &&
             !!settingsStore?.settings?.privacy?.enableMempoolRates;
