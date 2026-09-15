@@ -95,6 +95,7 @@ class BackendUtils {
     getInvoices = (...args: any[]) => this.call('getInvoices', args);
     createInvoice = (...args: any[]) => this.call('createInvoice', args);
     getPayments = (...args: any[]) => this.call('getPayments', args);
+    lookupPayment = (...args: any[]) => this.call('lookupPayment', args);
     getNewAddress = (...args: any[]) => this.call('getNewAddress', args);
     getNewChangeAddress = (...args: any[]) =>
         this.call('getNewChangeAddress', args);
@@ -221,6 +222,7 @@ class BackendUtils {
     supportsOnchainReceiving = () => this.call('supportsOnchainReceiving');
     supportsLightningSends = () => this.call('supportsLightningSends');
     supportsKeysend = () => this.call('supportsKeysend');
+    supportsPaymentLookup = () => this.call('supportsPaymentLookup');
     supportsChannelManagement = () => this.call('supportsChannelManagement');
     supportsCircularRebalancing = () =>
         this.call('supportsCircularRebalancing');

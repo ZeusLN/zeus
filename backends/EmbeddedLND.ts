@@ -261,6 +261,20 @@ export default class EmbeddedLND extends LND {
             cltv_limit: data.cltv_limit,
             amp: data.amp
         });
+    // override LND's REST implementation with an on-device lookup
+    lookupPayment = async (data: { payment_hash: string }) => {
+        const response = await listPayments({
+            maxPayments: 50,
+            reversed: true
+        });
+        return (
+            response?.payments?.find(
+                (payment: any) =>
+                    payment.payment_hash?.toLowerCase() ===
+                    data.payment_hash.toLowerCase()
+            ) ?? null
+        );
+    };
     closeChannel = async (urlParams?: Array<string>) => {
         const fundingTxId = (urlParams && urlParams[0]) || '';
         const outputIndex =
