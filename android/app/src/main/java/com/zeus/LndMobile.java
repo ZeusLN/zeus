@@ -369,8 +369,7 @@ class LndMobile extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void startLnd(String args, String lndDir, Boolean isTorEnabled, Boolean isTestnet, Promise promise) {
-    // TODO args is only used on iOS right now
+  public void startLnd(String args, String lndDir, Boolean isTestnet, Promise promise) {
     int req = new Random().nextInt();
     requests.put(req, promise);
 
@@ -386,21 +385,14 @@ class LndMobile extends ReactContextBaseJavaModule {
       params = "--lnddir=" + getReactApplicationContext().getFilesDir().getPath() + "/" + lndDir;
     }
 
-    if (isTorEnabled) {
-      // int listenPort = ZeusTorUtils.getListenPort(isTestnet);
-      // String controlSocket = "unix://" + getReactApplicationContext().getDir(TorService.class.getSimpleName(), Context.MODE_PRIVATE).getAbsolutePath() + "/data/ControlSocket";
-      // params += " --tor.active --tor.control=" + controlSocket;
-      // params += " --tor.v3 --listen=localhost:" + listenPort;
-    } else {
-      // If Tor isn't active, make sure we aren't
-      // listening at all
-      params += " --nolisten";
-     
-      
-    }
-     // Enable watchtower client
-     params += " --wtclient.active";
-     
+    // Never listen for inbound p2p connections on mobile. Tor args
+    // (tor.active, tor.socks) are composed on the JS side and arrive
+    // via `args`.
+    params += " --nolisten";
+
+    // Enable watchtower client
+    params += " --wtclient.active";
+
     bundle.putString(
       "args",
       params + " " + args
