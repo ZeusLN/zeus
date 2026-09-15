@@ -216,10 +216,20 @@ Per-network TRIPLETS (mainnet/testnet/mutinynet). The canonical resolver is `get
 
 | Axis | Options | Default |
 |---|---|---|
-| `hostMainnet` | `SWAP_HOST_KEYS_MAINNET`: Boltz, SwapMarket, Coinos, SATS Routing, Custom | `https://api.boltz.exchange/v2` (`DEFAULT_SWAP_HOST_MAINNET`) |
-| `hostTestnet` | `SWAP_HOST_KEYS_TESTNET`: Boltz, Custom | `https://api.testnet.boltz.exchange/v2` |
+| `hostMainnet` | `SWAP_HOST_KEYS_MAINNET`: SATS Routing, Coinos, Custom | `https://satsrouting.exchange/v2` (`DEFAULT_SWAP_HOST_MAINNET`) |
+| `hostTestnet` | `SWAP_HOST_KEYS_TESTNET`: Boltz, Custom | `https://api.testnet.boltz.exchange/v2` — **dead**, see below |
 | `customHost` | string | `''` |
-| `proEnabled` | bool — unlocks `pro: true` hosts (Boltz mainnet, Custom) | `false` |
+| `proEnabled` | bool — unlocks `pro: true` hosts (Custom only) | `false` |
+
+Boltz and SwapMarket were retired from the mainnet roster in Sept 2026: Boltz suspended
+its swap service indefinitely on 2026-08-03 and took its infrastructure offline, and
+SwapMarket's API is gated behind a shared secret only its own frontend holds (401 from
+ZEUS). Both are listed in `RETIRED_SWAP_HOSTS_MAINNET`, and
+`MigrationUtils.migrateRetiredSwapHosts` (mod key `swap-hosts-retired-v2`) moves anyone
+pinned to them back to the default, clearing `proEnabled` since the new default is not a
+`pro` host. The testnet default is also dead and has no working replacement — no
+Boltz-compatible testnet provider exists publicly — so `SWAP_HOST_KEYS_TESTNET` is
+knowingly left pointing at it.
 
 ### `lightningAddress` (nested) — UI: `views/LightningAddress/LightningAddressSettings.tsx` (+ Cashu/NWC variants under `views/Cashu/LightningAddress/`, `views/LightningAddress/NWCAddressSettings.tsx`)
 
