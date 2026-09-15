@@ -131,7 +131,15 @@ describe('ReverseClaimTransaction.build', () => {
         ],
         ['refundPubKey is unavailable', { refundPubKey: undefined }],
         ['lockupAddress is unavailable', { effectiveLockupAddress: undefined }],
-        ['destinationAddress is missing', { destinationAddress: undefined }]
+        ['destinationAddress is missing', { destinationAddress: undefined }],
+        // A rescued swap used to arrive here with no preimage at all: the
+        // claim was built with preimageHex '' and broadcast 10 times before
+        // giving up, so the host reclaimed the lockup at timeout.
+        ['preimage is missing', { preimage: undefined }],
+        [
+            'preimage is an empty buffer',
+            { preimage: { type: 'Buffer', data: [] } }
+        ]
     ])('returns null when %s', (_, overrides) => {
         const claim = ReverseClaimTransaction.build({
             swap: reverseSwap(overrides),
@@ -209,8 +217,13 @@ describe('preimage deserialization (via ReverseClaimTransaction.build)', () => {
 
     it.each([
         ['null', null],
-        ['undefined', undefined]
-    ])('falls back to empty string for %s preimage', (_, preimage) => {
-        expect(buildWith(preimage)?.preimageHex).toBe('');
+        ['undefined', undefined],
+        ['empty string', ''],
+        ['empty buffer', Buffer.alloc(0)]
+    ])('refuses to build a claim for a %s preimage', (_, preimage) => {
+        // Previously this fell back to preimageHex '' and built a claim
+        // that could never be accepted; a reverse claim spends the lockup
+        // by revealing the preimage, so it now fails closed instead.
+        expect(buildWith(preimage)).toBeNull();
     });
 });
