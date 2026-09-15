@@ -679,9 +679,13 @@ export default class LSPStore {
 
     @action
     public subscribeCustomMessages = async () => {
-        if (this.customMessagesSubscriber) return;
+        // Arm a fresh response timeout on every call, even when the
+        // underlying listener is already subscribed from an earlier
+        // request (in this or a prior LSPS1/LSPS7 flow) - otherwise a
+        // non-responding LSP leaves the caller stuck loading forever
+        // with no timeout to fall back to an error state.
         this.resolvedCustomMessage = false;
-        let timer = 7000;
+        const timer = 7000;
         const timeoutId = setTimeout(() => {
             if (!this.resolvedCustomMessage) {
                 runInAction(() => {
@@ -692,6 +696,8 @@ export default class LSPStore {
                 });
             }
         }, timer);
+
+        if (this.customMessagesSubscriber) return;
 
         if (this.settingsStore.implementation === 'embedded-lnd') {
             this.customMessagesSubscriber = LndMobileEventEmitter.addListener(
