@@ -342,6 +342,10 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
         const result = createOrderResponse?.result || createOrderResponse;
         const payment = result?.payment;
         const isFreeOrder = isOrderFree(payment);
+        const isGetInfoError =
+            LSPStore.error &&
+            !!LSPStore.error_msg &&
+            Object.keys(getInfoData ?? {}).length === 0;
 
         const HistoryBtn = () => (
             <TouchableOpacity
@@ -481,15 +485,13 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
 
                     {LSPStore?.error &&
                         LSPStore?.error_msg &&
-                        LSPStore?.error_msg !==
-                            localeString('views.LSPS1.timeoutError') && (
+                        !isGetInfoError && (
                             <ErrorMessage message={LSPStore.error_msg} />
                         )}
                 </View>
                 {LSPStore.loadingLSPS1 ? (
                     <LoadingIndicator />
-                ) : (LSPStore?.error && LSPStore?.error_msg) ===
-                  localeString('views.LSPS1.timeoutError') ? (
+                ) : isGetInfoError ? (
                     <ErrorMessage message={LSPStore.error_msg} />
                 ) : (
                     <>
@@ -1320,48 +1322,41 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                     </>
                 )}
 
-                {!LSPStore.loadingLSPS1 &&
-                    LSPStore.error &&
-                    LSPStore.error_msg ===
-                        localeString('views.LSPS1.timeoutError') && (
-                        <View
-                            style={{
-                                position: 'absolute',
-                                width: '100%',
-                                bottom: 0
+                {!LSPStore.loadingLSPS1 && isGetInfoError && (
+                    <View
+                        style={{
+                            position: 'absolute',
+                            width: '100%',
+                            bottom: 0
+                        }}
+                    >
+                        <Button
+                            title={localeString('general.retry')}
+                            onPress={async () => {
+                                if (BackendUtils.supportsLSPS1native()) {
+                                    LSPStore.lsps1GetInfoNative();
+                                } else if (BackendUtils.supportsLSPS1rest()) {
+                                    LSPStore.lsps1GetInfoREST();
+                                } else if (
+                                    BackendUtils.supportsLSPScustomMessage()
+                                ) {
+                                    await this.connectPeer();
+                                    await this.subscribeToCustomMessages();
+                                    LSPStore.lsps1GetInfoCustomMessage();
+                                }
                             }}
-                        >
-                            <Button
-                                title={localeString('general.retry')}
-                                onPress={async () => {
-                                    if (BackendUtils.supportsLSPS1native()) {
-                                        LSPStore.lsps1GetInfoNative();
-                                    } else if (
-                                        BackendUtils.supportsLSPS1rest()
-                                    ) {
-                                        LSPStore.lsps1GetInfoREST();
-                                    } else if (
-                                        BackendUtils.supportsLSPScustomMessage()
-                                    ) {
-                                        await this.connectPeer();
-                                        await this.subscribeToCustomMessages();
-                                        LSPStore.lsps1GetInfoCustomMessage();
-                                    }
-                                }}
-                            />
+                        />
 
-                            <Button
-                                onPress={() => {
-                                    this.props.navigation.navigate(
-                                        'LSPS1Settings'
-                                    );
-                                }}
-                                title={localeString('views.LSPS1.goToSettings')}
-                                containerStyle={{ paddingVertical: 20 }}
-                                secondary
-                            />
-                        </View>
-                    )}
+                        <Button
+                            onPress={() => {
+                                this.props.navigation.navigate('LSPS1Settings');
+                            }}
+                            title={localeString('views.LSPS1.goToSettings')}
+                            containerStyle={{ paddingVertical: 20 }}
+                            secondary
+                        />
+                    </View>
+                )}
             </Screen>
         );
     }
