@@ -208,6 +208,7 @@ export default class LightningNodeConnect {
         params: {
             maxPayments?: number;
             reversed?: boolean;
+            creationDateStart?: number;
         } = {
             maxPayments: 500,
             reversed: true
@@ -220,9 +221,37 @@ export default class LightningNodeConnect {
                     max_payments: params.maxPayments
                 }),
                 reversed:
-                    params?.reversed !== undefined ? params.reversed : true
+                    params?.reversed !== undefined ? params.reversed : true,
+                ...(params?.creationDateStart && {
+                    creation_date_start: params.creationDateStart
+                })
             })
             .then((data: lnrpc.ListPaymentsResponse) => snakeize(data));
+    // scans a payments page; trackPaymentV2 over LNC is a stream and would
+    // need view-level event plumbing. With a creation_date_start bound the
+    // page is anchored at the dispatch time (ascending), so newer payments
+    // from other clients can't evict the target; without one, fall back to
+    // the newest page.
+    lookupPayment = async (data: {
+        payment_hash: string;
+        creation_date_start?: number;
+    }) =>
+        await this.getPayments(
+            data.creation_date_start
+                ? {
+                      maxPayments: 50,
+                      reversed: false,
+                      creationDateStart: data.creation_date_start
+                  }
+                : { maxPayments: 50, reversed: true }
+        ).then(
+            (response: any) =>
+                response?.payments?.find(
+                    (payment: any) =>
+                        payment.payment_hash?.toLowerCase() ===
+                        data.payment_hash.toLowerCase()
+                ) ?? null
+        );
     getNewAddress = async (data: any) =>
         await this.lnc.lnd.lightning
             .newAddress({
@@ -388,7 +417,11 @@ export default class LightningNodeConnect {
                         resolve({
                             payment_error: localeString(
                                 'views.SendingLightning.paymentTimedOut'
-                            )
+                            ),
+                            // outcome unknown on the node: lets the caller
+                            // track the payment to a terminal state
+                            // instead of reporting failure
+                            payment_timed_out: true
                         })
                     ),
                 timeoutMs
@@ -878,6 +911,7 @@ export default class LightningNodeConnect {
     supportsOnchainReceiving = () => this.permNewAddress;
     supportsLightningSends = () => this.permSendLN;
     supportsKeysend = () => true;
+    supportsPaymentLookup = () => true;
     supportsChannelManagement = () => this.permOpenChannel;
     supportsCircularRebalancing = () => true;
     supportsForceClose = () => true;

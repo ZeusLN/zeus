@@ -125,6 +125,7 @@ export default class EmbeddedLND extends LND {
     getPayments = async (params?: {
         maxPayments?: number;
         reversed?: boolean;
+        creationDateStart?: number;
     }) => await listPayments(params);
     getNewAddress = async (data: any) =>
         await newAddress(
@@ -261,6 +262,30 @@ export default class EmbeddedLND extends LND {
             cltv_limit: data.cltv_limit,
             amp: data.amp
         });
+    // override LND's REST implementation with an on-device lookup; a
+    // creation_date_start bound anchors the page at the dispatch time so
+    // newer payments (e.g. the NWC service's) can't evict the target
+    lookupPayment = async (data: {
+        payment_hash: string;
+        creation_date_start?: number;
+    }) => {
+        const response = await listPayments(
+            data.creation_date_start
+                ? {
+                      maxPayments: 50,
+                      reversed: false,
+                      creationDateStart: data.creation_date_start
+                  }
+                : { maxPayments: 50, reversed: true }
+        );
+        return (
+            response?.payments?.find(
+                (payment: any) =>
+                    payment.payment_hash?.toLowerCase() ===
+                    data.payment_hash.toLowerCase()
+            ) ?? null
+        );
+    };
     closeChannel = async (urlParams?: Array<string>) => {
         const fundingTxId = (urlParams && urlParams[0]) || '';
         const outputIndex =
