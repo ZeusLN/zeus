@@ -153,4 +153,11 @@ const restartTor = async () => {
     await ensureTorStarted();
 };
 
-export { doTorRequest, restartTor, isOnionHttpsUrl, RequestMethod };
+export {
+    doTorRequest,
+    restartTor,
+    ensureTorStarted,
+    isOnionHttpsUrl,
+    RequestMethod,
+    SOCKS_PORT
+};

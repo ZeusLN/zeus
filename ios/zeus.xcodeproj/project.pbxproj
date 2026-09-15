@@ -159,6 +159,8 @@
 		B1C2D3E62D36C99900000003 /* LDKNode.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C2D3E52D36C99900000002 /* LDKNode.swift */; };
 		B1C2D3E92D36C99900000006 /* LdkNodeModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C2D3E72D36C99900000004 /* LdkNodeModule.swift */; };
 		B1C2D3EA2D36C99900000007 /* LdkNodeModule.m in Sources */ = {isa = PBXBuildFile; fileRef = B1C2D3E82D36C99900000005 /* LdkNodeModule.m */; };
+		7B7054A32E6B000000000004 /* TorWebSocketModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B7054A12E6B000000000002 /* TorWebSocketModule.swift */; };
+		7B7054A42E6B000000000005 /* TorWebSocketModule.m in Sources */ = {isa = PBXBuildFile; fileRef = 7B7054A22E6B000000000003 /* TorWebSocketModule.m */; };
 		B1C2D3EC2D36C99900000009 /* LogFileObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = B1C2D3EB2D36C99900000008 /* LogFileObserver.swift */; };
 		B1DB19555C1C4546922217C2 /* eye_closed.svg in Resources */ = {isa = PBXBuildFile; fileRef = 744BE042F00E4B16BDC79870 /* eye_closed.svg */; };
 		B20A92EA4E82493CB6D1A2F0 /* NFC.svg in Resources */ = {isa = PBXBuildFile; fileRef = 3C37D42473A54AD981B549B4 /* NFC.svg */; };
@@ -665,6 +667,8 @@
 		B1C2D3E52D36C99900000002 /* LDKNode.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LDKNode.swift; sourceTree = "<group>"; };
 		B1C2D3E72D36C99900000004 /* LdkNodeModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LdkNodeModule.swift; sourceTree = "<group>"; };
 		B1C2D3E82D36C99900000005 /* LdkNodeModule.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = LdkNodeModule.m; sourceTree = "<group>"; };
+		7B7054A12E6B000000000002 /* TorWebSocketModule.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TorWebSocketModule.swift; sourceTree = "<group>"; };
+		7B7054A22E6B000000000003 /* TorWebSocketModule.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = TorWebSocketModule.m; sourceTree = "<group>"; };
 		B1C2D3EB2D36C99900000008 /* LogFileObserver.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LogFileObserver.swift; sourceTree = "<group>"; };
 		B362E70907794D2F924BCB42 /* temple.jpeg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = temple.jpeg; path = ../assets/images/onboarding/temple.jpeg; sourceTree = "<group>"; };
 		B36D434AE9B14EE7AD5E6BCE /* Routing.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Routing.svg; path = ../assets/images/SVG/Routing.svg; sourceTree = "<group>"; };
@@ -905,6 +909,7 @@
 				51BF29FB2ED5FB940044B4FB /* ShareBridge.h */,
 				51BF29FC2ED5FB940044B4FB /* ShareBridge.m */,
 				B1C2D3E42D36C99900000001 /* LdkNodeMobile */,
+				7B7054A02E6B000000000001 /* TorWebSocket */,
 				74B637782A5A350A00750202 /* LncMobile */,
 				745388372A54C2B6000927CE /* LndMobile */,
 				CDC0DEEE2A54C2B6000927CE /* CashuDevKit */,
@@ -1133,6 +1138,15 @@
 				B1C2D3E82D36C99900000005 /* LdkNodeModule.m */,
 			);
 			path = LdkNodeMobile;
+			sourceTree = "<group>";
+		};
+		7B7054A02E6B000000000001 /* TorWebSocket */ = {
+			isa = PBXGroup;
+			children = (
+				7B7054A12E6B000000000002 /* TorWebSocketModule.swift */,
+				7B7054A22E6B000000000003 /* TorWebSocketModule.m */,
+			);
+			path = TorWebSocket;
 			sourceTree = "<group>";
 		};
 		C313040DFF224D8A9EC46990 /* Resources */ = {
@@ -2070,6 +2084,8 @@
 				B1C2D3E62D36C99900000003 /* LDKNode.swift in Sources */,
 				B1C2D3E92D36C99900000006 /* LdkNodeModule.swift in Sources */,
 				B1C2D3EA2D36C99900000007 /* LdkNodeModule.m in Sources */,
+				7B7054A32E6B000000000004 /* TorWebSocketModule.swift in Sources */,
+				7B7054A42E6B000000000005 /* TorWebSocketModule.m in Sources */,
 				B1C2D3EC2D36C99900000009 /* LogFileObserver.swift in Sources */,
 				745388452A54C2B6000927CE /* LndMobileScheduledSync.swift in Sources */,
 				13B07FBC1A68108700A75B9A /* AppDelegate.mm in Sources */,
