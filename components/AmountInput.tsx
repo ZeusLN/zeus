@@ -38,6 +38,9 @@ interface AmountInputProps {
     UnitsStore?: UnitsStore;
     prefix?: any;
     error?: boolean;
+    // Why the amount could not be shown in fiat. Shown under the input in
+    // place of the conversion rate.
+    fiatError?: string;
 }
 
 interface AmountInputState {
@@ -179,7 +182,8 @@ export default class AmountInput extends React.Component<
             SettingsStore,
             forceUnit,
             prefix,
-            error
+            error,
+            fiatError
         } = this.props;
         const { units }: any = UnitsStore;
         const effectiveUnits = forceUnit || units;
@@ -274,19 +278,32 @@ export default class AmountInput extends React.Component<
                 </Row>
                 {!hideConversion && (
                     <View style={{ marginBottom: 10 }}>
-                        {fiatEnabled && (
+                        {fiatError ? (
                             <Text
                                 style={{
                                     fontFamily: 'PPNeueMontreal-Book',
-                                    color: themeColor('text')
+                                    color: themeColor('warning')
                                 }}
                             >
-                                {getRate(effectiveUnits === 'sats')}
+                                {fiatError}
                             </Text>
+                        ) : (
+                            fiatEnabled && (
+                                <Text
+                                    style={{
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        color: themeColor('text')
+                                    }}
+                                >
+                                    {getRate(effectiveUnits === 'sats')}
+                                </Text>
+                            )
                         )}
-                        {fiatEnabled && effectiveUnits !== 'fiat' && (
-                            <Amount sats={satAmount} fixedUnits="fiat" />
-                        )}
+                        {fiatEnabled &&
+                            !fiatError &&
+                            effectiveUnits !== 'fiat' && (
+                                <Amount sats={satAmount} fixedUnits="fiat" />
+                            )}
                         {effectiveUnits !== 'BTC' && (
                             <Amount sats={satAmount} fixedUnits="BTC" />
                         )}

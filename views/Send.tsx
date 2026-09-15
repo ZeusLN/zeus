@@ -93,6 +93,9 @@ interface SendState {
     destination: string;
     amount: string;
     satAmount: string | number;
+    // Set once a preset amount could not be converted to fiat. The amount
+    // inputs then stay pinned to sats until the screen is closed.
+    fiatError?: string;
     fee: string;
     error_msg: string;
     utxos: Array<string>;
@@ -150,9 +153,9 @@ export default class Send extends React.Component<SendProps, SendState> {
             this.props.InvoicesStore.getPayReq(destination);
         }
 
-        let amount;
+        let rawAmount;
         if (satAmount) {
-            amount = getRawAmountFromSats(satAmount);
+            rawAmount = getRawAmountFromSats(satAmount);
         }
 
         this.state = {
@@ -160,8 +163,9 @@ export default class Send extends React.Component<SendProps, SendState> {
             transactionType,
             bolt12,
             destination: destination || '',
-            amount: amount || '',
+            amount: rawAmount?.amount || '',
             satAmount: satAmount || '0',
+            fiatError: rawAmount?.error,
             fee: fee || '',
             utxos: [],
             utxoBalance: 0,
@@ -212,11 +216,20 @@ export default class Send extends React.Component<SendProps, SendState> {
             };
 
             if (satAmount) {
-                // must be the raw, unformatted value in the active unit -
+                // must be the raw, unformatted value in the input's unit -
                 // AmountInput's `amount` prop is parsed back into sats, so a
-                // display-formatted string (eg '12,618 sats') yields NaN
-                stateUpdate.amount = getRawAmountFromSats(satAmount);
+                // display-formatted string (eg '12,618 sats') yields NaN.
+                // Once the inputs are pinned to sats they stay pinned, so
+                // keep converting to sats even if a fiat rate arrived since.
+                const { amount, error } = getRawAmountFromSats(
+                    satAmount,
+                    this.state.fiatError ? 'sats' : undefined
+                );
+                stateUpdate.amount = amount;
                 stateUpdate.satAmount = satAmount;
+                if (error) {
+                    stateUpdate.fiatError = error;
+                }
             }
             if (fee) {
                 stateUpdate.fee = fee;
@@ -644,7 +657,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             account,
             utxos,
             nfcSupported,
-            timeoutSeconds
+            timeoutSeconds,
+            fiatError
         } = this.state;
         const {
             confirmedBlockchainBalance,
@@ -959,7 +973,13 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     }}
                                     hideConversion={amount === 'all'}
                                     locked={fundMax}
-                                    forceUnit={fundMax ? 'sats' : undefined}
+                                    forceUnit={
+                                        fundMax || fiatError
+                                            ? 'sats'
+                                            : undefined
+                                    }
+                                    hideUnitChangeButton={!!fiatError}
+                                    fiatError={fiatError}
                                 />
 
                                 {BackendUtils.supportsCoinControl() && (
@@ -1106,6 +1126,15 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                             newOutputs
                                                     });
                                                 }}
+                                                forceUnit={
+                                                    fiatError
+                                                        ? 'sats'
+                                                        : undefined
+                                                }
+                                                hideUnitChangeButton={
+                                                    !!fiatError
+                                                }
+                                                fiatError={fiatError}
                                             />
                                             <View
                                                 style={{
@@ -1285,6 +1314,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             satAmount
                                         });
                                     }}
+                                    forceUnit={fiatError ? 'sats' : undefined}
+                                    hideUnitChangeButton={!!fiatError}
+                                    fiatError={fiatError}
                                 />
                                 <Text
                                     style={{
@@ -1336,6 +1368,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             satAmount
                                         });
                                     }}
+                                    forceUnit={fiatError ? 'sats' : undefined}
+                                    hideUnitChangeButton={!!fiatError}
+                                    fiatError={fiatError}
                                 />
 
                                 {implementation !== 'cln-rest' && (
