@@ -645,6 +645,23 @@ class MigrationsUtils {
         return settings;
     }
 
+    // One-shot: clear the last-channel-backup status/time markers so
+    // ChannelBackupStore.initSubscribeChannelEvents re-runs backupChannels
+    // on the next embedded LND connect, re-uploading the static channel
+    // backup in the v1 AES-256-GCM format. Legacy CryptoJS blobs remain
+    // decryptable via the permanent legacy path in triggerRecovery.
+    // Touches no settings; idempotent (removing absent keys is a no-op).
+    public async migrateScbBackupFormat() {
+        const MOD_KEY_SCB = 'scb-gcm-reupload';
+        const modScb = await EncryptedStorage.getItem(MOD_KEY_SCB);
+        if (modScb) return;
+
+        await Storage.removeItem(LAST_CHANNEL_BACKUP_STATUS);
+        await Storage.removeItem(LAST_CHANNEL_BACKUP_TIME);
+
+        await EncryptedStorage.setItem(MOD_KEY_SCB, 'true');
+    }
+
     // Repair invoice expiry display fields when out of sync with
     // `expirySeconds`. Older installs default `expiry: '3600'` and
     // never stored `timePeriod`/`expirySeconds`, so once Receive.tsx's
