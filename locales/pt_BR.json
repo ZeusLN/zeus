@@ -1768,6 +1768,8 @@
     "stores.SettingsStore.lncConnectError": "Falha ao conectar o cliente LNC ao servidor proxy",
     "stores.LSPStore.error": "Erro LSP",
     "stores.LSPStore.connectionError": "Não foi possível conectar -se ao LSP. Verifique suas configurações do LSP ou tente novamente mais tarde.",
+    "stores.LSPStore.getInfoNetworkError": "Could not connect to the LSP. Please check your internet connection and LSP settings, then try again.",
+    "stores.LSPStore.getInfoResponseError": "The LSP returned an unexpected response. Please try again later, or contact the LSP if the problem continues.",
     "stores.LightningAddressStore.preimageNotFound": "Pré-imagem não encontrada no seu dispositivo. Você trocou de dispositivo recentemente?",
     "stores.LightningAddressStore.Cashu.quoteNotPaid": "Cotação não paga",
     "stores.LightningAddressStore.Cashu.quotePaymentErr": "Verificação de erro para pagamento de cotação",
