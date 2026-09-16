@@ -1768,6 +1768,8 @@
     "stores.SettingsStore.lncConnectError": "Clientul LNC nu s-a putut conecta la serverul proxy",
     "stores.LSPStore.error": "Eroare LSP",
     "stores.LSPStore.connectionError": "Nu s -a putut conecta la LSP. Vă rugăm să verificați setările LSP sau să încercați din nou mai târziu.",
+    "stores.LSPStore.getInfoNetworkError": "Could not connect to the LSP. Please check your internet connection and LSP settings, then try again.",
+    "stores.LSPStore.getInfoResponseError": "The LSP returned an unexpected response. Please try again later, or contact the LSP if the problem continues.",
     "stores.LightningAddressStore.preimageNotFound": "Pre-Imaginea nu a fost găsită pe dispozitivul dvs. Ai schimbat recent dispozitivele?",
     "stores.LightningAddressStore.Cashu.quoteNotPaid": "Ofertă neplătită",
     "stores.LightningAddressStore.Cashu.quotePaymentErr": "Eroare la verificarea plății cotației",
