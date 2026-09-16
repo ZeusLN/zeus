@@ -606,9 +606,11 @@ export default class LSPStore {
 
         if (data.id === this.getInfoId) {
             if (data.error) {
+                const message =
+                    data?.error?.data?.message || data?.error?.message;
                 this.error = true;
-                this.error_msg = data?.error?.data?.message
-                    ? errorToUserFriendly(data?.error?.data?.message)
+                this.error_msg = message
+                    ? errorToUserFriendly(message)
                     : localeString('stores.LSPStore.getInfoResponseError');
             } else {
                 this.getInfoData = data;
@@ -679,13 +681,9 @@ export default class LSPStore {
 
     @action
     public subscribeCustomMessages = async () => {
-        // Arm a fresh response timeout on every call, even when the
-        // underlying listener is already subscribed from an earlier
-        // request (in this or a prior LSPS1/LSPS7 flow) - otherwise a
-        // non-responding LSP leaves the caller stuck loading forever
-        // with no timeout to fall back to an error state.
+        if (this.customMessagesSubscriber) return;
         this.resolvedCustomMessage = false;
-        const timer = 7000;
+        let timer = 7000;
         const timeoutId = setTimeout(() => {
             if (!this.resolvedCustomMessage) {
                 runInAction(() => {
@@ -696,8 +694,6 @@ export default class LSPStore {
                 });
             }
         }, timer);
-
-        if (this.customMessagesSubscriber) return;
 
         if (this.settingsStore.implementation === 'embedded-lnd') {
             this.customMessagesSubscriber = LndMobileEventEmitter.addListener(
