@@ -1768,6 +1768,8 @@
     "stores.SettingsStore.lncConnectError": "LNC क्लाइंट को प्रॉक्सी सर्वर से कनेक्ट करने में विफल",
     "stores.LSPStore.error": "LSP त्रुटि",
     "stores.LSPStore.connectionError": "LSP से कनेक्ट नहीं हो सका। कृपया अपनी LSP सेटिंग्स की जांच करें या बाद में पुनः प्रयास करें।",
+    "stores.LSPStore.getInfoNetworkError": "Could not connect to the LSP. Please check your internet connection and LSP settings, then try again.",
+    "stores.LSPStore.getInfoResponseError": "The LSP returned an unexpected response. Please try again later, or contact the LSP if the problem continues.",
     "stores.LightningAddressStore.preimageNotFound": "आपके डिवाइस पर प्री-इमेज नहीं मिला। क्या आपने हाल ही में डिवाइस बदला है?",
     "stores.LightningAddressStore.Cashu.quoteNotPaid": "Quote not paid",
     "stores.LightningAddressStore.Cashu.quotePaymentErr": "Error checking for quote payment",
