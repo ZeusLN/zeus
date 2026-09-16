@@ -177,8 +177,9 @@ export default class LSPS1Settings extends React.Component<
         const isTestNet = nodeInfo?.isTestNet;
 
         const isOlympusCustom =
-            pubkey === lspConfig.defaultPubkey && host === lspConfig.lsps1Host;
-        const isOlympusRestMatch = restHost === lspConfig.lsps1Rest;
+            pubkey === lspConfig.defaultPubkey &&
+            host === lspConfig.defaultLsps1Host;
+        const isOlympusRestMatch = restHost === lspConfig.defaultLsps1Rest;
 
         const isOlympusCustomMessage =
             BackendUtils.supportsLSPScustomMessage() && isOlympusCustom;

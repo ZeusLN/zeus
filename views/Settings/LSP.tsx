@@ -73,7 +73,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
             !enableLSP ||
             accessKey !== '' ||
             requestSimpleTaproot ||
-            lsp !== lspConfig.flowHost;
+            lsp !== lspConfig.defaultFlowHost;
 
         return (
             <Screen>
