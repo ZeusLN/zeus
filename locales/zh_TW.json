@@ -1768,6 +1768,8 @@
     "stores.SettingsStore.lncConnectError": "LNC 客戶端和代理伺服器連線失敗",
     "stores.LSPStore.error": "LSP 發生錯誤",
     "stores.LSPStore.connectionError": "無法跟 LSP 連線，請檢查 LSP 設定，或是待會再試看看。",
+    "stores.LSPStore.getInfoNetworkError": "Could not connect to the LSP. Please check your internet connection and LSP settings, then try again.",
+    "stores.LSPStore.getInfoResponseError": "The LSP returned an unexpected response. Please try again later, or contact the LSP if the problem continues.",
     "stores.LightningAddressStore.preimageNotFound": "裝置上找不到交易驗證碼，你是否最近剛換設備呢？",
     "stores.LightningAddressStore.Cashu.quoteNotPaid": "報價單尚未付款",
     "stores.LightningAddressStore.Cashu.quotePaymentErr": "檢查報價單支付時發生錯誤",
