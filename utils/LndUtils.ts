@@ -1,3 +1,48 @@
+export interface LndCreationDateRange {
+    creationDateStart?: number;
+    creationDateEnd?: number;
+}
+
+export interface LndInvoiceListParams extends LndCreationDateRange {
+    limit?: number;
+    reversed?: boolean;
+}
+
+export interface LndPaymentListParams extends LndCreationDateRange {
+    maxPayments?: number;
+    reversed?: boolean;
+}
+
+export const getLndCreationDateRange = (
+    startDate?: Date,
+    endDate?: Date
+): LndCreationDateRange | undefined => {
+    if (!startDate && !endDate) return undefined;
+
+    const range: LndCreationDateRange = {};
+
+    if (startDate) {
+        range.creationDateStart = Math.floor(
+            new Date(
+                startDate.getFullYear(),
+                startDate.getMonth(),
+                startDate.getDate()
+            ).getTime() / 1000
+        );
+    }
+
+    if (endDate) {
+        const nextDay = new Date(
+            endDate.getFullYear(),
+            endDate.getMonth(),
+            endDate.getDate() + 1
+        );
+        range.creationDateEnd = Math.floor(nextDay.getTime() / 1000) - 1;
+    }
+
+    return range;
+};
+
 // LND's lnrpc.NewAddress endpoint expects the AddressType enum by name.
 // Address types reach the backend in three forms:
 //

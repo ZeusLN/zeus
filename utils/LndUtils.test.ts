@@ -1,4 +1,5 @@
 import {
+    getLndCreationDateRange,
     toLnrpcAddressType,
     toLnrpcAddressTypeNum,
     toWalletrpcAddressTypeName,
@@ -6,6 +7,44 @@ import {
 } from './LndUtils';
 
 describe('LndUtils', () => {
+    describe('getLndCreationDateRange', () => {
+        it('returns undefined when no date filter is active', () => {
+            expect(getLndCreationDateRange()).toBeUndefined();
+        });
+
+        it('converts the start date to local midnight in Unix seconds', () => {
+            const startDate = new Date(2024, 4, 10, 15, 30, 45);
+
+            expect(getLndCreationDateRange(startDate)).toEqual({
+                creationDateStart: Math.floor(
+                    new Date(2024, 4, 10).getTime() / 1000
+                )
+            });
+        });
+
+        it('converts the end date to the final second of the local day', () => {
+            const endDate = new Date(2024, 4, 10, 15, 30, 45);
+
+            expect(getLndCreationDateRange(undefined, endDate)).toEqual({
+                creationDateEnd:
+                    Math.floor(new Date(2024, 4, 11).getTime() / 1000) - 1
+            });
+        });
+
+        it('returns both inclusive LND creation-date bounds', () => {
+            const startDate = new Date(2024, 4, 10, 15, 30, 45);
+            const endDate = new Date(2024, 4, 12, 3, 20, 10);
+
+            expect(getLndCreationDateRange(startDate, endDate)).toEqual({
+                creationDateStart: Math.floor(
+                    new Date(2024, 4, 10).getTime() / 1000
+                ),
+                creationDateEnd:
+                    Math.floor(new Date(2024, 4, 13).getTime() / 1000) - 1
+            });
+        });
+    });
+
     describe('toLnrpcAddressType', () => {
         it('returns the lnrpc enum name for numeric-string input from the picker / settings', () => {
             expect(toLnrpcAddressType('0')).toEqual('WITNESS_PUBKEY_HASH');

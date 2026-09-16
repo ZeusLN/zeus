@@ -4,6 +4,7 @@ import Payment from './../models/Payment';
 import SettingsStore from './SettingsStore';
 import ChannelsStore from './ChannelsStore';
 import BackendUtils from './../utils/BackendUtils';
+import { LndPaymentListParams } from '../utils/LndUtils';
 
 export default class PaymentsStore {
     @observable loading = false;
@@ -24,10 +25,7 @@ export default class PaymentsStore {
         this.loading = false;
     };
 
-    public getPayments = async (params?: {
-        maxPayments?: number;
-        reversed?: boolean;
-    }) => {
+    public getPayments = async (params?: LndPaymentListParams) => {
         this.loading = true;
         try {
             const data = await BackendUtils.getPayments(params);

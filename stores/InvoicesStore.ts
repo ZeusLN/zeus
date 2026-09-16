@@ -12,7 +12,10 @@ import ChannelInfo from '../models/ChannelInfo';
 import SettingsStore from './SettingsStore';
 import LSPStore from './LSPStore';
 import BackendUtils from '../utils/BackendUtils';
-import { toWalletrpcAddressTypeName } from '../utils/LndUtils';
+import {
+    LndInvoiceListParams,
+    toWalletrpcAddressTypeName
+} from '../utils/LndUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import LdkNodeInjection from '../ldknode/LdkNodeInjection';
@@ -114,9 +117,9 @@ export default class InvoicesStore {
     };
 
     @action
-    public getInvoices = async () => {
+    public getInvoices = async (params?: LndInvoiceListParams) => {
         this.loading = true;
-        await BackendUtils.getInvoices()
+        await BackendUtils.getInvoices(params)
             .then((data: any) => {
                 runInAction(() => {
                     this.invoices = data.invoices

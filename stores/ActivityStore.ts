@@ -22,6 +22,7 @@ import NodeInfoStore from './NodeInfoStore';
 import BackendUtils from './../utils/BackendUtils';
 import ActivityFilterUtils from '../utils/ActivityFilterUtils';
 import DateTimeUtils from '../utils/DateTimeUtils';
+import { getLndCreationDateRange } from '../utils/LndUtils';
 
 import Storage from '../storage';
 
@@ -358,12 +359,16 @@ export default class ActivityStore {
         return sortedActivity;
     };
 
-    private getActivity = async () => {
+    private getActivity = async (filters: Filter) => {
         this.activity = [];
-        await this.paymentsStore.getPayments();
+        const dateRange = BackendUtils.isLNDBased()
+            ? getLndCreationDateRange(filters.startDate, filters.endDate)
+            : undefined;
+
+        await this.paymentsStore.getPayments(dateRange);
         if (BackendUtils.supportsOnchainSends())
             await this.transactionsStore.getTransactions();
-        await this.invoicesStore.getInvoices();
+        await this.invoicesStore.getInvoices(dateRange);
 
         await this.swapStore.fetchAndUpdateSwaps();
         const sortedActivity = await this.getSortedActivity();
@@ -375,7 +380,13 @@ export default class ActivityStore {
     };
 
     public updateInvoices = async (locale: string | undefined) => {
-        await this.invoicesStore.getInvoices();
+        const dateRange = BackendUtils.isLNDBased()
+            ? getLndCreationDateRange(
+                  this.filters.startDate,
+                  this.filters.endDate
+              )
+            : undefined;
+        await this.invoicesStore.getInvoices(dateRange);
         await runInAction(async () => {
             this.activity = await this.getSortedActivity();
             await this.setFilters(this.filters, locale);
@@ -476,7 +487,7 @@ export default class ActivityStore {
         // Check pending Cashu items (invoices and tokens) in background
         this.cashuStore.checkPendingItems();
 
-        await this.getActivity();
+        await this.getActivity(filters);
         await this.setFilters(filters, locale);
     };
 }
