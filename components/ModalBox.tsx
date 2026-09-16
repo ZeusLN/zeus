@@ -23,11 +23,7 @@ import { inject, observer } from 'mobx-react';
 
 import SettingsStore from '../stores/SettingsStore';
 
-const {
-    height: SCREEN_HEIGHT,
-    width: SCREEN_WIDTH,
-    fontScale: FONT_SCALE
-} = Dimensions.get('window');
+const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const styles = StyleSheet.create({
     wrapper: {
@@ -638,6 +634,12 @@ export default class ModalBox extends React.PureComponent<
         };
         const offsetX = (this.state.containerWidth - this.state.width) / 2;
 
+        // Read fontScale at render time rather than caching it at module load:
+        // changing the system text size does not reload the JS bundle (Android
+        // recreates the Activity but reuses the JS context, iOS does not restart
+        // at all), so a cached value stays stale until the app is force-quit.
+        const { fontScale } = Dimensions.get('window');
+
         // Scaling the requested height by fontScale gives larger text more room,
         // but the result must never exceed the container: calculateModalPosition
         // clamps a bottom sheet's offset at 0, so any excess height spills off
@@ -649,7 +651,7 @@ export default class ModalBox extends React.PureComponent<
             style.height
                 ? {
                       height: Math.min(
-                          (style.height as number) * FONT_SCALE,
+                          (style.height as number) * fontScale,
                           this.state.containerHeight
                       )
                   }
