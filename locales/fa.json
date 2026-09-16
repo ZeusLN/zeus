@@ -1768,6 +1768,8 @@
     "stores.SettingsStore.lncConnectError": "اتصال کلاینت LNC به سرور پراکسی انجام نشد",
     "stores.LSPStore.error": "خطای LSP ",
     "stores.LSPStore.connectionError": "به LSP وصل نشد. لطفا تنظیمات LSP خود را بررسی کرده و دوباره تلاش کنید.",
+    "stores.LSPStore.getInfoNetworkError": "Could not connect to the LSP. Please check your internet connection and LSP settings, then try again.",
+    "stores.LSPStore.getInfoResponseError": "The LSP returned an unexpected response. Please try again later, or contact the LSP if the problem continues.",
     "stores.LightningAddressStore.preimageNotFound": "Pre-image not found on your device. Did you recently change devices?",
     "stores.LightningAddressStore.Cashu.quoteNotPaid": "Quote not paid",
     "stores.LightningAddressStore.Cashu.quotePaymentErr": "Error checking for quote payment",
