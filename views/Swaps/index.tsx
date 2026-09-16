@@ -961,11 +961,30 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                             style={{
                                                 fontFamily:
                                                     'PPNeueMontreal-Book',
-                                                fontSize: 20,
-                                                marginBottom: 20
+                                                fontSize: 20
                                             }}
                                         >
                                             {localeString('views.Swaps.create')}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                fontSize: 14,
+                                                marginTop: 4,
+                                                marginBottom: 20
+                                            }}
+                                            numberOfLines={1}
+                                            ellipsizeMode="middle"
+                                        >
+                                            {`${localeString(
+                                                'general.serviceProvider'
+                                            )}: ${
+                                                SwapStore.getServiceProvider
+                                            }`}
                                         </Text>
                                     </View>
 
