@@ -638,12 +638,21 @@ export default class ModalBox extends React.PureComponent<
         };
         const offsetX = (this.state.containerWidth - this.state.width) / 2;
 
+        // Scaling the requested height by fontScale gives larger text more room,
+        // but the result must never exceed the container: calculateModalPosition
+        // clamps a bottom sheet's offset at 0, so any excess height spills off
+        // the bottom of the screen, taking footer buttons with it.
         const customHeightStyle =
             style &&
             typeof style === 'object' &&
             'height' in style &&
             style.height
-                ? { height: (style.height as number) * FONT_SCALE }
+                ? {
+                      height: Math.min(
+                          (style.height as number) * FONT_SCALE,
+                          this.state.containerHeight
+                      )
+                  }
                 : undefined;
 
         return (
