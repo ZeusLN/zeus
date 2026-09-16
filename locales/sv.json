@@ -1768,6 +1768,8 @@
     "stores.SettingsStore.lncConnectError": "Kunde inte ansluta LNC-klienten till proxyservern",
     "stores.LSPStore.error": "LSP-fel",
     "stores.LSPStore.connectionError": "Kunde inte ansluta till LSP. Kontrollera dina LSP-inställningar eller försök igen senare.",
+    "stores.LSPStore.getInfoNetworkError": "Could not connect to the LSP. Please check your internet connection and LSP settings, then try again.",
+    "stores.LSPStore.getInfoResponseError": "The LSP returned an unexpected response. Please try again later, or contact the LSP if the problem continues.",
     "stores.LightningAddressStore.preimageNotFound": "Pre-image not found on your device. Did you recently change devices?",
     "stores.LightningAddressStore.Cashu.quoteNotPaid": "Quote not paid",
     "stores.LightningAddressStore.Cashu.quotePaymentErr": "Error checking for quote payment",
