@@ -2489,7 +2489,7 @@
     "views.Swaps.SwapsPane.restoreSwaps": "Restore swaps",
     "views.Swaps.SwapsPane.swapsRecovery": "Swaps recovery",
     "views.Swaps.SwapsPane.imported": "Imported",
-    "views.Swaps.Settings.enablePro": "Enable Boltz Pro",
+    "views.Swaps.Settings.enablePro": "Enable Pro mode",
     "views.Swaps.Settings.invoiceExpiration": "Invoice expiration",
     "views.Swaps.rescueKey": "Rescue key",
     "views.Swaps.rescueKey.create": "Create rescue key",
