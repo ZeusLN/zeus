@@ -1768,6 +1768,8 @@
     "stores.SettingsStore.lncConnectError": "Gagal menghubungkan ke klien LNC ke server proxy",
     "stores.LSPStore.error": "Terjadi kesalahan LSP",
     "stores.LSPStore.connectionError": "Tidak dapat terhubung ke LSP. Mohon cek pengaturan LSP Anda atau coba lagi nanti.",
+    "stores.LSPStore.getInfoNetworkError": "Could not connect to the LSP. Please check your internet connection and LSP settings, then try again.",
+    "stores.LSPStore.getInfoResponseError": "The LSP returned an unexpected response. Please try again later, or contact the LSP if the problem continues.",
     "stores.LightningAddressStore.preimageNotFound": "Preimage tidak ditemukan di perangkat Anda. Apakah Anda mengganti perangkat baru-baru ini?",
     "stores.LightningAddressStore.Cashu.quoteNotPaid": "Estimasi harga belum dibayar",
     "stores.LightningAddressStore.Cashu.quotePaymentErr": "Terjadi kesalahan saat memeriksa perkiraan harga",
