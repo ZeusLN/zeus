@@ -231,18 +231,23 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
     async componentDidMount() {
         const { SettingsStore, NodeInfoStore, SwapStore } = this.props;
+
+        // Swaps are mainnet only: no Boltz-compatible testnet provider is
+        // currently available, so render() shows an unavailable message
+        // instead of the form. The menu hides this screen on testnet, but
+        // deep links and SwapsQRScanner can still land here. The message
+        // needs none of the mount work below, and some of it must not run:
+        // SwapStore.loading only turns false once rates are fetched, so
+        // checkAndShowModal would reschedule itself every 100ms forever, and
+        // the focus listener could fetch rates from the dead testnet host.
+        if (NodeInfoStore.testnet) return;
+
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
 
         const { flowLspNotConfigured } = NodeInfoStore.flowLspNotConfigured();
 
-        // Swaps are mainnet only: no Boltz-compatible testnet provider is
-        // currently available, so there is no host to fetch rates from.
-        // This screen is unreachable from the menu on testnet (Menu.tsx),
-        // but guard here too against deep links and SwapsQRScanner.
-        if (!NodeInfoStore.testnet) {
-            this.props.SwapStore.getSwapFees();
-        }
+        this.props.SwapStore.getSwapFees();
         this.setState({
             enableLSP: settings?.enableLSP,
             flowLspNotConfigured
