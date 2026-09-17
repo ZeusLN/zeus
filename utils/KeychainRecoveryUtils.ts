@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import * as Keychain from 'react-native-keychain';
 import EncryptedStorage from 'react-native-encrypted-storage';
-import Storage from '../storage';
+import Storage, { KEY_PREFIX, getRawItem } from '../storage';
 
 import { CURRENCY_CODES_KEY, STORAGE_KEY, Node } from '../stores/SettingsStore';
 import { CONTACTS_KEY } from '../stores/ContactStore';
@@ -35,6 +35,7 @@ export interface RecoveryResult {
     key: string;
     source:
         | 'current'
+        | 'prefixed-cloud'
         | 'unprefixed-local'
         | 'unprefixed-cloud'
         | 'encrypted-storage';
@@ -88,6 +89,25 @@ class KeychainRecoveryUtils {
             return data || null;
         } catch (e) {
             console.warn(`[Recovery] Error reading current storage ${key}:`, e);
+            return null;
+        }
+    }
+
+    /**
+     * Attempts to read zeus:-prefixed data from the synchronizable (iCloud)
+     * partition. All zeus:* data lived there while the react-native-keychain
+     * cloudSync bug was active (oblador/react-native-keychain#800); with the
+     * patched library, current Storage reads the device-local partition only,
+     * so an install whose desync migration has not completed holds its data
+     * exclusively here.
+     */
+    private async readFromPrefixedCloud(key: string): Promise<string | null> {
+        if (Platform.OS !== 'ios') return null;
+
+        try {
+            return await getRawItem(`${KEY_PREFIX}${key}`, true);
+        } catch (e) {
+            console.warn(`[Recovery] Error reading prefixed cloud ${key}:`, e);
             return null;
         }
     }
@@ -165,6 +185,10 @@ class KeychainRecoveryUtils {
                 reader: (key) => this.readFromCurrentStorage(key)
             },
             {
+                source: 'prefixed-cloud',
+                reader: (key) => this.readFromPrefixedCloud(key)
+            },
+            {
                 source: 'unprefixed-local',
                 reader: (key) => this.readFromUnprefixedLocal(key)
             },
@@ -190,6 +214,18 @@ class KeychainRecoveryUtils {
         const sources = this.getStorageSources();
 
         for (const { source, reader } of sources) {
+            // The prefixed-cloud copy is only meaningful when the current
+            // read misses (i.e. the desync migration never completed). After
+            // a completed desync the local copy is the fresher of the two,
+            // and offering the stale synchronizable copy as a restore source
+            // would invite overwriting live data with it.
+            if (
+                source === 'prefixed-cloud' &&
+                results.some((r) => r.source === 'current')
+            ) {
+                continue;
+            }
+
             const data = await reader(key);
             if (data) {
                 results.push({ key, source, data, description });
@@ -367,6 +403,8 @@ class KeychainRecoveryUtils {
         switch (source) {
             case 'current':
                 return 'Current Storage';
+            case 'prefixed-cloud':
+                return 'iCloud Keychain (Current Format)';
             case 'unprefixed-local':
                 return 'Legacy Local Keychain';
             case 'unprefixed-cloud':
@@ -410,6 +448,18 @@ class KeychainRecoveryUtils {
         locations: string[];
         error?: string;
     }> {
+        // Development seeding helper only. Guarded internally (not just at
+        // the UI) because it is the last remaining writer of unprefixed
+        // keychain entries: in a release build it could resurrect exactly
+        // the data the keychain cleanup purge deletes.
+        if (!__DEV__) {
+            return {
+                success: false,
+                locations: [],
+                error: 'copyToLegacyLocations is only available in dev builds'
+            };
+        }
+
         console.log(
             '[Recovery DEV] Copying current settings to legacy locations...'
         );
