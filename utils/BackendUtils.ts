@@ -85,6 +85,8 @@ class BackendUtils {
     getLightningBalance = (...args: any[]) =>
         this.call('getLightningBalance', args);
     sendCoins = (...args: any[]) => this.call('sendCoins', args);
+    estimateOnchainFee = (...args: any[]) =>
+        this.call('estimateOnchainFee', args);
     sendCustomMessage = (...args: any[]) =>
         this.call('sendCustomMessage', args);
     subscribeCustomMessages = (...args: any[]) =>
@@ -218,6 +220,8 @@ class BackendUtils {
     supportsLnurlAuth = () => this.call('supportsLnurlAuth');
     supportsOnchainBalance = () => this.call('supportsOnchainBalance');
     supportsOnchainSends = () => this.call('supportsOnchainSends');
+    supportsOnchainFeeEstimation = () =>
+        this.call('supportsOnchainFeeEstimation');
     supportsOnchainReceiving = () => this.call('supportsOnchainReceiving');
     supportsLightningSends = () => this.call('supportsLightningSends');
     supportsKeysend = () => this.call('supportsKeysend');
