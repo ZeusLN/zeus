@@ -736,13 +736,26 @@ export default class WalletConfiguration extends React.Component<
                         BackendUtils.disconnect();
                     }
                     setConnectingStatus(true);
-                    navigation.popTo('Wallet');
+                    // reset, not popTo: popTo only collapses the stack
+                    // when the target route already exists on it. The
+                    // advanced-setup first-wallet path can reach here
+                    // with no Wallet route on the stack at all (its
+                    // stale root was removed by the reset above), and
+                    // popTo would then just pop-and-push, leaving
+                    // IntroSplash/Menu/Wallets stranded underneath
+                    navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'Wallet' }]
+                    });
                 } else {
                     if (newEmbeddedLndWallet) {
                         // New wallet created - trigger fresh connection
                         // LND was already stopped in createNewWallet(), just navigate
                         setConnectingStatus(true);
-                        navigation.popTo('Wallet');
+                        navigation.reset({
+                            index: 0,
+                            routes: [{ name: 'Wallet' }]
+                        });
                     } else if (this.state.newEntry) {
                         navigation.navigate('Wallets');
                     } else {
@@ -923,7 +936,16 @@ export default class WalletConfiguration extends React.Component<
                 // (legacy shared db, any per-wallet dbs whose seeds are no
                 // longer recoverable, and WAL/SHM sidecars).
                 await clearCDKDatabase();
-                navigation.navigate('IntroSplash');
+                // reset, not navigate/replace: this screen is normally
+                // reached several pushes deep (Menu/Wallets ->
+                // WalletConfiguration), and once its last wallet is
+                // deleted every one of those earlier routes is stale too
+                // - a plain replace only swaps this top entry and leaves
+                // them reachable underneath via swipe-back/hardware back
+                navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'IntroSplash' }]
+                });
             } else {
                 navigation.popTo('Wallets');
             }
@@ -1240,7 +1262,15 @@ export default class WalletConfiguration extends React.Component<
             setConnectingStatus(true);
 
             if (nodes.length === 1) {
-                navigation.popTo('Wallet');
+                // reset, not popTo: this is the first-ever wallet, so
+                // Wallet may not be on the stack at all (its stale root
+                // was removed by the boot-time reset when there were no
+                // wallets) - popTo would then just pop-and-push, leaving
+                // IntroSplash/Menu/Wallets stranded underneath
+                navigation.reset({
+                    index: 0,
+                    routes: [{ name: 'Wallet' }]
+                });
             } else {
                 navigation.popTo('Wallets');
             }

@@ -518,7 +518,16 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 // to prevent interference when user is on other screens
                 // (e.g., setting up a wallet image via WalletConfiguration)
                 if (navigation.isFocused()) {
-                    navigation.navigate('IntroSplash');
+                    // reset, not navigate: this loading screen has no
+                    // wallet to return to, so leaving anything in the
+                    // stack lets iOS's swipe-back gesture (and Android's
+                    // hardware back) reveal it again behind IntroSplash.
+                    // replace only swaps the top entry and would still
+                    // leave earlier routes reachable underneath.
+                    navigation.reset({
+                        index: 0,
+                        routes: [{ name: 'IntroSplash' }]
+                    });
                 }
             }
         } catch (error) {
