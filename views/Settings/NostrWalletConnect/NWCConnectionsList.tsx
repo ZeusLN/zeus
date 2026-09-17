@@ -7,7 +7,8 @@ import {
     Text,
     RefreshControl
 } from 'react-native';
-import { Divider, SearchBar, ButtonGroup } from '@rneui/themed';
+import { Divider, SearchBar } from '@rneui/themed';
+import ButtonGroup from '../../../components/GlassButtonGroup';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
