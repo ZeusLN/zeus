@@ -366,6 +366,8 @@ export default class ActivityStore {
 
     private getActivity = async (filters: Filter) => {
         this.activity = [];
+        this.activityPayments = [];
+        this.activityInvoices = [];
         const paymentDateRange = BackendUtils.isLNDBased()
             ? getLndCreationDateRange(filters.startDate, filters.endDate)
             : undefined;
@@ -425,6 +427,7 @@ export default class ActivityStore {
             ? getLndInvoiceCreationDateRange(this.filters.endDate)
             : undefined;
         if (invoiceDateRange) {
+            const canonicalRefresh = this.invoicesStore.getInvoices();
             try {
                 const { invoices } = await this.invoicesStore.fetchInvoices(
                     invoiceDateRange
@@ -433,6 +436,7 @@ export default class ActivityStore {
             } catch {
                 this.activityInvoices = [];
             }
+            await canonicalRefresh;
         } else {
             await this.invoicesStore.getInvoices();
             this.activityInvoices = this.invoicesStore.invoices;

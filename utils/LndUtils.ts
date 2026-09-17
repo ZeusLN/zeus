@@ -45,19 +45,8 @@ export const getLndCreationDateRange = (
 
 export const getLndInvoiceCreationDateRange = (
     endDate?: Date
-): LndCreationDateRange | undefined => {
-    if (!endDate) return undefined;
-
-    const nextDay = new Date(
-        endDate.getFullYear(),
-        endDate.getMonth(),
-        endDate.getDate() + 1
-    );
-
-    return {
-        creationDateEnd: Math.floor(nextDay.getTime() / 1000) - 1
-    };
-};
+): LndCreationDateRange | undefined =>
+    getLndCreationDateRange(undefined, endDate);
 
 // LND's lnrpc.NewAddress endpoint expects the AddressType enum by name.
 // Address types reach the backend in three forms:

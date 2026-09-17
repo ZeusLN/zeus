@@ -144,6 +144,16 @@ describe('LND activity date filtering', () => {
         );
     });
 
+    it('preserves an explicit zero invoice limit in the request', async () => {
+        nodeInfoStore.nodeInfo.version = '0.20.0-beta';
+
+        await lnd.getInvoices({ limit: 0 });
+
+        expect(getRequest).toHaveBeenCalledWith(
+            '/v1/invoices?reversed=true&num_max_invoices=0'
+        );
+    });
+
     it('passes payment date bounds to supported LND nodes', async () => {
         nodeInfoStore.nodeInfo.version = '0.20.0-beta';
 

@@ -118,4 +118,76 @@ describe('ActivityStore scoped LND fetches', () => {
 
         expect(nodeInfoStore.getNodeInfo).toHaveBeenCalledTimes(1);
     });
+
+    it('clears node-scoped activity before starting a new wallet fetch', async () => {
+        const store = new ActivityStore(
+            { implementation: 'lnd', settings: {} } as any,
+            {
+                payments: [],
+                getPayments: jest.fn(),
+                fetchPayments: jest
+                    .fn()
+                    .mockRejectedValue(new Error('wallet unavailable'))
+            } as any,
+            {
+                invoices: [],
+                getInvoices: jest.fn(),
+                fetchInvoices: jest.fn()
+            } as any,
+            { transactions: [] } as any,
+            { checkPendingItems: jest.fn() } as any,
+            { swaps: [], fetchAndUpdateSwaps: jest.fn() } as any,
+            { nodeInfo: { version: '0.20.0-beta' } } as any
+        );
+        (store as any).activityPayments = [activityItem(1)];
+        (store as any).activityInvoices = [activityItem(2)];
+
+        await expect(
+            store.getActivityAndFilter(undefined, {
+                ...DEFAULT_FILTERS,
+                startDate: new Date(2024, 4, 10)
+            })
+        ).rejects.toThrow('wallet unavailable');
+
+        expect((store as any).activityPayments).toEqual([]);
+        expect((store as any).activityInvoices).toEqual([]);
+    });
+
+    it('refreshes canonical invoices as well as scoped LNC activity', async () => {
+        const canonicalInvoice = activityItem(2);
+        const scopedInvoice = activityItem(4);
+        const invoicesStore = {
+            invoices: [] as any[],
+            getInvoices: jest.fn().mockImplementation(async () => {
+                invoicesStore.invoices = [canonicalInvoice];
+                return invoicesStore.invoices;
+            }),
+            fetchInvoices: jest.fn().mockResolvedValue({
+                invoices: [scopedInvoice],
+                count: 1
+            })
+        };
+        const store = new ActivityStore(
+            { implementation: 'lightning-node-connect', settings: {} } as any,
+            { payments: [] } as any,
+            invoicesStore as any,
+            { transactions: [] } as any,
+            { checkPendingItems: jest.fn() } as any,
+            { swaps: [] } as any,
+            { nodeInfo: { version: '0.20.0-beta' } } as any
+        );
+        store.filters = {
+            ...DEFAULT_FILTERS,
+            endDate: new Date(2024, 4, 12)
+        };
+
+        await store.updateInvoices(undefined);
+
+        expect(invoicesStore.getInvoices).toHaveBeenCalledTimes(1);
+        expect(invoicesStore.fetchInvoices).toHaveBeenCalledWith({
+            creationDateEnd: expect.any(Number)
+        });
+        expect(invoicesStore.invoices).toEqual([canonicalInvoice]);
+        expect(store.activity).toEqual([scopedInvoice]);
+    });
 });

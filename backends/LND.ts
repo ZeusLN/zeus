@@ -363,9 +363,7 @@ export default class LND {
         const supportsCreationDateFilter = this.supports('v0.16.0');
 
         return this.getRequest(
-            `/v1/invoices?reversed=${reversed}${
-                limit ? `&num_max_invoices=${limit}` : ''
-            }${
+            `/v1/invoices?reversed=${reversed}&num_max_invoices=${limit}${
                 supportsCreationDateFilter &&
                 params.creationDateStart !== undefined
                     ? `&creation_date_start=${params.creationDateStart}`
