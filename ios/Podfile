@@ -55,8 +55,8 @@ target 'zeus' do
         # Lndmobile framework search path
         config.build_settings['FRAMEWORK_SEARCH_PATHS'] << '"$(SRCROOT)/LncMobile"'
         # Ensure minimum deployment target to suppress Xcode warnings
-        if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < 13.4
-          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.4'
+        if config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'].to_f < min_ios_version_supported.to_f
+          config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = min_ios_version_supported
         end
       end
     end
