@@ -76,6 +76,7 @@ jest.mock('./SettingsStore', () => ({
     ]
 }));
 
+import { observable, runInAction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import Storage from '../storage';
 import SwapStore from './SwapStore';
@@ -277,5 +278,59 @@ describe('SwapStore Pro referral gating', () => {
         expect(s.isProHost).toBe(true);
         expect(s.getHeaders).toBeUndefined();
         expect(s.referralId).toBeUndefined();
+    });
+});
+
+describe('SwapStore host-change rate refetch', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    const MAINNET_HOST = 'https://satsrouting.exchange/v2';
+
+    // observable stores so the constructor's getHost reaction actually fires
+    const buildReactiveStore = () => {
+        const nodeInfoStore: any = observable({
+            nodeInfo: { isTestNet: false }
+        });
+        const settingsStore: any = observable({
+            settings: {
+                swaps: {
+                    hostMainnet: MAINNET_HOST,
+                    hostTestnet: 'https://api.testnet.boltz.exchange/v2'
+                }
+            }
+        });
+        const store = new SwapStore(nodeInfoStore, settingsStore);
+        runInAction(() => {
+            // rates already loaded from mainnet this session
+            store.fetchedRatesHost = MAINNET_HOST;
+        });
+        return { store, nodeInfoStore, settingsStore };
+    };
+
+    it('refetches when the mainnet host changes', () => {
+        // control: proves the reaction fires in this harness, so the
+        // testnet case below cannot pass vacuously
+        const { settingsStore } = buildReactiveStore();
+
+        runInAction(() => {
+            settingsStore.settings.swaps.hostMainnet =
+                'https://swap.coinos.io/v2';
+        });
+
+        expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledWith(
+            'GET',
+            'https://swap.coinos.io/v2/swap/submarine',
+            undefined
+        );
+    });
+
+    it('does not fetch rates after switching to a testnet wallet', () => {
+        const { nodeInfoStore } = buildReactiveStore();
+
+        runInAction(() => {
+            nodeInfoStore.nodeInfo.isTestNet = true;
+        });
+
+        expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
     });
 });

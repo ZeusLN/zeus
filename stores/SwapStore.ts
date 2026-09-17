@@ -83,8 +83,14 @@ export default class SwapStore {
                 // only refetch when rates were already fetched this
                 // session; getHost also changes on startup as settings
                 // load and node info resolves, and rates must not be
-                // fetched on startup
-                if (this.fetchedRatesHost && this.fetchedRatesHost !== host) {
+                // fetched on startup. Never on testnet: swaps are mainnet
+                // only, and switching to a testnet wallet after loading
+                // mainnet rates would otherwise fetch from a dead host
+                if (
+                    this.fetchedRatesHost &&
+                    this.fetchedRatesHost !== host &&
+                    !this.nodeInfoStore?.nodeInfo?.isTestNet
+                ) {
                     this.getSwapFees();
                 }
             }
