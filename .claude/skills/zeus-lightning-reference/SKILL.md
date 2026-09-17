@@ -338,11 +338,22 @@ proofs); paying Lightning from proofs = **melt quote**. Tokens serialize as
 Zeus speaks the Boltz v2 REST API, but no longer against Boltz itself: the default
 provider is SATS Routing (`DEFAULT_SWAP_HOST_MAINNET = 'https://satsrouting.exchange/v2'`
 in `stores/SettingsStore.ts`), with Coinos (`https://swap.coinos.io/v2`) and Custom
-selectable. Both run forks of `boltz-backend`, so the wire protocol is unchanged.
-Boltz suspended its swap service on 2026-08-03 and ZEUS retired its own instance
-(`swaps.zeuslsp.com`) after an August 2026 security incident; both are in
-`RETIRED_SWAP_HOSTS_MAINNET`. Endpoints used: `/swap/submarine`, `/swap/reverse`,
-`/swap/restore`.
+selectable. Both run `boltz-backend`, so the wire protocol is unchanged. Endpoints used:
+`/swap/submarine`, `/swap/reverse`, `/swap/restore`.
+
+Retired hosts are moved to the current default by `MigrationUtils`, and each generation
+has its own mechanism:
+
+- `swaps.zeuslsp.com`, the former ZEUS default (`LEGACY_ZEUS_SWAP_HOST_*`), is rewritten
+  by `applySwapHostsToBoltz` in the settings-version 1 block.
+- Eldamar Swaps is in `RETIRED_SWAP_HOSTS_MAINNET`, applied by `applyRetiredSwapHosts` in
+  the version 1 block.
+- Boltz, which suspended its swap service on 2026-08-03, and SwapMarket, whose API is
+  gated behind a secret ZEUS cannot hold, are in `RETIRED_SWAP_HOSTS_MAINNET_V2`, applied
+  by `applyRetiredSwapHosts` in the version 2 block.
+
+A later retirement takes a new list under a new version gate rather than extending one of
+these, so a finished version's migration never re-runs.
 
 **Deterministic rescue key** — the design goal is that a single mnemonic can recover any
 in-flight swap:
