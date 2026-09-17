@@ -22,7 +22,10 @@ import NodeInfoStore from './NodeInfoStore';
 import BackendUtils from './../utils/BackendUtils';
 import ActivityFilterUtils from '../utils/ActivityFilterUtils';
 import DateTimeUtils from '../utils/DateTimeUtils';
-import { getLndCreationDateRange } from '../utils/LndUtils';
+import {
+    getLndCreationDateRange,
+    getLndInvoiceCreationDateRange
+} from '../utils/LndUtils';
 
 import Storage from '../storage';
 
@@ -133,6 +136,8 @@ export default class ActivityStore {
     cashuStore: CashuStore;
     swapStore: SwapStore;
     nodeInfoStore: NodeInfoStore;
+    private activityPayments?: Array<Payment | any>;
+    private activityInvoices?: Array<Invoice>;
 
     constructor(
         settingsStore: SettingsStore,
@@ -299,9 +304,9 @@ export default class ActivityStore {
 
     getSortedActivity = async () => {
         const activity: any[] = [];
-        const payments = this.paymentsStore.payments;
+        const payments = this.activityPayments ?? this.paymentsStore.payments;
         const transactions = this.transactionsStore.transactions;
-        const invoices = this.invoicesStore.invoices;
+        const invoices = this.activityInvoices ?? this.invoicesStore.invoices;
         const swaps = this.swapStore.swaps;
         const lspOrders = await this.getLSPOrders();
 
@@ -361,14 +366,50 @@ export default class ActivityStore {
 
     private getActivity = async (filters: Filter) => {
         this.activity = [];
-        const dateRange = BackendUtils.isLNDBased()
+        const paymentDateRange = BackendUtils.isLNDBased()
             ? getLndCreationDateRange(filters.startDate, filters.endDate)
             : undefined;
+        // Paid invoices are displayed and filtered by settlement time. A
+        // creation-date lower bound would exclude invoices created earlier
+        // but settled inside the selected range. The upper bound is safe:
+        // an invoice cannot settle before it is created.
+        const invoiceDateRange = BackendUtils.isLNDBased()
+            ? getLndInvoiceCreationDateRange(filters.endDate)
+            : undefined;
 
-        await this.paymentsStore.getPayments(dateRange);
+        if (
+            (paymentDateRange || invoiceDateRange) &&
+            !this.nodeInfoStore.nodeInfo?.version &&
+            this.settingsStore.implementation !== 'embedded-lnd'
+        ) {
+            try {
+                await this.nodeInfoStore.getNodeInfo();
+            } catch {}
+        }
+
+        if (paymentDateRange) {
+            this.activityPayments = await this.paymentsStore.fetchPayments(
+                paymentDateRange
+            );
+        } else {
+            await this.paymentsStore.getPayments();
+            this.activityPayments = this.paymentsStore.payments;
+        }
         if (BackendUtils.supportsOnchainSends())
             await this.transactionsStore.getTransactions();
-        await this.invoicesStore.getInvoices(dateRange);
+        if (invoiceDateRange) {
+            try {
+                const { invoices } = await this.invoicesStore.fetchInvoices(
+                    invoiceDateRange
+                );
+                this.activityInvoices = invoices;
+            } catch {
+                this.activityInvoices = [];
+            }
+        } else {
+            await this.invoicesStore.getInvoices();
+            this.activityInvoices = this.invoicesStore.invoices;
+        }
 
         await this.swapStore.fetchAndUpdateSwaps();
         const sortedActivity = await this.getSortedActivity();
@@ -380,13 +421,22 @@ export default class ActivityStore {
     };
 
     public updateInvoices = async (locale: string | undefined) => {
-        const dateRange = BackendUtils.isLNDBased()
-            ? getLndCreationDateRange(
-                  this.filters.startDate,
-                  this.filters.endDate
-              )
+        const invoiceDateRange = BackendUtils.isLNDBased()
+            ? getLndInvoiceCreationDateRange(this.filters.endDate)
             : undefined;
-        await this.invoicesStore.getInvoices(dateRange);
+        if (invoiceDateRange) {
+            try {
+                const { invoices } = await this.invoicesStore.fetchInvoices(
+                    invoiceDateRange
+                );
+                this.activityInvoices = invoices;
+            } catch {
+                this.activityInvoices = [];
+            }
+        } else {
+            await this.invoicesStore.getInvoices();
+            this.activityInvoices = this.invoicesStore.invoices;
+        }
         await runInAction(async () => {
             this.activity = await this.getSortedActivity();
             await this.setFilters(this.filters, locale);

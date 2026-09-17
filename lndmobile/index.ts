@@ -804,8 +804,8 @@ export const listInvoices = async (
         response: lnrpc.ListInvoiceResponse,
         method: 'ListInvoices',
         options: {
-            reversed: true,
-            num_max_invoices: Long.fromValue(1000),
+            reversed: params?.reversed ?? true,
+            num_max_invoices: Long.fromValue(params?.limit ?? 1000),
             ...(params?.creationDateStart !== undefined && {
                 creation_date_start: Long.fromValue(params.creationDateStart)
             }),

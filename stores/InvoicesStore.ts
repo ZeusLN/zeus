@@ -119,19 +119,30 @@ export default class InvoicesStore {
     @action
     public getInvoices = async (params?: LndInvoiceListParams) => {
         this.loading = true;
-        await BackendUtils.getInvoices(params)
-            .then((data: any) => {
-                runInAction(() => {
-                    this.invoices = data.invoices
-                        .map((invoice: any) => new Invoice(invoice))
-                        .slice()
-                        .reverse();
-                    this.invoicesCount =
-                        data.last_index_offset || this.invoices.length;
-                    this.loading = false;
-                });
-            })
-            .catch(() => this.resetInvoices());
+        try {
+            const { invoices, count } = await this.fetchInvoices(params);
+            runInAction(() => {
+                this.invoices = invoices;
+                this.invoicesCount = count;
+                this.loading = false;
+            });
+            return this.invoices;
+        } catch {
+            this.resetInvoices();
+        }
+    };
+
+    public fetchInvoices = async (params?: LndInvoiceListParams) => {
+        const data = await BackendUtils.getInvoices(params);
+        const invoices = data.invoices
+            .map((invoice: any) => new Invoice(invoice))
+            .slice()
+            .reverse();
+
+        return {
+            invoices,
+            count: data.last_index_offset || invoices.length
+        };
     };
 
     @action

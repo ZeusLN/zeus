@@ -175,4 +175,21 @@ describe('LND activity date filtering', () => {
                 '&reversed=true'
         );
     });
+
+    it('safely falls back when the node version is unavailable', async () => {
+        nodeInfoStore.nodeInfo = {};
+
+        await lnd.getInvoices({ creationDateEnd: 1_700_086_399 });
+        await lnd.getPayments({ creationDateStart: 1_700_000_000 });
+
+        expect(getRequest).toHaveBeenNthCalledWith(
+            1,
+            '/v1/invoices?reversed=true&num_max_invoices=500'
+        );
+        expect(getRequest).toHaveBeenNthCalledWith(
+            2,
+            '/v1/payments?include_incomplete=true&max_payments=500' +
+                '&reversed=true'
+        );
+    });
 });

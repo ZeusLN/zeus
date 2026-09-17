@@ -1,5 +1,6 @@
 import {
     getLndCreationDateRange,
+    getLndInvoiceCreationDateRange,
     toLnrpcAddressType,
     toLnrpcAddressTypeNum,
     toWalletrpcAddressTypeName,
@@ -42,6 +43,21 @@ describe('LndUtils', () => {
                 creationDateEnd:
                     Math.floor(new Date(2024, 4, 13).getTime() / 1000) - 1
             });
+        });
+    });
+
+    describe('getLndInvoiceCreationDateRange', () => {
+        it('omits the unsafe creation-date lower bound', () => {
+            const endDate = new Date(2024, 4, 12, 3, 20, 10);
+
+            expect(getLndInvoiceCreationDateRange(endDate)).toEqual({
+                creationDateEnd:
+                    Math.floor(new Date(2024, 4, 13).getTime() / 1000) - 1
+            });
+        });
+
+        it('returns undefined without an end date', () => {
+            expect(getLndInvoiceCreationDateRange()).toBeUndefined();
         });
     });
 
