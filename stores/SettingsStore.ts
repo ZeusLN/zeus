@@ -345,26 +345,14 @@ export const FEE_ESTIMATOR_KEYS = [
 
 export const SWAP_HOST_KEYS_MAINNET = [
     {
-        key: 'Boltz',
-        value: 'https://api.boltz.exchange/v2',
-        pro: true,
-        supportsRescue: true
-    },
-    {
-        key: 'SwapMarket',
-        value: 'https://api.middle-way.space/v2',
+        key: 'SATS Routing',
+        value: 'https://satsrouting.exchange/v2',
         pro: false,
         supportsRescue: true
     },
     {
         key: 'Coinos',
         value: 'https://swap.coinos.io/v2',
-        pro: false,
-        supportsRescue: true
-    },
-    {
-        key: 'SATS Routing',
-        value: 'https://satsrouting.exchange/v2',
         pro: false,
         supportsRescue: true
     },
@@ -1392,16 +1380,31 @@ export function getLspConfigForNetwork(
 }
 
 // Swaps
-export const DEFAULT_SWAP_HOST_MAINNET = 'https://api.boltz.exchange/v2';
+export const DEFAULT_SWAP_HOST_MAINNET = 'https://satsrouting.exchange/v2';
 export const DEFAULT_SWAP_HOST_TESTNET =
     'https://api.testnet.boltz.exchange/v2';
-// Retired ZEUS swap server hosts, migrated to Boltz
+// Retired ZEUS swap server hosts, migrated to the default host
 export const LEGACY_ZEUS_SWAP_HOST_MAINNET = 'https://swaps.zeuslsp.com/api/v2';
 export const LEGACY_ZEUS_SWAP_HOST_TESTNET =
     'https://testnet-swaps.zeuslsp.com/api/v2';
-// Swap providers that have shut down; users pinned to one are moved
-// back to the default host by MigrationUtils.applyRetiredSwapHosts
+// Swap providers that are no longer usable; users pinned to one are moved back
+// to the default host by MigrationUtils.applyRetiredSwapHosts. One list per
+// settings version: a list is frozen once a build stamping its version ships,
+// so a later retirement takes a new list under a new version gate. Extending
+// an earlier list would re-apply it to blobs already stamped past that
+// version, over values their users may have since restored.
+//
+// v1 — Eldamar Swaps: shut down, 404 on every path.
 export const RETIRED_SWAP_HOSTS_MAINNET = ['https://boltz-api.eldamar.icu/v2'];
+// v2 — Boltz: suspended its swap service indefinitely on 2026-08-03 and took
+// its infrastructure offline; api.boltz.exchange no longer accepts
+// connections. SwapMarket: the API is gated behind a shared secret only
+// SwapMarket's own frontend holds, so it answers 401 on every endpoint from
+// ZEUS.
+export const RETIRED_SWAP_HOSTS_MAINNET_V2 = [
+    'https://api.boltz.exchange/v2',
+    'https://api.middle-way.space/v2'
+];
 
 export const DEFAULT_NOSTR_RELAYS_2023 = [
     'wss://nostr.mutinywallet.com',

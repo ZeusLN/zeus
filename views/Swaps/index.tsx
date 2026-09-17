@@ -231,6 +231,17 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
     async componentDidMount() {
         const { SettingsStore, NodeInfoStore, SwapStore } = this.props;
+
+        // Swaps are mainnet only: no Boltz-compatible testnet provider is
+        // currently available, so render() shows an unavailable message
+        // instead of the form. The menu hides this screen on testnet, but
+        // deep links and SwapsQRScanner can still land here. The message
+        // needs none of the mount work below, and some of it must not run:
+        // SwapStore.loading only turns false once rates are fetched, so
+        // checkAndShowModal would reschedule itself every 100ms forever, and
+        // the focus listener could fetch rates from the dead testnet host.
+        if (NodeInfoStore.testnet) return;
+
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
 
@@ -729,10 +740,51 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
     };
 
     render() {
+        const { NodeInfoStore, navigation } = this.props;
+
+        // Defense in depth: this screen is unreachable from the menu on
+        // testnet (Menu.tsx), but a deep link or SwapsQRScanner could still
+        // land here directly.
+        if (NodeInfoStore.testnet) {
+            return (
+                <Screen>
+                    <Header
+                        leftComponent="Back"
+                        centerComponent={{
+                            text: localeString('views.Swaps.title'),
+                            style: {
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book'
+                            }
+                        }}
+                        navigation={navigation}
+                    />
+                    <View
+                        style={{
+                            flex: 1,
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            margin: 20
+                        }}
+                    >
+                        <Text
+                            style={{
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book',
+                                fontSize: 16,
+                                textAlign: 'center'
+                            }}
+                        >
+                            {localeString('views.Swaps.notAvailableOnTestnet')}
+                        </Text>
+                    </View>
+                </Screen>
+            );
+        }
+
         const {
             SwapStore,
             UnitsStore,
-            navigation,
             InvoicesStore,
             FiatStore,
             SettingsStore,
@@ -914,11 +966,30 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                             style={{
                                                 fontFamily:
                                                     'PPNeueMontreal-Book',
-                                                fontSize: 20,
-                                                marginBottom: 20
+                                                fontSize: 20
                                             }}
                                         >
                                             {localeString('views.Swaps.create')}
+                                        </Text>
+                                        <Text
+                                            style={{
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book',
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                fontSize: 14,
+                                                marginTop: 4,
+                                                marginBottom: 20
+                                            }}
+                                            numberOfLines={1}
+                                            ellipsizeMode="middle"
+                                        >
+                                            {`${localeString(
+                                                'general.serviceProvider'
+                                            )}: ${
+                                                SwapStore.getServiceProvider
+                                            }`}
                                         </Text>
                                     </View>
 

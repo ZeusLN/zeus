@@ -66,11 +66,15 @@ jest.mock('../stores/SettingsStore', () => ({
     DEFAULT_LSPS1_REST_TESTNET: 'https://lsps1.testnet.zeuslsp.com',
     DEFAULT_LSPS1_REST_MUTINYNET: 'https://lsps1.mutinynet.zeuslsp.com',
     DEFAULT_SPEEDLOADER: 'https://egs.lnze.us/',
-    DEFAULT_SWAP_HOST_MAINNET: 'https://api.boltz.exchange/v2',
+    DEFAULT_SWAP_HOST_MAINNET: 'https://satsrouting.exchange/v2',
     DEFAULT_SWAP_HOST_TESTNET: 'https://api.testnet.boltz.exchange/v2',
     LEGACY_ZEUS_SWAP_HOST_MAINNET: 'https://swaps.zeuslsp.com/api/v2',
     LEGACY_ZEUS_SWAP_HOST_TESTNET: 'https://testnet-swaps.zeuslsp.com/api/v2',
     RETIRED_SWAP_HOSTS_MAINNET: ['https://boltz-api.eldamar.icu/v2'],
+    RETIRED_SWAP_HOSTS_MAINNET_V2: [
+        'https://api.boltz.exchange/v2',
+        'https://api.middle-way.space/v2'
+    ],
     DEFAULT_NOSTR_RELAYS_2023: [
         'wss://nostr.mutinywallet.com',
         'wss://relay.damus.io',
@@ -368,7 +372,7 @@ describe('MigrationUtils', () => {
     });
 
     describe('applySwapHostsToBoltz', () => {
-        it('migrates retired ZEUS swap hosts to the Boltz defaults', () => {
+        it('migrates retired ZEUS swap hosts to the current defaults', () => {
             const settings: any = {
                 swaps: {
                     hostMainnet: 'https://swaps.zeuslsp.com/api/v2',
@@ -378,7 +382,7 @@ describe('MigrationUtils', () => {
 
             expect(MigrationUtils.applySwapHostsToBoltz(settings)).toBe(true);
             expect(settings.swaps).toEqual({
-                hostMainnet: 'https://api.boltz.exchange/v2',
+                hostMainnet: 'https://satsrouting.exchange/v2',
                 hostTestnet: 'https://api.testnet.boltz.exchange/v2'
             });
         });
@@ -415,11 +419,81 @@ describe('MigrationUtils', () => {
 
             expect(MigrationUtils.applyRetiredSwapHosts(settings)).toBe(true);
             expect(settings.swaps.hostMainnet).toBe(
-                'https://api.boltz.exchange/v2'
+                'https://satsrouting.exchange/v2'
             );
             expect(settings.swaps.hostTestnet).toBe(
                 'https://api.testnet.boltz.exchange/v2'
             );
+        });
+
+        it.each([
+            ['Boltz', 'https://api.boltz.exchange/v2'],
+            ['SwapMarket', 'https://api.middle-way.space/v2']
+        ])('moves %s off when given the v2 list', (_name, host) => {
+            const settings: any = {
+                swaps: {
+                    hostMainnet: host,
+                    hostTestnet: 'https://api.testnet.boltz.exchange/v2'
+                }
+            };
+
+            expect(
+                MigrationUtils.applyRetiredSwapHosts(settings, [
+                    'https://api.boltz.exchange/v2',
+                    'https://api.middle-way.space/v2'
+                ])
+            ).toBe(true);
+            expect(settings.swaps.hostMainnet).toBe(
+                'https://satsrouting.exchange/v2'
+            );
+            // the testnet Boltz host is a different URL and is never retired
+            expect(settings.swaps.hostTestnet).toBe(
+                'https://api.testnet.boltz.exchange/v2'
+            );
+        });
+
+        it('keeps each version list to its own hosts', () => {
+            // the default (v1) list must not reach the v2 retirements,
+            // or the v1 block would re-apply them to unstamped blobs
+            const onBoltz: any = {
+                swaps: { hostMainnet: 'https://api.boltz.exchange/v2' }
+            };
+            expect(MigrationUtils.applyRetiredSwapHosts(onBoltz)).toBe(false);
+            expect(onBoltz.swaps.hostMainnet).toBe(
+                'https://api.boltz.exchange/v2'
+            );
+
+            // and the v2 list must not reach Eldamar, or the v2 block would
+            // re-apply the v1 retirement to blobs already stamped at 1
+            const onEldamar: any = {
+                swaps: { hostMainnet: 'https://boltz-api.eldamar.icu/v2' }
+            };
+            expect(
+                MigrationUtils.applyRetiredSwapHosts(onEldamar, [
+                    'https://api.boltz.exchange/v2',
+                    'https://api.middle-way.space/v2'
+                ])
+            ).toBe(false);
+            expect(onEldamar.swaps.hostMainnet).toBe(
+                'https://boltz-api.eldamar.icu/v2'
+            );
+        });
+
+        it('leaves proEnabled alone, which is shared with the testnet host', () => {
+            const settings: any = {
+                swaps: {
+                    hostMainnet: 'https://api.boltz.exchange/v2',
+                    hostTestnet: 'Custom',
+                    customHost: 'https://my-boltz.local/v2',
+                    proEnabled: true
+                }
+            };
+
+            MigrationUtils.applyRetiredSwapHosts(settings, [
+                'https://api.boltz.exchange/v2'
+            ]);
+
+            expect(settings.swaps.proEnabled).toBe(true);
         });
 
         it('leaves a custom host pointed at a retired provider alone', () => {
@@ -802,7 +876,7 @@ describe('MigrationUtils', () => {
             expect(result).toBe(fresh);
             expect(result.supportedBiometryType).toBe('FaceID');
             expect(result.swaps.hostMainnet).toBe(
-                'https://api.boltz.exchange/v2'
+                'https://satsrouting.exchange/v2'
             );
             expect(result.settingsVersion).toBe(SETTINGS_VERSION);
         });
@@ -818,7 +892,7 @@ describe('MigrationUtils', () => {
 
             expect(settings.lspMainnet).toBe('https://flow.zeuslsp.com');
             expect(settings.swaps.hostMainnet).toBe(
-                'https://api.boltz.exchange/v2'
+                'https://satsrouting.exchange/v2'
             );
             expect(settings.settingsVersion).toBe(SETTINGS_VERSION);
             // applySettingsUpdate persists right after getSettings
@@ -859,7 +933,7 @@ describe('MigrationUtils', () => {
             expect(settings.lspMainnet).toBe('https://0conf.lnolymp.us');
             // the un-flagged swap migration still applies
             expect(settings.swaps.hostMainnet).toBe(
-                'https://api.boltz.exchange/v2'
+                'https://satsrouting.exchange/v2'
             );
             expect(settings.settingsVersion).toBe(SETTINGS_VERSION);
         });
@@ -916,7 +990,7 @@ describe('MigrationUtils', () => {
             await MigrationUtils.runSettingsMigrations(settings, true);
 
             expect(settings.swaps.hostMainnet).toBe(
-                'https://api.boltz.exchange/v2'
+                'https://satsrouting.exchange/v2'
             );
             expect(settings.settingsVersion).toBe(SETTINGS_VERSION);
 
@@ -937,6 +1011,28 @@ describe('MigrationUtils', () => {
                 'https://boltz-api.eldamar.icu/v2'
             );
         });
+
+        it.each([
+            ['Boltz', 'https://api.boltz.exchange/v2'],
+            ['SwapMarket', 'https://api.middle-way.space/v2']
+        ])(
+            'retires %s on an unstamped blob even when every v1 flag is set',
+            async (_name, host) => {
+                // a typical existing install: every retired v1 flag is set,
+                // including 'swap-hosts-retired-eldamar'. That flag gates only
+                // the v1 retirement, so it must not hold users on a host that
+                // was retired afterwards.
+                EncryptedStorage.getItem.mockResolvedValue('true');
+                const settings: any = { swaps: { hostMainnet: host } };
+
+                await MigrationUtils.runSettingsMigrations(settings, true);
+
+                expect(settings.swaps.hostMainnet).toBe(
+                    'https://satsrouting.exchange/v2'
+                );
+                expect(settings.settingsVersion).toBe(SETTINGS_VERSION);
+            }
+        );
 
         it('stamps even when nothing needed migrating, then goes quiet', async () => {
             EncryptedStorage.getItem.mockResolvedValue('true');
@@ -1013,6 +1109,46 @@ describe('MigrationUtils', () => {
             // the retired-flag reads are skipped along with the blocks
             expect(EncryptedStorage.getItem).not.toHaveBeenCalled();
             expect(settings.settingsVersion).toBe(SETTINGS_VERSION);
+        });
+
+        it('applies the v2 retirement to a blob already stamped at 1', async () => {
+            // installs that booted a v1-stamping build skip the v1 blocks
+            // entirely, so the v2 block is the only thing that moves them
+            // off Boltz. It needs no flag: the stamp alone makes it
+            // exactly-once.
+            const settings: any = {
+                settingsVersion: 1,
+                swaps: { hostMainnet: 'https://api.boltz.exchange/v2' }
+            };
+
+            const changed = await MigrationUtils.applySettingsMigrations(
+                settings
+            );
+
+            expect(changed).toBe(true);
+            expect(settings.swaps.hostMainnet).toBe(
+                'https://satsrouting.exchange/v2'
+            );
+            expect(EncryptedStorage.getItem).not.toHaveBeenCalled();
+            expect(settings.settingsVersion).toBe(2);
+        });
+
+        it('skips every block for a blob already stamped at 2', async () => {
+            const settings: any = {
+                settingsVersion: 2,
+                swaps: { hostMainnet: 'https://api.boltz.exchange/v2' }
+            };
+
+            const changed = await MigrationUtils.applySettingsMigrations(
+                settings
+            );
+
+            // a user who deliberately picked Boltz again after stamping,
+            // e.g. once it returns, is not moved off it a second time
+            expect(changed).toBe(false);
+            expect(settings.swaps.hostMainnet).toBe(
+                'https://api.boltz.exchange/v2'
+            );
         });
     });
 

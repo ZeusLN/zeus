@@ -27,6 +27,7 @@ import {
     LEGACY_ZEUS_SWAP_HOST_MAINNET,
     LEGACY_ZEUS_SWAP_HOST_TESTNET,
     RETIRED_SWAP_HOSTS_MAINNET,
+    RETIRED_SWAP_HOSTS_MAINNET_V2,
     DEFAULT_NOSTR_RELAYS_2023,
     PosEnabled,
     DEFAULT_SLIDE_TO_PAY_THRESHOLD,
@@ -567,6 +568,19 @@ class MigrationsUtils {
             }
         }
 
+        if (priorVersion < 2) {
+            // v1 -> v2: retire Boltz and SwapMarket. No flag read: the stamp
+            // alone keeps this exactly-once. The v1 'swap-hosts-retired-eldamar'
+            // flag must not gate it either — that flag is set on every install
+            // that ran the Eldamar migration, which covers nearly every user
+            // still pinned to these hosts.
+            changed =
+                this.applyRetiredSwapHosts(
+                    settings,
+                    RETIRED_SWAP_HOSTS_MAINNET_V2
+                ) || changed;
+        }
+
         settings.settingsVersion = SETTINGS_VERSION;
         return changed;
     }
@@ -670,7 +684,9 @@ class MigrationsUtils {
         return changed;
     }
 
-    // migrate users pointed at the retired ZEUS swap server to Boltz
+    // migrate users pointed at the retired ZEUS swap server to the default
+    // host. Named for Boltz, which was the default when this was written; it
+    // rewrites to whatever DEFAULT_SWAP_HOST_* currently is.
     public applySwapHostsToBoltz(settings: any): boolean {
         let changed = false;
         if (settings?.swaps) {
@@ -687,20 +703,26 @@ class MigrationsUtils {
         return changed;
     }
 
-    // Move users pinned to a swap provider that has shut down back to the
+    // Move users pinned to a swap provider that is no longer usable back to the
     // default host. Without this their persisted host no longer matches any
     // entry in SWAP_HOST_KEYS_MAINNET, so the provider dropdown renders no
     // selection while every swap request goes to a dead endpoint. Custom
     // hosts are left alone: a retired host is only rewritten when it was
-    // picked from the dropdown, not typed in as a custom host. Retired
-    // flag: 'swap-hosts-retired-eldamar' (honored in
-    // applySettingsMigrations; installs that ran the migration before the
-    // stamp existed are not re-migrated over a since-changed value).
-    public applyRetiredSwapHosts(settings: any): boolean {
+    // picked from the dropdown, not typed in as a custom host.
+    //
+    // Takes the list to apply because retirements are frozen per settings
+    // version (see RETIRED_SWAP_HOSTS_MAINNET): the v1 block applies the v1
+    // list under its 'swap-hosts-retired-eldamar' flag, the v2 block applies
+    // RETIRED_SWAP_HOSTS_MAINNET_V2, and neither re-applies the other's.
+    // Defaults to the v1 list so the v1 block stays unchanged.
+    public applyRetiredSwapHosts(
+        settings: any,
+        retiredHosts: string[] = RETIRED_SWAP_HOSTS_MAINNET
+    ): boolean {
         let changed = false;
         if (
             settings?.swaps?.hostMainnet &&
-            RETIRED_SWAP_HOSTS_MAINNET.includes(settings.swaps.hostMainnet)
+            retiredHosts.includes(settings.swaps.hostMainnet)
         ) {
             settings.swaps.hostMainnet = DEFAULT_SWAP_HOST_MAINNET;
             changed = true;
