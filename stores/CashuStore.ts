@@ -3948,13 +3948,11 @@ export default class CashuStore {
                 this.creatingInvoice = false;
             });
 
-            let jit_bolt11: string = '';
-
             if (lnurl) {
                 const u = url.parse(lnurl.callback);
                 const qs = querystring.parse(u.query);
                 qs.k1 = lnurl.k1;
-                qs.pr = jit_bolt11 || invoice.getPaymentRequest;
+                qs.pr = invoice.getPaymentRequest;
                 u.search = querystring.stringify(qs);
                 u.query = querystring.stringify(qs);
 
@@ -3993,9 +3991,7 @@ export default class CashuStore {
 
             return {
                 // rHash: invoice.getFormattedRhash,
-                paymentRequest: jit_bolt11
-                    ? jit_bolt11
-                    : invoice.getPaymentRequest
+                paymentRequest: invoice.getPaymentRequest
             };
         } catch (e: any) {
             if (__DEV__) {
