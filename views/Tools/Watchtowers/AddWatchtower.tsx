@@ -105,7 +105,7 @@ export default class AddWatchtower extends React.Component<
         } catch (error: any) {
             this.setState({
                 loading: false,
-                error: error.message || localeString('general.unknown_error')
+                error: error.message || localeString('general.unknownError')
             });
         }
     };

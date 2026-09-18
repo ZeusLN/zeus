@@ -171,7 +171,7 @@ export default class SetWalletPicture extends React.Component<
                     leftComponent="Back"
                     centerComponent={{
                         text: localeString(
-                            'views.SetWalletPicture.choosePicture'
+                            'views.SetNodePicture.choosePicture'
                         ),
                         style: {
                             color: themeColor('text'),

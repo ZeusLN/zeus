@@ -366,7 +366,7 @@ export default class ChoosePaymentMethod extends React.Component<
                             ]}
                         >
                             {isWithdraw
-                                ? localeString('views.Receive.amount')
+                                ? localeString('general.amount')
                                 : localeString('views.Payment.paymentAmount')}
                         </Text>
                         <Amount

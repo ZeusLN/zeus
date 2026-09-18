@@ -952,7 +952,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 : confirmedBlockchainBalance.toString()
                                             : amount
                                     }
-                                    title={localeString('views.Send.amount')}
+                                    title={localeString('general.amount')}
                                     onAmountChange={(
                                         amount: string,
                                         satAmount: string | number
@@ -1091,7 +1091,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             <AmountInput
                                                 amount={output?.amount.toString()}
                                                 title={localeString(
-                                                    'views.Send.amount'
+                                                    'general.amount'
                                                 )}
                                                 onAmountChange={(
                                                     amount: string,
@@ -1297,7 +1297,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <React.Fragment>
                                 <AmountInput
                                     amount={amount}
-                                    title={localeString('views.Send.amount')}
+                                    title={localeString('general.amount')}
                                     onAmountChange={(
                                         amount: string,
                                         satAmount: string | number
@@ -1348,7 +1348,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <React.Fragment>
                                 <AmountInput
                                     amount={amount}
-                                    title={localeString('views.Send.amount')}
+                                    title={localeString('general.amount')}
                                     onAmountChange={(
                                         amount: string,
                                         satAmount: string | number

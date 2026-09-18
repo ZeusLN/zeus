@@ -184,7 +184,7 @@ export default class SweepStore {
 
                     if (!output)
                         throw new Error(
-                            localeString('views.Sweep.outputIndexNotFound', {
+                            localeString('views.Wif.outputIndexNotFound', {
                                 vout,
                                 txid
                             })

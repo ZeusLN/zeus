@@ -235,7 +235,9 @@ export default class PendingHTLCs extends React.PureComponent<
                     />
                 ) : (
                     <Button
-                        title={localeString('views.PendingHTLCs.noPendingHTLC')}
+                        title={localeString(
+                            'views.PendingHTLCs.noPendingHTLCs'
+                        )}
                         icon={{
                             name: 'error-outline',
                             size: 25,

@@ -432,9 +432,7 @@ export default class SendEcash extends React.Component<
 
                                     <AmountInput
                                         amount={value}
-                                        title={localeString(
-                                            'views.Receive.amount'
-                                        )}
+                                        title={localeString('general.amount')}
                                         onAmountChange={this.handleAmountChange}
                                     />
 
