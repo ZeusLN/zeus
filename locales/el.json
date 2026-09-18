@@ -1742,7 +1742,7 @@
     "views.LSPS7.originalService": "Original service",
     "views.LSPS7.extensionOrderIds": "Extension Order IDs",
     "views.LSPS7.freeExtension": "Free extension — processing now…",
-    "views.LSPS7.extensionFailed": "Η διαδικασία ανοίγματος καναλιού απέτυχε. Οποιαδήποτε πληρωμή έχει επιστραφεί· εάν χρησιμοποιήσατε κουπόνι έκπτωσης, το ποσό που ξοδέψατε έχει πιστωθεί ξανά στο λογαριασμό σας.",
+    "views.LSPS7.extensionFailed": "Η διαδικασία επέκτασης του καναλιού απέτυχε. Οποιαδήποτε πληρωμή έχει επιστραφεί· εάν χρησιμοποιήσατε κουπόνι έκπτωσης, το ποσό που ξοδέψατε έχει πιστωθεί ξανά στο λογαριασμό σας.",
     "views.LSPS7.serviceInfoText1": "Αυτή η υπηρεσία σας επιτρέπει να παρατείνετε τη διάρκεια μίσθωσης ενός καναλιού ή να αγοράσετε μίσθωση για ένα κανάλι που έχετε ανοίξει στον LSP.",
     "views.LSPS7.leaseExtended": "Η μίσθωση του καναλιού σας έχει παραταθεί",
     "components.UTXOPicker.modal.title": "Επέλεξε UTXOs που θα χρησιμοποιηθούν",
