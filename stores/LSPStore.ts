@@ -490,6 +490,10 @@ export default class LSPStore {
         this.showLspSettings = false;
 
         const { settings } = this.settingsStore;
+        // snapshot the fee quote the proposal is priced against, so a
+        // quote overwritten while the request is in flight can't move
+        // the verification bound
+        const quotedFeeSats = this.zeroConfFee || 0;
 
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
@@ -543,7 +547,7 @@ export default class LSPStore {
                         const check = verifyWrappedInvoice(
                             bolt11,
                             data.jit_bolt11,
-                            this.zeroConfFee || 0
+                            quotedFeeSats
                         );
                         if (!check.valid) {
                             runInAction(() => {
