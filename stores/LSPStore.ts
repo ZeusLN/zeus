@@ -16,6 +16,7 @@ import Base64Utils from '../utils/Base64Utils';
 import { getClientInfo } from '../utils/ClientInfoUtils';
 import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { verifyWrappedInvoice } from '../utils/LspUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 
 import Storage from '../storage';
@@ -526,6 +527,21 @@ export default class LSPStore {
                         return;
                     }
                     if (status == 200 || status == 201) {
+                        const check = verifyWrappedInvoice(
+                            bolt11,
+                            data.jit_bolt11,
+                            this.zeroConfFee || 0
+                        );
+                        if (!check.valid) {
+                            runInAction(() => {
+                                this.flow_error = true;
+                                this.flow_error_msg = `${localeString(
+                                    'stores.LSPStore.wrappedInvoiceVerificationFailed'
+                                )} (${check.error})`;
+                            });
+                            reject();
+                            return;
+                        }
                         resolve(data.jit_bolt11);
                     } else {
                         runInAction(() => {
