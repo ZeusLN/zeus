@@ -53,10 +53,61 @@ jobs:
                 fs.readFileSync('coverage-summary.json', 'utf8')
             );
             const total = summary.total;
+
+            // Baseline: the most recent successful master-push Test run
+            // that uploaded a coverage-baseline artifact. Absent until the
+            // first master push after this workflow lands.
+            let baseline = null;
+            let baselineSha = null;
+            const { data: masterRuns } =
+                await github.rest.actions.listWorkflowRuns({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    workflow_id: 'test.yml',
+                    branch: 'master',
+                    event: 'push',
+                    status: 'success',
+                    per_page: 10
+                });
+            for (const candidate of masterRuns.workflow_runs) {
+                const { data: arts } =
+                    await github.rest.actions.listWorkflowRunArtifacts({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        run_id: candidate.id
+                    });
+                const art = arts.artifacts.find(
+                    (a) => a.name === 'coverage-baseline' && !a.expired
+                );
+                if (!art) continue;
+                const dl = await github.rest.actions.downloadArtifact({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    artifact_id: art.id,
+                    archive_format: 'zip'
+                });
+                fs.writeFileSync('baseline.zip', Buffer.from(dl.data));
+                await exec.exec('unzip', ['-o', 'baseline.zip', '-d', 'baseline']);
+                baseline = JSON.parse(
+                    fs.readFileSync('baseline/coverage-summary.json', 'utf8')
+                ).total;
+                baselineSha = candidate.head_sha;
+                break;
+            }
+
             const row = (label, key) => {
                 const m = total[key];
                 const pct = typeof m.pct === 'number' ? `${m.pct}%` : m.pct;
-                return `| ${label} | ${pct} | ${m.covered}/${m.total} |`;
+                let diff = 'n/a';
+                if (
+                    baseline &&
+                    typeof m.pct === 'number' &&
+                    typeof baseline[key]?.pct === 'number'
+                ) {
+                    const d = Number((m.pct - baseline[key].pct).toFixed(2));
+                    diff = d === 0 ? '0.00%' : `${d > 0 ? '+' : ''}${d.toFixed(2)}%`;
+                }
+                return `| ${label} | ${pct} | ${m.covered}/${m.total} | ${diff} |`;
             };
 
             const marker = '<!-- jest-coverage-summary -->';
@@ -64,14 +115,17 @@ jobs:
                 marker,
                 '## Test coverage',
                 '',
-                '| Metric | Coverage | Covered/Total |',
-                '| --- | --- | --- |',
+                '| Metric | Coverage | Covered/Total | vs master |',
+                '| --- | --- | --- | --- |',
                 row('Statements', 'statements'),
                 row('Branches', 'branches'),
                 row('Functions', 'functions'),
                 row('Lines', 'lines'),
                 '',
-                `Commit: ${run.head_sha} | [Test run](${run.html_url})`
+                `Commit: ${run.head_sha} | [Test run](${run.html_url})` +
+                    (baselineSha
+                        ? ` | Baseline: master@${baselineSha.slice(0, 9)}`
+                        : '')
             ].join('\n');
 
             const { data: comments } = await github.rest.issues.listComments({
