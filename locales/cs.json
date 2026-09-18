@@ -1785,6 +1785,8 @@
     "stores.LSPStore.connectionError": "Nepodařilo se připojit k LSP. Zkontrolujte prosím nastavení LSP nebo to zkuste později.",
     "stores.LSPStore.getInfoNetworkError": "Připojení k LSP se nezdařilo. Zkontrolujte prosím své internetové připojení a nastavení LSP, a poté to zkuste znovu.",
     "stores.LSPStore.getInfoResponseError": "LSP vrátil neočekávanou odpověď. Zkuste to prosím znovu později, nebo v případě přetrvávajících potíží kontaktujte LSP.",
+    "stores.LSPStore.wrappedInvoiceVerificationFailed": "The wrapped invoice returned by the LSP does not match the invoice it is supposed to wrap and was rejected",
+    "stores.LSPStore.missingWrappedInvoice": "The LSP response did not include a wrapped invoice",
     "stores.LightningAddressStore.preimageNotFound": "Předobraz nebyl na vašem zařízení nalezen. Nevyměnili jste v poslední době zařízení?",
     "stores.LightningAddressStore.Cashu.quoteNotPaid": "Kvóta nebyla zaplacena",
     "stores.LightningAddressStore.Cashu.quotePaymentErr": "Chyba při zjišťování odhadované částky k zaplacení",
