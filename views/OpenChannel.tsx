@@ -1271,6 +1271,10 @@ export default class OpenChannel extends React.Component<
                                             y: 0,
                                             animated: true
                                         });
+                                        // the store records the failure in
+                                        // errorMsgPeer before rejecting, so
+                                        // swallow it here to keep the
+                                        // rejection from going unhandled
                                         connectPeer(
                                             {
                                                 ...this.state,
@@ -1279,7 +1283,7 @@ export default class OpenChannel extends React.Component<
                                             },
                                             false,
                                             connectPeerOnly
-                                        );
+                                        ).catch(() => {});
                                     }}
                                     disabled={
                                         loading ||
