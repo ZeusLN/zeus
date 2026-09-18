@@ -16,4 +16,4 @@ jobs:
         with:
           node-version: '24.x'
       - run: yarn install --frozen-lockfile
-      - run: yarn run test
+      - run: yarn run test:coverage
