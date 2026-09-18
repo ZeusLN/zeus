@@ -35,17 +35,50 @@ describe('locale keys', () => {
                 .map((file: any) => path.join(dir, file as string))
         );
 
-        const keyRegExp = new RegExp(/localeString\(\s*['"]([^'"]+)['"]/, 'gs');
+        // every string literal inside a localeString(...) call is a
+        // candidate key, so keys that don't sit directly after the paren
+        // are covered too, e.g. localeString(condition ? 'a' : 'b');
+        // filtering on en.json's top-level namespaces keeps substitution
+        // values from being mistaken for keys
+        const namespaces = new Set(
+            Object.keys(enLocale).map((key) => key.split('.')[0])
+        );
+        const literalRegExp = new RegExp(/(['"`])([^'"`\n]+)\1/, 'g');
+        const call = 'localeString(';
+        const keysIn = (source: string): string[] => {
+            const keys: string[] = [];
+            for (
+                let i = source.indexOf(call);
+                i !== -1;
+                i = source.indexOf(call, i + call.length)
+            ) {
+                let j = i + call.length;
+                for (let depth = 1; j < source.length && depth > 0; j++) {
+                    if (source[j] === '(') depth++;
+                    else if (source[j] === ')') depth--;
+                }
+                for (const match of source
+                    .slice(i + call.length, j - 1)
+                    .matchAll(literalRegExp)) {
+                    if (namespaces.has(match[2].split('.')[0]))
+                        keys.push(match[2]);
+                }
+            }
+            return keys;
+        };
+
         const missing: { [key: string]: string[] } = {};
         sourceFiles.forEach((file) => {
             const source = fs
                 .readFileSync(path.join(root, file))
                 .toString('utf8');
-            for (const match of source.matchAll(keyRegExp)) {
-                const key = match[1];
+            for (const key of keysIn(source)) {
                 // keys ending in '.' are dynamic concatenation prefixes,
                 // e.g. localeString('views.Channel.Total.' + kind)
                 if (key.endsWith('.')) continue;
+                // interpolated template keys are dynamic too,
+                // e.g. localeString(`views.Tools.${action}`)
+                if (key.includes('${')) continue;
                 if (!(key in enLocale)) {
                     if (!missing[key]) missing[key] = [];
                     if (!missing[key].includes(file)) missing[key].push(file);
