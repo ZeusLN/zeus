@@ -16,6 +16,7 @@ import Base64Utils from '../utils/Base64Utils';
 import { getClientInfo } from '../utils/ClientInfoUtils';
 import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { verifyWrappedInvoice } from '../utils/LspUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 
 import Storage from '../storage';
@@ -489,6 +490,10 @@ export default class LSPStore {
         this.showLspSettings = false;
 
         const { settings } = this.settingsStore;
+        // snapshot the fee quote the proposal is priced against, so a
+        // quote overwritten while the request is in flight can't move
+        // the verification bound
+        const quotedFeeSats = this.zeroConfFee || 0;
 
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
@@ -526,6 +531,34 @@ export default class LSPStore {
                         return;
                     }
                     if (status == 200 || status == 201) {
+                        if (
+                            !data.jit_bolt11 ||
+                            typeof data.jit_bolt11 !== 'string'
+                        ) {
+                            runInAction(() => {
+                                this.flow_error = true;
+                                this.flow_error_msg = localeString(
+                                    'stores.LSPStore.missingWrappedInvoice'
+                                );
+                            });
+                            reject();
+                            return;
+                        }
+                        const check = verifyWrappedInvoice(
+                            bolt11,
+                            data.jit_bolt11,
+                            quotedFeeSats
+                        );
+                        if (!check.valid) {
+                            runInAction(() => {
+                                this.flow_error = true;
+                                this.flow_error_msg = `${localeString(
+                                    'stores.LSPStore.wrappedInvoiceVerificationFailed'
+                                )} (${check.error})`;
+                            });
+                            reject();
+                            return;
+                        }
                         resolve(data.jit_bolt11);
                     } else {
                         runInAction(() => {
