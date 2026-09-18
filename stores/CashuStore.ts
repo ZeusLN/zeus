@@ -574,15 +574,22 @@ export default class CashuStore {
                 `${KEY_PREFIX}${nodeDir}-cashu-seed-phrase`,
                 true
             );
-            if (!syncJson) return null;
+            // Only a confirmed miss permits initializeCDK to generate a seed.
+            // An unreadable or malformed entry may be the wallet's only seed.
+            if (syncJson === null) return null;
             const words = JSON.parse(syncJson);
-            if (!Array.isArray(words) || words.length === 0) return null;
+            if (
+                !Array.isArray(words) ||
+                words.length === 0 ||
+                !words.every((word) => typeof word === 'string')
+            ) {
+                throw new Error('Invalid synchronizable-partition cashu seed');
+            }
             const mnemonic = words.join(' ');
             if (!bip39scure.validateMnemonic(mnemonic, BIP39_WORD_LIST)) {
-                console.warn(
-                    'CDK: Synchronizable-partition cashu seed is not valid BIP-39'
+                throw new Error(
+                    'Synchronizable-partition cashu seed is not valid BIP-39'
                 );
-                return null;
             }
 
             // Mirror the generate path: in-memory state first, persistence
@@ -610,7 +617,9 @@ export default class CashuStore {
             return mnemonic;
         } catch (e) {
             console.warn('CDK: Synchronizable-partition seed check failed:', e);
-            return null;
+            // Abort initialization without shadowing the original seed with
+            // a replacement that a later desync/purge would trust as its copy.
+            throw e;
         }
     };
 
