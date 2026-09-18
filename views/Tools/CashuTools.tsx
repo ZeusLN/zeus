@@ -226,7 +226,7 @@ export default class CashuTools extends React.Component<CashuToolsProps, {}> {
                                     }}
                                 >
                                     {localeString(
-                                        'views.Tools.cashu.deleteData.subtitle'
+                                        'views.Tools.cashu.deleteData.confirmMessage'
                                     )}
                                 </Text>
                             </View>

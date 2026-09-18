@@ -127,11 +127,6 @@ export default class NostrRelays extends React.Component<
                             {error_msg && (
                                 <ErrorMessage message={error_msg} dismissable />
                             )}
-                            <Text>
-                                {localeString(
-                                    'views.Settings.EmbeddedNode.Peers.addRelay'
-                                )}
-                            </Text>
                             <KeyValue
                                 keyValue={localeString(
                                     'views.Settings.Nostr.addRelay'

@@ -330,7 +330,7 @@ export default class LSPS1OrderResponse extends React.Component<
                         {payment?.onchain.order_total_sat && (
                             <KeyValue
                                 keyValue={localeString(
-                                    'views.LSPS1.totalOrderValue'
+                                    'views.LSPS1.orderTotal'
                                 )}
                                 value={
                                     <Amount

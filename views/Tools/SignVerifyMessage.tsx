@@ -304,9 +304,14 @@ export default class SignVerifyMessage extends React.Component<
             selectionMode: true,
             selectedAddress,
             onAddressSelected: handleAddressSelected,
-            headerTitle: localeString(
-                'views.Settings.SignMessage.selectAddress'
-            )
+            headerTitle:
+                mode === 'sign'
+                    ? localeString(
+                          'views.Settings.SignMessage.selectAddressSigning'
+                      )
+                    : localeString(
+                          'views.Settings.SignMessage.selectAddressVerification'
+                      )
         });
     };
 
