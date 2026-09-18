@@ -6,7 +6,8 @@ import {
     getAmountFromSats,
     getFormattedAmount,
     getFeePercentage,
-    getSatAmount
+    getSatAmount,
+    feeLimitSatsToMaxRoutingFeeMsat
 } from './AmountUtils';
 import { settingsStore, fiatStore, unitsStore } from '../stores/Stores';
 import { SATS_PER_BTC } from './UnitsUtils';
@@ -1125,6 +1126,39 @@ describe('AmountUtils', () => {
             expect(getSatAmount('abc')).toBe(0);
             (unitsStore as any).units = 'BTC';
             expect(getSatAmount('\u20bf0.00012618')).toBe(0);
+        });
+    });
+
+    describe('feeLimitSatsToMaxRoutingFeeMsat', () => {
+        it('converts a sat fee limit to millisats', () => {
+            expect(feeLimitSatsToMaxRoutingFeeMsat('100')).toBe(100000);
+            expect(feeLimitSatsToMaxRoutingFeeMsat(100)).toBe(100000);
+        });
+
+        it('returns undefined when no limit is supplied', () => {
+            expect(feeLimitSatsToMaxRoutingFeeMsat(undefined)).toBeUndefined();
+            expect(feeLimitSatsToMaxRoutingFeeMsat(null)).toBeUndefined();
+            expect(feeLimitSatsToMaxRoutingFeeMsat('')).toBeUndefined();
+        });
+
+        it('treats a numeric 0 as "no limit", matching the previous behavior', () => {
+            expect(feeLimitSatsToMaxRoutingFeeMsat(0)).toBeUndefined();
+        });
+
+        it('treats an explicit "0" string as a real cap of zero', () => {
+            expect(feeLimitSatsToMaxRoutingFeeMsat('0')).toBe(0);
+        });
+
+        it('returns undefined rather than forwarding an unusable value', () => {
+            expect(feeLimitSatsToMaxRoutingFeeMsat('abc')).toBeUndefined();
+            expect(feeLimitSatsToMaxRoutingFeeMsat(NaN)).toBeUndefined();
+            expect(feeLimitSatsToMaxRoutingFeeMsat(-5)).toBeUndefined();
+            expect(feeLimitSatsToMaxRoutingFeeMsat(Infinity)).toBeUndefined();
+        });
+
+        it('floors fractional sats to a whole millisat value', () => {
+            expect(feeLimitSatsToMaxRoutingFeeMsat('1.5')).toBe(1500);
+            expect(feeLimitSatsToMaxRoutingFeeMsat('1.0005')).toBe(1000);
         });
     });
 });
