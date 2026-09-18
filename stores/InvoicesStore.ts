@@ -393,17 +393,21 @@ export default class InvoicesStore {
             const method =
                 info.connection_methods && info.connection_methods[0];
 
-            try {
-                await this.channelsStore.connectPeer(
-                    {
-                        host: `${method.address}:${method.port}`,
-                        node_pubkey_string: info.pubkey,
-                        local_funding_amount: ''
-                    },
-                    false,
-                    true
-                );
-            } catch (e) {}
+            // an incomplete connection method would produce a
+            // non-empty but undialable host like 'undefined:9735'
+            if (method?.address && method?.port) {
+                try {
+                    await this.channelsStore.connectPeer(
+                        {
+                            host: `${method.address}:${method.port}`,
+                            node_pubkey_string: info.pubkey,
+                            local_funding_amount: ''
+                        },
+                        false,
+                        true
+                    );
+                } catch (e) {}
+            }
 
             try {
                 await this.lspStore.getZeroConfFee(
