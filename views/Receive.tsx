@@ -31,6 +31,7 @@ const ZPayIconWhite = require('../assets/images/pay_z_white.png');
 
 import Amount from '../components/Amount';
 import AmountInput, { getSatAmount } from '../components/AmountInput';
+import AnimatedGradientBorder from '../components/AnimatedGradientBorder';
 import Button from '../components/Button';
 import CollapsedQR from '../components/CollapsedQR';
 import DropdownSetting from '../components/DropdownSetting';
@@ -1687,21 +1688,24 @@ export default class Receive extends React.Component<
                                                 )
                                             }
                                         >
-                                            <View
+                                            <AnimatedGradientBorder
+                                                active={!!requiresChannelSetup}
+                                                colors={[
+                                                    themeColor('highlight'),
+                                                    themeColor('secondary'),
+                                                    themeColor('highlight')
+                                                ]}
+                                                backgroundColor={themeColor(
+                                                    'secondary'
+                                                )}
+                                                borderRadius={10}
+                                                borderWidth={2}
                                                 style={{
-                                                    backgroundColor:
-                                                        themeColor('secondary'),
-                                                    borderColor:
-                                                        requiresChannelSetup
-                                                            ? themeColor(
-                                                                  'highlight'
-                                                              )
-                                                            : undefined,
-                                                    borderRadius: 10,
                                                     top: 10,
-                                                    margin: 10,
-                                                    padding: 15,
-                                                    borderWidth: 0.5
+                                                    margin: 10
+                                                }}
+                                                contentStyle={{
+                                                    padding: 15
                                                 }}
                                             >
                                                 <Text
@@ -1768,7 +1772,7 @@ export default class Receive extends React.Component<
                                                         'general.tapToLearnMore'
                                                     )}
                                                 </Text>
-                                            </View>
+                                            </AnimatedGradientBorder>
                                         </TouchableOpacity>
                                     )}
                                 {haveInvoice &&
