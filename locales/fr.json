@@ -1785,6 +1785,8 @@
     "stores.LSPStore.connectionError": "Impossible de se connecter à LSP. Veuillez vérifier vos paramètres LSP ou réessayer plus tard.",
     "stores.LSPStore.getInfoNetworkError": "Could not connect to the LSP. Please check your internet connection and LSP settings, then try again.",
     "stores.LSPStore.getInfoResponseError": "The LSP returned an unexpected response. Please try again later, or contact the LSP if the problem continues.",
+    "stores.LSPStore.wrappedInvoiceVerificationFailed": "The wrapped invoice returned by the LSP does not match the invoice it is supposed to wrap and was rejected",
+    "stores.LSPStore.missingWrappedInvoice": "The LSP response did not include a wrapped invoice",
     "stores.LightningAddressStore.preimageNotFound": "Aucune image préliminaire n'a été trouvée sur votre appareil. Avez-vous récemment changé d'appareil ?",
     "stores.LightningAddressStore.Cashu.quoteNotPaid": "Devis non payé",
     "stores.LightningAddressStore.Cashu.quotePaymentErr": "Vérification des erreurs lors du paiement du devis",

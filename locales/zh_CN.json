@@ -1785,6 +1785,8 @@
     "stores.LSPStore.connectionError": "无法连接到闪电网络服务提供方（LSP）。请检查您的 LSP 设置或稍后重试。",
     "stores.LSPStore.getInfoNetworkError": "无法连接到闪电网络服务提供方（LSP）。请检查您的网络连接和 LSP 设置，然后重试。",
     "stores.LSPStore.getInfoResponseError": "闪电网络服务提供方（LSP）返回了意外的响应。请稍后再试；如果问题仍然存在，请联系 LSP。",
+    "stores.LSPStore.wrappedInvoiceVerificationFailed": "The wrapped invoice returned by the LSP does not match the invoice it is supposed to wrap and was rejected",
+    "stores.LSPStore.missingWrappedInvoice": "The LSP response did not include a wrapped invoice",
     "stores.LightningAddressStore.preimageNotFound": "在您的设备上未找到预映像。您最近是否更换过设备？",
     "stores.LightningAddressStore.Cashu.quoteNotPaid": "报价尚未支付",
     "stores.LightningAddressStore.Cashu.quotePaymentErr": "检查报价支付时出错",
