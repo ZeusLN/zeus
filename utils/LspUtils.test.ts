@@ -23,6 +23,13 @@ const WRAPPED_UNDER_INNER =
 const WRAPPED_BAD_HASH =
     'lnbc1m1pj48ugqpp5lllllllllllllllllllllllllllllllllllllllllllllllllllssp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsdqvwaexzursv4jqxqyz5vqcqpj9qypqsqvp4xlq0j7vgk4jv6m4xx49a3zqffvx60lyv5nrgst2ll4g9pepa56hxm6sfmvdunvrhnu0gw6wytn8hp8r3yf7y6zkw2rzkw7ugedqcqr0jraj';
 
+const WRAPPED_AMOUNTLESS =
+    'lnbc1pj48ugqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsdqvwaexzursv4jqxqyz5vqcqpj9qypqsqsvrmr2u4zak97jvzueml36t58qrsu36q4y6csslzt58sqndtghmhmwa9njvkynxas8ssqj9svk2wcmhewkexdyhtrdmrt0up9tmflfgqxjmhxa';
+
+// inner amount plus 999 msat (99 000 999 msat)
+const WRAPPED_SUBSAT_OVER =
+    'lnbc990009990p1pj48ugqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsdqvwaexzursv4jqxqyz5vqcqpj9qypqsqys2xwnhsftksuaatsjc03fpdfy0tychgpyec4yq96kkpllt6zgnpctjj45fkypt4cpt0zegnlezd8k8clgc9qyatzgnqa4nnly8va7sq4udhp9';
+
 const WRAPPED_TESTNET =
     'lntb1m1pj48ugqpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsdqvwaexzursv4jqxqyz5vqcqpj9qypqsqcnr4xnjgqh9lq2shjstc78mv3cw3tu7upkmj37ly6cu4um4s7f0kzzmnnedk5au2wgt5c7pydjy6pr2eqhpj284j8lryjdrtentxnhgpgelv6l';
 
@@ -64,6 +71,35 @@ describe('verifyWrappedInvoice', () => {
             valid: false,
             error: 'amount_mismatch'
         });
+    });
+
+    it('allows sub-sat rounding on top of a quoted fee', () => {
+        expect(verifyWrappedInvoice(INNER, WRAPPED_SUBSAT_OVER, 1)).toEqual({
+            valid: true
+        });
+    });
+
+    it('rejects any overage when no fee was quoted', () => {
+        expect(verifyWrappedInvoice(INNER, WRAPPED_SUBSAT_OVER, 0)).toEqual({
+            valid: false,
+            error: 'amount_mismatch'
+        });
+    });
+
+    it('rejects an amountless wrapped invoice', () => {
+        expect(
+            verifyWrappedInvoice(INNER, WRAPPED_AMOUNTLESS, QUOTED_FEE_SATS)
+        ).toEqual({ valid: false, error: 'amount_missing' });
+    });
+
+    it('rejects an amountless inner invoice', () => {
+        expect(
+            verifyWrappedInvoice(
+                WRAPPED_AMOUNTLESS,
+                WRAPPED_EXACT,
+                QUOTED_FEE_SATS
+            )
+        ).toEqual({ valid: false, error: 'amount_missing' });
     });
 
     it('rejects a wrapped invoice with a different payment hash', () => {

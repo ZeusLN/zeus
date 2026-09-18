@@ -6,6 +6,7 @@ export type WrappedInvoiceError =
     | 'decode_failure'
     | 'network_mismatch'
     | 'payment_hash_mismatch'
+    | 'amount_missing'
     | 'amount_mismatch';
 
 export interface WrappedInvoiceCheck {
@@ -54,13 +55,21 @@ export function verifyWrappedInvoice(
         return fail('payment_hash_mismatch');
     }
 
-    const innerMsat = new BigNumber(inner.num_msat || 0);
-    const wrappedMsat = new BigNumber(wrapped.num_msat || 0);
+    // millisatoshis is null exactly when the invoice carries no amount;
+    // fail closed rather than treating a missing amount as zero
+    if (inner.millisatoshis == null || wrapped.millisatoshis == null) {
+        return fail('amount_missing');
+    }
+
+    const innerMsat = new BigNumber(inner.millisatoshis);
+    const wrappedMsat = new BigNumber(wrapped.millisatoshis);
     // zeroConfFee is truncated to whole sats from the LSP's msat quote,
-    // so allow up to 999 msat of rounding on top of the quoted fee
+    // so when a fee was quoted allow up to 999 msat of rounding on top;
+    // with no quote the wrapped amount must match the inner exactly
+    const fee = new BigNumber(maxFeeSats || 0);
     const maxWrappedMsat = innerMsat
-        .plus(new BigNumber(maxFeeSats || 0).times(1000))
-        .plus(999);
+        .plus(fee.times(1000))
+        .plus(fee.gt(0) ? 999 : 0);
     if (wrappedMsat.lt(innerMsat) || wrappedMsat.gt(maxWrappedMsat)) {
         return fail('amount_mismatch');
     }
