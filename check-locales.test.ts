@@ -54,12 +54,17 @@ describe('locale keys', () => {
             ) {
                 let j = i + call.length;
                 for (let depth = 1; j < source.length && depth > 0; j++) {
-                    if (source[j] === '(') depth++;
-                    else if (source[j] === ')') depth--;
+                    const c = source[j];
+                    if (c === "'" || c === '"' || c === '`') {
+                        for (j++; j < source.length && source[j] !== c; j++)
+                            if (source[j] === '\\') j++;
+                    } else if (c === '(') depth++;
+                    else if (c === ')') depth--;
                 }
-                for (const match of source
-                    .slice(i + call.length, j - 1)
-                    .matchAll(literalRegExp)) {
+                const span = source.slice(i + call.length, j - 1);
+                const lead = span.trimStart().match(/^(['"`])([^'"`\n]+)\1/);
+                if (lead) keys.push(lead[2]);
+                for (const match of span.matchAll(literalRegExp)) {
                     if (namespaces.has(match[2].split('.')[0]))
                         keys.push(match[2]);
                 }
