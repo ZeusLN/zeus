@@ -10,7 +10,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
-import LightningIndicator from '../components/LightningIndicator';
+import LoadingIndicator from '../components/LoadingIndicator';
 import Screen from '../components/Screen';
 import {
     SuccessMessage,
@@ -290,7 +290,7 @@ export default class LnurlAuth extends React.Component<
                         </View>
                     )}
                     {(preparingSignature || authenticating) && (
-                        <LightningIndicator />
+                        <LoadingIndicator />
                     )}
                     {lnurlAuthSuccess && (
                         <SuccessMessage

@@ -17,7 +17,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../components/Button';
 import Header from '../components/Header';
-import LightningIndicator from '../components/LightningIndicator';
+import LoadingIndicator from '../components/LoadingIndicator';
 import Screen from '../components/Screen';
 
 import { themeColor } from '../utils/ThemeUtils';
@@ -142,7 +142,7 @@ export default class EditFee extends React.Component<
                     >
                         {loading && (
                             <View style={{ flex: 1, justifyContent: 'center' }}>
-                                <LightningIndicator size={200} />
+                                <LoadingIndicator />
                             </View>
                         )}
                         {recommendedFees['fastestFee'] && !loading && (

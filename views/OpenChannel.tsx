@@ -16,7 +16,7 @@ import Accordion from '../components/Accordion';
 import Header from '../components/Header';
 import OnchainFeeInput from '../components/OnchainFeeInput';
 import KeyValue from '../components/KeyValue';
-import LightningIndicator from '../components/LightningIndicator';
+import LoadingIndicator from '../components/LoadingIndicator';
 import Screen from '../components/Screen';
 import { ErrorMessage } from '../components/SuccessErrorMessage';
 import Switch from '../components/Switch';
@@ -645,7 +645,7 @@ export default class OpenChannel extends React.Component<
                         )}
 
                         <View style={styles.content}>
-                            {loading && <LightningIndicator />}
+                            {loading && <LoadingIndicator />}
                             {(errorMsgPeer || errorMsgChannel) && (
                                 <ErrorMessage
                                     message={

@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 
 import Button from './../components/Button';
-import LightningIndicator from './../components/LightningIndicator';
+import LoadingIndicator from './../components/LoadingIndicator';
 import {
     SuccessMessage,
     ErrorMessage
@@ -292,7 +292,7 @@ export default class SetFeesForm extends React.Component<
                     </>
                 )}
 
-                {loading && <LightningIndicator />}
+                {loading && <LoadingIndicator />}
                 {!loading && (
                     <View style={styles.button}>
                         <Button
