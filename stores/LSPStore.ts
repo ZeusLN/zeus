@@ -527,6 +527,19 @@ export default class LSPStore {
                         return;
                     }
                     if (status == 200 || status == 201) {
+                        if (
+                            !data.jit_bolt11 ||
+                            typeof data.jit_bolt11 !== 'string'
+                        ) {
+                            runInAction(() => {
+                                this.flow_error = true;
+                                this.flow_error_msg = localeString(
+                                    'stores.LSPStore.missingWrappedInvoice'
+                                );
+                            });
+                            reject();
+                            return;
+                        }
                         const check = verifyWrappedInvoice(
                             bolt11,
                             data.jit_bolt11,
