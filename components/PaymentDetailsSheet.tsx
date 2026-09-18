@@ -344,7 +344,7 @@ export default class PaymentDetailsSheet extends React.Component<PaymentDetailsS
                                         {paymentAmount != null && (
                                             <KeyValue
                                                 keyValue={localeString(
-                                                    'views.Receive.amount'
+                                                    'general.amount'
                                                 )}
                                                 value={
                                                     <Amount

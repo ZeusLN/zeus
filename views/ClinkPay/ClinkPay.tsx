@@ -303,7 +303,7 @@ export default class ClinkPay extends React.Component<
                                     color: themeColor('secondaryText')
                                 }}
                             >
-                                {localeString('views.Send.amount')}
+                                {localeString('general.amount')}
                             </Text>
                             <AmountInput
                                 amount={amount}

@@ -205,7 +205,7 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
                     {hasAdditional && (
                         <TouchableOpacity onPress={this.toggleBitcoinUnits}>
                             <KeyValue
-                                keyValue={localeString('views.Send.amount')}
+                                keyValue={localeString('general.amount')}
                                 value={
                                     bitcoinUnits === 'sats' ? (
                                         <Amount
@@ -236,7 +236,7 @@ export default class VerifyOnChain extends React.Component<VerifyOnChainProps> {
                             />
                             <TouchableOpacity onPress={this.toggleBitcoinUnits}>
                                 <KeyValue
-                                    keyValue={localeString('views.Send.amount')}
+                                    keyValue={localeString('general.amount')}
                                     value={
                                         bitcoinUnits === 'sats' ? (
                                             <Amount

@@ -405,7 +405,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                                             {input.value && (
                                                                 <KeyValue
                                                                     keyValue={localeString(
-                                                                        'views.Receive.amount'
+                                                                        'general.amount'
                                                                     )}
                                                                     value={
                                                                         <Amount
@@ -482,7 +482,7 @@ export default class TxHex extends React.Component<TxHexProps, TxHexState> {
                                                             {output.value && (
                                                                 <KeyValue
                                                                     keyValue={localeString(
-                                                                        'views.Receive.amount'
+                                                                        'general.amount'
                                                                     )}
                                                                     value={
                                                                         <Amount

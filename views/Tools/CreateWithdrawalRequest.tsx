@@ -295,7 +295,7 @@ export default class CreateWithdrawalRequest extends Component<
                                         color: themeColor('secondaryText')
                                     }}
                                 >
-                                    {localeString('views.Receive.amount')}
+                                    {localeString('general.amount')}
                                 </Text>
                                 <AmountInput
                                     amount={amount}

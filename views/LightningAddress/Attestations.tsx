@@ -136,7 +136,7 @@ export default function Attestations(props: AttestationProps) {
                                         {item.millisatoshis && (
                                             <KeyValue
                                                 keyValue={localeString(
-                                                    'views.Receive.amount'
+                                                    'general.amount'
                                                 )}
                                                 value={
                                                     <Amount

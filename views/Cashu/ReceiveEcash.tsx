@@ -833,7 +833,7 @@ export default class ReceiveEcash extends React.Component<
                                         <AmountInput
                                             amount={value}
                                             title={`${localeString(
-                                                'views.Receive.amount'
+                                                'general.amount'
                                             )} ${
                                                 lnurl &&
                                                 lnurl.minWithdrawable !==
