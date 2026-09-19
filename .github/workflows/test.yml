@@ -16,4 +16,21 @@ jobs:
         with:
           node-version: '24.x'
       - run: yarn install --frozen-lockfile
-      - run: yarn run test
+      - run: yarn run test:coverage --coverageReporters=json-summary
+      - name: Upload coverage baseline
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-baseline
+          path: coverage/coverage-summary.json
+      - name: Save PR number for coverage comment
+        if: github.event_name == 'pull_request'
+        run: echo "${{ github.event.pull_request.number }}" > coverage/PR_NUMBER
+      - name: Upload coverage summary
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-summary
+          path: |
+            coverage/coverage-summary.json
+            coverage/PR_NUMBER

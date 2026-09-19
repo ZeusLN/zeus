@@ -16,6 +16,11 @@
     "testPathIgnorePatterns": [
       "check-styles.test.ts",
       "zeus_modules"
+    ],
+    "coveragePathIgnorePatterns": [
+      "/node_modules/",
+      "/proto/",
+      "/zeus_modules/"
     ]
   },
   "scripts": {
@@ -27,6 +32,7 @@
     "postinstall": "node patches/index.mjs && rn-nodeify --install crypto,stream,dgram --hack && yarn run fetch-libraries && pod-install",
     "verify": "concurrently \"yarn test\" \"yarn prettier\" \"yarn tsc\" \"yarn lint\"",
     "test": "jest",
+    "test:coverage": "jest --coverageReporters=text-summary --coverage",
     "tsc": "tsc",
     "lint": "eslint . && yarn run test check-styles.test.ts --testPathIgnorePatterns=",
     "prettier": "prettier --check \"**/*.ts*\"",
