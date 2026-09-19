@@ -405,6 +405,84 @@ export const decodeSendPaymentV2Result = (data: string): lnrpc.Payment => {
     });
 };
 
+// how long trackPaymentV2 waits for the stream's first update before
+// concluding the transport is wedged; an existing payment answers
+// immediately (no_inflight_updates is false) and an unknown hash errors
+// immediately, so this only fires when lnd isn't answering at all
+const TRACK_PAYMENT_TIMEOUT_MS = 10000;
+
+/**
+ * Resolves with the tracked payment's current state from the first
+ * matching TrackPaymentV2 update; the caller decides what a NOT_FOUND
+ * ("payment isn't initiated") rejection means. Events on this channel are
+ * multiplexed by method name across every concurrent track stream with no
+ * per-request correlation, so payment updates are matched by hash; error
+ * events carry no hash and may belong to another lookup's stream, which
+ * the caller must absorb. The underlying stream can't be cancelled from
+ * JS and stays open until the payment reaches a terminal state.
+ * @throws
+ */
+export const trackPaymentV2 = (payment_hash: string): Promise<lnrpc.Payment> =>
+    new Promise(async (resolve, reject) => {
+        const expectedHash = payment_hash.toLowerCase();
+        let settled = false;
+        let listener: any;
+        const settle = (fn: () => void) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            listener?.remove();
+            fn();
+        };
+        const timer = setTimeout(
+            () => settle(() => reject(new Error('Request timeout'))),
+            TRACK_PAYMENT_TIMEOUT_MS
+        );
+        listener = LndMobileEventEmitter.addListener(
+            'RouterTrackPaymentV2',
+            (e: any) => {
+                try {
+                    const error = checkLndStreamErrorResponse(
+                        'RouterTrackPaymentV2',
+                        e
+                    );
+                    if (error === 'EOF') return;
+                    else if (error) return settle(() => reject(error));
+                    // a transient (null) error report carries no payload
+                    if (!e?.data) return;
+
+                    const response = decodeSendPaymentV2Result(e.data);
+                    if (response.payment_hash?.toLowerCase() !== expectedHash)
+                        return;
+                    settle(() => resolve(response));
+                } catch (error: any) {
+                    settle(() =>
+                        reject(new Error(error?.message || String(error)))
+                    );
+                }
+            }
+        );
+
+        try {
+            await sendStreamCommand<
+                routerrpc.ITrackPaymentRequest,
+                routerrpc.TrackPaymentRequest
+            >(
+                {
+                    request: routerrpc.TrackPaymentRequest,
+                    method: 'RouterTrackPaymentV2',
+                    options: {
+                        payment_hash: Base64Utils.hexToBytes(payment_hash),
+                        no_inflight_updates: false
+                    }
+                },
+                false
+            );
+        } catch (error: any) {
+            settle(() => reject(new Error(error?.message || String(error))));
+        }
+    });
+
 export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
     const {
         dest,

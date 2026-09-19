@@ -1,6 +1,8 @@
 import {
     decideLncPayEvent,
+    decideLncTrackEvent,
     deriveExpectedPaymentHash,
+    isLncPaymentNotFound,
     normalizePaymentHash
 } from './LncPayUtils';
 
@@ -169,5 +171,103 @@ describe('decideLncPayEvent', () => {
         expect(decideLncPayEvent('"unavailable"').kind).toBe('error');
         expect(decideLncPayEvent('123').kind).toBe('error');
         expect(decideLncPayEvent('null').kind).toBe('error');
+    });
+});
+
+describe('isLncPaymentNotFound', () => {
+    it("matches channeldb's raw error text", () => {
+        expect(isLncPaymentNotFound("payment isn't initiated")).toBe(true);
+    });
+
+    it('matches the gRPC-wrapped form', () => {
+        expect(
+            isLncPaymentNotFound(
+                "rpc error: code = NotFound desc = payment isn't initiated"
+            )
+        ).toBe(true);
+    });
+
+    it('rejects other errors', () => {
+        expect(
+            isLncPaymentNotFound(
+                'rpc error: code = Unavailable desc = connection closed'
+            )
+        ).toBe(false);
+    });
+});
+
+describe('decideLncTrackEvent', () => {
+    const inFlightEvent = JSON.stringify({
+        status: 'IN_FLIGHT',
+        payment_hash: SPEC_HASH_HEX
+    });
+
+    it('ignores EOF and empty events', () => {
+        expect(decideLncTrackEvent('EOF', SPEC_HASH_HEX).kind).toBe('ignore');
+        expect(decideLncTrackEvent('', SPEC_HASH_HEX).kind).toBe('ignore');
+        expect(decideLncTrackEvent(undefined, SPEC_HASH_HEX).kind).toBe(
+            'ignore'
+        );
+        expect(decideLncTrackEvent(null, SPEC_HASH_HEX).kind).toBe('ignore');
+    });
+
+    it('answers with the first matching update whatever the status', () => {
+        // a lookup wants the payment's current state; IN_FLIGHT is an
+        // answer here, unlike for decideLncPayEvent
+        const decision = decideLncTrackEvent(inFlightEvent, SPEC_HASH_HEX);
+        expect(decision.kind).toBe('payment');
+        if (decision.kind === 'payment') {
+            expect(decision.result.status).toBe('IN_FLIGHT');
+        }
+    });
+
+    it('matches a base64-hashed update against the hex hash', () => {
+        const event = JSON.stringify({
+            status: 'SUCCEEDED',
+            payment_hash: SPEC_HASH_BASE64
+        });
+        expect(decideLncTrackEvent(event, SPEC_HASH_HEX).kind).toBe('payment');
+    });
+
+    it("ignores another payment's update on the shared channel", () => {
+        const event = JSON.stringify({
+            status: 'SUCCEEDED',
+            payment_hash: OTHER_HASH_HEX
+        });
+        expect(decideLncTrackEvent(event, SPEC_HASH_HEX).kind).toBe('ignore');
+    });
+
+    it('ignores a hashless update instead of tolerating it', () => {
+        // a track request always knows its hash, so a sparse event can
+        // only be a concurrent lookup's; sends tolerate these instead
+        const event = JSON.stringify({ status: 'SUCCEEDED' });
+        expect(decideLncTrackEvent(event, SPEC_HASH_HEX).kind).toBe('ignore');
+    });
+
+    it('classifies NOT_FOUND error strings as not_found', () => {
+        expect(
+            decideLncTrackEvent(
+                "rpc error: code = NotFound desc = payment isn't initiated",
+                SPEC_HASH_HEX
+            ).kind
+        ).toBe('not_found');
+    });
+
+    it('turns any other non-JSON error string into a real Error', () => {
+        const raw = 'rpc error: code = Unavailable desc = connection closed';
+        const decision = decideLncTrackEvent(raw, SPEC_HASH_HEX);
+        expect(decision.kind).toBe('error');
+        if (decision.kind === 'error') {
+            expect(decision.error).toBeInstanceOf(Error);
+            expect(decision.error.message).toBe(raw);
+        }
+    });
+
+    it('treats JSON that is not an object as an error', () => {
+        expect(decideLncTrackEvent('"unavailable"', SPEC_HASH_HEX).kind).toBe(
+            'error'
+        );
+        expect(decideLncTrackEvent('123', SPEC_HASH_HEX).kind).toBe('error');
+        expect(decideLncTrackEvent('null', SPEC_HASH_HEX).kind).toBe('error');
     });
 });

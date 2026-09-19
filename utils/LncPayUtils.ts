@@ -99,3 +99,57 @@ export const decideLncPayEvent = (
 
     return { kind: 'terminal', result };
 };
+
+// lnd rejects TrackPaymentV2 for an unknown hash with channeldb's
+// "payment isn't initiated"; over LNC that Go error arrives as a raw
+// string, usually wrapped as "rpc error: code = NotFound desc = ..."
+export const isLncPaymentNotFound = (message: string): boolean =>
+    message.includes("payment isn't initiated") ||
+    message.includes('code = NotFound');
+
+export type LncTrackEventDecision =
+    | { kind: 'ignore' }
+    | { kind: 'payment'; result: any }
+    | { kind: 'not_found' }
+    | { kind: 'error'; error: Error };
+
+// Classifies one raw `event.result` string from the shared
+// 'routerrpc.Router.TrackPaymentV2' LNC event channel for a lookup.
+// Unlike a send, a lookup's answer is the FIRST update carrying its hash
+// whatever the status (IN_FLIGHT is an answer), and lnd's NOT_FOUND is
+// an authoritative no-record answer rather than a failure. A track
+// request always knows its hash, so unlike sends there is no tolerance
+// for hashless payment events; they may belong to a concurrent lookup on
+// the same channel. Error strings carry no hash at all, so the caller
+// must treat 'not_found' and 'error' as possibly another stream's.
+export const decideLncTrackEvent = (
+    eventResult: unknown,
+    expectedHashHex: string
+): LncTrackEventDecision => {
+    if (
+        !eventResult ||
+        typeof eventResult !== 'string' ||
+        eventResult === 'EOF'
+    ) {
+        return { kind: 'ignore' };
+    }
+
+    let result: any;
+    try {
+        result = JSON.parse(eventResult);
+    } catch {
+        return isLncPaymentNotFound(eventResult)
+            ? { kind: 'not_found' }
+            : { kind: 'error', error: new Error(eventResult) };
+    }
+    if (typeof result !== 'object' || result === null) {
+        return { kind: 'error', error: new Error(eventResult) };
+    }
+
+    const eventHash = normalizePaymentHash(result.payment_hash);
+    if (!eventHash || eventHash !== expectedHashHex) {
+        return { kind: 'ignore' };
+    }
+
+    return { kind: 'payment', result };
+};
