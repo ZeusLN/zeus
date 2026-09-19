@@ -263,14 +263,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             });
         };
 
-        const onWalletPress = async (
-            nodeIndex: number,
-            nodeActive: boolean
-        ) => {
-            // A switch is still committing: ignore repeat taps. A second
-            // tap would take the nodeActive branch and drop the latch
-            // before the first tap's settings assignment lands.
-            if (this.walletSwitchInFlight) return;
+        const selectWallet = async (nodeIndex: number, nodeActive: boolean) => {
             if (SettingsStore.settings?.justDeletedWallet) {
                 await this.handleJustDeletedWallet(nodeIndex);
                 return;
@@ -334,18 +327,32 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                     });
                 }
 
-                this.walletSwitchInFlight = true;
-                try {
-                    await updateSettings({
-                        nodes,
-                        selectedNode: nodeIndex
-                    }).then(() => {
-                        setConnectingStatus(true);
-                        this.navigateAfterWalletSelection();
-                    });
-                } finally {
-                    this.walletSwitchInFlight = false;
-                }
+                await updateSettings({
+                    nodes,
+                    selectedNode: nodeIndex
+                }).then(() => {
+                    setConnectingStatus(true);
+                    this.navigateAfterWalletSelection();
+                });
+            }
+        };
+
+        const onWalletPress = async (
+            nodeIndex: number,
+            nodeActive: boolean
+        ) => {
+            // A switch is still committing: ignore repeat taps. A second
+            // tap would take the nodeActive branch and drop the latch
+            // before the first tap's settings assignment lands. Armed
+            // before the first await, so it also covers the wait for
+            // setPersistentMode on Android and the pause in
+            // handleJustDeletedWallet.
+            if (this.walletSwitchInFlight) return;
+            this.walletSwitchInFlight = true;
+            try {
+                await selectWallet(nodeIndex, nodeActive);
+            } finally {
+                this.walletSwitchInFlight = false;
             }
         };
 
