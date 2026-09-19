@@ -200,6 +200,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             updateSettings,
             setConnectingStatus,
             setInitialStart,
+            setWalletSelectionPending,
             implementation,
             initialStart
         } = SettingsStore;
@@ -272,6 +273,9 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             if (initialStart) {
                 setInitialStart(false);
             }
+            // The active-node branch below skips connecting, so it never
+            // reaches setConnectingStatus, which clears this elsewhere
+            setWalletSelectionPending(false);
             if (nodeActive) {
                 // if already on selected node, just pop to
                 // the Wallet view, skip connecting procedures
