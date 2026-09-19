@@ -21,6 +21,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
+import { verifyLnurlAuthCallback } from '../utils/LnurlPayUtils';
 import {
     ecdsaSignDERHex,
     getCompressedPublicKeyHex
@@ -92,6 +93,17 @@ export default class LnurlAuth extends React.Component<
         const { route } = props;
         const lnurl = route.params?.lnurlParams;
 
+        // the callback host must match the domain that is displayed and
+        // used for linking-key derivation, or an ambiguous URL could send
+        // a valid signature for one service to another
+        const callbackCheck = verifyLnurlAuthCallback(
+            lnurl.callback,
+            lnurl.domain
+        );
+        if (!callbackCheck.ok) {
+            throw new Error(callbackCheck.reason);
+        }
+
         return {
             domain: lnurl.domain,
             action: lnurl.action,
@@ -152,6 +164,10 @@ export default class LnurlAuth extends React.Component<
     }
 
     componentDidMount() {
+        // domain is only empty when constructor validation failed;
+        // never derive or sign in that state
+        if (!this.state.domain) return;
+
         const { implementation } = this.props.SettingsStore;
         if (implementation === 'lndhub') {
             this.props.SettingsStore.updateSettings({
@@ -176,6 +192,22 @@ export default class LnurlAuth extends React.Component<
 
         const { route } = this.props;
         const lnurl = route.params?.lnurlParams;
+
+        // last gate before the signature leaves the device: the host the
+        // request goes to must still be the domain the key was derived for
+        const callbackCheck = verifyLnurlAuthCallback(
+            lnurl.callback,
+            this.state.domain
+        );
+        if (!callbackCheck.ok) {
+            this.setState({
+                authenticating: false,
+                signatureSuccess: false,
+                errorMsgAuth: callbackCheck.reason || ''
+            });
+            return;
+        }
+
         const u = url.parse(lnurl.callback);
         const qs = querystring.parse(u.query);
         qs.key = linkingKeyPub;
