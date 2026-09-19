@@ -200,7 +200,8 @@ export default class LSPS1Settings extends React.Component<
                 BackendUtils.supportsLSPS1native()
             ) ||
                 isOlympusCustom) &&
-            (!BackendUtils.supportsLSPS1rest() || isOlympusRestMatch);
+            (!BackendUtils.supportsLSPS1rest() || isOlympusRestMatch) &&
+            lsps1Token === '';
 
         return (
             <Screen>
