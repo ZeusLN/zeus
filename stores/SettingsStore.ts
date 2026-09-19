@@ -2024,14 +2024,29 @@ export default class SettingsStore {
             if (modernSettings) {
                 console.log('attempting to load modern settings');
                 const parsedSettings = JSON.parse(modernSettings);
-                this.settings = parsedSettings;
+                // only swap the settings reference on a real change:
+                // BalanceStore reacts to every reassignment with a pair of
+                // node requests, and getSettings runs several times per
+                // boot/focus against an unchanged blob; each no-op swap
+                // fired probes whose only visible effect was raising the
+                // connection error on a slow network
+                if (!isEqual(this.settings, parsedSettings)) {
+                    this.settings = parsedSettings;
+                }
                 // when consolidation routes through the updateSettings
                 // queue the authoritative object is the queue's, not this
                 // call's snapshot, so adopt the return value
-                this.settings = await MigrationsUtils.runSettingsMigrations(
-                    parsedSettings,
-                    fromQueue
-                );
+                const migratedSettings =
+                    await MigrationsUtils.runSettingsMigrations(
+                        parsedSettings,
+                        fromQueue
+                    );
+                // second pass picks up whatever the migrations produced,
+                // in-place edits to the snapshot included, which the
+                // reference taken above does not see
+                if (!isEqual(this.settings, migratedSettings)) {
+                    this.settings = migratedSettings;
+                }
             } else {
                 console.log('attempting to load legacy settings');
 
