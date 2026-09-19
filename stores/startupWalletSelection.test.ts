@@ -34,11 +34,14 @@ jest.mock('../utils/LocaleUtils', () => ({
     localeString: (s: string) => s
 }));
 jest.mock('../utils/MigrationUtils', () => ({
+    keychainDesyncMigration: jest.fn().mockResolvedValue(undefined),
     keychainCloudSyncMigration: jest.fn().mockResolvedValue(undefined),
-    migrateRgsDefaultToZeus: jest.fn().mockResolvedValue(undefined),
-    migrateSwapHostsToBoltz: jest.fn().mockResolvedValue(undefined),
-    migrateInvoiceExpiryDisplay: jest.fn().mockResolvedValue(undefined),
-    migrateOlympusHostsToZeusLsp: jest.fn().mockResolvedValue(undefined),
+    purgeRescueKeyFiles: jest.fn().mockResolvedValue(undefined),
+    // getSettings adopts the return value as the settings, so the stub
+    // must hand the settings back rather than resolve undefined
+    runSettingsMigrations: jest
+        .fn()
+        .mockImplementation(async (settings: any) => settings),
     legacySettingsMigrations: jest.fn().mockResolvedValue({}),
     storageMigrationV2: jest.fn().mockResolvedValue(undefined)
 }));
@@ -65,7 +68,9 @@ jest.mock('../storage', () => {
         removeItem: jest.fn(async (key: string) => {
             delete backing[key];
             return true;
-        })
+        }),
+        KEY_PREFIX: 'zeus:',
+        getRawItem: jest.fn(async () => null)
     };
 });
 
