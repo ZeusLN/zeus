@@ -223,6 +223,13 @@ export default class CashuStore {
     @observable public paymentError?: boolean;
     @observable public paymentErrorMsg?: string;
     @observable public feeEstimate?: number;
+    // Inputs of the single-mint sufficiency check run by getPayReq(), exposed
+    // so the payment view can extend it with the donation that is sent from
+    // the same mint right after the invoice is paid. Both stay 0 when that
+    // check did not run: multi-mint plans its own coverage in
+    // MultimintPayment, which refuses to start when the mints fall short.
+    @observable public payReqMintBalance: number = 0;
+    @observable public payReqAmount: number = 0;
     @observable public meltQuotes: {
         mintUrl: string;
         meltQuote: CDKMeltQuote;
@@ -1913,6 +1920,8 @@ export default class CashuStore {
         this.paymentPreimage = undefined;
         this.getPayReqError = undefined;
         this.feeEstimate = undefined;
+        this.payReqMintBalance = 0;
+        this.payReqAmount = 0;
         this.meltQuotes = [];
         this.meltQuote = undefined;
         this.noteKey = undefined;
@@ -4196,6 +4205,8 @@ export default class CashuStore {
         this.paymentRequest = bolt11Invoice;
         this.feeEstimate = undefined;
         this.getPayReqError = undefined;
+        this.payReqMintBalance = 0;
+        this.payReqAmount = 0;
 
         try {
             if (__DEV__) {
@@ -4284,6 +4295,8 @@ export default class CashuStore {
             // the fee row doesn't render "0 sats" for an invoice that can't
             // be paid; every branch here assigns it before use.
             let totalFeeEstimate: number | undefined;
+            let mintBalanceChecked = 0;
+            let amountChecked = 0;
 
             if (rawPaymentAmt <= 0) {
                 // Zeus doesn't yet wire up CDK's amountless-melt option
@@ -4371,6 +4384,8 @@ export default class CashuStore {
                         : undefined;
 
                 totalFeeEstimate = Number(singleMeltQuote.fee_reserve) || 0;
+                mintBalanceChecked = mintBalance;
+                amountChecked = Number(singleMeltQuote.amount) || 0;
                 this.meltQuotes = [];
             }
 
@@ -4383,6 +4398,8 @@ export default class CashuStore {
                 this.meltQuote = singleMeltQuote;
                 this.feeEstimate = totalFeeEstimate;
                 this.getPayReqError = computedPayReqError;
+                this.payReqMintBalance = mintBalanceChecked;
+                this.payReqAmount = amountChecked;
             });
             if (__DEV__) {
                 console.log('getPayReq: Success, setting loading = false');
