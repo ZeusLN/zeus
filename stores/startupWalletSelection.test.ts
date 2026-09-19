@@ -94,11 +94,16 @@ const seedStartupSettings = () => {
     });
 };
 
-// What Wallets.tsx commits when the user picks the second wallet
-const commitSwitch = (store: SettingsStore) =>
-    store.updateSettings({ nodes, selectedNode: 1 } as any);
+// What Wallets.tsx does when the user picks the second wallet. Startup has
+// ended by the time the switch commits: Wallet.tsx ends it before it opens
+// the list, and onWalletPress ends it when Lockscreen opened the list
+const commitSwitch = (store: SettingsStore) => {
+    store.setInitialStart(false);
+    return store.updateSettings({ nodes, selectedNode: 1 } as any);
+};
 
 let logSpy: jest.SpyInstance;
+let errorSpy: jest.SpyInstance;
 
 beforeEach(() => {
     for (const key of Object.keys(StorageMock._backing)) {
@@ -115,9 +120,19 @@ beforeEach(() => {
         pending_open_balance: '0'
     });
     logSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
+    errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
 afterEach(() => {
+    // getSettings swallows load failures (console.error, then falls
+    // through with defaults). A stale MigrationUtils mock has let tests in
+    // this suite pass without the load ever completing, so fail loudly
+    expect(
+        errorSpy.mock.calls.filter(
+            ([message]) => message === 'Could not load settings'
+        )
+    ).toEqual([]);
+    errorSpy.mockRestore();
     logSpy.mockRestore();
 });
 
