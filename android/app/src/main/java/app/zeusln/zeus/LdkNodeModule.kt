@@ -1584,6 +1584,40 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         }
     }
 
+    @ReactMethod
+    fun bolt12DecodeOffer(offerStr: String, promise: Promise) {
+        // Pure decode via Offer.fromStr: no node required, no messages sent.
+        // Feeds the offer review screen shown before an offer payment is
+        // dispatched, so it must never itself initiate a payment.
+        try {
+            val offer = Offer.fromStr(offerStr)
+            val result = Arguments.createMap().apply {
+                putString("offerId", offer.id())
+                offer.offerDescription()?.let { putString("description", it) }
+                offer.issuer()?.let { putString("issuer", it) }
+                offer.issuerSigningPubkey()?.let { putString("issuerSigningPubkey", it) }
+                offer.absoluteExpirySeconds()?.let { putDouble("absoluteExpirySeconds", it.toLong().toDouble()) }
+                putBoolean("isExpired", offer.isExpired())
+                putBoolean("expectsQuantity", offer.expectsQuantity())
+                when (val amount = offer.amount()) {
+                    is OfferAmount.Bitcoin -> {
+                        putString("amountType", "bitcoin")
+                        putDouble("amountMsats", amount.amountMsats.toLong().toDouble())
+                    }
+                    is OfferAmount.Currency -> {
+                        putString("amountType", "currency")
+                        putString("iso4217Code", amount.iso4217Code)
+                        putDouble("currencyAmount", amount.amount.toLong().toDouble())
+                    }
+                    null -> {}
+                }
+            }
+            promise.resolve(result)
+        } catch (e: Exception) {
+            promise.reject("error", errorMessage(e))
+        }
+    }
+
     // Payment Methods
 
     @ReactMethod

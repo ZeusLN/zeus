@@ -629,6 +629,19 @@ export interface ILdkNodeModule {
         paymentTimeoutSecs: number
     ): Promise<{ refund: string }>;
     bolt12RequestRefundPayment(refundStr: string): Promise<{ invoice: string }>;
+    bolt12DecodeOffer(offerStr: string): Promise<{
+        offerId: string;
+        description?: string;
+        issuer?: string;
+        issuerSigningPubkey?: string;
+        absoluteExpirySeconds?: number;
+        isExpired: boolean;
+        expectsQuantity: boolean;
+        amountType?: 'bitcoin' | 'currency';
+        amountMsats?: number;
+        iso4217Code?: string;
+        currencyAmount?: number;
+    }>;
 
     // Payment Methods
     listPayments(): Promise<PaymentDetails[]>;
