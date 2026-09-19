@@ -29,6 +29,10 @@ export default class BalanceStore {
         reaction(
             () => this.settingsStore.settings,
             () => {
+                // While the user is still choosing a wallet on startup no
+                // wallet is active yet, but the credentials loaded from
+                // settings still point at the previously used one.
+                if (this.settingsStore.walletSelectionPending) return;
                 if (this.settingsStore.hasCredentials()) {
                     this.getBlockchainBalance(false, false);
                     this.getLightningBalance(false);

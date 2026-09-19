@@ -469,6 +469,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 navigation.navigate('Lockscreen', { shareIntentData });
             } else if (posEnabled && posStatus === 'unselected') {
                 setPosStatus('active');
+                // POS takes over from startup here. End startup first, so
+                // the settings writes inside fetchData cannot raise the
+                // latch again, then drop the latch raised while settings
+                // loaded: this path never reaches setConnectingStatus(true)
+                SettingsStore.setInitialStart(false);
+                SettingsStore.setWalletSelectionPending(false);
                 if (!this.state.unlocked) {
                     this.startListeners();
                     this.setState({ unlocked: true });
@@ -585,6 +591,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             NostrWalletConnectStore,
             UnitsStore
         } = this.props;
+        // Reaching fetchData means a wallet is being activated: it never runs
+        // while the startup wallet list is open. Not every activation goes
+        // through setConnectingStatus(true), so drop the latch here as well.
+        SettingsStore.setWalletSelectionPending(false);
         const {
             settings,
             implementation,
@@ -1355,6 +1365,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             );
             setConnectingStatus(false);
             SettingsStore.setInitialStart(false);
+            // A settings write while this first connection was running (for
+            // example turning Select wallet on startup on) raised the latch
+            // again, because startup was still on
+            SettingsStore.setWalletSelectionPending(false);
 
             if (this.startupTimeoutId) {
                 clearTimeout(this.startupTimeoutId);
