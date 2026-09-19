@@ -1,6 +1,74 @@
 import Base64Utils from './Base64Utils';
 import { Implementations } from '../stores/SettingsStore';
 
+// A pin must be actual certificate material: a DER SEQUENCE whose encoded
+// length spans the entire buffer. Anything else is dropped rather than
+// stored — a garbage pin can never authenticate a connection, and the
+// native parse failure it causes surfaces as an opaque connect error
+const isDerCertificate = (b64: string): boolean => {
+    let bytes: Uint8Array;
+    try {
+        bytes = Base64Utils.base64ToBytes(b64);
+    } catch (e) {
+        return false;
+    }
+    if (bytes.length < 4 || bytes[0] !== 0x30) return false;
+    let headerLen = 2;
+    let contentLen = bytes[1];
+    if (contentLen >= 0x80) {
+        const lenBytes = contentLen & 0x7f;
+        if (lenBytes === 0 || lenBytes > 4 || bytes.length < 2 + lenBytes)
+            return false;
+        headerLen = 2 + lenBytes;
+        contentLen = 0;
+        for (let i = 0; i < lenBytes; i++)
+            contentLen = contentLen * 256 + bytes[2 + i];
+    }
+    return headerLen + contentLen === bytes.length;
+};
+
+// Extract the base64-DER body of every CERTIFICATE block in a PEM bundle
+const pemBundleToPinnedCerts = (bundle: string): string[] | undefined => {
+    const blocks = bundle.match(
+        /-----BEGIN CERTIFICATE-----[^-]+-----END CERTIFICATE-----/g
+    );
+    if (!blocks || blocks.length === 0) return undefined;
+    const pins = blocks
+        .map((block) =>
+            block
+                .replace(/-----BEGIN CERTIFICATE-----/, '')
+                .replace(/-----END CERTIFICATE-----/, '')
+                .replace(/\s+/g, '')
+        )
+        .filter(isDerCertificate);
+    return pins.length > 0 ? pins : undefined;
+};
+
+// Normalize connection-string certificate material (lndconnect cert=,
+// clnrest certs=) into base64-DER pins. Inputs are base64(url) and may
+// carry either raw DER or PEM-armored certificates.
+const certsParamToPinnedCerts = (
+    param: string,
+    isBase64Url: boolean
+): string[] | undefined => {
+    let b64: string;
+    try {
+        b64 = isBase64Url ? Base64Utils.base64UrlToBase64(param) : param;
+    } catch (e) {
+        // malformed cert material: no pins — the strict-verification
+        // default makes the failure loud at connect time
+        return undefined;
+    }
+    const decoded = Base64Utils.base64ToUtf8(b64);
+    if (decoded.includes('-----BEGIN CERTIFICATE-----')) {
+        return pemBundleToPinnedCerts(decoded);
+    }
+    // PEM bundles without a certificate block carry nothing pinnable;
+    // otherwise the param may be raw DER (lndconnect) — pin only what
+    // actually parses as a certificate
+    return isBase64Url && isDerCertificate(b64) ? [b64] : undefined;
+};
+
 class ConnectionFormatUtils {
     processLndConnectUrl = (input: string) => {
         let host, port;
@@ -32,12 +100,18 @@ class ConnectionFormatUtils {
         const macaroonHex =
             result.macaroon && Base64Utils.base64UrlToHex(result.macaroon);
 
+        // cert= carries the node's TLS certificate — retain it for
+        // certificate pinning instead of silently dropping it
+        const pinnedCerts = result.cert
+            ? certsParamToPinnedCerts(result.cert, true)
+            : undefined;
+
         // prepend https by default
         host = 'https://' + host;
 
         const enableTor: boolean = host.includes('.onion');
 
-        return { host, port, macaroonHex, enableTor };
+        return { host, port, macaroonHex, enableTor, pinnedCerts };
     };
 
     processLncUrl = (input: string) => {
@@ -117,8 +191,15 @@ class ConnectionFormatUtils {
         }
 
         const rune = result.rune;
-        // certs parameter is available in result.certs but not currently used
-        // It contains Base64-encoded client key, client cert, and CA cert
+        // certs= carries a Base64-encoded PEM bundle (client key, client
+        // cert, CA cert) — extract the certificates for TLS pinning. The
+        // bundle's client certificate is mTLS identity material the server
+        // never presents, so as a trust anchor it is simply inert; we keep
+        // all certificate blocks rather than guess which is the CA from JS
+        // (Basic Constraints parsing is not worth the fragility).
+        const pinnedCerts = result.certs
+            ? certsParamToPinnedCerts(result.certs, false)
+            : undefined;
 
         // Build host with protocol
         if (host) {
@@ -134,7 +215,8 @@ class ConnectionFormatUtils {
             port,
             rune,
             enableTor,
-            implementation
+            implementation,
+            pinnedCerts
         };
     };
 }
