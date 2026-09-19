@@ -845,10 +845,19 @@ describe('LightningNodeConnect', () => {
                 payments: []
             }));
 
-            await backend.lookupPayment({
-                payment_hash: 'ab'.repeat(32),
-                creation_date_start: 1700000000
-            });
+            // the track stream never answers, so the lookup falls back to
+            // the scan once it times out
+            jest.useFakeTimers();
+            try {
+                const lookup = backend.lookupPayment({
+                    payment_hash: 'ab'.repeat(32),
+                    creation_date_start: 1700000000
+                });
+                await jest.advanceTimersByTimeAsync(10000);
+                await lookup;
+            } finally {
+                jest.useRealTimers();
+            }
 
             expect(lnc.lnd.lightning.listPayments).toHaveBeenNthCalledWith(1, {
                 include_incomplete: true,
