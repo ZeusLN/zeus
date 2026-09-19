@@ -1,17 +1,31 @@
 import {
     getFormattedDateTime,
     convertActivityToCsv,
-    saveCsvFile,
+    sanitizeCsvFileName,
+    shareCsvFiles,
+    purgeCsvShareStaging,
+    purgeLegacyActivityCsvExports,
+    LEGACY_CSV_EXPORT_REGEX,
     CSV_KEYS
 } from '.././utils/ActivityCsvUtils';
 import RNFS from 'react-native-fs';
+import Share from 'react-native-share';
 import { Platform } from 'react-native';
 
 jest.mock('react-native-fs', () => ({
     DownloadDirectoryPath: '/mock/download/path',
     DocumentDirectoryPath: '/mock/document/path',
+    CachesDirectoryPath: '/mock/caches/path',
     writeFile: jest.fn(),
-    exists: jest.fn()
+    exists: jest.fn(),
+    unlink: jest.fn(),
+    mkdir: jest.fn(),
+    readDir: jest.fn()
+}));
+
+jest.mock('react-native-share', () => ({
+    __esModule: true,
+    default: { open: jest.fn() }
 }));
 
 jest.mock('react-native', () => ({
@@ -151,196 +165,328 @@ describe('activityCsvUtils', () => {
         });
     });
 
-    describe('saveCsvFile', () => {
+    describe('sanitizeCsvFileName', () => {
+        it('keeps ordinary names, including spaces, intact', () => {
+            expect(sanitizeCsvFileName('my activity.csv')).toBe(
+                'my activity.csv'
+            );
+            expect(
+                sanitizeCsvFileName('zeus_20250212_140719_onchain.csv')
+            ).toBe('zeus_20250212_140719_onchain.csv');
+        });
+
+        it('reduces path-traversal names to a basename', () => {
+            expect(sanitizeCsvFileName('../../Documents/evil.csv')).toBe(
+                'evil.csv'
+            );
+            expect(sanitizeCsvFileName('2024/01-export.csv')).toBe(
+                '01-export.csv'
+            );
+            expect(sanitizeCsvFileName('a\\b.csv')).toBe('b.csv');
+        });
+
+        it('strips characters that corrupt file:// URLs', () => {
+            // # parses as a URL fragment on both platforms, ? as a query,
+            // % as a broken escape sequence
+            expect(sanitizeCsvFileName('report#1.csv')).toBe('report1.csv');
+            expect(sanitizeCsvFileName('is it done?.csv')).toBe(
+                'is it done.csv'
+            );
+            expect(sanitizeCsvFileName('progress 50%.csv')).toBe(
+                'progress 50.csv'
+            );
+        });
+
+        it('appends the csv extension when missing', () => {
+            expect(sanitizeCsvFileName('taxes')).toBe('taxes.csv');
+        });
+
+        it('falls back to a timestamped default when nothing survives', () => {
+            expect(sanitizeCsvFileName('###.csv')).toMatch(
+                /^zeus_\d{8}_\d{6}\.csv$/
+            );
+            expect(sanitizeCsvFileName('..')).toMatch(
+                /^zeus_\d{8}_\d{6}\.csv$/
+            );
+            expect(sanitizeCsvFileName('')).toMatch(/^zeus_\d{8}_\d{6}\.csv$/);
+        });
+    });
+
+    describe('shareCsvFiles', () => {
+        const stagingDir = '/mock/caches/path/csv-share-staging';
+
         beforeEach(() => {
             jest.clearAllMocks();
             (RNFS.exists as jest.Mock).mockResolvedValue(false);
+            (RNFS.writeFile as jest.Mock).mockResolvedValue(undefined);
+            (RNFS.unlink as jest.Mock).mockResolvedValue(undefined);
+            (RNFS.mkdir as jest.Mock).mockResolvedValue(undefined);
+            (Share.open as jest.Mock).mockResolvedValue(undefined);
         });
 
-        it('writes the CSV file to the correct path on Android', async () => {
-            (Platform.OS as any) = 'android';
-            (RNFS.writeFile as jest.Mock).mockResolvedValue(undefined);
+        it('stages files in a cache subdir and hands them to the share sheet', async () => {
+            await shareCsvFiles([
+                { fileName: 'a.csv', csvData: 'a,data' },
+                { fileName: 'b.csv', csvData: 'b,data' }
+            ]);
 
-            await saveCsvFile('test.csv', 'mock,csv,data');
-
-            expect(RNFS.exists).toHaveBeenCalledWith(
-                '/mock/download/path/test.csv'
+            expect(RNFS.mkdir).toHaveBeenCalledWith(stagingDir);
+            expect(RNFS.writeFile).toHaveBeenCalledWith(
+                `${stagingDir}/a.csv`,
+                'a,data',
+                'utf8'
             );
             expect(RNFS.writeFile).toHaveBeenCalledWith(
-                '/mock/download/path/test.csv',
-                'mock,csv,data',
+                `${stagingDir}/b.csv`,
+                'b,data',
+                'utf8'
+            );
+            expect(Share.open).toHaveBeenCalledWith({
+                urls: [
+                    `file://${stagingDir}/a.csv`,
+                    `file://${stagingDir}/b.csv`
+                ],
+                type: 'text/csv',
+                failOnCancel: false
+            });
+        });
+
+        it('sanitizes user-supplied file names before staging', async () => {
+            await shareCsvFiles([
+                { fileName: '../../evil#name.csv', csvData: 'a,data' }
+            ]);
+
+            expect(RNFS.writeFile).toHaveBeenCalledWith(
+                `${stagingDir}/evilname.csv`,
+                'a,data',
                 'utf8'
             );
         });
 
-        it('writes the CSV file to the correct path on iOS', async () => {
-            (Platform.OS as any) = 'ios';
-            (RNFS.writeFile as jest.Mock).mockResolvedValue(undefined);
+        it('leaves staged files in place after Share.open settles', async () => {
+            // the receiving app may still be streaming the FileProvider URI
+            // when the promise resolves; cleanup happens on the next share
+            // and in clearAllData
+            await shareCsvFiles([{ fileName: 'a.csv', csvData: 'a,data' }]);
 
-            await saveCsvFile('test.csv', 'mock,csv,data');
-
-            expect(RNFS.exists).toHaveBeenCalledWith(
-                '/mock/document/path/test.csv'
-            );
-            expect(RNFS.writeFile).toHaveBeenCalledWith(
-                '/mock/document/path/test.csv',
-                'mock,csv,data',
-                'utf8'
-            );
+            expect(RNFS.unlink).not.toHaveBeenCalled();
         });
 
-        it('appends (1) suffix when file already exists', async () => {
-            (Platform.OS as any) = 'android';
-            (RNFS.exists as jest.Mock)
-                .mockResolvedValueOnce(true)
-                .mockResolvedValueOnce(false);
-            (RNFS.writeFile as jest.Mock).mockResolvedValue(undefined);
+        it('sweeps the previous staging dir before sharing', async () => {
+            (RNFS.exists as jest.Mock).mockResolvedValue(true);
 
-            await saveCsvFile('test.csv', 'mock,csv,data');
+            await shareCsvFiles([{ fileName: 'a.csv', csvData: 'a,data' }]);
 
-            expect(RNFS.exists).toHaveBeenCalledWith(
-                '/mock/download/path/test.csv'
-            );
-            expect(RNFS.exists).toHaveBeenCalledWith(
-                '/mock/download/path/test (1).csv'
-            );
-            expect(RNFS.writeFile).toHaveBeenCalledWith(
-                '/mock/download/path/test (1).csv',
-                'mock,csv,data',
-                'utf8'
-            );
+            expect(RNFS.unlink).toHaveBeenCalledWith(stagingDir);
+            expect(RNFS.unlink).toHaveBeenCalledTimes(1);
         });
 
-        it('appends (2) suffix when file and (1) already exist', async () => {
-            (Platform.OS as any) = 'android';
-            (RNFS.exists as jest.Mock)
-                .mockResolvedValueOnce(true)
-                .mockResolvedValueOnce(true)
-                .mockResolvedValueOnce(false);
-            (RNFS.writeFile as jest.Mock).mockResolvedValue(undefined);
-
-            await saveCsvFile('test.csv', 'mock,csv,data');
-
-            expect(RNFS.exists).toHaveBeenCalledWith(
-                '/mock/download/path/test.csv'
-            );
-            expect(RNFS.exists).toHaveBeenCalledWith(
-                '/mock/download/path/test (1).csv'
-            );
-            expect(RNFS.exists).toHaveBeenCalledWith(
-                '/mock/download/path/test (2).csv'
-            );
-            expect(RNFS.writeFile).toHaveBeenCalledWith(
-                '/mock/download/path/test (2).csv',
-                'mock,csv,data',
-                'utf8'
-            );
-        });
-
-        it('handles uppercase CSV extension', async () => {
-            (Platform.OS as any) = 'android';
-            (RNFS.exists as jest.Mock)
-                .mockResolvedValueOnce(true)
-                .mockResolvedValueOnce(false);
-            (RNFS.writeFile as jest.Mock).mockResolvedValue(undefined);
-
-            await saveCsvFile('test.CSV', 'mock,csv,data');
-
-            expect(RNFS.writeFile).toHaveBeenCalledWith(
-                '/mock/download/path/test (1).csv',
-                'mock,csv,data',
-                'utf8'
-            );
-        });
-
-        it('handles filename with non-CSV extension correctly', async () => {
-            (Platform.OS as any) = 'android';
-            (RNFS.exists as jest.Mock)
-                .mockResolvedValueOnce(true)
-                .mockResolvedValueOnce(false);
-            (RNFS.writeFile as jest.Mock).mockResolvedValue(undefined);
-
-            await saveCsvFile('export.txt', 'mock,csv,data');
-
-            expect(RNFS.writeFile).toHaveBeenCalledWith(
-                '/mock/download/path/export (1).csv',
-                'mock,csv,data',
-                'utf8'
-            );
-        });
-
-        it('handles filename without extension', async () => {
-            (Platform.OS as any) = 'android';
-            (RNFS.exists as jest.Mock)
-                .mockResolvedValueOnce(true)
-                .mockResolvedValueOnce(false);
-            (RNFS.writeFile as jest.Mock).mockResolvedValue(undefined);
-
-            await saveCsvFile('export', 'mock,csv,data');
-
-            expect(RNFS.writeFile).toHaveBeenCalledWith(
-                '/mock/download/path/export (1).csv',
-                'mock,csv,data',
-                'utf8'
-            );
-        });
-
-        it('strips existing numbered suffix from filename', async () => {
-            (Platform.OS as any) = 'android';
-            (RNFS.exists as jest.Mock)
-                .mockResolvedValueOnce(true)
-                .mockResolvedValueOnce(false);
-            (RNFS.writeFile as jest.Mock).mockResolvedValue(undefined);
-
-            await saveCsvFile('export (1).csv', 'mock,csv,data');
-
-            expect(RNFS.writeFile).toHaveBeenCalledWith(
-                '/mock/download/path/export (2).csv',
-                'mock,csv,data',
-                'utf8'
-            );
-        });
-
-        it('strips existing numbered suffix and finds next available number', async () => {
-            (Platform.OS as any) = 'android';
-            (RNFS.exists as jest.Mock)
-                .mockResolvedValueOnce(true)
-                .mockResolvedValueOnce(true)
-                .mockResolvedValueOnce(false);
-            (RNFS.writeFile as jest.Mock).mockResolvedValue(undefined);
-
-            await saveCsvFile('export (1).csv', 'mock,csv,data');
-
-            expect(RNFS.exists).toHaveBeenCalledWith(
-                '/mock/download/path/export (1).csv'
-            );
-            expect(RNFS.exists).toHaveBeenCalledWith(
-                '/mock/download/path/export (2).csv'
-            );
-            expect(RNFS.exists).toHaveBeenCalledWith(
-                '/mock/download/path/export (3).csv'
-            );
-            expect(RNFS.writeFile).toHaveBeenCalledWith(
-                '/mock/download/path/export (3).csv',
-                'mock,csv,data',
-                'utf8'
-            );
-        });
-
-        it('throws an error when file writing fails (but suppresses console error)', async () => {
+        it('sweeps staging and rethrows when the share fails', async () => {
             const consoleErrorSpy = jest
                 .spyOn(console, 'error')
                 .mockImplementation(() => {});
+            (Share.open as jest.Mock).mockRejectedValue(
+                new Error('share failed')
+            );
+            // pre-share sweep finds nothing, failure sweep sees the dir
+            (RNFS.exists as jest.Mock)
+                .mockResolvedValueOnce(false)
+                .mockResolvedValue(true);
 
+            await expect(
+                shareCsvFiles([{ fileName: 'a.csv', csvData: 'a,data' }])
+            ).rejects.toThrow('share failed');
+
+            expect(RNFS.unlink).toHaveBeenCalledWith(stagingDir);
+            consoleErrorSpy.mockRestore();
+        });
+
+        it('sweeps staging when a write fails mid-flight', async () => {
+            const consoleErrorSpy = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
             (RNFS.writeFile as jest.Mock).mockRejectedValue(
-                new Error('File write failed')
+                new Error('disk full')
+            );
+            (RNFS.exists as jest.Mock)
+                .mockResolvedValueOnce(false)
+                .mockResolvedValue(true);
+
+            await expect(
+                shareCsvFiles([{ fileName: 'a.csv', csvData: 'a,data' }])
+            ).rejects.toThrow('disk full');
+
+            expect(RNFS.unlink).toHaveBeenCalledWith(stagingDir);
+            expect(Share.open).not.toHaveBeenCalled();
+            consoleErrorSpy.mockRestore();
+        });
+    });
+
+    describe('purgeCsvShareStaging', () => {
+        beforeEach(() => {
+            jest.clearAllMocks();
+            (RNFS.unlink as jest.Mock).mockResolvedValue(undefined);
+        });
+
+        it('removes the staging dir when present', async () => {
+            (RNFS.exists as jest.Mock).mockResolvedValue(true);
+
+            await purgeCsvShareStaging();
+
+            expect(RNFS.unlink).toHaveBeenCalledWith(
+                '/mock/caches/path/csv-share-staging'
+            );
+        });
+
+        it('does nothing when the staging dir is absent', async () => {
+            (RNFS.exists as jest.Mock).mockResolvedValue(false);
+
+            await purgeCsvShareStaging();
+
+            expect(RNFS.unlink).not.toHaveBeenCalled();
+        });
+
+        it('swallows unlink errors', async () => {
+            const consoleWarnSpy = jest
+                .spyOn(console, 'warn')
+                .mockImplementation(() => {});
+            (RNFS.exists as jest.Mock).mockResolvedValue(true);
+            (RNFS.unlink as jest.Mock).mockRejectedValue(new Error('locked'));
+
+            await expect(purgeCsvShareStaging()).resolves.toBeUndefined();
+
+            consoleWarnSpy.mockRestore();
+        });
+    });
+
+    describe('purgeLegacyActivityCsvExports', () => {
+        const entry = (name: string, isFile = true) => ({
+            name,
+            path: `/mock/document/path/${name}`,
+            isFile: () => isFile
+        });
+
+        beforeEach(() => {
+            jest.clearAllMocks();
+            (Platform.OS as any) = 'ios';
+            (RNFS.unlink as jest.Mock).mockResolvedValue(undefined);
+        });
+
+        it('matches every export shape released builds generated', () => {
+            for (const suffix of [
+                'ln_invoices',
+                'ln_payments',
+                'onchain',
+                'invoice',
+                'payment',
+                'invoice_payment',
+                'transaction'
+            ]) {
+                expect(
+                    LEGACY_CSV_EXPORT_REGEX.test(
+                        `zeus_20250212_140719_${suffix}.csv`
+                    )
+                ).toBe(true);
+            }
+            expect(
+                LEGACY_CSV_EXPORT_REGEX.test(
+                    'zeus_20250212_140719_ln_payments (2).csv'
+                )
+            ).toBe(true);
+        });
+
+        it('does not match user files that merely share the prefix', () => {
+            // e.g. an export the user renamed while keeping the timestamp
+            expect(
+                LEGACY_CSV_EXPORT_REGEX.test(
+                    'zeus_20250212_140719_personal-tax.csv'
+                )
+            ).toBe(false);
+            expect(
+                LEGACY_CSV_EXPORT_REGEX.test(
+                    'zeus_20250212_140719_invoice_backup.csv'
+                )
+            ).toBe(false);
+            expect(LEGACY_CSV_EXPORT_REGEX.test('myexport.csv')).toBe(false);
+            expect(LEGACY_CSV_EXPORT_REGEX.test('notes.txt')).toBe(false);
+        });
+
+        it('deletes only matching files from iOS Documents', async () => {
+            (RNFS.readDir as jest.Mock).mockResolvedValue([
+                entry('zeus_20250212_140719_invoice.csv'),
+                entry('zeus_20250212_140719_onchain (1).csv'),
+                entry('myexport.csv'),
+                entry('ldk-node', false)
+            ]);
+
+            await purgeLegacyActivityCsvExports();
+
+            expect(RNFS.readDir).toHaveBeenCalledWith('/mock/document/path');
+            expect(RNFS.unlink).toHaveBeenCalledTimes(2);
+            expect(RNFS.unlink).toHaveBeenCalledWith(
+                '/mock/document/path/zeus_20250212_140719_invoice.csv'
+            );
+            expect(RNFS.unlink).toHaveBeenCalledWith(
+                '/mock/document/path/zeus_20250212_140719_onchain (1).csv'
+            );
+        });
+
+        it('does nothing on Android by default', async () => {
+            (Platform.OS as any) = 'android';
+
+            await purgeLegacyActivityCsvExports();
+
+            expect(RNFS.readDir).not.toHaveBeenCalled();
+        });
+
+        it('sweeps Android Downloads when asked to (full wipe)', async () => {
+            (Platform.OS as any) = 'android';
+            (RNFS.readDir as jest.Mock).mockResolvedValue([
+                {
+                    name: 'zeus_20250212_140719_transaction.csv',
+                    path: '/mock/download/path/zeus_20250212_140719_transaction.csv',
+                    isFile: () => true
+                },
+                {
+                    name: 'unrelated.csv',
+                    path: '/mock/download/path/unrelated.csv',
+                    isFile: () => true
+                }
+            ]);
+
+            await purgeLegacyActivityCsvExports(true);
+
+            expect(RNFS.readDir).toHaveBeenCalledWith('/mock/download/path');
+            expect(RNFS.unlink).toHaveBeenCalledTimes(1);
+            expect(RNFS.unlink).toHaveBeenCalledWith(
+                '/mock/download/path/zeus_20250212_140719_transaction.csv'
+            );
+        });
+
+        it('swallows readDir and unlink errors', async () => {
+            const consoleWarnSpy = jest
+                .spyOn(console, 'warn')
+                .mockImplementation(() => {});
+            (RNFS.readDir as jest.Mock).mockRejectedValue(
+                new Error('no access')
             );
 
             await expect(
-                saveCsvFile('test.csv', 'mock,csv,data')
-            ).rejects.toThrow('File write failed');
+                purgeLegacyActivityCsvExports()
+            ).resolves.toBeUndefined();
 
-            consoleErrorSpy.mockRestore();
+            (RNFS.readDir as jest.Mock).mockResolvedValue([
+                entry('zeus_20250212_140719_invoice.csv')
+            ]);
+            (RNFS.unlink as jest.Mock).mockRejectedValue(
+                new Error('unlink denied')
+            );
+
+            await expect(
+                purgeLegacyActivityCsvExports()
+            ).resolves.toBeUndefined();
+
+            consoleWarnSpy.mockRestore();
         });
     });
 });
