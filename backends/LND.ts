@@ -596,14 +596,14 @@ export default class LND {
     };
     // lnd's NOT_FOUND (code 5) answer from TrackPaymentV2, surfaced
     // either as a parsed {error} stream message or a thrown Error
-    private isPaymentNotFound = (err: any) => {
+    protected isPaymentNotFound = (err: any) => {
         const code = err?.grpc_code ?? err?.code;
         const message = typeof err === 'string' ? err : err?.message;
         return code === 5 || !!message?.includes("payment isn't initiated");
     };
     // ListPayments fallback; see findPaymentByHash for when a miss counts
     // as no record
-    private scanForPayment = (data: {
+    protected scanForPayment = (data: {
         payment_hash: string;
         creation_date_start?: number;
     }) =>
