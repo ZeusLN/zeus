@@ -72,7 +72,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
         const showReset: boolean =
             !enableLSP ||
             accessKey !== '' ||
-            requestSimpleTaproot ||
+            !requestSimpleTaproot ||
             lsp !== lspConfig.defaultFlowHost;
 
         return (
@@ -330,7 +330,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                                 enableLSP: true,
                                                 lsp: defaultLsp,
                                                 accessKey: '',
-                                                requestSimpleTaproot: false
+                                                requestSimpleTaproot: true
                                             });
                                             await updateSettings({
                                                 enableLSP: true,
@@ -339,7 +339,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                                 lspMutinynet:
                                                     DEFAULT_LSP_MUTINYNET,
                                                 lspAccessKey: '',
-                                                requestSimpleTaproot: false
+                                                requestSimpleTaproot: true
                                             });
                                         }}
                                     />
