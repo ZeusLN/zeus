@@ -444,7 +444,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             BackendUtils.supportsFlowLSP() &&
             !flowLspNotConfigured;
 
-        const isOlympus = LSPStore.isOlympus();
+        const isOlympus = LSPStore.isOlympus(LSPService.LSPS1);
 
         const lspDisplay = isOlympus
             ? 'Olympus by ZEUS'

@@ -177,8 +177,9 @@ export default class LSPS1Settings extends React.Component<
         const isTestNet = nodeInfo?.isTestNet;
 
         const isOlympusCustom =
-            pubkey === lspConfig.defaultPubkey && host === lspConfig.lsps1Host;
-        const isOlympusRestMatch = restHost === lspConfig.lsps1Rest;
+            pubkey === lspConfig.defaultPubkey &&
+            host === lspConfig.defaultLsps1Host;
+        const isOlympusRestMatch = restHost === lspConfig.defaultLsps1Rest;
 
         const isOlympusCustomMessage =
             BackendUtils.supportsLSPScustomMessage() && isOlympusCustom;
@@ -189,6 +190,18 @@ export default class LSPS1Settings extends React.Component<
 
         const isOlympus =
             isOlympusCustomMessage || isOlympusRest || isOlympusNative;
+
+        // Branding follows whichever transport matches Olympus, but the reset
+        // button has to stay visible until every field the backend actually
+        // uses is back at its default.
+        const isDefaultConfig =
+            (!(
+                BackendUtils.supportsLSPScustomMessage() ||
+                BackendUtils.supportsLSPS1native()
+            ) ||
+                isOlympusCustom) &&
+            (!BackendUtils.supportsLSPS1rest() || isOlympusRestMatch) &&
+            lsps1Token === '';
 
         return (
             <Screen>
@@ -307,7 +320,7 @@ export default class LSPS1Settings extends React.Component<
                                 />
                             )}
 
-                            {!isOlympus && (
+                            {!isDefaultConfig && (
                                 <Button
                                     containerStyle={{ paddingTop: 20 }}
                                     title={localeString('general.reset')}
@@ -426,13 +439,14 @@ export default class LSPS1Settings extends React.Component<
                         </>
                     )}
 
-                    {!BackendUtils.supportsLSPS1native() && !isOlympus && (
-                        <Button
-                            containerStyle={{ paddingTop: 30 }}
-                            title={localeString('general.reset')}
-                            onPress={() => this.handleReset()}
-                        />
-                    )}
+                    {!BackendUtils.supportsLSPS1native() &&
+                        !isDefaultConfig && (
+                            <Button
+                                containerStyle={{ paddingTop: 30 }}
+                                title={localeString('general.reset')}
+                                onPress={() => this.handleReset()}
+                            />
+                        )}
                 </View>
                 <View style={{ marginBottom: 15 }}>
                     <View style={{ marginBottom: 10 }}>

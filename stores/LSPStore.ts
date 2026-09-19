@@ -213,18 +213,27 @@ export default class LSPStore {
             this.nodeInfoStore!.nodeInfo
         );
 
-    public isOlympus = () => {
+    // Each service answers for the transport it actually uses: LSPS7 only
+    // speaks custom messages, while LSPS1 picks native, then REST, then
+    // custom messages.
+    public isOlympus = (service: LSPService = LSPService.LSPS1) => {
         const config = this.getLspConfig();
-        if (
-            BackendUtils.supportsLSPScustomMessage() &&
-            this.getLSPSPubkey() == config.defaultPubkey
-        ) {
-            return true;
-        } else if (
-            BackendUtils.supportsLSPS1rest() &&
-            this.getLSPS1Rest() === config.lsps1Rest
-        ) {
-            return true;
+        const usesDefaultPubkey = this.getLSPSPubkey() === config.defaultPubkey;
+
+        if (service === LSPService.LSPS7) {
+            return usesDefaultPubkey;
+        }
+
+        if (BackendUtils.supportsLSPS1native()) {
+            return usesDefaultPubkey;
+        }
+
+        if (BackendUtils.supportsLSPS1rest()) {
+            return this.getLSPS1Rest() === config.defaultLsps1Rest;
+        }
+
+        if (BackendUtils.supportsLSPScustomMessage()) {
+            return usesDefaultPubkey;
         }
 
         return false;

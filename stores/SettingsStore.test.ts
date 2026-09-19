@@ -77,7 +77,22 @@ jest.mock('../storage', () => {
     };
 });
 
-import SettingsStore, { STORAGE_KEY } from './SettingsStore';
+import SettingsStore, {
+    DEFAULT_LSP_MAINNET,
+    DEFAULT_LSP_MUTINYNET,
+    DEFAULT_LSP_TESTNET,
+    DEFAULT_LSPS1_HOST_MAINNET,
+    DEFAULT_LSPS1_HOST_MUTINYNET,
+    DEFAULT_LSPS1_HOST_TESTNET,
+    DEFAULT_LSPS1_PUBKEY_MAINNET,
+    DEFAULT_LSPS1_PUBKEY_MUTINYNET,
+    DEFAULT_LSPS1_PUBKEY_TESTNET,
+    DEFAULT_LSPS1_REST_MAINNET,
+    DEFAULT_LSPS1_REST_MUTINYNET,
+    DEFAULT_LSPS1_REST_TESTNET,
+    STORAGE_KEY,
+    getLspConfigForNetwork
+} from './SettingsStore';
 
 const StorageMock: any = jest.requireMock('../storage');
 
@@ -254,4 +269,58 @@ describe('SettingsStore.getSettings', () => {
         // Read-only fallback: the local partition must not be written
         expect(StorageMock._backing[STORAGE_KEY]).toBeUndefined();
     });
+});
+
+// The LSP settings screens decide whether to show Reset by comparing the
+// field against these defaults, so they must never follow the saved value.
+describe('getLspConfigForNetwork', () => {
+    const custom = {
+        flow: 'https://flow.example.com',
+        rest: 'https://lsps1.example.com',
+        host: '127.0.0.1:9735'
+    };
+    const customSettings: any = {};
+    for (const net of ['Mainnet', 'Testnet', 'Mutinynet']) {
+        customSettings[`lsp${net}`] = custom.flow;
+        customSettings[`lsps1Rest${net}`] = custom.rest;
+        customSettings[`lsps1Host${net}`] = custom.host;
+    }
+
+    it.each([
+        [
+            'mainnet',
+            DEFAULT_LSP_MAINNET,
+            DEFAULT_LSPS1_REST_MAINNET,
+            DEFAULT_LSPS1_HOST_MAINNET,
+            DEFAULT_LSPS1_PUBKEY_MAINNET
+        ],
+        [
+            'testnet',
+            DEFAULT_LSP_TESTNET,
+            DEFAULT_LSPS1_REST_TESTNET,
+            DEFAULT_LSPS1_HOST_TESTNET,
+            DEFAULT_LSPS1_PUBKEY_TESTNET
+        ],
+        [
+            'mutinynet',
+            DEFAULT_LSP_MUTINYNET,
+            DEFAULT_LSPS1_REST_MUTINYNET,
+            DEFAULT_LSPS1_HOST_MUTINYNET,
+            DEFAULT_LSPS1_PUBKEY_MUTINYNET
+        ]
+    ])(
+        'keeps %s defaults while settings hold custom values',
+        (network, flow, rest, host, pubkey) => {
+            const config = getLspConfigForNetwork(customSettings, network);
+
+            expect(config.flowHost).toEqual(custom.flow);
+            expect(config.lsps1Rest).toEqual(custom.rest);
+            expect(config.lsps1Host).toEqual(custom.host);
+
+            expect(config.defaultFlowHost).toEqual(flow);
+            expect(config.defaultLsps1Rest).toEqual(rest);
+            expect(config.defaultLsps1Host).toEqual(host);
+            expect(config.defaultPubkey).toEqual(pubkey);
+        }
+    );
 });
