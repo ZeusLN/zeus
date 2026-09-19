@@ -35,6 +35,9 @@ interface ClinkPayState {
     nofferData: NofferData | null;
     amount: string;
     satAmount: string | number;
+    // Set when the offer price could not be converted to fiat. The amount
+    // input is then pinned to sats.
+    fiatError?: string;
     loading: boolean;
 }
 
@@ -107,6 +110,7 @@ export default class ClinkPay extends React.Component<
         let nofferData: NofferData | null = null;
         let amount = '';
         let satAmount: string | number = '0';
+        let fiatError: string | undefined;
         try {
             nofferData = ClinkUtils.decodeNoffer(noffer);
             if (
@@ -114,7 +118,9 @@ export default class ClinkPay extends React.Component<
                 nofferData.price
             ) {
                 satAmount = nofferData.price.toString();
-                amount = getRawAmountFromSats(satAmount);
+                const rawAmount = getRawAmountFromSats(satAmount);
+                amount = rawAmount.amount;
+                fiatError = rawAmount.error;
             }
         } catch (err: any) {
             Alert.alert(
@@ -135,6 +141,7 @@ export default class ClinkPay extends React.Component<
             nofferData,
             amount,
             satAmount,
+            fiatError,
             loading: false
         };
     }
@@ -250,7 +257,8 @@ export default class ClinkPay extends React.Component<
 
     render() {
         const { navigation } = this.props;
-        const { nofferData, amount, satAmount, loading } = this.state;
+        const { nofferData, amount, satAmount, fiatError, loading } =
+            this.state;
 
         return (
             <Screen>
@@ -307,6 +315,8 @@ export default class ClinkPay extends React.Component<
                             </Text>
                             <AmountInput
                                 amount={amount}
+                                forceUnit={fiatError ? 'sats' : undefined}
+                                fiatError={fiatError}
                                 onAmountChange={(
                                     newAmount: string,
                                     newSatAmount: string | number

@@ -423,8 +423,25 @@ export default class Amount extends React.Component<AmountProps, {}> {
             const unit = 'fiat';
             const symbol = '$';
 
+            // A large N/A amount gets the reason under it, so the user knows
+            // why and can switch units. While rates are still loading,
+            // AmountDisplay shows a spinner instead, so wait for that.
+            // Pending amounts are shown under a main amount that already
+            // carries the warning, so they do not repeat it.
+            const withFiatError = (display: React.ReactElement) =>
+                jumboText && !pending && !FiatStore.loading ? (
+                    <View style={styles.fiatError}>
+                        {display}
+                        <Body color="warning" small>
+                            {unformattedAmount.error}
+                        </Body>
+                    </View>
+                ) : (
+                    display
+                );
+
             if (toggleable) {
-                return (
+                return withFiatError(
                     <TouchableOpacity
                         onPress={() => {
                             if (lurkerExposed || !lurkerMode) {
@@ -462,7 +479,7 @@ export default class Amount extends React.Component<AmountProps, {}> {
                 );
             }
 
-            return (
+            return withFiatError(
                 <AmountDisplay
                     amount={amount}
                     unit={unit}
@@ -561,6 +578,9 @@ export default class Amount extends React.Component<AmountProps, {}> {
 }
 
 const styles = StyleSheet.create({
+    fiatError: {
+        alignItems: 'center'
+    },
     row: {
         flexDirection: 'row',
         alignItems: 'center'
