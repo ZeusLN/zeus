@@ -24,6 +24,10 @@ interface Headers {
 // keep track of all active calls so we can cancel when appropriate
 const calls = new Map<string, Promise<any>>();
 
+// how long lookupPayment holds TrackPaymentV2's stream open waiting for
+// a terminal update before concluding the payment is still in flight
+const TRACK_PAYMENT_TIMEOUT_MS = 10000;
+
 export default class LND {
     torSocksPort?: number = undefined;
     private defaultTimeout: number = 30000;
@@ -269,8 +273,8 @@ export default class LND {
         );
     };
 
-    getRequest = (route: string, data?: any) =>
-        this.request(route, 'get', null, data);
+    getRequest = (route: string, data?: any, timeout?: number) =>
+        this.request(route, 'get', null, data, timeout);
     postRequest = (route: string, data?: any, timeout?: number) =>
         this.request(route, 'post', data, null, timeout);
     deleteRequest = (route: string) => this.request(route, 'delete', null);
@@ -378,7 +382,11 @@ export default class LND {
             route_hints: data.route_hints
         });
     getPayments = (
-        params: { maxPayments?: number; reversed?: boolean } = {
+        params: {
+            maxPayments?: number;
+            reversed?: boolean;
+            creationDateStart?: number;
+        } = {
             maxPayments: 500,
             reversed: true
         }
@@ -388,6 +396,10 @@ export default class LND {
                 params?.maxPayments ? `&max_payments=${params.maxPayments}` : ''
             }&reversed=${
                 params?.reversed !== undefined ? params.reversed : true
+            }${
+                params?.creationDateStart
+                    ? `&creation_date_start=${params.creationDateStart}`
+                    : ''
             }`
         );
 
@@ -536,6 +548,16 @@ export default class LND {
             return response;
         };
 
+        // payment_timed_out marks the outcome as unknown on the node (the
+        // client gave up, not the payment), so the caller can track the
+        // payment to its terminal state instead of reporting failure
+        const timedOutResponse = () => ({
+            payment_error: localeString(
+                'views.SendingLightning.paymentTimedOut'
+            ),
+            payment_timed_out: true
+        });
+
         // The request timeout must exceed the forcedTimeout below, or the
         // generic transport rejection wins the race and the user sees a
         // retryable-looking error instead of the payment-timed-out shape
@@ -548,19 +570,83 @@ export default class LND {
                     allow_self_payment: true
                 },
                 (timeoutSeconds + 5) * 1000
-            );
+            ).catch((err: any) => {
+                // safety net if the transport deadline ever fires first:
+                // a client-side timeout is outcome-unknown, not a failure
+                if (err?.message === 'Request timeout')
+                    return timedOutResponse();
+                throw err;
+            });
 
         const result: any = await Promise.race([
-            forcedTimeout((timeoutSeconds + 1) * 1000, {
-                payment_error: localeString(
-                    'views.SendingLightning.paymentTimedOut'
-                )
-            }),
+            forcedTimeout((timeoutSeconds + 1) * 1000, timedOutResponse()),
             call()
         ]);
 
         return result;
     };
+    // lnd's NOT_FOUND (code 5) answer from TrackPaymentV2, surfaced
+    // either as a parsed {error} stream message or a thrown Error
+    private isPaymentNotFound = (err: any) => {
+        const code = err?.grpc_code ?? err?.code;
+        const message = typeof err === 'string' ? err : err?.message;
+        return code === 5 || !!message?.includes("payment isn't initiated");
+    };
+    // scans a payments page. With a creation_date_start bound the page is
+    // anchored at the dispatch time (ascending), so newer payments from
+    // other clients can't evict the target; without one, fall back to the
+    // newest page.
+    private scanForPayment = (data: {
+        payment_hash: string;
+        creation_date_start?: number;
+    }) =>
+        this.getPayments(
+            data.creation_date_start
+                ? {
+                      maxPayments: 50,
+                      reversed: false,
+                      creationDateStart: data.creation_date_start
+                  }
+                : { maxPayments: 50, reversed: true }
+        ).then(
+            (response: any) =>
+                response?.payments?.find(
+                    (payment: any) =>
+                        payment.payment_hash?.toLowerCase() ===
+                        data.payment_hash.toLowerCase()
+                ) ?? null
+        );
+    // LND has no unary per-payment lookup, but TrackPaymentV2's REST
+    // stream closes right after emitting the update for a payment already
+    // in a terminal state, so the buffered transport resolves it like one:
+    // a targeted query for exactly the two states the trackers act on,
+    // with NOT_FOUND as an authoritative no-record answer (no scan-page
+    // eviction caveat). A payment still in flight holds the stream open
+    // instead (no_inflight_updates suppresses its updates and the
+    // transport can't read partial bodies anyway), so a timeout means
+    // "exists, not terminal": resolve it via the scan, which also backs
+    // up any other transport failure before it propagates as unobservable
+    lookupPayment = (data: {
+        payment_hash: string;
+        creation_date_start?: number;
+    }) =>
+        this.getRequest(
+            `/v2/router/track/${Base64Utils.base64ToBase64Url(
+                Base64Utils.hexToBase64(data.payment_hash)
+            )}`,
+            { no_inflight_updates: true },
+            TRACK_PAYMENT_TIMEOUT_MS
+        ).then(
+            (response: any) => {
+                if (response?.result) return response.result;
+                if (this.isPaymentNotFound(response?.error)) return null;
+                return this.scanForPayment(data);
+            },
+            (error: any) => {
+                if (this.isPaymentNotFound(error)) return null;
+                return this.scanForPayment(data);
+            }
+        );
     closeChannel = (urlParams?: Array<string>) => {
         let requestString = `/v1/channels/${urlParams && urlParams[0]}/${
             urlParams && urlParams[1]
@@ -1015,6 +1101,7 @@ export default class LND {
     supportsOnchainReceiving = () => true;
     supportsLightningSends = () => true;
     supportsKeysend = () => true;
+    supportsPaymentLookup = () => true;
     supportsChannelManagement = () => true;
     supportsCircularRebalancing = () => true;
     supportsForceClose = () => true;
