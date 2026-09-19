@@ -587,7 +587,7 @@ export default class LND {
     };
     // lnd's NOT_FOUND (code 5) answer from TrackPaymentV2, surfaced
     // either as a parsed {error} stream message or a thrown Error
-    private isPaymentNotFound = (err: any) => {
+    protected isPaymentNotFound = (err: any) => {
         const code = err?.grpc_code ?? err?.code;
         const message = typeof err === 'string' ? err : err?.message;
         return code === 5 || !!message?.includes("payment isn't initiated");
@@ -596,7 +596,7 @@ export default class LND {
     // anchored at the dispatch time (ascending), so newer payments from
     // other clients can't evict the target; without one, fall back to the
     // newest page.
-    private scanForPayment = (data: {
+    protected scanForPayment = (data: {
         payment_hash: string;
         creation_date_start?: number;
     }) =>
