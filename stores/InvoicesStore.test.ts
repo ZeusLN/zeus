@@ -5,6 +5,7 @@ jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
     default: {
         decodePaymentRequest: jest.fn(),
+        getInvoices: jest.fn(),
         getNewAddress: jest.fn(),
         getNewChangeAddress: jest.fn(),
         isLNDBased: jest.fn(() => false)
@@ -35,6 +36,26 @@ const lndDecodeResponse = {
 
 const newStore = () =>
     new InvoicesStore({} as any, {} as any, {} as any, {} as any);
+
+describe('InvoicesStore.fetchInvoices', () => {
+    it('returns scoped invoices without replacing the canonical collection', async () => {
+        (BackendUtils.getInvoices as jest.Mock).mockResolvedValue({
+            invoices: [{ creation_date: '1700000000', value: '10' }],
+            last_index_offset: '42'
+        });
+        const store = newStore();
+        const canonicalInvoice = { r_hash: 'canonical' } as any;
+        store.invoices = [canonicalInvoice];
+
+        const result = await store.fetchInvoices({
+            creationDateEnd: 1_700_086_399
+        });
+
+        expect(result.invoices).toHaveLength(1);
+        expect(result.count).toBe('42');
+        expect(store.invoices).toEqual([canonicalInvoice]);
+    });
+});
 
 describe('InvoicesStore.getPayReq', () => {
     it('threads the original payment request through so expiry is computable when the decode response omits the bolt11 string', async () => {
