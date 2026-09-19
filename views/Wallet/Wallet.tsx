@@ -469,6 +469,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 navigation.navigate('Lockscreen', { shareIntentData });
             } else if (posEnabled && posStatus === 'unselected') {
                 setPosStatus('active');
+                // POS never hands over to the wallet list, so the latch
+                // raised while settings loaded must not outlive startup
+                SettingsStore.setWalletSelectionPending(false);
                 if (!this.state.unlocked) {
                     this.startListeners();
                     this.setState({ unlocked: true });
