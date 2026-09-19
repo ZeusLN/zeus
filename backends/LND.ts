@@ -25,6 +25,10 @@ interface Headers {
 // keep track of all active calls so we can cancel when appropriate
 const calls = new Map<string, Promise<any>>();
 
+// how long lookupPayment holds TrackPaymentV2's stream open waiting for
+// a terminal update before concluding the payment is still in flight
+const TRACK_PAYMENT_TIMEOUT_MS = 10000;
+
 export default class LND {
     torSocksPort?: number = undefined;
     private defaultTimeout: number = 30000;
@@ -270,8 +274,8 @@ export default class LND {
         );
     };
 
-    getRequest = (route: string, data?: any) =>
-        this.request(route, 'get', null, data);
+    getRequest = (route: string, data?: any, timeout?: number) =>
+        this.request(route, 'get', null, data, timeout);
     postRequest = (route: string, data?: any, timeout?: number) =>
         this.request(route, 'post', data, null, timeout);
     deleteRequest = (route: string) => this.request(route, 'delete', null);
@@ -590,9 +594,16 @@ export default class LND {
 
         return result;
     };
-    // scans payments pages because LND REST has no non-streaming
-    // per-payment lookup (TrackPaymentV2 streams until terminal)
-    lookupPayment = (data: {
+    // lnd's NOT_FOUND (code 5) answer from TrackPaymentV2, surfaced
+    // either as a parsed {error} stream message or a thrown Error
+    private isPaymentNotFound = (err: any) => {
+        const code = err?.grpc_code ?? err?.code;
+        const message = typeof err === 'string' ? err : err?.message;
+        return code === 5 || !!message?.includes("payment isn't initiated");
+    };
+    // ListPayments fallback; see findPaymentByHash for when a miss counts
+    // as no record
+    private scanForPayment = (data: {
         payment_hash: string;
         creation_date_start?: number;
     }) =>
@@ -600,6 +611,37 @@ export default class LND {
             (request) => this.getPayments(request),
             data.payment_hash,
             data.creation_date_start
+        );
+    // LND has no unary per-payment lookup, but TrackPaymentV2's REST
+    // stream closes right after emitting the update for a payment already
+    // in a terminal state, so the buffered transport resolves it like one:
+    // a targeted query for exactly the two states the trackers act on,
+    // with NOT_FOUND as an authoritative no-record answer (no scan-page
+    // eviction caveat). A payment still in flight holds the stream open
+    // instead (no_inflight_updates suppresses its updates and the
+    // transport can't read partial bodies anyway), so a timeout means
+    // "exists, not terminal": resolve it via the scan, which also backs
+    // up any other transport failure before it propagates as unobservable
+    lookupPayment = (data: {
+        payment_hash: string;
+        creation_date_start?: number;
+    }) =>
+        this.getRequest(
+            `/v2/router/track/${Base64Utils.base64ToBase64Url(
+                Base64Utils.hexToBase64(data.payment_hash)
+            )}`,
+            { no_inflight_updates: true },
+            TRACK_PAYMENT_TIMEOUT_MS
+        ).then(
+            (response: any) => {
+                if (response?.result) return response.result;
+                if (this.isPaymentNotFound(response?.error)) return null;
+                return this.scanForPayment(data);
+            },
+            (error: any) => {
+                if (this.isPaymentNotFound(error)) return null;
+                return this.scanForPayment(data);
+            }
         );
     closeChannel = (urlParams?: Array<string>) => {
         let requestString = `/v1/channels/${urlParams && urlParams[0]}/${
