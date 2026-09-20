@@ -72,7 +72,8 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
         const showReset: boolean =
             !enableLSP ||
             accessKey !== '' ||
-            !requestSimpleTaproot ||
+            (BackendUtils.supportsSimpleTaprootChannels() &&
+                !requestSimpleTaproot) ||
             lsp !== lspConfig.defaultFlowHost;
 
         return (
