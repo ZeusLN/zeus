@@ -213,9 +213,9 @@ export default class LSPStore {
             this.nodeInfoStore!.nodeInfo
         );
 
-    // Each service answers for the transport it actually uses: LSPS7 only
-    // speaks custom messages, while LSPS1 picks native, then REST, then
-    // custom messages.
+    // Each service answers for the transport it actually uses: LSPS7 runs
+    // over native or custom messages, both keyed off the LSP pubkey, while
+    // LSPS1 picks native, then REST, then custom messages.
     public isOlympus = (service: LSPService = LSPService.LSPS1) => {
         const config = this.getLspConfig();
         const usesDefaultPubkey = this.getLSPSPubkey() === config.defaultPubkey;
