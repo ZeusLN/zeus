@@ -1126,6 +1126,22 @@ describe('AmountUtils', () => {
             });
         });
 
+        // The pin in Send.tsx:220 and in LnurlPay's recalculateDisplayAmount
+        // re-derives the amount with fixedUnits 'sats' while the active unit
+        // is still fiat without a rate. That call has to come back without an
+        // error, otherwise each pass would set the same error over again.
+        it('sets no error for fixedUnits sats when the unit has no rate', () => {
+            (unitsStore as any).units = 'fiat';
+            (settingsStore as any).settings.fiat = 'IDR';
+            expect(getRawAmountFromSats(12618, 'sats')).toEqual({
+                amount: '12618'
+            });
+            (fiatStore as any).fiatRates = undefined;
+            expect(getRawAmountFromSats(12618, 'sats')).toEqual({
+                amount: '12618'
+            });
+        });
+
         // #4635: with fiat as the unit and no rate, getUnformattedAmount
         // returns a 'Disabled' placeholder. It must not reach the input, and
         // the sats value put there instead must not be read back as fiat.
