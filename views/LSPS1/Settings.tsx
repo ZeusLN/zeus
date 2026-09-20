@@ -181,19 +181,16 @@ export default class LSPS1Settings extends React.Component<
             host === lspConfig.defaultLsps1Host;
         const isOlympusRestMatch = restHost === lspConfig.defaultLsps1Rest;
 
-        const isOlympusCustomMessage =
-            BackendUtils.supportsLSPScustomMessage() && isOlympusCustom;
-        const isOlympusRest =
-            BackendUtils.supportsLSPS1rest() && isOlympusRestMatch;
-        const isOlympusNative =
-            BackendUtils.supportsLSPS1native() && isOlympusCustom;
+        // Branding answers for the transport LSPS1 will actually use, in the
+        // same priority order as LSPStore.isOlympus.
+        const isOlympus = BackendUtils.supportsLSPS1native()
+            ? isOlympusCustom
+            : BackendUtils.supportsLSPS1rest()
+            ? isOlympusRestMatch
+            : BackendUtils.supportsLSPScustomMessage() && isOlympusCustom;
 
-        const isOlympus =
-            isOlympusCustomMessage || isOlympusRest || isOlympusNative;
-
-        // Branding follows whichever transport matches Olympus, but the reset
-        // button has to stay visible until every field the backend actually
-        // uses is back at its default.
+        // The reset button, in contrast, has to stay visible until every
+        // field the backend uses is back at its default.
         const isDefaultConfig =
             (!(
                 BackendUtils.supportsLSPScustomMessage() ||
