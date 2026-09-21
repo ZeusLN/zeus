@@ -1,3 +1,27 @@
+# zeus.xcodeproj is objectVersion 77 and its app extension targets (ShareQR,
+# NWCWidget) use PBXFileSystemSynchronizedRootGroup, which Xcode creates by
+# default since Xcode 16. Xcodeproj only learned that ISA in 1.26.0; older
+# versions abort with "attempted to initialize an object with unknown ISA".
+# 1.28.0 added the objectVersion for Xcode 26 and 1.28.1 fixed the Ruby 3.4
+# crashes, so anything current wants 1.28.1. Fail loudly here rather than in a
+# backtrace from the project parser.
+MIN_XCODEPROJ_VERSION = '1.26.0'
+RECOMMENDED_XCODEPROJ_VERSION = '1.28.1'
+
+if Gem::Version.new(Xcodeproj::VERSION) < Gem::Version.new(MIN_XCODEPROJ_VERSION)
+  raise <<~MSG
+    Xcodeproj #{Xcodeproj::VERSION} cannot read this project.
+
+    ZEUS needs Xcodeproj >= #{MIN_XCODEPROJ_VERSION} (>= #{RECOMMENDED_XCODEPROJ_VERSION} recommended).
+    CocoaPods #{Pod::VERSION} is using it. Upgrade CocoaPods (`gem install cocoapods`
+    or `brew upgrade cocoapods`), and if you install through Bundler make sure
+    nothing in your Gemfile pins xcodeproj below #{MIN_XCODEPROJ_VERSION}.
+  MSG
+elsif Gem::Version.new(Xcodeproj::VERSION) < Gem::Version.new(RECOMMENDED_XCODEPROJ_VERSION)
+  Pod::UI.warn "Xcodeproj #{Xcodeproj::VERSION} predates Xcode 26 project support; " \
+               ">= #{RECOMMENDED_XCODEPROJ_VERSION} is recommended."
+end
+
 require_relative '../node_modules/react-native/scripts/react_native_pods'
 
 platform :ios, min_ios_version_supported
