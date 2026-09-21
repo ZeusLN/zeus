@@ -1034,6 +1034,36 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
+    @objc(spliceIn:counterpartyNodeId:spliceAmountSats:resolver:rejecter:)
+    func spliceIn(_ userChannelId: String, counterpartyNodeId: String, spliceAmountSats: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        do {
+            try node.spliceIn(userChannelId: userChannelId, counterpartyNodeId: counterpartyNodeId, spliceAmountSats: spliceAmountSats.uint64Value)
+            resolve(["status": "ok"])
+        } catch {
+            reject("error", self.errorMessage(error), error)
+        }
+    }
+
+    @objc(spliceOut:counterpartyNodeId:address:spliceAmountSats:resolver:rejecter:)
+    func spliceOut(_ userChannelId: String, counterpartyNodeId: String, address: String, spliceAmountSats: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        do {
+            try node.spliceOut(userChannelId: userChannelId, counterpartyNodeId: counterpartyNodeId, address: address, spliceAmountSats: spliceAmountSats.uint64Value)
+            resolve(["status": "ok"])
+        } catch {
+            reject("error", self.errorMessage(error), error)
+        }
+    }
+
     // MARK: - On-chain Methods
 
     @objc(newOnchainAddress:rejecter:)
