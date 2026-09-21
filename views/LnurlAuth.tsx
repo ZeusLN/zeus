@@ -101,7 +101,9 @@ export default class LnurlAuth extends React.Component<
             lnurl.domain
         );
         if (!callbackCheck.ok) {
-            throw new Error(callbackCheck.reason);
+            // callbackCheck.reason is a developer-facing diagnostic; the user
+            // gets the localized message below
+            throw new Error(localeString('views.LnurlAuth.unsafeCallback'));
         }
 
         return {
@@ -203,7 +205,7 @@ export default class LnurlAuth extends React.Component<
             this.setState({
                 authenticating: false,
                 signatureSuccess: false,
-                errorMsgAuth: callbackCheck.reason || ''
+                errorMsgAuth: localeString('views.LnurlAuth.unsafeCallback')
             });
             return;
         }

@@ -8,6 +8,7 @@ import Bolt11Utils from './Bolt11Utils';
 
 export interface LnurlCheckResult {
     ok: boolean;
+    // developer-facing diagnostic only; views surface a localized message
     reason?: string;
 }
 
