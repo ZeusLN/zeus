@@ -333,6 +333,7 @@
     "views.LnurlAuth.login": "登入",
     "views.LnurlAuth.loginSuccess": "認證成功",
     "views.LnurlAuth.lndHubAuthMode": "LNURL-Auth模式",
+    "views.LnurlAuth.unsafeCallback": "This service asked the wallet to send your login signature to an address that doesn't match the domain you're logging in to. Login cancelled to protect your account.",
     "views.Routing.received": "收取費用",
     "views.Routing.RoutingHeader.timeframeEarned": "選取時間內所得金額",
     "views.Routing.RoutingHeader.dayEarned": "今日所得",
