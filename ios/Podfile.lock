@@ -1500,8 +1500,28 @@ PODS:
     - Yoga
   - react-native-encrypted-storage (4.0.3):
     - React-Core
-  - react-native-get-random-values (1.9.0):
+  - react-native-get-random-values (2.0.0):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
     - React-Core
+    - React-Core-prebuilt
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/bridging
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - Yoga
   - react-native-hce (0.3.0):
     - React
   - react-native-image-picker (8.2.1):
@@ -2989,7 +3009,7 @@ SPEC CHECKSUMS:
   react-native-blob-util: 13e70f811eb34f14864622c4afa37cc20fe8100e
   react-native-document-picker: c3a7536f3ee52525b4714c3720537f941d0cb094
   react-native-encrypted-storage: 569d114e329b1c2c2d9f8c84bcdbe4478dda2258
-  react-native-get-random-values: 419569b6ed3d15bfb9b6781b2f2e058f8e8d2698
+  react-native-get-random-values: 68792987aef40e8aa72dc448d97e009d1f440c88
   react-native-hce: ad5462e792d84e87924308dda1ee516757f1c0eb
   react-native-image-picker: 23540feacc79c63c60857f318fdfa8477c26e70a
   react-native-netinfo: cec9c4e86083cb5b6aba0e0711f563e2fbbff187
