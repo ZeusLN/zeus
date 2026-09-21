@@ -333,6 +333,7 @@
     "views.LnurlAuth.login": "Masuk",
     "views.LnurlAuth.loginSuccess": "Autentikasi sukses",
     "views.LnurlAuth.lndHubAuthMode": "Mode LNURL-Auth",
+    "views.LnurlAuth.unsafeCallback": "This service asked the wallet to send your login signature to an address that doesn't match the domain you're logging in to. Login cancelled to protect your account.",
     "views.Routing.received": "Biaya yang diterima",
     "views.Routing.RoutingHeader.timeframeEarned": "Diperoleh selama rentang waktu yang dipilih",
     "views.Routing.RoutingHeader.dayEarned": "Diperoleh hari ini",
