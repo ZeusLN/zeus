@@ -1238,20 +1238,15 @@ class LdkNodeModule: RCTEventEmitter {
 
     // MARK: - BOLT11 Payment Methods
 
-    private func parseRouteHintsMode(_ mode: String?) -> RouteHintsMode {
+    private func parseRouteHints(_ mode: String?, customChannelIds: [String]?) -> RouteHints {
         switch mode?.lowercased() {
         case "none":
             return .none
         case "custom":
-            return .custom
+            return .custom(userChannelIds: customChannelIds ?? [])
         default:
             return .automatic
         }
-    }
-
-    private func parseCustomRouteHintUserChannelIds(_ ids: [String]?) -> [UserChannelId]? {
-        guard let ids = ids, !ids.isEmpty else { return nil }
-        return ids
     }
 
     @objc(receiveBolt11:invoiceDescription:expirySecs:routeHintsMode:customRouteHintChannelIds:resolver:rejecter:)
@@ -1269,14 +1264,12 @@ class LdkNodeModule: RCTEventEmitter {
         do {
             let bolt11 = node.bolt11Payment()
             let descriptionObj = Bolt11InvoiceDescription.direct(description: invoiceDescription)
-            let hintsMode = parseRouteHintsMode(routeHintsMode)
-            let customChannelIds = parseCustomRouteHintUserChannelIds(customRouteHintChannelIds)
+            let routeHints = parseRouteHints(routeHintsMode, customChannelIds: customRouteHintChannelIds)
             let invoice = try bolt11.receiveWithRouteHints(
                 amountMsat: amount,
                 description: descriptionObj,
                 expirySecs: expiry,
-                routeHintsMode: hintsMode,
-                customRouteHintUserChannelIds: customChannelIds
+                routeHints: routeHints
             )
             resolve(["invoice": invoice.description])
         } catch {
@@ -1299,13 +1292,11 @@ class LdkNodeModule: RCTEventEmitter {
         do {
             let bolt11 = node.bolt11Payment()
             let descriptionObj = Bolt11InvoiceDescription.direct(description: invoiceDescription)
-            let hintsMode = parseRouteHintsMode(routeHintsMode)
-            let customChannelIds = parseCustomRouteHintUserChannelIds(customRouteHintChannelIds)
+            let routeHints = parseRouteHints(routeHintsMode, customChannelIds: customRouteHintChannelIds)
             let invoice = try bolt11.receiveVariableAmountWithRouteHints(
                 description: descriptionObj,
                 expirySecs: expiry,
-                routeHintsMode: hintsMode,
-                customRouteHintUserChannelIds: customChannelIds
+                routeHints: routeHints
             )
             resolve(["invoice": invoice.description])
         } catch {

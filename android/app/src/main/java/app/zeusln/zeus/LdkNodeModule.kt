@@ -1319,19 +1319,24 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
 
     // BOLT11 Payment Methods
 
-    private fun parseRouteHintsMode(mode: String?): RouteHintsMode {
+    private fun parseRouteHints(
+        mode: String?,
+        customRouteHintChannelIds: ReadableArray?
+    ): RouteHints {
         return when (mode?.lowercase()) {
-            "none" -> RouteHintsMode.NONE
-            "custom" -> RouteHintsMode.CUSTOM
-            else -> RouteHintsMode.AUTOMATIC
+            "none" -> RouteHints.None
+            "custom" -> {
+                val ids = if (customRouteHintChannelIds == null || customRouteHintChannelIds.size() == 0) {
+                    emptyList()
+                } else {
+                    (0 until customRouteHintChannelIds.size()).mapNotNull { i ->
+                        customRouteHintChannelIds.getString(i)
+                    }
+                }
+                RouteHints.Custom(ids)
+            }
+            else -> RouteHints.Automatic
         }
-    }
-
-    private fun parseCustomRouteHintUserChannelIds(array: ReadableArray?): List<UserChannelId>? {
-        if (array == null || array.size() == 0) return null
-        return (0 until array.size()).mapNotNull { i ->
-            array.getString(i)
-        }.ifEmpty { null }
     }
 
     @ReactMethod
@@ -1347,14 +1352,12 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             val node = this.node ?: throw Exception("Node not initialized")
             val bolt11 = node.bolt11Payment()
             val invoiceDescription = Bolt11InvoiceDescription.Direct(description)
-            val hintsMode = parseRouteHintsMode(routeHintsMode)
-            val customChannelIds = parseCustomRouteHintUserChannelIds(customRouteHintChannelIds)
+            val routeHints = parseRouteHints(routeHintsMode, customRouteHintChannelIds)
             val invoice = bolt11.receiveWithRouteHints(
                 toULongExact(amountMsat, "amount"),
                 invoiceDescription,
                 toUIntExact(expirySecs, "expiry"),
-                hintsMode,
-                customChannelIds
+                routeHints
             )
             val result = Arguments.createMap().apply { putString("invoice", invoice.toString()) }
             promise.resolve(result)
@@ -1375,13 +1378,11 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             val node = this.node ?: throw Exception("Node not initialized")
             val bolt11 = node.bolt11Payment()
             val invoiceDescription = Bolt11InvoiceDescription.Direct(description)
-            val hintsMode = parseRouteHintsMode(routeHintsMode)
-            val customChannelIds = parseCustomRouteHintUserChannelIds(customRouteHintChannelIds)
+            val routeHints = parseRouteHints(routeHintsMode, customRouteHintChannelIds)
             val invoice = bolt11.receiveVariableAmountWithRouteHints(
                 invoiceDescription,
                 toUIntExact(expirySecs, "expiry"),
-                hintsMode,
-                customChannelIds
+                routeHints
             )
             val result = Arguments.createMap().apply { putString("invoice", invoice.toString()) }
             promise.resolve(result)
