@@ -333,6 +333,7 @@
     "views.LnurlAuth.login": "Logga in",
     "views.LnurlAuth.loginSuccess": "Autentisering lyckades",
     "views.LnurlAuth.lndHubAuthMode": "LNURL-Authläge",
+    "views.LnurlAuth.unsafeCallback": "This service asked the wallet to send your login signature to an address that doesn't match the domain you're logging in to. Login cancelled to protect your account.",
     "views.Routing.received": "Avgift mottagen",
     "views.Routing.RoutingHeader.timeframeEarned": "Intjänat under vald tidsperiod",
     "views.Routing.RoutingHeader.dayEarned": "Intjänat idag",
