@@ -333,6 +333,7 @@
     "views.LnurlAuth.login": "लॉग इन",
     "views.LnurlAuth.loginSuccess": "सफलतापूर्वक प्रमाणित",
     "views.LnurlAuth.lndHubAuthMode": "LNURL-Auth मोड",
+    "views.LnurlAuth.unsafeCallback": "This service asked the wallet to send your login signature to an address that doesn't match the domain you're logging in to. Login cancelled to protect your account.",
     "views.Routing.received": "प्राप्त फीस",
     "views.Routing.RoutingHeader.timeframeEarned": "चयनित समयावधि के दौरान अर्जित",
     "views.Routing.RoutingHeader.dayEarned": "आज अर्जित",
