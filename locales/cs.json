@@ -333,6 +333,7 @@
     "views.LnurlAuth.login": "Přihlášení",
     "views.LnurlAuth.loginSuccess": "Úspěšné ověřeno",
     "views.LnurlAuth.lndHubAuthMode": "Režim LNURL-Auth",
+    "views.LnurlAuth.unsafeCallback": "This service asked the wallet to send your login signature to an address that doesn't match the domain you're logging in to. Login cancelled to protect your account.",
     "views.Routing.received": "Přijaté poplatky",
     "views.Routing.RoutingHeader.timeframeEarned": "Zisk ve vybraném období",
     "views.Routing.RoutingHeader.dayEarned": "Vyděláno dnes",

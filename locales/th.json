@@ -333,6 +333,7 @@
     "views.LnurlAuth.login": "เข้าสู่ระบบ",
     "views.LnurlAuth.loginSuccess": "ยืนยันตัวตนเสร็จสมบูรณ์",
     "views.LnurlAuth.lndHubAuthMode": "โหมด LNURL-Auth",
+    "views.LnurlAuth.unsafeCallback": "This service asked the wallet to send your login signature to an address that doesn't match the domain you're logging in to. Login cancelled to protect your account.",
     "views.Routing.received": "ค่าธรรมเนียมที่ได้รับ",
     "views.Routing.RoutingHeader.timeframeEarned": "ที่ได้รับในช่วงเวลาที่เลือก",
     "views.Routing.RoutingHeader.dayEarned": "ที่ได้รับในวันนี้",

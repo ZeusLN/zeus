@@ -333,6 +333,7 @@
     "views.LnurlAuth.login": "Conecte-se",
     "views.LnurlAuth.loginSuccess": "Autenticado com sucesso",
     "views.LnurlAuth.lndHubAuthMode": "LNURL-Modo de Autenticação",
+    "views.LnurlAuth.unsafeCallback": "This service asked the wallet to send your login signature to an address that doesn't match the domain you're logging in to. Login cancelled to protect your account.",
     "views.Routing.received": "Taxa recebida",
     "views.Routing.RoutingHeader.timeframeEarned": "Ganhos durante o período selecionado ",
     "views.Routing.RoutingHeader.dayEarned": "Ganho hoje",

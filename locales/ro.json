@@ -333,6 +333,7 @@
     "views.LnurlAuth.login": "Conectare",
     "views.LnurlAuth.loginSuccess": "Autentificare cu succes",
     "views.LnurlAuth.lndHubAuthMode": "Mod LNURL-Auth",
+    "views.LnurlAuth.unsafeCallback": "This service asked the wallet to send your login signature to an address that doesn't match the domain you're logging in to. Login cancelled to protect your account.",
     "views.Routing.received": "Comision primit",
     "views.Routing.RoutingHeader.timeframeEarned": "Câștigat în intervalul selectat",
     "views.Routing.RoutingHeader.dayEarned": "Câștigat astăzi",

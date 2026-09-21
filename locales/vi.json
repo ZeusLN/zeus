@@ -333,6 +333,7 @@
     "views.LnurlAuth.login": "Đăng nhập",
     "views.LnurlAuth.loginSuccess": "Xác thực thành công",
     "views.LnurlAuth.lndHubAuthMode": "LNURL-Auth Mode",
+    "views.LnurlAuth.unsafeCallback": "This service asked the wallet to send your login signature to an address that doesn't match the domain you're logging in to. Login cancelled to protect your account.",
     "views.Routing.received": "Phí đã nhận",
     "views.Routing.RoutingHeader.timeframeEarned": "Thu nhập trong khung thời gian đã chọn",
     "views.Routing.RoutingHeader.dayEarned": "Thu nhập hôm nay",

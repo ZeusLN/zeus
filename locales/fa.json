@@ -333,6 +333,7 @@
     "views.LnurlAuth.login": "ورود",
     "views.LnurlAuth.loginSuccess": "هویت با موفقیت احراز شد",
     "views.LnurlAuth.lndHubAuthMode": "حالت LNURL-Auth",
+    "views.LnurlAuth.unsafeCallback": "This service asked the wallet to send your login signature to an address that doesn't match the domain you're logging in to. Login cancelled to protect your account.",
     "views.Routing.received": "کارمزد دریافت شد",
     "views.Routing.RoutingHeader.timeframeEarned": "در بازه زمانی انتخاب شده بدست آمد",
     "views.Routing.RoutingHeader.dayEarned": "درآمد امروز",
