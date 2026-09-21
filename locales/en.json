@@ -1873,6 +1873,7 @@
     "error.paymentFailed": "Payment failed",
     "error.paymentTimedOut": "Payment timed out",
     "error.channelNotFound": "Channel with funding txid {{fundingTxid}} not found",
+    "error.spliceFailed": "Splice failed",
     "error.serviceConnection": "Error connecting to service. Please try again later.",
     "error.getExtendableChannels": "Failed to get extendable channels",
     "error.createOrder": "Failed to create order",
