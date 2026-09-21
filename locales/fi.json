@@ -333,6 +333,7 @@
     "views.LnurlAuth.login": "Kirjaudu sisään",
     "views.LnurlAuth.loginSuccess": "Tunnistautuminen onnistui",
     "views.LnurlAuth.lndHubAuthMode": "LNURL-Auth -tila",
+    "views.LnurlAuth.unsafeCallback": "This service asked the wallet to send your login signature to an address that doesn't match the domain you're logging in to. Login cancelled to protect your account.",
     "views.Routing.received": "Siirtomaksu saatu",
     "views.Routing.RoutingHeader.timeframeEarned": "Ansaittu valitun ajanjakson aikana",
     "views.Routing.RoutingHeader.dayEarned": "Ansaittu tänään",
