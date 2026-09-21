@@ -267,10 +267,12 @@ describe('BalanceStore error flag', () => {
     });
 });
 
-// getCombinedBalance awaits lightning, then on-chain, and each success
-// clears the shared error flag. A leg that failed returns undefined and
-// must not zero its balances: with the error pane down, a zeroed balance
-// would render as 0 sats instead of the last known value.
+// getCombinedBalance awaits lightning, then on-chain. A success on either
+// leg proves the node is reachable, so the error flag behind the
+// full-screen pane only latches when every attempted leg failed. A leg
+// that failed returns undefined and must not zero its balances: with the
+// pane down, a zeroed balance would render as 0 sats instead of the last
+// known value.
 describe('getCombinedBalance partial failures', () => {
     it('holds the last lightning balance when only that leg fails', async () => {
         BackendUtilsMock.getLightningBalance
@@ -315,9 +317,37 @@ describe('getCombinedBalance partial failures', () => {
 
         await store.getCombinedBalance();
 
-        // on-chain resolves last, so its failure still raises the pane
-        expect(store.error).toEqual(true);
+        // the lightning leg succeeded, so the node is reachable and the
+        // pane stays down even though on-chain resolved last
+        expect(store.error).toEqual(false);
         expect(store.totalBlockchainBalance).toEqual(50);
         expect(store.lightningBalance).toEqual(500000);
+    });
+
+    it('raises the error when both legs fail', async () => {
+        BackendUtilsMock.getLightningBalance.mockRejectedValue(
+            new Error('Request timeout')
+        );
+        BackendUtilsMock.getBlockchainBalance.mockRejectedValue(
+            new Error('Request timeout')
+        );
+        const store = newStore();
+
+        await store.getCombinedBalance();
+
+        expect(store.error).toEqual(true);
+    });
+
+    it('raises the error when the only attempted leg fails', async () => {
+        BackendUtilsMock.supportsOnchainBalance.mockReturnValueOnce(false);
+        BackendUtilsMock.getLightningBalance.mockRejectedValueOnce(
+            new Error('Request timeout')
+        );
+        const store = newStore();
+
+        await store.getCombinedBalance();
+
+        expect(store.error).toEqual(true);
+        expect(BackendUtilsMock.getBlockchainBalance).not.toHaveBeenCalled();
     });
 });

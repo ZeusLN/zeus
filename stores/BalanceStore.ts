@@ -245,11 +245,19 @@ export default class BalanceStore {
         if (reset) this.reset();
         let lightning, onChain: any;
         lightning = await this.getLightningBalance(false);
-        if (BackendUtils.supportsOnchainBalance()) {
+        const onChainAttempted = BackendUtils.supportsOnchainBalance();
+        if (onChainAttempted) {
             onChain = await this.getBlockchainBalance(false, false);
         }
 
         runInAction(() => {
+            // the legs each set the flag as they resolve, so on its own it
+            // ends up reflecting whichever one happened to finish last.
+            // This flag only drives the full-screen "Error connecting to
+            // your node" pane, so it has to mean "the node is unreachable":
+            // latch it only when every leg we attempted failed.
+            this.error = !lightning && (!onChainAttempted || !onChain);
+
             // a failed leg returns undefined; hold its last known values
             // rather than zeroing them, since a success on the other leg
             // clears the error pane that used to cover the zeros
