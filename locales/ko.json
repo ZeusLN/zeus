@@ -333,6 +333,7 @@
     "views.LnurlAuth.login": "로그인",
     "views.LnurlAuth.loginSuccess": "인증 성공",
     "views.LnurlAuth.lndHubAuthMode": "LNURL 인증 모드",
+    "views.LnurlAuth.unsafeCallback": "This service asked the wallet to send your login signature to an address that doesn't match the domain you're logging in to. Login cancelled to protect your account.",
     "views.Routing.received": "받은 수수료",
     "views.Routing.RoutingHeader.timeframeEarned": "선택한 기간 동안 획득",
     "views.Routing.RoutingHeader.dayEarned": "오늘 획득",
