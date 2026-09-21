@@ -333,6 +333,7 @@
     "views.LnurlAuth.login": "התחברות",
     "views.LnurlAuth.loginSuccess": "אימות בוצע בהצלחה",
     "views.LnurlAuth.lndHubAuthMode": "מצב LNURL-Auth",
+    "views.LnurlAuth.unsafeCallback": "This service asked the wallet to send your login signature to an address that doesn't match the domain you're logging in to. Login cancelled to protect your account.",
     "views.Routing.received": "עמלות שהתקבלו",
     "views.Routing.RoutingHeader.timeframeEarned": "רווח תקופתי",
     "views.Routing.RoutingHeader.dayEarned": "רווח יומי",
