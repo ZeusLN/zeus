@@ -275,6 +275,10 @@ export const verifyLnurlAuthCallback = (
     callback: string,
     expectedDomain: string
 ): LnurlCheckResult => {
+    // The reason strings below are developer-facing diagnostics, not UI copy:
+    // the unit tests assert on them, and the host-mismatch one interpolates an
+    // attacker-controlled hostname that must never be rendered as wallet text.
+    // Views show the localized views.LnurlAuth.unsafeCallback message instead.
     if (typeof callback === 'string' && callback.includes('\\')) {
         return { ok: false, reason: 'callback URL contains a backslash' };
     }
