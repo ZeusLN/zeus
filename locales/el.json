@@ -333,6 +333,7 @@
     "views.LnurlAuth.login": "Συνδεθείτε",
     "views.LnurlAuth.loginSuccess": "Επαληθεύτηκε με επιτυχία ",
     "views.LnurlAuth.lndHubAuthMode": "Λειτουργία LNURL-Auth",
+    "views.LnurlAuth.unsafeCallback": "This service asked the wallet to send your login signature to an address that doesn't match the domain you're logging in to. Login cancelled to protect your account.",
     "views.Routing.received": "Τέλος που εισπράχθηκε",
     "views.Routing.RoutingHeader.timeframeEarned": "Έσοδα κατά τη διάρκεια του επιλεγμένου χρονικού διαστήματος",
     "views.Routing.RoutingHeader.dayEarned": "Έσοδα σήμερα",
