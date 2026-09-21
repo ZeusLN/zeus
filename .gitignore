@@ -75,6 +75,10 @@ coverage/
 ios/Pods
 **.swp
 
+# Bundler: the Gemfile is a convenience path for installing CocoaPods, the
+# resolved set is not something we pin (see the Gemfile and ios/Podfile)
+Gemfile.lock
+
 # Lnd binaries
 android/lndmobile/Lndmobile.aar
 ios/LncMobile/Lndmobile.xcframework
