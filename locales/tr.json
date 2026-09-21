@@ -333,6 +333,7 @@
     "views.LnurlAuth.login": "Giriş Yap",
     "views.LnurlAuth.loginSuccess": "Kimlik doğrulandı",
     "views.LnurlAuth.lndHubAuthMode": "LNURL-Auth Modu",
+    "views.LnurlAuth.unsafeCallback": "This service asked the wallet to send your login signature to an address that doesn't match the domain you're logging in to. Login cancelled to protect your account.",
     "views.Routing.received": "Ücret alındı",
     "views.Routing.RoutingHeader.timeframeEarned": "Seçilen zaman diliminde kazanılan",
     "views.Routing.RoutingHeader.dayEarned": "Bugün kazanılan",
