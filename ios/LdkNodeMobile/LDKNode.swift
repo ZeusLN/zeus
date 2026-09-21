@@ -849,21 +849,25 @@ public protocol Bolt11PaymentProtocol : AnyObject {
     
     func receiveForHash(amountMsat: UInt64, description: Bolt11InvoiceDescription, expirySecs: UInt32, paymentHash: PaymentHash) throws  -> Bolt11Invoice
     
+    func receiveForHashWithRouteHints(amountMsat: UInt64, description: Bolt11InvoiceDescription, expirySecs: UInt32, paymentHash: PaymentHash, routeHints: RouteHints) throws  -> Bolt11Invoice
+    
     func receiveVariableAmount(description: Bolt11InvoiceDescription, expirySecs: UInt32) throws  -> Bolt11Invoice
     
     func receiveVariableAmountForHash(description: Bolt11InvoiceDescription, expirySecs: UInt32, paymentHash: PaymentHash) throws  -> Bolt11Invoice
+    
+    func receiveVariableAmountForHashWithRouteHints(description: Bolt11InvoiceDescription, expirySecs: UInt32, paymentHash: PaymentHash, routeHints: RouteHints) throws  -> Bolt11Invoice
     
     func receiveVariableAmountViaJitChannel(description: Bolt11InvoiceDescription, expirySecs: UInt32, maxProportionalLspFeeLimitPpmMsat: UInt64?) throws  -> Bolt11Invoice
     
     func receiveVariableAmountViaJitChannelForHash(description: Bolt11InvoiceDescription, expirySecs: UInt32, maxProportionalLspFeeLimitPpmMsat: UInt64?, paymentHash: PaymentHash) throws  -> Bolt11Invoice
     
-    func receiveVariableAmountWithRouteHints(description: Bolt11InvoiceDescription, expirySecs: UInt32, routeHintsMode: RouteHintsMode, customRouteHintUserChannelIds: [UserChannelId]?) throws  -> Bolt11Invoice
+    func receiveVariableAmountWithRouteHints(description: Bolt11InvoiceDescription, expirySecs: UInt32, routeHints: RouteHints) throws  -> Bolt11Invoice
     
     func receiveViaJitChannel(amountMsat: UInt64, description: Bolt11InvoiceDescription, expirySecs: UInt32, maxLspFeeLimitMsat: UInt64?) throws  -> Bolt11Invoice
     
     func receiveViaJitChannelForHash(amountMsat: UInt64, description: Bolt11InvoiceDescription, expirySecs: UInt32, maxLspFeeLimitMsat: UInt64?, paymentHash: PaymentHash) throws  -> Bolt11Invoice
     
-    func receiveWithRouteHints(amountMsat: UInt64, description: Bolt11InvoiceDescription, expirySecs: UInt32, routeHintsMode: RouteHintsMode, customRouteHintUserChannelIds: [UserChannelId]?) throws  -> Bolt11Invoice
+    func receiveWithRouteHints(amountMsat: UInt64, description: Bolt11InvoiceDescription, expirySecs: UInt32, routeHints: RouteHints) throws  -> Bolt11Invoice
     
     func send(invoice: Bolt11Invoice, routeParameters: RouteParametersConfig?, paymentTimeoutSecs: UInt64?) throws  -> PaymentId
     
@@ -962,6 +966,18 @@ open func receiveForHash(amountMsat: UInt64, description: Bolt11InvoiceDescripti
 })
 }
     
+open func receiveForHashWithRouteHints(amountMsat: UInt64, description: Bolt11InvoiceDescription, expirySecs: UInt32, paymentHash: PaymentHash, routeHints: RouteHints)throws  -> Bolt11Invoice {
+    return try  FfiConverterTypeBolt11Invoice.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
+    uniffi_ldk_node_fn_method_bolt11payment_receive_for_hash_with_route_hints(self.uniffiClonePointer(),
+        FfiConverterUInt64.lower(amountMsat),
+        FfiConverterTypeBolt11InvoiceDescription.lower(description),
+        FfiConverterUInt32.lower(expirySecs),
+        FfiConverterTypePaymentHash.lower(paymentHash),
+        FfiConverterTypeRouteHints.lower(routeHints),$0
+    )
+})
+}
+    
 open func receiveVariableAmount(description: Bolt11InvoiceDescription, expirySecs: UInt32)throws  -> Bolt11Invoice {
     return try  FfiConverterTypeBolt11Invoice.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount(self.uniffiClonePointer(),
@@ -977,6 +993,17 @@ open func receiveVariableAmountForHash(description: Bolt11InvoiceDescription, ex
         FfiConverterTypeBolt11InvoiceDescription.lower(description),
         FfiConverterUInt32.lower(expirySecs),
         FfiConverterTypePaymentHash.lower(paymentHash),$0
+    )
+})
+}
+    
+open func receiveVariableAmountForHashWithRouteHints(description: Bolt11InvoiceDescription, expirySecs: UInt32, paymentHash: PaymentHash, routeHints: RouteHints)throws  -> Bolt11Invoice {
+    return try  FfiConverterTypeBolt11Invoice.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
+    uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount_for_hash_with_route_hints(self.uniffiClonePointer(),
+        FfiConverterTypeBolt11InvoiceDescription.lower(description),
+        FfiConverterUInt32.lower(expirySecs),
+        FfiConverterTypePaymentHash.lower(paymentHash),
+        FfiConverterTypeRouteHints.lower(routeHints),$0
     )
 })
 }
@@ -1002,13 +1029,12 @@ open func receiveVariableAmountViaJitChannelForHash(description: Bolt11InvoiceDe
 })
 }
     
-open func receiveVariableAmountWithRouteHints(description: Bolt11InvoiceDescription, expirySecs: UInt32, routeHintsMode: RouteHintsMode, customRouteHintUserChannelIds: [UserChannelId]?)throws  -> Bolt11Invoice {
+open func receiveVariableAmountWithRouteHints(description: Bolt11InvoiceDescription, expirySecs: UInt32, routeHints: RouteHints)throws  -> Bolt11Invoice {
     return try  FfiConverterTypeBolt11Invoice.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_bolt11payment_receive_variable_amount_with_route_hints(self.uniffiClonePointer(),
         FfiConverterTypeBolt11InvoiceDescription.lower(description),
         FfiConverterUInt32.lower(expirySecs),
-        FfiConverterTypeRouteHintsMode.lower(routeHintsMode),
-        FfiConverterOptionSequenceTypeUserChannelId.lower(customRouteHintUserChannelIds),$0
+        FfiConverterTypeRouteHints.lower(routeHints),$0
     )
 })
 }
@@ -1036,14 +1062,13 @@ open func receiveViaJitChannelForHash(amountMsat: UInt64, description: Bolt11Inv
 })
 }
     
-open func receiveWithRouteHints(amountMsat: UInt64, description: Bolt11InvoiceDescription, expirySecs: UInt32, routeHintsMode: RouteHintsMode, customRouteHintUserChannelIds: [UserChannelId]?)throws  -> Bolt11Invoice {
+open func receiveWithRouteHints(amountMsat: UInt64, description: Bolt11InvoiceDescription, expirySecs: UInt32, routeHints: RouteHints)throws  -> Bolt11Invoice {
     return try  FfiConverterTypeBolt11Invoice.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_bolt11payment_receive_with_route_hints(self.uniffiClonePointer(),
         FfiConverterUInt64.lower(amountMsat),
         FfiConverterTypeBolt11InvoiceDescription.lower(description),
         FfiConverterUInt32.lower(expirySecs),
-        FfiConverterTypeRouteHintsMode.lower(routeHintsMode),
-        FfiConverterOptionSequenceTypeUserChannelId.lower(customRouteHintUserChannelIds),$0
+        FfiConverterTypeRouteHints.lower(routeHints),$0
     )
 })
 }
@@ -10316,21 +10341,26 @@ public func FfiConverterTypeQrPaymentResult_lower(_ value: QrPaymentResult) -> R
 extension QrPaymentResult: Equatable, Hashable {}
 
 
-public enum RouteHintsMode {
+
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+
+public enum RouteHints {
     
     case none
     case automatic
-    case custom
+    case custom(userChannelIds: [UserChannelId]
+    )
 }
 
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public struct FfiConverterTypeRouteHintsMode: FfiConverterRustBuffer {
-    typealias SwiftType = RouteHintsMode
+public struct FfiConverterTypeRouteHints: FfiConverterRustBuffer {
+    typealias SwiftType = RouteHints
 
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RouteHintsMode {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> RouteHints {
         let variant: Int32 = try readInt(&buf)
         switch variant {
         
@@ -10338,13 +10368,14 @@ public struct FfiConverterTypeRouteHintsMode: FfiConverterRustBuffer {
         
         case 2: return .automatic
         
-        case 3: return .custom
+        case 3: return .custom(userChannelIds: try FfiConverterSequenceTypeUserChannelId.read(from: &buf)
+        )
         
         default: throw UniffiInternalError.unexpectedEnumCase
         }
     }
 
-    public static func write(_ value: RouteHintsMode, into buf: inout [UInt8]) {
+    public static func write(_ value: RouteHints, into buf: inout [UInt8]) {
         switch value {
         
         
@@ -10356,9 +10387,10 @@ public struct FfiConverterTypeRouteHintsMode: FfiConverterRustBuffer {
             writeInt(&buf, Int32(2))
         
         
-        case .custom:
+        case let .custom(userChannelIds):
             writeInt(&buf, Int32(3))
-        
+            FfiConverterSequenceTypeUserChannelId.write(userChannelIds, into: &buf)
+            
         }
     }
 }
@@ -10367,20 +10399,20 @@ public struct FfiConverterTypeRouteHintsMode: FfiConverterRustBuffer {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeRouteHintsMode_lift(_ buf: RustBuffer) throws -> RouteHintsMode {
-    return try FfiConverterTypeRouteHintsMode.lift(buf)
+public func FfiConverterTypeRouteHints_lift(_ buf: RustBuffer) throws -> RouteHints {
+    return try FfiConverterTypeRouteHints.lift(buf)
 }
 
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
-public func FfiConverterTypeRouteHintsMode_lower(_ value: RouteHintsMode) -> RustBuffer {
-    return FfiConverterTypeRouteHintsMode.lower(value)
+public func FfiConverterTypeRouteHints_lower(_ value: RouteHints) -> RustBuffer {
+    return FfiConverterTypeRouteHints.lower(value)
 }
 
 
 
-extension RouteHintsMode: Equatable, Hashable {}
+extension RouteHints: Equatable, Hashable {}
 
 
 
@@ -11383,30 +11415,6 @@ fileprivate struct FfiConverterOptionSequenceTypeSocketAddress: FfiConverterRust
         switch try readInt(&buf) as Int8 {
         case 0: return nil
         case 1: return try FfiConverterSequenceTypeSocketAddress.read(from: &buf)
-        default: throw UniffiInternalError.unexpectedOptionalTag
-        }
-    }
-}
-
-#if swift(>=5.8)
-@_documentation(visibility: private)
-#endif
-fileprivate struct FfiConverterOptionSequenceTypeUserChannelId: FfiConverterRustBuffer {
-    typealias SwiftType = [UserChannelId]?
-
-    public static func write(_ value: SwiftType, into buf: inout [UInt8]) {
-        guard let value = value else {
-            writeInt(&buf, Int8(0))
-            return
-        }
-        writeInt(&buf, Int8(1))
-        FfiConverterSequenceTypeUserChannelId.write(value, into: &buf)
-    }
-
-    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> SwiftType {
-        switch try readInt(&buf) as Int8 {
-        case 0: return nil
-        case 1: return try FfiConverterSequenceTypeUserChannelId.read(from: &buf)
         default: throw UniffiInternalError.unexpectedOptionalTag
         }
     }
@@ -13272,10 +13280,16 @@ private var initializationResult: InitializationResult = {
     if (uniffi_ldk_node_checksum_method_bolt11payment_receive_for_hash() != 27050) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_ldk_node_checksum_method_bolt11payment_receive_for_hash_with_route_hints() != 62426) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount() != 4893) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_for_hash() != 1402) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_for_hash_with_route_hints() != 42267) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_via_jit_channel() != 24506) {
@@ -13284,7 +13298,7 @@ private var initializationResult: InitializationResult = {
     if (uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_via_jit_channel_for_hash() != 38025) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_with_route_hints() != 37082) {
+    if (uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_with_route_hints() != 44813) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_bolt11payment_receive_via_jit_channel() != 16532) {
@@ -13293,7 +13307,7 @@ private var initializationResult: InitializationResult = {
     if (uniffi_ldk_node_checksum_method_bolt11payment_receive_via_jit_channel_for_hash() != 1143) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ldk_node_checksum_method_bolt11payment_receive_with_route_hints() != 4129) {
+    if (uniffi_ldk_node_checksum_method_bolt11payment_receive_with_route_hints() != 6817) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_bolt11payment_send() != 53480) {
