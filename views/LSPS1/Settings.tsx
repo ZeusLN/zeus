@@ -176,18 +176,20 @@ export default class LSPS1Settings extends React.Component<
         const isMutinynet = nodeInfo?.isMutinynet;
         const isTestNet = nodeInfo?.isTestNet;
 
+        const isOlympusPubkey = pubkey === lspConfig.defaultPubkey;
         const isOlympusCustom =
-            pubkey === lspConfig.defaultPubkey &&
-            host === lspConfig.defaultLsps1Host;
+            isOlympusPubkey && host === lspConfig.defaultLsps1Host;
         const isOlympusRestMatch = restHost === lspConfig.defaultLsps1Rest;
 
         // Branding answers for the transport LSPS1 will actually use, in the
-        // same priority order as LSPStore.isOlympus.
+        // same priority order as LSPStore.isOlympus. The pubkey alone
+        // identifies the node on the peer transports; the host is only where
+        // it is reached.
         const isOlympus = BackendUtils.supportsLSPS1native()
-            ? isOlympusCustom
+            ? isOlympusPubkey
             : BackendUtils.supportsLSPS1rest()
             ? isOlympusRestMatch
-            : BackendUtils.supportsLSPScustomMessage() && isOlympusCustom;
+            : BackendUtils.supportsLSPScustomMessage() && isOlympusPubkey;
 
         // The reset button, in contrast, has to stay visible until every
         // field the backend uses is back at its default.
