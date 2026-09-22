@@ -1983,6 +1983,12 @@ export default class SettingsStore {
     ) => {
         if (!silentUpdate) this.loading = true;
         try {
+            // Sweep before migrations so a migration failure cannot leave
+            // plaintext staging remnants behind. The migration helper latches
+            // this once per process because getSettings also runs when the app
+            // backgrounds during Android's save dialog.
+            await MigrationsUtils.purgeNodeConfigStagingFiles();
+
             // ORDER IS LOAD-BEARING. keychainDesyncMigration must run BEFORE
             // keychainCloudSyncMigration: migrateKey() short-circuits on a
             // truthy Storage.getItem(), which (with the patched
@@ -1995,10 +2001,6 @@ export default class SettingsStore {
             await MigrationsUtils.keychainDesyncMigration();
             await MigrationsUtils.keychainCloudSyncMigration();
             await MigrationsUtils.purgeRescueKeyFiles();
-            // Sweep node-config staging plaintext a killed export/import left
-            // behind. Not a migration, so it is not MOD_KEY gated: a remnant
-            // can appear at any time and must not wait for the next export.
-            await MigrationsUtils.purgeNodeConfigStagingFiles();
 
             let modernSettings: any = await Storage.getItem(STORAGE_KEY);
 

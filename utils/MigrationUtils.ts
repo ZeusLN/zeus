@@ -814,11 +814,16 @@ class MigrationsUtils {
         await EncryptedStorage.setItem(MOD_KEY_RESCUE_FILE, 'true');
     }
 
-    // Deliberately not MOD_KEY gated, unlike the legacy sweeps above: this
-    // removes crash remnants rather than migrating once-off state, and a new
-    // one can appear after any killed export or import. Cheap enough to repeat
-    // (a handful of exists checks on app-private cache).
+    // This is not MOD_KEY gated: a new crash remnant can appear after any
+    // killed export or import. It is latched once per process because
+    // getSettings() also runs when Android backgrounds for the save dialog;
+    // sweeping then would delete an active export before saveDocuments copies
+    // it. clearAllData calls the underlying utility directly and always purges.
+    private nodeConfigStagingPurged = false;
+
     public async purgeNodeConfigStagingFiles() {
+        if (this.nodeConfigStagingPurged) return;
+        this.nodeConfigStagingPurged = true;
         await purgeNodeConfigStagingFiles();
     }
 

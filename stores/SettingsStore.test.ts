@@ -269,4 +269,22 @@ describe('SettingsStore.getSettings', () => {
             MigrationsUtils.purgeNodeConfigStagingFiles
         ).toHaveBeenCalledTimes(1);
     });
+
+    it('sweeps node-config staging before a migration failure', async () => {
+        MigrationsUtils.purgeNodeConfigStagingFiles.mockClear();
+        MigrationsUtils.keychainDesyncMigration.mockRejectedValueOnce(
+            new Error('migration failed')
+        );
+
+        await new SettingsStore().getSettings();
+
+        expect(
+            MigrationsUtils.purgeNodeConfigStagingFiles
+        ).toHaveBeenCalledTimes(1);
+        expect(errorSpy).toHaveBeenCalledWith(
+            'Could not load settings',
+            expect.any(Error)
+        );
+        errorSpy.mockClear();
+    });
 });
