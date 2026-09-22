@@ -379,6 +379,18 @@ export default class OrdersPane extends React.Component<
                             renderItem={this.renderItem}
                             keyExtractor={(item) => item?.orderId?.toString()}
                             ItemSeparatorComponent={this.renderSeparator}
+                            ListEmptyComponent={
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText'),
+                                        fontSize: 20,
+                                        textAlign: 'center',
+                                        padding: 20
+                                    }}
+                                >
+                                    {localeString('views.LSPS1.noOrdersError')}
+                                </Text>
+                            }
                         />
                     </>
                 )}
