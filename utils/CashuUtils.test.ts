@@ -520,9 +520,9 @@ describe('melt state', () => {
             expect(normalizeMeltState('Pending', 'Paid')).toBe('PENDING');
         });
 
-        it('treats a missing state as paid, as pre-lifecycle CDK did', () => {
-            expect(normalizeMeltState()).toBe('PAID');
-            expect(normalizeMeltState(undefined, null, '')).toBe('PAID');
+        it('leaves a missing state unknown', () => {
+            expect(normalizeMeltState()).toBe('');
+            expect(normalizeMeltState(undefined, null, '')).toBe('');
         });
     });
 
@@ -540,8 +540,8 @@ describe('melt state', () => {
             }
         );
 
-        it('accepts a melt with no state at all', () => {
-            expect(isMeltPaid(undefined)).toBe(true);
+        it('rejects a melt with no state at all', () => {
+            expect(isMeltPaid(undefined)).toBe(false);
         });
     });
 });

@@ -121,8 +121,8 @@ export const resolveLockTarget = (
  * in order and the first non-empty one wins, so a caller can fall back from
  * the melt result to the quote it was executed against.
  *
- * An absent state normalizes to PAID: CDK builds from before melts carried a
- * lifecycle state only ever resolved a melt that had completed.
+ * An absent state stays unknown. CDK's result type and both native bridges
+ * require a state, so ambiguity must not be reported as payment success.
  */
 export const normalizeMeltState = (
     ...candidates: Array<string | undefined | null>
@@ -130,7 +130,7 @@ export const normalizeMeltState = (
     const state = candidates.find(
         (candidate) => !!candidate && candidate.toString().length > 0
     );
-    return state ? state.toString().toUpperCase() : 'PAID';
+    return state ? state.toString().toUpperCase() : '';
 };
 
 /**
