@@ -15,6 +15,7 @@ import BackendUtils from '../utils/BackendUtils';
 import { toWalletrpcAddressTypeName } from '../utils/LndUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
+import { isLnurlCallbackAllowed } from '../utils/LnurlPayUtils';
 import LdkNodeInjection from '../ldknode/LdkNodeInjection';
 import ChannelsStore from './ChannelsStore';
 import NodeInfoStore from './NodeInfoStore';
@@ -704,6 +705,30 @@ export default class InvoicesStore {
 
                 // the withdraw is for the invoice on screen
                 if (lnurl && isCurrent()) {
+                    if (!isLnurlCallbackAllowed(lnurl.callback).ok) {
+                        // Never fetch a callback that would reach internal
+                        // infrastructure or leak in cleartext
+                        // (SSRF-by-callback)
+                        Alert.alert(
+                            localeString('general.error'),
+                            localeString('utils.lnurl.unsafeCallback'),
+                            [
+                                {
+                                    text: localeString('general.ok'),
+                                    onPress: () => void 0
+                                }
+                            ],
+                            { cancelable: false }
+                        );
+                        return {
+                            rHash: invoice.getFormattedRhash,
+                            paymentRequest: jit_bolt11
+                                ? jit_bolt11
+                                : invoice.getPaymentRequest,
+                            lspFeeSats: jit_bolt11 ? lspQuote.feeSats : null
+                        };
+                    }
+
                     const u = url.parse(lnurl.callback);
                     const qs = querystring.parse(u.query);
                     qs.k1 = lnurl.k1;
