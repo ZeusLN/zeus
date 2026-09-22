@@ -558,6 +558,19 @@ class KeychainRecoveryUtils {
         cleared: string[];
         error?: string;
     }> {
+        // Guarded internally for the same reason as copyToLegacyLocations,
+        // and with more at stake: this deletes the unprefixed keychain and
+        // EncryptedStorage entries that scanForRecoverableData exists to
+        // find, which for anyone who has not yet restored them are the only
+        // remaining copy of their wallet configurations.
+        if (!__DEV__) {
+            return {
+                success: false,
+                cleared: [],
+                error: 'clearLegacyLocations is only available in dev builds'
+            };
+        }
+
         console.log('[Recovery DEV] Clearing legacy storage locations...');
 
         const cleared: string[] = [];
