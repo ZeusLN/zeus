@@ -83,6 +83,16 @@ const UPGRADE_TITLES: { [key: number]: string } = {
     100000: 'cashu.upgradePrompt.title100k'
 };
 
+// NDK's pool connect resolves only once EVERY relay reports CONNECTED, or once
+// this timeout elapses. Without a timeout it waits forever, and our default
+// relay set is never fully reachable (some require auth, some are often down).
+//
+// We also opt out of NDK's outbox model, which defaults to on. Mint discovery
+// subscribes with hundreds of authors, and outbox tracking resolves each
+// author's relay list and reconnects the subscription as those arrive, growing
+// the pool past 40 relays and starving the JS thread for minutes.
+const NDK_CONNECT_TIMEOUT_MS = 2000;
+
 // ZEUS official npub for trusted mint recommendations
 const ZEUS_NPUB =
     'npub1xnf02f60r9v0e5kty33a404dm79zr7z2eepyrk5gsq3m7pwvsz2sazlpr5';
@@ -2161,9 +2171,10 @@ export default class CashuStore {
             });
 
             this.ndk = new NDK({
-                explicitRelayUrls: DEFAULT_NOSTR_RELAYS
+                explicitRelayUrls: DEFAULT_NOSTR_RELAYS,
+                enableOutboxModel: false
             });
-            await this.ndk.connect();
+            await this.ndk.connect(NDK_CONNECT_TIMEOUT_MS);
 
             const filter: NDKFilter = {
                 kinds: [38000 as NDKKind],
@@ -2233,9 +2244,10 @@ export default class CashuStore {
             // Initialize NDK if not already done
             if (!this.ndk) {
                 this.ndk = new NDK({
-                    explicitRelayUrls: DEFAULT_NOSTR_RELAYS
+                    explicitRelayUrls: DEFAULT_NOSTR_RELAYS,
+                    enableOutboxModel: false
                 });
-                await this.ndk.connect();
+                await this.ndk.connect(NDK_CONNECT_TIMEOUT_MS);
             }
 
             // Fetch follow list (kind 3)
@@ -2343,9 +2355,10 @@ export default class CashuStore {
             // Initialize NDK if not already done
             if (!this.ndk) {
                 this.ndk = new NDK({
-                    explicitRelayUrls: DEFAULT_NOSTR_RELAYS
+                    explicitRelayUrls: DEFAULT_NOSTR_RELAYS,
+                    enableOutboxModel: false
                 });
-                await this.ndk.connect();
+                await this.ndk.connect(NDK_CONNECT_TIMEOUT_MS);
             }
 
             // Fetch profiles (kind 0)
