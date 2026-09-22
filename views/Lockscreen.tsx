@@ -30,6 +30,7 @@ import {
 } from '../utils/DataClearUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { restartApp } from '../utils/RestartUtils';
+import { authenticatedShareIntent } from '../utils/ShareIntentProcessor';
 import { themeColor } from '../utils/ThemeUtils';
 
 interface LockscreenProps {
@@ -44,7 +45,12 @@ interface LockscreenProps {
             deletePassword: boolean;
             deleteDuressPassword: boolean;
             pendingNavigation?: { screen: string; params?: any };
-            shareIntentData?: { qrData?: string; base64Image?: string };
+            shareIntentData?: {
+                qrData?: string;
+                base64Image?: string;
+                requiresAuth?: boolean;
+                requiresWalletSelection?: boolean;
+            };
         }
     >;
 }
@@ -119,7 +125,9 @@ export default class Lockscreen extends React.Component<
 
     proceed = (targetScreen?: string, navigationParams?: any) => {
         const { SettingsStore, navigation, route } = this.props;
-        const shareIntentData = route.params?.shareIntentData;
+        const shareIntentData = authenticatedShareIntent(
+            route.params?.shareIntentData
+        );
 
         if (shareIntentData) {
             if (SettingsStore.settings.selectNodeOnStartup) {
@@ -154,7 +162,8 @@ export default class Lockscreen extends React.Component<
             deleteDuressPin,
             deletePassword,
             deleteDuressPassword,
-            pendingNavigation
+            pendingNavigation,
+            shareIntentData
         } = route.params ?? {};
 
         const posEnabled: PosEnabled =
@@ -165,12 +174,19 @@ export default class Lockscreen extends React.Component<
             posEnabled !== PosEnabled.Disabled &&
             SettingsStore.posStatus === 'active' &&
             !pendingNavigation &&
+            !shareIntentData &&
             !deletePin &&
             !deleteDuressPin &&
             !deletePassword &&
             !deleteDuressPassword
         ) {
-            // If POS is enabled and active, proceed without authentication
+            // If POS is enabled and active, proceed without authentication.
+            // Not for a share intent: nothing sends an already-authenticated
+            // payload here, so one that arrived is one that still has to be
+            // authenticated, and waiving that in POS mode is the bypass this
+            // gate exists to close. POS boots unauthenticated, so the waiver
+            // would otherwise hand a shared QR straight to the processing
+            // screen and on to Send or WalletConfiguration.
             SettingsStore.setLoginStatus(true);
             this.proceed('Wallet');
             return;
@@ -343,7 +359,9 @@ export default class Lockscreen extends React.Component<
                 // Only handle wallet selection when NOT modifying security
                 this.resetAuthenticationAttempts();
 
-                const shareIntentData = route.params?.shareIntentData;
+                const shareIntentData = authenticatedShareIntent(
+                    route.params?.shareIntentData
+                );
 
                 if (shareIntentData) {
                     navigation.replace('Wallets', {

@@ -2,6 +2,7 @@ import { NativeModules } from 'react-native';
 import QRKit from 'react-native-qr-kit';
 import handleAnything from './handleAnything';
 import { localeString } from './LocaleUtils';
+import { settingsStore } from '../stores/Stores';
 
 const { MobileTools } = NativeModules;
 
@@ -62,11 +63,26 @@ export const processSharedQRImageFast =
 
             if (!base64Image) return null;
 
-            // Return the base64 image for processing in the ShareIntentProcessing screen
+            // Return the base64 image for processing in the ShareIntentProcessing screen.
+            //
+            // The gates are attached here, where the payload enters the app,
+            // rather than at each call site. An intent read from the OS has
+            // passed no authentication, and a caller that forgets to say so
+            // hands it straight to the QR processor, which navigates wherever
+            // the QR points: the POS cold start did exactly that, so a shared
+            // image could open Send or WalletConfiguration with the PIN never
+            // asked for. Screens that continue this payload after a
+            // successful unlock or wallet selection clear the corresponding
+            // flag themselves.
             return {
                 success: true,
                 route: 'ShareIntentProcessing',
-                params: { base64Image }
+                params: {
+                    base64Image,
+                    requiresAuth: settingsStore.loginRequired(),
+                    requiresWalletSelection:
+                        settingsStore.settings?.selectNodeOnStartup
+                }
             };
         } catch (error) {
             console.error('Error in fast share QR processing:', error);
@@ -76,6 +92,24 @@ export const processSharedQRImageFast =
             };
         }
     };
+
+/**
+ * Marks a share-intent payload as having cleared the app lock, so the
+ * processing screen does not send the user straight back to the Lockscreen
+ * they just came from. Only for callers where the user has actually
+ * authenticated.
+ */
+export const authenticatedShareIntent = (shareIntentData?: any) =>
+    shareIntentData ? { ...shareIntentData, requiresAuth: false } : undefined;
+
+/**
+ * Marks a share-intent payload as having been through wallet selection, the
+ * counterpart of authenticatedShareIntent for the other gate.
+ */
+export const walletSelectedShareIntent = (shareIntentData?: any) =>
+    shareIntentData
+        ? { ...shareIntentData, requiresWalletSelection: false }
+        : undefined;
 
 /**
  * Checks if there's a pending shared image to process

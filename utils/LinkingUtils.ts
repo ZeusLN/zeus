@@ -50,20 +50,18 @@ class LinkingUtils {
                 if (shareIntentResult && shareIntentResult.success) {
                     this.shareIntentProcessed = true;
 
-                    const requiresAuth = settingsStore.loginRequired();
-                    const requiresWalletSelection =
-                        settingsStore.settings?.selectNodeOnStartup;
                     try {
                         await NativeModules.MobileTools.clearSharedIntent();
                     } catch (e) {
                         console.warn('Failed to clear intent', e);
                     }
 
-                    navigation.navigate('ShareIntentProcessing', {
-                        ...shareIntentResult.params,
-                        requiresAuth,
-                        requiresWalletSelection
-                    });
+                    // the gates ride on the params from
+                    // processSharedQRImageFast
+                    navigation.navigate(
+                        'ShareIntentProcessing',
+                        shareIntentResult.params
+                    );
                 }
                 return;
             }
@@ -94,10 +92,6 @@ class LinkingUtils {
             if (shareIntentResult && shareIntentResult.success) {
                 this.shareIntentProcessed = true;
 
-                const requiresAuth = settingsStore.loginRequired();
-                const requiresWalletSelection =
-                    settingsStore.settings?.selectNodeOnStartup;
-
                 // Clear the Android share intent immediately to prevent reprocessing
                 try {
                     await NativeModules.MobileTools.clearSharedIntent();
@@ -109,12 +103,13 @@ class LinkingUtils {
                 }
 
                 // Always show processing screen immediately for share intents
-                // Background sync and authentication will be handled by the processing screen
-                navigation.navigate('ShareIntentProcessing', {
-                    ...shareIntentResult.params,
-                    requiresAuth,
-                    requiresWalletSelection
-                });
+                // Background sync and authentication will be handled by the
+                // processing screen, on the gates that ride along with the
+                // params from processSharedQRImageFast
+                navigation.navigate(
+                    'ShareIntentProcessing',
+                    shareIntentResult.params
+                );
             }
         }
     };

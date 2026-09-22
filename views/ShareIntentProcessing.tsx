@@ -64,12 +64,22 @@ class ShareIntentProcessing extends React.Component<
         const { qrData, base64Image, requiresAuth, requiresWalletSelection } =
             route.params;
 
-        if (requiresAuth) {
+        // Fail closed. This screen decodes whatever QR it is handed and
+        // navigates wherever that QR points, including Send with an invoice
+        // loaded and WalletConfiguration pre-filled from a link, so a caller
+        // that arrives without saying whether the payload was authenticated
+        // must be treated as not having authenticated it. Only an explicit
+        // false, from a caller that knows the user has unlocked or that no
+        // login is configured, skips the Lockscreen.
+        if (requiresAuth !== false) {
             this.setState({
                 currentStep: localeString('utils.shareIntent.authRequired')
             });
 
-            const shareData = { qrData, base64Image };
+            // The Lockscreen continuation re-enters this screen with
+            // requiresAuth: false once the user is through. A pending wallet
+            // selection rides along: unlocking does not satisfy it.
+            const shareData = { qrData, base64Image, requiresWalletSelection };
 
             navigation.replace('Lockscreen', {
                 modifySecurityScreen: '',
@@ -85,7 +95,9 @@ class ShareIntentProcessing extends React.Component<
                 currentStep: localeString('utils.shareIntent.walletSelection')
             });
 
-            const shareData = { qrData, base64Image };
+            // Auth is already satisfied to have got this far: say so, or the
+            // gate above would ask for the PIN again once a wallet is picked
+            const shareData = { qrData, base64Image, requiresAuth: false };
 
             navigation.replace('Wallets', {
                 fromStartup: true,
