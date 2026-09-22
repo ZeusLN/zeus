@@ -4874,6 +4874,21 @@ export default class CashuStore {
         } catch (err: any) {
             const errorMsg = cashuErrorForDisplay(err);
             console.error('CDK payLnInvoiceFromEcash error:', err);
+
+            // A melt that did not pay still moved proofs: CDK reserves them
+            // against the quote for as long as the mint may settle it. Only
+            // the success path synced, so the balance on screen was the one
+            // from before the attempt. meltCDK and sweepMint already sync
+            // before their guard.
+            try {
+                await this.syncCDKBalances(true);
+            } catch (syncError) {
+                console.error(
+                    'CDK payLnInvoiceFromEcash: Failed to sync balances after error:',
+                    syncError
+                );
+            }
+
             if (!isDonationPayment) {
                 runInAction(() => {
                     this.paymentError = true;

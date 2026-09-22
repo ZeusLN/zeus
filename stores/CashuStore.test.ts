@@ -298,6 +298,26 @@ describe('CashuStore single-mint melt state', () => {
         // decides, not the failed round trip
         expect(store.pendingMelts).toHaveLength(1);
     });
+
+    // CDK reserves the proofs a melt moved for as long as the mint may
+    // settle it, so the balance from before the attempt is stale
+    it.each(['Pending', 'Unpaid'])(
+        'refreshes balances after a %s melt',
+        async (state) => {
+            const store = payingStore();
+            store.syncCDKBalances = jest.fn().mockResolvedValue(undefined);
+            (CashuDevKit.melt as jest.Mock).mockResolvedValue({
+                state,
+                amount: 1000,
+                fee_paid: 0
+            });
+
+            await store.payLnInvoiceFromEcash({ amount: '1000' });
+
+            expect(store.paymentSuccess).toBe(false);
+            expect(store.syncCDKBalances).toHaveBeenCalledWith(true);
+        }
+    );
 });
 
 describe('CashuStore reconcilePendingMelts', () => {
