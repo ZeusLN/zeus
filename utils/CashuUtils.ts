@@ -147,6 +147,61 @@ export const isMeltPaid = (
     ...candidates: Array<string | undefined | null>
 ): boolean => normalizeMeltState(...candidates) === 'PAID';
 
+// States in which the mint has finished with a melt without paying it. The
+// quote is settled, so nothing is in flight and nothing can change later.
+// Unpaid is the one CDK actually reports; the others are accepted so a mint
+// that spells the failure differently is not mistaken for a payment still on
+// its way.
+const SETTLED_UNPAID_MELT_STATES = ['UNPAID', 'FAILED', 'EXPIRED'];
+
+/**
+ * Whether the mint has settled a melt without paying the invoice, i.e. the
+ * ecash is the wallet's again and the payment will never happen.
+ */
+export const isMeltSettledUnpaid = (
+    ...candidates: Array<string | undefined | null>
+): boolean =>
+    SETTLED_UNPAID_MELT_STATES.includes(normalizeMeltState(...candidates));
+
+export type MeltOutcome = 'paid' | 'unpaid' | 'inFlight';
+
+/**
+ * Classifies what a melt state means for a melt the wallet is tracking.
+ *
+ * An unrecognized or absent state counts as in flight rather than failed: the
+ * mint may still be paying, and the melt quote can be re-checked to find out.
+ * Dropping it instead would be the same mistake in the other direction as
+ * reporting it paid.
+ */
+export const meltOutcome = (
+    ...candidates: Array<string | undefined | null>
+): MeltOutcome => {
+    if (isMeltPaid(...candidates)) return 'paid';
+    if (isMeltSettledUnpaid(...candidates)) return 'unpaid';
+    return 'inFlight';
+};
+
+/**
+ * A melt the mint has taken the ecash for but has not settled, recorded so it
+ * can be re-checked later. `source` is what the wallet was doing: `payment` is
+ * a Lightning invoice the user paid and expects in their history, while
+ * `sweep` and `claim` pay an invoice from the user's own node, which records
+ * the incoming payment itself once it settles.
+ */
+export type PendingMeltSource = 'payment' | 'sweep' | 'claim';
+
+export interface PendingMelt {
+    quote: string;
+    mintUrl: string;
+    source: PendingMeltSource;
+    amount: number;
+    feeReserve: number;
+    request?: string;
+    // melt quote expiry, in seconds, as the mint reported it
+    expiry?: number;
+    createdAt: number;
+}
+
 // Limits to mitigate resource exhaustion from malicious P2PK secret payloads
 const MAX_P2PK_SECRET_LENGTH = 2048;
 const MAX_P2PK_SECRET_DEPTH = 10;
