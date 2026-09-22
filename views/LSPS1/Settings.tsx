@@ -176,19 +176,31 @@ export default class LSPS1Settings extends React.Component<
         const isMutinynet = nodeInfo?.isMutinynet;
         const isTestNet = nodeInfo?.isTestNet;
 
+        const isOlympusPubkey = pubkey === lspConfig.defaultPubkey;
         const isOlympusCustom =
-            pubkey === lspConfig.defaultPubkey && host === lspConfig.lsps1Host;
-        const isOlympusRestMatch = restHost === lspConfig.lsps1Rest;
+            isOlympusPubkey && host === lspConfig.defaultLsps1Host;
+        const isOlympusRestMatch = restHost === lspConfig.defaultLsps1Rest;
 
-        const isOlympusCustomMessage =
-            BackendUtils.supportsLSPScustomMessage() && isOlympusCustom;
-        const isOlympusRest =
-            BackendUtils.supportsLSPS1rest() && isOlympusRestMatch;
-        const isOlympusNative =
-            BackendUtils.supportsLSPS1native() && isOlympusCustom;
+        // Branding answers for the transport LSPS1 will actually use, in the
+        // same priority order as LSPStore.isOlympus. The pubkey alone
+        // identifies the node on the peer transports; the host is only where
+        // it is reached.
+        const isOlympus = BackendUtils.supportsLSPS1native()
+            ? isOlympusPubkey
+            : BackendUtils.supportsLSPS1rest()
+            ? isOlympusRestMatch
+            : BackendUtils.supportsLSPScustomMessage() && isOlympusPubkey;
 
-        const isOlympus =
-            isOlympusCustomMessage || isOlympusRest || isOlympusNative;
+        // The reset button, in contrast, has to stay visible until every
+        // field the backend uses is back at its default.
+        const isDefaultConfig =
+            (!(
+                BackendUtils.supportsLSPScustomMessage() ||
+                BackendUtils.supportsLSPS1native()
+            ) ||
+                isOlympusCustom) &&
+            (!BackendUtils.supportsLSPS1rest() || isOlympusRestMatch) &&
+            lsps1Token === '';
 
         return (
             <Screen>
@@ -307,7 +319,7 @@ export default class LSPS1Settings extends React.Component<
                                 />
                             )}
 
-                            {!isOlympus && (
+                            {!isDefaultConfig && (
                                 <Button
                                     containerStyle={{ paddingTop: 20 }}
                                     title={localeString('general.reset')}
@@ -426,13 +438,14 @@ export default class LSPS1Settings extends React.Component<
                         </>
                     )}
 
-                    {!BackendUtils.supportsLSPS1native() && !isOlympus && (
-                        <Button
-                            containerStyle={{ paddingTop: 30 }}
-                            title={localeString('general.reset')}
-                            onPress={() => this.handleReset()}
-                        />
-                    )}
+                    {!BackendUtils.supportsLSPS1native() &&
+                        !isDefaultConfig && (
+                            <Button
+                                containerStyle={{ paddingTop: 30 }}
+                                title={localeString('general.reset')}
+                                onPress={() => this.handleReset()}
+                            />
+                        )}
                 </View>
                 <View style={{ marginBottom: 15 }}>
                     <View style={{ marginBottom: 10 }}>

@@ -310,7 +310,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
             { element: maxButton }
         ];
 
-        const isOlympus = LSPStore.isOlympus();
+        const isOlympus = LSPStore.isOlympus(LSPService.LSPS7);
 
         const lspDisplay = isOlympus
             ? 'Olympus by ZEUS'

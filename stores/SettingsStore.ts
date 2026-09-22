@@ -1337,6 +1337,9 @@ export function getLspConfigForNetwork(
     lsps1Pubkey: string;
     lsps1Host: string;
     defaultPubkey: string;
+    defaultFlowHost: string;
+    defaultLsps1Rest: string;
+    defaultLsps1Host: string;
 } {
     const isMutinynet =
         typeof network === 'string'
@@ -1356,7 +1359,10 @@ export function getLspConfigForNetwork(
                 settings.lsps1PubkeyMutinynet || DEFAULT_LSPS1_PUBKEY_MUTINYNET,
             lsps1Host:
                 settings.lsps1HostMutinynet || DEFAULT_LSPS1_HOST_MUTINYNET,
-            defaultPubkey: DEFAULT_LSPS1_PUBKEY_MUTINYNET
+            defaultPubkey: DEFAULT_LSPS1_PUBKEY_MUTINYNET,
+            defaultFlowHost: DEFAULT_LSP_MUTINYNET,
+            defaultLsps1Rest: DEFAULT_LSPS1_REST_MUTINYNET,
+            defaultLsps1Host: DEFAULT_LSPS1_HOST_MUTINYNET
         };
     }
     if (isTestnet) {
@@ -1366,7 +1372,10 @@ export function getLspConfigForNetwork(
             lsps1Pubkey:
                 settings.lsps1PubkeyTestnet || DEFAULT_LSPS1_PUBKEY_TESTNET,
             lsps1Host: settings.lsps1HostTestnet || DEFAULT_LSPS1_HOST_TESTNET,
-            defaultPubkey: DEFAULT_LSPS1_PUBKEY_TESTNET
+            defaultPubkey: DEFAULT_LSPS1_PUBKEY_TESTNET,
+            defaultFlowHost: DEFAULT_LSP_TESTNET,
+            defaultLsps1Rest: DEFAULT_LSPS1_REST_TESTNET,
+            defaultLsps1Host: DEFAULT_LSPS1_HOST_TESTNET
         };
     }
     return {
@@ -1375,7 +1384,10 @@ export function getLspConfigForNetwork(
         lsps1Pubkey:
             settings.lsps1PubkeyMainnet || DEFAULT_LSPS1_PUBKEY_MAINNET,
         lsps1Host: settings.lsps1HostMainnet || DEFAULT_LSPS1_HOST_MAINNET,
-        defaultPubkey: DEFAULT_LSPS1_PUBKEY_MAINNET
+        defaultPubkey: DEFAULT_LSPS1_PUBKEY_MAINNET,
+        defaultFlowHost: DEFAULT_LSP_MAINNET,
+        defaultLsps1Rest: DEFAULT_LSPS1_REST_MAINNET,
+        defaultLsps1Host: DEFAULT_LSPS1_HOST_MAINNET
     };
 }
 
