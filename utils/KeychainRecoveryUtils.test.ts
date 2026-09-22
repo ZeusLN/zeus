@@ -291,6 +291,80 @@ describe('KeychainRecoveryUtils', () => {
                 error: 'Verification failed after write'
             });
         });
+
+        // The dangerous case is not an empty read-back but a plausible one.
+        // A key still holding an older copy reads as truthy, so a check that
+        // only asks "is something there" reports the restore succeeded while
+        // the wallet configs on disk are still the ones being replaced.
+        it('reports failure when the read-back is a stale value', async () => {
+            const stale = JSON.stringify({ nodes: [{ nickname: 'old' }] });
+            storage.setItem.mockResolvedValue(true as any);
+            storage.getItem.mockResolvedValue(stale as any);
+
+            const result = await utils.restoreSettings(recovered(SETTINGS));
+
+            expect(result).toEqual({
+                success: false,
+                error: 'Verification failed after write'
+            });
+        });
+    });
+
+    describe('restoreDataKey', () => {
+        const recovered = (data: string): RecoveryResult => ({
+            key: 'contacts',
+            source: 'encrypted-storage',
+            data,
+            description: 'Contacts'
+        });
+
+        it('writes the payload under the recovered key', async () => {
+            storage.setItem.mockResolvedValue(true as any);
+            storage.getItem.mockResolvedValue('["alice"]' as any);
+
+            const result = await utils.restoreDataKey(recovered('["alice"]'));
+
+            expect(result).toEqual({ success: true });
+            expect(storage.setItem).toHaveBeenCalledWith(
+                'contacts',
+                '["alice"]'
+            );
+        });
+
+        it('reports failure when the write is rejected', async () => {
+            storage.setItem.mockResolvedValue(false as any);
+
+            const result = await utils.restoreDataKey(recovered('["alice"]'));
+
+            expect(result).toEqual({
+                success: false,
+                error: 'Failed to write to storage'
+            });
+        });
+
+        it('reports failure when the read-back is a stale value', async () => {
+            storage.setItem.mockResolvedValue(true as any);
+            storage.getItem.mockResolvedValue('["bob"]' as any);
+
+            const result = await utils.restoreDataKey(recovered('["alice"]'));
+
+            expect(result).toEqual({
+                success: false,
+                error: 'Verification failed after write'
+            });
+        });
+
+        it('reports failure when the key cannot be read back at all', async () => {
+            storage.setItem.mockResolvedValue(true as any);
+            storageMiss();
+
+            const result = await utils.restoreDataKey(recovered('["alice"]'));
+
+            expect(result).toEqual({
+                success: false,
+                error: 'Verification failed after write'
+            });
+        });
     });
 
     describe('parseSettingsPreview', () => {
