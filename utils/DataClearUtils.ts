@@ -60,6 +60,7 @@ import {
     purgeLegacyRescueKeyFiles,
     unlinkRescueKeyStagingFile
 } from '../utils/SwapUtils';
+import { purgeNodeConfigStagingFiles } from '../utils/NodeConfigStagingUtils';
 import {
     NWC_CONNECTIONS_KEY,
     NWC_CLIENT_KEYS,
@@ -1137,6 +1138,13 @@ export async function clearAllData(): Promise<void> {
     // Olympus flows staged in app cache, outside the node directories
     // deleted in 2c.
     await purgeChannelDbStagingFiles();
+
+    // 2g. Delete anything the node-config export/import flows left staged in
+    // cache. A kill between staging the plaintext node list and unlinking it
+    // leaves every seed phrase sitting there in the clear, and nothing below
+    // touches app cache. A duress wipe that spares seed material is not a
+    // wipe.
+    await purgeNodeConfigStagingFiles();
 
     // 3. Clear all known storage keys. The legacy settings blob goes first:
     // getSettings() loads it whenever the keychain blob is missing, and it
