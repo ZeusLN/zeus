@@ -1121,14 +1121,19 @@ export default class LdkNode {
     };
 
     /**
-     * Wait for the outcome of a splice we just requested
+     * Request a splice and wait for its outcome
      *
      * splicePending means the splice transaction was negotiated and
      * broadcast; the channel keeps operating until it confirms, at which
      * point a fresh channelReady event carries the new funding output.
+     *
+     * The request is only sent once the event subscription is in place:
+     * negotiation with a responsive peer can complete in well under a
+     * second, and the event would otherwise be missed.
      */
-    private waitForSpliceResult = async (
-        userChannelId: string
+    private spliceAndWait = async (
+        userChannelId: string,
+        request: () => Promise<void>
     ): Promise<any> => {
         const SPLICE_TIMEOUT_MS = 60000;
 
@@ -1163,6 +1168,12 @@ export default class LdkNode {
                     }
                 }
             );
+
+            request().catch((error) => {
+                clearTimeout(timeout);
+                unsubscribe();
+                reject(error);
+            });
         });
     };
 
@@ -1178,13 +1189,13 @@ export default class LdkNode {
     }): Promise<any> => {
         const channel = await this.findChannelByFundingTxid(fundingTxid);
 
-        await LdkNodeInjection.channel.spliceIn({
-            userChannelId: channel.userChannelId,
-            counterpartyNodeId: channel.counterpartyNodeId,
-            spliceAmountSats: Number(amountSats)
-        });
-
-        return await this.waitForSpliceResult(channel.userChannelId);
+        return await this.spliceAndWait(channel.userChannelId, () =>
+            LdkNodeInjection.channel.spliceIn({
+                userChannelId: channel.userChannelId,
+                counterpartyNodeId: channel.counterpartyNodeId,
+                spliceAmountSats: Number(amountSats)
+            })
+        );
     };
 
     /**
@@ -1204,14 +1215,14 @@ export default class LdkNode {
     }): Promise<any> => {
         const channel = await this.findChannelByFundingTxid(fundingTxid);
 
-        await LdkNodeInjection.channel.spliceOut({
-            userChannelId: channel.userChannelId,
-            counterpartyNodeId: channel.counterpartyNodeId,
-            address,
-            spliceAmountSats: Number(amountSats)
-        });
-
-        return await this.waitForSpliceResult(channel.userChannelId);
+        return await this.spliceAndWait(channel.userChannelId, () =>
+            LdkNodeInjection.channel.spliceOut({
+                userChannelId: channel.userChannelId,
+                counterpartyNodeId: channel.counterpartyNodeId,
+                address,
+                spliceAmountSats: Number(amountSats)
+            })
+        );
     };
 
     // ========================================================================
