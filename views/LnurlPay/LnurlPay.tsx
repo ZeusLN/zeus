@@ -14,7 +14,7 @@ import Button from '../../components/Button';
 import Header from '../../components/Header';
 import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
-import { Row } from '../..//components/layout/Row';
+import { Row } from '../../components/layout/Row';
 import LoadingIndicator from '../../components/LoadingIndicator';
 
 import CashuStore from '../../stores/CashuStore';
