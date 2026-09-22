@@ -73,6 +73,7 @@ const TypedDragList = DragList as unknown as React.ComponentType<Props<Node>>;
 @observer
 export default class Nodes extends React.Component<NodesProps, NodesState> {
     isInitialFocus = true;
+    private walletSwitchInFlight = false;
 
     state = {
         nodes: [],
@@ -200,6 +201,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             updateSettings,
             setConnectingStatus,
             setInitialStart,
+            setWalletSelectionPending,
             implementation,
             initialStart
         } = SettingsStore;
@@ -261,10 +263,7 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
             });
         };
 
-        const onWalletPress = async (
-            nodeIndex: number,
-            nodeActive: boolean
-        ) => {
+        const selectWallet = async (nodeIndex: number, nodeActive: boolean) => {
             if (SettingsStore.settings?.justDeletedWallet) {
                 await this.handleJustDeletedWallet(nodeIndex);
                 return;
@@ -273,6 +272,13 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                 setInitialStart(false);
             }
             if (nodeActive) {
+                // This branch skips connecting, so unlike the else branch it
+                // never reaches setConnectingStatus(true), which clears the
+                // latch there. Clearing it any earlier would drop the
+                // latch before updateSettings assigns settings, and the
+                // BalanceStore reaction would fire while the credentials
+                // still belong to the previously used wallet.
+                setWalletSelectionPending(false);
                 // if already on selected node, just pop to
                 // the Wallet view, skip connecting procedures
                 this.navigateAfterWalletSelection();
@@ -328,6 +334,25 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                     setConnectingStatus(true);
                     this.navigateAfterWalletSelection();
                 });
+            }
+        };
+
+        const onWalletPress = async (
+            nodeIndex: number,
+            nodeActive: boolean
+        ) => {
+            // A switch is still committing: ignore repeat taps. A second
+            // tap would take the nodeActive branch and drop the latch
+            // before the first tap's settings assignment lands. Armed
+            // before the first await, so it also covers the wait for
+            // setPersistentMode on Android and the pause in
+            // handleJustDeletedWallet.
+            if (this.walletSwitchInFlight) return;
+            this.walletSwitchInFlight = true;
+            try {
+                await selectWallet(nodeIndex, nodeActive);
+            } finally {
+                this.walletSwitchInFlight = false;
             }
         };
 
