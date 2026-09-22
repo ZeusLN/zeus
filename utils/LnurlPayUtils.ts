@@ -2,6 +2,7 @@
 import url from 'url';
 import BigNumber from 'bignumber.js';
 import { sha256 } from '@noble/hashes/sha256';
+import { decodelnurl } from 'js-lnurl/lib/helpers';
 
 import Base64Utils from './Base64Utils';
 import Bolt11Utils from './Bolt11Utils';
@@ -304,4 +305,28 @@ export const verifyLnurlAuthCallback = (
     }
 
     return { ok: true };
+};
+
+/**
+ * The same policy, applied to the LNURL endpoint itself before it is fetched.
+ *
+ * Checking callbacks alone leaves the step before them wide open: a bech32
+ * lnurl decodes to an arbitrary URL and js-lnurl fetches whatever it decodes
+ * to, so an `lnurl1...` encoding `http://192.168.1.1/` reaches the LAN with
+ * no server, no service and no callback involved. It also covers every tag at
+ * once, including the ones whose callbacks are checked elsewhere.
+ */
+export const isLnurlEndpointAllowed = (lnurl: string): LnurlCheckResult => {
+    let decoded: string;
+    try {
+        decoded = decodelnurl(lnurl);
+    } catch (err: any) {
+        // Nothing to police: js-lnurl decodes before it fetches and reports
+        // an undecodable value as an error without touching the network, so
+        // no request can come of this one. Rejecting it here would only
+        // replace that error with a misleading security one.
+        return { ok: true };
+    }
+
+    return isLnurlCallbackAllowed(decoded);
 };

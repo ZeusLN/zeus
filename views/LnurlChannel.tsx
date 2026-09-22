@@ -19,6 +19,7 @@ import {
 import ChannelsStore from '../stores/ChannelsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 
+import { isLnurlCallbackAllowed } from '../utils/LnurlPayUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import NodeUriUtils from '../utils/NodeUriUtils';
@@ -132,6 +133,19 @@ export default class LnurlChannel extends React.Component<
         const { route, NodeInfoStore } = this.props;
         const { domain, k1 } = this.state;
         const lnurl = route.params?.lnurlParams;
+        if (!isLnurlCallbackAllowed(lnurl.callback).ok) {
+            // Never fetch a callback that would reach internal infrastructure
+            // or leak in cleartext (SSRF-by-callback)
+            this.setState({ connectingToPeer: false });
+            Alert.alert(
+                localeString('general.error'),
+                localeString('utils.lnurl.unsafeCallback'),
+                [{ text: localeString('general.ok'), onPress: () => void 0 }],
+                { cancelable: false }
+            );
+            return;
+        }
+
         const u = url.parse(lnurl.callback);
         const qs = querystring.parse(u.query);
         qs.k1 = k1;

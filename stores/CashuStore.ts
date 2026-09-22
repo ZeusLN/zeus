@@ -59,6 +59,7 @@ import CashuUtils, {
     MultinutPaymentStep
 } from '../utils/CashuUtils';
 import { cashuErrorForDisplay, errorToUserFriendly } from '../utils/ErrorUtils';
+import { isLnurlCallbackAllowed } from '../utils/LnurlPayUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { themeColor, getUpgradeBackgroundColor } from '../utils/ThemeUtils';
@@ -3958,6 +3959,23 @@ export default class CashuStore {
             });
 
             if (lnurl) {
+                if (!isLnurlCallbackAllowed(lnurl.callback).ok) {
+                    // Never fetch a callback that would reach internal
+                    // infrastructure or leak in cleartext (SSRF-by-callback)
+                    Alert.alert(
+                        localeString('general.error'),
+                        localeString('utils.lnurl.unsafeCallback'),
+                        [
+                            {
+                                text: localeString('general.ok'),
+                                onPress: () => void 0
+                            }
+                        ],
+                        { cancelable: false }
+                    );
+                    return { paymentRequest: invoice.getPaymentRequest };
+                }
+
                 const u = url.parse(lnurl.callback);
                 const qs = querystring.parse(u.query);
                 qs.k1 = lnurl.k1;

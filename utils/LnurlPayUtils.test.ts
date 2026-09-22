@@ -2,12 +2,15 @@
 import BigNumber from 'bignumber.js';
 import { sha256 } from '@noble/hashes/sha256';
 
+import { bech32 } from 'bech32';
+
 import Base64Utils from './Base64Utils';
 import Bolt11Utils from './Bolt11Utils';
 import {
     verifyLnurlPayInvoice,
     isLnurlCallbackAllowed,
-    verifyLnurlAuthCallback
+    verifyLnurlAuthCallback,
+    isLnurlEndpointAllowed
 } from './LnurlPayUtils';
 
 const METADATA = '[["text/plain","Payment to Alice"]]';
@@ -312,5 +315,57 @@ describe('LnurlPayUtils', () => {
                 verifyLnurlAuthCallback(undefined as any, 'service.example').ok
             ).toBe(false);
         });
+    });
+});
+
+// The callback check alone leaves the step before it open: js-lnurl fetches
+// whatever the bech32 decodes to, so the endpoint needs the same policy.
+describe('isLnurlEndpointAllowed', () => {
+    // what a QR actually carries: the target URL, bech32 encoded
+    const asLnurl = (target: string) =>
+        bech32.encode(
+            'lnurl',
+            bech32.toWords(Base64Utils.utf8ToBytes(target)),
+            20000
+        );
+
+    it('allows a public https endpoint', () => {
+        expect(
+            isLnurlEndpointAllowed(asLnurl('https://example.com/lnurl')).ok
+        ).toBe(true);
+    });
+
+    it('allows an lnurlp:// endpoint, which decodes to https', () => {
+        expect(isLnurlEndpointAllowed('lnurlp://example.com/lnurl').ok).toBe(
+            true
+        );
+    });
+
+    it('allows an onion endpoint over cleartext', () => {
+        expect(isLnurlEndpointAllowed('lnurlp://abcdefg.onion/lnurl').ok).toBe(
+            true
+        );
+    });
+
+    it.each([
+        'https://127.0.0.1/lnurl',
+        'https://10.1.2.3/lnurl',
+        'https://192.168.0.1/lnurl',
+        'https://169.254.169.254/latest',
+        'http://cleartext.example/lnurl'
+    ])('refuses a bech32 endpoint pointing at %s', (target) => {
+        expect(isLnurlEndpointAllowed(asLnurl(target)).ok).toBe(false);
+    });
+
+    it('refuses an lnurlw:// endpoint pointing at a LAN host', () => {
+        expect(isLnurlEndpointAllowed('lnurlw://192.168.1.1/cb').ok).toBe(
+            false
+        );
+    });
+
+    // js-lnurl reports an undecodable value as an error without touching the
+    // network, so there is no request for this check to prevent
+    it('leaves an undecodable value to js-lnurl', () => {
+        expect(isLnurlEndpointAllowed('not an lnurl at all').ok).toBe(true);
     });
 });
