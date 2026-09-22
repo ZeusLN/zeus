@@ -563,19 +563,26 @@ export default class CashuTokenView extends React.Component<
                                 )}
                                 onPress={async () => {
                                     this.setState({
-                                        errorMessage: ''
+                                        errorMessage: '',
+                                        warningMessage: ''
                                     });
 
-                                    const { success, errorMessage } =
-                                        await claimToken(
-                                            encodedToken!,
-                                            decoded,
-                                            true
-                                        );
+                                    const {
+                                        success,
+                                        errorMessage,
+                                        warningMessage
+                                    } = await claimToken(
+                                        encodedToken!,
+                                        decoded,
+                                        true
+                                    );
 
                                     if (success) {
+                                        // the token can be claimed without
+                                        // the sweep to the node completing
                                         this.setState({
-                                            success
+                                            success,
+                                            warningMessage: warningMessage || ''
                                         });
                                     } else {
                                         this.setState({
