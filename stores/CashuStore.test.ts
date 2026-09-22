@@ -15,7 +15,9 @@ jest.mock('../utils/LocaleUtils');
 jest.mock('../NavigationService', () => ({}));
 jest.mock('../cashu-cdk', () => ({
     isAvailable: jest.fn(() => true),
-    initializeWallet: jest.fn().mockResolvedValue(undefined)
+    initializeWallet: jest.fn().mockResolvedValue(undefined),
+    melt: jest.fn(),
+    getMintBalance: jest.fn()
 }));
 jest.mock('../storage', () => ({
     setItem: jest.fn().mockResolvedValue(true),
@@ -404,7 +406,9 @@ describe('CashuStore melt quotes belong to the loaded invoice', () => {
             // back to one regular quote
             getBalances: jest.fn().mockResolvedValue({ [mints[0]]: 100000 }),
             getMintBalance: jest.fn().mockResolvedValue(100000),
-            melt: jest.fn().mockResolvedValue({ amount: 0, fee_paid: 0 }),
+            melt: jest
+                .fn()
+                .mockResolvedValue({ state: 'Paid', amount: 0, fee_paid: 0 }),
             restore: jest.fn().mockResolvedValue(0)
         });
     });
@@ -529,7 +533,7 @@ describe('CashuStore melt quotes belong to the loaded invoice', () => {
         await load(wallet, 'lnbc1second');
         (CashuDevKit.melt as jest.Mock).mockImplementation(async () => {
             await load(wallet, 'lnbc1first');
-            return { amount: 100, fee_paid: 0 };
+            return { state: 'Paid', amount: 100, fee_paid: 0 };
         });
 
         const payment = await store.payLnInvoiceFromEcash({
@@ -547,5 +551,92 @@ describe('CashuStore melt quotes belong to the loaded invoice', () => {
         expect(payment?.meltResponse.quote?.quote).toBe(
             'quote for lnbc1second'
         );
+    });
+});
+
+describe('CashuStore single-mint melt state', () => {
+    const payingStore = () => {
+        const store: any = new CashuStore(
+            { implementation: 'lnd', settings: {}, lndDir: 'lnd' } as any,
+            {} as any,
+            {} as any,
+            { checkAndTriggerRatingModal: jest.fn() } as any
+        );
+        // cdkInitialized stays false so syncCDKBalances early-returns
+        store.selectedMintUrl = 'https://mint.example.com';
+        store.meltQuote = {
+            quote: 'quote-1',
+            amount: 1000,
+            fee_reserve: 10,
+            state: 'Unpaid',
+            expiry: 9999999999
+        };
+        store.payReq = {};
+        store.paymentRequest = 'lnbc10n1ptestinvoice';
+        store.payments = [];
+        return store;
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        // the success path schedules the rating modal, which would otherwise
+        // outlive the test and force the worker to exit
+        jest.useFakeTimers();
+        (CashuDevKit.getMintBalance as jest.Mock).mockResolvedValue(1_000_000);
+        (Storage.setItem as jest.Mock).mockReset().mockResolvedValue(true);
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        jest.clearAllTimers();
+        jest.useRealTimers();
+        jest.restoreAllMocks();
+    });
+
+    // CDK resolves an unsettled melt with a non-Paid state instead of
+    // throwing, and the single-mint path used to report that as a paid
+    // invoice: payment success with an empty preimage for an invoice the
+    // mint had not paid
+    it('reports a Pending melt as an error, not a successful payment', async () => {
+        const store = payingStore();
+        (CashuDevKit.melt as jest.Mock).mockResolvedValue({
+            state: 'Pending',
+            amount: 1000,
+            fee_paid: 0
+        });
+
+        await store.payLnInvoiceFromEcash({
+            amount: '1000',
+            paymentRequest: 'lnbc10n1ptestinvoice'
+        });
+
+        expect(store.paymentSuccess).toBe(false);
+        expect(store.paymentError).toBe(true);
+        expect(store.paymentPreimage).toBe('');
+        // nothing is recorded in history for an unpaid invoice
+        expect(store.payments).toEqual([]);
+        expect(Storage.setItem).not.toHaveBeenCalled();
+    });
+
+    it('records a Paid melt as a successful payment', async () => {
+        const store = payingStore();
+        (CashuDevKit.melt as jest.Mock).mockResolvedValue({
+            state: 'Paid',
+            amount: 1000,
+            fee_paid: 2,
+            preimage: 'a'.repeat(64)
+        });
+
+        await store.payLnInvoiceFromEcash({
+            amount: '1000',
+            paymentRequest: 'lnbc10n1ptestinvoice'
+        });
+
+        expect(store.paymentError).toBe(false);
+        expect(store.paymentSuccess).toBe(true);
+        expect(store.paymentPreimage).toBe('a'.repeat(64));
+        expect(store.paymentFee).toBe(2);
+        expect(store.payments).toHaveLength(1);
     });
 });

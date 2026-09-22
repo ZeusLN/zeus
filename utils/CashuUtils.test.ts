@@ -13,6 +13,8 @@ import CashuUtils, {
     cashuTokenPrefixes,
     CashuSeedOrigin,
     classifyCashuSeedOrigin,
+    isMeltPaid,
+    normalizeMeltState,
     resolveLockTarget
 } from './CashuUtils';
 
@@ -499,5 +501,47 @@ describe('resolveLockTarget', () => {
         expect(
             resolveLockTarget({}, { pubkey: '', contactName: 'Alice' })
         ).toEqual({ pubkey: '', contactName: '' });
+    });
+});
+
+describe('melt state', () => {
+    describe('normalizeMeltState', () => {
+        it('uppercases the state it was given', () => {
+            expect(normalizeMeltState('Paid')).toBe('PAID');
+            expect(normalizeMeltState('Pending')).toBe('PENDING');
+        });
+
+        it('falls back to the next candidate when one is missing', () => {
+            expect(normalizeMeltState(undefined, 'Unpaid')).toBe('UNPAID');
+            expect(normalizeMeltState('', 'Pending')).toBe('PENDING');
+        });
+
+        it('prefers the first non-empty candidate', () => {
+            expect(normalizeMeltState('Pending', 'Paid')).toBe('PENDING');
+        });
+
+        it('treats a missing state as paid, as pre-lifecycle CDK did', () => {
+            expect(normalizeMeltState()).toBe('PAID');
+            expect(normalizeMeltState(undefined, null, '')).toBe('PAID');
+        });
+    });
+
+    describe('isMeltPaid', () => {
+        it('accepts a Paid melt', () => {
+            expect(isMeltPaid('Paid')).toBe(true);
+        });
+
+        // The mint has not settled the invoice in any of these states, so a
+        // melt resolving with one must never be reported as a paid invoice
+        it.each(['Pending', 'Unpaid', 'Issued', 'Failed'])(
+            'rejects a %s melt',
+            (state) => {
+                expect(isMeltPaid(state)).toBe(false);
+            }
+        );
+
+        it('accepts a melt with no state at all', () => {
+            expect(isMeltPaid(undefined)).toBe(true);
+        });
     });
 });
