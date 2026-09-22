@@ -450,9 +450,9 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             ? 'Olympus by ZEUS'
             : BackendUtils.supportsLSPS1native()
             ? localeString('views.LSPS1.nativeLsps1Enabled')
-            : BackendUtils.supportsLSPScustomMessage()
-            ? LSPStore.getLSPSPubkey()
-            : LSPStore.getLSPS1Rest();
+            : BackendUtils.supportsLSPS1rest()
+            ? LSPStore.getLSPS1Rest()
+            : LSPStore.getLSPSPubkey();
 
         return (
             <Screen>
