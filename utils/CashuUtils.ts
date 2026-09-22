@@ -116,6 +116,37 @@ export const resolveLockTarget = (
     return { pubkey, contactName };
 };
 
+/**
+ * Normalizes the lifecycle state CDK reports for a melt. Candidates are read
+ * in order and the first non-empty one wins, so a caller can fall back from
+ * the melt result to the quote it was executed against.
+ *
+ * An absent state normalizes to PAID: CDK builds from before melts carried a
+ * lifecycle state only ever resolved a melt that had completed.
+ */
+export const normalizeMeltState = (
+    ...candidates: Array<string | undefined | null>
+): string => {
+    const state = candidates.find(
+        (candidate) => !!candidate && candidate.toString().length > 0
+    );
+    return state ? state.toString().toUpperCase() : 'PAID';
+};
+
+/**
+ * Whether the mint has actually paid the invoice a melt was executed for.
+ *
+ * CDK reports a melt the mint has not settled by resolving with a non-Paid
+ * state instead of throwing: a mint that accepts the payment asynchronously
+ * (NUT-05) or is still settling the Lightning leg returns Pending, and a melt
+ * recovered mid-flight can come back Unpaid. Treating a resolved melt as a
+ * completed payment therefore shows the user a successful payment, and
+ * records one with an empty preimage, for an invoice nobody has paid.
+ */
+export const isMeltPaid = (
+    ...candidates: Array<string | undefined | null>
+): boolean => normalizeMeltState(...candidates) === 'PAID';
+
 // Limits to mitigate resource exhaustion from malicious P2PK secret payloads
 const MAX_P2PK_SECRET_LENGTH = 2048;
 const MAX_P2PK_SECRET_DEPTH = 10;

@@ -53,10 +53,12 @@ import ModalStore from './ModalStore';
 import Base64Utils from '../utils/Base64Utils';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
 import CashuUtils, {
+    isMeltPaid,
     MintPaymentStatus,
     MintProgressInfo,
     MultimintProgressCallback,
-    MultinutPaymentStep
+    MultinutPaymentStep,
+    normalizeMeltState
 } from '../utils/CashuUtils';
 import { cashuErrorForDisplay, errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -1062,6 +1064,15 @@ export default class CashuStore {
         const quote = await CashuDevKit.createMeltQuote(mintUrl, bolt11);
         const result = await CashuDevKit.melt(mintUrl, quote.id);
         await this.syncCDKBalances();
+
+        // A resolved melt is not a paid one. Callers treat a returned result
+        // as a completed payment, so refuse to hand one back for an invoice
+        // the mint has not settled.
+        if (!isMeltPaid(result.state)) {
+            throw new Error(
+                localeString('stores.CashuStore.errorPayingInvoice')
+            );
+        }
 
         return result;
     };
@@ -4542,6 +4553,15 @@ export default class CashuStore {
                 this.meltQuote.quote
             );
 
+            // Only a Paid melt means the mint settled the invoice. Anything
+            // else is surfaced as an error rather than recorded as a payment,
+            // matching the multimint path below.
+            if (!isMeltPaid(meltResult.state)) {
+                throw new Error(
+                    localeString('stores.CashuStore.errorPayingInvoice')
+                );
+            }
+
             const realFee = meltResult.fee_paid;
             const paymentPreimage = meltResult.preimage || '';
 
@@ -4740,15 +4760,10 @@ export default class CashuStore {
                                   partialAmount * 1000
                               );
 
-                        const meltState = (
-                            meltResult.state ||
-                            meltQuote.state ||
-                            ''
-                        ).toString();
-                        const normalizedMeltState =
-                            meltState.length > 0
-                                ? meltState.toUpperCase()
-                                : 'PAID';
+                        const normalizedMeltState = normalizeMeltState(
+                            meltResult.state,
+                            meltQuote.state
+                        );
 
                         if (normalizedMeltState !== 'PAID') {
                             throw new Error(
@@ -5574,6 +5589,15 @@ export default class CashuStore {
 
             // 6. Update balances from CDK
             await this.syncCDKBalances(true);
+
+            // The sweep only moved funds if the mint paid the invoice it was
+            // handed. A Pending melt leaves the sats at the mint, so reporting
+            // a successful sweep would be wrong.
+            if (!isMeltPaid(meltResponse.state)) {
+                throw new Error(
+                    localeString('stores.CashuStore.errorPayingInvoice')
+                );
+            }
 
             if (__DEV__) {
                 console.log(
