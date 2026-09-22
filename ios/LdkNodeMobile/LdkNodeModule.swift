@@ -1962,7 +1962,8 @@ class LdkNodeModule: RCTEventEmitter {
                 "channelId": channelId,
                 "userChannelId": userChannelId,
                 "counterpartyNodeId": counterpartyNodeId,
-                "newFundingTxo": ["txid": newFundingTxo.txid, "vout": newFundingTxo.vout]
+                "newFundingTxo_txid": newFundingTxo.txid,
+                "newFundingTxo_vout": newFundingTxo.vout
             ]
         case .spliceFailed(let channelId, let userChannelId, let counterpartyNodeId, let abandonedFundingTxo):
             return [
@@ -1970,7 +1971,8 @@ class LdkNodeModule: RCTEventEmitter {
                 "channelId": channelId,
                 "userChannelId": userChannelId,
                 "counterpartyNodeId": counterpartyNodeId,
-                "abandonedFundingTxo": abandonedFundingTxo.map { ["txid": $0.txid, "vout": $0.vout] } as Any
+                "abandonedFundingTxo_txid": abandonedFundingTxo?.txid as Any,
+                "abandonedFundingTxo_vout": abandonedFundingTxo?.vout as Any
             ]
         }
     }
