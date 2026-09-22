@@ -1995,6 +1995,10 @@ export default class SettingsStore {
             await MigrationsUtils.keychainDesyncMigration();
             await MigrationsUtils.keychainCloudSyncMigration();
             await MigrationsUtils.purgeRescueKeyFiles();
+            // Sweep node-config staging plaintext a killed export/import left
+            // behind. Not a migration, so it is not MOD_KEY gated: a remnant
+            // can appear at any time and must not wait for the next export.
+            await MigrationsUtils.purgeNodeConfigStagingFiles();
 
             let modernSettings: any = await Storage.getItem(STORAGE_KEY);
 

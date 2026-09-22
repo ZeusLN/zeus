@@ -137,6 +137,9 @@ jest.mock('../utils/SwapUtils', () => ({
     purgeLegacyRescueKeyFiles: jest.fn().mockResolvedValue(undefined),
     unlinkRescueKeyStagingFile: jest.fn().mockResolvedValue(undefined)
 }));
+jest.mock('../utils/NodeConfigStagingUtils', () => ({
+    purgeNodeConfigStagingFiles: jest.fn().mockResolvedValue(undefined)
+}));
 jest.mock('../stores/NostrWalletConnectStore', () => ({
     NWC_CONNECTIONS_KEY: 'zeus-nwc-connections',
     NWC_CLIENT_KEYS: 'zeus-nwc-client-keys',
@@ -171,6 +174,7 @@ import {
 } from './DataClearUtils';
 import { deleteLndWallet } from './LndMobileUtils';
 import { deleteLdkNodeWallet, stopLdkNode } from './LdkNodeUtils';
+import { purgeNodeConfigStagingFiles } from './NodeConfigStagingUtils';
 import { sleep } from './SleepUtils';
 
 const mockedDeleteLndWallet = deleteLndWallet as jest.Mock;
@@ -209,6 +213,33 @@ const settingsWithNodes = (nodes: any[]) => ({
         key === 'zeus-settings-v2'
             ? Promise.resolve(JSON.stringify({ nodes }))
             : Promise.resolve(null)
+});
+
+// The export/import flows stage a plaintext copy of every node config, seed
+// phrases included, in app cache. A kill between staging it and the unlink in
+// their finally blocks leaves the plaintext behind, and the wipe used to walk
+// straight past it: it purged the analogous rescue-key staging but had no step
+// for node-config staging, so a duress wipe reported success while seed
+// material stayed on disk.
+describe('clearAllData node-config staging purge', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+    });
+
+    it('purges node-config staging files', async () => {
+        await clearAllData();
+
+        expect(purgeNodeConfigStagingFiles).toHaveBeenCalledTimes(1);
+    });
+
+    it('purges them even when there are no configured nodes', async () => {
+        mockedStorageGetItem.mockResolvedValue(null);
+
+        await clearAllData();
+
+        expect(purgeNodeConfigStagingFiles).toHaveBeenCalled();
+    });
 });
 
 describe('clearAllData node data directory wipe (KEY-005 regression)', () => {
