@@ -15,6 +15,7 @@ jest.mock('../cashu-cdk', () => ({
     isAvailable: jest.fn(() => true),
     initializeWallet: jest.fn().mockResolvedValue(undefined),
     melt: jest.fn(),
+    isValidToken: jest.fn(),
     checkMeltQuote: jest.fn(),
     getMintBalance: jest.fn()
 }));
@@ -318,6 +319,77 @@ describe('CashuStore single-mint melt state', () => {
             expect(store.syncCDKBalances).toHaveBeenCalledWith(true);
         }
     );
+});
+
+describe('CashuStore self-custody claim', () => {
+    const mintUrl = 'https://mint.example.com';
+
+    const claimingStore = () => {
+        const store: any = new CashuStore(
+            { implementation: 'lnd', settings: {}, lndDir: 'lnd' } as any,
+            {
+                createInvoice: jest.fn().mockResolvedValue({
+                    paymentRequest: 'lnbc10n1ptestinvoice'
+                })
+            } as any,
+            {} as any,
+            {} as any
+        );
+        store.cdkInitialized = true;
+        store.mintUrls = [mintUrl];
+        store.receiveTokenCDK = jest.fn().mockResolvedValue(undefined);
+        store.createMeltQuoteCDK = jest.fn().mockResolvedValue({
+            id: 'quote-1',
+            amount: 1000,
+            fee_reserve: 0,
+            expiry: 9999999999
+        });
+        store.syncCDKBalances = jest.fn().mockResolvedValue(undefined);
+        return store;
+    };
+
+    const token = { mint: mintUrl, getAmount: 1000, proofs: [] } as any;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (CashuDevKit.isValidToken as jest.Mock).mockResolvedValue(true);
+        (Storage.setItem as jest.Mock).mockReset().mockResolvedValue(true);
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    // The token is received before the sweep runs, so a melt that does not
+    // pay leaves the ecash claimed and unclaimable again: reporting a failed
+    // claim would send the user looking for a token they already hold
+    it('reports a claim whose sweep did not complete as a warning', async () => {
+        const store = claimingStore();
+        store.meltCDK = jest
+            .fn()
+            .mockRejectedValue(
+                new Error('stores.CashuStore.errorPayingInvoice')
+            );
+
+        const result = await store.claimToken('cashuAtoken', token, true);
+
+        expect(store.receiveTokenCDK).toHaveBeenCalled();
+        expect(result.success).toBe(true);
+        expect(result.errorMessage).toBe('');
+        expect(result.warningMessage).toBe(
+            'stores.CashuStore.claimedButNotSwept'
+        );
+    });
+
+    it('reports a completed self-custody claim as a plain success', async () => {
+        const store = claimingStore();
+        store.meltCDK = jest.fn().mockResolvedValue({ state: 'Paid' });
+
+        const result = await store.claimToken('cashuAtoken', token, true);
+
+        expect(result.success).toBe(true);
+        expect(result.warningMessage).toBeUndefined();
+    });
 });
 
 describe('CashuStore reconcilePendingMelts', () => {

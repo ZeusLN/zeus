@@ -5656,8 +5656,25 @@ export default class CashuStore {
                     }
                 }
 
-                // Melt via CDK to pay the invoice
-                await this.meltCDK(mintUrl, invoice.paymentRequest);
+                // Melt via CDK to pay the invoice. The token has already been
+                // received at this point, so a melt that does not pay is not
+                // a failed claim: the ecash is in the wallet and the proofs
+                // are spent, so reporting failure would send the user looking
+                // for a token they already hold and cannot claim again.
+                try {
+                    await this.meltCDK(mintUrl, invoice.paymentRequest);
+                } catch (e: any) {
+                    console.error('CDK claimToken self-custody sweep:', e);
+                    await this.syncCDKBalances(true);
+                    this.loading = false;
+                    return {
+                        success: true,
+                        errorMessage: '',
+                        warningMessage: localeString(
+                            'stores.CashuStore.claimedButNotSwept'
+                        )
+                    };
+                }
 
                 await this.syncCDKBalances(true); // Include transactions for activity
             } else {
