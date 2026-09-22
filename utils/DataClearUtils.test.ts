@@ -240,6 +240,25 @@ describe('clearAllData node-config staging purge', () => {
 
         expect(purgeNodeConfigStagingFiles).toHaveBeenCalled();
     });
+
+    // The steps that follow take seconds on a device (a seed-derived node id
+    // per embedded wallet on iOS, then up to three 500ms retries per node
+    // shutdown). The sweep needs none of their results, so it runs first: a
+    // force-stop during them must not be what leaves the plaintext behind.
+    it('purges before the slow node teardown, not after it', async () => {
+        mockedStorageGetItem.mockResolvedValue(
+            JSON.stringify({
+                nodes: [{ implementation: 'embedded-lnd', seedPhrase: [] }]
+            })
+        );
+
+        await clearAllData();
+
+        expect(
+            (purgeNodeConfigStagingFiles as jest.Mock).mock
+                .invocationCallOrder[0]
+        ).toBeLessThan(mockedStorageGetItem.mock.invocationCallOrder[0]);
+    });
 });
 
 describe('clearAllData node data directory wipe (KEY-005 regression)', () => {
