@@ -85,6 +85,7 @@ import {
     purgeLegacyRescueKeyFiles,
     unlinkRescueKeyStagingFile
 } from '../utils/SwapUtils';
+import { purgeNodeConfigStagingFiles } from '../utils/NodeConfigStagingUtils';
 
 import {
     TimePeriod,
@@ -917,6 +918,14 @@ class MigrationsUtils {
         await purgeLegacyRescueKeyFiles();
 
         await this.writeFlag(MOD_KEY_RESCUE_FILE);
+    }
+
+    // Deliberately not MOD_KEY gated, unlike the legacy sweeps above: this
+    // removes crash remnants rather than migrating once-off state, and a new
+    // one can appear after any killed export or import. Cheap enough to repeat
+    // (a handful of exists checks on app-private cache).
+    public async purgeNodeConfigStagingFiles() {
+        await purgeNodeConfigStagingFiles();
     }
 
     public async storageMigrationV2(settings: any) {

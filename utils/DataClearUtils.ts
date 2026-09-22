@@ -57,6 +57,7 @@ import {
     purgeLegacyRescueKeyFiles,
     unlinkRescueKeyStagingFile
 } from '../utils/SwapUtils';
+import { purgeNodeConfigStagingFiles } from '../utils/NodeConfigStagingUtils';
 import {
     NWC_CONNECTIONS_KEY,
     NWC_CLIENT_KEYS,
@@ -733,6 +734,13 @@ export async function clearAllData(): Promise<void> {
     // nothing else in this flow touches either.
     await purgeLegacyRescueKeyFiles();
     await unlinkRescueKeyStagingFile();
+
+    // 2e. Delete anything the node-config export/import flows left staged in
+    // cache. A kill between staging the plaintext node list and unlinking it
+    // leaves every seed phrase sitting there in the clear, and nothing below
+    // touches app cache. A duress wipe that spares seed material is not a
+    // wipe.
+    await purgeNodeConfigStagingFiles();
 
     // 3. Clear all known storage keys
     console.log('[ClearData] Clearing known storage keys...');
