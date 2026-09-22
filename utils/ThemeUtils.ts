@@ -88,38 +88,6 @@ const Dark: { [key: string]: any } = {
     buttonText: '#FFF'
 };
 
-const Junkie: { [key: string]: any } = {
-    generalStyle: 'dark',
-    background: 'rgb(51, 51, 51)',
-    secondary: 'rgb(191, 0, 28)',
-    modalBackground: 'rgb(51, 51, 51)',
-    text: 'white',
-    secondaryText: 'lightgray',
-    placeholderText: '#A7A9AC',
-    highlight: 'rgb(249, 212, 0)',
-    error: '#992600',
-    separator: 'darkgray',
-    outbound: '#FFD93F',
-    inbound: '#FFF0CA',
-    delete: '#FFD699'
-};
-
-const BPM: { [key: string]: any } = {
-    generalStyle: 'light',
-    background: '#fff',
-    secondary: '#f0f0f0',
-    modalBackground: '#ffffff',
-    text: '#2b74b4',
-    secondaryText: '#8a8999',
-    highlight: 'orange',
-    error: '#cc3300',
-    separator: '#CED0CE',
-    bolt: '#2b74b4',
-    chain: '#2b74b4',
-    inbound: 'lightblue',
-    outbound: '#2b74b4'
-};
-
 const Spooky: { [key: string]: any } = {
     generalStyle: 'dark',
     background: '#000',
@@ -306,18 +274,6 @@ const Nostrich: { [key: string]: any } = {
     separator: '#141414'
 };
 
-const Desert: { [key: string]: any } = {
-    gradientBackground: ['#006BB6', '#BEC0C2', '#F58426', '#000000'],
-    generalStyle: 'dark',
-    background: '#000',
-    secondary: '#141414',
-    modalBackground: '#141414',
-    separator: '#141414',
-    text: '#FFFFFF',
-    secondaryText: '#E8E8E8',
-    placeholderText: '#A7A9AC'
-};
-
 const OrangeCreamSoda: { [key: string]: any } = {
     gradientBackground: ['#FDB777', '#FDA766', '#FD9346', '#FD7F2C', '#FF6200'],
     generalStyle: 'dark',
@@ -329,26 +285,6 @@ const OrangeCreamSoda: { [key: string]: any } = {
     placeholderText: '#A7A9AC'
 };
 
-const Mint: { [key: string]: any } = {
-    gradientBackground: [
-        '#ADF0D3',
-        '#98E4C4',
-        '#84D8B6',
-        '#6FCCA7',
-        '#5BC099',
-        '#46B48A'
-    ],
-    generalStyle: 'dark',
-    background: '#46B48A',
-    modalBackground: '#46B48A',
-    secondaryText: '#FFFDF2',
-    placeholderText: '#A7A9AC',
-    separator: '#141414',
-    highlight: '#ffd24b',
-    bolt: '#fff',
-    chain: '#fff'
-};
-
 const RedMetallic: { [key: string]: any } = {
     gradientBackground: ['#961E1E', '#A72F2F', '#B94A4A'],
     generalStyle: 'dark',
@@ -356,19 +292,6 @@ const RedMetallic: { [key: string]: any } = {
     secondary: '#141414',
     modalBackground: '#141414',
     separator: '#141414'
-};
-
-const Watermelon: { [key: string]: any } = {
-    gradientBackground: ['#FF5C98', 'green'],
-    generalStyle: 'dark',
-    background: 'green',
-    modalBackground: 'green',
-    separator: '#141414',
-    highlight: '#ffd24b',
-    bolt: '#fff',
-    chain: '#fff',
-    secondaryText: 'lightgray',
-    placeholderText: '#A7A9AC'
 };
 
 const Radioactive: { [key: string]: any } = {
@@ -410,10 +333,6 @@ export function themeColor(themeString: string): any {
             return Kyriaki[themeString] || Dark[themeString];
         case 'light':
             return Light[themeString] || Dark[themeString];
-        case 'junkie':
-            return Junkie[themeString] || Dark[themeString];
-        case 'bpm':
-            return BPM[themeString] || Light[themeString];
         case 'orange':
             return Spooky[themeString] || Light[themeString];
         case 'blacked-out':
@@ -438,16 +357,10 @@ export function themeColor(themeString: string): any {
             return Popsicle[themeString] || Dark[themeString];
         case 'nostrich':
             return Nostrich[themeString] || Dark[themeString];
-        case 'desert':
-            return Desert[themeString] || Dark[themeString];
         case 'orange-cream-soda':
             return OrangeCreamSoda[themeString] || Dark[themeString];
-        case 'mint':
-            return Mint[themeString] || Dark[themeString];
         case 'red-metallic':
             return RedMetallic[themeString] || Dark[themeString];
-        case 'watermelon':
-            return Watermelon[themeString] || Dark[themeString];
         case 'radioactive':
             return Radioactive[themeString] || Dark[themeString];
         default:
