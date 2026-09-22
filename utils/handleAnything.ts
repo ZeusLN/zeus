@@ -12,7 +12,19 @@ import CashuUtils from './CashuUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
 import ContactUtils from './ContactUtils';
 import { localeString } from './LocaleUtils';
-import { getLnurlpUrl } from './LnurlPayUtils';
+import { getLnurlpUrl, isLnurlEndpointAllowed } from './LnurlPayUtils';
+
+/**
+ * Resolving an lnurl fetches whatever the bech32 decodes to, so the host
+ * policy has to apply here and not only to the callbacks the response
+ * carries: `lnurl1...` encoding a LAN or loopback URL is a request the wallet
+ * makes from the user's network position before any callback exists.
+ */
+const assertLnurlEndpointAllowed = (lnurl: string) => {
+    if (!isLnurlEndpointAllowed(lnurl).ok) {
+        throw new Error(localeString('utils.lnurl.unsafeEndpoint'));
+    }
+};
 import NodeUriUtils from './NodeUriUtils';
 import NostrUtils from './NostrUtils';
 import { doTorRequest, RequestMethod } from './TorUtils';
@@ -938,6 +950,7 @@ const handleAnything = async (
         // to when the user actually acts on the value.
         if (isClipboardValue) return true;
         const raw: string = findlnurl(value) || lnurl || value || '';
+        assertLnurlEndpointAllowed(raw);
         return getlnurlParams(raw)
             .then((params: any) => {
                 if (
