@@ -324,6 +324,7 @@
     "views.LnurlPay.LnurlPay.unsafeCallback": "This Lightning service asked the wallet to contact an unsafe address. Payment cancelled to protect your privacy.",
     "utils.lnurl.unsafeCallback": "This Lightning service asked the wallet to contact an unsafe address. Request cancelled to protect your privacy.",
     "utils.lnurl.unsafeEndpoint": "This LNURL points at an unsafe address. Request cancelled to protect your privacy.",
+    "utils.lnurl.unsafeLightningAddress": "This lightning address points at an unsafe host. Request cancelled to protect your privacy.",
     "views.LnurlPay.Success.servicedBy": "Serviced by",
     "views.LnurlPay.Success.uriAlert": "Don't know how to open URI",
     "views.LnurlChannel.title": "Incoming Channel",
