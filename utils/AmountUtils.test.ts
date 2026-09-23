@@ -439,6 +439,9 @@ describe('AmountUtils', () => {
                 expect(result.amount).toBe('Disabled');
                 expect(result.unit).toBe('fiat');
                 expect(result.symbol).toBe('$');
+                expect(result.error).toBe(
+                    'Rate for selected currency not available'
+                );
             });
 
             it('returns error when fiat rates are not available', () => {
@@ -1077,36 +1080,104 @@ describe('AmountUtils', () => {
 
         it('round-trips in sats', () => {
             (unitsStore as any).units = 'sats';
-            expect(getRawAmountFromSats(12618)).toBe('12618');
-            expect(getSatAmount(getRawAmountFromSats(12618))).toBe(12618);
+            expect(getRawAmountFromSats(12618)).toEqual({ amount: '12618' });
+            expect(getSatAmount(getRawAmountFromSats(12618).amount)).toBe(
+                12618
+            );
             // route params deliver satAmount as a string
-            expect(getSatAmount(getRawAmountFromSats('12618'))).toBe(12618);
+            expect(getSatAmount(getRawAmountFromSats('12618').amount)).toBe(
+                12618
+            );
         });
 
         it('round-trips in BTC', () => {
             (unitsStore as any).units = 'BTC';
-            expect(getRawAmountFromSats(12618)).toBe('0.00012618');
-            expect(getSatAmount(getRawAmountFromSats(12618))).toBe(12618);
+            expect(getRawAmountFromSats(12618)).toEqual({
+                amount: '0.00012618'
+            });
+            expect(getSatAmount(getRawAmountFromSats(12618).amount)).toBe(
+                12618
+            );
         });
 
         it('round-trips in fiat when the rate divides evenly', () => {
             (unitsStore as any).units = 'fiat';
             // 12,000 sats at 50,000 USD/BTC is exactly $6.00
-            expect(getRawAmountFromSats(12000)).toBe('6.00');
-            expect(getSatAmount(getRawAmountFromSats(12000))).toBe(12000);
+            expect(getRawAmountFromSats(12000)).toEqual({ amount: '6.00' });
+            expect(getSatAmount(getRawAmountFromSats(12000).amount)).toBe(
+                12000
+            );
         });
 
         it('round-trips in fiat to cent precision otherwise', () => {
             (unitsStore as any).units = 'fiat';
             // 12,618 sats is $6.309, which displays as $6.31 = 12,620 sats.
             // Lossy by design (cent rounding), but parseable - never NaN.
-            expect(getRawAmountFromSats(12618)).toBe('6.31');
-            expect(getSatAmount(getRawAmountFromSats(12618))).toBe(12620);
+            expect(getRawAmountFromSats(12618)).toEqual({ amount: '6.31' });
+            expect(getSatAmount(getRawAmountFromSats(12618).amount)).toBe(
+                12620
+            );
         });
 
         it('respects fixedUnits over the active unit', () => {
             (unitsStore as any).units = 'fiat';
-            expect(getRawAmountFromSats(12618, 'sats')).toBe('12618');
+            expect(getRawAmountFromSats(12618, 'sats')).toEqual({
+                amount: '12618'
+            });
+        });
+
+        // The pin in Send.tsx:220 and in LnurlPay's recalculateDisplayAmount
+        // re-derives the amount with fixedUnits 'sats' while the active unit
+        // is still fiat without a rate. That call has to come back without an
+        // error, otherwise each pass would set the same error over again.
+        it('sets no error for fixedUnits sats when the unit has no rate', () => {
+            (unitsStore as any).units = 'fiat';
+            (settingsStore as any).settings.fiat = 'IDR';
+            expect(getRawAmountFromSats(12618, 'sats')).toEqual({
+                amount: '12618'
+            });
+            (fiatStore as any).fiatRates = undefined;
+            expect(getRawAmountFromSats(12618, 'sats')).toEqual({
+                amount: '12618'
+            });
+        });
+
+        // #4635: with fiat as the unit and no rate, getUnformattedAmount
+        // returns a 'Disabled' placeholder. It must not reach the input, and
+        // the sats value put there instead must not be read back as fiat.
+        it('falls back to sats when no fiat rates are loaded', () => {
+            (unitsStore as any).units = 'fiat';
+            (fiatStore as any).fiatRates = undefined;
+            const raw = getRawAmountFromSats(12618);
+            expect(raw).toEqual({
+                amount: '12618',
+                forceUnit: 'sats',
+                error: 'Error fetching fiat rates'
+            });
+            expect(getSatAmount(raw.amount, raw.forceUnit)).toBe(12618);
+        });
+
+        it('falls back to sats when the selected currency has no rate', () => {
+            (unitsStore as any).units = 'fiat';
+            (settingsStore as any).settings.fiat = 'IDR';
+            // route params deliver satAmount as a string
+            const raw = getRawAmountFromSats('12618');
+            expect(raw).toEqual({
+                amount: '12618',
+                forceUnit: 'sats',
+                error: 'Rate for selected currency not available'
+            });
+            expect(getSatAmount(raw.amount, raw.forceUnit)).toBe(12618);
+        });
+
+        it('falls back to sats when no fiat currency is set', () => {
+            (unitsStore as any).units = 'fiat';
+            (settingsStore as any).settings.fiat = undefined;
+            expect(getRawAmountFromSats(12618)).toEqual({
+                amount: '12618',
+                forceUnit: 'sats',
+                error: 'Rate for selected currency not available'
+            });
         });
 
         it('getAmountFromSats output is display-only and does not round-trip', () => {
