@@ -3,6 +3,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import LightningAddressStore from './LightningAddressStore';
 import BackendUtils from '../utils/BackendUtils';
+import { doTorRequestRaw } from '../utils/TorUtils';
 
 jest.mock('react-native-blob-util', () => ({
     __esModule: true,
@@ -14,6 +15,11 @@ jest.mock('react-native-notifications', () => ({
 }));
 
 jest.mock('socket.io-client', () => ({ io: jest.fn() }));
+
+jest.mock('../utils/TorUtils', () => ({
+    doTorRequestRaw: jest.fn(),
+    RequestMethod: { GET: 'GET', POST: 'POST', DELETE: 'DELETE' }
+}));
 
 jest.mock('./CashuStore', () => ({
     __esModule: true,
@@ -63,6 +69,7 @@ jest.mock('../storage', () => ({
 }));
 
 const fetchMock = ReactNativeBlobUtil.fetch as jest.Mock;
+const torMock = doTorRequestRaw as jest.Mock;
 
 const NODE_PUBKEY = `02${'b'.repeat(64)}`;
 const LSP_PUBKEY =
@@ -74,12 +81,14 @@ const response = (status: number, body: any) => ({
 });
 
 const setup = ({
-    settings = {},
+    settings = { lspPushNotifications: true },
+    enableTor = false,
     isMainNet = true,
     isOlympus = true,
     channels = [{ remotePubkey: LSP_PUBKEY }]
 }: {
     settings?: any;
+    enableTor?: boolean;
     isMainNet?: boolean;
     isOlympus?: boolean;
     channels?: Array<{ remotePubkey: string }>;
@@ -90,7 +99,7 @@ const setup = ({
         {
             nodeInfo: { identity_pubkey: NODE_PUBKEY, isMainNet }
         } as any,
-        { settings } as any,
+        { settings, enableTor } as any,
         channelsStore,
         {
             isOlympus: () => isOlympus,
@@ -123,6 +132,7 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
 describe('LightningAddressStore LSP push registration', () => {
     beforeEach(() => {
         fetchMock.mockReset();
+        torMock.mockReset();
         (BackendUtils.supportsFlowLSP as jest.Mock).mockReturnValue(true);
     });
 
@@ -175,6 +185,7 @@ describe('LightningAddressStore LSP push registration', () => {
     });
 
     it.each([
+        ['the user has not opted in', { settings: {} }],
         ['the setting is off', { settings: { lspPushNotifications: false } }],
         ['the node is not on mainnet', { isMainNet: false }],
         ['the LSP is not Olympus', { isOlympus: false }],
@@ -209,6 +220,32 @@ describe('LightningAddressStore LSP push registration', () => {
         await flush();
 
         expect(fetchMock).not.toHaveBeenCalled();
+    });
+
+    it('sends /auth and /push over Tor when Tor is enabled', async () => {
+        const { store, loadChannels } = setup({ enableTor: true });
+        store.setDeviceToken('device-token');
+        torMock
+            .mockResolvedValueOnce({
+                status: 200,
+                body: JSON.stringify({ success: true, verification: 'nonce' })
+            })
+            .mockResolvedValueOnce({
+                status: 200,
+                body: JSON.stringify({ success: true })
+            });
+
+        loadChannels();
+        await flush();
+
+        expect(fetchMock).not.toHaveBeenCalled();
+        expect(torMock.mock.calls.map(([url]) => url)).toEqual([
+            'https://zeuspay.com/api/lnurl/auth',
+            'https://zeuspay.com/api/lnurl/push'
+        ]);
+        expect(JSON.parse(torMock.mock.calls[1][2]).device_token).toBe(
+            'device-token'
+        );
     });
 
     it('sends enabled: false without a token to unregister', async () => {

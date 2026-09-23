@@ -54,7 +54,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                 .flowHost,
             accessKey: settings.lspAccessKey ?? '',
             requestSimpleTaproot: settings?.requestSimpleTaproot ?? true,
-            lspPushNotifications: settings?.lspPushNotifications ?? true
+            lspPushNotifications: settings?.lspPushNotifications ?? false
         };
     }
 
@@ -106,7 +106,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
             accessKey !== '' ||
             (BackendUtils.supportsSimpleTaprootChannels() &&
                 !requestSimpleTaproot) ||
-            (showLspPushNotifications && !lspPushNotifications) ||
+            (showLspPushNotifications && lspPushNotifications) ||
             lsp !== lspConfig.defaultFlowHost;
 
         return (
@@ -421,9 +421,9 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                                 accessKey: '',
                                                 requestSimpleTaproot: true
                                             });
-                                            if (!lspPushNotifications) {
+                                            if (lspPushNotifications) {
                                                 this.setLspPushNotifications(
-                                                    true
+                                                    false
                                                 );
                                             }
                                             await updateSettings({

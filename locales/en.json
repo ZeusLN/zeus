@@ -1551,7 +1551,7 @@
     "views.Settings.LSP.enableLSP.subtitle": "The LSP will get you connected to the Lightning network by opening up payment channels for you.",
     "views.Settings.LSP.requestSimpleTaproot": "Request Simple Taproot Channels",
     "views.Settings.LSP.pushNotifications": "Channel expiry notifications",
-    "views.Settings.LSP.pushNotifications.subtitle": "Get a push notification before a channel from the ZEUS LSP expires. Your node pubkey and device's push token are sent to ZEUS Pay, which sends the notification.",
+    "views.Settings.LSP.pushNotifications.subtitle": "Get a push notification before a channel from the ZEUS LSP expires. Turning this on sends your node pubkey and this device's push token to ZEUS Pay, which sends the notification. Wallets on this device that turn it on share the same push token, so ZEUS Pay can tell they are on the same device.",
     "views.Settings.LSP.pushNotifications.zeusPay": "Channel expiry notifications use your ZEUS Pay notification setting.",
     "views.Settings.LSP.toProceed": "To proceed with using the LSP, the following settings must be configured:",
     "views.Settings.LSP.zeroConfChans": "Zero-conf channels",
