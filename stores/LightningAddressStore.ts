@@ -15,6 +15,7 @@ import { LSPService } from '../models/LSP';
 
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { networkFetch } from '../utils/NetworkUtils';
 
 import Storage from '../storage';
 
@@ -125,14 +126,15 @@ export default class LightningAddressStore {
         if (this.auth && this.authDate && this.authDate > tenMinutesAgo) {
             return this.auth;
         } else {
-            const authResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${LNURL_HOST}/api/lnurl/auth`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
+            const authResponse = await networkFetch({
+                method: 'POST',
+                url: `${LNURL_HOST}/api/lnurl/auth`,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
-                })
-            );
+                }),
+                enableTor: this.settingsStore.enableTor
+            });
 
             const authData = authResponse.json();
             if (authResponse.info().status !== 200) throw authData.error;
@@ -646,15 +648,15 @@ export default class LightningAddressStore {
 
     // The Olympus LSP sends channel-expiry reminders to the device token
     // stored with ZEUS Pay. Nodes with an Olympus channel but no ZEUS Pay
-    // address register the token through /push instead of /update. ZEUS Pay
-    // is mainnet-only, and the opt-out switch lives in the Flow LSP settings,
-    // so this only runs where that screen is reachable.
+    // address register the token through /push instead of /update, once the
+    // user opts in from the Flow LSP settings. ZEUS Pay is mainnet-only, and
+    // the switch is only reachable where supportsFlowLSP() is true.
     public maybeRegisterLspPush = async () => {
         const { settings } = this.settingsStore;
         const { nodeInfo } = this.nodeInfoStore;
 
         if (
-            settings.lspPushNotifications === false ||
+            settings.lspPushNotifications !== true ||
             this.lightningAddress ||
             !nodeInfo?.isMainNet ||
             !nodeInfo?.identity_pubkey ||
@@ -702,11 +704,11 @@ export default class LightningAddressStore {
         const pubkey = this.nodeInfoStore.nodeInfo.identity_pubkey;
         const { verification, signature } = await this.getAuthData();
 
-        const response = await ReactNativeBlobUtil.fetch(
-            'POST',
-            `${LNURL_HOST}/api/lnurl/push`,
-            { 'Content-Type': 'application/json' },
-            JSON.stringify({
+        const response = await networkFetch({
+            method: 'POST',
+            url: `${LNURL_HOST}/api/lnurl/push`,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
                 pubkey,
                 message: verification,
                 signature,
@@ -715,8 +717,9 @@ export default class LightningAddressStore {
                     device_token,
                     device_platform: Platform.OS
                 })
-            })
-        );
+            }),
+            enableTor: this.settingsStore.enableTor
+        });
 
         const data = response.json();
         if (response.info().status !== 200 || !data.success) {
@@ -855,11 +858,6 @@ export default class LightningAddressStore {
             await Storage.setItem(ADDRESS_ACTIVATED_STRING, false);
             await Storage.setItem(HASHES_STORAGE_STRING, '');
             this.reset();
-
-            // /delete removed the whole row, device token included
-            this.maybeRegisterLspPush().catch((e) =>
-                console.log('Failed to register LSP push', e)
-            );
 
             runInAction(() => {
                 this.loading = false;

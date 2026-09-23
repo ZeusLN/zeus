@@ -1664,7 +1664,7 @@ export const DEFAULT_SETTINGS: Settings = {
     lspMutinynet: DEFAULT_LSP_MUTINYNET,
     lspAccessKey: '',
     requestSimpleTaproot: true,
-    lspPushNotifications: true,
+    lspPushNotifications: false,
     //lsps1
     lsps1RestMainnet: DEFAULT_LSPS1_REST_MAINNET,
     lsps1RestTestnet: DEFAULT_LSPS1_REST_TESTNET,
