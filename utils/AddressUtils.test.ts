@@ -324,30 +324,87 @@ describe('AddressUtils', () => {
             expect(
                 AddressUtils.isValidBitcoinAddress(
                     'bc1pmfr3p9j00pfxjh0zmgp99y8zftmd3s5pmedqhyptwy6lm87hf5sspknck9',
-                    true
+                    false
                 )
             ).toBeTruthy();
 
             expect(
                 AddressUtils.isValidBitcoinAddress(
                     'BC1PMFR3P9J00PFXJH0ZMGP99Y8ZFTMD3S5PMEDQHYPTWY6LM87HF5SSPKNCK9',
-                    true
+                    false
                 )
             ).toBeTruthy();
 
             expect(
                 AddressUtils.isValidBitcoinAddress(
                     'bc1pveaamy78cq5hvl74zmfw52fxyjun3lh7lgt44j03ygx02zyk8lesgk06f6',
-                    true
+                    false
                 )
             ).toBeTruthy();
 
             expect(
                 AddressUtils.isValidBitcoinAddress(
                     'BC1PVEAAMY78CQ5HVL74ZMFW52FXYJUN3LH7LGT44J03YGX02ZYK8LESGK06F6',
-                    true
+                    false
                 )
             ).toBeTruthy();
+        });
+
+        it('rejects mainnet addresses when validating for testnet', () => {
+            [
+                'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                'BC1Q7065EZYHCD3QTQLCVWCMP9T2WEAXC4SGUUVLWU',
+                'bc1pmfr3p9j00pfxjh0zmgp99y8zftmd3s5pmedqhyptwy6lm87hf5sspknck9',
+                '1AY6gTALH7bGrbN73qqTRnkW271JvBJc9o',
+                '3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy'
+            ].forEach((address) =>
+                expect(
+                    AddressUtils.isValidBitcoinAddress(address, true)
+                ).toBeFalsy()
+            );
+        });
+
+        it('rejects testnet and regtest addresses when validating for mainnet', () => {
+            [
+                'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+                'bcrt1qqgdrlt97x4847rf85utak8gre5q7k83uwh3ajj',
+                'mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn',
+                '2MzQwSSnBHWHqSAqtTVQ6v47XtaisrJa1Vc'
+            ].forEach((address) =>
+                expect(
+                    AddressUtils.isValidBitcoinAddress(address, false)
+                ).toBeFalsy()
+            );
+        });
+    });
+
+    describe('isValidBitcoinAddressOnAnyNetwork', () => {
+        it('accepts mainnet, testnet and regtest addresses', () => {
+            [
+                'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                'bc1pmfr3p9j00pfxjh0zmgp99y8zftmd3s5pmedqhyptwy6lm87hf5sspknck9',
+                '1AY6gTALH7bGrbN73qqTRnkW271JvBJc9o',
+                '3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy',
+                'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+                'bcrt1qqgdrlt97x4847rf85utak8gre5q7k83uwh3ajj',
+                'mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn',
+                '2MzQwSSnBHWHqSAqtTVQ6v47XtaisrJa1Vc'
+            ].forEach((address) =>
+                expect(
+                    AddressUtils.isValidBitcoinAddressOnAnyNetwork(address)
+                ).toBeTruthy()
+            );
+        });
+
+        it('rejects non-addresses', () => {
+            expect(
+                AddressUtils.isValidBitcoinAddressOnAnyNetwork('')
+            ).toBeFalsy();
+            expect(
+                AddressUtils.isValidBitcoinAddressOnAnyNetwork(
+                    'bc1q073ezlgdrqj8ug8gpmlnh0qa7ztlx65cm62sck-'
+                )
+            ).toBeFalsy();
         });
     });
 
