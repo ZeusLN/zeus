@@ -372,11 +372,12 @@ class KeychainRecoveryUtils {
             }
 
             // Verify the write by reading the value back and comparing it
-            // against what was sent. Checking only that something is there
-            // cannot tell an unwritten key from one still holding an older
-            // copy -- and Storage.getItem resolves `false` for a missing key
-            // rather than throwing, so both pass a truthiness check as long
-            // as the stale value is non-empty.
+            // against what was sent. A truthiness check cannot tell the value
+            // just written from an older copy the key is still holding, so it
+            // reports success while the data on disk is the data being
+            // replaced. It catches the unwritten case only incidentally,
+            // because Storage.getItem resolves `false` for a missing key
+            // rather than throwing.
             const verifyData = await Storage.getItem(recoveryResult.key);
             if (verifyData !== recoveryResult.data) {
                 return {

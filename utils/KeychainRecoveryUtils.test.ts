@@ -247,7 +247,11 @@ describe('KeychainRecoveryUtils', () => {
 
         it('writes the recovered payload verbatim and counts the nodes', async () => {
             storage.setItem.mockResolvedValue(true as any);
-            storage.getItem.mockResolvedValue(SETTINGS as any);
+            // Keyed, not blanket: the read-back has to hit the key that was
+            // written, or the verification is reading someone else's value.
+            storage.getItem.mockImplementation(async (key: string) =>
+                key === STORAGE_KEY ? SETTINGS : (false as any)
+            );
 
             const result = await utils.restoreSettings(recovered(SETTINGS));
 
@@ -320,7 +324,9 @@ describe('KeychainRecoveryUtils', () => {
 
         it('writes the payload under the recovered key', async () => {
             storage.setItem.mockResolvedValue(true as any);
-            storage.getItem.mockResolvedValue('["alice"]' as any);
+            storage.getItem.mockImplementation(async (key: string) =>
+                key === 'contacts' ? '["alice"]' : (false as any)
+            );
 
             const result = await utils.restoreDataKey(recovered('["alice"]'));
 
