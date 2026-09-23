@@ -363,7 +363,7 @@ export default class PosStore {
                 hasIndividualTaxRates ||
                 (taxPercentage && taxPercentage !== '0' && taxPercentage !== '')
             ) {
-                let totalTaxFiat = new BigNumber(0);
+                let totalTaxCents = new BigNumber(0);
 
                 if (hasIndividualTaxRates) {
                     this.currentOrder.line_items.forEach((item) => {
@@ -372,37 +372,40 @@ export default class PosStore {
                                 ? item.taxPercentage
                                 : taxPercentage || '0';
 
-                        let itemSubtotalFiat: BigNumber;
+                        // line item prices are in major units, total_* in cents
+                        let itemSubtotalCents: BigNumber;
 
                         if (item.base_price_money.sats! > 0) {
                             const satsAmount = new BigNumber(
                                 item.base_price_money.sats || 0
                             ).times(item.quantity);
-                            itemSubtotalFiat = new BigNumber(
+                            itemSubtotalCents = new BigNumber(
                                 this.calcFiatAmountFromSats(
                                     satsAmount.toNumber()
                                 )
-                            ).div(100);
+                            );
                         } else {
-                            itemSubtotalFiat = new BigNumber(
+                            itemSubtotalCents = new BigNumber(
                                 item.base_price_money.amount || 0
-                            ).times(item.quantity);
+                            )
+                                .times(item.quantity)
+                                .times(100);
                         }
 
-                        const itemTaxFiat = itemSubtotalFiat
+                        const itemTaxCents = itemSubtotalCents
                             .multipliedBy(new BigNumber(itemTaxRate))
                             .dividedBy(100);
 
-                        totalTaxFiat = totalTaxFiat.plus(itemTaxFiat);
+                        totalTaxCents = totalTaxCents.plus(itemTaxCents);
                     });
                 } else {
-                    totalTaxFiat = totalFiat
+                    totalTaxCents = totalFiat
                         .div(100)
                         .multipliedBy(Number(taxPercentage) || 0);
                 }
 
                 this.currentOrder.total_tax_money.amount =
-                    totalTaxFiat.toNumber();
+                    totalTaxCents.toNumber();
 
                 if (this.fiatStore.fiatRates) {
                     const fiatEntry = this.fiatStore.fiatRates.filter(
@@ -412,6 +415,8 @@ export default class PosStore {
                     const { code } = fiatEntry;
                     this.currentOrder.total_tax_money.currency = code;
                 }
+            } else {
+                this.currentOrder.total_tax_money.amount = 0;
             }
         }
     };
