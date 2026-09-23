@@ -10,6 +10,7 @@ import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 import TextInput from '../../components/TextInput';
 
+import LightningAddressStore from '../../stores/LightningAddressStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore, {
     DEFAULT_LSP_MAINNET,
@@ -25,6 +26,7 @@ import UrlUtils from '../../utils/UrlUtils';
 
 interface LSPProps {
     navigation: NativeStackNavigationProp<any, any>;
+    LightningAddressStore: LightningAddressStore;
     NodeInfoStore: NodeInfoStore;
     SettingsStore: SettingsStore;
 }
@@ -34,9 +36,10 @@ interface LSPState {
     lsp: string;
     accessKey: string;
     requestSimpleTaproot: boolean;
+    lspPushNotifications: boolean;
 }
 
-@inject('NodeInfoStore', 'SettingsStore')
+@inject('LightningAddressStore', 'NodeInfoStore', 'SettingsStore')
 @observer
 export default class LSP extends React.Component<LSPProps, LSPState> {
     constructor(props: LSPProps) {
@@ -50,13 +53,35 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
             lsp: getLspConfigForNetwork(settings, NodeInfoStore!.nodeInfo)
                 .flowHost,
             accessKey: settings.lspAccessKey ?? '',
-            requestSimpleTaproot: settings?.requestSimpleTaproot ?? true
+            requestSimpleTaproot: settings?.requestSimpleTaproot ?? true,
+            lspPushNotifications: settings?.lspPushNotifications ?? true
         };
     }
 
+    setLspPushNotifications = async (enabled: boolean) => {
+        const { LightningAddressStore, SettingsStore } = this.props;
+        this.setState({ lspPushNotifications: enabled });
+        await SettingsStore.updateSettings({ lspPushNotifications: enabled });
+        const request = enabled
+            ? LightningAddressStore.maybeRegisterLspPush()
+            : LightningAddressStore.registerLspPush(false);
+        request.catch((e) => console.log('Failed to update LSP push', e));
+    };
+
     render() {
-        const { navigation, NodeInfoStore, SettingsStore } = this.props;
-        const { enableLSP, lsp, accessKey, requestSimpleTaproot } = this.state;
+        const {
+            navigation,
+            LightningAddressStore,
+            NodeInfoStore,
+            SettingsStore
+        } = this.props;
+        const {
+            enableLSP,
+            lsp,
+            accessKey,
+            requestSimpleTaproot,
+            lspPushNotifications
+        } = this.state;
         const { updateSettings, certVerification, settings }: any =
             SettingsStore;
         const { nodes, selectedNode } = settings;
@@ -65,6 +90,13 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
         const lspConfig = getLspConfigForNetwork(settings, nodeInfo);
         const isMutinynet = nodeInfo?.isMutinynet;
         const isTestNet = nodeInfo?.isTestNet;
+        // Expiry reminders go through ZEUS Pay, which is mainnet-only
+        const showLspPushNotifications = !!nodeInfo?.isMainNet;
+        // Both share one ZEUS Pay row, so with an address the ZEUS Pay
+        // notification setting applies
+        const hasZeusPayAddress = !!LightningAddressStore.lightningAddress;
+        const zeusPayNotificationsOn =
+            (settings.lightningAddress?.notifications ?? 0) !== 0;
 
         const { flowLspNotConfigured, zeroConfConfig, scidAlias, zeroConf } =
             NodeInfoStore.flowLspNotConfigured();
@@ -74,6 +106,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
             accessKey !== '' ||
             (BackendUtils.supportsSimpleTaprootChannels() &&
                 !requestSimpleTaproot) ||
+            (showLspPushNotifications && !lspPushNotifications) ||
             lsp !== lspConfig.defaultFlowHost;
 
         return (
@@ -313,6 +346,61 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                     </View>
                                 </ListItem>
                             )}
+                            {showLspPushNotifications && (
+                                <>
+                                    <ListItem containerStyle={styles.listItem}>
+                                        <ListItem.Title
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                fontFamily:
+                                                    'PPNeueMontreal-Book'
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Settings.LSP.pushNotifications'
+                                            )}
+                                        </ListItem.Title>
+                                        <View
+                                            style={{
+                                                flex: 1,
+                                                flexDirection: 'row',
+                                                justifyContent: 'flex-end'
+                                            }}
+                                        >
+                                            <Switch
+                                                value={
+                                                    hasZeusPayAddress
+                                                        ? zeusPayNotificationsOn
+                                                        : lspPushNotifications
+                                                }
+                                                disabled={hasZeusPayAddress}
+                                                onValueChange={() =>
+                                                    this.setLspPushNotifications(
+                                                        !lspPushNotifications
+                                                    )
+                                                }
+                                            />
+                                        </View>
+                                    </ListItem>
+                                    <View style={{ margin: 10 }}>
+                                        <Text
+                                            style={{
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {localeString(
+                                                hasZeusPayAddress
+                                                    ? 'views.Settings.LSP.pushNotifications.zeusPay'
+                                                    : 'views.Settings.LSP.pushNotifications.subtitle'
+                                            )}
+                                        </Text>
+                                    </View>
+                                </>
+                            )}
 
                             {showReset && (
                                 <View style={{ marginTop: 20 }}>
@@ -333,6 +421,11 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                                 accessKey: '',
                                                 requestSimpleTaproot: true
                                             });
+                                            if (!lspPushNotifications) {
+                                                this.setLspPushNotifications(
+                                                    true
+                                                );
+                                            }
                                             await updateSettings({
                                                 enableLSP: true,
                                                 lspMainnet: DEFAULT_LSP_MAINNET,
