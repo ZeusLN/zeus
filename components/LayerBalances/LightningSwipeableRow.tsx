@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import { Alert, View, I18nManager, TouchableOpacity } from 'react-native';
 import { SharedValue } from 'react-native-reanimated';
-import { getParams as getlnurlParams, LNURLWithdrawParams } from 'js-lnurl';
+import { LNURLWithdrawParams } from 'js-lnurl';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
 
@@ -9,6 +9,8 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { doTorRequest, RequestMethod } from '../../utils/TorUtils';
 import BackendUtils from './../../utils/BackendUtils';
+import { isLightningAddressEndpointAllowed } from './../../utils/LnurlPayUtils';
+import { getLnurlParams } from './../../utils/LnurlResolveUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
@@ -133,7 +135,26 @@ export default class LightningSwipeableRow extends Component<
         navigation?: any,
         settings?: any
     ): Promise<void> => {
-        const params = lnurlParams || (await getlnurlParams(lightning ?? ''));
+        let params = lnurlParams;
+        if (!params) {
+            try {
+                params = await getLnurlParams(lightning ?? '');
+            } catch (e: any) {
+                // refused by the lnurl host policy (see getLnurlParams)
+                Alert.alert(
+                    localeString('general.error'),
+                    e.message,
+                    [
+                        {
+                            text: localeString('general.ok'),
+                            onPress: () => void 0
+                        }
+                    ],
+                    { cancelable: false }
+                );
+                return;
+            }
+        }
         if (
             params &&
             params.status === 'ERROR' &&
@@ -184,6 +205,16 @@ export default class LightningSwipeableRow extends Component<
         const url = bolt11Domain.includes('.onion')
             ? `http://${bolt11Domain}/.well-known/lnurlp/${username.toLowerCase()}`
             : `https://${bolt11Domain}/.well-known/lnurlp/${username.toLowerCase()}`;
+
+        if (!isLightningAddressEndpointAllowed(url).ok) {
+            Alert.alert(
+                localeString('general.error'),
+                localeString('utils.lnurl.unsafeLightningAddress'),
+                [{ text: localeString('general.ok'), onPress: () => void 0 }],
+                { cancelable: false }
+            );
+            return;
+        }
 
         const error = localeString(
             'utils.handleAnything.lightningAddressError'

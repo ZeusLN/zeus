@@ -330,3 +330,13 @@ export const isLnurlEndpointAllowed = (lnurl: string): LnurlCheckResult => {
 
     return isLnurlCallbackAllowed(decoded);
 };
+
+/**
+ * The same policy for a LUD-16 lightning address, given the well-known URL
+ * the caller is about to fetch. The address grammar admits IP-literal
+ * domains, so `user@192.168.1.1` is the same LAN request as a bech32 lnurl
+ * encoding it, without involving js-lnurl at all.
+ */
+export const isLightningAddressEndpointAllowed = (
+    wellKnownUrl: string
+): LnurlCheckResult => isLnurlCallbackAllowed(wellKnownUrl);

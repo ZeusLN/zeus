@@ -10,7 +10,8 @@ import {
     verifyLnurlPayInvoice,
     isLnurlCallbackAllowed,
     verifyLnurlAuthCallback,
-    isLnurlEndpointAllowed
+    isLnurlEndpointAllowed,
+    isLightningAddressEndpointAllowed
 } from './LnurlPayUtils';
 
 const METADATA = '[["text/plain","Payment to Alice"]]';
@@ -367,5 +368,25 @@ describe('isLnurlEndpointAllowed', () => {
     // network, so there is no request for this check to prevent
     it('leaves an undecodable value to js-lnurl', () => {
         expect(isLnurlEndpointAllowed('not an lnurl at all').ok).toBe(true);
+    });
+});
+
+// LUD-16 addresses admit IP-literal domains, so the well-known URL they
+// resolve to needs the same policy.
+describe('isLightningAddressEndpointAllowed', () => {
+    it.each([
+        'https://example.com/.well-known/lnurlp/user',
+        'http://abcdefg.onion/.well-known/lnurlp/user'
+    ])('allows %s', (target) => {
+        expect(isLightningAddressEndpointAllowed(target).ok).toBe(true);
+    });
+
+    it.each([
+        'https://192.168.1.1/.well-known/lnurlp/user',
+        'https://127.0.0.1/.well-known/lnurlp/user',
+        'https://169.254.169.254/.well-known/lnurlp/user',
+        'https://[192.168.1.1]/.well-known/lnurlp/user'
+    ])('refuses %s', (target) => {
+        expect(isLightningAddressEndpointAllowed(target).ok).toBe(false);
     });
 });

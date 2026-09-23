@@ -1048,6 +1048,21 @@ describe('handleAnything', () => {
             );
         });
 
+        // The address grammar admits IP-literal domains, and the well-known
+        // lookup is a request from the user's network position.
+        it.each(['user@192.168.1.1', 'user@127.0.0.1', 'user@169.254.169.254'])(
+            'refuses to resolve %s',
+            async (address) => {
+                mockProcessBIP21Uri.mockReturnValue({ value: address });
+                mockIsValidLightningAddress = true;
+
+                await expect(handleAnything(address)).rejects.toThrow(
+                    'This lightning address points at an unsafe host'
+                );
+                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+            }
+        );
+
         it('lowercases domain per LUD-16 spec', async () => {
             const address = 'satoshi@EXAMPLE.COM';
             mockProcessBIP21Uri.mockReturnValue({ value: address });

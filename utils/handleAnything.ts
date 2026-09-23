@@ -1,5 +1,4 @@
 import { Alert, Platform } from 'react-native';
-import { getParams as getlnurlParams } from 'js-lnurl';
 import { findlnurl, decodelnurl } from 'js-lnurl/lib/helpers';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
@@ -11,7 +10,11 @@ import Bolt11Utils from './Bolt11Utils';
 import CashuUtils from './CashuUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
 import ContactUtils from './ContactUtils';
-import { isLnurlEndpointAllowed } from './LnurlPayUtils';
+import {
+    isLightningAddressEndpointAllowed,
+    isLnurlEndpointAllowed
+} from './LnurlPayUtils';
+import { getLnurlParams as getlnurlParams } from './LnurlResolveUtils';
 import { localeString } from './LocaleUtils';
 
 /**
@@ -456,8 +459,10 @@ const handleAnything = async (
         if (isClipboardValue) return true;
         if (!BackendUtils.supportsOnchainSends()) {
             if (lightning?.toLowerCase().startsWith('lnurl')) {
+                // outside the try, so the refusal is not reported as
+                // malformed params
+                assertLnurlEndpointAllowed(lightning);
                 try {
-                    assertLnurlEndpointAllowed(lightning);
                     const params = await getlnurlParams(lightning);
                     if ('tag' in params && params.tag === 'payRequest') {
                         return [
@@ -765,6 +770,9 @@ const handleAnything = async (
             url = `http://${normalizedDomain}/.well-known/lnurlp/${normalizedUsername}`;
         } else {
             url = `https://${normalizedDomain}/.well-known/lnurlp/${normalizedUsername}`;
+        }
+        if (!isLightningAddressEndpointAllowed(url).ok) {
+            throw new Error(localeString('utils.lnurl.unsafeLightningAddress'));
         }
         const error = localeString(
             'utils.handleAnything.lightningAddressError'
