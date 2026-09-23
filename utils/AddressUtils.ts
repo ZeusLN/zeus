@@ -218,6 +218,26 @@ class AddressUtils {
         return btcNonBech.test(input) || btcBech.test(input);
     };
 
+    // Unlike isValidBitcoinAddress, checks the checksum and the exact
+    // network. Testnet, signet and mutinynet share address formats
+    isValidAddressForNetwork = (
+        input: string,
+        nodeInfo: { isMainNet: boolean; isRegTest: boolean }
+    ): boolean => {
+        const network = nodeInfo.isMainNet
+            ? bitcoin.networks.bitcoin
+            : nodeInfo.isRegTest
+            ? bitcoin.networks.regtest
+            : bitcoin.networks.testnet;
+
+        try {
+            bitcoin.address.toOutputScript(input, network);
+            return true;
+        } catch {
+            return false;
+        }
+    };
+
     isValidBIP21Uri = (input: string) => bip21Uri.test(input);
 
     isValidLightningPaymentRequest = (input: string) => lnInvoice.test(input);
