@@ -130,7 +130,7 @@ export default class LSPS7 extends React.Component<LSPS7Props, LSPS7State> {
     };
 
     componentWillUnmount() {
-        this.props.LSPStore.stopFreeOrderStatusPolling();
+        this.props.LSPStore.resetLSPS7Data();
     }
 
     componentDidUpdate(_prevProps: LSPS7Props) {
