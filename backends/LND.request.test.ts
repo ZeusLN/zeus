@@ -32,10 +32,13 @@ const nodeInfo = nodeInfoStore as any;
 const CONNECTION_ERROR = 'Connection error';
 const PAYMENT_TIMED_OUT =
     'Payment timed out. It may be in transit, meaning it may complete momentarily or it may go on to fail. Check the Activity view to track its progress.';
-const TIMED_OUT = {
+// payLightningInvoice's timed-out shape for a call made at startMs: the
+// request is torn down natively 5s past timeout_seconds
+const timedOut = (startMs: number, timeoutSeconds: number) => ({
     payment_error: PAYMENT_TIMED_OUT,
-    payment_timed_out: true
-};
+    payment_timed_out: true,
+    dispatch_deadline_ms: startMs + (timeoutSeconds + 5) * 1000
+});
 
 // shape of a react-native-blob-util FetchBlobResponse
 const response = (status: number, data: any, json?: () => any) => ({
@@ -567,6 +570,7 @@ describe('LND.payLightningInvoice timeout race', () => {
     it('returns the timed-out shape 1s after timeout_seconds when the node has not answered', async () => {
         mockFetch.mockReturnValue(new Promise(() => {}));
 
+        const start = Date.now();
         const result = lnd.payLightningInvoice({ timeout_seconds: 10 });
         const settled = jest.fn();
         result.then(settled, settled);
@@ -575,16 +579,17 @@ describe('LND.payLightningInvoice timeout race', () => {
         expect(settled).not.toHaveBeenCalled();
 
         await jest.advanceTimersByTimeAsync(1);
-        await expect(result).resolves.toEqual(TIMED_OUT);
+        await expect(result).resolves.toEqual(timedOut(start, 10));
     });
 
     it('resolves the timed-out shape, not the transport rejection, when nothing answers', async () => {
         // the transport race fires at 15s; the forced timeout must win
         mockFetch.mockReturnValue(new Promise(() => {}));
 
+        const start = Date.now();
         const result = lnd.payLightningInvoice({ timeout_seconds: 10 });
         await jest.advanceTimersByTimeAsync(20000);
-        await expect(result).resolves.toEqual(TIMED_OUT);
+        await expect(result).resolves.toEqual(timedOut(start, 10));
     });
 
     it('defaults to a 60s timeout when timeout_seconds is missing or not numeric', async () => {
@@ -592,6 +597,7 @@ describe('LND.payLightningInvoice timeout race', () => {
 
         for (const data of [{}, { timeout_seconds: 'abc' }]) {
             lnd.clearCachedCalls();
+            const start = Date.now();
             const result = lnd.payLightningInvoice(data);
             const settled = jest.fn();
             result.then(settled, settled);
@@ -599,7 +605,7 @@ describe('LND.payLightningInvoice timeout race', () => {
             await jest.advanceTimersByTimeAsync(60999);
             expect(settled).not.toHaveBeenCalled();
             await jest.advanceTimersByTimeAsync(1);
-            await expect(result).resolves.toEqual(TIMED_OUT);
+            await expect(result).resolves.toEqual(timedOut(start, 60));
             expect(mockConfig).toHaveBeenLastCalledWith({
                 trusty: true,
                 timeout: 65000
@@ -646,12 +652,13 @@ describe('LND.payLightningInvoice timeout race', () => {
             })
         );
 
+        const start = Date.now();
         const result = lnd.payLightningInvoice({ timeout_seconds: 10 });
         await jest.advanceTimersByTimeAsync(11000);
         resolveFetch(response(200, '{"result":{"status":"SUCCEEDED"}}\n'));
         await jest.advanceTimersByTimeAsync(0);
 
-        await expect(result).resolves.toEqual(TIMED_OUT);
+        await expect(result).resolves.toEqual(timedOut(start, 10));
     });
 });
 
