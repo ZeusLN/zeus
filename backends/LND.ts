@@ -539,6 +539,10 @@ export default class LND {
         if (data.pubkey) delete data.pubkey;
 
         const timeoutSeconds = Number(data.timeout_seconds) || 60;
+        // native transport deadline for the send request, past the
+        // forcedTimeout below
+        const requestTimeoutMs = (timeoutSeconds + 5) * 1000;
+        const dispatchDeadline = Date.now() + requestTimeoutMs;
 
         const forcedTimeout = async (time_ms: number, response: any) => {
             await new Promise((res) => setTimeout(res, time_ms));
@@ -547,12 +551,16 @@ export default class LND {
 
         // payment_timed_out marks the outcome as unknown on the node (the
         // client gave up, not the payment), so the caller can track the
-        // payment to its terminal state instead of reporting failure
+        // payment to its terminal state instead of reporting failure.
+        // dispatch_deadline_ms is when the request is torn down natively;
+        // before then it may still reach the node, so a lookup finding no
+        // record isn't proof the payment was never sent.
         const timedOutResponse = () => ({
             payment_error: localeString(
                 'views.SendingLightning.paymentTimedOut'
             ),
-            payment_timed_out: true
+            payment_timed_out: true,
+            dispatch_deadline_ms: dispatchDeadline
         });
 
         // The request timeout must exceed the forcedTimeout below, or the
@@ -566,7 +574,7 @@ export default class LND {
                     ...data,
                     allow_self_payment: true
                 },
-                (timeoutSeconds + 5) * 1000
+                requestTimeoutMs
             ).catch((err: any) => {
                 // safety net if the transport deadline ever fires first:
                 // a client-side timeout is outcome-unknown, not a failure
