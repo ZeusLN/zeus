@@ -14,6 +14,7 @@ jest.mock('./LocaleUtils', () => ({
 import {
     SPLICE_OUT_MIN_SATS,
     getSpliceAmountError,
+    getSpliceErrorMessage,
     getSpliceInAvailableSats,
     getSpliceOutAvailableSats
 } from './SpliceUtils';
@@ -86,6 +87,51 @@ describe('SpliceUtils', () => {
 
         it('has no minimum for a splice-in', () => {
             expect(getSpliceAmountError('in', 1, 100000)).toBeNull();
+        });
+    });
+
+    describe('getSpliceErrorMessage', () => {
+        it('explains the generic splicing failure', () => {
+            expect(getSpliceErrorMessage('Failed to splice channel.')).toEqual(
+                en['views.Splice.error.spliceRefused']
+            );
+        });
+
+        it('explains an unreachable peer', () => {
+            expect(getSpliceErrorMessage('Network connection closed.')).toEqual(
+                en['views.Splice.error.peerOffline']
+            );
+        });
+
+        it('explains an invalid address', () => {
+            expect(
+                getSpliceErrorMessage('The given address is invalid.')
+            ).toEqual(en['views.Splice.error.invalidAddress']);
+        });
+
+        it('explains insufficient on-chain funds', () => {
+            expect(
+                getSpliceErrorMessage(
+                    'The available funds are insufficient to complete the given operation.'
+                )
+            ).toEqual(en['views.Splice.error.insufficientOnchainFunds']);
+        });
+
+        it('recognises a node error inside a longer message', () => {
+            expect(
+                getSpliceErrorMessage(
+                    'ChannelSplicingFailed(message: "Failed to splice channel.")'
+                )
+            ).toEqual(en['views.Splice.error.spliceRefused']);
+        });
+
+        it('passes other messages through unchanged', () => {
+            expect(getSpliceErrorMessage('Splice failed')).toEqual(
+                'Splice failed'
+            );
+            expect(getSpliceErrorMessage('Node not initialized')).toEqual(
+                'Node not initialized'
+            );
         });
     });
 });
