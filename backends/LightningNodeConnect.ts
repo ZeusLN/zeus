@@ -403,7 +403,10 @@ export default class LightningNodeConnect {
                             ),
                             // outcome unknown on the node: lets the caller
                             // track the payment to a terminal state
-                            // instead of reporting failure
+                            // instead of reporting failure. No
+                            // dispatch_deadline_ms: the stream is never
+                            // cancelled, so the request could still reach
+                            // the node through the mailbox.
                             payment_timed_out: true
                         })
                     ),

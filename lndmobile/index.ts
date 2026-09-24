@@ -389,7 +389,9 @@ export const sendPaymentV2Sync = async (
             ),
             // outcome unknown on the node: lets the caller track the
             // payment to a terminal state instead of reporting failure
-            payment_timed_out: true
+            payment_timed_out: true,
+            // in-process call: the request reached lnd at dispatch
+            dispatch_deadline_ms: Date.now()
         }),
         call()
     ]);

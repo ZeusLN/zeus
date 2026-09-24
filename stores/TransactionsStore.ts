@@ -799,7 +799,9 @@ export default class TransactionsStore {
         if (this.inFlightOwnerSeq !== seq) return;
         if (this.trackingSeq === seq) return; // tracking owns the release
         if (this.canTrackPayment(seq)) {
-            this.trackPaymentToTerminal(seq);
+            // the send never settled, so its request may still reach the
+            // node: a no-record answer can't prove it was never dispatched
+            this.trackPaymentToTerminal(seq, null);
         } else {
             this.clearPaymentInFlight(seq);
         }
@@ -816,7 +818,17 @@ export default class TransactionsStore {
     // PAYMENT_TRACK_MAX_MS ceiling. A release without a terminal state
     // updates the send screen: never-dispatched shows as not sent, any other
     // exit leaves the outcome flagged as unverified.
-    private trackPaymentToTerminal = async (seq: number) => {
+    //
+    // `neverDispatchedAfter` is the time (ms) after which the send request
+    // can no longer reach the node, so a no-record answer from then on is
+    // evidence it never will. Answers before it don't count. null means the
+    // request has no such deadline (e.g. an LNC stream that is never
+    // cancelled): repeated no-record answers then end tracking as
+    // unverified, never as not sent.
+    private trackPaymentToTerminal = async (
+        seq: number,
+        neverDispatchedAfter: number | null
+    ) => {
         if (this.trackingSeq === seq) return;
         const payment_hash = this.inFlightPaymentHash;
         if (!payment_hash) return;
@@ -889,10 +901,16 @@ export default class TransactionsStore {
                     // it: the send request may still be in transit (a slow
                     // Tor circuit can deliver it after a fresh-connection
                     // lookup returns). Only conclude never-dispatched after
-                    // repeated no-record answers with no sighting between.
+                    // repeated no-record answers with no sighting between,
+                    // all given once the request's deadline has passed.
                     failures = 0;
-                    if (++notFound >= PAYMENT_TRACK_MAX_NOT_FOUND) {
-                        neverDispatched = true;
+                    if (
+                        neverDispatchedAfter !== null &&
+                        Date.now() < neverDispatchedAfter
+                    ) {
+                        // the request may still arrive: not evidence yet
+                    } else if (++notFound >= PAYMENT_TRACK_MAX_NOT_FOUND) {
+                        neverDispatched = neverDispatchedAfter !== null;
                         return;
                     }
                 } else if (++failures >= PAYMENT_TRACK_MAX_FAILURES) {
@@ -1018,7 +1036,16 @@ export default class TransactionsStore {
             this.canTrackPayment(seq)
         ) {
             this.status = 'IN_FLIGHT';
-            this.trackPaymentToTerminal(seq);
+            // a timed-out send may still be on its way to the node; the
+            // backend reports when its request can no longer arrive. An
+            // IN_FLIGHT result means the node already has the payment.
+            this.trackPaymentToTerminal(
+                seq,
+                result.payment_timed_out &&
+                    typeof result.dispatch_deadline_ms === 'number'
+                    ? result.dispatch_deadline_ms
+                    : null
+            );
             return;
         }
 
@@ -1095,7 +1122,9 @@ export default class TransactionsStore {
         // payment turns out to be pending or terminal after all, the
         // tracker replaces this error with the real outcome.
         if (seq !== undefined && this.canTrackPayment(seq)) {
-            this.trackPaymentToTerminal(seq);
+            // the rejection settled the request, so no-record answers
+            // count from now on
+            this.trackPaymentToTerminal(seq, Date.now());
         } else {
             this.clearPaymentInFlight(seq);
         }
