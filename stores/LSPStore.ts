@@ -47,7 +47,6 @@ export default class LSPStore {
     @observable public showLspSettings: boolean = false;
     @observable public channelAcceptor: any;
     @observable public customMessagesSubscriber: any;
-    @observable public resolvedCustomMessage: boolean;
     // LSPS1
     @observable public getInfoId: string;
     @observable public createOrderId: string;
@@ -63,10 +62,16 @@ export default class LSPStore {
     @observable public getExtensionOrderId: string;
     @observable public getExtensionOrderResponse: any = {};
 
-    // Resolve callbacks for in-flight custom-message get_order requests, invoked
-    // by handleCustomMessages when the matching response arrives so callers can
-    // await the round trip instead of racing a fixed delay.
+    // Resolve callbacks for in-flight custom-message requests, invoked by
+    // handleCustomMessages when the matching response arrives so callers can
+    // await the round trip instead of racing a fixed delay. Each request type
+    // owns its own resolver/timeout pair so a slow or unanswered request can't
+    // be masked by an unrelated request settling first.
+    private getInfoResponseResolver: (() => void) | null = null;
+    private createOrderResponseResolver: (() => void) | null = null;
     private getOrderResponseResolver: (() => void) | null = null;
+    private getExtendableChannelsResponseResolver: (() => void) | null = null;
+    private createExtensionOrderResponseResolver: (() => void) | null = null;
     private getExtensionOrderResponseResolver: (() => void) | null = null;
 
     // Free orders have no payment step, so they never pass through the LSPPaymentAwait polling screen.
@@ -140,6 +145,12 @@ export default class LSPStore {
     @action
     public resetLSPS1Data = () => {
         this.stopFreeOrderStatusPolling();
+        this.getInfoResponseResolver?.();
+        this.createOrderResponseResolver?.();
+        // Invalidate in-flight request ids so a late response or send failure
+        // can't write into the next screen's state.
+        this.getInfoId = '';
+        this.createOrderId = '';
         this.createOrderResponse = {};
         this.getInfoData = {};
         this.loadingLSPS1 = false;
@@ -150,6 +161,8 @@ export default class LSPStore {
     @action
     public resetLSPS7Data = () => {
         this.stopFreeOrderStatusPolling();
+        this.createExtensionOrderResponseResolver?.();
+        this.createExtensionOrderId = '';
         this.createExtensionOrderResponse = {};
         this.loadingLSPS7 = false;
         this.error = false;
@@ -597,11 +610,15 @@ export default class LSPStore {
     public sendCustomMessage = ({
         peer,
         type,
-        data
+        data,
+        isCurrent = () => true
     }: {
         peer: string;
         type: number | null;
         data: string;
+        // lets a caller drop the error write for a request that has since been
+        // superseded or reset
+        isCurrent?: () => boolean;
     }) => {
         return new Promise((resolve, reject) => {
             if (!peer || !type || !data) {
@@ -614,11 +631,13 @@ export default class LSPStore {
                     resolve(response);
                 })
                 .catch((error: any) => {
-                    const errorMsg = errorToUserFriendly(error);
-                    runInAction(() => {
-                        this.error = true;
-                        this.error_msg = errorMsg;
-                    });
+                    if (isCurrent()) {
+                        const errorMsg = errorToUserFriendly(error);
+                        runInAction(() => {
+                            this.error = true;
+                            this.error_msg = errorMsg;
+                        });
+                    }
                     reject(error);
                 });
         });
@@ -653,6 +672,7 @@ export default class LSPStore {
                 this.getInfoData = data;
             }
             this.loadingLSPS1 = false;
+            this.getInfoResponseResolver?.();
             return true;
         } else if (data.id === this.createOrderId) {
             if (data.error) {
@@ -664,6 +684,7 @@ export default class LSPStore {
                 this.createOrderResponse = data;
             }
             this.loadingLSPS1 = false;
+            this.createOrderResponseResolver?.();
             return true;
         } else if (data.id === this.getOrderId) {
             if (data.error) {
@@ -688,6 +709,7 @@ export default class LSPStore {
                     data?.result?.extendable_channels;
             }
             this.loadingLSPS7 = false;
+            this.getExtendableChannelsResponseResolver?.();
             return true;
         } else if (data.id === this.createExtensionOrderId) {
             if (data.error) {
@@ -699,6 +721,7 @@ export default class LSPStore {
                 this.createExtensionOrderResponse = data;
             }
             this.loadingLSPS7 = false;
+            this.createExtensionOrderResponseResolver?.();
             return true;
         } else if (data.id === this.getExtensionOrderId) {
             if (data.error) {
@@ -716,21 +739,15 @@ export default class LSPStore {
         return false;
     };
 
+    // Establishes the long-lived custom-message listener for the app session.
+    // This only wires up delivery of incoming messages; it does not track
+    // whether any particular request is still awaited. Each request method
+    // (e.g. lsps1GetInfoCustomMessage) arms and clears its own timeout so a
+    // non-responding LSP is caught per-request, not just on the first
+    // subscription of the session.
     @action
     public subscribeCustomMessages = async () => {
         if (this.customMessagesSubscriber) return;
-        this.resolvedCustomMessage = false;
-        let timer = 7000;
-        const timeoutId = setTimeout(() => {
-            if (!this.resolvedCustomMessage) {
-                runInAction(() => {
-                    this.error = true;
-                    this.error_msg = localeString('views.LSPS1.timeoutError');
-                    this.loadingLSPS1 = false;
-                    this.loadingLSPS7 = false;
-                });
-            }
-        }, timer);
 
         if (this.settingsStore.implementation === 'embedded-lnd') {
             this.customMessagesSubscriber = LndMobileEventEmitter.addListener(
@@ -739,13 +756,7 @@ export default class LSPStore {
                     if (!event?.data) return;
                     try {
                         const decoded = index.decodeCustomMessage(event.data);
-                        const handled = runInAction(() =>
-                            this.handleCustomMessages(decoded)
-                        );
-                        if (handled) {
-                            this.resolvedCustomMessage = true;
-                            clearTimeout(timeoutId);
-                        }
+                        runInAction(() => this.handleCustomMessages(decoded));
                     } catch (error: any) {
                         console.error(
                             'sub custom messages error: ' + error.message
@@ -759,13 +770,7 @@ export default class LSPStore {
             BackendUtils.subscribeCustomMessages(
                 (response: any) => {
                     const decoded = response.result;
-                    const handled = runInAction(() =>
-                        this.handleCustomMessages(decoded)
-                    );
-                    if (handled) {
-                        this.resolvedCustomMessage = true;
-                        clearTimeout(timeoutId);
-                    }
+                    runInAction(() => this.handleCustomMessages(decoded));
                 },
                 (error: any) => {
                     console.error(
@@ -830,36 +835,76 @@ export default class LSPStore {
     };
 
     @action
-    public lsps1GetInfoCustomMessage = () => {
+    public lsps1GetInfoCustomMessage = (): Promise<void> => {
+        // Settle any earlier get_info request still waiting so its timer
+        // can't fire a stale timeout after this newer request completes.
+        this.getInfoResponseResolver?.();
+
         this.loadingLSPS1 = true;
         this.error = false;
         this.error_msg = '';
 
         this.getInfoId = uuidv4();
+        const requestId = this.getInfoId;
         const method = 'lsps1.get_info';
 
-        this.sendCustomMessage({
-            peer: this.getLSPSPubkey(),
-            type: CUSTOM_MESSAGE_TYPE,
-            data: this.encodeMessage({
-                jsonrpc: JSON_RPC_VERSION,
-                method,
-                params: {},
-                id: this.getInfoId
+        return new Promise<void>((resolve) => {
+            let settled = false;
+            const settle = () => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timeoutId);
+                if (this.getInfoResponseResolver === settle) {
+                    this.getInfoResponseResolver = null;
+                }
+                resolve();
+            };
+            const timeoutId = setTimeout(() => {
+                if (this.getInfoId === requestId) {
+                    runInAction(() => {
+                        this.error = true;
+                        this.error_msg = localeString(
+                            'views.LSPS1.timeoutError'
+                        );
+                        this.loadingLSPS1 = false;
+                    });
+                }
+                settle();
+            }, CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS);
+            this.getInfoResponseResolver = settle;
+
+            this.sendCustomMessage({
+                isCurrent: () => this.getInfoId === requestId,
+                peer: this.getLSPSPubkey(),
+                type: CUSTOM_MESSAGE_TYPE,
+                data: this.encodeMessage({
+                    jsonrpc: JSON_RPC_VERSION,
+                    method,
+                    params: {},
+                    id: this.getInfoId
+                })
             })
-        })
-            .then((response) => {
-                console.log(
-                    `Response for custom message (${method}) received:`,
-                    response
-                );
-            })
-            .catch((error) => {
-                console.error(
-                    `Error sending (${method}) custom message:`,
-                    error
-                );
-            });
+                .then((response) => {
+                    console.log(
+                        `Response for custom message (${method}) received:`,
+                        response
+                    );
+                })
+                .catch((error) => {
+                    console.error(
+                        `Error sending (${method}) custom message:`,
+                        error
+                    );
+                    if (this.getInfoId === requestId) {
+                        runInAction(() => {
+                            this.error = true;
+                            this.error_msg = errorToUserFriendly(error);
+                            this.loadingLSPS1 = false;
+                        });
+                    }
+                    settle();
+                });
+        });
     };
 
     @action
@@ -924,50 +969,90 @@ export default class LSPStore {
     };
 
     @action
-    public lsps1CreateOrderCustomMessage = (state: any) => {
+    public lsps1CreateOrderCustomMessage = (state: any): Promise<void> => {
+        // Settle any earlier create_order request still waiting so its timer
+        // can't fire a stale timeout after this newer request completes.
+        this.createOrderResponseResolver?.();
+
         this.loadingLSPS1 = true;
         this.error = false;
         this.error_msg = '';
 
         this.createOrderId = uuidv4();
+        const requestId = this.createOrderId;
         const method = 'lsps1.create_order';
 
-        this.sendCustomMessage({
-            peer: this.getLSPSPubkey(),
-            type: CUSTOM_MESSAGE_TYPE,
-            data: this.encodeMessage({
-                jsonrpc: JSON_RPC_VERSION,
-                method,
-                params: {
-                    lsp_balance_sat: state.lspBalanceSat.toString(),
-                    client_balance_sat: state.clientBalanceSat.toString(),
-                    required_channel_confirmations: parseInt(
-                        state.requiredChannelConfirmations
-                    ),
-                    funding_confirms_within_blocks: parseInt(
-                        state.confirmsWithinBlocks
-                    ),
-                    channel_expiry_blocks: state.channelExpiryBlocks,
-                    token: state.token,
-                    refund_onchain_address: state.refundOnchainAddress,
-                    announce_channel: state.announceChannel,
-                    client_info: this.getClientInfo()
-                },
-                id: this.createOrderId
+        return new Promise<void>((resolve) => {
+            let settled = false;
+            const settle = () => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timeoutId);
+                if (this.createOrderResponseResolver === settle) {
+                    this.createOrderResponseResolver = null;
+                }
+                resolve();
+            };
+            const timeoutId = setTimeout(() => {
+                if (this.createOrderId === requestId) {
+                    runInAction(() => {
+                        this.error = true;
+                        this.error_msg = localeString(
+                            'views.LSPS1.timeoutError'
+                        );
+                        this.loadingLSPS1 = false;
+                    });
+                }
+                settle();
+            }, CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS);
+            this.createOrderResponseResolver = settle;
+
+            this.sendCustomMessage({
+                isCurrent: () => this.createOrderId === requestId,
+                peer: this.getLSPSPubkey(),
+                type: CUSTOM_MESSAGE_TYPE,
+                data: this.encodeMessage({
+                    jsonrpc: JSON_RPC_VERSION,
+                    method,
+                    params: {
+                        lsp_balance_sat: state.lspBalanceSat.toString(),
+                        client_balance_sat: state.clientBalanceSat.toString(),
+                        required_channel_confirmations: parseInt(
+                            state.requiredChannelConfirmations
+                        ),
+                        funding_confirms_within_blocks: parseInt(
+                            state.confirmsWithinBlocks
+                        ),
+                        channel_expiry_blocks: state.channelExpiryBlocks,
+                        token: state.token,
+                        refund_onchain_address: state.refundOnchainAddress,
+                        announce_channel: state.announceChannel,
+                        client_info: this.getClientInfo()
+                    },
+                    id: this.createOrderId
+                })
             })
-        })
-            .then((response) => {
-                console.log(
-                    `Response for custom message (${method}) received:`,
-                    response
-                );
-            })
-            .catch((error) => {
-                console.error(
-                    `Error sending (${method}) custom message:`,
-                    error
-                );
-            });
+                .then((response) => {
+                    console.log(
+                        `Response for custom message (${method}) received:`,
+                        response
+                    );
+                })
+                .catch((error) => {
+                    console.error(
+                        `Error sending (${method}) custom message:`,
+                        error
+                    );
+                    if (this.createOrderId === requestId) {
+                        runInAction(() => {
+                            this.error = true;
+                            this.error_msg = errorToUserFriendly(error);
+                            this.loadingLSPS1 = false;
+                        });
+                    }
+                    settle();
+                });
+        });
     };
 
     public lsps1GetOrderREST(id: string, RESTHost: string) {
@@ -1235,29 +1320,53 @@ export default class LSPStore {
             }
         }
 
-        // Fall back to custom message for other backends
+        // Fall back to custom message for other backends. This is a background
+        // probe with no spinner, so a timeout or send failure settles silently
+        // instead of surfacing an error.
+        this.getExtendableChannelsResponseResolver?.();
+
         this.getExtendableChannelsId = uuidv4();
         const method = 'lsps7.get_extendable_channels';
 
-        this.sendCustomMessage({
-            peer: this.getLSPSPubkey(),
-            type: CUSTOM_MESSAGE_TYPE,
-            data: this.encodeMessage({
-                jsonrpc: JSON_RPC_VERSION,
-                method,
-                params: {},
-                id: this.getExtendableChannelsId
+        await new Promise<void>((resolve) => {
+            let settled = false;
+            const settle = () => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timeoutId);
+                if (this.getExtendableChannelsResponseResolver === settle) {
+                    this.getExtendableChannelsResponseResolver = null;
+                }
+                resolve();
+            };
+            const timeoutId = setTimeout(
+                settle,
+                CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS
+            );
+            this.getExtendableChannelsResponseResolver = settle;
+
+            this.sendCustomMessage({
+                peer: this.getLSPSPubkey(),
+                type: CUSTOM_MESSAGE_TYPE,
+                isCurrent: () => false,
+                data: this.encodeMessage({
+                    jsonrpc: JSON_RPC_VERSION,
+                    method,
+                    params: {},
+                    id: this.getExtendableChannelsId
+                })
             })
-        })
-            .then((response) => {
-                console.log(`Custom message (${method}) sent:`, response);
-            })
-            .catch((error) => {
-                console.error(
-                    `Error sending (${method}) custom message:`,
-                    error
-                );
-            });
+                .then((response) => {
+                    console.log(`Custom message (${method}) sent:`, response);
+                })
+                .catch((error) => {
+                    console.error(
+                        `Error sending (${method}) custom message:`,
+                        error
+                    );
+                    settle();
+                });
+        });
     };
 
     @action
@@ -1292,38 +1401,78 @@ export default class LSPStore {
         }
 
         // Fall back to custom message for other backends
+        // Settle any earlier create_order request still waiting so its timer
+        // can't fire a stale timeout after this newer request completes.
+        this.createExtensionOrderResponseResolver?.();
+
         this.createExtensionOrderId = uuidv4();
+        const requestId = this.createExtensionOrderId;
         const method = 'lsps7.create_order';
 
-        this.sendCustomMessage({
-            peer: this.getLSPSPubkey(),
-            type: CUSTOM_MESSAGE_TYPE,
-            data: this.encodeMessage({
-                jsonrpc: JSON_RPC_VERSION,
-                method,
-                params: {
-                    short_channel_id: state.chanId,
-                    channel_extension_expiry_blocks:
-                        state.channelExtensionBlocks,
-                    token: state.token,
-                    refund_onchain_address: state.refundOnchainAddress,
-                    client_info: this.getClientInfo()
-                },
-                id: this.createExtensionOrderId
+        await new Promise<void>((resolve) => {
+            let settled = false;
+            const settle = () => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timeoutId);
+                if (this.createExtensionOrderResponseResolver === settle) {
+                    this.createExtensionOrderResponseResolver = null;
+                }
+                resolve();
+            };
+            const timeoutId = setTimeout(() => {
+                if (this.createExtensionOrderId === requestId) {
+                    runInAction(() => {
+                        this.error = true;
+                        this.error_msg = localeString(
+                            'views.LSPS1.timeoutError'
+                        );
+                        this.loadingLSPS7 = false;
+                    });
+                }
+                settle();
+            }, CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS);
+            this.createExtensionOrderResponseResolver = settle;
+
+            this.sendCustomMessage({
+                isCurrent: () => this.createExtensionOrderId === requestId,
+                peer: this.getLSPSPubkey(),
+                type: CUSTOM_MESSAGE_TYPE,
+                data: this.encodeMessage({
+                    jsonrpc: JSON_RPC_VERSION,
+                    method,
+                    params: {
+                        short_channel_id: state.chanId,
+                        channel_extension_expiry_blocks:
+                            state.channelExtensionBlocks,
+                        token: state.token,
+                        refund_onchain_address: state.refundOnchainAddress,
+                        client_info: this.getClientInfo()
+                    },
+                    id: this.createExtensionOrderId
+                })
             })
-        })
-            .then((response) => {
-                console.log(
-                    `Response for custom message (${method}) received:`,
-                    response
-                );
-            })
-            .catch((error) => {
-                console.error(
-                    `Error sending (${method}) custom message:`,
-                    error
-                );
-            });
+                .then((response) => {
+                    console.log(
+                        `Response for custom message (${method}) received:`,
+                        response
+                    );
+                })
+                .catch((error) => {
+                    console.error(
+                        `Error sending (${method}) custom message:`,
+                        error
+                    );
+                    if (this.createExtensionOrderId === requestId) {
+                        runInAction(() => {
+                            this.error = true;
+                            this.error_msg = errorToUserFriendly(error);
+                            this.loadingLSPS7 = false;
+                        });
+                    }
+                    settle();
+                });
+        });
     };
 
     @action
