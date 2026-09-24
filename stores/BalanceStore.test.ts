@@ -7,7 +7,9 @@ jest.mock('../utils/BackendUtils', () => ({
     default: {
         getBlockchainBalance: jest.fn(),
         getLightningBalance: jest.fn(),
-        supportsOnchainBalance: jest.fn(() => true)
+        getTransactions: jest.fn(),
+        supportsOnchainBalance: jest.fn(() => true),
+        supportsUnconfirmedTransactionOrigin: jest.fn(() => true)
     }
 }));
 
@@ -82,5 +84,54 @@ describe('BalanceStore settings reaction', () => {
 
         expect(BackendUtils.getBlockchainBalance).toHaveBeenCalled();
         expect(BackendUtils.getLightningBalance).toHaveBeenCalled();
+    });
+});
+
+describe('BalanceStore cooperative close overlap', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('counts an unconfirmed cooperative close once', async () => {
+        // lnd reports the close as 47,151 sats of limbo and as a
+        // 50,000 sat unconfirmed closing output at the same time
+        (BackendUtils.getBlockchainBalance as jest.Mock).mockResolvedValue({
+            total_balance: '150000',
+            confirmed_balance: '100000',
+            unconfirmed_balance: '50000'
+        });
+        (BackendUtils.getTransactions as jest.Mock).mockResolvedValue({
+            transactions: [
+                {
+                    tx_hash: 'coop',
+                    amount: '50000',
+                    total_fees: '0',
+                    num_confirmations: 0
+                }
+            ]
+        });
+        const store = new BalanceStore(newSettingsStore(true) as any);
+
+        await store.getBlockchainBalance(true, false);
+        store.setPendingCloseBalance(47151, [
+            { closingTxid: 'coop', limboBalance: 47151 }
+        ]);
+
+        expect(store.externalUnconfirmedBalance).toEqual(50000);
+        expect(store.externalUnconfirmedTxids).toEqual(['coop']);
+        expect(store.cooperativeCloseOverlap).toEqual(47151);
+    });
+
+    it('keeps the limbo balance of a force close', async () => {
+        (BackendUtils.getBlockchainBalance as jest.Mock).mockResolvedValue(
+            blockchainBalance
+        );
+        const store = new BalanceStore(newSettingsStore(true) as any);
+
+        await store.getBlockchainBalance(true, false);
+        store.setPendingCloseBalance(47151);
+
+        expect(BackendUtils.getTransactions).not.toHaveBeenCalled();
+        expect(store.cooperativeCloseOverlap).toEqual(0);
     });
 });
