@@ -158,6 +158,9 @@ export default class NostrWalletConnectStore {
     @observable public persistentNWCServiceEnabled: boolean = false;
     @observable private lastConnectionAttempt: number = 0;
     @observable public maxBudgetLimit: number = 0; // Max wallet balance
+    // Which balance maxBudgetLimit was read from, so UI copy describes the
+    // number on screen rather than the live isCashuConfigured predicate.
+    @observable public maxBudgetSource: 'lightning' | 'cashu' = 'lightning';
     private maxBudgetLoadInFlight: Promise<void> | null = null;
     private maxBudgetRefreshNeeded: boolean = false;
     private scheduledMaxBudgetRefresh: ReturnType<typeof setTimeout> | null =
@@ -3686,10 +3689,7 @@ export default class NostrWalletConnectStore {
 
     private async loadCashuSetting(): Promise<void> {
         try {
-            const cashuEnabled =
-                BackendUtils.supportsCashuWallet() &&
-                this.settingsStore.settings.ecash.enableCashu;
-            if (!cashuEnabled) {
+            if (!this.isCashuAvailable) {
                 runInAction(() => {
                     this.cashuEnabled = false;
                 });
@@ -3815,6 +3815,24 @@ export default class NostrWalletConnectStore {
         return this.cashuEnabled && this.cashuStore.isProperlyConfigured();
     }
 
+    // Whether the backend and wallet settings allow the Cashu funding
+    // switch to be offered at all, regardless of whether it's on.
+    @computed
+    get isCashuAvailable(): boolean {
+        return (
+            BackendUtils.supportsCashuWallet() &&
+            !!this.settingsStore.settings.ecash?.enableCashu
+        );
+    }
+
+    // Whether it's worth prompting the user to turn the Cashu switch on
+    // (available, but not already on) — e.g. to point an empty-budget
+    // dead end at the setting that would resolve it.
+    @computed
+    get canOfferCashuSwitch(): boolean {
+        return this.isCashuAvailable && !this.cashuEnabled;
+    }
+
     public async loadMaxBudget(): Promise<void> {
         // A concurrent caller joins the in-flight promise and sets
         // maxBudgetRefreshNeeded so we re-fetch once it settles. That
@@ -3829,6 +3847,7 @@ export default class NostrWalletConnectStore {
             try {
                 if (this.isCashuConfigured) {
                     runInAction(() => {
+                        this.maxBudgetSource = 'cashu';
                         this.maxBudgetLimit =
                             this.cashuStore.totalBalanceSats || 0;
                     });
@@ -3837,12 +3856,14 @@ export default class NostrWalletConnectStore {
                         true
                     );
                     runInAction(() => {
+                        this.maxBudgetSource = 'lightning';
                         this.maxBudgetLimit =
                             Number(balance?.lightningBalance) || 0;
                     });
                 }
             } catch (error) {
                 runInAction(() => {
+                    this.maxBudgetSource = 'lightning';
                     this.maxBudgetLimit = 0;
                 });
                 console.error('Failed to get max budget:', error);
