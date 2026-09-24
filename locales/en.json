@@ -1764,6 +1764,7 @@
     "utils.handleAnything.lightningAddressError": "Error fetching Lightning Address data",
     "utils.handleAnything.notValid": "Value provided was not a valid Bitcoin address or Lightning Invoice",
     "utils.handleAnything.lnurlAuthNotSupported": "LnurlAuth not supported by your node implementation",
+    "utils.handleAnything.lnurlChannelNotSupported": "LNURL channel requests are not supported by your node implementation",
     "utils.handleAnything.unsupportedLnurlType": "Unsupported lnurl type",
     "utils.handleAnything.invalidLnurlParams": "Could not parse lnurl params",
     "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",
