@@ -675,107 +675,96 @@ const handleAnything = async (
     } else if (hasAt && AddressUtils.isValidLightningAddress(value)) {
         if (isClipboardValue) return true;
 
-        // try BOLT 12 address first, if supported
-        const [localPart, domain] = value.split('@');
-        const dnsUrl = 'https://cloudflare-dns.com/dns-query';
+        const [username, domain] = value.split('@');
+        // LUD-16: domain MUST be lowercased
+        const normalizedDomain = domain.toLowerCase();
+        const isOnion = normalizedDomain.endsWith('.onion');
 
-        const name = `${localPart}.user._bitcoin-payment.${domain}`;
-        let url = `${dnsUrl}?name=${name}&type=TXT`;
         let bolt12: string | undefined;
         let b12Value: string | undefined,
             b12SatAmount: string | undefined,
             b12Lightning: string | undefined,
             b12Offer: string | undefined;
 
-        try {
-            const res = await fetch(url, {
-                headers: {
-                    accept: 'application/dns-json'
-                }
-            });
-            const json = await res.json();
+        // try BOLT 12 address first, if supported. Skipped for .onion: it is
+        // a special-use name (RFC 7686) with no DNS records, so the lookup
+        // can never succeed and would only send the onion address to the
+        // DoH resolver over clearnet.
+        if (!isOnion) {
+            const dnsUrl = 'https://cloudflare-dns.com/dns-query';
+            const name = `${username}.user._bitcoin-payment.${domain}`;
 
-            // BIP 353 requires the payment instructions to be secured by
-            // DNSSEC. Cloudflare performs the validation and reports the
-            // outcome via the AD (Authenticated Data) bit; Status 0 is
-            // NOERROR. If the answer is not proven-signed we ignore it,
-            // otherwise a forged, poisoned, or hijacked DNS response could
-            // silently redirect the payment to an attacker's offer.
-            // TODO: BIP 353 also states clients MUST NOT trust a remote
-            // resolver to validate DNSSEC on their behalf. Full conformance
-            // requires validating the DNSSEC proof chain client-side.
-            const dnssecValidated = json?.Status === 0 && json?.AD === true;
+            try {
+                const res = await fetch(`${dnsUrl}?name=${name}&type=TXT`, {
+                    headers: {
+                        accept: 'application/dns-json'
+                    }
+                });
+                const json = await res.json();
 
-            // Concatenate each TXT record's character-strings in RDATA order,
-            // never across records. BIP 353 requires TXT records at the label
-            // which don't begin with 'bitcoin:' to be ignored, and treats
-            // multiple 'bitcoin:' records as invalid.
-            const bitcoinTxts: string[] = (
-                Array.isArray(json?.Answer) ? json.Answer : []
-            )
-                .filter(
-                    (a: any) => a?.type === 16 && typeof a?.data === 'string'
+                // BIP 353 requires the payment instructions to be secured by
+                // DNSSEC. Cloudflare performs the validation and reports the
+                // outcome via the AD (Authenticated Data) bit; Status 0 is
+                // NOERROR. If the answer is not proven-signed we ignore it,
+                // otherwise a forged, poisoned, or hijacked DNS response could
+                // silently redirect the payment to an attacker's offer.
+                // TODO: BIP 353 also states clients MUST NOT trust a remote
+                // resolver to validate DNSSEC on their behalf. Full conformance
+                // requires validating the DNSSEC proof chain client-side.
+                const dnssecValidated = json?.Status === 0 && json?.AD === true;
+
+                // Concatenate each TXT record's character-strings in RDATA
+                // order, never across records. BIP 353 requires TXT records at
+                // the label which don't begin with 'bitcoin:' to be ignored,
+                // and treats multiple 'bitcoin:' records as invalid.
+                const bitcoinTxts: string[] = (
+                    Array.isArray(json?.Answer) ? json.Answer : []
                 )
-                .map((a: any) => a.data.replace(/("|\\|\s+)/g, ''))
-                .filter((data: string) =>
-                    data.toLowerCase().startsWith('bitcoin:')
-                );
+                    .filter(
+                        (a: any) =>
+                            a?.type === 16 && typeof a?.data === 'string'
+                    )
+                    .map((a: any) => a.data.replace(/("|\\|\s+)/g, ''))
+                    .filter((data: string) =>
+                        data.toLowerCase().startsWith('bitcoin:')
+                    );
 
-            if (dnssecValidated && bitcoinTxts.length === 1) {
-                bolt12 = bitcoinTxts[0].replace(/^bitcoin:b12=/i, '');
+                if (dnssecValidated && bitcoinTxts.length === 1) {
+                    bolt12 = bitcoinTxts[0].replace(/^bitcoin:b12=/i, '');
 
-                const {
-                    value: _v,
-                    satAmount: _s,
-                    lightning: _l,
-                    offer: _o
-                }: any = AddressUtils.processBIP21Uri(bolt12);
-                b12Value = _v;
-                b12SatAmount = _s;
-                b12Lightning = _l;
-                b12Offer = _o;
-            }
-        } catch (e: any) {}
+                    const {
+                        value: _v,
+                        satAmount: _s,
+                        lightning: _l,
+                        offer: _o
+                    }: any = AddressUtils.processBIP21Uri(bolt12);
+                    b12Value = _v;
+                    b12SatAmount = _s;
+                    b12Lightning = _l;
+                    b12Offer = _o;
+                }
+            } catch (e: any) {}
+        }
 
         // try BOLT 11 address
-        const [username, bolt11Domain] = value.split('@');
-        // LUD-16: domain MUST be lowercased
-        const normalizedDomain = bolt11Domain.toLowerCase();
         // Skip lowercasing for cryptoqr.net addresses as they contain URL-encoded
         // data where hex digit casing matters for server-side lookup
         const isCryptoQR = normalizedDomain.endsWith('cryptoqr.net');
         const normalizedUsername = isCryptoQR
             ? username
             : username.toLowerCase();
-        if (normalizedDomain.includes('.onion')) {
-            url = `http://${normalizedDomain}/.well-known/lnurlp/${normalizedUsername}`;
-        } else {
-            url = `https://${normalizedDomain}/.well-known/lnurlp/${normalizedUsername}`;
-        }
+        const scheme = isOnion ? 'http' : 'https';
+        const url = `${scheme}://${normalizedDomain}/.well-known/lnurlp/${normalizedUsername}`;
         const error = localeString(
             'utils.handleAnything.lightningAddressError'
         );
 
         // handle Tor LN addresses
-        if (settingsStore.enableTor && normalizedDomain.includes('.onion')) {
-            return doTorRequest(url, RequestMethod.GET)
-                .then((response: any) => {
+        if (settingsStore.enableTor && isOnion) {
+            return doTorRequest(url, RequestMethod.GET).then(
+                (response: any) => {
                     if (!response.callback) {
                         throw new Error(error);
-                    }
-
-                    if (b12Offer) {
-                        return [
-                            'ChoosePaymentMethod',
-                            {
-                                value: b12Value,
-                                satAmount: b12SatAmount,
-                                lightning: b12Lightning,
-                                offer: b12Offer,
-                                lightningAddress: value,
-                                locked: true
-                            }
-                        ];
                     }
 
                     return [
@@ -787,35 +776,8 @@ const handleAnything = async (
                             lightningAddress: value
                         }
                     ];
-                })
-                .catch((e: any) => {
-                    const hasMultipleB12 = b12Value || b12Lightning;
-
-                    if (b12Offer) {
-                        if (hasMultipleB12) {
-                            return [
-                                'ChoosePaymentMethod',
-                                {
-                                    value: b12Value,
-                                    satAmount: b12SatAmount,
-                                    lightning: b12Lightning,
-                                    offer: b12Offer,
-                                    locked: true
-                                }
-                            ];
-                        }
-                        return [
-                            'Send',
-                            {
-                                destination: b12Offer,
-                                bolt12,
-                                transactionType: 'BOLT 12',
-                                isValid: true
-                            }
-                        ];
-                    }
-                    throw e; // re-throw original error from doTorRequest
-                });
+                }
+            );
         } else {
             return ReactNativeBlobUtil.fetch('get', url)
                 .then((response: any) => {

@@ -1187,6 +1187,93 @@ describe('handleAnything', () => {
             expect(bitcoinUriCalls()).toHaveLength(0);
             expect(result[0]).toBe('LnurlPay');
         });
+
+        // .onion has no DNS records (RFC 7686), so a DoH lookup can never
+        // resolve and would only send the onion address to the resolver
+        // over clearnet
+        describe('.onion Lightning addresses', () => {
+            const ONION =
+                'zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion';
+            const ONION_ADDRESS = `satoshi@${ONION}`;
+            const ONION_LNURLP = `http://${ONION}/.well-known/lnurlp/satoshi`;
+
+            let settingsStore: any;
+
+            beforeEach(() => {
+                settingsStore = require('../stores/Stores').settingsStore;
+                mockDoTorRequest.mockReset();
+                mockDoHResponse({
+                    Status: 0,
+                    AD: true,
+                    Answer: [txt(REAL_TXT)]
+                });
+            });
+
+            afterEach(() => {
+                delete settingsStore.enableTor;
+            });
+
+            it('makes no DoH request with Tor enabled', async () => {
+                settingsStore.enableTor = true;
+                const lnurlParams = { callback: `http://${ONION}/callback` };
+                mockDoTorRequest.mockResolvedValue(lnurlParams);
+
+                const result = await handleAnything(ONION_ADDRESS);
+
+                expect(mockDnsFetch).not.toHaveBeenCalled();
+                expect(mockDoTorRequest).toHaveBeenCalledWith(
+                    ONION_LNURLP,
+                    'GET'
+                );
+                expect(result).toEqual([
+                    'LnurlPay',
+                    {
+                        lnurlParams,
+                        satAmount: undefined,
+                        ecash: false,
+                        lightningAddress: ONION_ADDRESS
+                    }
+                ]);
+            });
+
+            it('rejects with the Tor request error when the LNURL fetch fails', async () => {
+                settingsStore.enableTor = true;
+                mockDoTorRequest.mockRejectedValue(new Error('tor failure'));
+
+                await expect(handleAnything(ONION_ADDRESS)).rejects.toThrow(
+                    'tor failure'
+                );
+                expect(mockDnsFetch).not.toHaveBeenCalled();
+            });
+
+            it('makes no DoH request with Tor disabled', async () => {
+                const result = await handleAnything(ONION_ADDRESS);
+
+                expect(mockDnsFetch).not.toHaveBeenCalled();
+                expect(mockDoTorRequest).not.toHaveBeenCalled();
+                expect(mockBlobUtilFetch).toHaveBeenCalledWith(
+                    'get',
+                    ONION_LNURLP
+                );
+                expect(result[0]).toBe('LnurlPay');
+            });
+
+            it('still looks up a clearnet domain with an .onion label', async () => {
+                settingsStore.enableTor = true;
+
+                const result = await handleAnything(
+                    'satoshi@pay.onion.example.com'
+                );
+
+                expect(mockDnsFetch).toHaveBeenCalledTimes(1);
+                expect(mockDoTorRequest).not.toHaveBeenCalled();
+                expect(mockBlobUtilFetch).toHaveBeenCalledWith(
+                    'get',
+                    'https://pay.onion.example.com/.well-known/lnurlp/satoshi'
+                );
+                expect(result[0]).toBe('ChoosePaymentMethod');
+            });
+        });
     });
 
     describe('node configuration handling', () => {
