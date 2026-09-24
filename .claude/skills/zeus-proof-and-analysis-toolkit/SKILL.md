@@ -235,7 +235,7 @@ Three provable claims fall out: (a) the msat↔sat conversions occur exactly at 
 
 | Mechanism | Where |
 |---|---|
-| Builder image pinned by **sha256 digest** (`reactnativecommunity/react-native-android@sha256:c390bfb3…`) | `build.sh` |
+| Builder image pinned by **sha256 digest** (`reactnativecommunity/react-native-android@sha256:d4b8ea07…`) | `build.sh` |
 | `SOURCE_DATE_EPOCH` fixed (defaults to `0`) and exported into the container | `build.sh` |
 | `yarn install --frozen-lockfile` inside the container | `build.sh` |
 | Parallel Gradle **disabled** ("parallel execution causes non-deterministic file ordering") | `android/gradle.properties` (`org.gradle.parallel=false`) |
