@@ -1,3 +1,4 @@
+jest.mock('react-native-blob-util', () => ({}));
 jest.mock('mobx-react', () => ({
     inject: () => (component: any) => component,
     observer: (component: any) => component

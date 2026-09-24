@@ -2,7 +2,13 @@ jest.mock('mobx-react', () => ({
     inject: () => (component: any) => component,
     observer: (component: any) => component
 }));
-jest.mock('js-lnurl', () => ({ getParams: jest.fn() }));
+jest.mock('react-native-blob-util', () => ({}));
+// the lnurl resolve behind getLnurlParams
+const mockFetchLnurlParams = jest.fn();
+jest.mock('../../utils/LnurlFetchUtils', () => ({
+    ...jest.requireActual('../../utils/LnurlFetchUtils'),
+    fetchLnurlParams: (...args: any[]) => mockFetchLnurlParams(...args)
+}));
 jest.mock('../../utils/BackendUtils', () => ({
     supportsCoinControl: () => false
 }));
@@ -17,11 +23,8 @@ import * as React from 'react';
 import { Alert, Text } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { bech32 } from 'bech32';
-import { getParams } from 'js-lnurl';
 import Base64Utils from '../../utils/Base64Utils';
 import EcashSwipeableRow from './EcashSwipeableRow';
-
-const mockGetParams = getParams as jest.Mock;
 
 const asLnurl = (target: string) =>
     bech32.encode(
@@ -57,7 +60,7 @@ describe('EcashSwipeableRow lnurl resolve', () => {
     let alertSpy: jest.SpyInstance;
 
     beforeEach(() => {
-        mockGetParams.mockReset();
+        mockFetchLnurlParams.mockReset();
         alertSpy = jest.spyOn(Alert, 'alert').mockImplementation();
     });
 
@@ -77,7 +80,7 @@ describe('EcashSwipeableRow lnurl resolve', () => {
             k1: 'k1',
             callback: 'https://example.com/cb'
         };
-        mockGetParams.mockResolvedValue(params);
+        mockFetchLnurlParams.mockResolvedValue(params);
 
         const navigation = await tapRow(asLnurl('https://example.com/lnurl'));
 
@@ -91,12 +94,12 @@ describe('EcashSwipeableRow lnurl resolve', () => {
         const navigation = await tapRow(asLnurl('https://192.168.1.1/lnurl'));
 
         expectAlert('utils.lnurl.unsafeEndpoint');
-        expect(mockGetParams).not.toHaveBeenCalled();
+        expect(mockFetchLnurlParams).not.toHaveBeenCalled();
         expect(navigation.navigate).not.toHaveBeenCalled();
     });
 
     it('refuses a withdraw whose callback is on a private host', async () => {
-        mockGetParams.mockResolvedValue({
+        mockFetchLnurlParams.mockResolvedValue({
             tag: 'withdrawRequest',
             k1: 'k1',
             callback: 'https://10.0.0.1/cb'
@@ -110,7 +113,7 @@ describe('EcashSwipeableRow lnurl resolve', () => {
 
     // js-lnurl throws this for a withdraw link with a repeated callback=
     it('shows the generic message, not the raw error, for a malformed link', async () => {
-        mockGetParams.mockRejectedValue(
+        mockFetchLnurlParams.mockRejectedValue(
             new TypeError('url.split is not a function')
         );
 
