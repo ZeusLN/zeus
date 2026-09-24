@@ -1,6 +1,6 @@
 #!/bin/bash
-# reactnativecommunity/react-native-android:18.0
-BUILDER_IMAGE="reactnativecommunity/react-native-android@sha256:c390bfb35a15ffdf52538bdd0e6c5a926469cefa8c8c6da54bfd501c122de25d"
+# reactnativecommunity/react-native-android:21.1
+BUILDER_IMAGE="reactnativecommunity/react-native-android@sha256:d4b8ea0773d62096261cf0ed356004fe2c8292f5e5cdb260d11da953c8c84374"
 CONTAINER_NAME="zeus_builder_container"
 ZEUS_PATH=/olympus/zeus
 

@@ -107,7 +107,7 @@ Everything in this section verified by reading `build.sh`, `android/app/build.gr
 `--low-memory` passes its overrides on the gradlew command line, which outranks every `gradle.properties`, so **the source tree stays pristine** (necessary when building a signed tag for verification) and nothing is written to the Gradle cache directory, meaning the setting can never go silently sticky across builds. It deliberately does not touch `org.gradle.parallel`.
 
 What it does (all in `build.sh`):
-- Docker image pinned **by sha256 digest**: `reactnativecommunity/react-native-android@sha256:c390bfb...` (comment says tag 18.0). Digest pinning = byte-identical toolchain for every builder.
+- Docker image pinned **by sha256 digest**: `reactnativecommunity/react-native-android@sha256:d4b8ea0...` (comment says tag 21.1). Digest pinning = byte-identical toolchain for every builder.
 - Exports `SOURCE_DATE_EPOCH` (default `0`, overridable via env) so embedded timestamps are deterministic.
 - Mounts the repo at `/olympus/zeus`, runs `yarn install --frozen-lockfile`, then `./gradlew generateCodegenArtifactsFromSchema && ./gradlew app:assembleRelease`.
 - Renames `app-*-release-unsigned.apk` → `zeus-*.apk` and prints `sha256sum` for each to stdout (hashes are printed, not written to a file).
