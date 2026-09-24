@@ -11,6 +11,7 @@ import Base64Utils from './../utils/Base64Utils';
 import VersionUtils from './../utils/VersionUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { toLnrpcAddressType } from './../utils/LndUtils';
+import { findPaymentByHash } from './../utils/PaymentLookupUtils';
 import { Hash as sha256Hash } from 'fast-sha256';
 import BigNumber from 'bignumber.js';
 
@@ -581,30 +582,16 @@ export default class LND {
 
         return result;
     };
-    // scans a payments page because LND REST has no non-streaming
-    // per-payment lookup (TrackPaymentV2 streams until terminal). With a
-    // creation_date_start bound the page is anchored at the dispatch time
-    // (ascending), so newer payments from other clients can't evict the
-    // target; without one, fall back to the newest page.
+    // scans payments pages because LND REST has no non-streaming
+    // per-payment lookup (TrackPaymentV2 streams until terminal)
     lookupPayment = (data: {
         payment_hash: string;
         creation_date_start?: number;
     }) =>
-        this.getPayments(
+        findPaymentByHash(
+            (request) => this.getPayments(request),
+            data.payment_hash,
             data.creation_date_start
-                ? {
-                      maxPayments: 50,
-                      reversed: false,
-                      creationDateStart: data.creation_date_start
-                  }
-                : { maxPayments: 50, reversed: true }
-        ).then(
-            (response: any) =>
-                response?.payments?.find(
-                    (payment: any) =>
-                        payment.payment_hash?.toLowerCase() ===
-                        data.payment_hash.toLowerCase()
-                ) ?? null
         );
     closeChannel = (urlParams?: Array<string>) => {
         let requestString = `/v1/channels/${urlParams && urlParams[0]}/${
