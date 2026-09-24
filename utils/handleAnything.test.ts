@@ -9,7 +9,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 
 import { Alert } from 'react-native';
 
-import { invoicesStore } from '../stores/Stores';
+import { invoicesStore, settingsStore } from '../stores/Stores';
 import handleAnything, {
     strictUriEncode,
     convertMerchantQRToLightningAddress,
@@ -66,7 +66,11 @@ jest.mock('./AddressUtils', () => ({
     isValidTxHex: () => false,
     ZEUS_ECASH_GIFT_URL
 }));
-jest.mock('./TorUtils', () => ({}));
+const mockDoTorRequest = jest.fn();
+jest.mock('./TorUtils', () => ({
+    doTorRequest: (...args: any[]) => mockDoTorRequest(...args),
+    RequestMethod: { GET: 'GET' }
+}));
 jest.mock('./BackendUtils', () => ({
     supportsOnchainSends: () => mockSupportsOnchainSends,
     supportsAccounts: () => false,
@@ -1007,6 +1011,31 @@ describe('handleAnything', () => {
                 'get',
                 'https://example.com/.well-known/lnurlp/satoshi'
             );
+        });
+
+        it('routes an uppercase .onion address through Tor', async () => {
+            const address =
+                'SATOSHI@ZEUSPAYZEUSPAYZEUSPAYZEUSPAYZEUSPAYZEUSPAYZEUSPAYZEUS.ONION';
+            mockProcessBIP21Uri.mockReturnValue({ value: address });
+            mockIsValidLightningAddress = true;
+            mockDoTorRequest.mockResolvedValue({
+                callback: 'http://example.onion/callback'
+            });
+            (settingsStore as any).enableTor = true;
+
+            try {
+                const result = await handleAnything(address);
+
+                expect(mockDoTorRequest).toHaveBeenCalledWith(
+                    'http://zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion/.well-known/lnurlp/satoshi',
+                    'GET'
+                );
+                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+                expect(result[0]).toBe('LnurlPay');
+            } finally {
+                (settingsStore as any).enableTor = undefined;
+                mockDoTorRequest.mockReset();
+            }
         });
     });
 

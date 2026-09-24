@@ -609,6 +609,33 @@ describe('AddressUtils', () => {
                 ).toBeTruthy();
             });
 
+            it('validates lightning addresses with uppercase chars in the domain', () => {
+                // QR generators often uppercase the whole payload; the domain
+                // is lowercased in handleAnything before the LUD-16 fetch
+                expect(
+                    AddressUtils.isValidLightningAddress('SATOSHI@BLINK.SV')
+                ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLightningAddress('satoshi@Blink.sv')
+                ).toBeTruthy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        AddressUtils.processBIP21Uri(
+                            'LIGHTNING:SATOSHI@BLINK.SV'
+                        ).value
+                    )
+                ).toBeTruthy();
+            });
+
+            it('rejects non-ASCII letters that case-fold to ASCII in the domain', () => {
+                // U+212A KELVIN SIGN lowercases to 'k'
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        'satoshi@\u212Araken.com'
+                    )
+                ).toBeFalsy();
+            });
+
             it("rejects LNURLPay Lightning Addresses with ports - let's not mix this up with nodes", () => {
                 expect(
                     AddressUtils.isValidLightningAddress(
