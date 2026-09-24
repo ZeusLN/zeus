@@ -1,6 +1,5 @@
 import { Alert, Platform } from 'react-native';
 import { findlnurl, decodelnurl } from 'js-lnurl/lib/helpers';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { nodeInfoStore, invoicesStore, settingsStore } from '../stores/Stores';
 
@@ -11,6 +10,7 @@ import CashuUtils from './CashuUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
 import ContactUtils from './ContactUtils';
 import { isLightningAddressEndpointAllowed } from './LnurlPayUtils';
+import { fetchLnurlUrl } from './LnurlFetchUtils';
 import {
     getLnurlParams as getlnurlParams,
     isUnsafeLnurlError
@@ -826,7 +826,7 @@ const handleAnything = async (
                     throw e; // re-throw original error from doTorRequest
                 });
         } else {
-            return ReactNativeBlobUtil.fetch('get', url)
+            return fetchLnurlUrl(url)
                 .then((response: any) => {
                     const status = response.info().status;
                     if (status == 200) {
@@ -862,8 +862,14 @@ const handleAnything = async (
                         throw new Error(error);
                     }
                 })
-                .catch(async () => {
+                .catch(async (e: any) => {
                     const hasMultipleB12 = b12Value || b12Lightning;
+
+                    // A redirect refused by the lnurl host policy is
+                    // reported, not treated as a missing address, so the
+                    // NIP-05 fallback does not contact the same host again.
+                    // A BIP 353 offer came from DNS and is still usable.
+                    if (isUnsafeLnurlError(e) && !b12Offer) throw e;
 
                     if (b12Offer) {
                         if (hasMultipleB12) {

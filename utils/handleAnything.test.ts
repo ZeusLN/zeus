@@ -119,7 +119,9 @@ jest.mock('../stores/Stores', () => ({
     settingsStore: { settings: { locale: 'en' } }
 }));
 jest.mock('react-native-blob-util', () => ({
-    fetch: (...args: any[]) => mockBlobUtilFetch(...args)
+    config: () => ({
+        fetch: (...args: any[]) => mockBlobUtilFetch(...args)
+    })
 }));
 jest.mock('react-native-encrypted-storage', () => ({}));
 jest.mock('react-native-fs', () => ({}));
@@ -133,8 +135,9 @@ const UNDECODABLE = () => {
     throw new Error('invalid url');
 };
 let mockDecodeLnurl: (...args: any[]) => any = UNDECODABLE;
-jest.mock('js-lnurl', () => ({
-    getParams: (...args: any[]) => mockGetLnurlParamsFn(...args)
+jest.mock('./LnurlFetchUtils', () => ({
+    ...jest.requireActual('./LnurlFetchUtils'),
+    fetchLnurlParams: (...args: any[]) => mockGetLnurlParamsFn(...args)
 }));
 jest.mock('js-lnurl/lib/helpers', () => ({
     findlnurl: (...args: any[]) => mockFindLnurl(...args),
@@ -1080,6 +1083,27 @@ describe('handleAnything', () => {
                 expect(mockBlobUtilFetch).not.toHaveBeenCalled();
             }
         );
+
+        // A public well-known URL can redirect to the LAN; the redirect is
+        // refused and reported instead of falling through to NIP-05, which
+        // would contact the same host again.
+        it('refuses a well-known lookup that redirects to the LAN', async () => {
+            const address = 'user@example.com';
+            mockProcessBIP21Uri.mockReturnValue({ value: address });
+            mockIsValidLightningAddress = true;
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({
+                    status: 302,
+                    headers: { Location: 'http://192.168.1.1/lnurlp' }
+                }),
+                json: () => ({})
+            });
+
+            await expect(handleAnything(address)).rejects.toThrow(
+                'redirected the wallet to an unsafe address'
+            );
+            expect(mockBlobUtilFetch).toHaveBeenCalledTimes(1);
+        });
 
         it('lowercases domain per LUD-16 spec', async () => {
             const address = 'satoshi@EXAMPLE.COM';

@@ -1,6 +1,7 @@
 jest.mock('../stores/Stores', () => ({}));
 const mockBlobFetch = jest.fn((..._args: any[]) =>
     Promise.resolve({
+        info: () => ({ status: 200, headers: {} }),
         json: () => ({ status: 'OK' }),
         text: () => ''
     })
@@ -8,7 +9,9 @@ const mockBlobFetch = jest.fn((..._args: any[]) =>
 jest.mock('react-native-blob-util', () => ({
     __esModule: true,
     default: {
-        fetch: (...args: any[]) => mockBlobFetch(...args)
+        config: () => ({
+            fetch: (...args: any[]) => mockBlobFetch(...args)
+        })
     }
 }));
 jest.mock('react-native', () => ({
@@ -231,5 +234,20 @@ describe('InvoicesStore lnurl-withdraw callback', () => {
         expect(String(url)).toContain('https://service.example/cb');
         expect(String(url)).toContain('k1=K1');
         expect(String(url)).toContain('pr=lnbc1invoice');
+    });
+
+    it('does not follow a callback redirect to the LAN', async () => {
+        mockBlobFetch.mockResolvedValueOnce({
+            info: () => ({
+                status: 307,
+                headers: { location: 'http://10.0.0.1/cb' }
+            }),
+            json: () => ({ status: 'OK' }),
+            text: () => ''
+        });
+
+        await withdrawTo('https://service.example/cb');
+
+        expect(mockBlobFetch).toHaveBeenCalledTimes(1);
     });
 });

@@ -18,7 +18,6 @@ import CashuDevKit, {
 } from '../cashu-cdk';
 
 import { LNURLWithdrawParams } from 'js-lnurl';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import NDK, { NDKEvent, NDKFilter, NDKKind } from '@nostr-dev-kit/ndk';
 import * as bip39scure from '@scure/bip39';
 import {
@@ -60,6 +59,7 @@ import CashuUtils, {
 } from '../utils/CashuUtils';
 import { cashuErrorForDisplay, errorToUserFriendly } from '../utils/ErrorUtils';
 import { isLnurlCallbackAllowed } from '../utils/LnurlPayUtils';
+import { fetchLnurlUrl } from '../utils/LnurlFetchUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { themeColor, getUpgradeBackgroundColor } from '../utils/ThemeUtils';
@@ -3983,7 +3983,7 @@ export default class CashuStore {
                 u.search = querystring.stringify(qs);
                 u.query = querystring.stringify(qs);
 
-                ReactNativeBlobUtil.fetch('get', url.format(u))
+                fetchLnurlUrl(url.format(u))
                     .then((response: any) => {
                         try {
                             const data = response.json();
