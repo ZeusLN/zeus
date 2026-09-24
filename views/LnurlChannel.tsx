@@ -37,7 +37,7 @@ interface LnurlChannelState {
     node_pubkey_string: string;
     host: string;
     k1: string;
-    connectingToPeer: boolean;
+    loading: boolean;
     peerSuccess: boolean;
     lnurlChannelSuccess: boolean;
     errorMsgPeer: string;
@@ -49,6 +49,11 @@ export default class LnurlChannel extends React.Component<
     LnurlChannelProps,
     LnurlChannelState
 > {
+    // synchronous guard - state updates are batched, so a second press can
+    // land before a `loading` update commits
+    private requestInFlight = false;
+    private unmounted = false;
+
     constructor(props: LnurlChannelProps) {
         super(props);
 
@@ -61,7 +66,7 @@ export default class LnurlChannel extends React.Component<
                 node_pubkey_string: '',
                 host: '',
                 k1: '',
-                connectingToPeer: false,
+                loading: false,
                 peerSuccess: false,
                 lnurlChannelSuccess: false,
                 errorMsgPeer: ''
@@ -90,45 +95,91 @@ export default class LnurlChannel extends React.Component<
             localnodeids: [],
             localnodeid: '',
             privateChannel: true,
-            connectingToPeer: false,
+            loading: false,
             peerSuccess: false,
             lnurlChannelSuccess: false,
-            errorMsgPeer: 'Error'
+            errorMsgPeer: ''
         };
     }
 
-    triggerConnect() {
-        const { node_pubkey_string, host } = this.state;
-        this.setState({ connectingToPeer: true });
+    componentWillUnmount() {
+        this.unmounted = true;
+    }
 
-        BackendUtils.connectPeer({
+    // only contact the service-supplied peer after explicit user confirmation
+    private handleConnectPress = async () => {
+        if (this.requestInFlight) return;
+        this.requestInFlight = true;
+        this.setState({ loading: true, errorMsgPeer: '' });
+
+        try {
+            const connected = await this.triggerConnect();
+            // the user backed out while the connect was pending
+            if (!connected || this.unmounted) return;
+
+            const accepted = await this.sendValues();
+            if (accepted) await this.persistPeer();
+        } catch (error: any) {
+            this.setState({ errorMsgPeer: error.toString() });
+        } finally {
+            this.requestInFlight = false;
+            this.setState({ loading: false });
+        }
+    };
+
+    // The service accepted the request and will open a channel to us. LDK
+    // Node only persists the peer of an inbound channel when the graph has
+    // an address for it, so persist it here or the channel may not
+    // reconnect after a restart. Other backends are already connected and
+    // treat this as a no-op or an 'already connected' error.
+    private persistPeer = async () => {
+        const { node_pubkey_string, host } = this.state;
+        try {
+            await BackendUtils.connectPeer({
+                addr: {
+                    pubkey: node_pubkey_string,
+                    host
+                },
+                perm: true
+            });
+        } catch {
+            // best effort: the channel request already succeeded
+        }
+    };
+
+    triggerConnect(): Promise<boolean> {
+        const { node_pubkey_string, host } = this.state;
+
+        return BackendUtils.connectPeer({
             addr: {
                 pubkey: node_pubkey_string,
                 host
-            }
+            },
+            // don't persist a peer the user hasn't opened a channel with
+            perm: false
         })
             .then(() => {
-                this.setState({ connectingToPeer: false });
                 this.setState({ peerSuccess: true });
+                return true;
             })
             .catch((error: any) => {
-                // handle error
-                this.setState({ connectingToPeer: false });
-                this.setState({ errorMsgPeer: error.toString() });
+                // handle error - branch on the error itself, not on
+                // this.state.errorMsgPeer, which setState does not
+                // update synchronously
+                const errorMsgPeer = error.toString();
+                this.setState({ errorMsgPeer });
 
-                if (
-                    this.state.errorMsgPeer &&
-                    this.state.errorMsgPeer.includes('already')
-                ) {
+                // we're already connected to the peer, so we can proceed
+                if (errorMsgPeer.includes('already')) {
                     this.setState({ peerSuccess: true });
+                    return true;
                 }
+
+                return false;
             });
     }
-    componentDidMount() {
-        this.triggerConnect();
-    }
 
-    sendValues() {
+    sendValues(): Promise<boolean> {
         const { route, NodeInfoStore } = this.props;
         const { domain, k1 } = this.state;
         const lnurl = route.params?.lnurlParams;
@@ -144,7 +195,7 @@ export default class LnurlChannel extends React.Component<
         u.search = querystring.stringify(qs);
         u.query = querystring.stringify(qs);
 
-        ReactNativeBlobUtil.fetch('get', url.format(u))
+        return ReactNativeBlobUtil.fetch('get', url.format(u))
             .then((response: any) => {
                 try {
                     const data = response.json();
@@ -174,10 +225,11 @@ export default class LnurlChannel extends React.Component<
                         ],
                         { cancelable: false }
                     );
-                    return;
+                    return false;
                 } else {
                     this.setState({ peerSuccess: false });
                     this.setState({ lnurlChannelSuccess: true });
+                    return true;
                 }
             });
     }
@@ -187,9 +239,11 @@ export default class LnurlChannel extends React.Component<
         const {
             domain,
             privateChannel,
+            loading,
             peerSuccess,
             lnurlChannelSuccess,
-            errorMsgPeer
+            errorMsgPeer,
+            node_pubkey_string
         } = this.state;
         const lnurl = route.params?.lnurlParams;
 
@@ -275,15 +329,17 @@ export default class LnurlChannel extends React.Component<
                                 size: 25,
                                 color: themeColor('background')
                             }}
-                            onPress={() => {
-                                this.sendValues();
-                            }}
-                            disabled={!peerSuccess}
+                            onPress={this.handleConnectPress}
+                            disabled={
+                                loading ||
+                                lnurlChannelSuccess ||
+                                !node_pubkey_string
+                            }
                         />
                     </View>
 
                     <View style={styles.content}>
-                        {this.state.connectingToPeer && <LoadingIndicator />}
+                        {loading && <LoadingIndicator />}
                         {peerSuccess && (
                             <SuccessMessage
                                 message={localeString(

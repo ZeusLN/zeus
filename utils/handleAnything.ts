@@ -1041,12 +1041,29 @@ const handleAnything = async (
                             }
                         ];
                     case 'channelRequest':
-                        return [
-                            'LnurlChannel',
-                            {
-                                lnurlParams: params
-                            }
-                        ];
+                        if (BackendUtils.supportsChannelManagement()) {
+                            return [
+                                'LnurlChannel',
+                                {
+                                    lnurlParams: params
+                                }
+                            ];
+                        } else {
+                            Alert.alert(
+                                localeString('general.error'),
+                                localeString(
+                                    'utils.handleAnything.lnurlChannelNotSupported'
+                                ),
+                                [
+                                    {
+                                        text: localeString('general.ok'),
+                                        onPress: () => void 0
+                                    }
+                                ],
+                                { cancelable: false }
+                            );
+                        }
+                        break;
                     case 'login':
                         if (BackendUtils.supportsLnurlAuth()) {
                             return [
