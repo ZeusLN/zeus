@@ -1,5 +1,10 @@
 jest.mock('../stores/Stores');
-jest.mock('react-native-blob-util', () => ({ fetch: jest.fn() }));
+// fetchLnurlUrl fetches through config({ followRedirect: false }); expose
+// the same mock both ways so tests can read its calls from either
+jest.mock('react-native-blob-util', () => {
+    const fetch = jest.fn();
+    return { fetch, config: () => ({ fetch }) };
+});
 jest.mock('../ldknode/LdkNodeInjection', () => ({}));
 jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
@@ -500,6 +505,7 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
         });
         (ReactNativeBlobUtil.fetch as jest.Mock).mockReset();
         (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValue({
+            info: () => ({ status: 200, headers: {} }),
             json: () => ({ status: 'OK' })
         });
         return { store, lspStore };
@@ -1071,6 +1077,7 @@ describe('InvoicesStore lnurl-withdraw callback', () => {
     beforeEach(() => {
         blobFetch.mockReset();
         blobFetch.mockResolvedValue({
+            info: () => ({ status: 200, headers: {} }),
             json: () => ({ status: 'OK' }),
             text: () => ''
         });
@@ -1104,5 +1111,20 @@ describe('InvoicesStore lnurl-withdraw callback', () => {
         expect(String(url)).toContain('https://service.example/cb');
         expect(String(url)).toContain('k1=K1');
         expect(String(url)).toContain('pr=lnbc1invoice');
+    });
+
+    it('does not follow a callback redirect to the LAN', async () => {
+        blobFetch.mockResolvedValueOnce({
+            info: () => ({
+                status: 307,
+                headers: { location: 'http://10.0.0.1/cb' }
+            }),
+            json: () => ({ status: 'OK' }),
+            text: () => ''
+        });
+
+        await withdrawTo('https://service.example/cb');
+
+        expect(blobFetch).toHaveBeenCalledTimes(1);
     });
 });
