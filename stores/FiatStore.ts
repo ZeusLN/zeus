@@ -27,7 +27,6 @@ export default class FiatStore {
           }[]
         | undefined;
     @observable public loading = false;
-    @observable public error = false;
 
     private sourceOfCurrentFiatRates: string | undefined;
 
