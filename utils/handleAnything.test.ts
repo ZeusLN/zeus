@@ -553,8 +553,26 @@ describe('handleAnything', () => {
         ])('refuses to resolve an lnurl pointing at %s', async (decoded) => {
             mockDecodeLnurl = () => decoded;
 
-            await expect(handleAnything(lnurlValue)).rejects.toThrow();
+            // the refusal, not the generic invalid-params message
+            await expect(handleAnything(lnurlValue)).rejects.toThrow(
+                'This LNURL points at an unsafe address'
+            );
             expect(mockGetLnurlParamsFn).not.toHaveBeenCalled();
+        });
+
+        // Refused at resolve time, before the user creates an invoice for a
+        // withdraw the service could never pay.
+        it('refuses a withdraw whose callback points at a LAN host', async () => {
+            mockDecodeLnurl = () => 'https://example.com/lnurl';
+            mockGetLnurlParamsFn.mockResolvedValue({
+                tag: 'withdrawRequest',
+                callback: 'https://192.168.1.1/cb',
+                k1: 'K1'
+            });
+
+            await expect(handleAnything(lnurlValue)).rejects.toThrow(
+                'This Lightning service asked the wallet to contact an unsafe address'
+            );
         });
 
         it('resolves an lnurl pointing at a public https host', async () => {

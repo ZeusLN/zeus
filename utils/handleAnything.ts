@@ -10,24 +10,12 @@ import Bolt11Utils from './Bolt11Utils';
 import CashuUtils from './CashuUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
 import ContactUtils from './ContactUtils';
+import { isLightningAddressEndpointAllowed } from './LnurlPayUtils';
 import {
-    isLightningAddressEndpointAllowed,
-    isLnurlEndpointAllowed
-} from './LnurlPayUtils';
-import { getLnurlParams as getlnurlParams } from './LnurlResolveUtils';
+    getLnurlParams as getlnurlParams,
+    isUnsafeLnurlError
+} from './LnurlResolveUtils';
 import { localeString } from './LocaleUtils';
-
-/**
- * Resolving an lnurl fetches whatever the bech32 decodes to, so the host
- * policy has to apply here and not only to the callbacks the response
- * carries: `lnurl1...` encoding a LAN or loopback URL is a request the wallet
- * makes from the user's network position before any callback exists.
- */
-const assertLnurlEndpointAllowed = (lnurl: string) => {
-    if (!isLnurlEndpointAllowed(lnurl).ok) {
-        throw new Error(localeString('utils.lnurl.unsafeEndpoint'));
-    }
-};
 import NodeUriUtils from './NodeUriUtils';
 import NostrUtils from './NostrUtils';
 import { doTorRequest, RequestMethod } from './TorUtils';
@@ -459,9 +447,6 @@ const handleAnything = async (
         if (isClipboardValue) return true;
         if (!BackendUtils.supportsOnchainSends()) {
             if (lightning?.toLowerCase().startsWith('lnurl')) {
-                // outside the try, so the refusal is not reported as
-                // malformed params
-                assertLnurlEndpointAllowed(lightning);
                 try {
                     const params = await getlnurlParams(lightning);
                     if ('tag' in params && params.tag === 'payRequest') {
@@ -479,7 +464,9 @@ const handleAnything = async (
                             )
                         );
                     }
-                } catch {
+                } catch (e) {
+                    // a host policy refusal keeps its own message
+                    if (isUnsafeLnurlError(e)) throw e;
                     throw new Error(
                         localeString('utils.handleAnything.invalidLnurlParams')
                     );
@@ -1025,7 +1012,6 @@ const handleAnything = async (
         // to when the user actually acts on the value.
         if (isClipboardValue) return true;
         const raw: string = findlnurl(value) || lnurl || value || '';
-        assertLnurlEndpointAllowed(raw);
         return getlnurlParams(raw)
             .then((params: any) => {
                 if (
@@ -1112,7 +1098,9 @@ const handleAnything = async (
                         );
                 }
             })
-            .catch(() => {
+            .catch((e) => {
+                // a host policy refusal keeps its own message
+                if (isUnsafeLnurlError(e)) throw e;
                 throw new Error(
                     localeString('utils.handleAnything.invalidLnurlParams')
                 );
