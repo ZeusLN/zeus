@@ -3,9 +3,12 @@ jest.mock('mobx-react', () => ({
     observer: (component: any) => component
 }));
 jest.mock('js-lnurl', () => ({ getParams: jest.fn() }));
-const mockBlobUtilFetch = jest.fn();
-jest.mock('react-native-blob-util', () => ({
-    fetch: (...args: any[]) => mockBlobUtilFetch(...args)
+jest.mock('react-native-blob-util', () => ({}));
+// clearnet lookups go through the redirect-checking fetch
+const mockFetchLnurlUrl = jest.fn();
+jest.mock('../../utils/LnurlFetchUtils', () => ({
+    ...jest.requireActual('../../utils/LnurlFetchUtils'),
+    fetchLnurlUrl: (...args: any[]) => mockFetchLnurlUrl(...args)
 }));
 const mockDoTorRequest = jest.fn();
 jest.mock('../../utils/TorUtils', () => ({
@@ -63,8 +66,8 @@ const tapRow = async (lightningAddress: string) => {
 
 describe('LightningSwipeableRow Lightning Address lookup', () => {
     beforeEach(() => {
-        mockBlobUtilFetch.mockReset();
-        mockBlobUtilFetch.mockResolvedValue({
+        mockFetchLnurlUrl.mockReset();
+        mockFetchLnurlUrl.mockResolvedValue({
             info: () => ({ status: 200 }),
             json: () => ({ callback: 'https://example.com/callback' })
         });
@@ -79,8 +82,7 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
     it('lowercases an uppercase domain and username', async () => {
         const navigation = await tapRow('SATOSHI@BLINK.SV');
 
-        expect(mockBlobUtilFetch).toHaveBeenCalledWith(
-            'get',
+        expect(mockFetchLnurlUrl).toHaveBeenCalledWith(
             'https://blink.sv/.well-known/lnurlp/satoshi'
         );
         expect(navigation.navigate).toHaveBeenCalledWith(
@@ -94,8 +96,7 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
 
         await tapRow(`${username}@cryptoqr.net`);
 
-        expect(mockBlobUtilFetch).toHaveBeenCalledWith(
-            'get',
+        expect(mockFetchLnurlUrl).toHaveBeenCalledWith(
             `https://cryptoqr.net/.well-known/lnurlp/${username}`
         );
     });
@@ -109,7 +110,7 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
             `http://${ONION}/.well-known/lnurlp/satoshi`,
             'GET'
         );
-        expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+        expect(mockFetchLnurlUrl).not.toHaveBeenCalled();
         expect(navigation.navigate).toHaveBeenCalledWith(
             'LnurlPay',
             expect.anything()
@@ -120,8 +121,7 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
         await tapRow(`satoshi@${ONION}`);
 
         expect(mockDoTorRequest).not.toHaveBeenCalled();
-        expect(mockBlobUtilFetch).toHaveBeenCalledWith(
-            'get',
+        expect(mockFetchLnurlUrl).toHaveBeenCalledWith(
             `http://${ONION}/.well-known/lnurlp/satoshi`
         );
     });
@@ -132,8 +132,7 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
         await tapRow('satoshi@pay.onion.example.com');
 
         expect(mockDoTorRequest).not.toHaveBeenCalled();
-        expect(mockBlobUtilFetch).toHaveBeenCalledWith(
-            'get',
+        expect(mockFetchLnurlUrl).toHaveBeenCalledWith(
             'https://pay.onion.example.com/.well-known/lnurlp/satoshi'
         );
     });
@@ -171,7 +170,7 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
         };
 
         it('rejects a response without a callback', async () => {
-            mockBlobUtilFetch.mockResolvedValue({
+            mockFetchLnurlUrl.mockResolvedValue({
                 info: () => ({ status: 200 }),
                 json: () => ({})
             });
@@ -185,7 +184,7 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
         });
 
         it('rejects a non-200 response', async () => {
-            mockBlobUtilFetch.mockResolvedValue({
+            mockFetchLnurlUrl.mockResolvedValue({
                 info: () => ({ status: 404 }),
                 json: () => ({ callback: 'https://example.com/callback' })
             });

@@ -1,9 +1,13 @@
 // LnurlResolveUtils.test.ts
-// js-lnurl's own fetch, so these tests can prove what never left
-const mockCrossFetch = jest.fn();
-jest.mock('cross-fetch', () => ({
+// the resolve's fetch, so these tests can prove what never left
+const mockFetch = jest.fn();
+jest.mock('react-native-blob-util', () => ({
     __esModule: true,
-    default: (...args: any[]) => mockCrossFetch(...args)
+    default: {
+        config: () => ({
+            fetch: (_method: string, target: string) => mockFetch(target)
+        })
+    }
 }));
 jest.mock('./LocaleUtils', () => ({
     localeString: (key: string) => key
@@ -25,10 +29,10 @@ describe('getLnurlParams', () => {
         );
 
     beforeEach(() => {
-        mockCrossFetch.mockReset();
-        mockCrossFetch.mockResolvedValue({
-            status: 200,
-            json: async () => ({
+        mockFetch.mockReset();
+        mockFetch.mockResolvedValue({
+            info: () => ({ status: 200, headers: {} }),
+            json: () => ({
                 tag: 'payRequest',
                 callback: 'https://example.com/cb',
                 metadata: '[]'
@@ -41,9 +45,7 @@ describe('getLnurlParams', () => {
             asLnurl('https://example.com/lnurl')
         );
 
-        expect(mockCrossFetch).toHaveBeenCalledWith(
-            'https://example.com/lnurl'
-        );
+        expect(mockFetch).toHaveBeenCalledWith('https://example.com/lnurl');
         expect(params.tag).toBe('payRequest');
     });
 
@@ -53,7 +55,7 @@ describe('getLnurlParams', () => {
             await expect(getLnurlParams(asLnurl(target))).rejects.toThrow(
                 'utils.lnurl.unsafeEndpoint'
             );
-            expect(mockCrossFetch).not.toHaveBeenCalled();
+            expect(mockFetch).not.toHaveBeenCalled();
         }
     );
 
@@ -86,9 +88,9 @@ describe('getLnurlParams', () => {
         ['payRequest', 'http://example.com/cb'],
         ['channelRequest', 'https://127.0.0.1/cb']
     ])('refuses a %s whose callback is %s', async (tag, callback) => {
-        mockCrossFetch.mockResolvedValue({
-            status: 200,
-            json: async () => ({ tag, callback, k1: 'K1', metadata: '[]' })
+        mockFetch.mockResolvedValue({
+            info: () => ({ status: 200, headers: {} }),
+            json: () => ({ tag, callback, k1: 'K1', metadata: '[]' })
         });
 
         const error = await getLnurlParams(
@@ -100,9 +102,9 @@ describe('getLnurlParams', () => {
     });
 
     it('resolves an onion service with a cleartext onion callback', async () => {
-        mockCrossFetch.mockResolvedValue({
-            status: 200,
-            json: async () => ({
+        mockFetch.mockResolvedValue({
+            info: () => ({ status: 200, headers: {} }),
+            json: () => ({
                 tag: 'withdrawRequest',
                 callback: 'http://abcdefg.onion/cb',
                 k1: 'K1'
@@ -116,14 +118,35 @@ describe('getLnurlParams', () => {
         expect(params.callback).toBe('http://abcdefg.onion/cb');
     });
 
-    // Pins the js-lnurl behavior the undecodable pass-through relies on: it
+    // A public endpoint that redirects to the LAN is refused at the hop,
+    // before the redirect target is requested.
+    it('refuses an endpoint that redirects to the LAN', async () => {
+        mockFetch.mockResolvedValue({
+            info: () => ({
+                status: 302,
+                headers: { Location: 'http://192.168.1.1/lnurl' }
+            }),
+            json: () => ({}),
+            text: () => ''
+        });
+
+        const error = await getLnurlParams(
+            asLnurl('https://example.com/lnurl')
+        ).catch((e) => e);
+
+        expect(error.message).toBe('utils.lnurl.unsafeRedirect');
+        expect(isUnsafeLnurlError(error)).toBe(true);
+        expect(mockFetch).toHaveBeenCalledTimes(1);
+    });
+
+    // Pins the behavior the undecodable pass-through relies on: the resolve
     // decodes with the same function before fetching and reports failure
     // without a request. A lightning address is not something it resolves;
     // Zeus handles those itself (see isLightningAddressEndpointAllowed).
-    it('makes no request for a value js-lnurl cannot decode', async () => {
+    it('makes no request for a value it cannot decode', async () => {
         const params: any = await getLnurlParams('user@192.168.1.1');
 
         expect(params.status).toBe('ERROR');
-        expect(mockCrossFetch).not.toHaveBeenCalled();
+        expect(mockFetch).not.toHaveBeenCalled();
     });
 });

@@ -34,9 +34,10 @@ jest.mock('../../utils/LnurlPayUtils', () => ({
     isLnurlCallbackAllowed: jest.fn(() => ({ ok: true }))
 }));
 // the callback request never settles, so Confirm only shows what it sent
-const mockBlobFetch = jest.fn((..._args: any[]) => new Promise(() => {}));
-jest.mock('react-native-blob-util', () => ({
-    fetch: (...args: any[]) => mockBlobFetch(...args)
+const mockFetchLnurlUrl = jest.fn((..._args: any[]) => new Promise(() => {}));
+jest.mock('react-native-blob-util', () => ({}));
+jest.mock('../../utils/LnurlFetchUtils', () => ({
+    fetchLnurlUrl: (...args: any[]) => mockFetchLnurlUrl(...args)
 }));
 jest.mock('react-native-gesture-handler', () => ({ ScrollView: 'ScrollView' }));
 jest.mock('../../components/Amount', () => 'Amount');
@@ -113,9 +114,9 @@ const amountInputProps = () => {
 
 // Presses Confirm and returns the msat amount sent to the callback
 const confirmedMsat = async () => {
-    mockBlobFetch.mockClear();
+    mockFetchLnurlUrl.mockClear();
     await fireEvent.press(screen.getByRole('button', { name: CONFIRM }));
-    const [, url] = mockBlobFetch.mock.calls[0];
+    const [url] = mockFetchLnurlUrl.mock.calls[0];
     return new URL(url).searchParams.get('amount');
 };
 
