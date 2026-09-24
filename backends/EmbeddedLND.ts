@@ -1,6 +1,7 @@
 import LND from './LND';
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
+import { findPaymentByHash } from './../utils/PaymentLookupUtils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 import { decodeSubscribeTransactionsResult } from '../lndmobile/onchain';
@@ -270,30 +271,16 @@ export default class EmbeddedLND extends LND {
             cltv_limit: data.cltv_limit,
             amp: data.amp
         });
-    // override LND's REST implementation with an on-device lookup; a
-    // creation_date_start bound anchors the page at the dispatch time so
-    // newer payments (e.g. the NWC service's) can't evict the target
+    // override LND's REST implementation with an on-device lookup
     lookupPayment = async (data: {
         payment_hash: string;
         creation_date_start?: number;
-    }) => {
-        const response = await listPayments(
+    }) =>
+        await findPaymentByHash(
+            (request) => listPayments(request),
+            data.payment_hash,
             data.creation_date_start
-                ? {
-                      maxPayments: 50,
-                      reversed: false,
-                      creationDateStart: data.creation_date_start
-                  }
-                : { maxPayments: 50, reversed: true }
         );
-        return (
-            response?.payments?.find(
-                (payment: any) =>
-                    payment.payment_hash?.toLowerCase() ===
-                    data.payment_hash.toLowerCase()
-            ) ?? null
-        );
-    };
     closeChannel = async (urlParams?: Array<string>) => {
         const fundingTxId = (urlParams && urlParams[0]) || '';
         const outputIndex =

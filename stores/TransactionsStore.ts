@@ -18,6 +18,7 @@ import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { checkGraphSyncBeforePayment } from '../utils/GraphSyncUtils';
 import { deriveExpectedPaymentHash } from '../utils/LncPayUtils';
+import { isPaymentLookupInconclusive } from '../utils/PaymentLookupUtils';
 import { sleep } from '../utils/SleepUtils';
 import UrlUtils from '../utils/UrlUtils';
 import { RATING_MODAL_TRIGGER_DELAY } from '../utils/RatingUtils';
@@ -103,6 +104,10 @@ export default class TransactionsStore {
     // coin control
     @observable funded_psbt: string = '';
 
+    // set when payment tracking stopped before observing a terminal state:
+    // the payment may still settle, so the send screen warns against retrying
+    @observable public paymentOutcomeUnverified = false;
+
     // monotonic id assigned to each dispatched payment
     private paymentSequence = 0;
     // sequence of the payment that set paymentInFlight (null when none);
@@ -147,6 +152,7 @@ export default class TransactionsStore {
         this.inFlightOwnerSeq = null;
         this.inFlightPaymentHash = null;
         this.inFlightDispatchTime = null;
+        this.paymentOutcomeUnverified = false;
         this.error = false;
         this.error_msg = null;
         this.transactions = [];
@@ -639,6 +645,7 @@ export default class TransactionsStore {
         }
         this.paymentStartTime = Date.now();
         this.paymentDuration = null;
+        this.paymentOutcomeUnverified = false;
         this.loading = true;
         this.error_msg = null;
         this.error = false;
@@ -806,7 +813,9 @@ export default class TransactionsStore {
     // dedup can't protect against it (issue #4317). Exits released: on a
     // terminal state, when the payment provably never reached the node,
     // after PAYMENT_TRACK_MAX_FAILURES unobservable polls, or at the
-    // PAYMENT_TRACK_MAX_MS ceiling.
+    // PAYMENT_TRACK_MAX_MS ceiling. A release without a terminal state
+    // updates the send screen: never-dispatched shows as not sent, any other
+    // exit leaves the outcome flagged as unverified.
     private trackPaymentToTerminal = async (seq: number) => {
         if (this.trackingSeq === seq) return;
         const payment_hash = this.inFlightPaymentHash;
@@ -829,17 +838,20 @@ export default class TransactionsStore {
         const deadline = Date.now() + PAYMENT_TRACK_MAX_MS;
         let failures = 0;
         let notFound = 0;
+        let neverDispatched = false;
         try {
             while (this.inFlightOwnerSeq === seq && Date.now() < deadline) {
                 let payment: any = null;
                 let lookupFailed = false;
+                let inconclusive = false;
                 try {
                     payment = await BackendUtils.lookupPayment({
                         payment_hash,
                         creation_date_start
                     });
                 } catch (e) {
-                    lookupFailed = true;
+                    if (isPaymentLookupInconclusive(e)) inconclusive = true;
+                    else lookupFailed = true;
                 }
                 if (this.inFlightOwnerSeq !== seq) return;
 
@@ -866,6 +878,11 @@ export default class TransactionsStore {
                         // stale timeout/transport error on screen
                         this.markPaymentInTransit();
                     }
+                } else if (inconclusive) {
+                    // the node answered, but the scan may have missed the
+                    // payment on a truncated page: neither a sighting nor a
+                    // no-record answer, so keep polling until the ceiling
+                    failures = 0;
                 } else if (!lookupFailed) {
                     // the node answered and has no record of the payment.
                     // One such answer isn't proof the dispatch never reached
@@ -874,7 +891,10 @@ export default class TransactionsStore {
                     // lookup returns). Only conclude never-dispatched after
                     // repeated no-record answers with no sighting between.
                     failures = 0;
-                    if (++notFound >= PAYMENT_TRACK_MAX_NOT_FOUND) return;
+                    if (++notFound >= PAYMENT_TRACK_MAX_NOT_FOUND) {
+                        neverDispatched = true;
+                        return;
+                    }
                 } else if (++failures >= PAYMENT_TRACK_MAX_FAILURES) {
                     return;
                 }
@@ -882,7 +902,34 @@ export default class TransactionsStore {
             }
         } finally {
             this.trackingSeq = null;
+            // still the owner means tracking gave up without a terminal
+            // state (a terminal result or a new send has already moved the
+            // guard on)
+            if (this.inFlightOwnerSeq === seq) {
+                this.markTrackingStopped(neverDispatched);
+            }
             this.clearPaymentInFlight(seq);
+        }
+    };
+
+    // Replaces the in-transit state the tracker was maintaining once it
+    // stops without a terminal result, so the send screen doesn't keep
+    // presenting the payment as being followed. A never-dispatched payment
+    // is shown as not sent (retrying is safe). Otherwise the payment may
+    // still settle (e.g. a held HTLC past the tracking ceiling), so it must
+    // not be shown as failed, which invites a retry that can double-pay.
+    @action
+    private markTrackingStopped = (neverDispatched: boolean) => {
+        if (neverDispatched) {
+            if (!this.error) {
+                this.error = true;
+                this.error_msg = localeString(
+                    'views.SendingLightning.paymentNotSent'
+                );
+            }
+            if (this.status === 'IN_FLIGHT') this.status = null;
+        } else {
+            this.paymentOutcomeUnverified = true;
         }
     };
 

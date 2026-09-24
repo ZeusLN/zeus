@@ -46,9 +46,11 @@ jest.mock('../utils/RatingUtils', () => ({
 import TransactionsStore, {
     PAYMENT_TRACK_POLL_MS,
     PAYMENT_TRACK_MAX_FAILURES,
-    PAYMENT_TRACK_MAX_NOT_FOUND
+    PAYMENT_TRACK_MAX_NOT_FOUND,
+    PAYMENT_TRACK_MAX_MS
 } from './TransactionsStore';
 import BackendUtils from '../utils/BackendUtils';
+import { paymentLookupInconclusiveError } from '../utils/PaymentLookupUtils';
 
 // 64-char hex: normalizePaymentHash rejects anything that isn't a real hash
 const HASH = 'ab'.repeat(32);
@@ -183,6 +185,8 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
         }
         expect(store.paymentInFlight).toBe(false);
         expect(store.error).toBe(true);
+        // the dispatch error is more specific than the generic not-sent copy
+        expect(store.error_msg).toBe('invoice is invalid');
         expect(BackendUtils.lookupPayment).toHaveBeenCalledTimes(
             PAYMENT_TRACK_MAX_NOT_FOUND
         );
@@ -245,6 +249,71 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
         expect(BackendUtils.lookupPayment).toHaveBeenCalledTimes(
             PAYMENT_TRACK_MAX_FAILURES
         );
+        // outcome unknown: stays in transit rather than failed (a failed
+        // screen offers a retry that could double-pay), flagged unverified
+        expect(store.status).toBe('IN_FLIGHT');
+        expect(store.error).toBe(false);
+        expect(store.paymentOutcomeUnverified).toBe(true);
+    });
+
+    it('shows a timed-out payment the node never recorded as not sent', async () => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockResolvedValue({
+            payment_error: 'views.SendingLightning.paymentTimedOut',
+            payment_timed_out: true
+        });
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(null);
+
+        const store = newStore();
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+        expect(store.status).toBe('IN_FLIGHT');
+        expect(store.error).toBe(false);
+
+        for (let i = 1; i < PAYMENT_TRACK_MAX_NOT_FOUND; i++) {
+            await advancePoll();
+        }
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.status).toBe(null);
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe('views.SendingLightning.paymentNotSent');
+        expect(store.paymentOutcomeUnverified).toBe(false);
+    });
+
+    it('keeps tracking through inconclusive lookups until the ceiling', async () => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockResolvedValue({
+            payment_error: 'views.SendingLightning.paymentTimedOut',
+            payment_timed_out: true
+        });
+        (BackendUtils.lookupPayment as jest.Mock).mockImplementation(() =>
+            Promise.reject(paymentLookupInconclusiveError())
+        );
+
+        const store = newStore();
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+
+        // a truncated scan is neither a no-record answer nor a failure
+        const limit = Math.max(
+            PAYMENT_TRACK_MAX_NOT_FOUND,
+            PAYMENT_TRACK_MAX_FAILURES
+        );
+        for (let i = 0; i < limit; i++) {
+            await advancePoll();
+        }
+        expect(store.paymentInFlight).toBe(true);
+
+        await jest.advanceTimersByTimeAsync(PAYMENT_TRACK_MAX_MS);
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.status).toBe('IN_FLIGHT');
+        expect(store.error).toBe(false);
+        expect(store.paymentOutcomeUnverified).toBe(true);
+
+        // the next send starts with a clean slate
+        (BackendUtils.payLightningInvoice as jest.Mock).mockReturnValue(
+            new Promise(() => {})
+        );
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        expect(store.paymentOutcomeUnverified).toBe(false);
     });
 
     it('keeps the pre-tracking behavior on backends without payment lookup', async () => {

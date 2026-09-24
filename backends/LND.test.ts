@@ -114,3 +114,49 @@ describe('LND.getURL', () => {
         });
     });
 });
+
+describe('LND.lookupPayment', () => {
+    const HASH = 'ab'.repeat(32);
+
+    const lndWithPages = (...pages: any[]) => {
+        const lnd = new LND();
+        const getRequest = jest.fn();
+        pages.forEach((p) => getRequest.mockResolvedValueOnce(p));
+        (lnd as any).getRequest = getRequest;
+        return { lnd, getRequest };
+    };
+
+    it('scans ascending from creation_date_start, then the newest page', async () => {
+        const { lnd, getRequest } = lndWithPages(
+            { payments: [] },
+            { payments: [] }
+        );
+
+        await expect(
+            lnd.lookupPayment({
+                payment_hash: HASH,
+                creation_date_start: 1700000000
+            })
+        ).resolves.toBeNull();
+        expect(getRequest.mock.calls.map(([route]) => route)).toEqual([
+            '/v1/payments?include_incomplete=true&max_payments=50&reversed=false&creation_date_start=1700000000',
+            '/v1/payments?include_incomplete=true&max_payments=50&reversed=true'
+        ]);
+    });
+
+    it('matches the payment hash case-insensitively', async () => {
+        const target = {
+            payment_hash: HASH.toUpperCase(),
+            status: 'SUCCEEDED'
+        };
+        const { lnd, getRequest } = lndWithPages({ payments: [target] });
+
+        await expect(
+            lnd.lookupPayment({
+                payment_hash: HASH,
+                creation_date_start: 1700000000
+            })
+        ).resolves.toBe(target);
+        expect(getRequest).toHaveBeenCalledTimes(1);
+    });
+});

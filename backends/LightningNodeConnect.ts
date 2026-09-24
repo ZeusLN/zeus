@@ -19,6 +19,7 @@ import {
     deriveExpectedPaymentHash
 } from '../utils/LncPayUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { findPaymentByHash } from '../utils/PaymentLookupUtils';
 import {
     toLnrpcAddressType,
     toWalletrpcAddressTypeName
@@ -221,30 +222,16 @@ export default class LightningNodeConnect {
                 })
             })
             .then((data: lnrpc.ListPaymentsResponse) => snakeize(data));
-    // scans a payments page; trackPaymentV2 over LNC is a stream and would
-    // need view-level event plumbing. With a creation_date_start bound the
-    // page is anchored at the dispatch time (ascending), so newer payments
-    // from other clients can't evict the target; without one, fall back to
-    // the newest page.
+    // scans payments pages; trackPaymentV2 over LNC is a stream and would
+    // need view-level event plumbing
     lookupPayment = async (data: {
         payment_hash: string;
         creation_date_start?: number;
     }) =>
-        await this.getPayments(
+        await findPaymentByHash(
+            (request) => this.getPayments(request),
+            data.payment_hash,
             data.creation_date_start
-                ? {
-                      maxPayments: 50,
-                      reversed: false,
-                      creationDateStart: data.creation_date_start
-                  }
-                : { maxPayments: 50, reversed: true }
-        ).then(
-            (response: any) =>
-                response?.payments?.find(
-                    (payment: any) =>
-                        payment.payment_hash?.toLowerCase() ===
-                        data.payment_hash.toLowerCase()
-                ) ?? null
         );
     getNewAddress = async (data: any) =>
         await this.lnc.lnd.lightning
