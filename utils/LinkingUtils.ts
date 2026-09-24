@@ -118,7 +118,9 @@ class LinkingUtils {
         url: string,
         navigation: NativeStackNavigationProp<any, any>
     ) => {
-        if (settingsStore.loginRequired()) {
+        // not loginRequired(): an active POS session counts as logged in
+        // there, and a link can open Send or WalletConfiguration
+        if (settingsStore.externalInputAuthRequired()) {
             this.pendingDeepLink = url;
             return;
         }

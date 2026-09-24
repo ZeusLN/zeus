@@ -6,6 +6,15 @@ import { settingsStore } from '../stores/Stores';
 
 const { MobileTools } = NativeModules;
 
+// A shared image on its way to the ShareIntentProcessing screen, with the
+// gates it still has to clear
+export interface ShareIntentPayload {
+    qrData?: string;
+    base64Image?: string;
+    requiresAuth?: boolean;
+    requiresWalletSelection?: boolean;
+}
+
 export interface ShareIntentResult {
     success: boolean;
     route?: string;
@@ -63,6 +72,16 @@ export const processSharedQRImageFast =
 
             if (!base64Image) return null;
 
+            // Consume the intent now that the image is in memory. Left in
+            // place, every later read (each resume runs
+            // Wallet.getSettingsAndNavigate) hands the same image over again,
+            // which in POS mode puts the terminal back on the PIN screen.
+            try {
+                await MobileTools.clearSharedIntent();
+            } catch (clearError) {
+                console.warn('Failed to clear share intent', clearError);
+            }
+
             // Return the base64 image for processing in the ShareIntentProcessing screen.
             //
             // The gates are attached here, where the payload enters the app,
@@ -73,16 +92,20 @@ export const processSharedQRImageFast =
             // image could open Send or WalletConfiguration with the PIN never
             // asked for. Screens that continue this payload after a
             // successful unlock or wallet selection clear the corresponding
-            // flag themselves.
+            // flag themselves. Wallet selection is only owed on a start-up
+            // that has not picked a wallet yet: initialStart goes false once
+            // one is selected or connected.
+            const params: ShareIntentPayload = {
+                base64Image,
+                requiresAuth: settingsStore.externalInputAuthRequired(),
+                requiresWalletSelection:
+                    !!settingsStore.settings?.selectNodeOnStartup &&
+                    settingsStore.initialStart
+            };
             return {
                 success: true,
                 route: 'ShareIntentProcessing',
-                params: {
-                    base64Image,
-                    requiresAuth: settingsStore.loginRequired(),
-                    requiresWalletSelection:
-                        settingsStore.settings?.selectNodeOnStartup
-                }
+                params
             };
         } catch (error) {
             console.error('Error in fast share QR processing:', error);
@@ -99,14 +122,18 @@ export const processSharedQRImageFast =
  * they just came from. Only for callers where the user has actually
  * authenticated.
  */
-export const authenticatedShareIntent = (shareIntentData?: any) =>
+export const authenticatedShareIntent = (
+    shareIntentData?: ShareIntentPayload
+): ShareIntentPayload | undefined =>
     shareIntentData ? { ...shareIntentData, requiresAuth: false } : undefined;
 
 /**
  * Marks a share-intent payload as having been through wallet selection, the
  * counterpart of authenticatedShareIntent for the other gate.
  */
-export const walletSelectedShareIntent = (shareIntentData?: any) =>
+export const walletSelectedShareIntent = (
+    shareIntentData?: ShareIntentPayload
+): ShareIntentPayload | undefined =>
     shareIntentData
         ? { ...shareIntentData, requiresWalletSelection: false }
         : undefined;

@@ -11,20 +11,15 @@ import Screen from '../components/Screen';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import handleAnything from '../utils/handleAnything';
+import { ShareIntentPayload } from '../utils/ShareIntentProcessor';
+
+import { settingsStore } from '../stores/Stores';
 
 const { MobileTools } = NativeModules;
 
 interface ShareIntentProcessingProps {
     navigation: NativeStackNavigationProp<any, any>;
-    route: Route<
-        'ShareIntentProcessing',
-        {
-            qrData?: string;
-            base64Image?: string;
-            requiresAuth?: boolean;
-            requiresWalletSelection?: boolean;
-        }
-    >;
+    route: Route<'ShareIntentProcessing', ShareIntentPayload>;
 }
 
 interface ShareIntentProcessingState {
@@ -70,8 +65,14 @@ class ShareIntentProcessing extends React.Component<
         // that arrives without saying whether the payload was authenticated
         // must be treated as not having authenticated it. Only an explicit
         // false, from a caller that knows the user has unlocked or that no
-        // login is configured, skips the Lockscreen.
-        if (requiresAuth !== false) {
+        // login is configured, skips the Lockscreen. The flag is also
+        // re-checked live: it was set when the intent was read, and the
+        // payload can wait in Wallet's pendingShareIntent across a
+        // background lock or a return to POS mode.
+        if (
+            requiresAuth !== false ||
+            settingsStore.externalInputAuthRequired()
+        ) {
             this.setState({
                 currentStep: localeString('utils.shareIntent.authRequired')
             });
@@ -79,7 +80,11 @@ class ShareIntentProcessing extends React.Component<
             // The Lockscreen continuation re-enters this screen with
             // requiresAuth: false once the user is through. A pending wallet
             // selection rides along: unlocking does not satisfy it.
-            const shareData = { qrData, base64Image, requiresWalletSelection };
+            const shareData: ShareIntentPayload = {
+                qrData,
+                base64Image,
+                requiresWalletSelection
+            };
 
             navigation.replace('Lockscreen', {
                 modifySecurityScreen: '',
@@ -97,7 +102,11 @@ class ShareIntentProcessing extends React.Component<
 
             // Auth is already satisfied to have got this far: say so, or the
             // gate above would ask for the PIN again once a wallet is picked
-            const shareData = { qrData, base64Image, requiresAuth: false };
+            const shareData: ShareIntentPayload = {
+                qrData,
+                base64Image,
+                requiresAuth: false
+            };
 
             navigation.replace('Wallets', {
                 fromStartup: true,

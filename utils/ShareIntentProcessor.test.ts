@@ -1,7 +1,8 @@
 jest.mock('react-native', () => ({
     NativeModules: {
         MobileTools: {
-            getSharedImageBase64: jest.fn()
+            getSharedImageBase64: jest.fn(),
+            clearSharedIntent: jest.fn()
         }
     }
 }));
@@ -17,8 +18,9 @@ jest.mock('./LocaleUtils', () => ({ localeString: (key: string) => key }));
 
 jest.mock('../stores/Stores', () => ({
     settingsStore: {
-        loginRequired: jest.fn(),
-        settings: {}
+        externalInputAuthRequired: jest.fn(),
+        settings: {},
+        initialStart: true
     }
 }));
 
@@ -32,12 +34,16 @@ import { settingsStore } from '../stores/Stores';
 
 const getSharedImageBase64 = NativeModules.MobileTools
     .getSharedImageBase64 as jest.Mock;
+const clearSharedIntent = NativeModules.MobileTools
+    .clearSharedIntent as jest.Mock;
 
 describe('processSharedQRImageFast', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         getSharedImageBase64.mockResolvedValue('QRIMAGE');
+        clearSharedIntent.mockResolvedValue(true);
         (settingsStore as any).settings = {};
+        (settingsStore as any).initialStart = true;
     });
 
     // An intent read from the OS has passed no authentication. The flags are
@@ -45,19 +51,23 @@ describe('processSharedQRImageFast', () => {
     // forwarded the bare payload and the processing screen, which gated only
     // on a truthy requiresAuth, decoded the QR and navigated with no PIN.
     it('marks a shared image as needing auth when a login is configured', async () => {
-        (settingsStore.loginRequired as jest.Mock).mockReturnValue(true);
+        (settingsStore.externalInputAuthRequired as jest.Mock).mockReturnValue(
+            true
+        );
 
         const result = await processSharedQRImageFast();
 
         expect(result?.params).toEqual({
             base64Image: 'QRIMAGE',
             requiresAuth: true,
-            requiresWalletSelection: undefined
+            requiresWalletSelection: false
         });
     });
 
     it('does not require auth when no login is configured', async () => {
-        (settingsStore.loginRequired as jest.Mock).mockReturnValue(false);
+        (settingsStore.externalInputAuthRequired as jest.Mock).mockReturnValue(
+            false
+        );
 
         const result = await processSharedQRImageFast();
 
@@ -65,7 +75,9 @@ describe('processSharedQRImageFast', () => {
     });
 
     it('carries the wallet-selection requirement', async () => {
-        (settingsStore.loginRequired as jest.Mock).mockReturnValue(false);
+        (settingsStore.externalInputAuthRequired as jest.Mock).mockReturnValue(
+            false
+        );
         (settingsStore as any).settings = { selectNodeOnStartup: true };
 
         const result = await processSharedQRImageFast();
@@ -73,10 +85,49 @@ describe('processSharedQRImageFast', () => {
         expect(result?.params.requiresWalletSelection).toBe(true);
     });
 
+    // A warm share after a wallet was already picked this session must not
+    // put the picker up again
+    it('does not ask for wallet selection once a wallet was picked', async () => {
+        (settingsStore.externalInputAuthRequired as jest.Mock).mockReturnValue(
+            false
+        );
+        (settingsStore as any).settings = { selectNodeOnStartup: true };
+        (settingsStore as any).initialStart = false;
+
+        const result = await processSharedQRImageFast();
+
+        expect(result?.params.requiresWalletSelection).toBe(false);
+    });
+
+    // Left in place, each resume re-read the same image, which put a POS
+    // terminal back on the PIN screen
+    it('consumes the intent once the image is read', async () => {
+        (settingsStore.externalInputAuthRequired as jest.Mock).mockReturnValue(
+            true
+        );
+
+        await processSharedQRImageFast();
+
+        expect(clearSharedIntent).toHaveBeenCalledTimes(1);
+    });
+
+    it('still returns the image when clearing the intent fails', async () => {
+        (settingsStore.externalInputAuthRequired as jest.Mock).mockReturnValue(
+            true
+        );
+        clearSharedIntent.mockRejectedValue(new Error('no activity'));
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+        const result = await processSharedQRImageFast();
+
+        expect(result?.params.base64Image).toBe('QRIMAGE');
+    });
+
     it('returns null when nothing was shared', async () => {
         getSharedImageBase64.mockResolvedValue(null);
 
         expect(await processSharedQRImageFast()).toBeNull();
+        expect(clearSharedIntent).not.toHaveBeenCalled();
     });
 });
 
