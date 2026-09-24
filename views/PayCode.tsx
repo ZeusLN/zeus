@@ -3,7 +3,7 @@ import { StyleSheet, ScrollView, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { ButtonGroup } from '@rneui/themed';
+import ButtonGroup from '../components/GlassButtonGroup';
 
 import Button from '../components/Button';
 import CollapsedQR from '../components/CollapsedQR';
