@@ -27,11 +27,13 @@ jest.mock('../utils/LocaleUtils', () => ({
 jest.mock('../utils/BackendUtils', () => ({
     connectPeer: jest.fn(() => Promise.resolve())
 }));
-jest.mock('react-native-blob-util', () => ({
-    fetch: jest.fn(() => Promise.resolve({ json: () => ({ status: 'OK' }) }))
+jest.mock('../utils/LnurlFetchUtils', () => ({
+    fetchLnurlUrl: jest.fn(() =>
+        Promise.resolve({ json: () => ({ status: 'OK' }) })
+    )
 }));
 
-import ReactNativeBlobUtil from 'react-native-blob-util';
+import { fetchLnurlUrl } from '../utils/LnurlFetchUtils';
 import Switch from '../components/Switch';
 import LnurlChannel from './LnurlChannel';
 
@@ -60,13 +62,13 @@ const renderView = async () => {
 };
 
 const callbackQuery = () => {
-    const [, url] = (ReactNativeBlobUtil.fetch as jest.Mock).mock.calls[0];
+    const [url] = (fetchLnurlUrl as jest.Mock).mock.calls[0];
     return new URL(url).searchParams;
 };
 
 describe('LnurlChannel', () => {
     beforeEach(() => {
-        (ReactNativeBlobUtil.fetch as jest.Mock).mockClear();
+        (fetchLnurlUrl as jest.Mock).mockClear();
     });
 
     it('renders the themed Switch for the announced toggle', async () => {

@@ -1,6 +1,5 @@
 import url from 'url';
 import * as React from 'react';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import querystring from 'querystring-es3';
@@ -21,6 +20,7 @@ import ChannelsStore from '../stores/ChannelsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 
 import { isLnurlCallbackAllowed } from '../utils/LnurlPayUtils';
+import { fetchLnurlUrl } from '../utils/LnurlFetchUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import NodeUriUtils from '../utils/NodeUriUtils';
@@ -159,7 +159,7 @@ export default class LnurlChannel extends React.Component<
         u.search = querystring.stringify(qs);
         u.query = querystring.stringify(qs);
 
-        ReactNativeBlobUtil.fetch('get', url.format(u))
+        fetchLnurlUrl(url.format(u))
             .then((response: any) => {
                 try {
                     const data = response.json();
