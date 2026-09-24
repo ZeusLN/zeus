@@ -1,5 +1,12 @@
 import React from 'react';
-import { BackHandler, View, StyleSheet, ScrollView, Text } from 'react-native';
+import {
+    BackHandler,
+    View,
+    StyleSheet,
+    ScrollView,
+    Text,
+    TouchableOpacity
+} from 'react-native';
 import { ButtonGroup } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -66,6 +73,7 @@ interface AddOrEditNWCConnectionState {
     customExpiryUnit: TimeUnit;
     budgetValue: number;
     maxBudgetLimit: number;
+    maxBudgetSource: 'lightning' | 'cashu';
 }
 
 @inject('NostrWalletConnectStore', 'ModalStore')
@@ -93,7 +101,8 @@ export default class AddOrEditNWCConnection extends React.Component<
             customExpiryValue: null,
             customExpiryUnit: NostrConnectUtils.TIME_UNITS[1],
             budgetValue: 0,
-            maxBudgetLimit: 0
+            maxBudgetLimit: 0,
+            maxBudgetSource: 'lightning'
         };
     }
 
@@ -149,6 +158,7 @@ export default class AddOrEditNWCConnection extends React.Component<
         const existingBudgetValue = this.state.budgetValue || 0;
         this.setState({
             maxBudgetLimit: Math.max(0, maxLimit),
+            maxBudgetSource: NostrWalletConnectStore.maxBudgetSource,
             budgetValue: existingBudgetValue
         });
     };
@@ -210,7 +220,8 @@ export default class AddOrEditNWCConnection extends React.Component<
                 customExpiryValue,
                 customExpiryUnit,
                 budgetValue,
-                maxBudgetLimit: Math.max(0, maxBudgetLimit)
+                maxBudgetLimit: Math.max(0, maxBudgetLimit),
+                maxBudgetSource: NostrWalletConnectStore.maxBudgetSource
             });
         }
     };
@@ -843,7 +854,7 @@ export default class AddOrEditNWCConnection extends React.Component<
     };
 
     render() {
-        const { navigation, route } = this.props;
+        const { navigation, route, NostrWalletConnectStore } = this.props;
         const {
             connectionName,
             selectedBudgetRenewalIndex,
@@ -851,6 +862,7 @@ export default class AddOrEditNWCConnection extends React.Component<
             error,
             loading,
             maxBudgetLimit,
+            maxBudgetSource,
             showCustomExpiryInput,
             customExpiryValue,
             customExpiryUnit,
@@ -1217,10 +1229,39 @@ export default class AddOrEditNWCConnection extends React.Component<
                                                     fontSize: 14
                                                 }}
                                             >
-                                                {localeString(
-                                                    'views.Settings.NostrWalletConnect.noBalanceAvailable'
-                                                )}
+                                                {maxBudgetSource === 'cashu'
+                                                    ? localeString(
+                                                          'views.Settings.NostrWalletConnect.noCashuBalanceAvailable'
+                                                      )
+                                                    : localeString(
+                                                          'views.Settings.NostrWalletConnect.noBalanceAvailable'
+                                                      )}
                                             </Text>
+                                            {NostrWalletConnectStore.canOfferCashuSwitch && (
+                                                <TouchableOpacity
+                                                    onPress={() =>
+                                                        navigation.navigate(
+                                                            'NWCSettings'
+                                                        )
+                                                    }
+                                                >
+                                                    <Text
+                                                        style={{
+                                                            color: themeColor(
+                                                                'highlight'
+                                                            ),
+                                                            fontFamily:
+                                                                'PPNeueMontreal-Book',
+                                                            fontSize: 16,
+                                                            marginTop: 10
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'views.Settings.NostrWalletConnect.enableCashuInSettings'
+                                                        )}
+                                                    </Text>
+                                                </TouchableOpacity>
+                                            )}
                                         </View>
                                     )}
                                 </View>
