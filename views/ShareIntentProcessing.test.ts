@@ -42,6 +42,13 @@ jest.mock('../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
 }));
 
+let mockExternalInputAuthRequired = false;
+jest.mock('../stores/Stores', () => ({
+    settingsStore: {
+        externalInputAuthRequired: () => mockExternalInputAuthRequired
+    }
+}));
+
 jest.mock('../components/LoadingIndicator', () => 'LoadingIndicator');
 jest.mock('../components/Screen', () => 'Screen');
 
@@ -74,6 +81,7 @@ const mount = async (params: any) => {
 describe('ShareIntentProcessing auth gate', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+        mockExternalInputAuthRequired = false;
         jest.spyOn(console, 'log').mockImplementation(() => {});
         jest.spyOn(console, 'error').mockImplementation(() => {});
     });
@@ -143,6 +151,24 @@ describe('ShareIntentProcessing auth gate', () => {
         expect(navigation.replace).toHaveBeenCalledWith('Send', {
             invoice: 'lnbc1invoice'
         });
+    });
+
+    // requiresAuth is fixed when the intent is read, but the payload can
+    // wait in Wallet's pendingShareIntent while the app locks on background
+    // or the terminal returns to POS mode
+    it('sends a stale satisfied payload to the Lockscreen when auth is now required', async () => {
+        mockExternalInputAuthRequired = true;
+
+        const { navigation } = await mount({
+            base64Image: 'QRIMAGE',
+            requiresAuth: false
+        });
+
+        expect(navigation.replace).toHaveBeenCalledWith(
+            'Lockscreen',
+            expect.anything()
+        );
+        expect(handleAnything).not.toHaveBeenCalled();
     });
 
     it('routes to wallet selection with auth already marked satisfied', async () => {

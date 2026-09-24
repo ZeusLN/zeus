@@ -8,7 +8,7 @@ jest.mock('./ShareIntentProcessor', () => ({
 let mockLoginRequired = false;
 jest.mock('../stores/Stores', () => ({
     settingsStore: {
-        loginRequired: () => mockLoginRequired,
+        externalInputAuthRequired: () => mockLoginRequired,
         settings: {}
     }
 }));
