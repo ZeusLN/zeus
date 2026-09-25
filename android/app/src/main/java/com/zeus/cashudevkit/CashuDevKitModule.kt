@@ -810,6 +810,11 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     @ReactMethod
     fun getMintKeysets(mintUrl: String, promise: Promise) {
         getInitializedRepo(promise) ?: return
+        val currentDb = db
+        if (currentDb == null) {
+            promise.reject("NO_WALLET", "Wallet not initialized")
+            return
+        }
 
         scope.launch {
             try {
@@ -817,7 +822,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 // Wallet.getMintKeysets(KeysetFilter.ALL) was also a
                 // local-store read (network refresh was a separate call)
                 val keysets =
-                    db!!.getMintKeysets(MintUrl(normalizeMintUrl(mintUrl)))
+                    currentDb.getMintKeysets(MintUrl(normalizeMintUrl(mintUrl)))
                         ?: emptyList()
 
                 val array = JSONArray()
