@@ -231,20 +231,23 @@ const openChannel = async ({
     address,
     channelAmountSats,
     pushToCounterpartyMsat,
-    announceChannel = false
+    announceChannel = false,
+    satPerVbyte
 }: {
     nodeId: string;
     address: string;
     channelAmountSats: number;
     pushToCounterpartyMsat?: number | null;
     announceChannel?: boolean;
+    satPerVbyte?: number;
 }): Promise<string> => {
     const result: any = await LdkNodeModule.openChannel(
         nodeId,
         address,
         channelAmountSats,
         pushToCounterpartyMsat ?? 0,
-        announceChannel
+        announceChannel,
+        satPerVbyte ?? -1
     );
     return result.userChannelId;
 };
@@ -254,20 +257,23 @@ const openChannelFundMax = async ({
     address,
     pushToCounterpartyMsat,
     announceChannel = false,
-    utxos
+    utxos,
+    satPerVbyte
 }: {
     nodeId: string;
     address: string;
     pushToCounterpartyMsat?: number | null;
     announceChannel?: boolean;
     utxos?: Array<{ txid: string; vout: number }> | null;
+    satPerVbyte?: number;
 }): Promise<string> => {
     const result: any = await LdkNodeModule.openChannelFundMax(
         nodeId,
         address,
         pushToCounterpartyMsat ?? 0,
         announceChannel,
-        utxos ?? null
+        utxos ?? null,
+        satPerVbyte ?? -1
     );
     return result.userChannelId;
 };
@@ -278,7 +284,8 @@ const openChannelWithUtxos = async ({
     channelAmountSats,
     pushToCounterpartyMsat,
     announceChannel = false,
-    utxos
+    utxos,
+    satPerVbyte
 }: {
     nodeId: string;
     address: string;
@@ -286,6 +293,7 @@ const openChannelWithUtxos = async ({
     pushToCounterpartyMsat?: number | null;
     announceChannel?: boolean;
     utxos: Array<{ txid: string; vout: number }>;
+    satPerVbyte?: number;
 }): Promise<string> => {
     const result: any = await LdkNodeModule.openChannelWithUtxos(
         nodeId,
@@ -293,7 +301,8 @@ const openChannelWithUtxos = async ({
         channelAmountSats,
         pushToCounterpartyMsat ?? 0,
         announceChannel,
-        utxos
+        utxos,
+        satPerVbyte ?? -1
     );
     return result.userChannelId;
 };
@@ -335,25 +344,30 @@ const newOnchainAddress = async (): Promise<string> => {
 
 const sendToOnchainAddress = async ({
     address,
-    amountSats
+    amountSats,
+    satPerVbyte
 }: {
     address: string;
     amountSats: number;
+    satPerVbyte?: number;
 }): Promise<string> => {
     const result: any = await LdkNodeModule.sendToOnchainAddress(
         address,
-        amountSats
+        amountSats,
+        satPerVbyte ?? -1
     );
     return result.txid;
 };
 
 const sendAllToOnchainAddress = async (
     address: string,
-    retainReserve: boolean = false
+    retainReserve: boolean = false,
+    satPerVbyte?: number
 ): Promise<string> => {
     const result: any = await LdkNodeModule.sendAllToOnchainAddress(
         address,
-        retainReserve
+        retainReserve,
+        satPerVbyte ?? -1
     );
     return result.txid;
 };
@@ -374,16 +388,19 @@ const listUtxos = async (): Promise<WalletUtxo[]> => {
 const sendToOnchainAddressWithUtxos = async ({
     address,
     amountSats,
-    utxos
+    utxos,
+    satPerVbyte
 }: {
     address: string;
     amountSats: number;
     utxos: Array<{ txid: string; vout: number }>;
+    satPerVbyte?: number;
 }): Promise<string> => {
     const result: any = await LdkNodeModule.sendToOnchainAddressWithUtxos(
         address,
         amountSats,
-        utxos
+        utxos,
+        satPerVbyte ?? -1
     );
     return result.txid;
 };
@@ -391,16 +408,19 @@ const sendToOnchainAddressWithUtxos = async ({
 const sendAllToOnchainAddressWithUtxos = async ({
     address,
     retainReserve = false,
-    utxos
+    utxos,
+    satPerVbyte
 }: {
     address: string;
     retainReserve?: boolean;
     utxos: Array<{ txid: string; vout: number }>;
+    satPerVbyte?: number;
 }): Promise<string> => {
     const result: any = await LdkNodeModule.sendAllToOnchainAddressWithUtxos(
         address,
         retainReserve,
-        utxos
+        utxos,
+        satPerVbyte ?? -1
     );
     return result.txid;
 };
@@ -1085,6 +1105,7 @@ export interface ILdkNodeInjections {
             channelAmountSats: number;
             pushToCounterpartyMsat?: number | null;
             announceChannel?: boolean;
+            satPerVbyte?: number;
         }) => Promise<string>;
         openChannelFundMax: (params: {
             nodeId: string;
@@ -1092,6 +1113,7 @@ export interface ILdkNodeInjections {
             pushToCounterpartyMsat?: number | null;
             announceChannel?: boolean;
             utxos?: Array<{ txid: string; vout: number }> | null;
+            satPerVbyte?: number;
         }) => Promise<string>;
         openChannelWithUtxos: (params: {
             nodeId: string;
@@ -1100,6 +1122,7 @@ export interface ILdkNodeInjections {
             pushToCounterpartyMsat?: number | null;
             announceChannel?: boolean;
             utxos: Array<{ txid: string; vout: number }>;
+            satPerVbyte?: number;
         }) => Promise<string>;
         closeChannel: (params: {
             userChannelId: string;
@@ -1116,21 +1139,25 @@ export interface ILdkNodeInjections {
         sendToOnchainAddress: (params: {
             address: string;
             amountSats: number;
+            satPerVbyte?: number;
         }) => Promise<string>;
         sendAllToOnchainAddress: (
             address: string,
-            retainReserve?: boolean
+            retainReserve?: boolean,
+            satPerVbyte?: number
         ) => Promise<string>;
         listUtxos: () => Promise<WalletUtxo[]>;
         sendToOnchainAddressWithUtxos: (params: {
             address: string;
             amountSats: number;
             utxos: Array<{ txid: string; vout: number }>;
+            satPerVbyte?: number;
         }) => Promise<string>;
         sendAllToOnchainAddressWithUtxos: (params: {
             address: string;
             retainReserve?: boolean;
             utxos: Array<{ txid: string; vout: number }>;
+            satPerVbyte?: number;
         }) => Promise<string>;
     };
     bolt11: {
