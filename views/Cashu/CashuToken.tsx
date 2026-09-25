@@ -5,7 +5,7 @@ import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ButtonGroup } from '@rneui/themed';
 
-import CashuStore from '../../stores/CashuStore';
+import CashuStore, { TokenSwapQuote } from '../../stores/CashuStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 import ModalStore from '../../stores/ModalStore';
 import { activityStore, settingsStore } from '../../stores/Stores';
@@ -13,6 +13,7 @@ import { activityStore, settingsStore } from '../../stores/Stores';
 import Amount from '../../components/Amount';
 import AnimatedQRDisplay from '../../components/AnimatedQRDisplay';
 import Button from '../../components/Button';
+import EcashMintPicker from '../../components/EcashMintPicker';
 import Header from '../../components/Header';
 import KeyValue from '../../components/KeyValue';
 import LoadingIndicator from '../../components/LoadingIndicator';
@@ -46,6 +47,8 @@ interface CashuTokenProps {
             decoded: CashuToken;
             startOnQrTab?: boolean;
             offlineSpent?: boolean;
+            // Set by the Mints picker when choosing a swap destination
+            pickedMintUrl?: string;
         }
     >;
 }
@@ -57,6 +60,14 @@ interface CashuTokenState {
     warningMessage: string;
     infoIndex: number;
     isTokenTooLarge: boolean;
+    swapMode: boolean;
+    destinationMintUrl: string;
+    swapQuote: TokenSwapQuote | null;
+    // The token's mint was contacted for a quote and may need discarding
+    swapQuoted: boolean;
+    swapStarted: boolean;
+    successMessage: string;
+    leftoverSats?: number;
 }
 
 const MAX_TOKEN_LENGTH = 1000;
@@ -69,13 +80,20 @@ export default class CashuTokenView extends React.Component<
 > {
     checkInterval: ReturnType<typeof setInterval> | null = null;
 
-    state = {
+    state: CashuTokenState = {
         updatedToken: undefined,
         success: false,
         errorMessage: '',
         warningMessage: '',
         infoIndex: 0,
-        isTokenTooLarge: false
+        isTokenTooLarge: false,
+        swapMode: false,
+        destinationMintUrl: '',
+        swapQuote: null,
+        swapQuoted: false,
+        swapStarted: false,
+        successMessage: '',
+        leftoverSats: undefined
     };
 
     private stopCheckingInterval = () => {
@@ -93,7 +111,7 @@ export default class CashuTokenView extends React.Component<
             clearToken,
             initializeWallet,
             cashuWallets,
-            mintUrls
+            isKnownMint
         } = CashuStore!!;
 
         clearToken();
@@ -127,7 +145,7 @@ export default class CashuTokenView extends React.Component<
         // is deferred to the explicit Add Mint / Receive actions. This mirrors
         // the cashu.me wallet, which decodes tokens offline and only reaches an
         // untrusted mint on an explicit user action.
-        const haveMint = mintUrls.includes(mint);
+        const haveMint = isKnownMint(mint);
 
         if (!spent && haveMint) {
             if (__DEV__) {
@@ -157,9 +175,99 @@ export default class CashuTokenView extends React.Component<
         }
     }
 
+    componentDidUpdate(prevProps: CashuTokenProps) {
+        const pickedMintUrl = this.props.route.params?.pickedMintUrl;
+        if (
+            pickedMintUrl &&
+            pickedMintUrl !== prevProps.route.params?.pickedMintUrl
+        ) {
+            this.setState({
+                destinationMintUrl: pickedMintUrl,
+                swapQuote: null,
+                errorMessage: ''
+            });
+        }
+    }
+
     componentWillUnmount() {
         this.stopCheckingInterval();
+        this.discardQuotedMint();
     }
+
+    // A quote registers the token's mint in CDK. If the user backs out
+    // before swapping, remove it so it cannot slip into their mint list.
+    private discardQuotedMint = () => {
+        const { swapQuoted, swapStarted } = this.state;
+        if (swapQuoted && !swapStarted) {
+            this.props.CashuStore.discardTransitMint(
+                this.props.route.params.decoded.mint
+            );
+        }
+    };
+
+    private defaultDestinationMint = (): string => {
+        const { selectedMintUrl, mintUrls, isKnownMint } =
+            this.props.CashuStore;
+        return selectedMintUrl && isKnownMint(selectedMintUrl)
+            ? selectedMintUrl
+            : mintUrls[0] || '';
+    };
+
+    private getSwapQuote = async () => {
+        const { CashuStore, route } = this.props;
+        const { destinationMintUrl } = this.state;
+        this.setState({ errorMessage: '', swapQuoted: true });
+        try {
+            const swapQuote = await CashuStore.quoteTokenSwap(
+                route.params.decoded,
+                destinationMintUrl
+            );
+            this.setState({ swapQuote });
+        } catch (e: any) {
+            this.setState({
+                errorMessage:
+                    e?.message || localeString('stores.CashuStore.claimError')
+            });
+        }
+    };
+
+    private confirmSwap = async (encodedToken: string) => {
+        const { CashuStore, route } = this.props;
+        const { destinationMintUrl, swapQuote } = this.state;
+        if (!swapQuote) return;
+        this.setState({
+            errorMessage: '',
+            warningMessage: '',
+            swapStarted: true
+        });
+
+        const { success, errorMessage, warningMessage, leftoverSats } =
+            await CashuStore.swapTokenToMint(
+                encodedToken,
+                route.params.decoded,
+                destinationMintUrl,
+                swapQuote.feeReserve
+            );
+
+        if (!success) {
+            // Nothing was redeemed, so the token's mint can still be
+            // discarded when the user leaves
+            this.setState({
+                errorMessage,
+                swapStarted: false,
+                swapQuote: null
+            });
+            return;
+        }
+        this.setState({
+            success,
+            warningMessage: warningMessage || '',
+            leftoverSats,
+            successMessage: localeString('views.Cashu.CashuToken.swapSuccess', {
+                destMintName: CashuStore.getMintName(destinationMintUrl)
+            })
+        });
+    };
 
     shareGiftLink = async (token: string) => {
         const giftUrl = `${ZEUS_ECASH_GIFT_URL}${token}`;
@@ -198,7 +306,12 @@ export default class CashuTokenView extends React.Component<
             warningMessage,
             updatedToken,
             infoIndex,
-            isTokenTooLarge
+            isTokenTooLarge,
+            swapMode,
+            destinationMintUrl,
+            swapQuote,
+            successMessage,
+            leftoverSats
         } = this.state;
         const {
             mintUrls,
@@ -206,7 +319,10 @@ export default class CashuTokenView extends React.Component<
             claimToken,
             loading,
             errorAddingMint,
-            error_msg: storeErrorMsg
+            error_msg: storeErrorMsg,
+            isKnownMint,
+            isOffline,
+            getMintName
         } = CashuStore!!;
         const decoded = updatedToken || route.params?.decoded;
         const {
@@ -226,9 +342,53 @@ export default class CashuTokenView extends React.Component<
         const token: string = route.params?.token || encodedToken || '';
         const isSpent = spent || route.params?.offlineSpent;
 
-        const haveMint = mintUrls.includes(mint);
+        const haveMint = isKnownMint(mint);
         const hasOpenChannels = ChannelsStore?.channels?.length > 0;
         const enableCashu = settingsStore.settings.ecash?.enableCashu;
+        const canSwap =
+            !haveMint &&
+            !!enableCashu &&
+            mintUrls.length > 0 &&
+            isSupported &&
+            !isOffline &&
+            BackendUtils.supportsCashuWallet();
+        const showSwapPanel = swapMode && !success && !warningMessage;
+
+        const addMintButton = (
+            <Button
+                title={localeString(
+                    enableCashu
+                        ? 'views.Cashu.AddMint.title'
+                        : 'views.Cashu.AddMint.enableAndAdd'
+                )}
+                onPress={async () => {
+                    CashuStore.setLoading(true);
+                    try {
+                        if (!enableCashu) {
+                            await settingsStore.updateSettings({
+                                ecash: {
+                                    ...(settingsStore.settings.ecash || {}),
+                                    enableCashu: true
+                                }
+                            });
+                            await CashuStore.initializeWallets();
+                        }
+                        await addMint(mint);
+                    } catch (e) {
+                        console.error('Error enabling Cashu / adding mint:', e);
+                        this.setState({
+                            errorMessage: localeString(
+                                'stores.CashuStore.errorAddingMint'
+                            )
+                        });
+                        CashuStore.setLoading(false);
+                    }
+                }}
+                containerStyle={{ marginTop: 15 }}
+                disabled={!isSupported || loading}
+                tertiary
+            />
+        );
 
         const groupStyles = getButtonGroupStyles();
 
@@ -297,8 +457,21 @@ export default class CashuTokenView extends React.Component<
                 <ScrollView keyboardShouldPersistTaps="handled">
                     {success && !warningMessage && (
                         <SuccessMessage
+                            message={
+                                successMessage ||
+                                localeString('views.Cashu.CashuToken.success')
+                            }
+                        />
+                    )}
+
+                    {success && !!leftoverSats && !haveMint && (
+                        <WarningMessage
                             message={localeString(
-                                'views.Cashu.CashuToken.success'
+                                'views.Cashu.CashuToken.swapLeftover',
+                                {
+                                    amount: leftoverSats,
+                                    mintName: getMintName(mint)
+                                }
                             )}
                         />
                     )}
@@ -421,6 +594,68 @@ export default class CashuTokenView extends React.Component<
                                     sensitive
                                 />
                             )}
+
+                            {showSwapPanel && (
+                                <View style={styles.swapPanel}>
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Cashu.CashuToken.swapExplainer',
+                                            { mintName: getMintName(mint) }
+                                        )}
+                                    </Text>
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            ...styles.swapLabel,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Cashu.CashuToken.swapDestination'
+                                        )}
+                                    </Text>
+                                    <EcashMintPicker
+                                        navigation={navigation}
+                                        overrideMintUrl={destinationMintUrl}
+                                        disableRandom
+                                        disabled={loading}
+                                        onPress={() => {
+                                            if (loading) return;
+                                            navigation.navigate('Mints', {
+                                                pickFor: 'CashuToken',
+                                                pickedMintUrl:
+                                                    destinationMintUrl
+                                            });
+                                        }}
+                                    />
+                                    {swapQuote && (
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                ...styles.swapLabel,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.Cashu.CashuToken.swapQuoteSummary',
+                                                {
+                                                    amount: swapQuote.estimatedReceive,
+                                                    fee: swapQuote.feeReserve,
+                                                    destMintName:
+                                                        getMintName(
+                                                            destinationMintUrl
+                                                        )
+                                                }
+                                            )}
+                                        </Text>
+                                    )}
+                                </View>
+                            )}
                         </View>
                     )}
 
@@ -441,6 +676,7 @@ export default class CashuTokenView extends React.Component<
                     !received &&
                     !pendingClaim && (
                         <View style={{ bottom: 15 }}>
+                            {!!leftoverSats && !haveMint && addMintButton}
                             <Button
                                 title={localeString(
                                     'views.SendingLightning.goToWallet'
@@ -464,77 +700,135 @@ export default class CashuTokenView extends React.Component<
                     !pendingClaim &&
                     (!sent || (sent && !spent)) && (
                         <View style={{ bottom: 15 }}>
-                            {BackendUtils.supportsCashuWallet() && (
+                            {showSwapPanel ? (
                                 <>
-                                    {!haveMint && (
+                                    <Button
+                                        title={localeString(
+                                            swapQuote
+                                                ? 'general.confirm'
+                                                : 'views.Cashu.CashuToken.swapGetQuote'
+                                        )}
+                                        onPress={() =>
+                                            swapQuote
+                                                ? this.confirmSwap(
+                                                      encodedToken!
+                                                  )
+                                                : this.getSwapQuote()
+                                        }
+                                        containerStyle={{ marginTop: 15 }}
+                                        disabled={
+                                            loading || !destinationMintUrl
+                                        }
+                                    />
+                                    <Button
+                                        title={localeString('general.cancel')}
+                                        onPress={() => {
+                                            this.discardQuotedMint();
+                                            this.setState({
+                                                swapMode: false,
+                                                swapQuote: null,
+                                                swapQuoted: false,
+                                                errorMessage: ''
+                                            });
+                                        }}
+                                        containerStyle={{ marginTop: 15 }}
+                                        disabled={loading}
+                                        secondary
+                                    />
+                                </>
+                            ) : (
+                                <>
+                                    {BackendUtils.supportsCashuWallet() && (
+                                        <>
+                                            {!haveMint && addMintButton}
+                                            <Button
+                                                title={localeString(
+                                                    'general.receive'
+                                                )}
+                                                onPress={async () => {
+                                                    this.setState({
+                                                        errorMessage: '',
+                                                        warningMessage: ''
+                                                    });
+
+                                                    // Use encodedToken from decoded (clean, no cashu: prefix)
+                                                    const {
+                                                        success,
+                                                        errorMessage,
+                                                        warningMessage
+                                                    } = await claimToken(
+                                                        encodedToken!,
+                                                        decoded
+                                                    );
+                                                    if (errorMessage) {
+                                                        this.setState({
+                                                            errorMessage
+                                                        });
+                                                    } else if (warningMessage) {
+                                                        this.setState({
+                                                            success,
+                                                            warningMessage
+                                                        });
+                                                    } else if (success) {
+                                                        this.setState({
+                                                            success
+                                                        });
+                                                    }
+                                                }}
+                                                containerStyle={{
+                                                    marginTop: 15
+                                                }}
+                                                disabled={
+                                                    !haveMint ||
+                                                    errorAddingMint ||
+                                                    !isSupported ||
+                                                    loading
+                                                }
+                                            />
+                                        </>
+                                    )}
+                                    {canSwap && (
                                         <Button
                                             title={localeString(
-                                                enableCashu
-                                                    ? 'views.Cashu.AddMint.title'
-                                                    : 'views.Cashu.AddMint.enableAndAdd'
+                                                'views.Cashu.CashuToken.receiveToAnotherMint'
                                             )}
-                                            onPress={async () => {
-                                                CashuStore.setLoading(true);
-                                                try {
-                                                    if (!enableCashu) {
-                                                        await settingsStore.updateSettings(
-                                                            {
-                                                                ecash: {
-                                                                    ...(settingsStore
-                                                                        .settings
-                                                                        .ecash ||
-                                                                        {}),
-                                                                    enableCashu:
-                                                                        true
-                                                                }
-                                                            }
-                                                        );
-                                                        await CashuStore.initializeWallets();
-                                                    }
-                                                    await addMint(mint);
-                                                } catch (e) {
-                                                    console.error(
-                                                        'Error enabling Cashu / adding mint:',
-                                                        e
-                                                    );
-                                                    this.setState({
-                                                        errorMessage:
-                                                            localeString(
-                                                                'stores.CashuStore.errorAddingMint'
-                                                            )
-                                                    });
-                                                    CashuStore.setLoading(
-                                                        false
-                                                    );
-                                                }
-                                            }}
+                                            onPress={() =>
+                                                this.setState({
+                                                    swapMode: true,
+                                                    destinationMintUrl:
+                                                        destinationMintUrl ||
+                                                        this.defaultDestinationMint(),
+                                                    errorMessage: ''
+                                                })
+                                            }
                                             containerStyle={{ marginTop: 15 }}
-                                            disabled={!isSupported || loading}
-                                            tertiary
+                                            disabled={loading}
+                                            secondary
                                         />
                                     )}
                                     <Button
-                                        title={localeString('general.receive')}
+                                        title={localeString(
+                                            BackendUtils.supportsChannelManagement()
+                                                ? 'views.Cashu.CashuToken.meltTokenSelfCustody'
+                                                : 'general.receive'
+                                        )}
                                         onPress={async () => {
                                             this.setState({
                                                 errorMessage: '',
                                                 warningMessage: ''
                                             });
 
-                                            // Use encodedToken from decoded (clean, no cashu: prefix)
                                             const {
                                                 success,
                                                 errorMessage,
                                                 warningMessage
                                             } = await claimToken(
                                                 encodedToken!,
-                                                decoded
+                                                decoded,
+                                                true
                                             );
-                                            if (errorMessage) {
-                                                this.setState({
-                                                    errorMessage
-                                                });
-                                            } else if (warningMessage) {
+
+                                            if (warningMessage) {
                                                 this.setState({
                                                     success,
                                                     warningMessage
@@ -543,68 +837,27 @@ export default class CashuTokenView extends React.Component<
                                                 this.setState({
                                                     success
                                                 });
+                                            } else {
+                                                this.setState({
+                                                    errorMessage:
+                                                        errorMessage ||
+                                                        localeString(
+                                                            'stores.CashuStore.claimError'
+                                                        )
+                                                });
                                             }
                                         }}
                                         containerStyle={{ marginTop: 15 }}
                                         disabled={
-                                            !haveMint ||
-                                            errorAddingMint ||
+                                            (BackendUtils.supportsChannelManagement() &&
+                                                !hasOpenChannels) ||
                                             !isSupported ||
                                             loading
                                         }
+                                        secondary
                                     />
                                 </>
                             )}
-                            <Button
-                                title={localeString(
-                                    BackendUtils.supportsChannelManagement()
-                                        ? 'views.Cashu.CashuToken.meltTokenSelfCustody'
-                                        : 'general.receive'
-                                )}
-                                onPress={async () => {
-                                    this.setState({
-                                        errorMessage: '',
-                                        warningMessage: ''
-                                    });
-
-                                    const {
-                                        success,
-                                        errorMessage,
-                                        warningMessage
-                                    } = await claimToken(
-                                        encodedToken!,
-                                        decoded,
-                                        true
-                                    );
-
-                                    if (warningMessage) {
-                                        this.setState({
-                                            success,
-                                            warningMessage
-                                        });
-                                    } else if (success) {
-                                        this.setState({
-                                            success
-                                        });
-                                    } else {
-                                        this.setState({
-                                            errorMessage:
-                                                errorMessage ||
-                                                localeString(
-                                                    'stores.CashuStore.claimError'
-                                                )
-                                        });
-                                    }
-                                }}
-                                containerStyle={{ marginTop: 15 }}
-                                disabled={
-                                    (BackendUtils.supportsChannelManagement() &&
-                                        !hasOpenChannels) ||
-                                    !isSupported ||
-                                    loading
-                                }
-                                secondary
-                            />
                         </View>
                     )}
                 {infoIndex === 0 &&
@@ -674,5 +927,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingTop: 15,
         paddingBottom: 15
+    },
+    swapPanel: {
+        paddingTop: 15
+    },
+    swapLabel: {
+        paddingTop: 10,
+        paddingBottom: 5
     }
 });

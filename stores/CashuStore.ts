@@ -159,6 +159,13 @@ interface ClaimTokenResponse {
     success: boolean;
     errorMessage: string;
     warningMessage?: string;
+    // Sats left at the token's mint after a swap (unused fee reserve)
+    leftoverSats?: number;
+}
+
+export interface TokenSwapQuote {
+    feeReserve: number;
+    estimatedReceive: number;
 }
 
 // Reason a mint was excluded by the multi-mint planner. 'selfSend' marks
@@ -175,6 +182,10 @@ type MultimintSkipReason =
     | 'networkError';
 
 export default class CashuStore {
+    // How long swapTokenToMint waits for the destination mint to issue
+    static TOKEN_SWAP_POLL_ATTEMPTS = 10;
+    static TOKEN_SWAP_POLL_MS = 3000;
+
     private getPayReqRequestId = 0;
 
     @observable public mintUrls: Array<string>;
@@ -191,6 +202,10 @@ export default class CashuStore {
     @observable public payments?: Array<CashuPayment>;
     @observable public receivedTokens?: Array<CashuToken>;
     @observable public sentTokens?: Array<CashuToken>;
+    // Mints a token was redeemed through on its way to self-custody or
+    // another mint. Their CDK transactions are hidden from activity unless
+    // the user adds the mint.
+    @observable public transitMintUrls: string[] = [];
     // CDK transactions loaded from history (CashuInvoice for incoming, CashuPayment for outgoing)
     @observable public cdkInvoices: Array<CashuInvoice> = [];
     @observable public seedVersion?: string;
@@ -414,10 +429,17 @@ export default class CashuStore {
     /**
      * Normalize mint URL for consistent comparison
      */
-    private normalizeMintUrl = (url: string): string => {
-        // Remove trailing slash for consistent format
-        return url.replace(/\/+$/, '');
-    };
+    private normalizeMintUrl = (url: string): string =>
+        CashuUtils.normalizeMintUrl(url);
+
+    /**
+     * Whether the mint is in the user's added mints (not merely registered in
+     * CDK, which also happens for mints a token was redeemed through)
+     */
+    public isKnownMint = (mintUrl: string): boolean =>
+        (this.mintUrls || []).some((url) =>
+            CashuUtils.isSameMintUrl(url, mintUrl)
+        );
 
     /**
      * Ensure a mint is added to CDK, using cache to avoid redundant calls.
@@ -699,13 +721,22 @@ export default class CashuStore {
                 (await CashuDevKit.listTransactions()) || [];
             runInAction(() => {
                 this.cdkInvoices = cdkTransactions
-                    .filter((tx) => tx.direction === 'incoming')
+                    .filter(
+                        (tx) =>
+                            tx.direction === 'incoming' &&
+                            !this.isTransitOnlyMint(tx.mint_url)
+                    )
                     .map((tx) => CashuInvoice.fromCDKTransaction(tx));
             });
         } catch (e) {
             console.error('CDK: Failed to load transactions:', e);
         }
     };
+
+    private isTransitOnlyMint = (mintUrl: string): boolean =>
+        this.transitMintUrls.some((url) =>
+            CashuUtils.isSameMintUrl(url, mintUrl)
+        ) && !this.isKnownMint(mintUrl);
 
     /**
      * Fetch mint info from CDK for a specific mint
@@ -1871,6 +1902,7 @@ export default class CashuStore {
         this.payments = undefined;
         this.receivedTokens = undefined;
         this.sentTokens = undefined;
+        this.transitMintUrls = [];
         this.seedVersion = undefined;
         this.seedPhrase = undefined;
         this.seed = undefined;
@@ -3297,7 +3329,8 @@ export default class CashuStore {
             storedSeedPhrase,
             storedSeed,
             storedRandomizeMintSelection,
-            storedMultiMintSelectedUrls
+            storedMultiMintSelectedUrls,
+            storedTransitMintUrls
         ] = await Promise.all([
             Storage.getItem(`${lndDir}-cashu-mintUrls`),
             Storage.getItem(`${lndDir}-cashu-selectedMintUrl`),
@@ -3310,7 +3343,8 @@ export default class CashuStore {
             Storage.getItem(`${lndDir}-cashu-seed-phrase`),
             Storage.getItem(`${lndDir}-cashu-seed`),
             Storage.getItem(`${lndDir}-cashu-randomizeMintSelection`),
-            Storage.getItem(`${lndDir}-cashu-multiMintSelectedUrls`)
+            Storage.getItem(`${lndDir}-cashu-multiMintSelectedUrls`),
+            Storage.getItem(`${lndDir}-cashu-transitMints`)
         ]);
 
         // Parse app-specific stored data
@@ -3325,6 +3359,9 @@ export default class CashuStore {
             ? JSON.parse(storedMultiMintSelectedUrls)
             : this.selectedMintUrls.length > 0
             ? [...this.selectedMintUrls]
+            : [];
+        this.transitMintUrls = storedTransitMintUrls
+            ? JSON.parse(storedTransitMintUrls)
             : [];
         this.invoices = storedInvoices
             ? JSON.parse(storedInvoices).map(
@@ -3915,41 +3952,8 @@ export default class CashuStore {
                 value ? Number(value) : 0,
                 memo
             );
-            const mintQuote = {
-                quote: cdkQuote.id,
-                request: cdkQuote.request,
-                state: cdkQuote.state,
-                expiry: cdkQuote.expiry
-            };
-
-            let invoice: any;
-            if (mintQuote) {
-                this.quoteId = mintQuote.quote;
-
-                // decode bolt11 for metadata
-                let decoded;
-                try {
-                    decoded = Bolt11Utils.decode(mintQuote.request);
-                } catch (e) {
-                    if (__DEV__) {
-                        console.log(
-                            'error decoding Cashu bolt11',
-                            mintQuote.request
-                        );
-                    }
-                }
-
-                invoice = new CashuInvoice({
-                    ...mintQuote,
-                    decoded,
-                    mintUrl
-                });
-                this.invoices?.push(invoice);
-                await Storage.setItem(
-                    `${this.getNodeDir()}-cashu-invoices`,
-                    this.invoices
-                );
-            }
+            this.quoteId = cdkQuote.id;
+            const invoice = await this.persistMintQuote(cdkQuote, mintUrl);
 
             runInAction(() => {
                 this.invoice = invoice?.getPaymentRequest;
@@ -4015,6 +4019,40 @@ export default class CashuStore {
                 )}: ${error_msg}`;
             });
         }
+    };
+
+    /**
+     * Save a mint quote as a CashuInvoice so checkPendingItems keeps
+     * checking it until it is paid or expires
+     */
+    private persistMintQuote = async (
+        cdkQuote: CDKMintQuote,
+        mintUrl: string
+    ): Promise<CashuInvoice> => {
+        // decode bolt11 for metadata
+        let decoded;
+        try {
+            decoded = Bolt11Utils.decode(cdkQuote.request);
+        } catch (e) {
+            if (__DEV__) {
+                console.log('error decoding Cashu bolt11', cdkQuote.request);
+            }
+        }
+
+        const invoice = new CashuInvoice({
+            quote: cdkQuote.id,
+            request: cdkQuote.request,
+            state: cdkQuote.state,
+            expiry: cdkQuote.expiry,
+            decoded,
+            mintUrl
+        });
+        this.invoices?.push(invoice);
+        await Storage.setItem(
+            `${this.getNodeDir()}-cashu-invoices`,
+            this.invoices
+        );
+        return invoice;
     };
 
     @action
@@ -5242,28 +5280,11 @@ export default class CashuStore {
         const mintUrl = decoded.mint;
 
         try {
-            // Ensure CDK is initialized
-            if (!this.cdkInitialized) {
-                const initialized = await this.initializeCDK();
-                if (!initialized) {
-                    throw new Error('CDK wallet not initialized');
-                }
-            }
-
-            // Check if token is valid
-            const isValid = await CashuDevKit.isValidToken(encodedToken);
-            if (!isValid) {
+            const invalidToken = await this.checkTokenBeforeClaim(encodedToken);
+            if (invalidToken) {
                 this.loading = false;
-                return {
-                    success: false,
-                    errorMessage: localeString('stores.CashuStore.invalidToken')
-                };
+                return invalidToken;
             }
-
-            const isLocked = CashuUtils.isTokenP2PKLocked(decoded);
-            const signingKey = isLocked
-                ? this.deriveCashuSecretKey() ?? undefined
-                : undefined;
 
             if (toSelfCustody) {
                 // Prepare the sweep invoice and fee probe BEFORE receiving
@@ -5276,36 +5297,40 @@ export default class CashuStore {
                     'views.Cashu.CashuToken.tokenSweep'
                 )}${decoded.memo ? `: ${decoded.memo}` : ''}`;
 
-                const invoiceParams = {
-                    expirySeconds: '3600',
-                    routeHints: true,
-                    noLsp: true
+                const createSweepInvoice = async (
+                    amountSat: number,
+                    feeAdjusted: boolean
+                ): Promise<string> => {
+                    const invoice = await this.invoicesStore.createInvoice({
+                        expirySeconds: '3600',
+                        routeHints: true,
+                        noLsp: true,
+                        memo: feeAdjusted
+                            ? `${memo} [${localeString(
+                                  'views.Cashu.CashuToken.feeAdjusted'
+                              )}]`
+                            : memo,
+                        value: String(amountSat)
+                    });
+                    if (!invoice?.paymentRequest) {
+                        throw new Error(
+                            localeString(
+                                'stores.InvoicesStore.errorCreatingInvoice'
+                            )
+                        );
+                    }
+                    return invoice.paymentRequest;
                 };
 
-                // Create invoice for sweeping
-                let invoice = await this.invoicesStore.createInvoice({
-                    ...invoiceParams,
-                    memo,
-                    value: String(tokenAmt)
-                });
-
-                if (!invoice?.paymentRequest) {
-                    this.loading = false;
-                    return {
-                        success: false,
-                        errorMessage: localeString(
-                            'stores.InvoicesStore.errorCreatingInvoice'
-                        )
-                    };
-                }
+                const probeInvoice = await createSweepInvoice(tokenAmt, false);
 
                 // Probe the melt fee via CDK
-                const meltQuote = await this.createMeltQuoteCDK(
+                const probeQuote = await this.createMeltQuoteCDK(
                     mintUrl,
-                    invoice.paymentRequest
+                    probeInvoice
                 );
 
-                if (meltQuote.fee_reserve >= tokenAmt) {
+                if (probeQuote.fee_reserve >= tokenAmt) {
                     this.loading = false;
                     return {
                         success: false,
@@ -5315,105 +5340,459 @@ export default class CashuStore {
                     };
                 }
 
-                // Pass signing key only when token is P2PK-locked (decoded has proofs)
-
                 // Point of no return: this consumes the token and credits
                 // the wallet's own balance at the mint
-                const receivedAmt = await this.receiveTokenCDK(
+                const receivedAmt = await this.receiveTransitToken(
                     encodedToken,
-                    signingKey,
                     mintUrl
                 );
-                await this.syncCDKBalances();
 
-                try {
-                    // The mint may credit less than face value (input fees),
-                    // so size the sweep from what was actually received
-                    const receiveAmtSat = receivedAmt - meltQuote.fee_reserve;
-                    if (receiveAmtSat <= 0) {
-                        throw new Error(
-                            localeString('stores.CashuStore.feeExceedsAmt')
-                        );
-                    }
-
-                    if (meltQuote.fee_reserve > 0 || receivedAmt !== tokenAmt) {
-                        // Recreate invoice with adjusted amount
-                        invoice = await this.invoicesStore.createInvoice({
-                            ...invoiceParams,
-                            memo: `${memo} [${localeString(
-                                'views.Cashu.CashuToken.feeAdjusted'
-                            )}]`,
-                            value: receiveAmtSat.toString()
-                        });
-
-                        if (!invoice?.paymentRequest) {
-                            throw new Error(
-                                localeString(
-                                    'stores.InvoicesStore.errorCreatingInvoice'
-                                )
-                            );
-                        }
-                    }
-
-                    // Melt via CDK to pay the invoice
-                    await this.meltCDK(mintUrl, invoice.paymentRequest);
-
-                    await this.syncCDKBalances(true); // Include transactions for activity
-                } catch (sweepError: any) {
-                    // The token is now spent and its value sits in the
-                    // wallet's own balance at the mint, so a failed sweep
-                    // must not read as a failed claim: a retry would only
-                    // hit "token already spent" against our own receive
-                    console.error('CDK claimToken sweep error:', sweepError);
-                    await this.syncCDKBalances(true);
+                const melt = await this.meltRedeemedToken(
+                    mintUrl,
+                    receivedAmt,
+                    probeQuote.fee_reserve,
+                    (amountSat) =>
+                        amountSat === tokenAmt
+                            ? Promise.resolve(probeInvoice)
+                            : createSweepInvoice(amountSat, true),
+                    localeString('stores.CashuStore.selfCustodySweepFailed', {
+                        mintName: this.getMintName(mintUrl)
+                    })
+                );
+                if (melt.warningMessage) {
                     this.loading = false;
                     return {
                         success: true,
                         errorMessage: '',
-                        warningMessage: localeString(
-                            'stores.CashuStore.selfCustodySweepFailed',
-                            { mintName: this.getMintName(mintUrl) }
-                        )
+                        warningMessage: melt.warningMessage
                     };
                 }
-            } else {
-                // Regular receive via CDK
-                await this.receiveTokenCDK(encodedToken, signingKey, mintUrl);
 
-                // CDK handles balance updates internally and records the
-                // transaction, so no need to also push to receivedTokens
-                await this.syncCDKBalances(true); // Include transactions for activity
-
-                this.checkAndSweepMints(mintUrl);
+                const leftoverSats = await this.releaseTransitMint(mintUrl);
+                this.loading = false;
+                return { success: true, errorMessage: '', leftoverSats };
             }
+
+            const isLocked = CashuUtils.isTokenP2PKLocked(decoded);
+            const signingKey = isLocked
+                ? this.deriveCashuSecretKey() ?? undefined
+                : undefined;
+
+            // Regular receive via CDK
+            await this.receiveTokenCDK(encodedToken, signingKey, mintUrl);
+
+            // CDK handles balance updates internally and records the
+            // transaction, so no need to also push to receivedTokens
+            await this.syncCDKBalances(true); // Include transactions for activity
+
+            this.checkAndSweepMints(mintUrl);
 
             this.loading = false;
             return { success: true, errorMessage: '' };
         } catch (e: any) {
             console.error('CDK claimToken error:', e);
-            if (e.message?.includes('spent') || e.message?.includes('Spent')) {
-                this.loading = false;
-                return {
-                    success: false,
-                    errorMessage: localeString('stores.CashuStore.alreadySpent')
-                };
+            this.loading = false;
+            return this.claimErrorResponse(e);
+        }
+    };
+
+    /**
+     * Get a quote for moving a token from a mint the user has not added into
+     * one of their mints. Contacts both mints but does not touch the token,
+     * so the user can back out.
+     */
+    @action
+    public quoteTokenSwap = async (
+        decoded: CashuToken,
+        destMintUrl: string
+    ): Promise<TokenSwapQuote> => {
+        this.loading = true;
+        try {
+            if (!this.cdkInitialized && !(await this.initializeCDK())) {
+                throw new Error('CDK wallet not initialized');
             }
-            if (CashuUtils.isTokenLockedError(e)) {
-                this.loading = false;
-                return {
-                    success: false,
-                    errorMessage: localeString(
-                        'stores.CashuStore.claimError.lockedToWallet'
-                    )
-                };
+
+            const tokenAmt = decoded.getAmount;
+            const destQuote = await this.createMintQuoteCDK(
+                destMintUrl,
+                tokenAmt
+            );
+            const meltQuote = await this.createMeltQuoteCDK(
+                decoded.mint,
+                destQuote.request
+            );
+            if (meltQuote.fee_reserve >= tokenAmt) {
+                throw new Error(
+                    localeString('stores.CashuStore.feeExceedsAmt')
+                );
             }
+
+            return {
+                feeReserve: meltQuote.fee_reserve,
+                estimatedReceive: tokenAmt - meltQuote.fee_reserve
+            };
+        } finally {
+            runInAction(() => {
+                this.loading = false;
+            });
+        }
+    };
+
+    /**
+     * Redeem a token at its mint and melt the value into a mint quote from
+     * destMintUrl, so the funds end up at a mint the user already uses.
+     * probeFeeReserve comes from quoteTokenSwap.
+     */
+    @action
+    public swapTokenToMint = async (
+        encodedToken: string,
+        decoded: CashuToken,
+        destMintUrl: string,
+        probeFeeReserve: number
+    ): Promise<ClaimTokenResponse> => {
+        this.loading = true;
+
+        if (this.isOffline) {
             this.loading = false;
             return {
                 success: false,
-                errorMessage:
-                    e.message || localeString('stores.CashuStore.claimError')
+                errorMessage: localeString('stores.CashuStore.swapOffline')
             };
         }
+
+        const mintUrl = decoded.mint;
+        const destMintName = this.getMintName(destMintUrl);
+
+        try {
+            const invalidToken = await this.checkTokenBeforeClaim(encodedToken);
+            if (invalidToken) {
+                this.loading = false;
+                return invalidToken;
+            }
+
+            const memo = `${localeString('views.Cashu.CashuToken.tokenSwap')}${
+                decoded.memo ? `: ${decoded.memo}` : ''
+            }`;
+
+            // Point of no return: this consumes the token and credits the
+            // wallet's own balance at the token's mint
+            const receivedAmt = await this.receiveTransitToken(
+                encodedToken,
+                mintUrl
+            );
+
+            // Save each destination quote before it is paid so that
+            // checkPendingItems can still mint it if the app is closed
+            // before the poll below finishes
+            let destQuoteId = '';
+            const melt = await this.meltRedeemedToken(
+                mintUrl,
+                receivedAmt,
+                probeFeeReserve,
+                async (amountSat) => {
+                    const quote = await this.createMintQuoteCDK(
+                        destMintUrl,
+                        amountSat,
+                        memo
+                    );
+                    await this.persistMintQuote(quote, destMintUrl);
+                    destQuoteId = quote.id;
+                    return quote.request;
+                },
+                localeString('stores.CashuStore.swapFailed', {
+                    mintName: this.getMintName(mintUrl),
+                    destMintName
+                })
+            );
+            if (melt.warningMessage) {
+                this.loading = false;
+                return {
+                    success: true,
+                    errorMessage: '',
+                    warningMessage: melt.warningMessage
+                };
+            }
+
+            const minted = await this.waitForMintQuote(
+                destQuoteId,
+                destMintUrl
+            );
+            const leftoverSats = await this.releaseTransitMint(mintUrl);
+
+            this.loading = false;
+            return {
+                success: true,
+                errorMessage: '',
+                warningMessage: minted
+                    ? undefined
+                    : localeString('stores.CashuStore.swapProcessing', {
+                          destMintName
+                      }),
+                leftoverSats
+            };
+        } catch (e: any) {
+            console.error('CDK swapTokenToMint error:', e);
+            this.loading = false;
+            return this.claimErrorResponse(e);
+        }
+    };
+
+    /**
+     * Remove a mint that was only contacted to quote a swap or sweep, so it
+     * does not end up in the user's mint list. Leaves mints the user added
+     * and mints holding a balance.
+     */
+    public discardTransitMint = async (mintUrl: string) => {
+        if (!this.cdkInitialized || this.isKnownMint(mintUrl)) return;
+        try {
+            if ((await CashuDevKit.getMintBalance(mintUrl)) > 0) return;
+            await CashuDevKit.removeMint(mintUrl);
+            this.addedMintsCache.delete(this.normalizeMintUrl(mintUrl));
+        } catch (e) {
+            console.warn(`CDK: Failed to discard transit mint ${mintUrl}:`, e);
+        }
+    };
+
+    private checkTokenBeforeClaim = async (
+        encodedToken: string
+    ): Promise<ClaimTokenResponse | undefined> => {
+        if (!this.cdkInitialized && !(await this.initializeCDK())) {
+            throw new Error('CDK wallet not initialized');
+        }
+        if (!(await CashuDevKit.isValidToken(encodedToken))) {
+            return {
+                success: false,
+                errorMessage: localeString('stores.CashuStore.invalidToken')
+            };
+        }
+        return undefined;
+    };
+
+    private claimErrorResponse = (e: any): ClaimTokenResponse => {
+        if (e?.message?.includes('spent') || e?.message?.includes('Spent')) {
+            return {
+                success: false,
+                errorMessage: localeString('stores.CashuStore.alreadySpent')
+            };
+        }
+        if (CashuUtils.isTokenLockedError(e)) {
+            return {
+                success: false,
+                errorMessage: localeString(
+                    'stores.CashuStore.claimError.lockedToWallet'
+                )
+            };
+        }
+        return {
+            success: false,
+            errorMessage:
+                e?.message || localeString('stores.CashuStore.claimError')
+        };
+    };
+
+    /**
+     * Receive a token whose value will be melted straight back out. Tokens
+     * from a mint the user has not added decode without proofs, so a P2PK
+     * lock cannot be detected up front; always offer the wallet's key, which
+     * CDK only uses for proofs locked to it.
+     */
+    private receiveTransitToken = async (
+        encodedToken: string,
+        mintUrl: string
+    ): Promise<number> => {
+        if (!this.isKnownMint(mintUrl)) {
+            await this.recordTransitMint(mintUrl);
+        }
+        const receivedAmt = await this.receiveTokenCDK(
+            encodedToken,
+            this.deriveCashuSecretKey() ?? undefined,
+            mintUrl
+        );
+        await this.syncCDKBalances();
+        return receivedAmt;
+    };
+
+    /**
+     * Melt a token already redeemed at mintUrl to pay an invoice from
+     * getInvoice, sized from the amount actually received. The token is
+     * spent at this point, so a failure is returned as a warning rather
+     * than an error: a retry would only hit "token already spent" against
+     * our own receive. A mint the user has not added is added on failure,
+     * because the boot reconcile in initializeWallets would otherwise drop
+     * it and strand the balance.
+     */
+    private meltRedeemedToken = async (
+        mintUrl: string,
+        receivedAmt: number,
+        probeFeeReserve: number,
+        getInvoice: (amountSat: number) => Promise<string>,
+        knownMintFailureMessage: string
+    ): Promise<{ warningMessage?: string }> => {
+        const mintName = this.getMintName(mintUrl);
+        let pending = false;
+
+        try {
+            const inputFee = await this.estimateMeltInputFee(mintUrl);
+            let amountSat = receivedAmt - probeFeeReserve - inputFee;
+            let quote: CDKMeltQuote | undefined;
+
+            // The fee reserve can grow with the final invoice, so re-quote
+            // once at the reduced amount
+            for (let attempt = 0; attempt < 2 && !quote; attempt++) {
+                if (amountSat <= 0) break;
+                const bolt11 = await getInvoice(amountSat);
+                const candidate = await this.createMeltQuoteCDK(
+                    mintUrl,
+                    bolt11
+                );
+                const shortfall =
+                    candidate.amount +
+                    candidate.fee_reserve +
+                    inputFee -
+                    receivedAmt;
+                if (shortfall <= 0) {
+                    quote = candidate;
+                } else {
+                    amountSat -= shortfall;
+                }
+            }
+            if (!quote) {
+                throw new Error(
+                    localeString('stores.CashuStore.feeExceedsAmt')
+                );
+            }
+
+            const result = await CashuDevKit.melt(mintUrl, quote.id);
+            const state = (result?.state || 'PAID').toString().toUpperCase();
+            if (state === 'PAID') {
+                await this.syncCDKBalances(true);
+                return {};
+            }
+            if (state !== 'PENDING') {
+                throw new Error(
+                    localeString('stores.CashuStore.errorPayingInvoice')
+                );
+            }
+            pending = true;
+        } catch (e) {
+            console.error('CDK transit melt error:', e);
+        }
+
+        await this.syncCDKBalances(true);
+
+        if (this.isKnownMint(mintUrl)) {
+            return {
+                warningMessage: pending
+                    ? localeString('stores.CashuStore.transitPending', {
+                          mintName
+                      })
+                    : knownMintFailureMessage
+            };
+        }
+
+        try {
+            await this.addMint(mintUrl);
+        } catch (e) {
+            console.error(`CDK: Failed to keep transit mint ${mintUrl}:`, e);
+        }
+        return {
+            warningMessage: localeString(
+                pending
+                    ? 'stores.CashuStore.transitPending'
+                    : 'stores.CashuStore.transitFailedMintAdded',
+                { mintName }
+            )
+        };
+    };
+
+    /**
+     * Input fee the mint charges to spend every proof held there
+     * (NUT-02 input_fee_ppk, rounded up per transaction)
+     */
+    private estimateMeltInputFee = async (mintUrl: string): Promise<number> => {
+        try {
+            const [keysets, proofs] = await Promise.all([
+                CashuDevKit.getMintKeysets(mintUrl),
+                CashuDevKit.getUnspentProofs(mintUrl)
+            ]);
+            const ppkById = new Map(
+                keysets.map((k) => [k.id, Number(k.input_fee_ppk) || 0])
+            );
+            const totalPpk = proofs.reduce(
+                (sum, proof) => sum + (ppkById.get(proof.keyset_id) || 0),
+                0
+            );
+            return Math.ceil(totalPpk / 1000);
+        } catch (e) {
+            console.warn(`CDK: Could not estimate input fee at ${mintUrl}:`, e);
+            return 0;
+        }
+    };
+
+    /**
+     * Poll a paid mint quote until the destination mint issues the ecash
+     */
+    private waitForMintQuote = async (
+        quoteId: string,
+        mintUrl: string
+    ): Promise<boolean> => {
+        for (let i = 0; i < CashuStore.TOKEN_SWAP_POLL_ATTEMPTS; i++) {
+            try {
+                const { isPaid } = await this.checkInvoicePaid(
+                    quoteId,
+                    mintUrl
+                );
+                if (isPaid) return true;
+            } catch (e) {
+                console.warn(`CDK: Mint quote ${quoteId} not ready:`, e);
+            }
+            await new Promise((resolve) =>
+                setTimeout(resolve, CashuStore.TOKEN_SWAP_POLL_MS)
+            );
+        }
+        return false;
+    };
+
+    /**
+     * After a successful transit melt, drop the token's mint from CDK unless
+     * the user added it. Returns what the unused fee reserve left there;
+     * those proofs stay in the CDK database and come back if the user adds
+     * the mint.
+     */
+    private releaseTransitMint = async (
+        mintUrl: string
+    ): Promise<number | undefined> => {
+        if (this.isKnownMint(mintUrl)) return undefined;
+        let leftover = 0;
+        try {
+            leftover = await CashuDevKit.getMintBalance(mintUrl);
+            await CashuDevKit.removeMint(mintUrl);
+            this.addedMintsCache.delete(this.normalizeMintUrl(mintUrl));
+        } catch (e) {
+            console.warn(`CDK: Failed to release transit mint ${mintUrl}:`, e);
+        }
+        await this.syncCDKBalances(true);
+        return leftover > 0 ? leftover : undefined;
+    };
+
+    private recordTransitMint = async (mintUrl: string) => {
+        if (
+            this.transitMintUrls.some((url) =>
+                CashuUtils.isSameMintUrl(url, mintUrl)
+            )
+        ) {
+            return;
+        }
+        runInAction(() => {
+            this.transitMintUrls = [
+                ...this.transitMintUrls,
+                this.normalizeMintUrl(mintUrl)
+            ];
+        });
+        await Storage.setItem(
+            `${this.getNodeDir()}-cashu-transitMints`,
+            JSON.stringify(this.transitMintUrls)
+        );
     };
 
     @action
@@ -5834,6 +6213,7 @@ export default class CashuStore {
             await Storage.removeItem(`${lndDir}-cashu-offline-pending-tokens`);
             await Storage.removeItem(`${lndDir}-cashu-offline-spent-tokens`);
             await Storage.removeItem(`${lndDir}-cashu-sent-tokens`);
+            await Storage.removeItem(`${lndDir}-cashu-transitMints`);
 
             // Storage.removeItem clears only the device-local partition. A
             // pre-desync synchronizable twin of the seed survives until the
