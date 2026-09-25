@@ -27,8 +27,22 @@ export default function OrderItem({
             }}
         >
             <Row justify="space-between">
-                <Text style={{ color: themeColor('text') }}>{date}</Text>
-                <Text style={{ color: themeColor('text') }}>{money}</Text>
+                <Text
+                    style={{
+                        color: themeColor('text'),
+                        fontFamily: 'PPNeueMontreal-Book'
+                    }}
+                >
+                    {date}
+                </Text>
+                <Text
+                    style={{
+                        color: themeColor('text'),
+                        fontFamily: 'PPNeueMontreal-Book'
+                    }}
+                >
+                    {money}
+                </Text>
             </Row>
             <Row justify="space-between">
                 <View style={{ flex: 1, paddingRight: 10 }}>
