@@ -1391,6 +1391,21 @@ export function getLspConfigForNetwork(
     };
 }
 
+/**
+ * Whether the configured LSPS1 peer is still ZEUS's own Olympus node, for
+ * screens that reach the LSP over the peer transport rather than REST.
+ * The pubkey is the whole test: the handshake proves the remote holds that
+ * key, so a custom host either reaches Olympus or fails to connect. Matches
+ * LSPStore.isOlympus and the fixed aliases in ChannelsStore.
+ */
+export function isOlympusPeer(
+    settings: Settings,
+    network: string | { isMutinynet: boolean; isTestNet: boolean }
+): boolean {
+    const config = getLspConfigForNetwork(settings, network);
+    return config.lsps1Pubkey === config.defaultPubkey;
+}
+
 // Swaps
 export const DEFAULT_SWAP_HOST_MAINNET = 'https://satsrouting.exchange/v2';
 export const DEFAULT_SWAP_HOST_TESTNET =

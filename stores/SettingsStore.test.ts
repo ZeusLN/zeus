@@ -94,7 +94,8 @@ import SettingsStore, {
     DEFAULT_LSPS1_REST_MUTINYNET,
     DEFAULT_LSPS1_REST_TESTNET,
     STORAGE_KEY,
-    getLspConfigForNetwork
+    getLspConfigForNetwork,
+    isOlympusPeer
 } from './SettingsStore';
 
 const StorageMock: any = jest.requireMock('../storage');
@@ -407,4 +408,37 @@ describe('getLspConfigForNetwork', () => {
             expect(config.defaultPubkey).toEqual(pubkey);
         }
     );
+});
+
+// Open Channel names the LSPS1 peer it dials, so it has to tell ZEUS's own
+// node from one the user pointed elsewhere.
+describe('isOlympusPeer', () => {
+    it('is true on the shipped defaults', () => {
+        expect(isOlympusPeer({} as any, 'mainnet')).toEqual(true);
+        expect(isOlympusPeer({} as any, 'testnet')).toEqual(true);
+        expect(isOlympusPeer({} as any, 'mutinynet')).toEqual(true);
+    });
+
+    it('is false when the pubkey is customized', () => {
+        expect(
+            isOlympusPeer({ lsps1PubkeyMainnet: '02abc' } as any, 'mainnet')
+        ).toEqual(false);
+    });
+
+    // the handshake is keyed on the pubkey, so a custom address for the same
+    // node is still Olympus
+    it('is true when only the host is customized', () => {
+        expect(
+            isOlympusPeer(
+                { lsps1HostMainnet: '127.0.0.1:9735' } as any,
+                'mainnet'
+            )
+        ).toEqual(true);
+    });
+
+    it('reads the network it is asked about', () => {
+        const settings: any = { lsps1PubkeyTestnet: '02abc' };
+        expect(isOlympusPeer(settings, 'testnet')).toEqual(false);
+        expect(isOlympusPeer(settings, 'mainnet')).toEqual(true);
+    });
 });
