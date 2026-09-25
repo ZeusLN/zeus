@@ -147,11 +147,16 @@ class MigrationsUtils {
                 );
             }
 
-            // 4. Verify write succeeded by reading back
+            // 4. Verify the write by reading the value back and comparing it
+            // against what was sent. A truthiness check cannot tell the value
+            // just written from an older copy the key is still holding, so a
+            // partial or clobbered write reports success. It catches the
+            // unwritten case only incidentally, because Storage.getItem
+            // resolves `false` for a missing key rather than throwing.
             const verifyData = await Storage.getItem(key);
-            if (!verifyData) {
+            if (verifyData !== credentials.password) {
                 throw new Error(
-                    `Verification failed for ${key}. Data not found after write.`
+                    `Verification failed for ${key}. Read-back does not match what was written.`
                 );
             }
 

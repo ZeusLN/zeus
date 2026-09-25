@@ -14,6 +14,11 @@ jest.mock('react-native-encrypted-storage', () => ({
     getItem: jest.fn(),
     setItem: jest.fn()
 }));
+jest.mock('react-native-keychain', () => ({
+    getInternetCredentials: jest.fn(),
+    setInternetCredentials: jest.fn(),
+    resetInternetCredentials: jest.fn()
+}));
 jest.mock('@react-native-async-storage/async-storage', () => ({
     getItem: jest.fn(),
     setItem: jest.fn(),
@@ -1575,6 +1580,110 @@ describe('MigrationUtils', () => {
                 'keychain-desync-v1',
                 'true'
             );
+        });
+    });
+    describe('keychainCloudSyncMigration write verification', () => {
+        const Keychain = require('react-native-keychain');
+        const EncryptedStorage = require('react-native-encrypted-storage');
+        const StorageModule = require('../storage');
+        const STORAGE_KEY = 'zeus-settings-v2';
+        const KEYCHAIN_MIGRATION_KEY = 'ios-keychain-cloud-sync-migration-v1';
+        const SETTINGS = '{"nodes":[{"nickname":"fresh"}]}';
+        const STALE = '{"nodes":[{"nickname":"stale"}]}';
+
+        // The file-level console spies are restored by an earlier describe's
+        // afterAll, so this describe needs its own
+        let consoleErrorSpy: jest.SpyInstance;
+        let consoleLogSpy: jest.SpyInstance;
+
+        beforeEach(() => {
+            jest.clearAllMocks();
+            consoleErrorSpy = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
+            consoleLogSpy = jest
+                .spyOn(console, 'log')
+                .mockImplementation(() => {});
+            // Not yet migrated, and the Cashu pass has nothing to do.
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            EncryptedStorage.setItem.mockResolvedValue(undefined);
+            StorageModule.setItem.mockResolvedValue(true);
+            // Only STORAGE_KEY exists in the old keychain; every other key in
+            // the migration list reads as absent so the pass stays short.
+            Keychain.getInternetCredentials.mockImplementation(
+                async (server: string) =>
+                    server === STORAGE_KEY
+                        ? { username: server, password: SETTINGS }
+                        : false
+            );
+        });
+
+        afterEach(() => {
+            consoleErrorSpy.mockRestore();
+            consoleLogSpy.mockRestore();
+        });
+
+        const migratedFlagSet = () =>
+            EncryptedStorage.setItem.mock.calls.some(
+                (c: any[]) => c[0] === KEYCHAIN_MIGRATION_KEY && c[1] === 'true'
+            );
+
+        it('completes when the read-back matches what was written', async () => {
+            // The stub stores what it is given and hands it back, so the
+            // verification compares against the real write rather than a
+            // fixed answer. Reading absent first matters too: migrateKey
+            // returns at step 1 when the new namespace already holds the key,
+            // and would never reach the verification this test covers.
+            const store: Record<string, string> = {};
+            StorageModule.setItem.mockImplementation(
+                async (key: string, value: string) => {
+                    store[key] = value;
+                    return true;
+                }
+            );
+            StorageModule.getItem.mockImplementation(
+                async (key: string) => store[key] ?? false
+            );
+
+            await MigrationUtils.keychainCloudSyncMigration();
+
+            expect(migratedFlagSet()).toBe(true);
+        });
+
+        it('fails verification when the key still holds an older value', async () => {
+            // setItem reports success, but the key reads back as the copy that
+            // was already there. A truthiness check passes this and the
+            // migration is recorded as done over stale data.
+            let written = false;
+            StorageModule.setItem.mockImplementation(async () => {
+                written = true;
+                return true;
+            });
+            StorageModule.getItem.mockImplementation(async (key: string) =>
+                key === STORAGE_KEY ? (written ? STALE : false) : false
+            );
+
+            await MigrationUtils.keychainCloudSyncMigration();
+
+            expect(migratedFlagSet()).toBe(false);
+            expect(consoleErrorSpy).toHaveBeenCalledWith(
+                'Error during keychain cloud sync migration:',
+                expect.objectContaining({
+                    message: expect.stringContaining(
+                        `Verification failed for ${STORAGE_KEY}`
+                    )
+                })
+            );
+        });
+
+        it('still fails verification when the key reads back as absent', async () => {
+            // The case the old truthiness check did catch, kept so the change
+            // is not a trade of one blind spot for another.
+            StorageModule.getItem.mockResolvedValue(false);
+
+            await MigrationUtils.keychainCloudSyncMigration();
+
+            expect(migratedFlagSet()).toBe(false);
         });
     });
 });
