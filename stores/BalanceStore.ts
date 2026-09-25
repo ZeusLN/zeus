@@ -101,6 +101,15 @@ export default class BalanceStore {
         );
     }
 
+    // on-chain balance without external unconfirmed deposits, which are
+    // shown on the pending line instead. Used for the on-chain part of the
+    // combined balance and for the On-chain row so the two agree
+    @computed public get settledBlockchainBalance(): number {
+        return new BigNumber(this.totalBlockchainBalance || 0)
+            .minus(this.externalUnconfirmedBalance || 0)
+            .toNumber();
+    }
+
     @action
     private balanceError = () => {
         this.error = true;

@@ -135,3 +135,66 @@ describe('BalanceStore cooperative close overlap', () => {
         expect(store.cooperativeCloseOverlap).toEqual(0);
     });
 });
+
+describe('BalanceStore settled blockchain balance', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it('excludes an external unconfirmed deposit', async () => {
+        (BackendUtils.getBlockchainBalance as jest.Mock).mockResolvedValue({
+            total_balance: '150000',
+            confirmed_balance: '100000',
+            unconfirmed_balance: '50000'
+        });
+        (BackendUtils.getTransactions as jest.Mock).mockResolvedValue({
+            transactions: [
+                {
+                    tx_hash: 'deposit',
+                    amount: '50000',
+                    total_fees: '0',
+                    num_confirmations: 0
+                }
+            ]
+        });
+        const store = new BalanceStore(newSettingsStore(true) as any);
+
+        await store.getBlockchainBalance(true, false);
+
+        expect(store.totalBlockchainBalance).toEqual(150000);
+        expect(store.settledBlockchainBalance).toEqual(100000);
+    });
+
+    it('keeps unconfirmed change from our own spend', async () => {
+        (BackendUtils.getBlockchainBalance as jest.Mock).mockResolvedValue({
+            total_balance: '150000',
+            confirmed_balance: '100000',
+            unconfirmed_balance: '50000'
+        });
+        (BackendUtils.getTransactions as jest.Mock).mockResolvedValue({
+            transactions: [
+                {
+                    tx_hash: 'funding',
+                    amount: '-200000',
+                    total_fees: '1000',
+                    num_confirmations: 0
+                }
+            ]
+        });
+        const store = new BalanceStore(newSettingsStore(true) as any);
+
+        await store.getBlockchainBalance(true, false);
+
+        expect(store.externalUnconfirmedBalance).toEqual(0);
+        expect(store.settledBlockchainBalance).toEqual(150000);
+    });
+
+    it('handles a string total before any external balance is set', () => {
+        const store = new BalanceStore(newSettingsStore(true) as any);
+        runInAction(() => {
+            store.totalBlockchainBalance = '25000';
+        });
+
+        expect(store.settledBlockchainBalance).toEqual(25000);
+    });
+});

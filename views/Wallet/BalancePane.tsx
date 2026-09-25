@@ -180,7 +180,7 @@ export default class BalancePane extends React.PureComponent<
             showOfflineSpentModal
         } = this.state;
         const {
-            totalBlockchainBalance,
+            settledBlockchainBalance,
             externalUnconfirmedBalance,
             lightningBalance,
             pendingOpenBalance,
@@ -206,8 +206,7 @@ export default class BalancePane extends React.PureComponent<
             .minus(cooperativeCloseOverlap || 0)
             .toNumber()
             .toFixed(3);
-        const combinedBalanceValue = new BigNumber(totalBlockchainBalance)
-            .minus(externalUnconfirmedBalance || 0)
+        const combinedBalanceValue = new BigNumber(settledBlockchainBalance)
             .plus(lightningBalance)
             .plus(settings?.ecash?.enableCashu ? cashuBalance : 0)
             .toNumber()
