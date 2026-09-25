@@ -89,6 +89,7 @@ import CashuStore from '../../stores/CashuStore';
 import ChannelBackupStore from '../../stores/ChannelBackupStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 import TransactionsStore from '../../stores/TransactionsStore';
+import { feeStore } from '../../stores/Stores';
 import FiatStore from '../../stores/FiatStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 import LightningAddressStore from '../../stores/LightningAddressStore';
@@ -1219,6 +1220,35 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 }
             } else {
                 BalanceStore.getLightningBalance(true);
+            }
+        } else if (implementation === 'lnsocket') {
+            let error;
+            if (connecting) {
+                try {
+                    await BackendUtils.initLnSocket();
+                    const connected = await BackendUtils.connect();
+                    if (!connected) {
+                        error = 'Failed to connect';
+                    }
+                } catch (connectionError) {
+                    console.log('LNSocket connection failed:', connectionError);
+                    return;
+                }
+            }
+            if (!error) {
+                try {
+                    await NodeInfoStore.getNodeInfo();
+                    await BalanceStore.getCombinedBalance();
+                    if (BackendUtils.supportsChannelManagement())
+                        await ChannelsStore.getChannels();
+                    if (BackendUtils.supportsRouting()) {
+                        feeStore.getFees();
+                        feeStore.getForwardingHistory();
+                    }
+                } catch (connectionError) {
+                    console.log('LNSocket fetch failed:', connectionError);
+                    return;
+                }
             }
         } else if (implementation === 'lightning-node-connect') {
             let error;

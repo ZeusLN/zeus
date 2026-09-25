@@ -121,6 +121,7 @@ interface WalletConfigurationState {
     port: string; // lnd
     macaroonHex: string; // lnd
     rune: string; // CLN-rest
+    lnSocketPubkey: string; // LNSocket (Commando)
     lndhubUrl: string; // lndhub
     username: string | undefined; // lndhub
     password: string | undefined; // lndhub
@@ -205,6 +206,7 @@ export default class WalletConfiguration extends React.Component<
         port: '',
         macaroonHex: '',
         rune: '',
+        lnSocketPubkey: '',
         saved: false,
         index: null as number | null,
         active: false,
@@ -470,7 +472,9 @@ export default class WalletConfiguration extends React.Component<
                 ldkScorerUrl,
                 ldkVssServer,
                 // NWC
-                nostrWalletConnectUrl
+                nostrWalletConnectUrl,
+                // LNSocket (Commando)
+                lnSocketPubkey
             } = node as any;
 
             this.setState({
@@ -481,6 +485,7 @@ export default class WalletConfiguration extends React.Component<
                 port,
                 macaroonHex,
                 rune,
+                lnSocketPubkey,
                 implementation: implementation || 'lnd',
                 certVerification,
                 index,
@@ -588,6 +593,7 @@ export default class WalletConfiguration extends React.Component<
     ) => {
         const { SettingsStore, navigation } = this.props;
         const {
+            node: existingNode,
             nickname,
             dismissCustodialWarning,
             host,
@@ -597,6 +603,7 @@ export default class WalletConfiguration extends React.Component<
             existingAccount,
             macaroonHex,
             rune,
+            lnSocketPubkey,
             username,
             password,
             implementation,
@@ -645,6 +652,9 @@ export default class WalletConfiguration extends React.Component<
             existingAccount,
             macaroonHex,
             rune,
+            lnSocketPubkey,
+            // keep the generated local commando key across edits
+            lnSocketPrivateKey: (existingNode as any)?.lnSocketPrivateKey,
             username,
             password,
             implementation,
@@ -732,7 +742,10 @@ export default class WalletConfiguration extends React.Component<
                             return;
                         }
                     }
-                    if (implementation === 'lightning-node-connect') {
+                    if (
+                        implementation === 'lightning-node-connect' ||
+                        implementation === 'lnsocket'
+                    ) {
                         BackendUtils.disconnect();
                     }
                     setConnectingStatus(true);
@@ -781,6 +794,7 @@ export default class WalletConfiguration extends React.Component<
             existingAccount,
             macaroonHex,
             rune,
+            lnSocketPubkey,
             username,
             password,
             implementation,
@@ -801,6 +815,7 @@ export default class WalletConfiguration extends React.Component<
             existingAccount,
             macaroonHex,
             rune,
+            lnSocketPubkey,
             username,
             password,
             implementation,
@@ -1398,6 +1413,7 @@ export default class WalletConfiguration extends React.Component<
             lndhubUrl,
             macaroonHex,
             rune,
+            lnSocketPubkey,
             username,
             password,
             saved,
@@ -2360,7 +2376,8 @@ export default class WalletConfiguration extends React.Component<
                                 </>
                             )}
                             {(implementation === 'lnd' ||
-                                implementation === 'cln-rest') && (
+                                implementation === 'cln-rest' ||
+                                implementation === 'lnsocket') && (
                                 <>
                                     <Text
                                         style={{
@@ -2512,7 +2529,43 @@ export default class WalletConfiguration extends React.Component<
                                         locked={loading}
                                     />
 
-                                    {implementation === 'cln-rest' ? (
+                                    {implementation === 'lnsocket' && (
+                                        <>
+                                            <Text
+                                                style={{
+                                                    color: themeColor(
+                                                        'secondaryText'
+                                                    )
+                                                }}
+                                            >
+                                                {localeString(
+                                                    'views.Settings.AddEditNode.nodePublicKey'
+                                                )}
+                                            </Text>
+                                            <TextInput
+                                                placeholder={
+                                                    '02cdfbc50a09e40d0adbe54a275eca9bcf4685bd67d697558bcb22c6c0ebcd0be2'
+                                                }
+                                                textColor={themeColor('text')}
+                                                autoCorrect={false}
+                                                autoCapitalize="none"
+                                                value={lnSocketPubkey}
+                                                onChangeText={(
+                                                    text: string
+                                                ) => {
+                                                    this.setState({
+                                                        lnSocketPubkey:
+                                                            text.trim(),
+                                                        saved: false
+                                                    });
+                                                }}
+                                                locked={loading}
+                                            />
+                                        </>
+                                    )}
+
+                                    {implementation === 'cln-rest' ||
+                                    implementation === 'lnsocket' ? (
                                         <>
                                             <Text
                                                 style={{
@@ -3447,6 +3500,15 @@ export default class WalletConfiguration extends React.Component<
                                                 !(host && macaroonHex)) ||
                                             (implementation === 'cln-rest' &&
                                                 !(host && rune)) ||
+                                            (implementation === 'lnsocket' &&
+                                                !(
+                                                    host &&
+                                                    rune &&
+                                                    lnSocketPubkey &&
+                                                    ValidationUtils.validateNodePubkey(
+                                                        lnSocketPubkey
+                                                    )
+                                                )) ||
                                             (implementation ===
                                                 'lightning-node-connect' &&
                                                 (!pairingPhrase ||
