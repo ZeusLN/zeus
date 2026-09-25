@@ -321,7 +321,8 @@ export default class LdkNode {
         return {
             total_balance: balances.totalOnchainBalanceSats.toString(),
             confirmed_balance: confirmed.toString(),
-            unconfirmed_balance: total.minus(confirmed).toString()
+            unconfirmed_balance: total.minus(confirmed).toString(),
+            reserved_balance_anchor_chan: anchorReserve.toString()
         };
     };
 
