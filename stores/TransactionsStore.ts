@@ -1,7 +1,6 @@
 const bitcoin = require('bitcoinjs-lib');
 
 import { action, observable, runInAction } from 'mobx';
-import { randomBytes } from 'react-native-randombytes';
 import { sha256 } from 'js-sha256';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
@@ -17,6 +16,7 @@ import Base64Utils from '../utils/Base64Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { checkGraphSyncBeforePayment } from '../utils/GraphSyncUtils';
+import { randomBytes } from '../utils/RandomUtils';
 import UrlUtils from '../utils/UrlUtils';
 import { RATING_MODAL_TRIGGER_DELAY } from '../utils/RatingUtils';
 
