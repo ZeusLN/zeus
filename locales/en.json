@@ -366,6 +366,7 @@
     "views.Settings.AddEditNode.restPort": "REST Port",
     "views.Settings.AddEditNode.macaroon": "Macaroon (Hex format)",
     "views.Settings.AddEditNode.rune": "Rune",
+    "views.Settings.AddEditNode.nodePublicKey": "Node public key",
     "views.Settings.AddEditNode.certificateVerification": "Certificate Verification",
     "views.Settings.AddEditNode.createLndhub": "Create LNDHub account",
     "views.Settings.WalletConfiguration.database": "Database",
