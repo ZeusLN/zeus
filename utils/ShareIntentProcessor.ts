@@ -1,6 +1,4 @@
 import { NativeModules } from 'react-native';
-import QRKit from 'react-native-qr-kit';
-import handleAnything from './handleAnything';
 import { localeString } from './LocaleUtils';
 import { settingsStore } from '../stores/Stores';
 
@@ -21,44 +19,6 @@ export interface ShareIntentResult {
     params?: any;
     error?: string;
 }
-
-/**
- * Processes a shared QR code image from Android share intent
- * @returns Navigation result with success status, route/params or error message
- */
-export const processSharedQRImage =
-    async (): Promise<ShareIntentResult | null> => {
-        try {
-            const base64Image = await MobileTools.getSharedImageBase64();
-            if (!base64Image) return null;
-
-            // Extract QR code data using QRKit
-            const result = await QRKit.decodeBase64(base64Image);
-
-            if (result?.success && result.data) {
-                const qrData = result.data;
-
-                // Use existing handleAnything function to process the QR data
-                const response = await handleAnything(qrData);
-
-                if (response) {
-                    const [route, params] = response;
-                    return { success: true, route, params };
-                }
-            }
-
-            return {
-                success: false,
-                error: localeString('utils.shareIntent.noQRFound')
-            };
-        } catch (error) {
-            console.error('Error processing shared QR image:', error);
-            return {
-                success: false,
-                error: localeString('utils.shareIntent.processingError')
-            };
-        }
-    };
 
 /**
  * Fast check for shared QR image without processing - for early app startup
@@ -137,17 +97,3 @@ export const walletSelectedShareIntent = (
     shareIntentData
         ? { ...shareIntentData, requiresWalletSelection: false }
         : undefined;
-
-/**
- * Checks if there's a pending shared image to process
- * @returns Promise<boolean> - true if there's a shared image waiting
- */
-export const hasSharedImage = async (): Promise<boolean> => {
-    try {
-        const base64Image = await MobileTools.getSharedImageBase64();
-        return !!base64Image;
-    } catch (error) {
-        console.error('Error checking for shared image:', error);
-        return false;
-    }
-};
