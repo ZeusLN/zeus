@@ -20,12 +20,23 @@ export interface ShareIntentResult {
     error?: string;
 }
 
+// On resume two handlers look for the same share at once: on iOS
+// Wallet.handleOpenURL and Wallet.handleAppStateChange, on Android
+// LinkingUtils.handleAndroidIntents and Wallet.handleAppStateChange. Both
+// reads finish before either clears the intent, so each would navigate to
+// ShareIntentProcessing. Only one read runs at a time, held until the intent
+// is cleared; a caller that arrives meanwhile gets null, as if nothing had
+// been shared, and the caller holding the read delivers the image.
+let readInFlight = false;
+
 /**
  * Fast check for shared QR image without processing - for early app startup
  * @returns Promise<ShareIntentResult | null> - result with base64 image if found
  */
 export const processSharedQRImageFast =
     async (): Promise<ShareIntentResult | null> => {
+        if (readInFlight) return null;
+        readInFlight = true;
         try {
             // Get the shared image as base64 from Android intent
             const base64Image = await MobileTools.getSharedImageBase64();
@@ -73,6 +84,8 @@ export const processSharedQRImageFast =
                 success: false,
                 error: localeString('utils.shareIntent.processingError')
             };
+        } finally {
+            readInFlight = false;
         }
     };
 
