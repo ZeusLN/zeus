@@ -122,6 +122,72 @@ describe('processSharedQRImageFast', () => {
         expect(await processSharedQRImageFast()).toBeNull();
         expect(clearSharedIntent).not.toHaveBeenCalled();
     });
+
+    // On resume two handlers look for the same share at once (iOS:
+    // Wallet.handleOpenURL and Wallet.handleAppStateChange; Android:
+    // LinkingUtils.handleAndroidIntents and Wallet.handleAppStateChange).
+    // Both reads used to finish before either cleared the intent, so the
+    // processing screen was navigated to twice (#4742).
+    it('hands a share to only one of two concurrent readers', async () => {
+        (settingsStore.externalInputAuthRequired as jest.Mock).mockReturnValue(
+            false
+        );
+
+        const [first, second] = await Promise.all([
+            processSharedQRImageFast(),
+            processSharedQRImageFast()
+        ]);
+
+        expect(getSharedImageBase64).toHaveBeenCalledTimes(1);
+        expect(first?.params.base64Image).toBe('QRIMAGE');
+        expect(second).toBeNull();
+    });
+
+    it('holds off a concurrent reader until the intent is cleared', async () => {
+        (settingsStore.externalInputAuthRequired as jest.Mock).mockReturnValue(
+            false
+        );
+        let finishClear: (value: boolean) => void = () => {};
+        clearSharedIntent.mockReturnValueOnce(
+            new Promise((resolve) => (finishClear = resolve))
+        );
+
+        const first = processSharedQRImageFast();
+        await new Promise((resolve) => setImmediate(resolve));
+        expect(clearSharedIntent).toHaveBeenCalledTimes(1);
+
+        expect(await processSharedQRImageFast()).toBeNull();
+
+        finishClear(true);
+        expect((await first)?.params.base64Image).toBe('QRIMAGE');
+    });
+
+    it('reads a later share once the earlier read has settled', async () => {
+        (settingsStore.externalInputAuthRequired as jest.Mock).mockReturnValue(
+            false
+        );
+
+        await processSharedQRImageFast();
+        getSharedImageBase64.mockResolvedValue('NEXTIMAGE');
+
+        const result = await processSharedQRImageFast();
+
+        expect(result?.params.base64Image).toBe('NEXTIMAGE');
+    });
+
+    it('reads again after a failed read', async () => {
+        (settingsStore.externalInputAuthRequired as jest.Mock).mockReturnValue(
+            false
+        );
+        getSharedImageBase64.mockRejectedValueOnce(new Error('decode failed'));
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+
+        expect((await processSharedQRImageFast())?.success).toBe(false);
+
+        const result = await processSharedQRImageFast();
+
+        expect(result?.params.base64Image).toBe('QRIMAGE');
+    });
 });
 
 describe('share intent gate continuations', () => {
