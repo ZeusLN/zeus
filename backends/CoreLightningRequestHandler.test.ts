@@ -169,6 +169,16 @@ describe('CoreLightningRequestHandler.listPeerChannels', () => {
         });
     });
 
+    it('reports our to_self_delay as the CSV delay', async () => {
+        const { channels } = await listPeerChannels({
+            channels: [
+                channel({ our_to_self_delay: 144, their_to_self_delay: 2016 })
+            ]
+        });
+
+        expect(channels[0].csv_delay).toBe(144);
+    });
+
     it('drops channels that are closed or not yet locked in', async () => {
         const { channels } = await listPeerChannels({
             channels: [
