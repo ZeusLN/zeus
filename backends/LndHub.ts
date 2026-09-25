@@ -188,6 +188,7 @@ export default class LndHub extends LND {
     supportsLnurlAuth = () => true;
     supportsOnchainBalance = () => false;
     supportsOnchainSends = () => false;
+    supportsOnchainFeeEstimation = () => false;
     supportsOnchainReceiving = () =>
         !(
             settingsStore?.lndhubUrl?.includes('lnbank/api/lndhub') ||

@@ -96,6 +96,35 @@ export const walletBalance = async ({
 /**
  * @throws
  */
+export const estimateFee = async (
+    addr_to_amount: { [address: string]: string },
+    target_conf?: number,
+    spend_unconfirmed?: boolean
+): Promise<lnrpc.EstimateFeeResponse> => {
+    const AddrToAmount: { [address: string]: Long } = {};
+    Object.keys(addr_to_amount).forEach((address: string) => {
+        AddrToAmount[address] = Long.fromValue(Number(addr_to_amount[address]));
+    });
+    const response = await sendCommand<
+        lnrpc.IEstimateFeeRequest,
+        lnrpc.EstimateFeeRequest,
+        lnrpc.EstimateFeeResponse
+    >({
+        request: lnrpc.EstimateFeeRequest,
+        response: lnrpc.EstimateFeeResponse,
+        method: 'EstimateFee',
+        options: {
+            AddrToAmount,
+            target_conf,
+            spend_unconfirmed
+        }
+    });
+    return response;
+};
+
+/**
+ * @throws
+ */
 export const sendCoins = async (
     address: string,
     sat: number,
