@@ -46,7 +46,8 @@ import {
     unitsStore,
     utxosStore,
     sweepStore,
-    nostrWalletConnectStore
+    nostrWalletConnectStore,
+    spliceStore
 } from './stores/Stores';
 import NavigationService from './NavigationService';
 import PushNotificationManager from './PushNotificationManager';
@@ -446,6 +447,7 @@ export default class App extends React.PureComponent {
                 UTXOsStore={utxosStore}
                 SweepStore={sweepStore}
                 NostrWalletConnectStore={nostrWalletConnectStore}
+                SpliceStore={spliceStore}
             >
                 <SafeAreaProvider initialMetrics={initialWindowMetrics}>
                     <AppContainer>
