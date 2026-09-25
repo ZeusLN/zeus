@@ -109,59 +109,45 @@ export default class LNSocket {
             transactions: outputs
         }));
     getChannels = () =>
-        this.rpc('listpeers').then(({ peers }: any) => ({
-            channels: peers
-                .filter((peer: any) => peer.channels?.length)
-                .map((peer: any) => {
-                    const channel =
-                        peer.channels.find(
-                            (c: any) =>
-                                c.state !== 'ONCHAIN' && c.state !== 'CLOSED'
-                        ) || peer.channels[0];
-
-                    return {
-                        active: peer.connected,
-                        remote_pubkey: peer.id,
-                        channel_point: channel.funding_txid,
-                        chan_id: channel.channel_id,
-                        capacity: Number(
-                            channel.msatoshi_total / 1000
-                        ).toString(),
-                        local_balance: Number(
-                            channel.msatoshi_to_us / 1000
-                        ).toString(),
-                        remote_balance: Number(
-                            (channel.msatoshi_total - channel.msatoshi_to_us) /
-                                1000
-                        ).toString(),
-                        total_satoshis_sent: Number(
-                            channel.out_msatoshi_fulfilled / 1000
-                        ).toString(),
-                        total_satoshis_received: Number(
-                            channel.in_msatoshi_fulfilled / 1000
-                        ).toString(),
-                        num_updates: (
-                            channel.in_payments_offered +
-                            channel.out_payments_offered
-                        ).toString(),
-                        csv_delay: channel.our_to_self_delay,
-                        private: channel.private,
-                        local_chan_reserve_sat:
-                            channel.our_channel_reserve_satoshis?.toString(),
-                        remote_chan_reserve_sat:
-                            channel.their_channel_reserve_satoshis?.toString(),
-                        close_address: channel.close_to_addr
-                    };
-                })
+        this.rpc('listpeerchannels').then(({ channels }: any) => ({
+            channels: channels.map((channel: any) => ({
+                active: channel.peer_connected,
+                remote_pubkey: channel.peer_id,
+                channel_point: channel.funding_txid,
+                chan_id: channel.channel_id,
+                capacity: Number(channel.total_msat / 1000).toString(),
+                local_balance: Number(channel.to_us_msat / 1000).toString(),
+                remote_balance: Number(
+                    (channel.total_msat - channel.to_us_msat) / 1000
+                ).toString(),
+                total_satoshis_sent: Number(
+                    channel.out_fulfilled_msat / 1000
+                ).toString(),
+                total_satoshis_received: Number(
+                    channel.in_fulfilled_msat / 1000
+                ).toString(),
+                num_updates: (
+                    channel.in_payments_offered + channel.out_payments_offered
+                ).toString(),
+                csv_delay: channel.our_to_self_delay,
+                private: channel.private,
+                local_chan_reserve_sat: Number(
+                    channel.our_reserve_msat / 1000
+                ).toString(),
+                remote_chan_reserve_sat: Number(
+                    channel.their_reserve_msat / 1000
+                ).toString(),
+                close_address: channel.close_to_addr
+            }))
         }));
     getBlockchainBalance = () =>
         this.rpc('listfunds').then(({ outputs }: any) => {
             const unconf = outputs
                 .filter((o: any) => o.status !== 'confirmed')
-                .reduce((acc: any, o: any) => acc + o.value, 0);
+                .reduce((acc: any, o: any) => acc + o.amount_msat / 1000, 0);
             const conf = outputs
                 .filter((o: any) => o.status === 'confirmed')
-                .reduce((acc: any, o: any) => acc + o.value, 0);
+                .reduce((acc: any, o: any) => acc + o.amount_msat / 1000, 0);
 
             return {
                 total_balance: conf + unconf,
@@ -173,10 +159,13 @@ export default class LNSocket {
         this.rpc('listfunds').then(({ channels }: any) => ({
             balance: channels
                 .filter((o: any) => o.state === 'CHANNELD_NORMAL')
-                .reduce((acc: any, o: any) => acc + o.channel_sat, 0),
+                .reduce(
+                    (acc: any, o: any) => acc + o.our_amount_msat / 1000,
+                    0
+                ),
             pending_open_balance: channels
                 .filter((o: any) => o.state === 'CHANNELD_AWAITING_LOCKIN')
-                .reduce((acc: any, o: any) => acc + o.channel_sat, 0)
+                .reduce((acc: any, o: any) => acc + o.our_amount_msat / 1000, 0)
         }));
     sendCoins = (data: TransactionRequest) =>
         this.rpc('withdraw', {
@@ -191,23 +180,23 @@ export default class LNSocket {
                 memo: inv.description,
                 r_preimage: inv.payment_preimage,
                 r_hash: inv.payment_hash,
-                value: inv.msatoshi / 1000,
-                value_msat: inv.msatoshi,
+                value: inv.amount_msat / 1000,
+                value_msat: inv.amount_msat,
                 settled: inv.status === 'paid',
                 creation_date: inv.expires_at,
                 settle_date: inv.paid_at,
                 payment_request: inv.bolt11,
                 expiry: inv.expires_at,
-                amt_paid: inv.msatoshi_received / 1000,
-                amt_paid_sat: inv.msatoshi_received / 1000,
-                amt_paid_msat: inv.msatoshi_received
+                amt_paid: inv.amount_received_msat / 1000,
+                amt_paid_sat: inv.amount_received_msat / 1000,
+                amt_paid_msat: inv.amount_received_msat
             }))
         }));
     createInvoice = (data: any) =>
         this.rpc('invoice', {
             description: data.memo,
             label: 'zeus.' + Math.floor(Math.random() * 1000000),
-            msatoshi: Number(data.value) * 1000,
+            amount_msat: Number(data.value) * 1000,
             expiry: Math.round(Date.now() / 1000) + Number(data.expiry),
             exposeprivatechannels: true
         });
@@ -226,12 +215,50 @@ export default class LNSocket {
     connectPeer = (data: any) =>
         this.rpc('connect', [data.addr.pubkey, data.addr.host]);
     decodePaymentRequest = (urlParams?: Array<string>) =>
-        this.rpc('decodepay', [urlParams && urlParams[0]]);
-    payLightningInvoice = (data: any) =>
-        this.rpc('pay', {
-            bolt11: data.payment_request,
-            msatoshi: data.amt ? Number(data.amt * 1000) : undefined
-        });
+        // `decodepay` was removed from modern CLN; `decode` handles bolt11
+        // (and more) and returns the same amount_msat/description/expiry fields
+        this.rpc('decode', [urlParams && urlParams[0]]);
+    payLightningInvoice = async (data: any) => {
+        // amount_msat is rejected when the invoice already carries an amount
+        // ('amount_msat unnecessary') and required when it doesn't, so decode
+        // the invoice first and only send amount_msat for amountless invoices.
+        // `decode` replaced `decodepay` on modern CLN; fall back for old nodes.
+        let decoded: any = null;
+        try {
+            decoded = await this.rpc('decode', [data.payment_request]);
+        } catch (e: any) {
+            if (
+                e &&
+                (e.code === -32601 || /unknown command/i.test(e.message || ''))
+            ) {
+                decoded = await this.rpc('decodepay', [data.payment_request]);
+            } else {
+                throw e;
+            }
+        }
+
+        const params: any = { invstring: data.payment_request };
+        if (decoded?.amount_msat === undefined && data.amt) {
+            params.amount_msat = Number(data.amt) * 1000;
+        }
+
+        // `pay` is deprecated since CLN v24.11 (removal planned); prefer `xpay`
+        // and fall back to `pay` on older nodes.
+        try {
+            return await this.rpc('xpay', params);
+        } catch (e: any) {
+            if (
+                e &&
+                (e.code === -32601 || /unknown command/i.test(e.message || ''))
+            ) {
+                return await this.rpc('pay', {
+                    bolt11: data.payment_request,
+                    amount_msat: params.amount_msat
+                });
+            }
+            throw e;
+        }
+    };
     closeChannel = (urlParams?: Array<string>) =>
         this.rpc('close', {
             id: urlParams && urlParams[0],
@@ -261,11 +288,12 @@ export default class LNSocket {
     getFees = async () => {
         const info = await this.rpc('getinfo');
 
-        const [listforwards, listpeers, listchannels] = await Promise.all([
-            this.rpc('listforwards'),
-            this.rpc('listpeers'),
-            this.rpc('listchannels', { source: info.id })
-        ]);
+        const [listforwards, listpeerchannels, listchannels] =
+            await Promise.all([
+                this.rpc('listforwards'),
+                this.rpc('listpeerchannels'),
+                this.rpc('listchannels', { source: info.id })
+            ]);
 
         let lastDay = 0,
             lastWeek = 0,
@@ -280,14 +308,14 @@ export default class LNSocket {
                 continue;
             }
             if (forward.resolved_time > oneDayAgo) {
-                lastDay += forward.fee;
-                lastWeek += forward.fee;
-                lastMonth += forward.fee;
+                lastDay += forward.fee_msat;
+                lastWeek += forward.fee_msat;
+                lastMonth += forward.fee_msat;
             } else if (forward.resolved_time > oneWeekAgo) {
-                lastWeek += forward.fee;
-                lastMonth += forward.fee;
+                lastWeek += forward.fee_msat;
+                lastMonth += forward.fee_msat;
             } else if (forward.resolved_time > oneMonthAgo) {
-                lastMonth += forward.fee;
+                lastMonth += forward.fee_msat;
             } else {
                 break;
             }
@@ -303,25 +331,16 @@ export default class LNSocket {
         }
 
         return {
-            channel_fees: listpeers.peers
-                .filter(({ channels }: any) => channels && channels.length)
+            channel_fees: listpeerchannels.channels
                 .filter(
-                    ({ channels: [{ short_channel_id }] }: any) =>
-                        channelsMap[short_channel_id]
+                    ({ short_channel_id }: any) => channelsMap[short_channel_id]
                 )
-                .map(
-                    ({
-                        channels: [
-                            { short_channel_id, channel_id, funding_txid }
-                        ]
-                    }: any) => ({
-                        chan_id: channel_id,
-                        channel_point: funding_txid,
-                        base_fee_msat:
-                            channelsMap[short_channel_id].base_fee_msat,
-                        fee_rate: channelsMap[short_channel_id].fee_rate
-                    })
-                ),
+                .map(({ short_channel_id, channel_id, funding_txid }: any) => ({
+                    chan_id: channel_id,
+                    channel_point: funding_txid,
+                    base_fee_msat: channelsMap[short_channel_id].base_fee_msat,
+                    fee_rate: channelsMap[short_channel_id].fee_rate
+                })),
             day_fee_sum: lastDay / 1000,
             week_fee_sum: lastWeek / 1000,
             month_fee_sum: lastMonth / 1000
@@ -338,16 +357,16 @@ export default class LNSocket {
 
         const res = await this.rpc('getroute', {
             id: urlParams && urlParams[0],
-            msatoshi,
+            amount_msat: msatoshi,
             riskfactor: 2
         });
 
-        const route = res.route[0];
+        const route = res.route;
 
         return {
             routes: [
                 {
-                    total_fees: (route[0].msatoshi - msatoshi) / 1000
+                    total_fees: (route[0].amount_msat - msatoshi) / 1000
                 }
             ]
         };

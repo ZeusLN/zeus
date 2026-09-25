@@ -174,35 +174,36 @@ describe('LNSocket', () => {
     });
 
     describe('response mapping', () => {
-        it('maps listpeers to channel objects', async () => {
+        it('maps listpeerchannels to channel objects', async () => {
             mockCommando.mockResolvedValue({
-                peers: [
+                channels: [
                     {
-                        id: 'peer-pubkey',
-                        connected: true,
-                        channels: [
-                            {
-                                state: 'CHANNELD_NORMAL',
-                                funding_txid: 'txid',
-                                channel_id: 'chan-id',
-                                msatoshi_total: 1000000,
-                                msatoshi_to_us: 600000,
-                                out_msatoshi_fulfilled: 10000,
-                                in_msatoshi_fulfilled: 20000,
-                                in_payments_offered: 1,
-                                out_payments_offered: 2,
-                                our_to_self_delay: 144,
-                                private: false,
-                                our_channel_reserve_satoshis: 1000,
-                                their_channel_reserve_satoshis: 1000,
-                                close_to_addr: 'bc1q...'
-                            }
-                        ]
+                        state: 'CHANNELD_NORMAL',
+                        peer_connected: true,
+                        peer_id: 'peer-pubkey',
+                        funding_txid: 'txid',
+                        channel_id: 'chan-id',
+                        total_msat: 1000000,
+                        to_us_msat: 600000,
+                        out_fulfilled_msat: 10000,
+                        in_fulfilled_msat: 20000,
+                        in_payments_offered: 1,
+                        out_payments_offered: 2,
+                        our_to_self_delay: 144,
+                        private: false,
+                        our_reserve_msat: 1000000,
+                        their_reserve_msat: 1000000,
+                        close_to_addr: 'bc1q...'
                     }
                 ]
             });
             const backend = new LNSocket();
             const { channels } = await backend.getChannels();
+            expect(mockCommando).toHaveBeenCalledWith({
+                method: 'listpeerchannels',
+                params: {},
+                rune: 'test-rune'
+            });
             expect(channels).toHaveLength(1);
             expect(channels[0]).toMatchObject({
                 active: true,
@@ -218,8 +219,8 @@ describe('LNSocket', () => {
         it('maps listfunds to confirmed/unconfirmed balances', async () => {
             mockCommando.mockResolvedValue({
                 outputs: [
-                    { status: 'confirmed', value: 50000 },
-                    { status: 'unconfirmed', value: 10000 }
+                    { status: 'confirmed', amount_msat: 50000000 },
+                    { status: 'unconfirmed', amount_msat: 10000000 }
                 ]
             });
             const backend = new LNSocket();
@@ -238,12 +239,12 @@ describe('LNSocket', () => {
                         description: 'test',
                         payment_preimage: 'preimage',
                         payment_hash: 'hash',
-                        msatoshi: 5000,
+                        amount_msat: 5000,
                         status: 'paid',
                         expires_at: 123,
                         paid_at: 456,
                         bolt11: 'lnbc...',
-                        msatoshi_received: 5000
+                        amount_received_msat: 5000
                     }
                 ]
             });
@@ -274,6 +275,114 @@ describe('LNSocket', () => {
                 },
                 rune: 'test-rune'
             });
+        });
+
+        it('sends invoice with amount_msat (modern CLN param)', async () => {
+            mockCommando.mockResolvedValue({});
+            const backend = new LNSocket();
+            await backend.createInvoice({
+                memo: 'test',
+                value: '100',
+                expiry: '3600'
+            } as any);
+            expect(mockCommando).toHaveBeenCalledWith({
+                method: 'invoice',
+                params: expect.objectContaining({
+                    description: 'test',
+                    amount_msat: 100000
+                }),
+                rune: 'test-rune'
+            });
+        });
+
+        it('pays via xpay without amount_msat when the invoice has an amount', async () => {
+            mockCommando.mockImplementation(({ method }: any) => {
+                if (method === 'decode') return { amount_msat: 50000000 };
+                if (method === 'xpay')
+                    return {
+                        status: 'complete',
+                        payment_preimage: 'ab'.repeat(32)
+                    };
+                throw new Error('unexpected method ' + method);
+            });
+            const backend = new LNSocket();
+            const res = await backend.payLightningInvoice({
+                payment_request: 'lnbc...',
+                amt: 50
+            } as any);
+            expect(mockCommando).toHaveBeenCalledWith({
+                method: 'xpay',
+                params: { invstring: 'lnbc...' },
+                rune: 'test-rune'
+            });
+            expect(res.status).toBe('complete');
+        });
+
+        it('pays via xpay with amount_msat for amountless invoices', async () => {
+            mockCommando.mockImplementation(({ method }: any) => {
+                if (method === 'decode') return { type: 'bolt11 invoice' };
+                if (method === 'xpay')
+                    return {
+                        status: 'complete',
+                        payment_preimage: 'ab'.repeat(32)
+                    };
+                throw new Error('unexpected method ' + method);
+            });
+            const backend = new LNSocket();
+            await backend.payLightningInvoice({
+                payment_request: 'lnbc...',
+                amt: 50
+            } as any);
+            expect(mockCommando).toHaveBeenCalledWith({
+                method: 'xpay',
+                params: { invstring: 'lnbc...', amount_msat: 50000 },
+                rune: 'test-rune'
+            });
+        });
+
+        it('falls back to pay when xpay is unknown (old CLN)', async () => {
+            mockCommando.mockImplementation(({ method }: any) => {
+                if (method === 'decode')
+                    throw { code: -32601, message: "Unknown command 'decode'" };
+                if (method === 'decodepay') return { amount_msat: 50000000 };
+                if (method === 'xpay')
+                    throw { code: -32601, message: "Unknown command 'xpay'" };
+                if (method === 'pay')
+                    return {
+                        status: 'complete',
+                        payment_preimage: 'ab'.repeat(32)
+                    };
+                throw new Error('unexpected method ' + method);
+            });
+            const backend = new LNSocket();
+            const res = await backend.payLightningInvoice({
+                payment_request: 'lnbc...',
+                amt: 50
+            } as any);
+            expect(mockCommando).toHaveBeenCalledWith({
+                method: 'pay',
+                params: { bolt11: 'lnbc...', amount_msat: undefined },
+                rune: 'test-rune'
+            });
+            expect(res.status).toBe('complete');
+        });
+
+        it('sends getroute with amount_msat (modern CLN param)', async () => {
+            mockCommando.mockResolvedValue({
+                route: [{ amount_msat: 51000, channel: '1x2x3' }]
+            });
+            const backend = new LNSocket();
+            const res = await backend.getRoutes(['node-pubkey', '50'] as any);
+            expect(mockCommando).toHaveBeenCalledWith({
+                method: 'getroute',
+                params: {
+                    id: 'node-pubkey',
+                    amount_msat: 50000,
+                    riskfactor: 2
+                },
+                rune: 'test-rune'
+            });
+            expect(res.routes[0].total_fees).toBe(1);
         });
     });
 
