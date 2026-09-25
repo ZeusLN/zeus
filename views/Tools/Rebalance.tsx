@@ -4,10 +4,7 @@ import {
     StyleSheet,
     TouchableOpacity,
     View,
-    Alert,
-    NativeModules,
-    NativeEventEmitter,
-    EmitterSubscription
+    Alert
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -52,8 +49,7 @@ const REBALANCE_CONSTANTS = {
     CIRCULAR_LAYER_NAME: 'circular-rebalance',
     BALANCE_PRECISION: 3,
     MSAT_MULTIPLIER: 1000,
-    DEFAULT_CLN_CLTV_EXPIRY: 144,
-    TIMEOUT_BUFFER_MS: 5000
+    DEFAULT_CLN_CLTV_EXPIRY: 144
 } as const;
 
 const calculateProjectedBalance = (
@@ -173,8 +169,6 @@ export default class Rebalance extends React.Component<
     RebalanceProps,
     RebalanceState
 > {
-    private listener: EmitterSubscription | null = null;
-    private paymentTimeoutId: ReturnType<typeof setTimeout> | null = null;
     private navigationUnsubscribe: (() => void) | null = null;
 
     constructor(props: RebalanceProps) {
@@ -200,8 +194,6 @@ export default class Rebalance extends React.Component<
 
     componentDidMount() {
         const { ChannelsStore, navigation } = this.props;
-
-        this.cleanupPaymentListener();
 
         if (!ChannelsStore.channels || ChannelsStore.channels.length === 0) {
             ChannelsStore.getChannels();
@@ -248,8 +240,6 @@ export default class Rebalance extends React.Component<
     };
 
     componentWillUnmount() {
-        this.cleanupPaymentListener();
-
         if (this.navigationUnsubscribe) {
             this.navigationUnsubscribe();
         }
@@ -633,18 +623,10 @@ export default class Rebalance extends React.Component<
                 case 'cln-rest':
                     return this.executeClnRestRebalance(invoiceData);
 
-                case 'lightning-node-connect':
-                    const result = await this.executeLndRebalance(invoiceData);
-
-                    // If result is a string (subscription ID), subscribe to payment updates
-                    if (typeof result === 'string') {
-                        return (await this.subscribePayment(
-                            result
-                        )) as PaymentResult;
-                    }
-                    return result;
-
                 default:
+                    // the LNC backend resolves payLightningInvoice with the
+                    // terminal payment result, so it takes the same path as
+                    // the other lnd-based backends here
                     return this.executeLndRebalance(invoiceData);
             }
         } catch (error: any) {
@@ -1169,7 +1151,6 @@ export default class Rebalance extends React.Component<
             );
             this.props.TransactionsStore.loading = false;
             this.handleRebalanceError(error);
-            this.cleanupPaymentListener();
         }
     };
 
@@ -1509,94 +1490,6 @@ export default class Rebalance extends React.Component<
             />
         </View>
     );
-
-    subscribePayment = (streamingCall: string) => {
-        const { handlePayment, handlePaymentError } =
-            this.props.TransactionsStore;
-        const { LncModule } = NativeModules;
-        const eventEmitter = new NativeEventEmitter(LncModule);
-
-        this.cleanupPaymentListener();
-
-        return new Promise((resolve, reject) => {
-            this.listener = eventEmitter.addListener(
-                streamingCall,
-                (event: { result?: string }) => {
-                    if (event.result && event.result !== 'EOF') {
-                        try {
-                            const result =
-                                typeof event.result === 'string'
-                                    ? JSON.parse(event.result)
-                                    : event.result;
-
-                            // Process final payment status
-                            if (result && result.status !== 'IN_FLIGHT') {
-                                handlePayment(result);
-
-                                this.cleanupPaymentListener();
-
-                                if (result.status === PaymentStatus.SUCCEEDED) {
-                                    const formattedResult = {
-                                        payment_hash: result.payment_hash,
-                                        payment_preimage:
-                                            result.payment_preimage,
-                                        value_sat: result.value_sat,
-                                        fee_sat: result.fee_sat,
-                                        status: PaymentStatus.COMPLETE,
-                                        creation_date: result.creation_date,
-                                        htlcs: result.htlcs
-                                    };
-                                    resolve(formattedResult);
-                                } else {
-                                    reject(
-                                        new Error(
-                                            result.failure_reason ||
-                                                localeString(
-                                                    'error.paymentFailed'
-                                                )
-                                        )
-                                    );
-                                }
-                            }
-                        } catch (error: any) {
-                            console.error(
-                                'Error parsing payment update:',
-                                error
-                            );
-                            handlePaymentError(error);
-                            this.cleanupPaymentListener();
-                            reject(error);
-                        }
-                    }
-                }
-            );
-
-            // Timeout to prevent hanging forever
-            const timeoutMs = Number(this.state.timeoutSeconds) * 1000;
-            this.paymentTimeoutId = setTimeout(() => {
-                if (this.listener) {
-                    const timeoutError = new Error(
-                        'Payment timed out waiting for final status'
-                    );
-                    handlePaymentError(timeoutError);
-                    this.cleanupPaymentListener();
-                    reject(timeoutError);
-                }
-            }, timeoutMs + REBALANCE_CONSTANTS.TIMEOUT_BUFFER_MS);
-        });
-    };
-
-    private cleanupPaymentListener = () => {
-        if (this.listener) {
-            this.listener.remove();
-            this.listener = null;
-        }
-
-        if (this.paymentTimeoutId) {
-            clearTimeout(this.paymentTimeoutId);
-            this.paymentTimeoutId = null;
-        }
-    };
 
     // Navigation and result handling
     private createRebalanceResult = (
