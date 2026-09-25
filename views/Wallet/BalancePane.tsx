@@ -180,11 +180,12 @@ export default class BalancePane extends React.PureComponent<
             showOfflineSpentModal
         } = this.state;
         const {
-            totalBlockchainBalance,
-            unconfirmedBlockchainBalance,
+            settledBlockchainBalance,
+            externalUnconfirmedBalance,
             lightningBalance,
             pendingOpenBalance,
-            pendingCloseBalance
+            pendingCloseBalance,
+            cooperativeCloseOverlap
         } = BalanceStore;
         const cashuBalance = CashuStore.totalBalanceSats;
         const cashuOfflinePendingBalance = CashuStore.offlinePendingBalance;
@@ -195,11 +196,17 @@ export default class BalancePane extends React.PureComponent<
             .toNumber();
         const hasLightningPending = lightningPendingTotal > 0;
 
+        // the pending balance sits on top of the total balance: external
+        // unconfirmed deposits count toward pending only, while unconfirmed
+        // change from the wallet's own spends counts toward the total only.
+        // An unconfirmed cooperative close is counted once, by its closing
+        // output rather than its limbo balance
         const pendingUnconfirmedBalance = new BigNumber(lightningPendingTotal)
-            .plus(unconfirmedBlockchainBalance)
+            .plus(externalUnconfirmedBalance || 0)
+            .minus(cooperativeCloseOverlap || 0)
             .toNumber()
             .toFixed(3);
-        const combinedBalanceValue = new BigNumber(totalBlockchainBalance)
+        const combinedBalanceValue = new BigNumber(settledBlockchainBalance)
             .plus(lightningBalance)
             .plus(settings?.ecash?.enableCashu ? cashuBalance : 0)
             .toNumber()
@@ -259,7 +266,7 @@ export default class BalancePane extends React.PureComponent<
         );
         const BalanceViewCombined = () => {
             const hasOnchainPending = Boolean(
-                Number(unconfirmedBlockchainBalance ?? 0) ||
+                Number(externalUnconfirmedBalance ?? 0) ||
                     Number(pendingOpenBalance ?? 0) ||
                     Number(pendingCloseBalance ?? 0)
             );

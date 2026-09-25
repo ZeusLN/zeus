@@ -438,7 +438,11 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
         } = this.props;
 
         const { settings } = SettingsStore!;
-        const { totalBlockchainBalance, lightningBalance } = BalanceStore!;
+        const {
+            totalBlockchainBalance,
+            settledBlockchainBalance,
+            lightningBalance
+        } = BalanceStore!;
         const { totalBalanceSats, mintUrls, mintInfos } = CashuStore!;
 
         const otherAccounts = editMode
@@ -457,7 +461,7 @@ export default class LayerBalances extends Component<LayerBalancesProps, {}> {
         if (BackendUtils.supportsOnchainReceiving()) {
             DATA.push({
                 layer: 'On-chain',
-                balance: Number(totalBlockchainBalance).toFixed(3)
+                balance: Number(settledBlockchainBalance).toFixed(3)
             });
         }
 
