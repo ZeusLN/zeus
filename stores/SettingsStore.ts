@@ -56,6 +56,9 @@ export interface Node {
     customMailboxServer?: string;
     // NWC
     nostrWalletConnectUrl?: string;
+    // LNSocket (Commando)
+    lnSocketPubkey?: string;
+    lnSocketPrivateKey?: string;
     // Embedded LND
     seedPhrase?: string[];
     walletPassword?: string;
@@ -411,6 +414,7 @@ export const INTERFACE_KEYS: {
     { key: 'LND (REST)', value: 'lnd' },
     { key: 'LND (Lightning Node Connect)', value: 'lightning-node-connect' },
     { key: 'Core Lightning (CLNRest)', value: 'cln-rest' },
+    { key: 'Core Lightning (Commando)', value: 'lnsocket' },
     { key: 'Nostr Wallet Connect', value: 'nostr-wallet-connect' },
     { key: 'LNDHub', value: 'lndhub' }
 ];
@@ -421,6 +425,7 @@ export type Implementations =
     | 'lnd'
     | 'lightning-node-connect'
     | 'cln-rest'
+    | 'lnsocket'
     | 'lndhub'
     | 'nostr-wallet-connect';
 
@@ -1675,6 +1680,9 @@ export default class SettingsStore {
     @observable url: string;
     @observable macaroonHex: string;
     @observable rune: string;
+    // LNSocket (Commando)
+    @observable lnSocketPubkey: string;
+    @observable lnSocketPrivateKey: string;
     @observable accessKey: string;
     @observable implementation: Implementations;
     @observable certVerification: boolean = false;
@@ -1947,6 +1955,9 @@ export default class SettingsStore {
             this.lndhubUrl = node.lndhubUrl;
             this.macaroonHex = node.macaroonHex;
             this.rune = node.rune;
+            // LNSocket (Commando)
+            this.lnSocketPubkey = node.lnSocketPubkey;
+            this.lnSocketPrivateKey = node.lnSocketPrivateKey;
             this.accessKey = node.accessKey;
             this.dismissCustodialWarning = node.dismissCustodialWarning;
             this.implementation = node.implementation || 'lnd';
