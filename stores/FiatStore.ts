@@ -27,7 +27,6 @@ export default class FiatStore {
           }[]
         | undefined;
     @observable public loading = false;
-    @observable public error = false;
 
     private sourceOfCurrentFiatRates: string | undefined;
 
@@ -643,9 +642,16 @@ export default class FiatStore {
             const fiatEntry = this.fiatRates.filter(
                 (entry) => entry.code === fiat
             )[0];
-            const rate = (fiatEntry && fiatEntry.rate) || 0;
+
+            // The selected currency is missing from the response, or its
+            // entry carries no usable rate. Report that with the same value
+            // used when no rates are loaded at all, instead of formatting a
+            // rate of 0 and dividing by it.
+            if (!fiatEntry?.rate) return '$N/A';
+
+            const rate = fiatEntry.rate;
             const { symbol, space, rtl, separatorSwap } = this.symbolLookup(
-                fiatEntry && fiatEntry.code
+                fiatEntry.code
             );
 
             const moscowTime = new BigNumber(1)
