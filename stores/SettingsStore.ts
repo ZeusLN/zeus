@@ -2365,6 +2365,15 @@ export default class SettingsStore {
 
     public loginRequired = () => this.loginMethodConfigured() && !this.loggedIn;
 
+    // For input handed to the app from outside (share intents, deep links)
+    // that can navigate to Send or WalletConfiguration. An active POS
+    // session does not count as logged in here: the Lockscreen's POS waiver
+    // sets loggedIn without a PIN, so after one resume in POS mode
+    // loginRequired() alone would wave such input through.
+    public externalInputAuthRequired = () =>
+        !!this.loginMethodConfigured() &&
+        (!this.loggedIn || this.posStatus === 'active');
+
     public loginMethodConfigured = () =>
         this.settings &&
         (this.settings.passphrase ||
