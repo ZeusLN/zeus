@@ -7,13 +7,6 @@ jest.mock('react-native', () => ({
     }
 }));
 
-jest.mock('react-native-qr-kit', () => ({
-    __esModule: true,
-    default: { decodeBase64: jest.fn() }
-}));
-
-jest.mock('./handleAnything', () => ({ __esModule: true, default: jest.fn() }));
-
 jest.mock('./LocaleUtils', () => ({ localeString: (key: string) => key }));
 
 jest.mock('../stores/Stores', () => ({
