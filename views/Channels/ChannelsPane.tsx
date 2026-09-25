@@ -35,9 +35,6 @@ import ChannelsStore, {
 } from '../../stores/ChannelsStore';
 import LSPStore from '../../stores/LSPStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
-import SettingsStore, {
-    getLspConfigForNetwork
-} from '../../stores/SettingsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -64,25 +61,15 @@ interface ChannelsProps {
     ChannelsStore?: ChannelsStore;
     LSPStore?: LSPStore;
     NodeInfoStore?: NodeInfoStore;
-    SettingsStore?: SettingsStore;
 }
 
 interface ChannelsState {
     activeTab: number;
-    channelDestination: string;
-    node_pubkey_string: string;
-    host: string;
     disconnectModalVisible: boolean;
     selectedPeer: any;
 }
 
-@inject(
-    'ChannelsStore',
-    'LSPStore',
-    'NodeInfoStore',
-    'SettingsStore',
-    'ModalStore'
-)
+@inject('ChannelsStore', 'LSPStore', 'NodeInfoStore', 'ModalStore')
 @observer
 export default class ChannelsPane extends React.PureComponent<
     ChannelsProps,
@@ -96,9 +83,6 @@ export default class ChannelsPane extends React.PureComponent<
         super(props);
         this.state = {
             activeTab: 0,
-            channelDestination: 'Olympus by ZEUS',
-            node_pubkey_string: '',
-            host: '',
             disconnectModalVisible: false,
             selectedPeer: null
         };
@@ -123,36 +107,12 @@ export default class ChannelsPane extends React.PureComponent<
         );
 
         ChannelsStore?.getPeers();
-        this.initFromProps(this.props);
-    }
-
-    componentDidUpdate(prevProps: any) {
-        if (prevProps !== this.props) {
-            this.initFromProps(this.props);
-        }
     }
 
     componentWillUnmount() {
         if (this.disposeReaction) {
             this.disposeReaction();
         }
-    }
-
-    initFromProps(props: ChannelsProps) {
-        const { NodeInfoStore, SettingsStore } = props;
-
-        const lspConfig = getLspConfigForNetwork(
-            SettingsStore!.settings,
-            NodeInfoStore!.nodeInfo
-        );
-        const olympusPubkey = lspConfig.lsps1Pubkey;
-        const olympusHost = lspConfig.lsps1Host;
-
-        this.setState({
-            channelDestination: 'Olympus by ZEUS',
-            node_pubkey_string: olympusPubkey!,
-            host: olympusHost!
-        });
     }
 
     validateNodeUri = (text: string) => {
