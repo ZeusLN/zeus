@@ -353,7 +353,8 @@ export default class CashuPaymentRequest extends React.Component<
     };
 
     render() {
-        const { CashuStore, SettingsStore, navigation } = this.props;
+        const { CashuStore, NodeInfoStore, SettingsStore, navigation } =
+            this.props;
         const {
             slideToPayThreshold,
             donationsToggle,
@@ -410,7 +411,8 @@ export default class CashuPaymentRequest extends React.Component<
         const enableDonations =
             Platform.OS !== 'ios' &&
             !isNoAmountInvoice &&
-            settings?.payments?.enableDonations;
+            settings?.payments?.enableDonations &&
+            NodeInfoStore?.nodeInfo?.isMainNet;
 
         // The donation is a second payment drawn from the same mint right
         // after this one, so the balance has to cover both. This is the same
