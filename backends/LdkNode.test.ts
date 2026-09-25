@@ -5,6 +5,9 @@ const mockBolt12SendUsingAmount = jest.fn();
 const mockListChannels = jest.fn();
 const mockCloseChannel = jest.fn();
 const mockForceCloseChannel = jest.fn();
+const mockListBalances = jest.fn();
+const mockStatus = jest.fn();
+const mockListUtxos = jest.fn();
 
 jest.mock('../ldknode/LdkNodeInjection', () => ({
     __esModule: true,
@@ -14,6 +17,13 @@ jest.mock('../ldknode/LdkNodeInjection', () => ({
             closeChannel: (...args: any[]) => mockCloseChannel(...args),
             forceCloseChannel: (...args: any[]) =>
                 mockForceCloseChannel(...args)
+        },
+        node: {
+            listBalances: (...args: any[]) => mockListBalances(...args),
+            status: (...args: any[]) => mockStatus(...args)
+        },
+        onchain: {
+            listUtxos: (...args: any[]) => mockListUtxos(...args)
         },
         payments: {
             listPayments: (...args: any[]) => mockListPayments(...args)
@@ -395,5 +405,67 @@ describe('LdkNode.closeChannel', () => {
         expect(close.settled).toBe(true);
         expect(close.error).toBeUndefined();
         expect(unsubscribed).toBe(true);
+    });
+});
+
+describe('LdkNode.getBlockchainBalance', () => {
+    const mockBalances = (balances: {
+        totalOnchainBalanceSats: number;
+        spendableOnchainBalanceSats: number;
+        totalAnchorChannelsReserveSats: number;
+    }) =>
+        mockListBalances.mockResolvedValue({
+            totalLightningBalanceSats: 0,
+            lightningBalances: [],
+            pendingBalancesFromChannelClosures: [],
+            ...balances
+        });
+
+    beforeEach(() => jest.clearAllMocks());
+
+    it('reports the anchor channel reserve alongside the balances', async () => {
+        mockBalances({
+            totalOnchainBalanceSats: 130000,
+            spendableOnchainBalanceSats: 75000,
+            totalAnchorChannelsReserveSats: 25000
+        });
+
+        expect(await new LdkNode().getBlockchainBalance()).toEqual({
+            total_balance: '130000',
+            confirmed_balance: '100000',
+            unconfirmed_balance: '30000',
+            reserved_balance_anchor_chan: '25000'
+        });
+    });
+
+    it('reports a zero reserve without anchor channels', async () => {
+        mockBalances({
+            totalOnchainBalanceSats: 50000,
+            spendableOnchainBalanceSats: 50000,
+            totalAnchorChannelsReserveSats: 0
+        });
+
+        const balance = await new LdkNode().getBlockchainBalance();
+        expect(balance.confirmed_balance).toEqual('50000');
+        expect(balance.reserved_balance_anchor_chan).toEqual('0');
+    });
+
+    it('still reports the reserve once it exceeds the spendable balance', async () => {
+        mockBalances({
+            totalOnchainBalanceSats: 20000,
+            spendableOnchainBalanceSats: 0,
+            totalAnchorChannelsReserveSats: 25000
+        });
+        mockListUtxos.mockResolvedValue([
+            { txid: 'aa', vout: 0, value_sats: 20000, is_spent: false }
+        ]);
+        mockListPayments.mockResolvedValue([
+            { kind: { type: 'onchain', txid: 'aa', confirmationHeight: 100 } }
+        ]);
+        mockStatus.mockResolvedValue({ currentBestBlock_height: 105 });
+
+        const balance = await new LdkNode().getBlockchainBalance();
+        expect(balance.confirmed_balance).toEqual('20000');
+        expect(balance.reserved_balance_anchor_chan).toEqual('25000');
     });
 });
