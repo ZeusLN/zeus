@@ -236,13 +236,13 @@ export default class OpenChannel extends React.Component<
             SettingsStore.settings,
             NodeInfoStore.nodeInfo
         );
-        const olympusPubkey = lspConfig.lsps1Pubkey;
-        const olympusHost = lspConfig.lsps1Host;
+        const lspPubkey = lspConfig.lsps1Pubkey;
+        const lspHost = lspConfig.lsps1Host;
 
         const resolvedPubkey = node_pubkey_string
             ? node_pubkey_string
-            : olympusPubkey;
-        const resolvedHost = node_pubkey_string ? host : olympusHost;
+            : lspPubkey;
+        const resolvedHost = node_pubkey_string ? host : lspHost;
 
         this.setState({
             channelDestination: node_pubkey_string ? 'Custom' : 'LSP',
@@ -355,6 +355,8 @@ export default class OpenChannel extends React.Component<
             BalanceStore;
 
         const loading = connectingToPeer || openingChannel;
+
+        const isCustomPeer = channelDestination === 'Custom';
 
         // The LSP option dials whichever LSPS1 peer is configured, so it can
         // only carry the Olympus name while that peer is still Olympus.
@@ -768,83 +770,73 @@ export default class OpenChannel extends React.Component<
                                 }}
                             />
 
-                            {channelDestination === 'Custom' && (
-                                <>
-                                    <>
-                                        <Text
-                                            style={{
-                                                ...styles.text,
-                                                color: themeColor(
-                                                    'secondaryText'
+                            <>
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.OpenChannel.nodePubkey'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    textColor={
+                                        isNodePubkeyValid
+                                            ? themeColor('text')
+                                            : themeColor('error')
+                                    }
+                                    placeholder={'0A...'}
+                                    value={node_pubkey_string}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            node_pubkey_string: text,
+                                            isNodePubkeyValid:
+                                                ValidationUtils.validateNodePubkey(
+                                                    text
                                                 )
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.OpenChannel.nodePubkey'
-                                            )}
-                                        </Text>
-                                        <TextInput
-                                            textColor={
-                                                isNodePubkeyValid
-                                                    ? themeColor('text')
-                                                    : themeColor('error')
-                                            }
-                                            placeholder={'0A...'}
-                                            value={node_pubkey_string}
-                                            onChangeText={(text: string) =>
-                                                this.setState({
-                                                    node_pubkey_string: text,
-                                                    isNodePubkeyValid:
-                                                        ValidationUtils.validateNodePubkey(
-                                                            text
-                                                        )
-                                                })
-                                            }
-                                            autoCapitalize="none"
-                                            locked={openingChannel}
-                                        />
-                                    </>
+                                        })
+                                    }
+                                    autoCapitalize="none"
+                                    locked={openingChannel || !isCustomPeer}
+                                />
+                            </>
 
-                                    <>
-                                        <Text
-                                            style={{
-                                                ...styles.text,
-                                                color: themeColor(
-                                                    'secondaryText'
+                            <>
+                                <Text
+                                    style={{
+                                        ...styles.text,
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString('views.OpenChannel.host')}
+                                </Text>
+                                <TextInput
+                                    textColor={
+                                        isNodeHostValid
+                                            ? themeColor('text')
+                                            : themeColor('error')
+                                    }
+                                    placeholder={localeString(
+                                        'views.OpenChannel.hostPort'
+                                    )}
+                                    value={host}
+                                    onChangeText={(text: string) =>
+                                        this.setState({
+                                            host: text,
+                                            isNodeHostValid:
+                                                ValidationUtils.validateNodeHost(
+                                                    text
                                                 )
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.OpenChannel.host'
-                                            )}
-                                        </Text>
-                                        <TextInput
-                                            textColor={
-                                                isNodeHostValid
-                                                    ? themeColor('text')
-                                                    : themeColor('error')
-                                            }
-                                            placeholder={localeString(
-                                                'views.OpenChannel.hostPort'
-                                            )}
-                                            value={host}
-                                            onChangeText={(text: string) =>
-                                                this.setState({
-                                                    host: text,
-                                                    isNodeHostValid:
-                                                        ValidationUtils.validateNodeHost(
-                                                            text
-                                                        )
-                                                })
-                                            }
-                                            autoCapitalize="none"
-                                            autoCorrect={false}
-                                            keyboardType="url"
-                                            locked={openingChannel}
-                                        />
-                                    </>
-                                </>
-                            )}
+                                        })
+                                    }
+                                    autoCapitalize="none"
+                                    autoCorrect={false}
+                                    keyboardType="url"
+                                    locked={openingChannel || !isCustomPeer}
+                                />
+                            </>
 
                             {!connectPeerOnly && (
                                 <>
