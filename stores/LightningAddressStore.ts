@@ -7,12 +7,11 @@ import BigNumber from 'bignumber.js';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import { io } from 'socket.io-client';
 import { schnorr } from '@noble/curves/secp256k1.js';
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
-import hashjs from 'hash.js';
+import { bytesToHex, hexToBytes, utf8ToBytes } from '@noble/hashes/utils';
 import { getPublicKey, SimplePool } from 'nostr-tools';
 import { mnemonicToEntropy, generateMnemonic } from '@scure/bip39';
 
-import { sha256 } from 'js-sha256';
+import { sha256Bytes, sha256Hex } from '../utils/HashingUtils';
 
 import CashuStore from './CashuStore';
 import NodeInfoStore from './NodeInfoStore';
@@ -222,10 +221,7 @@ export default class LightningAddressStore {
                 this.settingsStore?.settings?.lightningAddress?.nostrPrivateKey;
             for (let i = 0; i < preimages.length; i++) {
                 const preimage = preimages[i];
-                const hash = sha256
-                    .create()
-                    .update(Base64Utils.hexToBytes(preimage))
-                    .hex();
+                const hash = sha256Hex(Base64Utils.hexToBytes(preimage));
                 if (nostrPrivateKey) {
                     const pmthash_sig = bytesToHex(
                         schnorr.sign(
@@ -310,12 +306,7 @@ export default class LightningAddressStore {
 
             const relays_sig = bytesToHex(
                 schnorr.sign(
-                    hexToBytes(
-                        hashjs
-                            .sha256()
-                            .update(JSON.stringify(relays))
-                            .digest('hex')
-                    ),
+                    sha256Bytes(utf8ToBytes(JSON.stringify(relays))),
                     hexToBytes(nostrPrivateKey)
                 )
             );

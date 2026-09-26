@@ -3,11 +3,12 @@ import { StyleSheet, View } from 'react-native';
 import { Icon, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
+import { bytesToHex, hexToBytes, utf8ToBytes } from '@noble/hashes/utils';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { schnorr } from '@noble/curves/secp256k1.js';
-import hashjs from 'hash.js';
+
+import { sha256Bytes } from '../../utils/HashingUtils';
 
 import Button from '../../components/Button';
 import KeyValue from '../../components/KeyValue';
@@ -279,17 +280,12 @@ export default class CreateZaplockerLightningAddress extends React.Component<
                                                     const relays_sig =
                                                         bytesToHex(
                                                             schnorr.sign(
-                                                                hexToBytes(
-                                                                    hashjs
-                                                                        .sha256()
-                                                                        .update(
-                                                                            JSON.stringify(
-                                                                                nostrRelays
-                                                                            )
+                                                                sha256Bytes(
+                                                                    utf8ToBytes(
+                                                                        JSON.stringify(
+                                                                            nostrRelays
                                                                         )
-                                                                        .digest(
-                                                                            'hex'
-                                                                        )
+                                                                    )
                                                                 ),
                                                                 hexToBytes(
                                                                     nostrPrivateKey

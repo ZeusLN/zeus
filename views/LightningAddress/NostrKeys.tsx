@@ -2,11 +2,12 @@ import * as React from 'react';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { generateSecretKey, getPublicKey, nip19 } from 'nostr-tools';
-import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
+import { bytesToHex, hexToBytes, utf8ToBytes } from '@noble/hashes/utils';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { schnorr } from '@noble/curves/secp256k1.js';
-import hashjs from 'hash.js';
+
+import { sha256Bytes } from '../../utils/HashingUtils';
 
 import Button from '../../components/Button';
 import KeyValue from '../../components/KeyValue';
@@ -350,15 +351,12 @@ export default class NostrKey extends React.Component<
                                                         .nostrRelays;
                                                 const relays_sig = bytesToHex(
                                                     schnorr.sign(
-                                                        hexToBytes(
-                                                            hashjs
-                                                                .sha256()
-                                                                .update(
-                                                                    JSON.stringify(
-                                                                        relays
-                                                                    )
+                                                        sha256Bytes(
+                                                            utf8ToBytes(
+                                                                JSON.stringify(
+                                                                    relays
                                                                 )
-                                                                .digest('hex')
+                                                            )
                                                         ),
                                                         hexToBytes(
                                                             nostrPrivateKey
