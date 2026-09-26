@@ -1,4 +1,4 @@
-import { getPhoto, getPresetName } from './PhotoUtils';
+import { getPhoto, getPresetImage, getPresetNames } from './PhotoUtils';
 jest.mock('react-native-fs', () => ({
     DocumentDirectoryPath: 'docpath'
 }));
@@ -40,59 +40,57 @@ describe('PhotoUtils', () => {
         });
     });
 
-    describe('getPresetName', () => {
-        it('extracts zeus illustration names from dev server URIs', () => {
-            expect(
-                getPresetName(
-                    'http://localhost:8081/assets/assets/images/zeus_illustration_1a.jpg?platform=ios&hash=abc'
-                )
-            ).toEqual('zeusillustration1a');
-            expect(
-                getPresetName(
-                    'http://localhost:8081/assets/assets/images/zeus_illustration_7b.jpg?platform=android&hash=xyz'
-                )
-            ).toEqual('zeusillustration7b');
+    describe('getPresetNames', () => {
+        it('lists the zeus illustrations for every implementation', () => {
+            const names = getPresetNames();
+            expect(names).toHaveLength(14);
+            expect(names[0]).toEqual('zeusillustration1a');
+            expect(names[13]).toEqual('zeusillustration7b');
         });
 
-        it('extracts implementation image names from dev server URIs', () => {
-            expect(
-                getPresetName(
-                    'http://localhost:8081/assets/assets/images/alby.jpg?platform=ios&hash=abc'
-                )
-            ).toEqual('alby');
-            expect(
-                getPresetName(
-                    'http://localhost:8081/assets/assets/images/nostrwalletconnect.jpg?platform=ios&hash=abc'
-                )
-            ).toEqual('nostrwalletconnect');
-            expect(
-                getPresetName(
-                    'http://localhost:8081/assets/assets/images/ldk.png?platform=ios&hash=abc'
-                )
-            ).toEqual('ldk');
+        it('appends implementation specific presets', () => {
+            expect(getPresetNames('embedded-lnd').slice(14)).toEqual(['lnd']);
+            expect(getPresetNames('cln-rest').slice(14)).toEqual([
+                'cln',
+                'btcpay'
+            ]);
+            expect(getPresetNames('unknown')).toHaveLength(14);
         });
 
-        it('handles URIs without query params', () => {
-            expect(
-                getPresetName(
-                    'file:///app/assets/images/zeus_illustration_3a.jpg'
-                )
-            ).toEqual('zeusillustration3a');
-            expect(
-                getPresetName('file:///app/assets/images/btcpay.jpg')
-            ).toEqual('btcpay');
-        });
-
-        it('handles all zeus illustration variants', () => {
-            for (let i = 1; i <= 7; i++) {
-                for (const suffix of ['a', 'b']) {
-                    expect(
-                        getPresetName(
-                            `http://localhost:8081/assets/images/zeus_illustration_${i}${suffix}.jpg?hash=x`
-                        )
-                    ).toEqual(`zeusillustration${i}${suffix}`);
+        it('only returns names that getPhoto can resolve', () => {
+            const implementations = [
+                undefined,
+                'lndhub',
+                'nostr-wallet-connect',
+                'lnd',
+                'embedded-lnd',
+                'lightning-node-connect',
+                'cln-rest',
+                'ldk-node'
+            ];
+            for (const implementation of implementations) {
+                for (const name of getPresetNames(implementation)) {
+                    expect(getPresetImage(name)).toBeDefined();
+                    expect(getPhoto(`preset://${name}`)).not.toEqual('');
                 }
             }
+        });
+    });
+
+    describe('legacy preset values', () => {
+        it('resolves names saved by Android release builds', () => {
+            // v13.0.0 - v13.2.x derived these from Android resource ids
+            expect(getPhoto('preset://assetsimageslnd')).toEqual(
+                '../../../assets/images/lnd.jpg'
+            );
+            expect(getPhoto('preset://assetsimageszeusillustration1a')).toEqual(
+                '../../../assets/images/zeus_illustration_1a.jpg'
+            );
+        });
+
+        it('returns an empty string for unknown presets', () => {
+            expect(getPhoto('preset://doesnotexist')).toEqual('');
+            expect(getPhoto('preset://assetsimagesdoesnotexist')).toEqual('');
         });
     });
 });
