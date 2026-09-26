@@ -147,11 +147,17 @@ class MigrationsUtils {
                 );
             }
 
-            // 4. Verify write succeeded by reading back
+            // 4. Verify the write by reading the value back and comparing it
+            // against what was sent. A truthiness check passes on any
+            // non-empty value, so a write that landed as something else -
+            // another writer between step 1 and here, or a partial write -
+            // is reported as a successful migration. Step 1 rules out a
+            // pre-existing copy: it returns early if the key holds anything,
+            // so a mismatch here is newer than what we wrote, not older.
             const verifyData = await Storage.getItem(key);
-            if (!verifyData) {
+            if (verifyData !== credentials.password) {
                 throw new Error(
-                    `Verification failed for ${key}. Data not found after write.`
+                    `Verification failed for ${key}. Read-back does not match what was written.`
                 );
             }
 
