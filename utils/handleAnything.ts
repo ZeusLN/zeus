@@ -367,8 +367,6 @@ const handleAnything = async (
 ): Promise<any> => {
     data = data.trim();
     const network = getNetworkString();
-    const { nodeInfo } = nodeInfoStore;
-    const { isTestNet, isRegTest, isSigNet } = nodeInfo;
     let { value, satAmount, lightning, offer, clinkNoffer }: any =
         AddressUtils.processBIP21Uri(data);
     const hasAt: boolean = value.includes('@');
@@ -408,10 +406,15 @@ const handleAnything = async (
 
     if (!hasAt && hasMultiple) {
         if (isClipboardValue) return true;
+        // ChoosePaymentMethod offers on-chain for any value it receives, so
+        // leave out an address that is not valid on this node's network
         return [
             'ChoosePaymentMethod',
             {
-                value,
+                value:
+                    value && !AddressUtils.isValidBitcoinAddressForNode(value)
+                        ? undefined
+                        : value,
                 satAmount,
                 lightning,
                 offer,
@@ -435,67 +438,7 @@ const handleAnything = async (
                 isValid: true
             }
         ];
-    } else if (
-        !hasAt &&
-        AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest) &&
-        lightning
-    ) {
-        if (isClipboardValue) return true;
-        if (!BackendUtils.supportsOnchainSends()) {
-            if (lightning?.toLowerCase().startsWith('lnurl')) {
-                try {
-                    const params = await getlnurlParams(lightning);
-                    if ('tag' in params && params.tag === 'payRequest') {
-                        return [
-                            'LnurlPay',
-                            {
-                                lnurlParams: params,
-                                ecash
-                            }
-                        ];
-                    } else {
-                        throw new Error(
-                            localeString(
-                                'utils.handleAnything.invalidLnurlParams'
-                            )
-                        );
-                    }
-                } catch {
-                    throw new Error(
-                        localeString('utils.handleAnything.invalidLnurlParams')
-                    );
-                }
-            } else {
-                if (ecash && !isAmountlessInvoice(lightning)) {
-                    return [
-                        'ChoosePaymentMethod',
-                        {
-                            lightning,
-                            locked: true
-                        }
-                    ];
-                } else {
-                    await invoicesStore.getPayReq(lightning);
-                    return ['PaymentRequest', {}];
-                }
-            }
-        }
-        return [
-            'Accounts',
-            {
-                value,
-                satAmount,
-                lightning,
-                locked: true
-            }
-        ];
-    } else if (
-        !hasAt &&
-        AddressUtils.isValidBitcoinAddress(
-            value,
-            isTestNet || isRegTest || isSigNet
-        )
-    ) {
+    } else if (!hasAt && AddressUtils.isValidBitcoinAddressForNode(value)) {
         if (isClipboardValue) return true;
         return [
             'Send',
