@@ -655,6 +655,55 @@ describe('MigrationUtils', () => {
         });
     });
 
+    describe('applyCertVerificationDefault', () => {
+        it('normalizes nodes missing certVerification to explicit false, leaving set values untouched', () => {
+            const settings: any = {
+                nodes: [
+                    { implementation: 'lnd', host: 'a' },
+                    { implementation: 'lnd', certVerification: true },
+                    { implementation: 'cln-rest', certVerification: false },
+                    { implementation: 'embedded-lnd' }
+                ]
+            };
+
+            expect(MigrationUtils.applyCertVerificationDefault(settings)).toBe(
+                true
+            );
+            expect(settings.nodes[0].certVerification).toBe(false);
+            expect(settings.nodes[1].certVerification).toBe(true);
+            expect(settings.nodes[2].certVerification).toBe(false);
+            expect(settings.nodes[3].certVerification).toBe(false);
+        });
+
+        it('is idempotent: a repeat run mutates nothing further', () => {
+            const settings: any = {
+                nodes: [
+                    { implementation: 'lnd' },
+                    { implementation: 'lnd', certVerification: true }
+                ]
+            };
+
+            expect(MigrationUtils.applyCertVerificationDefault(settings)).toBe(
+                true
+            );
+            const afterFirst = JSON.parse(JSON.stringify(settings));
+            expect(MigrationUtils.applyCertVerificationDefault(settings)).toBe(
+                false
+            );
+
+            expect(settings).toEqual(afterFirst);
+        });
+
+        it('handles settings without nodes', () => {
+            const settings: any = { fiat: 'USD' };
+
+            expect(MigrationUtils.applyCertVerificationDefault(settings)).toBe(
+                false
+            );
+            expect(settings).toEqual({ fiat: 'USD' });
+        });
+    });
+
     describe('applyRgsDefaultsToV2', () => {
         it('rewrites both v1 default endpoints on mainnet nodes', () => {
             const settings: any = {
@@ -1130,13 +1179,33 @@ describe('MigrationUtils', () => {
                 'https://satsrouting.exchange/v2'
             );
             expect(EncryptedStorage.getItem).not.toHaveBeenCalled();
-            expect(settings.settingsVersion).toBe(2);
+            expect(settings.settingsVersion).toBe(SETTINGS_VERSION);
         });
 
-        it('skips every block for a blob already stamped at 2', async () => {
+        it('applies the v3 cert default to a blob already stamped at 2', async () => {
+            // the v2 block already ran for these installs, so the cert
+            // normalization is the only thing the pass changes
             const settings: any = {
                 settingsVersion: 2,
-                swaps: { hostMainnet: 'https://api.boltz.exchange/v2' }
+                swaps: { hostMainnet: 'https://satsrouting.exchange/v2' },
+                nodes: [{ implementation: 'lnd' }]
+            };
+
+            const changed = await MigrationUtils.applySettingsMigrations(
+                settings
+            );
+
+            expect(changed).toBe(true);
+            expect(settings.nodes[0].certVerification).toBe(false);
+            expect(EncryptedStorage.getItem).not.toHaveBeenCalled();
+            expect(settings.settingsVersion).toBe(3);
+        });
+
+        it('skips every block for a blob already stamped at 3', async () => {
+            const settings: any = {
+                settingsVersion: 3,
+                swaps: { hostMainnet: 'https://api.boltz.exchange/v2' },
+                nodes: [{ implementation: 'lnd' }]
             };
 
             const changed = await MigrationUtils.applySettingsMigrations(
@@ -1149,6 +1218,9 @@ describe('MigrationUtils', () => {
             expect(settings.swaps.hostMainnet).toBe(
                 'https://api.boltz.exchange/v2'
             );
+            // and a node they explicitly left key-less is not normalized
+            // a second time
+            expect(settings.nodes[0].certVerification).toBeUndefined();
         });
     });
 
