@@ -119,18 +119,29 @@ jest.mock('../stores/Stores', () => ({
     settingsStore: { settings: { locale: 'en' } }
 }));
 jest.mock('react-native-blob-util', () => ({
-    fetch: (...args: any[]) => mockBlobUtilFetch(...args)
+    config: () => ({
+        fetch: (...args: any[]) => mockBlobUtilFetch(...args)
+    })
 }));
 jest.mock('react-native-encrypted-storage', () => ({}));
 jest.mock('react-native-fs', () => ({}));
 const mockGetLnurlParamsFn = jest.fn();
 const mockFindLnurl = jest.fn();
-jest.mock('js-lnurl', () => ({
-    getParams: (...args: any[]) => mockGetLnurlParamsFn(...args)
+// Undecodable by default, which is what most of these inputs are. js-lnurl
+// decodes before it fetches, so an undecodable value never reaches the
+// network and the lnurl host policy has nothing to police; tests that care
+// about the policy point this at a URL.
+const UNDECODABLE = () => {
+    throw new Error('invalid url');
+};
+let mockDecodeLnurl: (...args: any[]) => any = UNDECODABLE;
+jest.mock('./LnurlFetchUtils', () => ({
+    ...jest.requireActual('./LnurlFetchUtils'),
+    fetchLnurlParams: (...args: any[]) => mockGetLnurlParamsFn(...args)
 }));
 jest.mock('js-lnurl/lib/helpers', () => ({
     findlnurl: (...args: any[]) => mockFindLnurl(...args),
-    decodelnurl: () => null
+    decodelnurl: (...args: any[]) => mockDecodeLnurl(...args)
 }));
 jest.mock('nostr-tools', () => ({
     SimplePool: class {
@@ -158,6 +169,7 @@ describe('handleAnything', () => {
         mockProcessNodeUri.mockReset();
         mockGetLnurlParamsFn.mockReset();
         mockFindLnurl.mockReset();
+        mockDecodeLnurl = UNDECODABLE;
         mockSimplePool.mockReset();
         mockNip19Decode.mockReset();
         mockIsValidNpub = false;
@@ -518,6 +530,72 @@ describe('handleAnything', () => {
     // fell through to getlnurlParams (a live HTTP GET of an attacker-controllable
     // target, including RFC1918/link-local literals) and nostrProfileLookup
     // (outbound Nostr relay connections) on every app foreground.
+    // Resolving an lnurl fetches whatever the bech32 decodes to, so the host
+    // policy has to apply before that fetch and not only to the callbacks the
+    // response carries: an lnurl1... encoding a LAN or loopback URL is a
+    // request made from the user's network position with no server, no
+    // service and no callback involved.
+    describe('lnurl endpoint host policy', () => {
+        const lnurlValue = 'lnurl1anything';
+
+        beforeEach(() => {
+            mockProcessBIP21Uri.mockReturnValue({ value: lnurlValue });
+            mockFindLnurl.mockReturnValue(lnurlValue);
+            mockGetLnurlParamsFn.mockResolvedValue({
+                tag: 'withdrawRequest',
+                callback: 'https://example.com/cb',
+                k1: 'K1'
+            });
+        });
+
+        it.each([
+            'http://127.0.0.1:8080/lnurl',
+            'https://192.168.1.1/lnurl',
+            'https://169.254.169.254/lnurl',
+            'http://cleartext.example/lnurl'
+        ])('refuses to resolve an lnurl pointing at %s', async (decoded) => {
+            mockDecodeLnurl = () => decoded;
+
+            // the refusal, not the generic invalid-params message
+            await expect(handleAnything(lnurlValue)).rejects.toThrow(
+                'This LNURL points at an unsafe address'
+            );
+            expect(mockGetLnurlParamsFn).not.toHaveBeenCalled();
+        });
+
+        // Refused at resolve time, before the user creates an invoice for a
+        // withdraw the service could never pay.
+        it('refuses a withdraw whose callback points at a LAN host', async () => {
+            mockDecodeLnurl = () => 'https://example.com/lnurl';
+            mockGetLnurlParamsFn.mockResolvedValue({
+                tag: 'withdrawRequest',
+                callback: 'https://192.168.1.1/cb',
+                k1: 'K1'
+            });
+
+            await expect(handleAnything(lnurlValue)).rejects.toThrow(
+                'This Lightning service asked the wallet to contact an unsafe address'
+            );
+        });
+
+        it('resolves an lnurl pointing at a public https host', async () => {
+            mockDecodeLnurl = () => 'https://example.com/lnurl';
+
+            const result = await handleAnything(lnurlValue);
+
+            expect(mockGetLnurlParamsFn).toHaveBeenCalledWith(lnurlValue);
+            expect(result[0]).toBe('Receive');
+        });
+
+        it('resolves an onion lnurl over cleartext, as the spec allows', async () => {
+            mockDecodeLnurl = () => 'http://abcdefg.onion/lnurl';
+
+            await handleAnything(lnurlValue);
+
+            expect(mockGetLnurlParamsFn).toHaveBeenCalledWith(lnurlValue);
+        });
+    });
+
     describe('clipboard probe must not touch the network', () => {
         it('does not fetch lnurl params for a bech32 LNURL clipboard value', async () => {
             const data =
@@ -989,6 +1067,42 @@ describe('handleAnything', () => {
                 'get',
                 'https://example.com/.well-known/lnurlp/satoshinakamoto'
             );
+        });
+
+        // The address grammar admits IP-literal domains, and the well-known
+        // lookup is a request from the user's network position.
+        it.each(['user@192.168.1.1', 'user@127.0.0.1', 'user@169.254.169.254'])(
+            'refuses to resolve %s',
+            async (address) => {
+                mockProcessBIP21Uri.mockReturnValue({ value: address });
+                mockIsValidLightningAddress = true;
+
+                await expect(handleAnything(address)).rejects.toThrow(
+                    'This lightning address points at an unsafe host'
+                );
+                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+            }
+        );
+
+        // A public well-known URL can redirect to the LAN; the redirect is
+        // refused and reported instead of falling through to NIP-05, which
+        // would contact the same host again.
+        it('refuses a well-known lookup that redirects to the LAN', async () => {
+            const address = 'user@example.com';
+            mockProcessBIP21Uri.mockReturnValue({ value: address });
+            mockIsValidLightningAddress = true;
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({
+                    status: 302,
+                    headers: { Location: 'http://192.168.1.1/lnurlp' }
+                }),
+                json: () => ({})
+            });
+
+            await expect(handleAnything(address)).rejects.toThrow(
+                'redirected the wallet to an unsafe address'
+            );
+            expect(mockBlobUtilFetch).toHaveBeenCalledTimes(1);
         });
 
         it('lowercases domain per LUD-16 spec', async () => {
