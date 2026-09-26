@@ -189,6 +189,17 @@ describe('AddressUtils', () => {
                 value: '',
                 offer: 'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
             });
+            // BIP 353 records commonly pair a silent payment address with
+            // an offer; the offer must survive alongside params ZEUS can't
+            // pay to
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'bitcoin:?sp=sp1qqgste7k9hx0qftg6qmwlkqtwuy6cycyavzmzj85c6qdfhjdpdjtdgqjuexzk6murw56suy3e0rd2cgqvycxttddwsvgxe2usfpxumr70xc9pkqwv&lno=lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+                )
+            ).toEqual({
+                value: '',
+                offer: 'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+            });
 
             // lightning invoices
             expect(
