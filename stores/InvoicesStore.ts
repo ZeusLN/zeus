@@ -107,28 +107,25 @@ export default class InvoicesStore {
     };
 
     @action
-    private resetInvoices = () => {
-        this.invoices = [];
-        this.invoicesCount = 0;
-        this.loading = false;
-    };
-
-    @action
     public getInvoices = async () => {
         this.loading = true;
-        await BackendUtils.getInvoices()
-            .then((data: any) => {
-                runInAction(() => {
-                    this.invoices = data.invoices
-                        .map((invoice: any) => new Invoice(invoice))
-                        .slice()
-                        .reverse();
-                    this.invoicesCount =
-                        data.last_index_offset || this.invoices.length;
-                    this.loading = false;
-                });
-            })
-            .catch(() => this.resetInvoices());
+        try {
+            const data = await BackendUtils.getInvoices();
+            runInAction(() => {
+                this.invoices = data.invoices
+                    .map((invoice: any) => new Invoice(invoice))
+                    .slice()
+                    .reverse();
+                this.invoicesCount =
+                    data.last_index_offset || this.invoices.length;
+                this.loading = false;
+            });
+        } catch (error) {
+            runInAction(() => {
+                this.loading = false;
+            });
+            throw error;
+        }
     };
 
     @action
