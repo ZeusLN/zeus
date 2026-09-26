@@ -31,6 +31,25 @@ export interface LnurlCheckResult {
  * response, so the check is identical across every backend (several omit
  * description_hash / num_msat from their decode output).
  */
+// Builds the LUD-16 lnurlp URL for a Lightning Address. The domain is
+// lowercased per LUD-16. The username is lowercased too, except for
+// cryptoqr.net, whose usernames carry URL-encoded data where hex digit casing
+// matters for the server-side lookup. .onion is served over http.
+export const getLnurlpUrl = (address: string) => {
+    const [username, domain] = address.split('@');
+    const normalizedDomain = domain.toLowerCase();
+    const isOnion = normalizedDomain.endsWith('.onion');
+    const normalizedUsername = normalizedDomain.endsWith('cryptoqr.net')
+        ? username
+        : username.toLowerCase();
+    const origin = `${isOnion ? 'http' : 'https'}://${normalizedDomain}`;
+    return {
+        url: `${origin}/.well-known/lnurlp/${normalizedUsername}`,
+        origin,
+        isOnion
+    };
+};
+
 export const verifyLnurlPayInvoice = (
     pr: string,
     metadata: string | undefined,

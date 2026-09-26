@@ -10,6 +10,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import { doTorRequest, RequestMethod } from '../../utils/TorUtils';
 import BackendUtils from './../../utils/BackendUtils';
 import { localeString } from './../../utils/LocaleUtils';
+import { getLnurlpUrl } from './../../utils/LnurlPayUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import {
@@ -180,16 +181,13 @@ export default class LightningSwipeableRow extends Component<
         navigation: any,
         settings: any
     ): Promise<void> => {
-        const [username, bolt11Domain] = lightningAddress.split('@');
-        const url = bolt11Domain.includes('.onion')
-            ? `http://${bolt11Domain}/.well-known/lnurlp/${username.toLowerCase()}`
-            : `https://${bolt11Domain}/.well-known/lnurlp/${username.toLowerCase()}`;
+        const { url, isOnion } = getLnurlpUrl(lightningAddress);
 
         const error = localeString(
             'utils.handleAnything.lightningAddressError'
         );
 
-        if (settingsStore.enableTor && bolt11Domain.includes('.onion')) {
+        if (settingsStore.enableTor && isOnion) {
             await doTorRequest(url, RequestMethod.GET)
                 .then((response: any) => {
                     if (!response.callback) {

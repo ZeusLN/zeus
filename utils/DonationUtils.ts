@@ -2,7 +2,7 @@
 import BigNumber from 'bignumber.js';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
-import { verifyLnurlPayInvoice } from './LnurlPayUtils';
+import { getLnurlpUrl, verifyLnurlPayInvoice } from './LnurlPayUtils';
 
 const DONATION_ADDRESS = 'tips@pay.zeusln.app';
 
@@ -40,9 +40,7 @@ export const findDonationPercentageIndex = (
 export const loadDonationLnurl = async (
     donationAmount: string
 ): Promise<string | null> => {
-    const [username, bolt11Domain] = DONATION_ADDRESS.split('@');
-    const protocol = bolt11Domain.includes('.onion') ? 'http' : 'https';
-    const url = `${protocol}://${bolt11Domain}/.well-known/lnurlp/${username.toLowerCase()}`;
+    const { url, origin } = getLnurlpUrl(DONATION_ADDRESS);
 
     try {
         const amountMsat = new BigNumber(donationAmount || 0).multipliedBy(
@@ -62,7 +60,6 @@ export const loadDonationLnurl = async (
         // The invoice returned by this callback is paid silently, with no
         // confirmation screen, so never follow it off the donation domain
         const callback = lnurlData?.callback;
-        const origin = `${protocol}://${bolt11Domain}`;
         if (
             typeof callback !== 'string' ||
             (callback !== origin && !callback.startsWith(`${origin}/`))
