@@ -188,9 +188,11 @@ const confirmBtcPayFetch = (
         );
     });
 
-const attemptNip05Lookup = async (data: string) => {
+const attemptNip05Lookup = async (identifier: string) => {
     try {
-        const lookup: any = await nip05.queryProfile(data);
+        // NIP-05 names are case-insensitive, but nostr-tools looks them up
+        // case-sensitively in nostr.json, whose keys are lowercase
+        const lookup: any = await nip05.queryProfile(identifier.toLowerCase());
         const pubkey = lookup.pubkey;
         return await nostrProfileLookup(pubkey);
     } catch (e) {
@@ -879,7 +881,7 @@ const handleAnything = async (
                             }
                         ];
                     }
-                    return await attemptNip05Lookup(data);
+                    return await attemptNip05Lookup(value);
                 });
         }
     } else if (value.includes('config=') && value.includes('lnd.config')) {
