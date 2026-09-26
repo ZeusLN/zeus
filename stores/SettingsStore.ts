@@ -248,6 +248,7 @@ export interface Settings {
     lspMutinynet: string;
     lspAccessKey: string;
     requestSimpleTaproot: boolean;
+    lspPushNotifications?: boolean;
     //LSPS1
     lsps1RestMainnet: string;
     lsps1RestTestnet: string;
@@ -1613,6 +1614,7 @@ export default class SettingsStore {
         lspMutinynet: DEFAULT_LSP_MUTINYNET,
         lspAccessKey: '',
         requestSimpleTaproot: true,
+        lspPushNotifications: false,
         //lsps1
         lsps1RestMainnet: DEFAULT_LSPS1_REST_MAINNET,
         lsps1RestTestnet: DEFAULT_LSPS1_REST_TESTNET,

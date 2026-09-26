@@ -88,7 +88,9 @@ export const activityStore = new ActivityStore(
 export const lightningAddressStore = new LightningAddressStore(
     cashuStore,
     nodeInfoStore,
-    settingsStore
+    settingsStore,
+    channelsStore,
+    lspStore
 );
 export const posStore = new PosStore(settingsStore, fiatStore, unitsStore);
 export const inventoryStore = new InventoryStore();
