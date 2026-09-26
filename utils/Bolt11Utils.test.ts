@@ -1,6 +1,18 @@
 import * as secp from '@noble/secp256k1';
+import { bech32 } from 'bech32';
 
 import Bolt11Utils from './Bolt11Utils';
+
+/**
+ * Builds a structurally valid invoice carrying only an amount prefix.
+ *
+ * BOLT11 publishes no vector for an amount it forbids, so the rule below has
+ * to be exercised against one we construct. The signature words are zeros,
+ * which is harmless here because recovery is lazy -- reading the amount
+ * fields never touches `destination`.
+ */
+const invoiceWithPrefix = (hrp: string) =>
+    bech32.encode(hrp, new Array(110).fill(0), Infinity);
 
 const REGTEST_FIXTURE =
     'lnbcrt1230n1pj429x7pp57t97q4awqj3f529snr0pa6senk83sq5pp760qf5a4jzvd7xgwcksdqqcqzzsxqrrsssp57eqtv7vxr46arupna3w4ct0lkf2mqmz9wt044cwkks0rwlnhfr5s9qyyssqragwpwav7nfwv2xyuuamxxj4pnnpzv2hlw7j473repd3sq7st698ta9kmzmygt0w7tmncl56a6mnma0w7e5dlpqd0wy6x3v35rssldspjhh8p0';
@@ -14,6 +26,18 @@ const BOLT11_SPEC_FIXTURE =
     'lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpquwpc4curk03c9wlrswe78q4eyqc7d8d0xqzpu9qrsgqhtjpauu9ur7fw2thcl4y9vfvh4m9wlfyz2gem29g5ghe2aak2pm3ps8fdhtceqsaagty2vph7utlgj48u0ged6a337aewvraedendscp573dxr';
 const BOLT11_SPEC_PAYEE =
     '03e7156ae33b0a208d0744199163177e909e80176e55d97a2f221ede0f934dd9ad';
+
+// BOLT11 spec reference vector, 20 milli-BTC with a hashed description
+// https://github.com/lightning/bolts/blob/master/11-payment-encoding.md#examples
+const MILLI_FIXTURE =
+    'lnbc20m1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqhp58yjmdan79s6qqdhdzgynm4zwqd5d7xmw5fk98klysy043l2ahrqs9qrsgq7ea976txfraylvgzuxs8kgcw23ezlrszfnh8r6qtfpr6cxga50aj6txm9rxrydzd06dfeawfk6swupvz4erwnyutnjq7x39ymw6j38gp7ynn44';
+
+// BOLT11 spec reference vector using the pico-BTC multiplier. 9678785340p is
+// 967878534 msat, which is 967878.534 sat -- deliberately NOT a whole number
+// of satoshis, which is the whole point of keeping it.
+// https://github.com/lightning/bolts/blob/master/11-payment-encoding.md#examples
+const PICO_FIXTURE =
+    'lnbc9678785340p1pwmna7lpp5gc3xfm08u9qy06djf8dfflhugl6p7lgza6dsjxq454gxhj9t7a0sd8dgfkx7cmtwd68yetpd5s9xar0wfjn5gpc8qhrsdfq24f5ggrxdaezqsnvda3kkum5wfjkzmfqf3jkgem9wgsyuctwdus9xgrcyqcjcgpzgfskx6eqf9hzqnteypzxz7fzypfhg6trddjhygrcyqezcgpzfysywmm5ypxxjemgw3hxjmn8yptk7untd9hxwg3q2d6xjcmtv4ezq7pqxgsxzmnyyqcjqmt0wfjjq6t5v4khxsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygsxqyjw5qcqp2rzjq0gxwkzc8w6323m55m4jyxcjwmy7stt9hwkwe2qxmy8zpsgg7jcuwz87fcqqeuqqqyqqqqlgqqqqn3qq9q9qrsgqrvgkpnmps664wgkp43l22qsgdw4ve24aca4nymnxddlnp8vh9v2sdxlu5ywdxefsfvm0fq3sesf08uf6q9a2ke0hc9j6z6wlxg5z5kqpu2v9wz';
 
 // BOLT11 spec reference vector with no amount
 // https://github.com/lightning/bolts/blob/master/11-payment-encoding.md#examples
@@ -96,6 +120,69 @@ describe('decode', () => {
 
         expect(decoded.destination).toBe(BOLT11_SPEC_PAYEE);
         expect(decoded.payeeNodeKey).toBe(BOLT11_SPEC_PAYEE);
+    });
+
+    it('parses the amount from a micro-BTC prefix (2500u = 250000 sat)', () => {
+        const decoded = Bolt11Utils.decode(BOLT11_SPEC_FIXTURE);
+
+        expect(decoded.satoshis).toBe(250000);
+        expect(decoded.millisatoshis).toBe('250000000');
+        expect(decoded.num_satoshis).toBe('250000');
+        expect(decoded.num_msat).toBe('250000000');
+    });
+
+    it('parses the amount from a milli-BTC prefix (20m = 2000000 sat)', () => {
+        const decoded = Bolt11Utils.decode(MILLI_FIXTURE);
+
+        expect(decoded.satoshis).toBe(2000000);
+        expect(decoded.millisatoshis).toBe('2000000000');
+        expect(decoded.num_satoshis).toBe('2000000');
+        expect(decoded.num_msat).toBe('2000000000');
+    });
+
+    // An invoice may specify an amount that is not a whole number of
+    // satoshis, and a wallet has to keep the millisatoshi figure to charge
+    // the right amount. `satoshis` is deliberately null here rather than
+    // rounded, so a caller cannot mistake a truncated figure for an exact
+    // one; `num_satoshis` floors for display and `num_msat` stays exact.
+    it('keeps msat precision for a sub-satoshi pico-BTC amount (9678785340p)', () => {
+        const decoded = Bolt11Utils.decode(PICO_FIXTURE);
+
+        expect(decoded.millisatoshis).toBe('967878534');
+        expect(decoded.satoshis).toBeNull();
+        expect(decoded.num_msat).toBe('967878534');
+        expect(decoded.num_satoshis).toBe('967878');
+    });
+
+    // BOLT11: "if the multiplier is `p`, the least-significant digit of
+    // `amount` MUST be 0", because a pico-bitcoin is a tenth of a
+    // millisatoshi and anything finer cannot be paid. The pair matters: 10p
+    // is accepted and yields 1 msat, so a null here is the rule firing and
+    // not pico amounts being unsupported.
+    it('rejects a pico amount whose last digit is not 0, but accepts 10p', () => {
+        const forbidden = Bolt11Utils.decode(invoiceWithPrefix('lnbc1p'));
+        expect(forbidden.millisatoshis).toBeNull();
+        expect(forbidden.satoshis).toBeNull();
+        expect(forbidden.num_msat).toBe('0');
+
+        const allowed = Bolt11Utils.decode(invoiceWithPrefix('lnbc10p'));
+        expect(allowed.millisatoshis).toBe('1');
+        expect(allowed.satoshis).toBeNull();
+        expect(allowed.num_msat).toBe('1');
+    });
+
+    // Characterising, not endorsing. decode() catches amount-parsing errors
+    // and nulls the fields rather than rejecting, so an amount above the
+    // 21M BTC supply cap arrives looking exactly like a no-amount invoice --
+    // and downstream `Invoice.getRequestAmount` resolves it to a real 0 via
+    // `Number(this.num_satoshis || 0)`. Raised on the PR; if decode is later
+    // changed to distinguish the two, this test is meant to fail loudly.
+    it('currently nulls, rather than rejects, an amount above the supply cap', () => {
+        const decoded = Bolt11Utils.decode(invoiceWithPrefix('lnbc22000000'));
+
+        expect(decoded.satoshis).toBeNull();
+        expect(decoded.millisatoshis).toBeNull();
+        expect(decoded.num_satoshis).toBe('0');
     });
 
     it('returns null amount fields for a no-amount invoice', () => {
