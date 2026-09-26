@@ -757,7 +757,7 @@ const handleAnything = async (
         );
 
         // handle Tor LN addresses
-        if (settingsStore.enableTor && bolt11Domain.includes('.onion')) {
+        if (settingsStore.enableTor && normalizedDomain.includes('.onion')) {
             return doTorRequest(url, RequestMethod.GET)
                 .then((response: any) => {
                     if (!response.callback) {
