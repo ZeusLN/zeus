@@ -1589,7 +1589,15 @@ describe('MigrationUtils', () => {
         const STORAGE_KEY = 'zeus-settings-v2';
         const KEYCHAIN_MIGRATION_KEY = 'ios-keychain-cloud-sync-migration-v1';
         const SETTINGS = '{"nodes":[{"nickname":"fresh"}]}';
-        const STALE = '{"nodes":[{"nickname":"stale"}]}';
+        const OTHER = '{"nodes":[{"nickname":"other"}]}';
+        const CONTACTS = '[{"name":"alice"}]';
+        // Two legacy keys, not one: with a single key, a verification that
+        // reads back STORAGE_KEY instead of the key it just wrote is
+        // indistinguishable from a correct one.
+        const LEGACY: Record<string, string> = {
+            [STORAGE_KEY]: SETTINGS,
+            'zeus-contacts-v2': CONTACTS
+        };
 
         // The file-level console spies are restored by an earlier describe's
         // afterAll, so this describe needs its own
@@ -1612,8 +1620,8 @@ describe('MigrationUtils', () => {
             // the migration list reads as absent so the pass stays short.
             Keychain.getInternetCredentials.mockImplementation(
                 async (server: string) =>
-                    server === STORAGE_KEY
-                        ? { username: server, password: SETTINGS }
+                    LEGACY[server]
+                        ? { username: server, password: LEGACY[server] }
                         : false
             );
         });
@@ -1650,17 +1658,19 @@ describe('MigrationUtils', () => {
             expect(migratedFlagSet()).toBe(true);
         });
 
-        it('fails verification when the key still holds an older value', async () => {
-            // setItem reports success, but the key reads back as the copy that
-            // was already there. A truthiness check passes this and the
-            // migration is recorded as done over stale data.
+        it('fails verification when the read-back is not what was written', async () => {
+            // setItem reports success, but the key reads back as something
+            // else - another writer landing between step 1 and the read-back.
+            // It cannot be a pre-existing copy: step 1 returns early if the
+            // key already holds anything. A truthiness check passes this and
+            // records the migration as done over a value it did not write.
             let written = false;
             StorageModule.setItem.mockImplementation(async () => {
                 written = true;
                 return true;
             });
             StorageModule.getItem.mockImplementation(async (key: string) =>
-                key === STORAGE_KEY ? (written ? STALE : false) : false
+                key === STORAGE_KEY ? (written ? OTHER : false) : false
             );
 
             await MigrationUtils.keychainCloudSyncMigration();

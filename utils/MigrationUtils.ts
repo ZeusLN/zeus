@@ -148,11 +148,12 @@ class MigrationsUtils {
             }
 
             // 4. Verify the write by reading the value back and comparing it
-            // against what was sent. A truthiness check cannot tell the value
-            // just written from an older copy the key is still holding, so a
-            // partial or clobbered write reports success. It catches the
-            // unwritten case only incidentally, because Storage.getItem
-            // resolves `false` for a missing key rather than throwing.
+            // against what was sent. A truthiness check passes on any
+            // non-empty value, so a write that landed as something else -
+            // another writer between step 1 and here, or a partial write -
+            // is reported as a successful migration. Step 1 rules out a
+            // pre-existing copy: it returns early if the key holds anything,
+            // so a mismatch here is newer than what we wrote, not older.
             const verifyData = await Storage.getItem(key);
             if (verifyData !== credentials.password) {
                 throw new Error(
