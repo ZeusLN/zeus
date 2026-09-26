@@ -10,7 +10,6 @@ LDK_NODE_ANDROID_SHA256=$(jq "['ldk-node']['androidSha256']")
 LDK_NODE_IOS_SHA256=$(jq "['ldk-node']['iosSha256']")
 CDK_VERSION=$(jq "['cdk']['version']")
 CDK_ANDROID_SHA256=$(jq "['cdk']['androidSha256']")
-CDK_ANDROID_BINDINGS_SHA256=$(jq "['cdk']['androidBindingsSha256']")
 CDK_IOS_SHA256=$(jq "['cdk']['iosSha256']")
 CDK_IOS_BINDINGS_SHA256=$(jq "['cdk']['iosBindingsSha256']")
 RESTORE_VERSION=$(jq "['zeus-cashu-restore']['version']")
@@ -24,7 +23,7 @@ RESTORE_IOS_BINDINGS_SHA256=$(jq "['zeus-cashu-restore']['iosBindingsSha256']")
 # blank hash would otherwise skip verification silently.
 for HASH in "$EMBEDDED_LND_ANDROID_SHA256" "$EMBEDDED_LND_IOS_SHA256" \
             "$LDK_NODE_ANDROID_SHA256" "$LDK_NODE_IOS_SHA256" \
-            "$CDK_ANDROID_SHA256" "$CDK_ANDROID_BINDINGS_SHA256" \
+            "$CDK_ANDROID_SHA256" \
             "$CDK_IOS_SHA256" "$CDK_IOS_BINDINGS_SHA256" \
             "$RESTORE_ANDROID_SHA256" "$RESTORE_IOS_SHA256" \
             "$RESTORE_ANDROID_BINDINGS_SHA256" "$RESTORE_IOS_BINDINGS_SHA256"; do
@@ -115,21 +114,24 @@ unzip ios/LndMobileLibZipFile/$EMBEDDED_LND_IOS_FILE.zip -d ios/LncMobile
 
 # Local filenames (what we save as)
 CDK_ANDROID_FILE=cashudevkit.aar
-CDK_ANDROID_BINDINGS_FILE=cdk-jvm.jar
 CDK_IOS_FILE=CashuDevKitFFI.xcframework
 
-# Since 0.17.x, cdk-kotlin is distributed via Maven Central and split in two:
-# cdk-android (only the per-ABI libcdk_ffi.so) + cdk-jvm (the compiled Kotlin
-# bindings). Both are vendored here with pinned hashes; JNA comes via gradle.
+# Since 0.18.0, cdk-android on Maven Central bundles the compiled Kotlin
+# bindings (classes.jar) alongside the per-ABI libcdk_ffi_kotlin.so again;
+# the separate cdk-jvm jar was discontinued after 0.17.5. JNA comes via
+# gradle.
 CDK_MAVEN_PATH=https://repo1.maven.org/maven2/org/cashudevkit
 CDK_IOS_PATH=https://github.com/cashubtc/cdk-swift/releases/download/v$CDK_VERSION/
 
 CDK_ANDROID_LINK=$CDK_MAVEN_PATH/cdk-android/$CDK_VERSION/cdk-android-$CDK_VERSION.aar
-CDK_ANDROID_BINDINGS_LINK=$CDK_MAVEN_PATH/cdk-jvm/$CDK_VERSION/cdk-jvm-$CDK_VERSION.jar
 CDK_IOS_LINK=$CDK_IOS_PATH$CDK_IOS_FILE.zip
 
 # Android CDK
 mkdir -p android/cdk
+
+# Remove the 0.17.x-era standalone bindings jar so stale copies of the old
+# API cannot shadow the bindings bundled in the aar
+rm -f android/cdk/cdk-jvm.jar
 
 if ! echo "$CDK_ANDROID_SHA256 android/cdk/$CDK_ANDROID_FILE" | sha256sum -c -; then
     echo "CDK Android library file missing or checksum failed" >&2
@@ -139,19 +141,6 @@ if ! echo "$CDK_ANDROID_SHA256 android/cdk/$CDK_ANDROID_FILE" | sha256sum -c -; 
 
     if ! echo "$CDK_ANDROID_SHA256 android/cdk/$CDK_ANDROID_FILE" | sha256sum -c -; then
         echo "CDK Android checksum failed" >&2
-        exit 1
-    fi
-fi
-
-# Android CDK Kotlin bindings (cdk-jvm)
-if ! echo "$CDK_ANDROID_BINDINGS_SHA256 android/cdk/$CDK_ANDROID_BINDINGS_FILE" | sha256sum -c -; then
-    echo "CDK Android bindings jar missing or checksum failed" >&2
-
-    rm -f android/cdk/$CDK_ANDROID_BINDINGS_FILE
-    curl -fL $CDK_ANDROID_BINDINGS_LINK > android/cdk/$CDK_ANDROID_BINDINGS_FILE
-
-    if ! echo "$CDK_ANDROID_BINDINGS_SHA256 android/cdk/$CDK_ANDROID_BINDINGS_FILE" | sha256sum -c -; then
-        echo "CDK Android bindings checksum failed" >&2
         exit 1
     fi
 fi
