@@ -1592,6 +1592,7 @@
     "views.Transaction.rawTxHex": "Raw transaction hex",
     "views.Transaction.copyRawTxHex": "Copy raw TX hex",
     "views.Activity.noActivity": "No activity yet",
+    "views.Activity.failedToLoad": "Failed to load activity. Tap to try again.",
     "views.Activity.expired": "Expired",
     "views.Activity.youSent": "You sent",
     "views.Activity.youReceived": "You received",

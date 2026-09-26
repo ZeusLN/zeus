@@ -139,22 +139,21 @@ export default class TransactionsStore {
 
     public getTransactions = async () => {
         this.loading = true;
-        await BackendUtils.getTransactions()
-            .then((data: any) => {
-                runInAction(() => {
-                    this.transactions = data.transactions
-                        .slice()
-                        .reverse()
-                        .map((tx: any) => new Transaction(tx));
-                    this.loading = false;
-                });
-            })
-            .catch(() => {
-                runInAction(() => {
-                    this.transactions = [];
-                    this.loading = false;
-                });
+        try {
+            const data = await BackendUtils.getTransactions();
+            runInAction(() => {
+                this.transactions = data.transactions
+                    .slice()
+                    .reverse()
+                    .map((tx: any) => new Transaction(tx));
+                this.loading = false;
             });
+        } catch (error) {
+            runInAction(() => {
+                this.loading = false;
+            });
+            throw error;
+        }
     };
 
     @action

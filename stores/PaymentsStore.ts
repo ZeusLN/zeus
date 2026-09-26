@@ -1,5 +1,5 @@
 //PaymentStore.tsx
-import { action, observable, runInAction } from 'mobx';
+import { observable, runInAction } from 'mobx';
 import Payment from './../models/Payment';
 import SettingsStore from './SettingsStore';
 import ChannelsStore from './ChannelsStore';
@@ -18,12 +18,6 @@ export default class PaymentsStore {
         this.channelsStore = channelsStore;
     }
 
-    @action
-    private resetPayments = () => {
-        this.payments = [];
-        this.loading = false;
-    };
-
     public getPayments = async (params?: {
         maxPayments?: number;
         reversed?: boolean;
@@ -41,10 +35,14 @@ export default class PaymentsStore {
                             new Payment(payment, this.channelsStore.nodes)
                     );
                 this.loading = false;
+                this.error = false;
             });
             return this.payments;
         } catch (error) {
-            this.resetPayments();
+            runInAction(() => {
+                this.loading = false;
+                this.error = true;
+            });
             throw error;
         }
     };

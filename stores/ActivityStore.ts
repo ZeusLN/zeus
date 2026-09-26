@@ -359,36 +359,70 @@ export default class ActivityStore {
     };
 
     private getActivity = async () => {
-        this.activity = [];
-        await this.paymentsStore.getPayments();
-        if (BackendUtils.supportsOnchainSends())
-            await this.transactionsStore.getTransactions();
-        await this.invoicesStore.getInvoices();
+        let fetchFailed = false;
 
-        await this.swapStore.fetchAndUpdateSwaps();
+        try {
+            await this.paymentsStore.getPayments();
+        } catch {
+            fetchFailed = true;
+        }
+
+        if (BackendUtils.supportsOnchainSends()) {
+            try {
+                await this.transactionsStore.getTransactions();
+            } catch {
+                fetchFailed = true;
+            }
+        }
+
+        try {
+            await this.invoicesStore.getInvoices();
+        } catch {
+            fetchFailed = true;
+        }
+
+        try {
+            await this.swapStore.fetchAndUpdateSwaps();
+        } catch {}
+
         const sortedActivity = await this.getSortedActivity();
 
         runInAction(() => {
             this.activity = sortedActivity;
             this.filteredActivity = this.activity;
+            this.error = fetchFailed;
         });
     };
 
     public updateInvoices = async (locale: string | undefined) => {
-        await this.invoicesStore.getInvoices();
-        await runInAction(async () => {
-            this.activity = await this.getSortedActivity();
-            await this.setFilters(this.filters, locale);
-        });
+        try {
+            await this.invoicesStore.getInvoices();
+            await runInAction(async () => {
+                this.activity = await this.getSortedActivity();
+                this.error = false;
+                await this.setFilters(this.filters, locale);
+            });
+        } catch {
+            runInAction(() => {
+                this.error = true;
+            });
+        }
     };
 
     public updateTransactions = async (locale: string | undefined) => {
-        if (BackendUtils.supportsOnchainSends())
-            await this.transactionsStore.getTransactions();
-        await runInAction(async () => {
-            this.activity = await this.getSortedActivity();
-            await this.setFilters(this.filters, locale);
-        });
+        try {
+            if (BackendUtils.supportsOnchainSends())
+                await this.transactionsStore.getTransactions();
+            await runInAction(async () => {
+                this.activity = await this.getSortedActivity();
+                this.error = false;
+                await this.setFilters(this.filters, locale);
+            });
+        } catch {
+            runInAction(() => {
+                this.error = true;
+            });
+        }
     };
 
     public async getFilters() {

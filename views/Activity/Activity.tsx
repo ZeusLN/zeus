@@ -482,22 +482,24 @@ export default class Activity extends React.PureComponent<
         } = this.props;
         this.setState({ loading: true });
 
-        const filters = await getFilters();
-        await getActivityAndFilter(SettingsStore.settings.locale, filters);
+        try {
+            const filters = await getFilters();
+            await getActivityAndFilter(SettingsStore.settings.locale, filters);
 
-        if (SettingsStore.implementation === 'lightning-node-connect') {
-            this.subscribeEvents();
+            if (SettingsStore.implementation === 'lightning-node-connect') {
+                this.subscribeEvents();
+            }
+
+            this.focusListener = navigation.addListener('focus', async () => {
+                const refilters = await getFilters();
+                await getActivityAndFilter(
+                    SettingsStore.settings.locale,
+                    refilters
+                );
+            });
+        } finally {
+            this.setState({ loading: false });
         }
-
-        this.focusListener = navigation.addListener('focus', async () => {
-            const refilters = await getFilters();
-            await getActivityAndFilter(
-                SettingsStore.settings.locale,
-                refilters
-            );
-        });
-
-        this.setState({ loading: false });
     }
 
     async componentDidUpdate(prevProps: any) {
@@ -540,6 +542,59 @@ export default class Activity extends React.PureComponent<
             style={{
                 height: 0.4,
                 backgroundColor: themeColor('separator')
+            }}
+        />
+    );
+
+    refreshActivity = async () => {
+        const {
+            ActivityStore: { getActivityAndFilter },
+            SettingsStore
+        } = this.props;
+        this.setState({ loading: true });
+        try {
+            await getActivityAndFilter(SettingsStore.settings.locale);
+        } finally {
+            this.setState({ loading: false });
+        }
+    };
+
+    renderEmptyState = () => (
+        <Button
+            title={localeString('views.Activity.noActivity')}
+            icon={{
+                name: 'error-outline',
+                size: 25,
+                color: themeColor('text')
+            }}
+            onPress={this.refreshActivity}
+            buttonStyle={{
+                backgroundColor: 'transparent',
+                borderRadius: 30
+            }}
+            titleStyle={{
+                color: themeColor('text'),
+                fontFamily: 'PPNeueMontreal-Book'
+            }}
+        />
+    );
+
+    renderError = () => (
+        <Button
+            title={localeString('views.Activity.failedToLoad')}
+            icon={{
+                name: 'error-outline',
+                size: 25,
+                color: themeColor('warning')
+            }}
+            onPress={this.refreshActivity}
+            buttonStyle={{
+                backgroundColor: 'transparent',
+                borderRadius: 30
+            }}
+            titleStyle={{
+                color: themeColor('warning'),
+                fontFamily: 'PPNeueMontreal-Book'
             }}
         />
     );
@@ -682,8 +737,7 @@ export default class Activity extends React.PureComponent<
         const { loading, selectedPaymentForOrder, isCsvModalVisible } =
             this.state;
 
-        const { filteredActivity, getActivityAndFilter, filters } =
-            ActivityStore;
+        const { filteredActivity, filters, error } = ActivityStore;
         const { recordPayment } = PosStore;
         const { settings } = SettingsStore;
         const { fiat } = settings;
@@ -865,33 +919,15 @@ export default class Activity extends React.PureComponent<
                         ItemSeparatorComponent={this.renderSeparator}
                         onEndReachedThreshold={50}
                         refreshing={loading}
-                        onRefresh={() =>
-                            getActivityAndFilter(SettingsStore.settings.locale)
-                        }
+                        onRefresh={this.refreshActivity}
                         initialNumToRender={10}
                         maxToRenderPerBatch={5}
                         windowSize={10}
                     />
+                ) : error ? (
+                    this.renderError()
                 ) : (
-                    <Button
-                        title={localeString('views.Activity.noActivity')}
-                        icon={{
-                            name: 'error-outline',
-                            size: 25,
-                            color: themeColor('text')
-                        }}
-                        onPress={() =>
-                            getActivityAndFilter(SettingsStore.settings.locale)
-                        }
-                        buttonStyle={{
-                            backgroundColor: 'transparent',
-                            borderRadius: 30
-                        }}
-                        titleStyle={{
-                            color: themeColor('text'),
-                            fontFamily: 'PPNeueMontreal-Book'
-                        }}
-                    />
+                    this.renderEmptyState()
                 )}
             </Screen>
         );
