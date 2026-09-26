@@ -151,7 +151,7 @@ const CalculatorApp: React.FC<CalculatorAppProps> = ({
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="light-content" backgroundColor="#000" />
+            <StatusBar barStyle="light-content" />
 
             {/* Display */}
             <View style={styles.displayContainer}>
