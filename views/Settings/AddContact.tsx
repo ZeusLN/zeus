@@ -346,12 +346,12 @@ export default class AddContact extends React.Component<
                 ? text
                     ? AddressUtils.isValidLightningPaymentRequest(text) ||
                       AddressUtils.isValidLightningAddress(text) ||
-                      AddressUtils.isValidBitcoinAddress(text, true)
+                      AddressUtils.isValidBitcoinAddressOnAnyNetwork(text)
                     : this.state.lnAddress[0] === '' // Only valid if it was never touched
                 : text
                 ? AddressUtils.isValidLightningPaymentRequest(text) ||
                   AddressUtils.isValidLightningAddress(text) ||
-                  AddressUtils.isValidBitcoinAddress(text, true)
+                  AddressUtils.isValidBitcoinAddressOnAnyNetwork(text)
                 : true; // Additional fields can be empty
 
         this.setState((prevState) => ({
@@ -424,7 +424,7 @@ export default class AddContact extends React.Component<
     };
 
     onChangeOnchainAddress = (text: string, index: number) => {
-        const isValid = AddressUtils.isValidBitcoinAddress(text, true); // Pass true for testnet
+        const isValid = AddressUtils.isValidBitcoinAddressOnAnyNetwork(text);
 
         this.setState((prevState) => ({
             isValidOnchainAddress: Object.assign(
@@ -552,7 +552,7 @@ export default class AddContact extends React.Component<
                     const isValid = text
                         ? AddressUtils.isValidLightningPaymentRequest(text) ||
                           AddressUtils.isValidLightningAddress(text) ||
-                          AddressUtils.isValidBitcoinAddress(text, true)
+                          AddressUtils.isValidBitcoinAddressOnAnyNetwork(text)
                         : true;
 
                     const updatedValidation = [

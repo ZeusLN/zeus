@@ -39,7 +39,7 @@ const noffer = /^(?:noffer1[02-9ac-hj-np-z]{6,}|NOFFER1[02-9AC-HJ-NP-Z]{6,})$/;
 
 /* testnet */
 const btcNonBechTestnet = /^[mn2][a-km-zA-HJ-NP-Z1-9]{25,34}$/;
-const btcBechTestnet = /^(bc1|bcrt1|BC1|BCRT1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
+const btcBechTestnet = /^(bcrt1|BCRT1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
 const btcBechPubkeyScriptHashTestnet =
     /^(tb1|TB1|[2])[a-zA-HJ-NP-Z0-9]{25,89}$/;
 
@@ -217,6 +217,11 @@ class AddressUtils {
 
         return btcNonBech.test(input) || btcBech.test(input);
     };
+
+    // For inputs not tied to the connected node's network, such as contacts
+    isValidBitcoinAddressOnAnyNetwork = (input: string) =>
+        this.isValidBitcoinAddress(input, false) ||
+        this.isValidBitcoinAddress(input, true);
 
     isValidBIP21Uri = (input: string) => bip21Uri.test(input);
 
