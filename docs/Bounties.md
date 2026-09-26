@@ -1,6 +1,6 @@
 # Open Bounties
 
-The ZEUS team is putting up the tasks listed below for bounty. Working code must be merged for a user to collect the bounty. To inquire about status of a bounty, to contribute to a bounty, or to proprose a new bounty please email zeusln (at) tutanota (dot) com. Thank you.
+The ZEUS team is putting up the tasks listed below for bounty. Working code must be merged for a user to collect the bounty. To inquire about status of a bounty, to contribute to a bounty, or to propose a new bounty please email zeusln (at) tutanota (dot) com. Thank you.
 
 ## Core Lightning: Commando/lnmessage connection
 
@@ -10,11 +10,7 @@ Currently, ZEUS supports remote connections to Core Lightning (CLN) through c-li
 
 Additional bounty patrons: @sathoarder, Seth For Privacy, denis2342
 
-## Point of Sale: Clover integration
-
-Payout: 1,500,000 sats (0.015 BTC)
-
-Currently, the ZEUS point of sale only works in tandem with the Square terminal API. We would like to expand support to Clover terminals. Check out the docs for the [Clover REST API](https://docs.clover.com/docs/making-rest-api-calls).
+Work in progress: https://github.com/ZeusLN/zeus/pull/3557
 
 # Claimed Bounties
 
