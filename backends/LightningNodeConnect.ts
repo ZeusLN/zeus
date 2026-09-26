@@ -19,6 +19,7 @@ import {
     deriveExpectedPaymentHash
 } from '../utils/LncPayUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { findPaymentByHash } from '../utils/PaymentLookupUtils';
 import {
     toLnrpcAddressType,
     toWalletrpcAddressTypeName
@@ -202,6 +203,7 @@ export default class LightningNodeConnect {
         params: {
             maxPayments?: number;
             reversed?: boolean;
+            creationDateStart?: number;
         } = {
             maxPayments: 500,
             reversed: true
@@ -214,9 +216,23 @@ export default class LightningNodeConnect {
                     max_payments: params.maxPayments
                 }),
                 reversed:
-                    params?.reversed !== undefined ? params.reversed : true
+                    params?.reversed !== undefined ? params.reversed : true,
+                ...(params?.creationDateStart && {
+                    creation_date_start: params.creationDateStart
+                })
             })
             .then((data: lnrpc.ListPaymentsResponse) => snakeize(data));
+    // scans payments pages; trackPaymentV2 over LNC is a stream and would
+    // need view-level event plumbing
+    lookupPayment = async (data: {
+        payment_hash: string;
+        creation_date_start?: number;
+    }) =>
+        await findPaymentByHash(
+            (request) => this.getPayments(request),
+            data.payment_hash,
+            data.creation_date_start
+        );
     getNewAddress = async (data: any) =>
         await this.lnc.lnd.lightning
             .newAddress({
@@ -384,7 +400,14 @@ export default class LightningNodeConnect {
                         resolve({
                             payment_error: localeString(
                                 'views.SendingLightning.paymentTimedOut'
-                            )
+                            ),
+                            // outcome unknown on the node: lets the caller
+                            // track the payment to a terminal state
+                            // instead of reporting failure. No
+                            // dispatch_deadline_ms: the stream is never
+                            // cancelled, so the request could still reach
+                            // the node through the mailbox.
+                            payment_timed_out: true
                         })
                     ),
                 timeoutMs
@@ -875,6 +898,7 @@ export default class LightningNodeConnect {
     supportsUnconfirmedTransactionOrigin = () => true;
     supportsLightningSends = () => this.permSendLN;
     supportsKeysend = () => true;
+    supportsPaymentLookup = () => true;
     supportsChannelManagement = () => this.permOpenChannel;
     supportsCircularRebalancing = () => true;
     supportsForceClose = () => true;

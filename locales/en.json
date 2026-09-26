@@ -972,6 +972,8 @@
     "views.SendingLightning.tryAgain": "Try Again",
     "views.SendingLightning.copyPaymentHash": "Copy Hash to Clipboard",
     "views.SendingLightning.inTransit": "Payment is in transit. It may complete momentarily or it may go on to fail. Check the Activity view to track its progress.",
+    "views.SendingLightning.paymentNotSent": "Payment was not sent. Your node has no record of it. Check the Activity view before trying again.",
+    "views.SendingLightning.trackingStopped": "ZEUS stopped checking this payment before it completed or failed. Check the Activity view before sending again, or you may pay twice.",
     "views.SendingLightning.isZaplocker": "Zaplocker payment in transit. It may complete momentarily, otherwise funds will return back to you within 24 hours. Check the Activity view to track its progress.",
     "views.SendingLightning.paymentTimedOut": "Payment timed out. It may be in transit, meaning it may complete momentarily or it may go on to fail. Check the Activity view to track its progress.",
     "views.SendingLightning.paymentSettled": "Your payment settled in {{seconds}} seconds",

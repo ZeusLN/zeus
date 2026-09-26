@@ -818,6 +818,8 @@ export default class CLNRest {
     supportsUnconfirmedTransactionOrigin = () => false;
     supportsLightningSends = () => true;
     supportsKeysend = () => true;
+    // follow-up: /v1/listpays accepts payment_hash and could support this
+    supportsPaymentLookup = () => false;
     supportsChannelManagement = () => true;
     supportsCircularRebalancing = () => true;
     supportsForceClose = () => false;

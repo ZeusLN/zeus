@@ -351,7 +351,8 @@ export default class SendingLightning extends React.Component<
             payment_fee,
             payment_error,
             noteKey,
-            paymentDuration
+            paymentDuration,
+            paymentOutcomeUnverified
         } = TransactionsStore;
 
         const {
@@ -607,6 +608,21 @@ export default class SendingLightning extends React.Component<
                                     >
                                         {localeString(
                                             'views.SendingLightning.lowFeeLimitMessage'
+                                        )}
+                                    </Text>
+                                )}
+                                {paymentOutcomeUnverified && (
+                                    <Text
+                                        style={{
+                                            textAlign: 'center',
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            padding: 20,
+                                            fontSize: 14
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.SendingLightning.trackingStopped'
                                         )}
                                     </Text>
                                 )}
