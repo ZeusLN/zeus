@@ -1,5 +1,6 @@
 import {
     errorToUserFriendly,
+    isRecipientRejection,
     parseLdkNodeError,
     parseCashuDevKitError,
     cashuErrorForDisplay
@@ -205,6 +206,67 @@ describe('ErrorUtils', () => {
                     )
                 )
             ).toEqual('Received invalid response data from the server');
+        });
+    });
+
+    describe('isRecipientRejection', () => {
+        it('matches LND incorrect-payment-details failures', () => {
+            expect(
+                isRecipientRejection('FAILURE_REASON_INCORRECT_PAYMENT_DETAILS')
+            ).toBe(true);
+            expect(
+                isRecipientRejection(
+                    new Error(
+                        'Payment details incorrect (unknown hash, invalid amt or invalid final cltv delta)'
+                    )
+                )
+            ).toBe(true);
+        });
+
+        it('matches LDK Node recipient rejections', () => {
+            expect(isRecipientRejection(new Error('recipientRejected'))).toBe(
+                true
+            );
+        });
+
+        it('matches CLN xpay and legacy pay final-hop rejections', () => {
+            expect(
+                isRecipientRejection(
+                    new Error(
+                        "Destination said it doesn't know invoice: WIRE_INCORRECT_OR_UNKNOWN_PAYMENT_DETAILS"
+                    )
+                )
+            ).toBe(true);
+            expect(
+                isRecipientRejection(
+                    new Error(
+                        'failed: WIRE_INCORRECT_OR_UNKNOWN_PAYMENT_DETAILS (reply from remote)'
+                    )
+                )
+            ).toBe(true);
+        });
+
+        it('matches plain objects with a message', () => {
+            expect(
+                isRecipientRejection({
+                    code: 2,
+                    message: 'FAILURE_REASON_INCORRECT_PAYMENT_DETAILS'
+                })
+            ).toBe(true);
+            expect(isRecipientRejection({ message: 'routeNotFound' })).toBe(
+                false
+            );
+        });
+
+        it('does not match other failures or non-error values', () => {
+            expect(isRecipientRejection('FAILURE_REASON_TIMEOUT')).toBe(false);
+            expect(isRecipientRejection('FAILURE_REASON_NO_ROUTE')).toBe(false);
+            expect(isRecipientRejection(new Error('routeNotFound'))).toBe(
+                false
+            );
+            expect(isRecipientRejection(undefined)).toBe(false);
+            expect(isRecipientRejection(4)).toBe(false);
+            expect(isRecipientRejection({})).toBe(false);
         });
     });
 
