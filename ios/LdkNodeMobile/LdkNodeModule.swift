@@ -1436,6 +1436,47 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
+    @objc(bolt12DecodeOffer:resolver:rejecter:)
+    func bolt12DecodeOffer(_ offerStr: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        // Pure decode via Offer.fromStr: no node required, no messages sent.
+        // Feeds the offer review screen shown before an offer payment is
+        // dispatched, so it must never itself initiate a payment.
+        do {
+            let offer = try Offer.fromStr(offerStr: offerStr)
+            var result: [String: Any] = [
+                "offerId": offer.id(),
+                "isExpired": offer.isExpired(),
+                "expectsQuantity": offer.expectsQuantity()
+            ]
+            if let description = offer.offerDescription() {
+                result["description"] = description
+            }
+            if let issuer = offer.issuer() {
+                result["issuer"] = issuer
+            }
+            if let issuerSigningPubkey = offer.issuerSigningPubkey() {
+                result["issuerSigningPubkey"] = issuerSigningPubkey
+            }
+            if let absoluteExpirySeconds = offer.absoluteExpirySeconds() {
+                result["absoluteExpirySeconds"] = Double(absoluteExpirySeconds)
+            }
+            if let amount = offer.amount() {
+                switch amount {
+                case .bitcoin(let amountMsats):
+                    result["amountType"] = "bitcoin"
+                    result["amountMsats"] = Double(amountMsats)
+                case .currency(let iso4217Code, let currencyAmount):
+                    result["amountType"] = "currency"
+                    result["iso4217Code"] = iso4217Code
+                    result["currencyAmount"] = Double(currencyAmount)
+                }
+            }
+            resolve(result)
+        } catch {
+            reject("error", self.errorMessage(error), error)
+        }
+    }
+
     // MARK: - Payment Methods
 
     @objc(listPayments:rejecter:)

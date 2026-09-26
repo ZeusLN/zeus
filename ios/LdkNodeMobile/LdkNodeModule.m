@@ -81,6 +81,7 @@ RCT_EXTERN_METHOD(bolt12Send:(NSString *)offerStr payerNote:(NSString *)payerNot
 RCT_EXTERN_METHOD(bolt12SendUsingAmount:(NSString *)offerStr amountMsat:(double)amountMsat payerNote:(NSString *)payerNote maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount paymentTimeoutSecs:(double)paymentTimeoutSecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(bolt12InitiateRefund:(double)amountMsat expirySecs:(double)expirySecs maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount paymentTimeoutSecs:(double)paymentTimeoutSecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(bolt12RequestRefundPayment:(NSString *)refundStr resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(bolt12DecodeOffer:(NSString *)offerStr resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 
 // Payment Methods
 RCT_EXTERN_METHOD(listPayments:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
