@@ -36,7 +36,6 @@ jest.mock('../storage', () => ({
 jest.mock('../utils/LocaleUtils', () => ({ localeString: (k: string) => k }));
 jest.mock('../utils/ThemeUtils', () => ({ themeColor: () => '#000' }));
 jest.mock('ecpair', () => ({ ECPairFactory: () => ({}) }));
-jest.mock('@bitcoinerlab/secp256k1', () => ({ __esModule: true, default: {} }));
 jest.mock('bitcoinjs-lib', () => ({
     crypto: { sha256: jest.fn() },
     initEccLib: jest.fn()
