@@ -732,6 +732,8 @@ export default class PosStore {
     private resetOrders = () => {
         this.openOrders = [];
         this.paidOrders = [];
+        this.filteredOpenOrders = [];
+        this.filteredPaidOrders = [];
         this.loading = false;
     };
 }
