@@ -277,8 +277,8 @@ describe('handleAnything', () => {
         });
     });
 
-    describe('bitcoin URI with lnurl and backend not supporting on-chain sends', () => {
-        it('should return LnurlPay screen if not from clipboard', async () => {
+    describe('bitcoin URI with lnurl on a backend without on-chain sends', () => {
+        it('should return ChoosePaymentMethod if not from clipboard', async () => {
             const data =
                 'bitcoin:BC1QUXCS7V556UTNUKU93HSZ7LHHFFLWN9NF2UTQ6N?pj=https://ts.dergigi.com/BTC/pj&lightning=LNURL1DP68GURN8GHJ7ARN9EJX2UN8D9NKJTNRDAKJ7SJ5GVH42J2VFE24YNP0WPSHJTMF9ATKWD622CE953JGWV6XXUMRDPXNVCJ8X4G9GF2CHDF';
             mockProcessBIP21Uri.mockReturnValue({
@@ -325,8 +325,8 @@ describe('handleAnything', () => {
         });
     });
 
-    describe('bitcoin URI with bolt11 and backend not supporting on-chain sends', () => {
-        it('should return PaymentRequest screen and call getPayReq if not from clipboard', async () => {
+    describe('bitcoin URI with bolt11 on a backend without on-chain sends', () => {
+        it('should return ChoosePaymentMethod if not from clipboard', async () => {
             const data =
                 'bitcoin:BC1QYLH3U67J673H6Y6ALV70M0PL2YZ53TZHVXGG7U?amount=0.00001&label=sbddesign%3A%20For%20lunch%20Tuesday&message=For%20lunch%20Tuesday&lightning=LNBC10U1P3PJ257PP5YZTKWJCZ5FTL5LAXKAV23ZMZEKAW37ZK6KMV80PK4XAEV5QHTZ7QDPDWD3XGER9WD5KWM36YPRX7U3QD36KUCMGYP282ETNV3SHJCQZPGXQYZ5VQSP5USYC4LK9CHSFP53KVCNVQ456GANH60D89REYKDNGSMTJ6YW3NHVQ9QYYSSQJCEWM5CJWZ4A6RFJX77C490YCED6PEMK0UPKXHY89CMM7SCT66K8GNEANWYKZGDRWRFJE69H9U5U0W57RRCSYSAS7GADWMZXC8C6T0SPJAZUP6';
             mockProcessBIP21Uri.mockReturnValue({
@@ -403,6 +403,57 @@ describe('handleAnything', () => {
 
             expect(result[0]).toBe('ChoosePaymentMethod');
             expect(result[1].value).toBeUndefined();
+            expect(result[1].offer).toBe('lno1qcp4256ypq');
+        });
+
+        it('leaves the address out of ChoosePaymentMethod with a noffer', async () => {
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+                clinkNoffer: 'noffer1qqqsyqcyq5rqwzqf'
+            });
+            mockIsValidBitcoinAddress = false;
+
+            const result = await handleAnything(
+                'bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?noffer=noffer1qqqsyqcyq5rqwzqf'
+            );
+
+            expect(result[0]).toBe('ChoosePaymentMethod');
+            expect(result[1].value).toBeUndefined();
+            expect(result[1].clinkNoffer).toBe('noffer1qqqsyqcyq5rqwzqf');
+        });
+
+        it('still reports a clipboard match, since lightning is payable', async () => {
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+                lightning: bolt11
+            });
+            mockIsValidBitcoinAddress = false;
+
+            const result = await handleAnything(
+                `bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?lightning=${bolt11}`,
+                undefined,
+                true
+            );
+
+            expect(result).toBe(true);
+        });
+
+        it('passes an empty BIP 321 address through unchanged', async () => {
+            // bitcoin:?lightning=...&lno=... has no on-chain address to check
+            mockProcessBIP21Uri.mockReturnValue({
+                value: '',
+                lightning: bolt11,
+                offer: 'lno1qcp4256ypq'
+            });
+            mockIsValidBitcoinAddress = false;
+
+            const result = await handleAnything(
+                `bitcoin:?lightning=${bolt11}&lno=lno1qcp4256ypq`
+            );
+
+            expect(result[0]).toBe('ChoosePaymentMethod');
+            expect(result[1].value).toBe('');
+            expect(result[1].lightning).toBe(bolt11);
             expect(result[1].offer).toBe('lno1qcp4256ypq');
         });
 
