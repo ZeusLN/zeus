@@ -258,7 +258,11 @@ export default class NostrContacts extends React.Component<
             pubkey = NostrUtils.npubToHex(account) || '';
         } else if (this.state.isValidNip05) {
             try {
-                const lookup: any = await nip05.queryProfile(account);
+                // NIP-05 names are case-insensitive, but nostr-tools looks
+                // them up case-sensitively in nostr.json
+                const lookup: any = await nip05.queryProfile(
+                    account.toLowerCase()
+                );
                 pubkey = lookup.pubkey;
             } catch (e) {
                 this.setState({
