@@ -2010,6 +2010,12 @@ export default class SettingsStore {
     ) => {
         if (!silentUpdate) this.loading = true;
         try {
+            // Sweep before migrations so a migration failure cannot leave
+            // plaintext staging remnants behind. The migration helper latches
+            // this once per process because getSettings also runs when the app
+            // backgrounds during Android's save dialog.
+            await MigrationsUtils.purgeNodeConfigStagingFiles();
+
             // ORDER IS LOAD-BEARING. keychainDesyncMigration must run BEFORE
             // keychainCloudSyncMigration: migrateKey() short-circuits on a
             // truthy Storage.getItem(), which (with the patched

@@ -5,6 +5,7 @@ jest.mock('react-native-fs', () => ({
     CachesDirectoryPath: '/cache',
     exists: jest.fn().mockResolvedValue(false),
     unlink: jest.fn().mockResolvedValue(undefined),
+    readDir: jest.fn().mockResolvedValue([]),
     writeFile: jest.fn().mockResolvedValue(undefined)
 }));
 jest.mock('@react-native-documents/picker', () => ({
@@ -1207,6 +1208,35 @@ describe('MigrationUtils', () => {
 
             expect(RNFS.unlink).not.toHaveBeenCalledWith(LEGACY_PATH);
             expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('purgeNodeConfigStagingFiles', () => {
+        const RNFS = require('react-native-fs');
+        const STAGING_PATHS = [
+            '/cache/zeus-nodeconfig-plain.tmp',
+            '/cache/zeus-nodeconfig-enc.tmp',
+            '/cache/zeus-nodeconfig-import-plain.tmp',
+            '/cache/zeus-nodeconfig-import-enc.tmp',
+            '/cache/nodeconfig-exports'
+        ];
+
+        it('sweeps staging files at most once per process', async () => {
+            RNFS.exists.mockReset().mockResolvedValue(true);
+            RNFS.unlink.mockReset().mockResolvedValue(undefined);
+            RNFS.readDir.mockReset().mockResolvedValue([]);
+
+            await MigrationUtils.purgeNodeConfigStagingFiles();
+            await MigrationUtils.purgeNodeConfigStagingFiles();
+            await MigrationUtils.purgeNodeConfigStagingFiles();
+
+            for (const path of STAGING_PATHS) {
+                expect(
+                    RNFS.unlink.mock.calls.filter(
+                        (call: any[]) => call[0] === path
+                    )
+                ).toHaveLength(1);
+            }
         });
     });
 

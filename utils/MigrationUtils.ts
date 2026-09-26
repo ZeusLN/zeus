@@ -82,6 +82,7 @@ import {
     purgeLegacyRescueKeyFiles,
     unlinkRescueKeyStagingFile
 } from '../utils/SwapUtils';
+import { purgeNodeConfigStagingFiles } from '../utils/NodeConfigStagingUtils';
 
 import {
     TimePeriod,
@@ -811,6 +812,19 @@ class MigrationsUtils {
         await purgeLegacyRescueKeyFiles();
 
         await EncryptedStorage.setItem(MOD_KEY_RESCUE_FILE, 'true');
+    }
+
+    // This is not MOD_KEY gated: a new crash remnant can appear after any
+    // killed export or import. It is latched once per process because
+    // getSettings() also runs when Android backgrounds for the save dialog;
+    // sweeping then would delete an active export before saveDocuments copies
+    // it. clearAllData calls the underlying utility directly and always purges.
+    private nodeConfigStagingPurged = false;
+
+    public async purgeNodeConfigStagingFiles() {
+        if (this.nodeConfigStagingPurged) return;
+        this.nodeConfigStagingPurged = true;
+        await purgeNodeConfigStagingFiles();
     }
 
     public async storageMigrationV2(settings: any) {
