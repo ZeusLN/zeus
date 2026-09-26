@@ -38,9 +38,10 @@ export default class Order extends BaseModel {
     }
 
     @computed public get getDisplayTime(): string {
-        const updated = moment(this.updated_at).format('hh:mm a');
-        const day = moment(this.created_at).format('ddd, MMM DD');
-        return `${updated} | ${day}`;
+        const date = moment(this.updated_at || this.created_at);
+        const year =
+            date.year() !== moment().year() ? `, '${date.format('YY')}` : '';
+        return `${date.format('hh:mm a | ddd, MMM DD')}${year}`;
     }
 
     @computed public get getItemCount(): number {
