@@ -159,3 +159,45 @@ describe('CashuStore synchronizable seed recovery', () => {
         expect(CashuDevKit.initializeWallet).toHaveBeenCalledTimes(1);
     });
 });
+
+describe('CashuStore checkAndSweepMints', () => {
+    const storeWith = (settings: any) => {
+        const store = new CashuStore(
+            { settings } as any,
+            {} as any,
+            { channels: [{}] } as any,
+            {} as any
+        );
+        store.mintUrls = ['https://mint.example.com'];
+        store.mintBalances = { 'https://mint.example.com': 50000 };
+        const sweepMint = jest
+            .spyOn(store, 'sweepMint')
+            .mockResolvedValue(undefined as any);
+        return { store, sweepMint };
+    };
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('does nothing when settings have no ecash key', async () => {
+        const { store, sweepMint } = storeWith({});
+        await expect(store.checkAndSweepMints()).resolves.toBeUndefined();
+        expect(sweepMint).not.toHaveBeenCalled();
+    });
+
+    it('does nothing when automatic sweep is off', async () => {
+        const { store, sweepMint } = storeWith({
+            ecash: { automaticallySweep: false, sweepThresholdSats: 10000 }
+        });
+        await store.checkAndSweepMints();
+        expect(sweepMint).not.toHaveBeenCalled();
+    });
+
+    it('sweeps a mint whose balance exceeds the threshold', async () => {
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+        const { store, sweepMint } = storeWith({
+            ecash: { automaticallySweep: true, sweepThresholdSats: 10000 }
+        });
+        await store.checkAndSweepMints();
+        expect(sweepMint).toHaveBeenCalledWith('https://mint.example.com');
+    });
+});
