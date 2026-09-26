@@ -5,6 +5,7 @@ import { sha256 } from '@noble/hashes/sha256';
 import Base64Utils from './Base64Utils';
 import Bolt11Utils from './Bolt11Utils';
 import {
+    getLnurlpUrl,
     verifyLnurlPayInvoice,
     isLnurlCallbackAllowed,
     verifyLnurlAuthCallback
@@ -16,6 +17,53 @@ const MATCHING_HASH = Base64Utils.bytesToHex(
 );
 
 describe('LnurlPayUtils', () => {
+    describe('getLnurlpUrl', () => {
+        it('lowercases the domain and username', () => {
+            expect(getLnurlpUrl('SATOSHI@BLINK.SV')).toEqual({
+                url: 'https://blink.sv/.well-known/lnurlp/satoshi',
+                origin: 'https://blink.sv',
+                isOnion: false
+            });
+        });
+
+        it('keeps the username casing for cryptoqr.net', () => {
+            const username = 'https%3A%2F%2Fpay.cryptoqr.net%2F3458967';
+            expect(getLnurlpUrl(`${username}@cryptoqr.net`).url).toBe(
+                `https://cryptoqr.net/.well-known/lnurlp/${username}`
+            );
+            expect(getLnurlpUrl(`${username}@STAGING.CRYPTOQR.NET`).url).toBe(
+                `https://staging.cryptoqr.net/.well-known/lnurlp/${username}`
+            );
+        });
+
+        it('lowercases the username for look-alike cryptoqr.net domains', () => {
+            expect(getLnurlpUrl('Alice@notcryptoqr.net').url).toBe(
+                'https://notcryptoqr.net/.well-known/lnurlp/alice'
+            );
+            expect(getLnurlpUrl('Alice@cryptoqr.net.example.com').url).toBe(
+                'https://cryptoqr.net.example.com/.well-known/lnurlp/alice'
+            );
+        });
+
+        it('uses http for an uppercase .onion domain', () => {
+            const onion =
+                'zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion';
+            expect(getLnurlpUrl(`SATOSHI@${onion.toUpperCase()}`)).toEqual({
+                url: `http://${onion}/.well-known/lnurlp/satoshi`,
+                origin: `http://${onion}`,
+                isOnion: true
+            });
+        });
+
+        it('uses https for a clearnet domain with an .onion label', () => {
+            expect(getLnurlpUrl('satoshi@pay.onion.example.com')).toEqual({
+                url: 'https://pay.onion.example.com/.well-known/lnurlp/satoshi',
+                origin: 'https://pay.onion.example.com',
+                isOnion: false
+            });
+        });
+    });
+
     describe('verifyLnurlPayInvoice', () => {
         afterEach(() => jest.restoreAllMocks());
 
