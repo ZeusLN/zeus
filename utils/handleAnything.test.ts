@@ -45,6 +45,7 @@ let mockIsValidLNDHubAddress = false;
 let mockIsValidNpub = false;
 let mockProcessLNDHubAddress = jest.fn();
 let mockSupportsOnchainSends = true;
+let mockSupportsChannelManagement = true;
 let mockGetLnurlParams = {};
 let mockBlobUtilFetch = jest.fn();
 const mockSimplePool = jest.fn();
@@ -76,7 +77,8 @@ jest.mock('./BackendUtils', () => ({
     supportsAccounts: () => false,
     supportsCashuWallet: () => false,
     supportsWithdrawalRequests: () => false,
-    supportsLnurlAuth: () => false
+    supportsLnurlAuth: () => false,
+    supportsChannelManagement: () => mockSupportsChannelManagement
 }));
 
 let mockIsValidCashuToken = false;
@@ -501,6 +503,33 @@ describe('handleAnything', () => {
                     lnurlParams: channelParams
                 }
             ]);
+        });
+
+        it('should not route a channel request to a backend without channel management', async () => {
+            const data = 'LIGHTNING:lnurlc://example.com/api/v1/lnurl/channel';
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'lnurlc://example.com/api/v1/lnurl/channel'
+            });
+            mockGetLnurlParamsFn.mockResolvedValue({
+                tag: 'channelRequest',
+                domain: 'example.com',
+                k1: 'test-k1-value',
+                uri: 'node@example.com:9735'
+            });
+            mockSupportsChannelManagement = false;
+            const alertSpy = jest
+                .spyOn(Alert, 'alert')
+                .mockImplementation(() => void 0);
+
+            try {
+                const result = await handleAnything(data);
+
+                expect(alertSpy).toHaveBeenCalled();
+                expect(result).toBeUndefined();
+            } finally {
+                mockSupportsChannelManagement = true;
+                alertSpy.mockRestore();
+            }
         });
 
         it('should return true if from clipboard', async () => {
