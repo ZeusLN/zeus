@@ -114,3 +114,114 @@ describe('LND.getURL', () => {
         });
     });
 });
+
+describe('LND.lookupPayment', () => {
+    // contains both base64url-swapped characters (_ and -) when encoded
+    const HASH_HEX =
+        '9f1459d8a2ac9353e6e229e4d85b11d1830b6a25f7f3f1786a107ecfd86f5d34';
+    const HASH_B64URL = 'nxRZ2KKsk1Pm4ink2FsR0YMLaiX38_F4ahB-z9hvXTQ';
+
+    const makeLnd = () => {
+        const lnd: any = new LND();
+        lnd.getRequest = jest.fn();
+        lnd.getPayments = jest.fn();
+        return lnd;
+    };
+
+    it('resolves a terminal payment from TrackPaymentV2 without scanning', async () => {
+        const lnd = makeLnd();
+        const payment = { payment_hash: HASH_HEX, status: 'SUCCEEDED' };
+        lnd.getRequest.mockResolvedValue({ result: payment });
+
+        await expect(
+            lnd.lookupPayment({ payment_hash: HASH_HEX })
+        ).resolves.toBe(payment);
+        expect(lnd.getRequest).toHaveBeenCalledWith(
+            `/v2/router/track/${HASH_B64URL}`,
+            { no_inflight_updates: true },
+            expect.any(Number)
+        );
+        expect(lnd.getPayments).not.toHaveBeenCalled();
+    });
+
+    it('maps a streamed NOT_FOUND error message to null', async () => {
+        const lnd = makeLnd();
+        lnd.getRequest.mockResolvedValue({
+            error: { code: 5, message: "payment isn't initiated" }
+        });
+
+        await expect(
+            lnd.lookupPayment({ payment_hash: HASH_HEX })
+        ).resolves.toBeNull();
+        expect(lnd.getPayments).not.toHaveBeenCalled();
+    });
+
+    it('maps a thrown NOT_FOUND error to null', async () => {
+        const lnd = makeLnd();
+        lnd.getRequest.mockRejectedValue(new Error("payment isn't initiated"));
+
+        await expect(
+            lnd.lookupPayment({ payment_hash: HASH_HEX })
+        ).resolves.toBeNull();
+        expect(lnd.getPayments).not.toHaveBeenCalled();
+    });
+
+    it('falls back to the anchored scan when the stream times out (in flight)', async () => {
+        const lnd = makeLnd();
+        lnd.getRequest.mockRejectedValue(new Error('Request timeout'));
+        const inFlight = {
+            payment_hash: HASH_HEX.toUpperCase(),
+            status: 'IN_FLIGHT'
+        };
+        lnd.getPayments.mockResolvedValue({
+            payments: [{ payment_hash: 'aa'.repeat(32) }, inFlight]
+        });
+
+        await expect(
+            lnd.lookupPayment({
+                payment_hash: HASH_HEX,
+                creation_date_start: 1700000000
+            })
+        ).resolves.toBe(inFlight);
+        expect(lnd.getPayments).toHaveBeenCalledWith({
+            maxPayments: 50,
+            reversed: false,
+            creationDateStart: 1700000000
+        });
+    });
+
+    it('scans the newest page when no dispatch-time anchor is given', async () => {
+        const lnd = makeLnd();
+        lnd.getRequest.mockRejectedValue(new Error('Request timeout'));
+        lnd.getPayments.mockResolvedValue({ payments: [] });
+
+        await expect(
+            lnd.lookupPayment({ payment_hash: HASH_HEX })
+        ).resolves.toBeNull();
+        expect(lnd.getPayments).toHaveBeenCalledWith({
+            maxPayments: 50,
+            reversed: true
+        });
+    });
+
+    it('backs up an unexpected response shape with the scan', async () => {
+        const lnd = makeLnd();
+        lnd.getRequest.mockResolvedValue('');
+        const payment = { payment_hash: HASH_HEX, status: 'SUCCEEDED' };
+        lnd.getPayments.mockResolvedValue({ payments: [payment] });
+
+        await expect(
+            lnd.lookupPayment({ payment_hash: HASH_HEX })
+        ).resolves.toBe(payment);
+    });
+
+    it('propagates a failure of both the stream and the scan', async () => {
+        const lnd = makeLnd();
+        lnd.getRequest.mockRejectedValue(new Error('Network request failed'));
+        lnd.getPayments.mockRejectedValue(new Error('Network request failed'));
+
+        await expect(
+            lnd.lookupPayment({ payment_hash: HASH_HEX })
+        ).rejects.toThrow('Network request failed');
+    });
+});
