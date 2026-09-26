@@ -436,6 +436,11 @@ export default class PosStore {
     };
 
     public getOrders = async () => {
+        // F7: single Clover predicate — no inline duplication of
+        // isCloverPosEnabled() logic (was duplicated in v3 L10-20 vs L91-99).
+        if (this.isCloverPosEnabled()) {
+            return this.getCloverOrders();
+        }
         switch (this.settingsStore.settings.pos.posEnabled) {
             case PosEnabled.Square:
                 return this.getSquareOrders();
@@ -534,8 +539,351 @@ export default class PosStore {
             });
     };
 
+    // Clover POS integration (open bounty, Square-parity where Clover API allows).
+    // Minimal shapes — avoids `any` hiding real bugs (review checklist).
+    // Full OpenAPI: docs.clover.com/dev/reference/ordergetorders.md
+    private getCloverApiHost = (devMode?: boolean) =>
+        devMode
+            ? 'https://apisandbox.dev.clover.com'
+            : 'https://api.clover.com';
+
+    private mapCloverOrderToZeusOrder = (cloverOrder: any) => {
+        const rawLineItems =
+            cloverOrder?.lineItems?.elements || cloverOrder?.lineItems || [];
+        const lineItems = (Array.isArray(rawLineItems) ? rawLineItems : []).map(
+            (li: any) => {
+                // Clover docs: unitQty is fixed-point x1000, PER_UNIT only; otherwise ignore.
+                // ordergetorders.md: "fixed-point integer with scaling factor of 1000
+                // (e.g. 2500 for 2.5 ounces)... If the item doesn't have a priceType
+                // of PER_UNIT, then unitQty is ignored."
+                // F4: gate on priceType === 'PER_UNIT' — stale unitQty on
+                // EACH/VARIABLE items must not produce fractional quantities.
+                let quantity = 1;
+                if (
+                    li.priceType === 'PER_UNIT' &&
+                    li.unitQty != null &&
+                    !isNaN(Number(li.unitQty))
+                ) {
+                    const q = Number(li.unitQty) / 1000;
+                    if (isFinite(q) && q > 0) quantity = q;
+                }
+                // F7: NaN-guard on price — non-numeric strings add 0, not NaN.
+                const priceRaw = Number(li.price);
+                const priceAmount = isFinite(priceRaw) ? priceRaw : 0;
+                return {
+                    name: li.name || 'Item',
+                    quantity,
+                    base_price_money: {
+                        amount: priceAmount
+                    }
+                };
+            }
+        );
+        const currency = cloverOrder.currency || 'USD';
+        // Clover docs: NO order-level taxAmount. Tax lives on payments[].taxAmount
+        // (ordergetorders.md top-level order props have no taxAmount; taxAmount only
+        // under payments/refunds/taxRates). Sum expanded payments instead of reading
+        // non-existent cloverOrder.taxAmount (which always evaluated to 0).
+        const rawPayments =
+            cloverOrder?.payments?.elements || cloverOrder?.payments || [];
+        const taxFromPayments = (Array.isArray(rawPayments) ? rawPayments : []).reduce(
+            (sum: number, p: any) => {
+                // F7: NaN-guard — "abc"/undefined contributes 0, never NaN.
+                const n = Number(p.taxAmount);
+                return sum + (isFinite(n) ? n : 0);
+            },
+            0
+        );
+        // F7: NaN-guard on order total — non-numeric total becomes 0.
+        const totalRaw = Number(cloverOrder.total);
+        const totalAmount = isFinite(totalRaw) ? totalRaw : 0;
+        return new Order({
+            id: cloverOrder.id,
+            created_at: cloverOrder.createdTime
+                ? new Date(Number(cloverOrder.createdTime)).toISOString()
+                : new Date().toISOString(),
+            updated_at: cloverOrder.modifiedTime
+                ? new Date(Number(cloverOrder.modifiedTime)).toISOString()
+                : new Date().toISOString(),
+            line_items: lineItems,
+            total_money: {
+                amount: totalAmount,
+                currency
+            },
+            total_tax_money: {
+                amount: taxFromPayments,
+                currency
+            },
+            // NOTE: Clover has no `tenders` (Square term; zero hits in Clover
+            // ordergetorders.md). Preserve raw order note for keyword filtering
+            // instead of fabricating a Square-shaped tenders array.
+            // F6: BaseModel ctor copies all keys (Object.keys loop), so `note`
+            // survives `new Order()` today (verified vs models/BaseModel.ts).
+            // Filtering still runs on the RAW payload BEFORE mapping (see
+            // filterRawCloverOrders) so a future strict Order ctor cannot turn
+            // the filter into a silent pass-all.
+            note: cloverOrder.note || ''
+        });
+    };
+
+    private isCloverPosEnabled = (): boolean => {
+        const posEnabled: any =
+            this.settingsStore.settings.pos.posEnabled;
+        return (
+            posEnabled === (PosEnabled as any).Clover ||
+            (typeof posEnabled === 'string' &&
+                posEnabled.toLowerCase() === 'clover')
+        );
+    };
+
+    // F6: Square parity — orders WITHOUT a note are hidden, not shown.
+    // Square requires tenders[0].note (missing note => filtered out); Clover
+    // v3 did `if (!note) return true` which inverts that and floods POS with
+    // foreign orders when notes are empty. Now `false`, explicit + commented.
+    // Shared predicate (F7 DRY) for mapped Orders and raw Clover payloads.
+    private cloverNoteMatches = (note: any): boolean => {
+        if (!note) return false;
+        const lowered = String(note).toLowerCase();
+        return (
+            lowered.includes('zeus') ||
+            lowered.includes('zues') ||
+            lowered.includes('bitcoin') ||
+            lowered.includes('btc') ||
+            lowered.includes('bit coin')
+        );
+    };
+
+    private filterCloverOrders = (orders: Array<Order>) =>
+        orders.filter((order: any) => this.cloverNoteMatches(order?.note));
+
+    // F6: raw-payload filter — MUST run BEFORE mapCloverOrderToZeusOrder.
+    private filterRawCloverOrders = (rawOrders: Array<any>) =>
+        (Array.isArray(rawOrders) ? rawOrders : []).filter((o: any) =>
+            this.cloverNoteMatches(o?.note)
+        );
+
+    // F3: ReactNativeBlobUtil.fetch has no timeout option — race it so a
+    // stalled Clover API cannot leave `loading=true` forever. Default 15s.
+    // Square has the same gap, but that is not a reason to repeat it here.
+    private cloverFetchWithTimeout = (url: string, headers: any, timeoutMs = 15000) =>
+        Promise.race([
+            ReactNativeBlobUtil.fetch('GET', url, headers),
+            new Promise((_, reject) =>
+                setTimeout(
+                    () => reject(new Error('Clover request timed out')),
+                    timeoutMs
+                )
+            )
+        ]);
+
+    // F5: shared historical recon — ONE implementation for Square + Clover,
+    // no 50-line copy-paste drift. Safe Storage JSON (try/catch +
+    // Array.isArray), safe BigNumber (isFinite gate on rate/orderTip),
+    // NaN-proof tally (one bad order never poisons reconTotal into "NaN").
+    private _enrichHistoricalRecon = async (orders: Array<any>) => {
+        let hiddenOrders: string[] = [];
+        try {
+            const raw = await Storage.getItem(POS_HIDDEN_KEY);
+            const parsed = JSON.parse(raw || '[]');
+            if (Array.isArray(parsed)) hiddenOrders = parsed;
+        } catch {}
+        let total = 0;
+        let tax = 0;
+        let tips = 0;
+        let exportString =
+            'orderId, totalSats, tipSats, rateFull, rateNumerical, type, tx\n';
+        const enrichedOrders = await Promise.all(
+            orders.map(async (order: any) => {
+                let stored: any = null;
+                try {
+                    const s = await Storage.getItem(`pos-${order.id}`);
+                    if (s) stored = JSON.parse(s);
+                } catch {}
+                let tip;
+                if (hiddenOrders.includes(order.id)) {
+                    order.hidden = true;
+                }
+                if (stored) {
+                    order.payment = stored;
+                    const {
+                        orderId,
+                        orderTotal,
+                        orderTip,
+                        exchangeRate,
+                        rate,
+                        type,
+                        tx
+                    } = order.payment;
+                    const rateNum = Number(rate);
+                    const tipNum = Number(orderTip);
+                    if (isFinite(rateNum) && isFinite(tipNum)) {
+                        try {
+                            tip = new BigNumber(tipNum)
+                                .multipliedBy(rateNum)
+                                .dividedBy(SATS_PER_BTC)
+                                .toFixed(2);
+                        } catch {}
+                    }
+                    exportString += `${orderId}, ${orderTotal}, ${orderTip}, ${exchangeRate}, ${rate}, ${type}, ${tx}\n`;
+                }
+                const tm = Number(order.getTotalMoney);
+                const txm = Number(order.getTaxMoney);
+                if (isFinite(tm)) total += tm;
+                if (isFinite(txm)) {
+                    total += txm;
+                    tax += txm;
+                }
+                const tipN = Number(tip);
+                if (tip !== undefined && isFinite(tipN)) {
+                    tips += tipN;
+                } else if (order.autoGratuity) {
+                    const g = Number(order.autoGratuity);
+                    if (isFinite(g)) tips += g;
+                }
+                return order;
+            })
+        );
+        runInAction(() => {
+            this.completedOrders = enrichedOrders;
+            this.reconTotal = total.toFixed(2);
+            this.reconTax = tax.toFixed(2);
+            this.reconTips = tips.toFixed(2);
+            this.reconExport = exportString;
+            this.loading = false;
+        });
+    };
+
+    @action
+    private getCloverOrders = async () => {
+        const pos: any = this.settingsStore.settings.pos;
+        const cloverAccessToken = pos.cloverAccessToken;
+        const cloverMerchantId = pos.cloverMerchantId;
+        const cloverDevMode = pos.cloverDevMode;
+        this.loading = true;
+        this.error = false;
+        if (!cloverAccessToken || !cloverMerchantId) {
+            runInAction(() => {
+                this.openOrders = [];
+                this.paidOrders = [];
+                this.loading = false;
+                this.error = true;
+            });
+            return;
+        }
+        const apiHost = this.getCloverApiHost(cloverDevMode);
+        // F7: encode merchant id; F2: return the promise so callers can await.
+        // F3: timeout via race + strict === + runInAction-only mutations.
+        return this.cloverFetchWithTimeout(
+            `${apiHost}/v3/merchants/${encodeURIComponent(
+                cloverMerchantId
+            )}/orders?expand=lineItems,payments&limit=100`,
+            {
+                Authorization: `Bearer ${cloverAccessToken}`,
+                'Content-Type': 'application/json'
+            }
+        )
+            .then(async (response: any) => {
+                const status = response.info().status;
+                if (status === 200) {
+                    const payload = response.json();
+                    const rawOrders =
+                        payload.elements || payload.orders || [];
+                    // F6: filter RAW notes before mapping (Order-roundtrip safe).
+                    const orders = this.filterRawCloverOrders(rawOrders).map(
+                        (o: any) => this.mapCloverOrderToZeusOrder(o)
+                    );
+                    runInAction(() => {
+                        this.loading = false;
+                    });
+                    await this._enrichAndFilterOrders(orders);
+                } else {
+                    runInAction(() => {
+                        this.openOrders = [];
+                        this.paidOrders = [];
+                        this.loading = false;
+                        this.error = true;
+                    });
+                }
+            })
+            .catch((err) => {
+                console.error('POS get clover orders err', err);
+                runInAction(() => {
+                    this.openOrders = [];
+                    this.paidOrders = [];
+                    this.loading = false;
+                    this.error = true;
+                });
+            });
+    };
+
+    @action
+    private getCloverOrdersHistorical = async (hours = 24) => {
+        const pos: any = this.settingsStore.settings.pos;
+        const cloverAccessToken = pos.cloverAccessToken;
+        const cloverMerchantId = pos.cloverMerchantId;
+        const cloverDevMode = pos.cloverDevMode;
+        this.loading = true;
+        this.error = false;
+        // F1: historical credentials guard — same as getCloverOrders; never
+        // fetch merchants/undefined with `Bearer undefined`.
+        if (!cloverAccessToken || !cloverMerchantId) {
+            runInAction(() => {
+                this.completedOrders = [];
+                this.loading = false;
+                this.error = true;
+            });
+            return;
+        }
+        const apiHost = this.getCloverApiHost(cloverDevMode);
+        const startMs = Date.now() - hours * 60 * 60 * 1000;
+        // F7: encode merchant id + filter expression (`>=` must be encoded).
+        // F2: return promise (awaitable); F3: timeout + === + runInAction.
+        return this.cloverFetchWithTimeout(
+            `${apiHost}/v3/merchants/${encodeURIComponent(
+                cloverMerchantId
+            )}/orders?expand=lineItems,payments&limit=1000&filter=${encodeURIComponent(
+                `createdTime>=${startMs}`
+            )}`,
+            {
+                Authorization: `Bearer ${cloverAccessToken}`,
+                'Content-Type': 'application/json'
+            }
+        )
+            .then(async (response: any) => {
+                const status = response.info().status;
+                if (status === 200) {
+                    const payload = response.json();
+                    const rawOrders =
+                        payload.elements || payload.orders || [];
+                    // F6: filter RAW notes before mapping.
+                    const orders = this.filterRawCloverOrders(rawOrders).map(
+                        (o: any) => this.mapCloverOrderToZeusOrder(o)
+                    );
+                    // F5: shared recon — no inline 50-line Square copy.
+                    await this._enrichHistoricalRecon(orders);
+                } else {
+                    runInAction(() => {
+                        this.completedOrders = [];
+                        this.loading = false;
+                        this.error = true;
+                    });
+                }
+            })
+            .catch((err) => {
+                console.error('POS get clover historical orders err', err);
+                runInAction(() => {
+                    this.completedOrders = [];
+                    this.loading = false;
+                    this.error = true;
+                });
+            });
+    };
+
     @action
     public getOrdersHistorical = async (hours = 24) => {
+        if (this.isCloverPosEnabled()) {
+            return this.getCloverOrdersHistorical(hours);
+        }
         const { squareAccessToken, squareLocationId, squareDevMode } =
             this.settingsStore.settings.pos;
         this.loading = true;
@@ -576,8 +924,7 @@ export default class PosStore {
         )
             .then(async (response: any) => {
                 const status = response.info().status;
-                if (status == 200) {
-                    this.loading = false;
+                if (status === 200) {
                     let orders = response
                         .json()
                         .orders.map((order: any) => new Order(order))
@@ -604,68 +951,10 @@ export default class PosStore {
                             );
                         });
 
-                    let total = 0;
-                    let tax = 0;
-                    let tips = 0;
-                    let exportString =
-                        'orderId, totalSats, tipSats, rateFull, rateNumerical, type, tx\n';
-
-                    // fetch hidden orders - orders customers couldn't pay
-                    const hiddenOrdersItem = await Storage.getItem(
-                        POS_HIDDEN_KEY
-                    );
-                    const hiddenOrders = JSON.parse(hiddenOrdersItem || '[]');
-
-                    const enrichedOrders = await Promise.all(
-                        orders.map(async (order: any) => {
-                            const payment = await Storage.getItem(
-                                `pos-${order.id}`
-                            );
-                            let tip;
-                            // mark order if hidden
-                            if (hiddenOrders.includes(order.id)) {
-                                order.hidden = true;
-                            }
-                            if (payment) {
-                                order.payment = JSON.parse(payment);
-                                const {
-                                    orderId,
-                                    orderTotal,
-                                    orderTip,
-                                    exchangeRate,
-                                    rate,
-                                    type,
-                                    tx
-                                } = order.payment;
-                                tip = new BigNumber(orderTip)
-                                    .multipliedBy(rate)
-                                    .dividedBy(SATS_PER_BTC)
-                                    .toFixed(2);
-
-                                exportString += `${orderId}, ${orderTotal}, ${orderTip}, ${exchangeRate}, ${rate}, ${type}, ${tx}\n`;
-                            }
-
-                            // tally totals
-                            total +=
-                                Number(order.getTotalMoney) +
-                                Number(order.getTaxMoney);
-                            tax += Number(order.getTaxMoney);
-                            tips += tip
-                                ? Number(tip)
-                                : order.autoGratuity
-                                ? Number(order.autoGratuity)
-                                : 0;
-                            return order;
-                        })
-                    );
-
-                    runInAction(() => {
-                        this.completedOrders = enrichedOrders;
-                        this.reconTotal = total.toFixed(2);
-                        this.reconTax = tax.toFixed(2);
-                        this.reconTips = tips.toFixed(2);
-                        this.reconExport = exportString;
-                    });
+                    // F5: shared recon (was 50-line Square/Clover duplicate).
+                    // _enrichHistoricalRecon sets completedOrders/recon* +
+                    // loading=false inside runInAction with safe JSON/BigNumber.
+                    await this._enrichHistoricalRecon(orders);
                 } else {
                     runInAction(() => {
                         this.completedOrders = [];
