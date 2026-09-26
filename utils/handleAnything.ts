@@ -1,5 +1,4 @@
 import { Alert, Platform } from 'react-native';
-import { getParams as getlnurlParams } from 'js-lnurl';
 import { findlnurl, decodelnurl } from 'js-lnurl/lib/helpers';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
@@ -11,6 +10,11 @@ import Bolt11Utils from './Bolt11Utils';
 import CashuUtils from './CashuUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
 import ContactUtils from './ContactUtils';
+import { isLightningAddressEndpointAllowed } from './LnurlPayUtils';
+import {
+    getLnurlParams as getlnurlParams,
+    isUnsafeLnurlError
+} from './LnurlResolveUtils';
 import { localeString } from './LocaleUtils';
 import NodeUriUtils from './NodeUriUtils';
 import NostrUtils from './NostrUtils';
@@ -460,7 +464,9 @@ const handleAnything = async (
                             )
                         );
                     }
-                } catch {
+                } catch (e) {
+                    // a host policy refusal keeps its own message
+                    if (isUnsafeLnurlError(e)) throw e;
                     throw new Error(
                         localeString('utils.handleAnything.invalidLnurlParams')
                     );
@@ -751,6 +757,9 @@ const handleAnything = async (
             url = `http://${normalizedDomain}/.well-known/lnurlp/${normalizedUsername}`;
         } else {
             url = `https://${normalizedDomain}/.well-known/lnurlp/${normalizedUsername}`;
+        }
+        if (!isLightningAddressEndpointAllowed(url).ok) {
+            throw new Error(localeString('utils.lnurl.unsafeLightningAddress'));
         }
         const error = localeString(
             'utils.handleAnything.lightningAddressError'
@@ -1089,7 +1098,9 @@ const handleAnything = async (
                         );
                 }
             })
-            .catch(() => {
+            .catch((e) => {
+                // a host policy refusal keeps its own message
+                if (isUnsafeLnurlError(e)) throw e;
                 throw new Error(
                     localeString('utils.handleAnything.invalidLnurlParams')
                 );
