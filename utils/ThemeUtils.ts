@@ -440,6 +440,8 @@ export function getUpgradeIntensity(balance: number): number {
 
 /**
  * Blend a base color toward the theme error color based on ecash balance.
+ * Follows getUpgradeIntensity so the tint stays in step with the Menu glow:
+ * 10k → no tint, 100k → 60% blend.
  * Returns undefined when colors aren't valid hex or balance < 10k.
  */
 export function getUpgradeBackgroundColor(
@@ -454,7 +456,7 @@ export function getUpgradeBackgroundColor(
         return undefined;
 
     if (balance >= 10_000) {
-        const ratio = Math.min(balance / 100_000, 1);
+        const ratio = getUpgradeIntensity(balance);
         return blendHexColors(baseColor, errorColor, ratio * 0.6);
     }
     return undefined;
