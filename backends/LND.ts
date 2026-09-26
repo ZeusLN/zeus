@@ -10,7 +10,11 @@ import OpenChannelRequest from './../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
 import VersionUtils from './../utils/VersionUtils';
 import { localeString } from './../utils/LocaleUtils';
-import { toLnrpcAddressType } from './../utils/LndUtils';
+import {
+    LndInvoiceListParams,
+    LndPaymentListParams,
+    toLnrpcAddressType
+} from './../utils/LndUtils';
 import { Hash as sha256Hash } from 'fast-sha256';
 import BigNumber from 'bignumber.js';
 
@@ -353,17 +357,25 @@ export default class LND {
     };
     getNetworkInfo = () => this.getRequest('/v1/graph/info');
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
-    getInvoices = (
-        params: { limit?: number; reversed?: boolean } = {
-            limit: 500,
-            reversed: true
-        }
-    ) =>
-        this.getRequest(
-            `/v1/invoices?reversed=${
-                params?.reversed !== undefined ? params.reversed : true
-            }${params?.limit ? `&num_max_invoices=${params.limit}` : ''}`
+    getInvoices = (params: LndInvoiceListParams = {}) => {
+        const limit = params.limit ?? 500;
+        const reversed = params.reversed ?? true;
+        const supportsCreationDateFilter = this.supports('v0.16.0');
+
+        return this.getRequest(
+            `/v1/invoices?reversed=${reversed}&num_max_invoices=${limit}${
+                supportsCreationDateFilter &&
+                params.creationDateStart !== undefined
+                    ? `&creation_date_start=${params.creationDateStart}`
+                    : ''
+            }${
+                supportsCreationDateFilter &&
+                params.creationDateEnd !== undefined
+                    ? `&creation_date_end=${params.creationDateEnd}`
+                    : ''
+            }`
         );
+    };
     createInvoice = (data: any) =>
         this.postRequest('/v1/invoices', {
             memo: data.memo,
@@ -377,19 +389,27 @@ export default class LND {
                 : undefined,
             route_hints: data.route_hints
         });
-    getPayments = (
-        params: { maxPayments?: number; reversed?: boolean } = {
-            maxPayments: 500,
-            reversed: true
-        }
-    ) =>
-        this.getRequest(
+    getPayments = (params: LndPaymentListParams = {}) => {
+        const maxPayments = params.maxPayments ?? 500;
+        const reversed = params.reversed ?? true;
+        const supportsCreationDateFilter = this.supports('v0.16.0');
+
+        return this.getRequest(
             `/v1/payments?include_incomplete=true${
-                params?.maxPayments ? `&max_payments=${params.maxPayments}` : ''
-            }&reversed=${
-                params?.reversed !== undefined ? params.reversed : true
+                maxPayments ? `&max_payments=${maxPayments}` : ''
+            }&reversed=${reversed}${
+                supportsCreationDateFilter &&
+                params.creationDateStart !== undefined
+                    ? `&creation_date_start=${params.creationDateStart}`
+                    : ''
+            }${
+                supportsCreationDateFilter &&
+                params.creationDateEnd !== undefined
+                    ? `&creation_date_end=${params.creationDateEnd}`
+                    : ''
             }`
         );
+    };
 
     getNewAddress = (data: any) => {
         const { type, ...rest } = data;
