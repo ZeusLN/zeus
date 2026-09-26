@@ -198,3 +198,156 @@ describe('BalanceStore settled blockchain balance', () => {
         expect(store.settledBlockchainBalance).toEqual(25000);
     });
 });
+
+// Regression coverage for issue #4593: the error flag raised by a failed
+// balance fetch was only ever cleared by reset(), which runs solely on
+// reconnect (Wallet.tsx fetchData under `connecting`). One request timing
+// out, e.g. over a VPN tunnel that was still establishing, kept the
+// full-screen "Error connecting to your node" pane up even after later
+// fetches succeeded. A successful fetch must clear the flag.
+
+const BackendUtilsMock: any = BackendUtils;
+
+// BalanceStore only touches settingsStore.settings (via its constructor
+// reaction) and hasCredentials(); a plain object keeps the reaction inert
+// so the tests drive the fetch methods directly.
+const newStore = () =>
+    new BalanceStore({
+        settings: {},
+        hasCredentials: () => false
+    } as any);
+
+beforeEach(() => {
+    jest.clearAllMocks();
+});
+
+describe('BalanceStore error flag', () => {
+    it('sets error when a lightning balance fetch fails', async () => {
+        BackendUtilsMock.getLightningBalance.mockRejectedValueOnce(
+            new Error('Request timeout')
+        );
+        const store = newStore();
+
+        await store.getLightningBalance(false);
+
+        expect(store.error).toEqual(true);
+    });
+
+    it('clears error once a lightning balance fetch succeeds again', async () => {
+        BackendUtilsMock.getLightningBalance
+            .mockRejectedValueOnce(new Error('Request timeout'))
+            .mockResolvedValueOnce({ balance: 100, pending_open_balance: 0 });
+        const store = newStore();
+
+        await store.getLightningBalance(false);
+        expect(store.error).toEqual(true);
+
+        await store.getLightningBalance(true);
+
+        expect(store.error).toEqual(false);
+        expect(store.lightningBalance).toEqual(100);
+    });
+
+    it('clears error once a blockchain balance fetch succeeds again', async () => {
+        BackendUtilsMock.getBlockchainBalance
+            .mockRejectedValueOnce(new Error('Request timeout'))
+            .mockResolvedValueOnce({
+                confirmed_balance: 50,
+                unconfirmed_balance: 0
+            });
+        const store = newStore();
+
+        await store.getBlockchainBalance(false, false);
+        expect(store.error).toEqual(true);
+
+        await store.getBlockchainBalance(true, false);
+
+        expect(store.error).toEqual(false);
+        expect(store.totalBlockchainBalance).toEqual(50);
+    });
+});
+
+// getCombinedBalance awaits lightning, then on-chain. A success on either
+// leg proves the node is reachable, so the error flag behind the
+// full-screen pane only latches when every attempted leg failed. A leg
+// that failed returns undefined and must not zero its balances: with the
+// pane down, a zeroed balance would render as 0 sats instead of the last
+// known value.
+describe('getCombinedBalance partial failures', () => {
+    it('holds the last lightning balance when only that leg fails', async () => {
+        BackendUtilsMock.getLightningBalance
+            .mockResolvedValueOnce({
+                balance: 500000,
+                pending_open_balance: 100
+            })
+            .mockRejectedValueOnce(new Error('Request timeout'));
+        BackendUtilsMock.getBlockchainBalance.mockResolvedValue({
+            confirmed_balance: 50,
+            unconfirmed_balance: 0
+        });
+        const store = newStore();
+
+        await store.getCombinedBalance();
+        expect(store.lightningBalance).toEqual(500000);
+        expect(store.pendingOpenBalance).toEqual(100);
+
+        await store.getCombinedBalance();
+
+        expect(store.error).toEqual(false);
+        expect(store.lightningBalance).toEqual(500000);
+        expect(store.pendingOpenBalance).toEqual(100);
+        expect(store.totalBlockchainBalance).toEqual(50);
+    });
+
+    it('holds the last on-chain balance when only that leg fails', async () => {
+        BackendUtilsMock.getLightningBalance.mockResolvedValue({
+            balance: 500000,
+            pending_open_balance: 0
+        });
+        BackendUtilsMock.getBlockchainBalance
+            .mockResolvedValueOnce({
+                confirmed_balance: 50,
+                unconfirmed_balance: 0
+            })
+            .mockRejectedValueOnce(new Error('Request timeout'));
+        const store = newStore();
+
+        await store.getCombinedBalance();
+        expect(store.totalBlockchainBalance).toEqual(50);
+
+        await store.getCombinedBalance();
+
+        // the lightning leg succeeded, so the node is reachable and the
+        // pane stays down even though on-chain resolved last
+        expect(store.error).toEqual(false);
+        expect(store.totalBlockchainBalance).toEqual(50);
+        expect(store.lightningBalance).toEqual(500000);
+    });
+
+    it('raises the error when both legs fail', async () => {
+        BackendUtilsMock.getLightningBalance.mockRejectedValue(
+            new Error('Request timeout')
+        );
+        BackendUtilsMock.getBlockchainBalance.mockRejectedValue(
+            new Error('Request timeout')
+        );
+        const store = newStore();
+
+        await store.getCombinedBalance();
+
+        expect(store.error).toEqual(true);
+    });
+
+    it('raises the error when the only attempted leg fails', async () => {
+        BackendUtilsMock.supportsOnchainBalance.mockReturnValueOnce(false);
+        BackendUtilsMock.getLightningBalance.mockRejectedValueOnce(
+            new Error('Request timeout')
+        );
+        const store = newStore();
+
+        await store.getCombinedBalance();
+
+        expect(store.error).toEqual(true);
+        expect(BackendUtilsMock.getBlockchainBalance).not.toHaveBeenCalled();
+    });
+});

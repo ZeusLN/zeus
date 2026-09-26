@@ -190,6 +190,12 @@ export default class BalanceStore {
                     this.totalBlockchainBalanceAccounts =
                         totalBlockchainBalanceAccounts;
                 }
+                // a successful fetch proves the node is reachable; without
+                // this, an error from one timed-out request (e.g. over a
+                // VPN that was still establishing) keeps the full-screen
+                // connection error up forever, since reset() only runs on
+                // reconnect
+                this.error = false;
                 this.loadingBlockchainBalance = false;
             });
             return {
@@ -220,6 +226,8 @@ export default class BalanceStore {
                     this.lightningBalance = lightningBalance;
                 }
 
+                // see getBlockchainBalance: reachability clears the error
+                this.error = false;
                 this.loadingLightningBalance = false;
             });
 
@@ -237,25 +245,38 @@ export default class BalanceStore {
         if (reset) this.reset();
         let lightning, onChain: any;
         lightning = await this.getLightningBalance(false);
-        if (BackendUtils.supportsOnchainBalance()) {
+        const onChainAttempted = BackendUtils.supportsOnchainBalance();
+        if (onChainAttempted) {
             onChain = await this.getBlockchainBalance(false, false);
         }
 
         runInAction(() => {
-            // LN
-            this.pendingOpenBalance = lightning?.pendingOpenBalance || 0;
-            this.lightningBalance = lightning?.lightningBalance || 0;
-            // on-chain
-            this.otherAccounts = onChain?.accounts || [];
-            this.unconfirmedBlockchainBalance =
-                onChain?.unconfirmedBlockchainBalance || 0;
-            this.externalUnconfirmedBalance =
-                onChain?.externalUnconfirmedBalance || 0;
-            this.externalUnconfirmedTxids =
-                onChain?.externalUnconfirmedTxids || [];
-            this.confirmedBlockchainBalance =
-                onChain?.confirmedBlockchainBalance || 0;
-            this.totalBlockchainBalance = onChain?.totalBlockchainBalance || 0;
+            // the legs each set the flag as they resolve, so on its own it
+            // ends up reflecting whichever one happened to finish last.
+            // This flag only drives the full-screen "Error connecting to
+            // your node" pane, so it has to mean "the node is unreachable":
+            // latch it only when every leg we attempted failed.
+            this.error = !lightning && (!onChainAttempted || !onChain);
+
+            // a failed leg returns undefined; hold its last known values
+            // rather than zeroing them, since a success on the other leg
+            // clears the error pane that used to cover the zeros
+            if (lightning) {
+                this.pendingOpenBalance = lightning.pendingOpenBalance;
+                this.lightningBalance = lightning.lightningBalance;
+            }
+            if (onChain) {
+                this.otherAccounts = onChain.accounts || [];
+                this.unconfirmedBlockchainBalance =
+                    onChain.unconfirmedBlockchainBalance;
+                this.externalUnconfirmedBalance =
+                    onChain.externalUnconfirmedBalance;
+                this.externalUnconfirmedTxids =
+                    onChain.externalUnconfirmedTxids;
+                this.confirmedBlockchainBalance =
+                    onChain.confirmedBlockchainBalance;
+                this.totalBlockchainBalance = onChain.totalBlockchainBalance;
+            }
         });
 
         return {
