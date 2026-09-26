@@ -22,6 +22,7 @@ jest.mock('../stores/Stores', () => ({
 }));
 
 import AddressUtils from './AddressUtils';
+import { nodeInfoStore } from '../stores/Stores';
 import { walletrpc } from '../proto/lightning';
 
 describe('AddressUtils', () => {
@@ -405,6 +406,107 @@ describe('AddressUtils', () => {
                     'bc1q073ezlgdrqj8ug8gpmlnh0qa7ztlx65cm62sck-'
                 )
             ).toBeFalsy();
+        });
+    });
+
+    describe('isNodeOnTestNetwork', () => {
+        it('is false before node info loads', () => {
+            // NodeInfoStore.nodeInfo starts as a plain {}, where
+            // NodeInfo.isMainNet would be undefined
+            expect(AddressUtils.isNodeOnTestNetwork({})).toBe(false);
+            expect(AddressUtils.isNodeOnTestNetwork(undefined)).toBe(false);
+        });
+
+        it('is false on mainnet', () => {
+            expect(
+                AddressUtils.isNodeOnTestNetwork({
+                    isTestNet: false,
+                    isRegTest: false,
+                    isSigNet: false,
+                    isMutinynet: false
+                })
+            ).toBe(false);
+        });
+
+        it('is true on testnet, regtest, signet and Mutinynet', () => {
+            [
+                { isTestNet: true },
+                { isRegTest: true },
+                { isSigNet: true },
+                { isSigNet: true, isMutinynet: true },
+                { isMutinynet: true }
+            ].forEach((nodeInfo) =>
+                expect(AddressUtils.isNodeOnTestNetwork(nodeInfo)).toBe(true)
+            );
+        });
+    });
+
+    describe('isValidBitcoinAddressForNode', () => {
+        const mainnet = [
+            'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+            '1AY6gTALH7bGrbN73qqTRnkW271JvBJc9o',
+            '3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy'
+        ];
+        const testNetworks = [
+            'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+            'bcrt1qqgdrlt97x4847rf85utak8gre5q7k83uwh3ajj',
+            'mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn',
+            '2MzQwSSnBHWHqSAqtTVQ6v47XtaisrJa1Vc'
+        ];
+        const originalNodeInfo = nodeInfoStore.nodeInfo;
+        const setNodeInfo = (nodeInfo: any) => {
+            (nodeInfoStore as any).nodeInfo = nodeInfo;
+        };
+
+        afterEach(() => setNodeInfo(originalNodeInfo));
+
+        it('accepts only mainnet addresses on a mainnet node', () => {
+            setNodeInfo({ isTestNet: false, isRegTest: false });
+            mainnet.forEach((address) =>
+                expect(AddressUtils.isValidBitcoinAddressForNode(address)).toBe(
+                    true
+                )
+            );
+            testNetworks.forEach((address) =>
+                expect(AddressUtils.isValidBitcoinAddressForNode(address)).toBe(
+                    false
+                )
+            );
+        });
+
+        it('accepts only test network addresses on a signet node', () => {
+            // Signet alone was not enough for Sweep.tsx, Swaps/index.tsx
+            // and the BIP21 + lightning branch of handleAnything
+            setNodeInfo({ isSigNet: true });
+            testNetworks.forEach((address) =>
+                expect(AddressUtils.isValidBitcoinAddressForNode(address)).toBe(
+                    true
+                )
+            );
+            mainnet.forEach((address) =>
+                expect(AddressUtils.isValidBitcoinAddressForNode(address)).toBe(
+                    false
+                )
+            );
+        });
+
+        it('accepts regtest addresses on a regtest node', () => {
+            setNodeInfo({ isRegTest: true });
+            expect(
+                AddressUtils.isValidBitcoinAddressForNode(
+                    'bcrt1qqgdrlt97x4847rf85utak8gre5q7k83uwh3ajj'
+                )
+            ).toBe(true);
+        });
+
+        it('treats a node whose info has not loaded as mainnet', () => {
+            setNodeInfo({});
+            expect(AddressUtils.isValidBitcoinAddressForNode(mainnet[0])).toBe(
+                true
+            );
+            expect(
+                AddressUtils.isValidBitcoinAddressForNode(testNetworks[0])
+            ).toBe(false);
         });
     });
 

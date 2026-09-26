@@ -218,6 +218,21 @@ class AddressUtils {
         return btcNonBech.test(input) || btcBech.test(input);
     };
 
+    // True when the connected node is on testnet, regtest or signet
+    // (including Mutinynet). nodeInfo is a plain {} until the first
+    // getNodeInfo resolves, so check the flags, not NodeInfo.isMainNet.
+    isNodeOnTestNetwork = (nodeInfo: any = nodeInfoStore?.nodeInfo) =>
+        !!(
+            nodeInfo?.isTestNet ||
+            nodeInfo?.isRegTest ||
+            nodeInfo?.isSigNet ||
+            nodeInfo?.isMutinynet
+        );
+
+    // For destinations the connected node will pay to
+    isValidBitcoinAddressForNode = (input: string) =>
+        this.isValidBitcoinAddress(input, this.isNodeOnTestNetwork());
+
     // For inputs not tied to the connected node's network, such as contacts
     isValidBitcoinAddressOnAnyNetwork = (input: string) =>
         this.isValidBitcoinAddress(input, false) ||

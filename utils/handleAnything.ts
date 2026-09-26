@@ -367,8 +367,6 @@ const handleAnything = async (
 ): Promise<any> => {
     data = data.trim();
     const network = getNetworkString();
-    const { nodeInfo } = nodeInfoStore;
-    const { isTestNet, isRegTest, isSigNet } = nodeInfo;
     let { value, satAmount, lightning, offer, clinkNoffer }: any =
         AddressUtils.processBIP21Uri(data);
     const hasAt: boolean = value.includes('@');
@@ -437,7 +435,7 @@ const handleAnything = async (
         ];
     } else if (
         !hasAt &&
-        AddressUtils.isValidBitcoinAddress(value, isTestNet || isRegTest) &&
+        AddressUtils.isValidBitcoinAddressForNode(value) &&
         lightning
     ) {
         if (isClipboardValue) return true;
@@ -489,13 +487,7 @@ const handleAnything = async (
                 locked: true
             }
         ];
-    } else if (
-        !hasAt &&
-        AddressUtils.isValidBitcoinAddress(
-            value,
-            isTestNet || isRegTest || isSigNet
-        )
-    ) {
+    } else if (!hasAt && AddressUtils.isValidBitcoinAddressForNode(value)) {
         if (isClipboardValue) return true;
         return [
             'Send',

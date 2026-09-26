@@ -54,6 +54,7 @@ const ZEUS_ECASH_GIFT_URL = 'https://zeusln.com/e/';
 jest.mock('./AddressUtils', () => ({
     processBIP21Uri: (...args: string[]) => mockProcessBIP21Uri(...args),
     isValidBitcoinAddress: () => mockIsValidBitcoinAddress,
+    isValidBitcoinAddressForNode: () => mockIsValidBitcoinAddress,
     isValidLightningPubKey: () => mockIsValidLightningPubKey,
     isValidLightningPaymentRequest: () => mockIsValidLightningPaymentRequest,
     isValidLightningAddress: () => mockIsValidLightningAddress,
