@@ -229,6 +229,11 @@ export default class ChannelsStore {
         this.channelsType = ChannelsType.Open;
         this.pendingHTLCs = [];
         this.peers = [];
+        // Clear stale Channels/Peers search state on node change (Wallet
+        // calls reset() when connecting) so a query typed for the previous
+        // node never filters the new node's list (ZeusLN/zeus#2813).
+        this.search = '';
+        this.filterOptions = [];
     };
 
     @action
