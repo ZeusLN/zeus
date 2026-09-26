@@ -36,6 +36,15 @@ describe('LnurlPayUtils', () => {
             );
         });
 
+        it('lowercases the username for look-alike cryptoqr.net domains', () => {
+            expect(getLnurlpUrl('Alice@notcryptoqr.net').url).toBe(
+                'https://notcryptoqr.net/.well-known/lnurlp/alice'
+            );
+            expect(getLnurlpUrl('Alice@cryptoqr.net.example.com').url).toBe(
+                'https://cryptoqr.net.example.com/.well-known/lnurlp/alice'
+            );
+        });
+
         it('uses http for an uppercase .onion domain', () => {
             const onion =
                 'zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion';

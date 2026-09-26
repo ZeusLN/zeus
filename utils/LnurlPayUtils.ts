@@ -39,9 +39,10 @@ export const getLnurlpUrl = (address: string) => {
     const [username, domain] = address.split('@');
     const normalizedDomain = domain.toLowerCase();
     const isOnion = normalizedDomain.endsWith('.onion');
-    const normalizedUsername = normalizedDomain.endsWith('cryptoqr.net')
-        ? username
-        : username.toLowerCase();
+    const isCryptoQR =
+        normalizedDomain === 'cryptoqr.net' ||
+        normalizedDomain.endsWith('.cryptoqr.net');
+    const normalizedUsername = isCryptoQR ? username : username.toLowerCase();
     const origin = `${isOnion ? 'http' : 'https'}://${normalizedDomain}`;
     return {
         url: `${origin}/.well-known/lnurlp/${normalizedUsername}`,
