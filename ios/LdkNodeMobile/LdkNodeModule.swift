@@ -1034,6 +1034,36 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
+    @objc(spliceIn:counterpartyNodeId:spliceAmountSats:resolver:rejecter:)
+    func spliceIn(_ userChannelId: String, counterpartyNodeId: String, spliceAmountSats: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        do {
+            try node.spliceIn(userChannelId: userChannelId, counterpartyNodeId: counterpartyNodeId, spliceAmountSats: spliceAmountSats.uint64Value)
+            resolve(["status": "ok"])
+        } catch {
+            reject("error", self.errorMessage(error), error)
+        }
+    }
+
+    @objc(spliceOut:counterpartyNodeId:address:spliceAmountSats:resolver:rejecter:)
+    func spliceOut(_ userChannelId: String, counterpartyNodeId: String, address: String, spliceAmountSats: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        do {
+            try node.spliceOut(userChannelId: userChannelId, counterpartyNodeId: counterpartyNodeId, address: address, spliceAmountSats: spliceAmountSats.uint64Value)
+            resolve(["status": "ok"])
+        } catch {
+            reject("error", self.errorMessage(error), error)
+        }
+    }
+
     // MARK: - On-chain Methods
 
     @objc(newOnchainAddress:rejecter:)
@@ -1765,7 +1795,8 @@ class LdkNodeModule: RCTEventEmitter {
                 "channelId": channelId,
                 "userChannelId": userChannelId,
                 "counterpartyNodeId": counterpartyNodeId,
-                "newFundingTxo": ["txid": newFundingTxo.txid, "vout": newFundingTxo.vout]
+                "newFundingTxo_txid": newFundingTxo.txid,
+                "newFundingTxo_vout": newFundingTxo.vout
             ]
         case .spliceFailed(let channelId, let userChannelId, let counterpartyNodeId, let abandonedFundingTxo):
             return [
@@ -1773,7 +1804,8 @@ class LdkNodeModule: RCTEventEmitter {
                 "channelId": channelId,
                 "userChannelId": userChannelId,
                 "counterpartyNodeId": counterpartyNodeId,
-                "abandonedFundingTxo": abandonedFundingTxo.map { ["txid": $0.txid, "vout": $0.vout] } as Any
+                "abandonedFundingTxo_txid": abandonedFundingTxo?.txid as Any,
+                "abandonedFundingTxo_vout": abandonedFundingTxo?.vout as Any
             ]
         }
     }

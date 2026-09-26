@@ -324,6 +324,41 @@ const forceCloseChannel = async ({
     );
 };
 
+const spliceIn = async ({
+    userChannelId,
+    counterpartyNodeId,
+    spliceAmountSats
+}: {
+    userChannelId: string;
+    counterpartyNodeId: string;
+    spliceAmountSats: number;
+}): Promise<void> => {
+    return await LdkNodeModule.spliceIn(
+        userChannelId,
+        counterpartyNodeId,
+        spliceAmountSats
+    );
+};
+
+const spliceOut = async ({
+    userChannelId,
+    counterpartyNodeId,
+    address,
+    spliceAmountSats
+}: {
+    userChannelId: string;
+    counterpartyNodeId: string;
+    address: string;
+    spliceAmountSats: number;
+}): Promise<void> => {
+    return await LdkNodeModule.spliceOut(
+        userChannelId,
+        counterpartyNodeId,
+        address,
+        spliceAmountSats
+    );
+};
+
 // ============================================================================
 // On-chain Functions
 // ============================================================================
@@ -1110,6 +1145,17 @@ export interface ILdkNodeInjections {
             counterpartyNodeId: string;
             reason?: string;
         }) => Promise<void>;
+        spliceIn: (params: {
+            userChannelId: string;
+            counterpartyNodeId: string;
+            spliceAmountSats: number;
+        }) => Promise<void>;
+        spliceOut: (params: {
+            userChannelId: string;
+            counterpartyNodeId: string;
+            address: string;
+            spliceAmountSats: number;
+        }) => Promise<void>;
     };
     onchain: {
         newOnchainAddress: () => Promise<string>;
@@ -1337,7 +1383,9 @@ const LdkNodeInjection: ILdkNodeInjections = {
         openChannelFundMax,
         openChannelWithUtxos,
         closeChannel,
-        forceCloseChannel
+        forceCloseChannel,
+        spliceIn,
+        spliceOut
     },
     onchain: {
         newOnchainAddress,

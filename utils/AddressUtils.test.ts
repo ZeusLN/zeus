@@ -351,6 +351,98 @@ describe('AddressUtils', () => {
         });
     });
 
+    describe('isValidAddressForNetwork', () => {
+        const mainnet = { isMainNet: true, isRegTest: false };
+        const testnet = { isMainNet: false, isRegTest: false };
+        const regtest = { isMainNet: false, isRegTest: true };
+
+        it('accepts every standard address type on mainnet', () => {
+            [
+                'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
+                'bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0',
+                '1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH',
+                '3CNHUhP3uyB9EUtRLsmvFUmvGdjGdkTxJw'
+            ].forEach((address) =>
+                expect(
+                    AddressUtils.isValidAddressForNetwork(address, mainnet)
+                ).toBe(true)
+            );
+        });
+
+        it('accepts every standard address type on testnet, signet and mutinynet', () => {
+            [
+                'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+                'tb1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vq47zagq',
+                'mrCDrCybB6J1vRfbwM5hemdJz73FwDBC8r',
+                '2N3vVYSK5XRgVSGWy21PnsRmBUywSQNdCsf'
+            ].forEach((address) =>
+                expect(
+                    AddressUtils.isValidAddressForNetwork(address, testnet)
+                ).toBe(true)
+            );
+        });
+
+        it('accepts regtest addresses on regtest', () => {
+            expect(
+                AddressUtils.isValidAddressForNetwork(
+                    'bcrt1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080',
+                    regtest
+                )
+            ).toBe(true);
+        });
+
+        it('accepts uppercase bech32 addresses', () => {
+            expect(
+                AddressUtils.isValidAddressForNetwork(
+                    'BC1QW508D6QEJXTDG4Y5R3ZARVARY0C5XW7KV8F3T4',
+                    mainnet
+                )
+            ).toBe(true);
+        });
+
+        it('rejects addresses from another network', () => {
+            expect(
+                AddressUtils.isValidAddressForNetwork(
+                    'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
+                    testnet
+                )
+            ).toBe(false);
+            expect(
+                AddressUtils.isValidAddressForNetwork(
+                    'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+                    mainnet
+                )
+            ).toBe(false);
+            expect(
+                AddressUtils.isValidAddressForNetwork(
+                    'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+                    regtest
+                )
+            ).toBe(false);
+            expect(
+                AddressUtils.isValidAddressForNetwork(
+                    '1BgGZ9tcN4rm9KBzDn7KprQz87SZ26SAMH',
+                    testnet
+                )
+            ).toBe(false);
+        });
+
+        it('rejects a bad checksum and non-addresses', () => {
+            expect(
+                AddressUtils.isValidAddressForNetwork(
+                    'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t5',
+                    mainnet
+                )
+            ).toBe(false);
+            expect(AddressUtils.isValidAddressForNetwork('', mainnet)).toBe(
+                false
+            );
+            expect(
+                AddressUtils.isValidAddressForNetwork('not an address', testnet)
+            ).toBe(false);
+        });
+    });
+
     describe('isValidLightningPaymentRequest', () => {
         it('validates Lightning payment requests properly', () => {
             expect(
