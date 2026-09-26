@@ -37,6 +37,10 @@ interface MintsProps {
             disableRandom?: boolean;
             forceSingleMint?: boolean;
             isMultiMintView?: boolean;
+            // Pick a mint for the given screen without changing the
+            // selected mint
+            pickFor?: 'CashuToken';
+            pickedMintUrl?: string;
         }
     >;
 }
@@ -125,7 +129,9 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
     render() {
         const { navigation, CashuStore, SettingsStore, route } = this.props;
         const { mints } = this.state;
-        const disableRandom = route?.params?.disableRandom;
+        const pickFor = route.params?.pickFor;
+        const pickedMintUrl = route.params?.pickedMintUrl;
+        const disableRandom = route?.params?.disableRandom || !!pickFor;
         const {
             selectedMintUrl,
             multiMintSelectedUrls,
@@ -142,6 +148,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
         const multiMintEnabled =
             !!SettingsStore.settings?.ecash?.enableMultiMint &&
             !forceSingleMint &&
+            !pickFor &&
             isMultiMintView;
 
         const AddMintButton = () => (
@@ -177,7 +184,7 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                     rightComponent={<AddMintButton />}
                     navigation={navigation}
                     onBack={() => {
-                        clearInvoice();
+                        if (!pickFor) clearInvoice();
                     }}
                 />
                 {!!mints &&
@@ -227,7 +234,9 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                             index: number;
                         }) => {
                             const mintInfo = item._mintInfo || item;
-                            const isSelectedMint = multiMintEnabled
+                            const isSelectedMint = pickFor
+                                ? mintInfo?.mintUrl === pickedMintUrl
+                                : multiMintEnabled
                                 ? !!mintInfo?.mintUrl &&
                                   multiMintSelectedUrls.includes(
                                       mintInfo?.mintUrl
@@ -287,6 +296,18 @@ export default class Mints extends React.Component<MintsProps, MintsState> {
                                         }}
                                         onPress={async () => {
                                             if (isDisabled && !isSelectedMint) {
+                                                return;
+                                            }
+
+                                            if (pickFor) {
+                                                navigation.popTo(
+                                                    pickFor,
+                                                    {
+                                                        pickedMintUrl:
+                                                            mintInfo?.mintUrl
+                                                    },
+                                                    { merge: true }
+                                                );
                                                 return;
                                             }
 
