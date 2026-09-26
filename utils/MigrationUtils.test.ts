@@ -75,6 +75,8 @@ jest.mock('../stores/SettingsStore', () => ({
         'https://api.boltz.exchange/v2',
         'https://api.middle-way.space/v2'
     ],
+    RETIRED_THEMES: ['junkie', 'bpm', 'desert', 'mint', 'watermelon'],
+    DEFAULT_THEME: 'kyriaki',
     DEFAULT_NOSTR_RELAYS_2023: [
         'wss://nostr.mutinywallet.com',
         'wss://relay.damus.io',
@@ -95,7 +97,7 @@ jest.mock('../stores/SettingsStore', () => ({
     // with the real constant by hand, same as every other DEFAULT_* value
     // in this mock.
     DEFAULT_SETTINGS: {
-        settingsVersion: 2,
+        settingsVersion: require('../utils/SettingsVersion').SETTINGS_VERSION,
         privacy: {
             defaultBlockExplorer: 'mempool.space',
             customBlockExplorer: '',
@@ -734,6 +736,42 @@ describe('MigrationUtils', () => {
 
             expect(MigrationUtils.applyRetiredSwapHosts(settings)).toBe(false);
             expect(settings).toEqual({});
+        });
+    });
+
+    describe('applyRetiredThemes', () => {
+        it.each(['junkie', 'bpm', 'desert', 'mint', 'watermelon'])(
+            'moves %s to the default theme',
+            (theme) => {
+                const settings: any = {
+                    display: {
+                        theme,
+                        defaultView: 'Keypad',
+                        displayNickname: true
+                    }
+                };
+
+                expect(MigrationUtils.applyRetiredThemes(settings)).toBe(true);
+                expect(settings.display.theme).toBe('kyriaki');
+                // the rest of the display group is left as it was
+                expect(settings.display.defaultView).toBe('Keypad');
+                expect(settings.display.displayNickname).toBe(true);
+            }
+        );
+
+        it('leaves themes that still exist alone', () => {
+            const settings: any = { display: { theme: 'blueberry' } };
+
+            expect(MigrationUtils.applyRetiredThemes(settings)).toBe(false);
+            expect(settings.display.theme).toBe('blueberry');
+        });
+
+        it('ignores blobs without a display group or theme', () => {
+            expect(MigrationUtils.applyRetiredThemes({})).toBe(false);
+
+            const noTheme: any = { display: { defaultView: 'Balance' } };
+            expect(MigrationUtils.applyRetiredThemes(noTheme)).toBe(false);
+            expect(noTheme.display).toEqual({ defaultView: 'Balance' });
         });
     });
 
@@ -1448,6 +1486,18 @@ describe('MigrationUtils', () => {
             }
         );
 
+        it('moves an unstamped blob off a retired theme even when every v1 flag is set', async () => {
+            // a typical existing install: every retired v1 flag is set. The
+            // theme retirement came later and is gated by the stamp alone.
+            EncryptedStorage.getItem.mockResolvedValue('true');
+            const settings: any = { display: { theme: 'desert' } };
+
+            await MigrationUtils.runSettingsMigrations(settings, true);
+
+            expect(settings.display.theme).toBe('kyriaki');
+            expect(settings.settingsVersion).toBe(SETTINGS_VERSION);
+        });
+
         it('stamps even when nothing needed migrating, then goes quiet', async () => {
             EncryptedStorage.getItem.mockResolvedValue('true');
             const settings: any = {
@@ -1544,10 +1594,10 @@ describe('MigrationUtils', () => {
                 'https://satsrouting.exchange/v2'
             );
             expect(EncryptedStorage.getItem).not.toHaveBeenCalled();
-            expect(settings.settingsVersion).toBe(2);
+            expect(settings.settingsVersion).toBe(SETTINGS_VERSION);
         });
 
-        it('skips every block for a blob already stamped at 2', async () => {
+        it('skips the v1 and v2 blocks for a blob already stamped at 2', async () => {
             const settings: any = {
                 settingsVersion: 2,
                 swaps: { hostMainnet: 'https://api.boltz.exchange/v2' }
@@ -1563,6 +1613,45 @@ describe('MigrationUtils', () => {
             expect(settings.swaps.hostMainnet).toBe(
                 'https://api.boltz.exchange/v2'
             );
+        });
+
+        it('applies the v3 theme retirement to a blob already stamped at 2', async () => {
+            // installs that booted v13.2.2 are stamped at 2 and skip the
+            // earlier blocks, so the v3 block alone moves them off a
+            // removed theme, without any flag read
+            const settings: any = {
+                settingsVersion: 2,
+                display: { theme: 'watermelon' },
+                swaps: { hostMainnet: 'https://api.boltz.exchange/v2' }
+            };
+
+            const changed = await MigrationUtils.applySettingsMigrations(
+                settings
+            );
+
+            expect(changed).toBe(true);
+            expect(settings.display.theme).toBe('kyriaki');
+            // the v2 block stays skipped
+            expect(settings.swaps.hostMainnet).toBe(
+                'https://api.boltz.exchange/v2'
+            );
+            expect(EncryptedStorage.getItem).not.toHaveBeenCalled();
+            expect(settings.settingsVersion).toBe(SETTINGS_VERSION);
+        });
+
+        it('skips every block for a blob already stamped at 3', async () => {
+            const settings: any = {
+                settingsVersion: 3,
+                display: { theme: 'mint' }
+            };
+
+            const changed = await MigrationUtils.applySettingsMigrations(
+                settings
+            );
+
+            // the theme retirement is exactly-once, not merely idempotent
+            expect(changed).toBe(false);
+            expect(settings.display.theme).toBe('mint');
         });
     });
 

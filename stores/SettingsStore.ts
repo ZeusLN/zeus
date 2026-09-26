@@ -1147,12 +1147,6 @@ export const THEME_KEYS = [
         value: 'light'
     },
     {
-        key: 'Junkie',
-        translateKey: 'views.Settings.Theme.junkie',
-        value: 'junkie'
-    },
-    { key: 'BPM', translateKey: 'views.Settings.Theme.bpm', value: 'bpm' },
-    {
         key: 'Blacked Out',
         translateKey: 'views.Settings.Theme.blacked-out',
         value: 'blacked-out'
@@ -1204,25 +1198,14 @@ export const THEME_KEYS = [
         value: 'nostrich'
     },
     {
-        key: 'Desert',
-        translateKey: 'views.Settings.Theme.desert',
-        value: 'desert'
-    },
-    {
         key: 'Orange Cream Soda',
         translateKey: 'views.Settings.Theme.orange-cream-soda',
         value: 'orange-cream-soda'
     },
-    { key: 'Mint', translateKey: 'views.Settings.Theme.mint', value: 'mint' },
     {
         key: 'Red Metallic',
         translateKey: 'views.Settings.Theme.red-metallic',
         value: 'red-metallic'
-    },
-    {
-        key: 'Watermelon',
-        translateKey: 'views.Settings.Theme.watermelon',
-        value: 'watermelon'
     },
     {
         key: 'Radioactive',
@@ -1235,6 +1218,13 @@ export const THEME_KEYS = [
         value: 'orange'
     }
 ];
+
+// Themes whose palettes were removed from utils/ThemeUtils.ts. A settings
+// blob still holding one of these would render with the Dark fallback
+// palette and match no picker entry, so MigrationUtils.applyRetiredThemes
+// moves it to DEFAULT_THEME. Frozen with settings version 3: a later
+// removal takes its own list and a new version.
+export const RETIRED_THEMES = ['junkie', 'bpm', 'desert', 'mint', 'watermelon'];
 
 export const DEFAULT_VIEW_KEYS = [
     {
