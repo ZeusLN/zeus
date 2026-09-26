@@ -368,6 +368,62 @@ describe('handleAnything', () => {
         });
     });
 
+    describe('bitcoin URI with an address for another network', () => {
+        const bolt11 =
+            'LNBC10U1P3PJ257PP5YZTKWJCZ5FTL5LAXKAV23ZMZEKAW37ZK6KMV80PK4XAEV5QHTZ7QDPDWD3XGER9WD5KWM36YPRX7U3QD36KUCMGYP282ETNV3SHJCQZPGXQYZ5VQSP5USYC4LK9CHSFP53KVCNVQ456GANH60D89REYKDNGSMTJ6YW3NHVQ9QYYSSQJCEWM5CJWZ4A6RFJX77C490YCED6PEMK0UPKXHY89CMM7SCT66K8GNEANWYKZGDRWRFJE69H9U5U0W57RRCSYSAS7GADWMZXC8C6T0SPJAZUP6';
+
+        it('leaves the address out of ChoosePaymentMethod with lightning', async () => {
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+                lightning: bolt11
+            });
+            // Not valid for the connected (mainnet) node
+            mockIsValidBitcoinAddress = false;
+
+            const result = await handleAnything(
+                `bitcoin:tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx?lightning=${bolt11}`
+            );
+
+            expect(result[0]).toBe('ChoosePaymentMethod');
+            expect(result[1].value).toBeUndefined();
+            expect(result[1].lightning).toBe(bolt11);
+        });
+
+        it('leaves the address out of ChoosePaymentMethod with an offer', async () => {
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
+                offer: 'lno1qcp4256ypq'
+            });
+            // Not valid for the connected (testnet) node
+            mockIsValidBitcoinAddress = false;
+
+            const result = await handleAnything(
+                'bitcoin:bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4?lno=lno1qcp4256ypq'
+            );
+
+            expect(result[0]).toBe('ChoosePaymentMethod');
+            expect(result[1].value).toBeUndefined();
+            expect(result[1].offer).toBe('lno1qcp4256ypq');
+        });
+
+        it('keeps an address valid for the node', async () => {
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
+                lightning: bolt11
+            });
+            mockIsValidBitcoinAddress = true;
+
+            const result = await handleAnything(
+                `bitcoin:bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4?lightning=${bolt11}`
+            );
+
+            expect(result[0]).toBe('ChoosePaymentMethod');
+            expect(result[1].value).toBe(
+                'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4'
+            );
+        });
+    });
+
     describe('nested URI schemes - LIGHTNING:lnurlp://', () => {
         beforeEach(() => {
             mockGetLnurlParamsFn.mockReset();
