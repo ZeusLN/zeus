@@ -6,7 +6,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 
 import InvoicesStore from '../../stores/InvoicesStore';
-import NodeInfoStore from '../../stores/NodeInfoStore';
 import SweepStore from '../../stores/SweepStore';
 
 import Button from '../../components/Button';
@@ -29,7 +28,6 @@ interface WIFSweepProps {
     exitSetup: any;
     navigation: NativeStackNavigationProp<any, any>;
     InvoicesStore: InvoicesStore;
-    NodeInfoStore: NodeInfoStore;
     SweepStore: SweepStore;
     route: Route<'WIFSweeper', { wif: string }>;
 }
@@ -46,7 +44,7 @@ interface WIFSweepState {
     isWifValid: boolean;
 }
 
-@inject('SweepStore', 'InvoicesStore', 'NodeInfoStore')
+@inject('SweepStore', 'InvoicesStore')
 @observer
 export default class WIFSweeper extends React.Component<
     WIFSweepProps,
@@ -201,12 +199,9 @@ export default class WIFSweeper extends React.Component<
                         >
                             <TextInput
                                 onChangeText={async (text: string) => {
-                                    const { isTestNet, isRegTest, isSigNet } =
-                                        this.props.NodeInfoStore.nodeInfo;
                                     const isValid = text
-                                        ? AddressUtils.isValidBitcoinAddress(
-                                              text,
-                                              isTestNet || isRegTest || isSigNet
+                                        ? AddressUtils.isValidBitcoinAddressForNode(
+                                              text
                                           )
                                         : false;
                                     this.props.SweepStore.destination = text;
