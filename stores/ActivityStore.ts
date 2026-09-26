@@ -320,6 +320,8 @@ export default class ActivityStore {
             // CDK transaction history (completed)
             additions = additions.concat(this.cashuStore.cdkInvoices);
             additions = additions.concat(this.cashuStore.payments || []);
+            // CDK-recorded melts missing from local payment storage
+            additions = additions.concat(this.cashuStore.cdkPayments);
 
             // Include pending/unpaid Cashu invoices (from local storage)
             const pendingCashuInvoices = this.cashuStore.invoices?.filter(
@@ -364,6 +366,15 @@ export default class ActivityStore {
         if (BackendUtils.supportsOnchainSends())
             await this.transactionsStore.getTransactions();
         await this.invoicesStore.getInvoices();
+
+        if (
+            BackendUtils.supportsCashuWallet() &&
+            this.settingsStore.settings?.ecash?.enableCashu
+        ) {
+            // refresh CDK transaction history so activity reflects
+            // records written since the last explicit sync
+            await this.cashuStore.loadTransactions();
+        }
 
         await this.swapStore.fetchAndUpdateSwaps();
         const sortedActivity = await this.getSortedActivity();
