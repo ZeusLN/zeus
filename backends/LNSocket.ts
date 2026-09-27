@@ -375,6 +375,10 @@ export default class LNSocket {
     supportsMessageSigning = () => false;
     supportsOnchainSends = () => true;
     supportsOnchainReceiving = () => true;
+    supportsOnchainBalance = () => true;
+    supportsLightningSends = () => true;
+    // listfunds cannot attribute unconfirmed outputs to self-transfers
+    supportsUnconfirmedTransactionOrigin = () => false;
     supportsKeysend = () => false;
     supportsChannelManagement = () => true;
     supportsMPP = () => false;

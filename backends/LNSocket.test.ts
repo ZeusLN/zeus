@@ -390,10 +390,13 @@ describe('LNSocket', () => {
         it('reports the commando-supported feature set', () => {
             const backend = new LNSocket();
             expect(backend.supportsOnchainSends()).toBe(true);
+            expect(backend.supportsOnchainBalance()).toBe(true);
+            expect(backend.supportsLightningSends()).toBe(true);
             expect(backend.supportsChannelManagement()).toBe(true);
             expect(backend.supportsRouting()).toBe(true);
             expect(backend.supportsMessageSigning()).toBe(false);
             expect(backend.supportsKeysend()).toBe(false);
+            expect(backend.supportsUnconfirmedTransactionOrigin()).toBe(false);
             expect(backend.isLNDBased()).toBe(false);
         });
     });
