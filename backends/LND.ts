@@ -11,6 +11,11 @@ import Base64Utils from './../utils/Base64Utils';
 import VersionUtils from './../utils/VersionUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { toLnrpcAddressType } from './../utils/LndUtils';
+import {
+    DEFAULT_MAX_TRANSACTIONS,
+    getNewestTransactions,
+    TransactionPageRequest
+} from './../utils/OnchainTransactionUtils';
 import { Hash as sha256Hash } from 'fast-sha256';
 import BigNumber from 'bignumber.js';
 
@@ -275,14 +280,36 @@ export default class LND {
         this.request(route, 'post', data, null, timeout);
     deleteRequest = (route: string) => this.request(route, 'delete', null);
 
-    getTransactions = (data: any) =>
+    getTransactionsPage = (data?: TransactionPageRequest | null) =>
         this.getRequest(
             `/v1/transactions?end_height=-1${
                 data?.start_height ? `&start_height=${data.start_height}` : ''
-            }&max_transactions=${data?.max_transactions || 500}`
+            }&max_transactions=${
+                data?.max_transactions ?? DEFAULT_MAX_TRANSACTIONS
+            }`
         ).then((data: any) => ({
-            transactions: data.transactions
+            transactions: data.transactions || []
         }));
+    getTransactions = async (data?: Partial<TransactionPageRequest> | null) => {
+        // callers that pick their own range get exactly that range
+        if (data?.start_height !== undefined) {
+            return await this.getTransactionsPage({
+                start_height: data.start_height,
+                max_transactions:
+                    data.max_transactions ?? DEFAULT_MAX_TRANSACTIONS
+            });
+        }
+        const transactions = await getNewestTransactions({
+            fetchPage: (request) =>
+                this.getTransactionsPage(request).then(
+                    (page: any) => page.transactions
+                ),
+            getTipHeight: () =>
+                this.getMyNodeInfo().then((info: any) => info?.block_height),
+            limit: data?.max_transactions || DEFAULT_MAX_TRANSACTIONS
+        });
+        return { transactions };
+    };
     getChannels = () => this.getRequest('/v1/channels');
     getPendingChannels = () => this.getRequest('/v1/channels/pending');
     getClosedChannels = () => this.getRequest('/v1/channels/closed');
