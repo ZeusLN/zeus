@@ -463,4 +463,131 @@ describe('KeychainRecoveryUtils', () => {
             });
         });
     });
+    describe('groupByKey', () => {
+        const at = (
+            key: string,
+            source: RecoveryResult['source'],
+            data = `${key}@${source}`
+        ): RecoveryResult => ({ key, source, data, description: key });
+
+        it('keeps one group per key', () => {
+            const grouped = utils.groupByKey([
+                at('contacts', 'unprefixed-local'),
+                at('notes', 'encrypted-storage'),
+                at('contacts', 'encrypted-storage')
+            ]);
+
+            expect([...grouped.keys()].sort()).toEqual(['contacts', 'notes']);
+            expect(grouped.get('contacts')).toHaveLength(2);
+            expect(grouped.get('notes')).toHaveLength(1);
+        });
+
+        it('puts the most trusted source first, whatever the input order', () => {
+            const grouped = utils.groupByKey([
+                at('contacts', 'prefixed-cloud'),
+                at('contacts', 'unprefixed-cloud'),
+                at('contacts', 'encrypted-storage'),
+                at('contacts', 'unprefixed-local')
+            ]);
+
+            expect(grouped.get('contacts')!.map((r) => r.source)).toEqual([
+                'encrypted-storage',
+                'unprefixed-local',
+                'unprefixed-cloud',
+                'prefixed-cloud'
+            ]);
+        });
+
+        it('sorts an unranked source last, so it cannot silently win', () => {
+            const grouped = utils.groupByKey([
+                at('contacts', 'current'),
+                at('contacts', 'unprefixed-cloud')
+            ]);
+
+            expect(grouped.get('contacts')!.map((r) => r.source)).toEqual([
+                'unprefixed-cloud',
+                'current'
+            ]);
+        });
+
+        it('returns an empty map for no results', () => {
+            expect(utils.groupByKey([]).size).toBe(0);
+        });
+    });
+
+    describe('restoreOtherData', () => {
+        const at = (
+            key: string,
+            source: RecoveryResult['source'],
+            data: string
+        ): RecoveryResult => ({ key, source, data, description: key });
+
+        // Round-trips like the real store, so restoreDataKey's read-back
+        // verification compares against what was actually written.
+        const installStore = () => {
+            const store: Record<string, string> = {};
+            storage.setItem.mockImplementation(
+                async (key: string, value: string) => {
+                    store[key] = value;
+                    return true as any;
+                }
+            );
+            storage.getItem.mockImplementation(
+                async (key: string) => store[key] ?? (false as any)
+            );
+            return store;
+        };
+
+        it('writes each key once, from its most trusted source', async () => {
+            const store = installStore();
+
+            const result = await utils.restoreOtherData([
+                at('contacts', 'unprefixed-cloud', '["stale"]'),
+                at('contacts', 'encrypted-storage', '["fresh"]'),
+                at('notes', 'unprefixed-local', '["note"]')
+            ]);
+
+            expect(result).toEqual({
+                restored: ['contacts', 'notes'],
+                failed: []
+            });
+            expect(store.contacts).toBe('["fresh"]');
+            expect(store.notes).toBe('["note"]');
+            // One write per key, not one per copy: restoring every copy
+            // would leave whichever came last in the array.
+            expect(storage.setItem).toHaveBeenCalledTimes(2);
+        });
+
+        it('reports a failing key without abandoning the others', async () => {
+            const store = installStore();
+            storage.setItem.mockImplementation(
+                async (key: string, value: string) => {
+                    if (key === 'contacts') return false as any;
+                    store[key] = value;
+                    return true as any;
+                }
+            );
+
+            const result = await utils.restoreOtherData([
+                at('contacts', 'encrypted-storage', '["alice"]'),
+                at('notes', 'encrypted-storage', '["note"]')
+            ]);
+
+            expect(result.restored).toEqual(['notes']);
+            expect(result.failed).toEqual([
+                { key: 'contacts', error: 'Failed to write to storage' }
+            ]);
+            expect(store.notes).toBe('["note"]');
+        });
+
+        it('does nothing for no results', async () => {
+            installStore();
+
+            await expect(utils.restoreOtherData([])).resolves.toEqual({
+                restored: [],
+                failed: []
+            });
+            expect(storage.setItem).not.toHaveBeenCalled();
+        });
+    });
 });
