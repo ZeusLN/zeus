@@ -42,6 +42,9 @@ interface PointOfSaleState {
     posEnabled: PosEnabled;
     squareAccessToken: string;
     squareLocationId: string;
+    cloverMerchantId: string;
+    cloverApiToken: string;
+    cloverDevMode: boolean;
     merchantName: string;
     confirmationPreference: string;
     disableTips: boolean;
@@ -62,6 +65,9 @@ export default class PointOfSale extends React.Component<
         posEnabled: PosEnabled.Disabled,
         squareAccessToken: '',
         squareLocationId: '',
+        cloverMerchantId: '',
+        cloverApiToken: '',
+        cloverDevMode: false,
         merchantName: '',
         confirmationPreference: 'lnOnly',
         disableTips: false,
@@ -81,6 +87,9 @@ export default class PointOfSale extends React.Component<
             posEnabled: settings?.pos?.posEnabled || PosEnabled.Disabled,
             squareAccessToken: settings?.pos?.squareAccessToken || '',
             squareLocationId: settings?.pos?.squareLocationId || '',
+            cloverMerchantId: settings?.pos?.cloverMerchantId || '',
+            cloverApiToken: settings?.pos?.cloverApiToken || '',
+            cloverDevMode: settings?.pos?.cloverDevMode || false,
             merchantName: settings?.pos?.merchantName || '',
             confirmationPreference:
                 settings?.pos?.confirmationPreference || 'lnOnly',
@@ -109,6 +118,9 @@ export default class PointOfSale extends React.Component<
             posEnabled,
             squareAccessToken,
             squareLocationId,
+            cloverMerchantId,
+            cloverApiToken,
+            cloverDevMode,
             merchantName,
             confirmationPreference,
             disableTips,
@@ -156,7 +168,9 @@ export default class PointOfSale extends React.Component<
                     keyboardShouldPersistTaps="handled"
                 >
                     <View style={{ padding: 15 }}>
-                        {!fiatEnabled && posEnabled === 'square' && (
+                        {!fiatEnabled &&
+                            (posEnabled === PosEnabled.Square ||
+                                posEnabled === PosEnabled.Clover) && (
                             <ErrorMessage
                                 message={localeString(
                                     'pos.views.Settings.PointOfSale.currencyMustBeEnabledError'
@@ -201,6 +215,91 @@ export default class PointOfSale extends React.Component<
                             values={POS_ENABLED_KEYS}
                             disabled={SettingsStore.settingsUpdateInProgress}
                         />
+
+                        {posEnabled === PosEnabled.Clover && (
+                            <>
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.POS.cloverMerchantId'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    value={cloverMerchantId}
+                                    onChangeText={async (text: string) => {
+                                        this.setState({
+                                            cloverMerchantId: text
+                                        });
+
+                                        await updateSettings({
+                                            pos: {
+                                                ...settings.pos,
+                                                cloverMerchantId: text
+                                            }
+                                        });
+                                    }}
+                                />
+
+                                <Text
+                                    style={{
+                                        color: themeColor('secondaryText')
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Settings.POS.cloverApiToken'
+                                    )}
+                                </Text>
+                                <TextInput
+                                    value={cloverApiToken}
+                                    onChangeText={async (text: string) => {
+                                        this.setState({
+                                            cloverApiToken: text
+                                        });
+
+                                        await updateSettings({
+                                            pos: {
+                                                ...settings.pos,
+                                                cloverApiToken: text
+                                            }
+                                        });
+                                    }}
+                                />
+
+                                <View style={styles.switchRow}>
+                                    <Text
+                                        style={{
+                                            ...styles.settingLabel,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.POS.devMode'
+                                        )}
+                                    </Text>
+                                    <Switch
+                                        value={cloverDevMode}
+                                        disabled={
+                                            SettingsStore.settingsUpdateInProgress
+                                        }
+                                        onValueChange={async () => {
+                                            this.setState({
+                                                cloverDevMode: !cloverDevMode
+                                            });
+                                            await updateSettings({
+                                                pos: {
+                                                    ...settings.pos,
+                                                    cloverDevMode:
+                                                        !cloverDevMode
+                                                }
+                                            });
+                                        }}
+                                    />
+                                </View>
+                            </>
+                        )}
 
                         {posEnabled === PosEnabled.Square && (
                             <>
