@@ -19,7 +19,7 @@ import SettingsStore from './SettingsStore';
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
-import { getCooperativeCloses } from '../utils/BalanceUtils';
+import { getCooperativeCloses, getForceCloses } from '../utils/BalanceUtils';
 
 interface ChannelInfoIndex {
     [key: string]: ChannelInfo;
@@ -633,7 +633,8 @@ export default class ChannelsStore {
                     // so BalancePane can render it next to pendingOpenBalance.
                     this.balanceStore.setPendingCloseBalance(
                         data.total_limbo_balance || 0,
-                        getCooperativeCloses(data.waiting_close_channels)
+                        getCooperativeCloses(data.waiting_close_channels),
+                        getForceCloses(data.pending_force_closing_channels)
                     );
                 })
             );

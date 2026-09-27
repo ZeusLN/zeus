@@ -3,11 +3,12 @@ jest.mock('react-native-randombytes', () => ({
 }));
 jest.mock('../utils/BackendUtils', () => ({
     getChannels: jest.fn(),
+    getPendingChannels: jest.fn(),
     getNodeInfo: jest.fn(() => Promise.resolve(null)),
     connectPeer: jest.fn(),
     openChannelSync: jest.fn(),
     supportsClosedChannels: () => false,
-    supportsPendingChannels: () => false,
+    supportsPendingChannels: jest.fn(() => false),
     isLNDBased: () => false
 }));
 jest.mock('../utils/LocaleUtils', () => ({
@@ -150,6 +151,52 @@ describe('ChannelsStore.getChannels', () => {
         expect(store.totalOffline).toBe(0);
         expect(store.channels).toEqual([]);
         expect(store.error).toBe(true);
+    });
+});
+
+describe('ChannelsStore pending close balance', () => {
+    afterEach(() => {
+        jest.mocked(BackendUtils.supportsPendingChannels).mockReturnValue(
+            false
+        );
+    });
+
+    it('hands BalanceStore the force closes a sweep can overlap', async () => {
+        const balanceStore = { setPendingCloseBalance: jest.fn() };
+        const store = new ChannelsStore(
+            { implementation: 'cln-rest' } as any,
+            balanceStore as any
+        );
+        // the pending channels reaction reads pendingHTLCs, which only
+        // reset() initializes
+        store.reset();
+        jest.mocked(BackendUtils.supportsPendingChannels).mockReturnValue(true);
+        jest.mocked(BackendUtils.getChannels).mockResolvedValue({
+            channels: []
+        } as any);
+        jest.mocked(BackendUtils.getPendingChannels).mockResolvedValue({
+            total_limbo_balance: '96860',
+            pending_open_channels: [],
+            pending_closing_channels: [],
+            waiting_close_channels: [],
+            pending_force_closing_channels: [
+                {
+                    channel: channel(96860, 0, false),
+                    closing_txid: 'commit',
+                    limbo_balance: '96860',
+                    blocks_til_maturity: 1,
+                    pending_htlcs: []
+                }
+            ]
+        } as any);
+
+        await store.getChannels();
+
+        expect(balanceStore.setPendingCloseBalance).toHaveBeenCalledWith(
+            '96860',
+            [],
+            [{ txids: ['commit'], limboBalance: 96860, hasPendingHtlcs: false }]
+        );
     });
 });
 

@@ -185,7 +185,8 @@ export default class BalancePane extends React.PureComponent<
             lightningBalance,
             pendingOpenBalance,
             pendingCloseBalance,
-            cooperativeCloseOverlap
+            cooperativeCloseOverlap,
+            forceCloseSweepOverlap
         } = BalanceStore;
         const cashuBalance = CashuStore.totalBalanceSats;
         const cashuOfflinePendingBalance = CashuStore.offlinePendingBalance;
@@ -200,10 +201,12 @@ export default class BalancePane extends React.PureComponent<
         // unconfirmed deposits count toward pending only, while unconfirmed
         // change from the wallet's own spends counts toward the total only.
         // An unconfirmed cooperative close is counted once, by its closing
-        // output rather than its limbo balance
+        // output rather than its limbo balance, and so is a force close
+        // whose sweep is unconfirmed
         const pendingUnconfirmedBalance = new BigNumber(lightningPendingTotal)
             .plus(externalUnconfirmedBalance || 0)
             .minus(cooperativeCloseOverlap || 0)
+            .minus(forceCloseSweepOverlap || 0)
             .toNumber()
             .toFixed(3);
         const combinedBalanceValue = new BigNumber(settledBlockchainBalance)

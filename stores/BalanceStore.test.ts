@@ -136,6 +136,84 @@ describe('BalanceStore cooperative close overlap', () => {
     });
 });
 
+describe('BalanceStore force close sweep overlap', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    // regtest vector from #4740: the sweep is broadcast one block before
+    // maturity, while lnd still reports the 96,860 sat limbo balance
+    const mockUnconfirmedSweep = () => {
+        (BackendUtils.getBlockchainBalance as jest.Mock).mockResolvedValue({
+            total_balance: '1087810',
+            confirmed_balance: '991415',
+            unconfirmed_balance: '96395'
+        });
+        (BackendUtils.getTransactions as jest.Mock).mockResolvedValue({
+            transactions: [
+                {
+                    tx_hash: 'sweep',
+                    amount: '96395',
+                    total_fees: '0',
+                    num_confirmations: 0,
+                    previous_outpoints: [
+                        { outpoint: 'commit:0', is_our_output: false }
+                    ]
+                }
+            ]
+        });
+    };
+
+    it('counts a force close with an unconfirmed sweep once', async () => {
+        mockUnconfirmedSweep();
+        const store = new BalanceStore(newSettingsStore(true) as any);
+
+        await store.getBlockchainBalance(true, false);
+        store.setPendingCloseBalance(
+            96860,
+            [],
+            [
+                {
+                    txids: ['commit'],
+                    limboBalance: 96860,
+                    hasPendingHtlcs: false
+                }
+            ]
+        );
+
+        expect(store.forceCloseSweepOverlap).toEqual(96860);
+        // pending shows the sweep output, and total + pending is the
+        // 1,087,810 sat wallet total rather than 1,184,670
+        const pending =
+            96860 +
+            store.externalUnconfirmedBalance -
+            store.forceCloseSweepOverlap;
+        expect(pending).toEqual(96395);
+        expect(store.settledBlockchainBalance + pending).toEqual(1087810);
+    });
+
+    it('never drops more than the cooperative close overlap leaves', async () => {
+        mockUnconfirmedSweep();
+        const store = new BalanceStore(newSettingsStore(true) as any);
+
+        await store.getBlockchainBalance(true, false);
+        store.setPendingCloseBalance(
+            96860,
+            [{ closingTxid: 'sweep', limboBalance: 50000 }],
+            [
+                {
+                    txids: ['commit'],
+                    limboBalance: 96860,
+                    hasPendingHtlcs: false
+                }
+            ]
+        );
+
+        expect(store.cooperativeCloseOverlap).toEqual(50000);
+        expect(store.forceCloseSweepOverlap).toEqual(46860);
+    });
+});
+
 describe('BalanceStore settled blockchain balance', () => {
     beforeEach(() => {
         jest.clearAllMocks();
