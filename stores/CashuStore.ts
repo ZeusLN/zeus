@@ -5390,9 +5390,9 @@ export default class CashuStore {
         }
 
         const automaticallySweep =
-            this.settingsStore.settings.ecash.automaticallySweep;
+            this.settingsStore.settings?.ecash?.automaticallySweep;
         const sweepThresholdSats =
-            this.settingsStore.settings.ecash.sweepThresholdSats;
+            this.settingsStore.settings?.ecash?.sweepThresholdSats;
         if (
             !automaticallySweep ||
             !sweepThresholdSats ||

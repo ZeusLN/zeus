@@ -532,7 +532,7 @@ export default class NWCSettings extends React.Component<
                         }}
                     >
                         {BackendUtils.supportsCashuWallet() &&
-                            settings.ecash.enableCashu && (
+                            settings?.ecash?.enableCashu && (
                                 <View style={{ marginTop: 20 }}>
                                     <View style={{ flexDirection: 'row' }}>
                                         <View
