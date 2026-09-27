@@ -213,7 +213,7 @@ export default class PosStore {
         );
     };
 
-    public recordPayment = ({
+    public recordPayment = async ({
         orderId,
         orderTotal,
         orderTip,
@@ -222,8 +222,28 @@ export default class PosStore {
         type,
         tx,
         preimage
-    }: orderPaymentInfo) =>
-        Storage.setItem(`pos-${orderId}`, {
+    }: orderPaymentInfo): Promise<void> => {
+        // F5: Clover-first — локальный pos-{orderId} пишется только после
+        // успеха Clover POST (иначе split-brain: локально "оплачено",
+        // в Clover OPEN). В Clover-режиме метод бросает
+        // (missing-creds/glue/tender/POST) — вызывающие обязаны await+catch.
+        // kaloudis R4: Clover lookup only in Clover mode — never hit
+        // Storage/Clover on Square/Standalone payments.
+        if (this.isCloverPosEnabled()) {
+            await this.recordCloverPayment(orderId, undefined, orderTip);
+            await Storage.setItem(`pos-${orderId}`, {
+                orderId,
+                orderTotal,
+                orderTip,
+                exchangeRate,
+                rate,
+                type,
+                tx,
+                preimage
+            });
+            return;
+        }
+        await Storage.setItem(`pos-${orderId}`, {
             orderId,
             orderTotal,
             orderTip,
@@ -233,6 +253,8 @@ export default class PosStore {
             tx,
             preimage
         });
+        return;
+    };
 
     public recordInvoice = ({
         orderId,
@@ -665,9 +687,21 @@ export default class PosStore {
     // F3: ReactNativeBlobUtil.fetch has no timeout option — race it so a
     // stalled Clover API cannot leave `loading=true` forever. Default 15s.
     // Square has the same gap, but that is not a reason to repeat it here.
-    private cloverFetchWithTimeout = (url: string, headers: any, timeoutMs = 15000) =>
+    // Extended (round 112): unified (method,url,headers,body?) — GET callers
+    // pass 'GET' + no body, POST payments pass 'POST' + JSON body. Reuses the
+    // single existing helper, no duplicate definitions.
+    // Tech-debt (F9): race без abort — висячий fetch продолжает жить.
+    private cloverFetchWithTimeout = (
+        method: string,
+        url: string,
+        headers: any,
+        body?: string,
+        timeoutMs = 15000
+    ) =>
         Promise.race([
-            ReactNativeBlobUtil.fetch('GET', url, headers),
+            body !== undefined
+                ? ReactNativeBlobUtil.fetch(method, url, headers, body)
+                : ReactNativeBlobUtil.fetch(method, url, headers),
             new Promise((_, reject) =>
                 setTimeout(
                     () => reject(new Error('Clover request timed out')),
@@ -675,6 +709,171 @@ export default class PosStore {
                 )
             )
         ]);
+
+    // F1: in-flight guard — двойной тап / ретри после таймаута не даёт
+    // второй параллельный POST .../payments (иначе дубли-оплаты).
+    private cloverPaymentInFlight = false;
+
+    // F8: кэш external-tender id на сессию — один GET tenders вместо N.
+    private cachedCloverExternalTenderId: string | null = null;
+
+    // External-payment tender for bookkeeping payments (docs:
+    // order.CreatePaymentForOrder references external tenders, not
+    // Clover card tenders; ids via GET .../tenders).
+    private getCloverExternalTenderId = async (
+        apiHost: string,
+        merchantId: string,
+        token: string
+    ): Promise<string> => {
+        const response: any = await this.cloverFetchWithTimeout(
+            'GET',
+            `${apiHost}/v3/merchants/${encodeURIComponent(
+                merchantId
+            )}/tenders?filter=${encodeURIComponent(
+                'labelKey=com.clover.tender.external_payment'
+            )}`,
+            {
+                Authorization: `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            }
+        );
+        const status = response.info().status;
+        // F7: принимать весь 2xx (create-API нередко отдают 201).
+        if (status < 200 || status >= 300) {
+            throw new Error('Could not record Clover payment.');
+        }
+        const tenderId = response.json()?.elements?.[0]?.id;
+        if (!tenderId) {
+            throw new Error('Could not record Clover payment.');
+        }
+        return tenderId;
+    };
+
+    // Mark a Clover order paid: POST .../orders/{cloverOrderId}/payments
+    // with tender.id + amount, tipAmount only when finite > 0 (docs: amount
+    // and tip submitted separately). Amount comes from the
+    // pos-clover-order-{zeusOrderId} glue written by saveCloverOrder.
+    private recordCloverPayment = async (
+        orderId: string,
+        tenderId?: string,
+        tip?: string | number
+    ): Promise<void> => {
+        // F1: guard от параллельных вызовов (двойной тап).
+        if (this.cloverPaymentInFlight) {
+            runInAction(() => {
+                this.error = true;
+            });
+            throw new Error('Could not record Clover payment.');
+        }
+        this.cloverPaymentInFlight = true;
+        try {
+            const pos: any = this.settingsStore.settings.pos;
+            const cloverAccessToken = pos.cloverAccessToken;
+            const cloverMerchantId = pos.cloverMerchantId;
+            const cloverDevMode = pos.cloverDevMode;
+            // Creds guard — never fetch merchants/undefined with Bearer undefined.
+            if (!orderId || !cloverAccessToken || !cloverMerchantId) {
+                runInAction(() => {
+                    this.error = true;
+                });
+                throw new Error('Could not record Clover payment.');
+            }
+            const apiHost = this.getCloverApiHost(cloverDevMode);
+            let stored: any = null;
+            try {
+                const raw = await Storage.getItem(
+                    `pos-clover-order-${orderId}`
+                );
+                if (raw)
+                    stored =
+                        typeof raw === 'string' ? JSON.parse(raw) : raw;
+            } catch {
+                runInAction(() => {
+                    this.error = true;
+                });
+                throw new Error('Could not record Clover payment.');
+            }
+            // F4: fail loudly — никакого silent fallback
+            // stored?.orderId || orderId (иначе 404/чужой заказ).
+            const cloverOrderId = stored?.orderId;
+            if (!cloverOrderId) {
+                runInAction(() => {
+                    this.error = true;
+                });
+                throw new Error('Could not record Clover payment.');
+            }
+            // F2: Clover ждёт integer ЦЕНТЫ (int64). stored.total обязан
+            // быть уже в центах из saveCloverOrder-glue — никакого ×100
+            // здесь; Math.round лишь гарантирует integer для int64.
+            const amountRaw = Number(stored?.total);
+            // F3: дока требует positive amount — 0/отрицательные/NaN
+            // отбрасываем ранним throw вместо серверного 400.
+            if (!isFinite(amountRaw) || amountRaw <= 0) {
+                runInAction(() => {
+                    this.error = true;
+                });
+                throw new Error('Could not record Clover payment.');
+            }
+            const amount = Math.round(amountRaw);
+            if (!isFinite(amount) || amount <= 0) {
+                runInAction(() => {
+                    this.error = true;
+                });
+                throw new Error('Could not record Clover payment.');
+            }
+            let tender = tenderId || this.cachedCloverExternalTenderId || undefined;
+            if (!tender) {
+                try {
+                    tender = await this.getCloverExternalTenderId(
+                        apiHost,
+                        cloverMerchantId,
+                        cloverAccessToken
+                    );
+                } catch {
+                    // F6: tender-path выставляет this.error — UI не молчит.
+                    runInAction(() => {
+                        this.error = true;
+                    });
+                    throw new Error('Could not record Clover payment.');
+                }
+                this.cachedCloverExternalTenderId = tender;
+            }
+            const request: any = {
+                tender: { id: tender },
+                amount,
+                // F1: идемпотентность — externalPaymentId = zeus orderId
+                // (uuid из createCurrentOrder); повторный POST/ретри после
+                // таймаута дедуплицируется вместо второй payment-записи.
+                externalPaymentId: orderId
+            };
+            const tipRaw = Number(tip);
+            if (tip !== undefined && isFinite(tipRaw) && tipRaw > 0) {
+                request.tipAmount = Math.round(tipRaw);
+            }
+            const response: any = await this.cloverFetchWithTimeout(
+                'POST',
+                `${apiHost}/v3/merchants/${encodeURIComponent(
+                    cloverMerchantId
+                )}/orders/${encodeURIComponent(cloverOrderId)}/payments`,
+                {
+                    Authorization: `Bearer ${cloverAccessToken}`,
+                    'Content-Type': 'application/json'
+                },
+                JSON.stringify(request)
+            );
+            const status = response.info().status;
+            // F7: принимать весь 2xx (201 — тоже успех).
+            if (status < 200 || status >= 300) {
+                runInAction(() => {
+                    this.error = true;
+                });
+                throw new Error('Could not record Clover payment.');
+            }
+            await Storage.removeItem(`pos-clover-order-${orderId}`);
+        } finally {
+            this.cloverPaymentInFlight = false;
+        }
+    };
 
     // F5: shared historical recon — ONE implementation for Square + Clover,
     // no 50-line copy-paste drift. Safe Storage JSON (try/catch +
@@ -774,6 +973,7 @@ export default class PosStore {
         // F7: encode merchant id; F2: return the promise so callers can await.
         // F3: timeout via race + strict === + runInAction-only mutations.
         return this.cloverFetchWithTimeout(
+            'GET',
             `${apiHost}/v3/merchants/${encodeURIComponent(
                 cloverMerchantId
             )}/orders?expand=lineItems,payments&limit=100`,
@@ -839,6 +1039,7 @@ export default class PosStore {
         // F7: encode merchant id + filter expression (`>=` must be encoded).
         // F2: return promise (awaitable); F3: timeout + === + runInAction.
         return this.cloverFetchWithTimeout(
+            'GET',
             `${apiHost}/v3/merchants/${encodeURIComponent(
                 cloverMerchantId
             )}/orders?expand=lineItems,payments&limit=1000&filter=${encodeURIComponent(
