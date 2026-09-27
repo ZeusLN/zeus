@@ -195,7 +195,7 @@ describe('ChannelsStore pending close balance', () => {
         expect(balanceStore.setPendingCloseBalance).toHaveBeenCalledWith(
             '96860',
             [],
-            [{ txids: ['commit'], limboBalance: 96860, hasPendingHtlcs: false }]
+            [{ txids: ['commit'], limboBalance: 96860, fullySweepable: true }]
         );
     });
 });

@@ -32,7 +32,9 @@ export interface ForceClose {
     // whose outputs a sweep of this channel spends
     txids: string[];
     limboBalance: number;
-    hasPendingHtlcs: boolean;
+    // nothing is left in HTLCs and the commitment output is at most a
+    // block from maturity, so one sweep can cover the whole limbo balance
+    fullySweepable: boolean;
 }
 
 /**
@@ -187,7 +189,12 @@ export function getForceCloses(
         forceCloses.push({
             txids,
             limboBalance: toNumber(pending.limbo_balance),
-            hasPendingHtlcs: htlcs.length > 0
+            // lnd broadcasts the commitment sweep one block before
+            // maturity. Until then the output is CSV locked, so a spend of
+            // the closing transaction can only be another output, such as
+            // an anchor. proto3 omits a zero blocks_til_maturity
+            fullySweepable:
+                htlcs.length === 0 && toNumber(pending.blocks_til_maturity) <= 1
         });
     }
     return forceCloses;
@@ -202,12 +209,15 @@ export function getForceCloses(
  *
  * The sweeper batches inputs from several channels into one transaction,
  * and a channel with pending HTLCs can have more than one sweep, so
- * channels that share a sweep are settled as one group. When no channel
- * in a group has pending HTLCs, the sweep covers all of its limbo balance,
- * and the whole limbo balance is dropped in favour of the sweep output,
- * which is net of the sweep fee. Otherwise part of the limbo balance is
- * not swept yet, so only the swept amount is dropped, which leaves the
- * sweep fee on the pending line until the sweep confirms.
+ * channels that share a sweep are settled as one group. When every
+ * channel in a group is fully sweepable, the sweep covers all of its limbo
+ * balance, and the whole limbo balance is dropped in favour of the sweep
+ * output, which is net of the sweep fee. Otherwise part of the limbo
+ * balance may not be swept yet: HTLCs are pending, or the sweep spends
+ * another output of the closing transaction, such as an anchor, while the
+ * commitment output is still locked. Then only the swept amount is
+ * dropped, which leaves the sweep fee on the pending line until the sweep
+ * confirms.
  *
  * The result is clamped to [0, pendingCloseBalance].
  */
@@ -263,11 +273,11 @@ export function getForceCloseSweepOverlap(
         group.sweeps.forEach((txid) => {
             swept = swept.plus(sweepAmounts.get(txid) || 0);
         });
-        const hasPendingHtlcs = group.closes.some(
-            (close) => close.hasPendingHtlcs
+        const fullySweepable = group.closes.every(
+            (close) => close.fullySweepable
         );
         overlap = overlap.plus(
-            hasPendingHtlcs ? BigNumber.min(limbo, swept) : limbo
+            fullySweepable ? limbo : BigNumber.min(limbo, swept)
         );
     }
 

@@ -176,7 +176,7 @@ describe('BalanceStore force close sweep overlap', () => {
                 {
                     txids: ['commit'],
                     limboBalance: 96860,
-                    hasPendingHtlcs: false
+                    fullySweepable: true
                 }
             ]
         );
@@ -204,7 +204,7 @@ describe('BalanceStore force close sweep overlap', () => {
                 {
                     txids: ['commit'],
                     limboBalance: 96860,
-                    hasPendingHtlcs: false
+                    fullySweepable: true
                 }
             ]
         );

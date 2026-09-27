@@ -362,6 +362,7 @@ describe('BalanceUtils', () => {
                     {
                         closing_txid: 'commit',
                         limbo_balance: '96860',
+                        blocks_til_maturity: 1,
                         pending_htlcs: []
                     }
                 ])
@@ -369,9 +370,34 @@ describe('BalanceUtils', () => {
                 {
                     txids: ['commit'],
                     limboBalance: 96860,
-                    hasPendingHtlcs: false
+                    fullySweepable: true
                 }
             ]);
+        });
+
+        it('is not fully sweepable while the commitment output is locked', () => {
+            expect(
+                getForceCloses([
+                    {
+                        closing_txid: 'commit',
+                        limbo_balance: '96860',
+                        blocks_til_maturity: 2,
+                        pending_htlcs: []
+                    }
+                ])[0].fullySweepable
+            ).toBe(false);
+        });
+
+        it('reads a missing blocks_til_maturity as 0', () => {
+            // proto3 JSON omits zero values
+            expect(
+                getForceCloses([
+                    {
+                        closing_txid: 'commit',
+                        limbo_balance: '96860'
+                    }
+                ])[0].fullySweepable
+            ).toBe(true);
         });
 
         it('adds the txids second-level HTLC sweeps spend from', () => {
@@ -392,7 +418,7 @@ describe('BalanceUtils', () => {
                 {
                     txids: ['commit', 'htlc'],
                     limboBalance: 120000,
-                    hasPendingHtlcs: true
+                    fullySweepable: false
                 }
             ]);
         });
@@ -428,6 +454,7 @@ describe('BalanceUtils', () => {
                 {
                     closing_txid: 'commit',
                     limbo_balance: '96860',
+                    blocks_til_maturity: 1,
                     pending_htlcs: []
                 }
             ]);
@@ -441,6 +468,32 @@ describe('BalanceUtils', () => {
             expect(96860 + external.amount - overlap).toEqual(96395);
         });
 
+        it('keeps locked limbo when a sweep spends only another output', () => {
+            // the sweeper batches this channel's anchor with a deposit
+            // from elsewhere while the commitment output is 50 blocks
+            // from maturity: only the anchor has left limbo
+            const external = getExternalUnconfirmedBalance(
+                [sweepOf('batch', 20200, 'commit:3', 'elsewhere:0')],
+                20200
+            );
+            const forceCloses = getForceCloses([
+                {
+                    closing_txid: 'commit',
+                    limbo_balance: '100330',
+                    blocks_til_maturity: 50,
+                    pending_htlcs: []
+                }
+            ]);
+            const overlap = getForceCloseSweepOverlap(
+                forceCloses,
+                external.transactions,
+                100330
+            );
+            expect(overlap).toEqual(20200);
+            // pending still carries the locked commitment output
+            expect(100330 + external.amount - overlap).toEqual(100330);
+        });
+
         it('keeps the limbo balance until the sweep is broadcast', () => {
             const external = getExternalUnconfirmedBalance(
                 [sweepOf('deposit', 50000, 'elsewhere:1')],
@@ -452,7 +505,7 @@ describe('BalanceUtils', () => {
                         {
                             txids: ['commit'],
                             limboBalance: 96860,
-                            hasPendingHtlcs: false
+                            fullySweepable: true
                         }
                     ],
                     external.transactions,
@@ -474,7 +527,7 @@ describe('BalanceUtils', () => {
                         {
                             txids: ['commit', 'htlc'],
                             limboBalance: 120000,
-                            hasPendingHtlcs: true
+                            fullySweepable: false
                         }
                     ],
                     external.transactions,
@@ -494,7 +547,7 @@ describe('BalanceUtils', () => {
                         {
                             txids: ['commit', 'htlc'],
                             limboBalance: 120000,
-                            hasPendingHtlcs: true
+                            fullySweepable: false
                         }
                     ],
                     external.transactions,
@@ -517,7 +570,7 @@ describe('BalanceUtils', () => {
                         {
                             txids: ['commit', 'htlc'],
                             limboBalance: 120000,
-                            hasPendingHtlcs: true
+                            fullySweepable: false
                         }
                     ],
                     external.transactions,
@@ -533,8 +586,8 @@ describe('BalanceUtils', () => {
                 96395
             );
             const closes = [
-                { txids: ['a'], limboBalance: 50000, hasPendingHtlcs: true },
-                { txids: ['b'], limboBalance: 46860, hasPendingHtlcs: false }
+                { txids: ['a'], limboBalance: 50000, fullySweepable: false },
+                { txids: ['b'], limboBalance: 46860, fullySweepable: true }
             ];
             expect(
                 getForceCloseSweepOverlap(closes, external.transactions, 96860)
@@ -543,7 +596,7 @@ describe('BalanceUtils', () => {
                 getForceCloseSweepOverlap(
                     closes.map((close) => ({
                         ...close,
-                        hasPendingHtlcs: false
+                        fullySweepable: true
                     })),
                     external.transactions,
                     96860
@@ -567,17 +620,17 @@ describe('BalanceUtils', () => {
                         {
                             txids: ['a'],
                             limboBalance: 30000,
-                            hasPendingHtlcs: false
+                            fullySweepable: true
                         },
                         {
                             txids: ['c'],
                             limboBalance: 20000,
-                            hasPendingHtlcs: false
+                            fullySweepable: true
                         },
                         {
                             txids: ['b'],
                             limboBalance: 55000,
-                            hasPendingHtlcs: true
+                            fullySweepable: false
                         }
                     ],
                     external.transactions,
@@ -598,7 +651,7 @@ describe('BalanceUtils', () => {
                         {
                             txids: ['commit'],
                             limboBalance: 50000,
-                            hasPendingHtlcs: true
+                            fullySweepable: false
                         }
                     ],
                     external.transactions,
@@ -616,7 +669,7 @@ describe('BalanceUtils', () => {
                 {
                     txids: ['commit'],
                     limboBalance: 96860,
-                    hasPendingHtlcs: false
+                    fullySweepable: true
                 }
             ];
             expect(
@@ -637,7 +690,7 @@ describe('BalanceUtils', () => {
                         {
                             txids: ['commit'],
                             limboBalance: 1000,
-                            hasPendingHtlcs: false
+                            fullySweepable: true
                         }
                     ],
                     undefined as any,
