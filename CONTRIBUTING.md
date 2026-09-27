@@ -281,6 +281,12 @@ First-time contributors submitting new features or UI changes **must include scr
 
 This requirement helps maintainers efficiently review contributions from new contributors and protects the project from low-effort or AI-generated submissions that have not been actually tested.
 
+### Disclosing AI Assistance
+
+First-time contributors must state in the pull request description whether AI tools were used to write any part of the contribution, including code, tests, commit messages, or the PR description itself. If AI tools were used, list each tool and model (for example, "Claude Code with Claude Opus 5.5" or "GitHub Copilot in VS Code") and briefly describe what it was used for.
+
+AI-assisted contributions are accepted, but you are responsible for all of the code you submit. You should be able to explain your changes and answer review questions yourself, and the testing and proof of work requirements above still apply.
+
 ## Working on Issues
 
 **Note on issue assignment**: GitHub issue assignment is reserved for ZEUS team members. Instead of asking to be assigned an issue, simply leave a comment indicating that you've started working on it. This helps others know the issue is being addressed while keeping the process lightweight.
