@@ -116,7 +116,8 @@ export default class EmbeddedLND extends LND {
     getMyNodeInfo = async () => await getInfo();
     getNetworkInfo = async () => await getNetworkInfo();
     getRecoveryInfo = async () => await getRecoveryInfo();
-    getInvoices = async () => await listInvoices();
+    getInvoices = async (params?: { limit?: number }) =>
+        await listInvoices(params?.limit);
     createInvoice = async (data: any) =>
         await addInvoice({
             amount: data.value ? Number(data.value) : undefined,

@@ -209,7 +209,9 @@ export interface ILndMobileInjections {
         getNodeInfo: (pubKey: string) => Promise<lnrpc.NodeInfo>;
         lookupInvoice: (rHash: string) => Promise<lnrpc.Invoice>;
         listPeers: () => Promise<lnrpc.ListPeersResponse>;
-        listInvoices: () => Promise<lnrpc.ListInvoiceResponse>;
+        listInvoices: (
+            numMaxInvoices?: number
+        ) => Promise<lnrpc.ListInvoiceResponse>;
         readLndLog: () => Promise<IReadLndLogResponse>;
         sendPaymentV2Sync: ({
             payment_request,

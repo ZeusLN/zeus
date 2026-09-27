@@ -26,6 +26,13 @@ import Bolt11Utils from '../utils/Bolt11Utils';
 
 const calls = new Map<string, Promise<any>>();
 
+const DEFAULT_SQL_LIMIT = 150;
+// limits are interpolated into SQL, so only positive integers pass
+export const sqlLimit = (limit?: number) =>
+    Number.isInteger(limit) && (limit as number) > 0
+        ? (limit as number)
+        : DEFAULT_SQL_LIMIT;
+
 export default class CLNRest {
     private defaultTimeout: number = 30000;
     getHeaders = (rune: string): any => {
@@ -332,9 +339,9 @@ export default class CLNRest {
     };
     getInvoices = (data?: any) =>
         this.postRequest('/v1/sql', {
-            query: `SELECT label, bolt11, bolt12, payment_hash, amount_msat, status, amount_received_msat, paid_at, payment_preimage, description, expires_at FROM invoices ORDER BY created_index DESC LIMIT ${
-                data?.limit ? data.limit : 150
-            };`
+            query: `SELECT label, bolt11, bolt12, payment_hash, amount_msat, status, amount_received_msat, paid_at, payment_preimage, description, expires_at FROM invoices ORDER BY created_index DESC LIMIT ${sqlLimit(
+                data?.limit
+            )};`
         }).then((data: any) => {
             const invoiceList: any[] = [];
             data.rows.forEach((invoice: any) => {
@@ -378,9 +385,11 @@ export default class CLNRest {
             exposeprivatechannels: true
         });
 
-    getPayments = () =>
+    getPayments = (params?: { maxPayments?: number }) =>
         this.postRequest('/v1/sql', {
-            query: "select sp.payment_hash, sp.groupid, min(sp.status) as status, min(sp.destination) as destination, min(sp.created_at) as created_at, min(sp.description) as description, min(sp.bolt11) as bolt11, min(sp.bolt12) as bolt12, sum(case when sp.status = 'complete' then sp.amount_sent_msat else null end) as amount_sent_msat, sum(case when sp.status = 'complete' then sp.amount_msat else 0 end) as amount_msat, max(sp.payment_preimage) as preimage from sendpays sp group by sp.payment_hash, sp.groupid order by created_index desc limit 150"
+            query: `select sp.payment_hash, sp.groupid, min(sp.status) as status, min(sp.destination) as destination, min(sp.created_at) as created_at, min(sp.description) as description, min(sp.bolt11) as bolt11, min(sp.bolt12) as bolt12, sum(case when sp.status = 'complete' then sp.amount_sent_msat else null end) as amount_sent_msat, sum(case when sp.status = 'complete' then sp.amount_msat else 0 end) as amount_msat, max(sp.payment_preimage) as preimage from sendpays sp group by sp.payment_hash, sp.groupid order by created_index desc limit ${sqlLimit(
+                params?.maxPayments
+            )}`
         }).then((data: any) => {
             const paymentList: any[] = [];
             data.rows.forEach((pay: any) => {

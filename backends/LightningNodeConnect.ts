@@ -203,7 +203,7 @@ export default class LightningNodeConnect {
                 reversed:
                     params?.reversed !== undefined ? params.reversed : true,
                 ...(params?.limit && {
-                    num_max_invoices: params.limit
+                    numMaxInvoices: String(params.limit)
                 })
             })
             .then((data: lnrpc.ListInvoiceResponse) => snakeize(data));
