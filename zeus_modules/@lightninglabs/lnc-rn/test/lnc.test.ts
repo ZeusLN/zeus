@@ -86,6 +86,19 @@ const newLnc = (config: any = {}) =>
 const lastCall = (method: string) =>
     [...nativeCalls].reverse().find((c) => c.method === method);
 
+const callCount = (method: string) =>
+    nativeCalls.filter((c) => c.method === method).length;
+
+const emit = (event: string, payload: { result: string; namespace?: string }) =>
+    listeners.get(event)?.forEach((handler) => handler(payload as any));
+
+const setConnected = (connected: boolean) => {
+    LncModule.isConnected = (...args: any[]) => {
+        nativeCalls.push({ method: 'isConnected', args });
+        return Promise.resolve(connected);
+    };
+};
+
 describe('lnc', () => {
     beforeEach(() => {
         nativeCalls.length = 0;
@@ -101,6 +114,10 @@ describe('lnc', () => {
         LncModule.disconnect = (...args: any[]) => {
             nativeCalls.push({ method: 'disconnect', args });
             return Promise.resolve(null);
+        };
+        LncModule.connectServer = (...args: any[]) => {
+            nativeCalls.push({ method: 'connectServer', args });
+            return Promise.resolve('');
         };
     });
 
@@ -239,6 +256,41 @@ describe('lnc', () => {
             expect(lastCall('connectServer')).to.equal(undefined);
         });
 
+        it('does not dial again while the previous dial is in progress', async () => {
+            // the Go client retries a dial on its own until it connects; a
+            // second ConnectServer would put two clients on one session
+            const lnc = newLnc();
+            await lnc.connect();
+            await lnc.connect();
+
+            expect(callCount('connectServer')).to.equal(1);
+            expect(await lnc.isDialing()).to.equal(true);
+        });
+
+        it('stops reporting a dial once it has connected', async () => {
+            const lnc = newLnc();
+            await lnc.connect();
+            setConnected(true);
+
+            expect(await lnc.isDialing()).to.equal(false);
+        });
+
+        it('does not mark a rejected dial as in progress', async () => {
+            LncModule.connectServer = (...args: any[]) => {
+                nativeCalls.push({ method: 'connectServer', args });
+                return Promise.resolve('invalid mailbox');
+            };
+
+            const lnc = newLnc();
+            expect(await lnc.connect()).to.equal('invalid mailbox');
+            expect(await lnc.isDialing()).to.equal(false);
+
+            LncModule.connectServer = (...args: any[]) => {
+                nativeCalls.push({ method: 'connectServer', args });
+                return Promise.resolve('');
+            };
+        });
+
         it('dials with the persisted credentials', async () => {
             const lnc = newLnc();
             await lnc.connect();
@@ -270,11 +322,80 @@ describe('lnc', () => {
             const lnc = newLnc();
             await lnc.connect();
             expect(listeners.get('lnc.localPrivCreate')!.size).to.equal(1);
+            setConnected(true);
 
             await lnc.disconnect();
 
             expect(released).to.equal(true);
             expect(listeners.get('lnc.localPrivCreate')!.size).to.equal(0);
+        });
+
+        it('leaves a dial in progress running with its key listeners', async () => {
+            // Disconnect cannot stop the dial, and the remote key it reports
+            // when it lands still has to reach this wallet's store
+            const credentials = makeCredentials({ remoteKey: '' });
+            const lnc = newLnc({ credentialStore: credentials });
+            await lnc.connect();
+
+            await lnc.disconnect();
+
+            expect(lastCall('disconnect')).to.equal(undefined);
+            emit('lnc.remoteKeyReceive', {
+                result: 'late-remote-key',
+                namespace: 'test-namespace'
+            });
+            expect(credentials.remoteKey).to.equal('late-remote-key');
+        });
+
+        it('dispose drops the key listeners without a native call', async () => {
+            const lnc = newLnc();
+            await lnc.connect();
+
+            lnc.dispose();
+
+            expect(lastCall('disconnect')).to.equal(undefined);
+            expect(listeners.get('lnc.remoteKeyReceive')!.size).to.equal(0);
+            expect(await lnc.isDialing()).to.equal(false);
+        });
+    });
+
+    describe('key events', () => {
+        it('stores keys reported for its own namespace', async () => {
+            const credentials = makeCredentials({
+                localKey: '',
+                remoteKey: ''
+            });
+            const lnc = newLnc({ credentialStore: credentials });
+            await lnc.connect();
+
+            emit('lnc.localPrivCreate', {
+                result: 'local',
+                namespace: 'test-namespace'
+            });
+            emit('lnc.remoteKeyReceive', {
+                result: 'remote',
+                namespace: 'test-namespace'
+            });
+
+            expect(credentials.localKey).to.equal('local');
+            expect(credentials.remoteKey).to.equal('remote');
+        });
+
+        it("ignores keys reported for another wallet's namespace", async () => {
+            // a dial left running for wallet A reports on the same event name
+            // while wallet B is open; writing it into B's store would pin B
+            // to A's node key
+            const credentials = makeCredentials();
+            const lnc = newLnc({ credentialStore: credentials });
+            await lnc.connect();
+
+            emit('lnc.remoteKeyReceive', {
+                result: 'other-wallet-key',
+                namespace: 'other-namespace'
+            });
+            emit('lnc.remoteKeyReceive', { result: 'untagged-key' });
+
+            expect(credentials.remoteKey).to.equal('remote-key');
         });
     });
 });

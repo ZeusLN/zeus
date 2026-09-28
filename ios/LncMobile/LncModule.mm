@@ -31,6 +31,7 @@ RCT_EXPORT_METHOD(registerLocalPrivCreateCallback:(NSString *)nameSpace
     StreamingCallback *lpccb = [[StreamingCallback alloc] init];
     lpccb.delegate = self;
     [lpccb setEventName:eventName];
+    lpccb.nameSpace = nameSpace;
     NSError *error;
     LndmobileRegisterLocalPrivCreateCallback(nameSpace, lpccb, &error);
     if (error) {
@@ -44,6 +45,7 @@ RCT_EXPORT_METHOD(registerRemoteKeyReceiveCallback:(NSString *)nameSpace
     StreamingCallback *rkrcb = [[StreamingCallback alloc] init];
     rkrcb.delegate = self;
     [rkrcb setEventName:eventName];
+    rkrcb.nameSpace = nameSpace;
     NSError *error;
     LndmobileRegisterRemoteKeyReceiveCallback(nameSpace, rkrcb, &error);
     if (error) {
@@ -57,6 +59,7 @@ RCT_EXPORT_METHOD(registerAuthDataCallback:(NSString *)nameSpace
     StreamingCallback *oacb = [[StreamingCallback alloc] init];
     oacb.delegate = self;
     [oacb setEventName:eventName];
+    oacb.nameSpace = nameSpace;
     NSError *error;
     LndmobileRegisterAuthDataCallback(nameSpace, oacb, &error);
     if (error) {
