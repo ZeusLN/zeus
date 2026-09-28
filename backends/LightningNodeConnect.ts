@@ -178,15 +178,25 @@ export default class LightningNodeConnect {
         this.permForwardingHistory = true;
         this.permSignMessage = true;
     };
+    // IsConnected on the native side only reports that an RPC connection
+    // was established once (lndConn != nil); it stays true after the
+    // mailbox session dies. The mailbox status is what tracks the session.
     isConnected = async () => {
         if (!this.lnc) return false;
         try {
-            return await this.lnc.isConnected();
+            if (!(await this.lnc.isConnected())) return false;
         } catch (e) {
             // rejects with 'unknown namespace' when the native client was
             // never initialized, which is just another way of saying no
             console.log('LNC: isConnected check failed', e);
             return false;
+        }
+        try {
+            const status = await this.lnc.status();
+            return !status || status === 'Connected';
+        } catch (e) {
+            console.log('LNC: status check failed', e);
+            return true;
         }
     };
     disconnect = async () => {
