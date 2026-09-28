@@ -371,12 +371,15 @@ export default class LSPStore {
         });
     };
 
-    // Flow LSP setup run by the wallet on every fetch. getLSPInfo rejects
-    // when the LSP can't be reached, answers with an error (including the
-    // geoblock reply) or returns a non-JSON body. It records the error in
-    // flow_error for the UI, so a rejection is caught here and must not stop
-    // the steps below or the rest of wallet startup
-    public initFlowLSP = async () => {
+    // Flow LSP setup run by the wallet on every fetch. The LSP info request
+    // isn't awaited: a host that drops packets holds it until the 60s
+    // HTTP timeout, and the fetch lock and deep link handling would wait
+    // on it. The channel acceptor reads the LSP pubkey per request, so it
+    // doesn't need the reply first. getLSPInfo rejects when the LSP can't
+    // be reached, answers with an error (including the geoblock reply) or
+    // returns a non-JSON body, and records the error in flow_error for
+    // the UI
+    public initFlowLSP = () => {
         if (!BackendUtils.supportsFlowLSP()) return;
 
         const { implementation, settings } = this.settingsStore;
@@ -385,16 +388,14 @@ export default class LSPStore {
             (implementation !== 'lnd' ||
                 !this.nodeInfoStore.flowLspNotConfigured().flowLspNotConfigured)
         ) {
-            try {
-                await this.getLSPInfo();
-            } catch {
+            this.getLSPInfo().catch(() => {
                 // getLSPInfo rejects without a reason; the message is in
                 // flow_error_msg
                 console.warn(
                     'Failed to fetch Flow LSP info:',
                     this.flow_error_msg
                 );
-            }
+            });
         }
         if (BackendUtils.supportsLSPScustomMessage()) {
             this.subscribeCustomMessages();
@@ -532,12 +533,30 @@ export default class LSPStore {
             await channel.channelAcceptor();
         } else {
             // Only allow 0-conf chans from LSP or whitelisted peers
-
-            BackendUtils.initChanAcceptor({
-                zeroConfPeers: this.settingsStore?.settings?.zeroConfPeers,
-                lspPubkey: this.info?.pubkey
+            const ws = BackendUtils.initChanAcceptor({
+                getZeroConfPeers: () =>
+                    this.settingsStore?.settings?.zeroConfPeers,
+                getLspPubkey: () => this.info?.pubkey
             });
+            this.keepSocket(ws, 'channelAcceptor');
         }
+    };
+
+    // Remote LND opens a WebSocket per subscription. lnd asks every open
+    // channel acceptor and rejects the channel if any of them does, and
+    // each custom message subscription delivers every message, so keep one
+    // of each and open a new one on the next fetch after it closes
+    private keepSocket = (
+        ws: any,
+        key: 'channelAcceptor' | 'customMessagesSubscriber'
+    ) => {
+        if (!ws?.addEventListener) return;
+        this[key] = ws;
+        const release = () => {
+            if (this[key] === ws) this[key] = null;
+        };
+        ws.addEventListener('error', release);
+        ws.addEventListener('close', release);
     };
 
     @action
@@ -807,7 +826,7 @@ export default class LSPStore {
 
             await index.subscribeCustomMessages();
         } else {
-            BackendUtils.subscribeCustomMessages(
+            const ws = BackendUtils.subscribeCustomMessages(
                 (response: any) => {
                     const decoded = response.result;
                     runInAction(() => this.handleCustomMessages(decoded));
@@ -818,6 +837,7 @@ export default class LSPStore {
                     );
                 }
             );
+            this.keepSocket(ws, 'customMessagesSubscriber');
         }
     };
 
