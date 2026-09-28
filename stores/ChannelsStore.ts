@@ -122,7 +122,7 @@ export default class ChannelsStore {
     @observable public funded_psbt: string = '';
     @observable public pending_chan_ids: Array<string>;
     // pending HTLCs
-    @observable public pendingHTLCs: Array<PendingHTLC>;
+    @observable public pendingHTLCs: Array<PendingHTLC> = [];
     @observable public haveAnnouncedChannels = false;
 
     settingsStore: SettingsStore;

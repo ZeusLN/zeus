@@ -167,9 +167,6 @@ describe('ChannelsStore pending close balance', () => {
             { implementation: 'cln-rest' } as any,
             balanceStore as any
         );
-        // the pending channels reaction reads pendingHTLCs, which only
-        // reset() initializes
-        store.reset();
         jest.mocked(BackendUtils.supportsPendingChannels).mockReturnValue(true);
         jest.mocked(BackendUtils.getChannels).mockResolvedValue({
             channels: []
@@ -195,7 +192,7 @@ describe('ChannelsStore pending close balance', () => {
         expect(balanceStore.setPendingCloseBalance).toHaveBeenCalledWith(
             '96860',
             [],
-            [{ txids: ['commit'], limboBalance: 96860, fullySweepable: true }]
+            [{ txids: ['commit'], limboBalance: 96860 }]
         );
     });
 });

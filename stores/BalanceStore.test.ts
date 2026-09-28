@@ -172,24 +172,19 @@ describe('BalanceStore force close sweep overlap', () => {
         store.setPendingCloseBalance(
             96860,
             [],
-            [
-                {
-                    txids: ['commit'],
-                    limboBalance: 96860,
-                    fullySweepable: true
-                }
-            ]
+            [{ txids: ['commit'], limboBalance: 96860 }]
         );
 
-        expect(store.forceCloseSweepOverlap).toEqual(96860);
-        // pending shows the sweep output, and total + pending is the
-        // 1,087,810 sat wallet total rather than 1,184,670
+        expect(store.forceCloseSweepOverlap).toEqual(96395);
+        // total + pending is 1,088,275 rather than 1,184,670: the sweep
+        // output is counted once, and only its 465 sat fee sits on top of
+        // the 1,087,810 sat wallet total until the sweep confirms
         const pending =
             96860 +
             store.externalUnconfirmedBalance -
             store.forceCloseSweepOverlap;
-        expect(pending).toEqual(96395);
-        expect(store.settledBlockchainBalance + pending).toEqual(1087810);
+        expect(pending).toEqual(96860);
+        expect(store.settledBlockchainBalance + pending).toEqual(1088275);
     });
 
     it('never drops more than the cooperative close overlap leaves', async () => {
@@ -200,13 +195,7 @@ describe('BalanceStore force close sweep overlap', () => {
         store.setPendingCloseBalance(
             96860,
             [{ closingTxid: 'sweep', limboBalance: 50000 }],
-            [
-                {
-                    txids: ['commit'],
-                    limboBalance: 96860,
-                    fullySweepable: true
-                }
-            ]
+            [{ txids: ['commit'], limboBalance: 96860 }]
         );
 
         expect(store.cooperativeCloseOverlap).toEqual(50000);

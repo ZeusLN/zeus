@@ -362,42 +362,10 @@ describe('BalanceUtils', () => {
                     {
                         closing_txid: 'commit',
                         limbo_balance: '96860',
-                        blocks_til_maturity: 1,
                         pending_htlcs: []
                     }
                 ])
-            ).toEqual([
-                {
-                    txids: ['commit'],
-                    limboBalance: 96860,
-                    fullySweepable: true
-                }
-            ]);
-        });
-
-        it('is not fully sweepable while the commitment output is locked', () => {
-            expect(
-                getForceCloses([
-                    {
-                        closing_txid: 'commit',
-                        limbo_balance: '96860',
-                        blocks_til_maturity: 2,
-                        pending_htlcs: []
-                    }
-                ])[0].fullySweepable
-            ).toBe(false);
-        });
-
-        it('reads a missing blocks_til_maturity as 0', () => {
-            // proto3 JSON omits zero values
-            expect(
-                getForceCloses([
-                    {
-                        closing_txid: 'commit',
-                        limbo_balance: '96860'
-                    }
-                ])[0].fullySweepable
-            ).toBe(true);
+            ).toEqual([{ txids: ['commit'], limboBalance: 96860 }]);
         });
 
         it('adds the txids second-level HTLC sweeps spend from', () => {
@@ -414,13 +382,7 @@ describe('BalanceUtils', () => {
                         ]
                     }
                 ])
-            ).toEqual([
-                {
-                    txids: ['commit', 'htlc'],
-                    limboBalance: 120000,
-                    fullySweepable: false
-                }
-            ]);
+            ).toEqual([{ txids: ['commit', 'htlc'], limboBalance: 120000 }]);
         });
 
         it('skips entries without a closing txid', () => {
@@ -432,6 +394,9 @@ describe('BalanceUtils', () => {
     });
 
     describe('getForceCloseSweepOverlap', () => {
+        // Channel outputs are not wallet UTXOs, so lnd lists them with
+        // is_our_output false. A sweep's net amount is what it pays the
+        // wallet minus any wallet inputs, so it is always below what it spent.
         const sweepOf = (txid: string, amount: number, ...spent: string[]) => ({
             tx_hash: txid,
             amount: String(amount),
@@ -443,78 +408,97 @@ describe('BalanceUtils', () => {
             }))
         });
 
-        it('drops the limbo balance of a force close whose sweep is unconfirmed', () => {
+        // What BalancePane shows on the pending line for these closes
+        const pendingLine = (
+            limbo: number,
+            external: number,
+            overlap: number
+        ) => limbo + external - overlap;
+
+        it('counts a force close with an unconfirmed sweep once', () => {
             // regtest vector from #4740: 96,860 sats of limbo, swept one
-            // block before maturity for 96,395 sats after the sweep fee
+            // block before maturity for 96,395 sats after a 465 sat fee
             const external = getExternalUnconfirmedBalance(
                 [sweepOf('sweep', 96395, 'commit:0')],
                 96395
             );
-            const forceCloses = getForceCloses([
-                {
-                    closing_txid: 'commit',
-                    limbo_balance: '96860',
-                    blocks_til_maturity: 1,
-                    pending_htlcs: []
-                }
-            ]);
             const overlap = getForceCloseSweepOverlap(
-                forceCloses,
+                getForceCloses([
+                    {
+                        closing_txid: 'commit',
+                        limbo_balance: '96860',
+                        pending_htlcs: []
+                    }
+                ]),
                 external.transactions,
                 96860
             );
-            expect(overlap).toEqual(96860);
-            // pending = limbo + external - overlap = the sweep output
-            expect(96860 + external.amount - overlap).toEqual(96395);
+            expect(overlap).toEqual(96395);
+            // the sweep output is no longer counted a second time; only the
+            // 465 sat fee stays on the pending line until it confirms
+            expect(pendingLine(96860, external.amount, overlap)).toEqual(96860);
         });
 
-        it('keeps locked limbo when a sweep spends only another output', () => {
-            // the sweeper batches this channel's anchor with a deposit
-            // from elsewhere while the commitment output is 50 blocks
-            // from maturity: only the anchor has left limbo
+        it('keeps a locked commitment output when its anchor is batched with another sweep', () => {
+            // x is 50 blocks from maturity: 100,000 sats locked plus a
+            // 330 sat anchor. y is mature, 46,860 sats. The sweeper
+            // batches x's anchor with y's commitment output, 500 sat fee.
             const external = getExternalUnconfirmedBalance(
-                [sweepOf('batch', 20200, 'commit:3', 'elsewhere:0')],
-                20200
+                [sweepOf('batch', 46690, 'x:3', 'y:0')],
+                46690
             );
-            const forceCloses = getForceCloses([
-                {
-                    closing_txid: 'commit',
-                    limbo_balance: '100330',
-                    blocks_til_maturity: 50,
-                    pending_htlcs: []
-                }
-            ]);
             const overlap = getForceCloseSweepOverlap(
-                forceCloses,
+                getForceCloses([
+                    { closing_txid: 'x', limbo_balance: '100330' },
+                    { closing_txid: 'y', limbo_balance: '46860' }
+                ]),
+                external.transactions,
+                147190
+            );
+            expect(overlap).toEqual(46690);
+            // x's 100,000 locked sats plus the 46,690 sat sweep output,
+            // with the 500 sat fee counted until the sweep confirms
+            expect(pendingLine(147190, external.amount, overlap)).toEqual(
+                147190
+            );
+        });
+
+        it('keeps a locked commitment output when only its anchor is swept', () => {
+            // a lone anchor sweep nets 130 sats after a 200 sat fee, while
+            // the 100,000 sat commitment output is still locked
+            const external = getExternalUnconfirmedBalance(
+                [sweepOf('anchor', 130, 'commit:3')],
+                130
+            );
+            const overlap = getForceCloseSweepOverlap(
+                getForceCloses([
+                    { closing_txid: 'commit', limbo_balance: '100330' }
+                ]),
                 external.transactions,
                 100330
             );
-            expect(overlap).toEqual(20200);
-            // pending still carries the locked commitment output
-            expect(100330 + external.amount - overlap).toEqual(100330);
+            expect(overlap).toEqual(130);
+            expect(pendingLine(100330, external.amount, overlap)).toEqual(
+                100330
+            );
         });
 
         it('keeps the limbo balance until the sweep is broadcast', () => {
+            // an external deposit spends someone else's outputs
             const external = getExternalUnconfirmedBalance(
                 [sweepOf('deposit', 50000, 'elsewhere:1')],
                 50000
             );
             expect(
                 getForceCloseSweepOverlap(
-                    [
-                        {
-                            txids: ['commit'],
-                            limboBalance: 96860,
-                            fullySweepable: true
-                        }
-                    ],
+                    [{ txids: ['commit'], limboBalance: 96860 }],
                     external.transactions,
                     96860
                 )
             ).toEqual(0);
         });
 
-        it('drops only the swept amount while HTLCs are pending', () => {
+        it('leaves an unswept HTLC in limbo', () => {
             // 96,860 of the 120,000 sat limbo is the commitment output;
             // the rest is an HTLC that is not swept yet
             const external = getExternalUnconfirmedBalance(
@@ -523,13 +507,7 @@ describe('BalanceUtils', () => {
             );
             expect(
                 getForceCloseSweepOverlap(
-                    [
-                        {
-                            txids: ['commit', 'htlc'],
-                            limboBalance: 120000,
-                            fullySweepable: false
-                        }
-                    ],
+                    [{ txids: ['commit', 'htlc'], limboBalance: 120000 }],
                     external.transactions,
                     120000
                 )
@@ -543,13 +521,7 @@ describe('BalanceUtils', () => {
             );
             expect(
                 getForceCloseSweepOverlap(
-                    [
-                        {
-                            txids: ['commit', 'htlc'],
-                            limboBalance: 120000,
-                            fullySweepable: false
-                        }
-                    ],
+                    [{ txids: ['commit', 'htlc'], limboBalance: 120000 }],
                     external.transactions,
                     120000
                 )
@@ -566,13 +538,7 @@ describe('BalanceUtils', () => {
             );
             expect(
                 getForceCloseSweepOverlap(
-                    [
-                        {
-                            txids: ['commit', 'htlc'],
-                            limboBalance: 120000,
-                            fullySweepable: false
-                        }
-                    ],
+                    [{ txids: ['commit', 'htlc'], limboBalance: 120000 }],
                     external.transactions,
                     120000
                 )
@@ -585,23 +551,16 @@ describe('BalanceUtils', () => {
                 [sweepOf('batch', 96395, 'a:0', 'b:1')],
                 96395
             );
-            const closes = [
-                { txids: ['a'], limboBalance: 50000, fullySweepable: false },
-                { txids: ['b'], limboBalance: 46860, fullySweepable: true }
-            ];
-            expect(
-                getForceCloseSweepOverlap(closes, external.transactions, 96860)
-            ).toEqual(96395);
             expect(
                 getForceCloseSweepOverlap(
-                    closes.map((close) => ({
-                        ...close,
-                        fullySweepable: true
-                    })),
+                    [
+                        { txids: ['a'], limboBalance: 50000 },
+                        { txids: ['b'], limboBalance: 46860 }
+                    ],
                     external.transactions,
                     96860
                 )
-            ).toEqual(96860);
+            ).toEqual(96395);
         });
 
         it('groups channels linked through a shared sweep', () => {
@@ -617,21 +576,9 @@ describe('BalanceUtils', () => {
             expect(
                 getForceCloseSweepOverlap(
                     [
-                        {
-                            txids: ['a'],
-                            limboBalance: 30000,
-                            fullySweepable: true
-                        },
-                        {
-                            txids: ['c'],
-                            limboBalance: 20000,
-                            fullySweepable: true
-                        },
-                        {
-                            txids: ['b'],
-                            limboBalance: 55000,
-                            fullySweepable: false
-                        }
+                        { txids: ['a'], limboBalance: 30000 },
+                        { txids: ['c'], limboBalance: 20000 },
+                        { txids: ['b'], limboBalance: 55000 }
                     ],
                     external.transactions,
                     105000
@@ -639,39 +586,12 @@ describe('BalanceUtils', () => {
             ).toEqual(100000);
         });
 
-        it("never drops more than a group's limbo balance", () => {
-            // the sweep also spends an input that is not in limbo here
-            const external = getExternalUnconfirmedBalance(
-                [sweepOf('sweep', 70000, 'commit:0', 'other:0')],
-                70000
-            );
-            expect(
-                getForceCloseSweepOverlap(
-                    [
-                        {
-                            txids: ['commit'],
-                            limboBalance: 50000,
-                            fullySweepable: false
-                        }
-                    ],
-                    external.transactions,
-                    200000
-                )
-            ).toEqual(50000);
-        });
-
         it('clamps to the pending close balance', () => {
             const external = getExternalUnconfirmedBalance(
                 [sweepOf('sweep', 96395, 'commit:0')],
                 96395
             );
-            const closes = [
-                {
-                    txids: ['commit'],
-                    limboBalance: 96860,
-                    fullySweepable: true
-                }
-            ];
+            const closes = [{ txids: ['commit'], limboBalance: 96860 }];
             expect(
                 getForceCloseSweepOverlap(closes, external.transactions, 90000)
             ).toEqual(90000);
@@ -686,13 +606,7 @@ describe('BalanceUtils', () => {
             ).toEqual(0);
             expect(
                 getForceCloseSweepOverlap(
-                    [
-                        {
-                            txids: ['commit'],
-                            limboBalance: 1000,
-                            fullySweepable: true
-                        }
-                    ],
+                    [{ txids: ['commit'], limboBalance: 1000 }],
                     undefined as any,
                     1000
                 )
