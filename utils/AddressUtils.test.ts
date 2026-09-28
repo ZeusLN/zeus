@@ -414,7 +414,20 @@ describe('AddressUtils', () => {
             // NodeInfoStore.nodeInfo starts as a plain {}, where
             // NodeInfo.isMainNet would be undefined
             expect(AddressUtils.isNodeOnTestNetwork({})).toBe(false);
-            expect(AddressUtils.isNodeOnTestNetwork(undefined)).toBe(false);
+            expect(AddressUtils.isNodeOnTestNetwork(null)).toBe(false);
+        });
+
+        it("reads the connected node's info when called without an argument", () => {
+            const originalNodeInfo = nodeInfoStore.nodeInfo;
+            try {
+                (nodeInfoStore as any).nodeInfo = { isSigNet: true };
+                expect(AddressUtils.isNodeOnTestNetwork()).toBe(true);
+                expect(AddressUtils.isNodeOnTestNetwork(undefined)).toBe(true);
+                (nodeInfoStore as any).nodeInfo = {};
+                expect(AddressUtils.isNodeOnTestNetwork()).toBe(false);
+            } finally {
+                (nodeInfoStore as any).nodeInfo = originalNodeInfo;
+            }
         });
 
         it('is false on mainnet', () => {
