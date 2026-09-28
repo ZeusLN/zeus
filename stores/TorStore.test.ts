@@ -54,6 +54,7 @@ import { observable, runInAction } from 'mobx';
 
 import TorStore, {
     getTorIndicator,
+    hostOf,
     getTorStatusText,
     TOR_FAILURE_THRESHOLD,
     TOR_PERSISTENT_SERVICE_ENABLED
@@ -83,13 +84,18 @@ const failed: any = {
     error: { code: 'TOR_START_FAILED', message: 'boom' }
 };
 
+const NODE_URL = 'https://node.onion:8080/v1/getinfo';
+const OTHER_URL = 'https://mempool.space/api/v1/prices';
+
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 
 const newSettingsStore = (fields: any = {}) =>
     observable({ enableTor: false, host: '', url: '', ...fields });
 
 // Builds an initialized store and hands back the listeners it registered
-const setup = async (settings: any = { enableTor: true }) => {
+const setup = async (
+    settings: any = { enableTor: true, host: 'node.onion', port: '8080' }
+) => {
     const settingsStore = newSettingsStore(settings);
     const store = new TorStore(settingsStore as any);
     await store.initialize();
@@ -137,6 +143,24 @@ describe('getTorIndicator', () => {
         expect(getTorIndicator(running(), TOR_FAILURE_THRESHOLD)).toBe(
             'degraded'
         );
+    });
+});
+
+describe('hostOf', () => {
+    it('takes the hostname from a URL', () => {
+        expect(hostOf('https://node.onion:8080/v1/getinfo')).toBe('node.onion');
+    });
+
+    it('accepts a bare host with a port', () => {
+        expect(hostOf('node.onion:8080')).toBe('node.onion');
+    });
+
+    it('lowercases', () => {
+        expect(hostOf('Node.ONION')).toBe('node.onion');
+    });
+
+    it('returns empty input as empty', () => {
+        expect(hostOf('')).toBe('');
     });
 });
 
@@ -221,20 +245,53 @@ describe('TorStore', () => {
         const { store, emitStatus, reportOutcome } = await setup();
         emitStatus(running());
 
-        reportOutcome(false);
-        reportOutcome(false);
+        reportOutcome(false, NODE_URL);
+        reportOutcome(false, NODE_URL);
         expect(store.indicator).toBe('degraded');
 
-        reportOutcome(true);
+        reportOutcome(true, NODE_URL);
         expect(store.consecutiveFailures).toBe(0);
         expect(store.indicator).toBe('connected');
+    });
+
+    it('ignores failures to hosts other than the node', async () => {
+        const { store, emitStatus, reportOutcome } = await setup();
+        emitStatus(running());
+
+        reportOutcome(false, OTHER_URL);
+        reportOutcome(false, OTHER_URL);
+
+        expect(store.indicator).toBe('connected');
+    });
+
+    it('keeps the node failures when a request to another host succeeds', async () => {
+        const { store, emitStatus, reportOutcome } = await setup();
+        emitStatus(running());
+
+        reportOutcome(false, NODE_URL);
+        reportOutcome(false, NODE_URL);
+        reportOutcome(true, OTHER_URL);
+
+        expect(store.indicator).toBe('degraded');
+    });
+
+    it('matches the node host case-insensitively and with a url setting', async () => {
+        const { store, emitStatus, reportOutcome } = await setup({
+            url: 'https://Node.onion:3010'
+        });
+        emitStatus(running());
+
+        reportOutcome(false, 'https://node.onion:3010/v1/getinfo');
+        reportOutcome(false, 'https://NODE.onion:3010/v1/listfunds');
+
+        expect(store.indicator).toBe('degraded');
     });
 
     it('clears the failure count when the daemon leaves the running state', async () => {
         const { store, emitStatus, reportOutcome } = await setup();
         emitStatus(running());
-        reportOutcome(false);
-        reportOutcome(false);
+        reportOutcome(false, NODE_URL);
+        reportOutcome(false, NODE_URL);
 
         emitStatus(starting(10));
 
@@ -245,8 +302,8 @@ describe('TorStore', () => {
         const { store, emitStatus, reportOutcome } = await setup();
         (requestNewTorIdentity as jest.Mock).mockResolvedValue(undefined);
         emitStatus(running());
-        reportOutcome(false);
-        reportOutcome(false);
+        reportOutcome(false, NODE_URL);
+        reportOutcome(false, NODE_URL);
 
         await store.newIdentity();
 
@@ -259,7 +316,7 @@ describe('TorStore', () => {
         const { store, emitStatus, reportOutcome } = await setup();
         (restartTor as jest.Mock).mockRejectedValue(new Error('no control'));
         emitStatus(running());
-        reportOutcome(false);
+        reportOutcome(false, NODE_URL);
 
         await store.restart();
 
@@ -324,8 +381,27 @@ describe('TorStore', () => {
             expect(mockTorServiceModule.startService).toHaveBeenCalledWith(
                 'views.Settings.Networking.tor',
                 'views.Settings.Networking.Tor.bootstrapping {"progress":5}',
-                'views.Settings.Networking.Tor.newIdentity'
+                // no New circuit action until Tor is running
+                ''
             );
+        });
+
+        it('offers New circuit in the notification only while running', async () => {
+            mockStorage[TOR_PERSISTENT_SERVICE_ENABLED] = 'true';
+            const { emitStatus } = await setup();
+
+            emitStatus(starting(5));
+            await flush();
+            emitStatus(running());
+            await flush();
+            emitStatus(failed);
+            await flush();
+
+            expect(
+                mockTorServiceModule.updateNotification.mock.calls.map(
+                    (call: any[]) => call[2]
+                )
+            ).toEqual(['views.Settings.Networking.Tor.newIdentity', '']);
         });
 
         it('updates the notification only when the text changes', async () => {
@@ -377,6 +453,7 @@ describe('TorStore', () => {
 
             runInAction(() => {
                 settingsStore.enableTor = false;
+                settingsStore.host = 'node.example.com';
             });
             await flush();
 

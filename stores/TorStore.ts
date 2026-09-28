@@ -92,9 +92,26 @@ export const getTorStatusText = (
     }
 };
 
+// Hostname of a URL or a bare host[:port], lowercased. Unparseable input
+// is returned lowercased so it can still be compared.
+export const hostOf = (address: string): string => {
+    const trimmed = (address || '').trim();
+    try {
+        const withScheme = trimmed.includes('://')
+            ? trimmed
+            : `https://${trimmed}`;
+        return new URL(withScheme).hostname.toLowerCase();
+    } catch {
+        return trimmed.toLowerCase();
+    }
+};
+
 export default class TorStore {
     @observable public status: TorStatus | null = null;
-    @observable public consecutiveFailures: number = 0;
+    // Consecutive transport failures per host. Only the node's host counts
+    // toward the indicator, so unrelated Tor traffic (fiat rates, LNURL
+    // hosts) neither masks nor causes a degraded node connection
+    private failuresByHost = observable.map<string, number>();
     @observable public persistentServiceEnabled: boolean = false;
     @observable public actionInFlight: 'newIdentity' | 'restart' | null = null;
     @observable public actionError: string | null = null;
@@ -113,6 +130,15 @@ export default class TorStore {
         const { enableTor, host, url } = this.settingsStore;
         const address = host || url || '';
         return !!enableTor || address.includes('.onion');
+    }
+
+    @computed private get nodeHost(): string {
+        const { host, url } = this.settingsStore;
+        return hostOf(host || url || '');
+    }
+
+    @computed public get consecutiveFailures(): number {
+        return this.failuresByHost.get(this.nodeHost) || 0;
     }
 
     @computed public get indicator(): TorIndicator {
@@ -156,12 +182,16 @@ export default class TorStore {
     @action
     private onStatus = (status: TorStatus) => {
         this.status = status;
-        if (status.state !== 'running') this.consecutiveFailures = 0;
+        if (status.state !== 'running') this.failuresByHost.clear();
     };
 
     @action
-    private onRequestOutcome = (ok: boolean) => {
-        this.consecutiveFailures = ok ? 0 : this.consecutiveFailures + 1;
+    private onRequestOutcome = (ok: boolean, url: string) => {
+        const host = hostOf(url);
+        this.failuresByHost.set(
+            host,
+            ok ? 0 : (this.failuresByHost.get(host) || 0) + 1
+        );
     };
 
     public newIdentity = () =>
@@ -181,7 +211,7 @@ export default class TorStore {
         try {
             await fn();
             runInAction(() => {
-                this.consecutiveFailures = 0;
+                this.failuresByHost.clear();
             });
         } catch (e: any) {
             runInAction(() => {
@@ -246,9 +276,12 @@ export default class TorStore {
             }
 
             const title = localeString('views.Settings.Networking.tor');
-            const newIdentityLabel = localeString(
-                'views.Settings.Networking.Tor.newIdentity'
-            );
+            // New circuit needs a running daemon; an empty label tells the
+            // service to leave the action off the notification
+            const newIdentityLabel =
+                state === 'running'
+                    ? localeString('views.Settings.Networking.Tor.newIdentity')
+                    : '';
             if (this.serviceRunning) {
                 await TorServiceModule.updateNotification(
                     title,
