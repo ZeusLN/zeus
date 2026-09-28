@@ -1,3 +1,9 @@
+const mockQueryProfile = jest.fn();
+jest.mock('nostr-tools', () => ({
+    ...jest.requireActual('nostr-tools'),
+    nip05: { queryProfile: (...args: any[]) => mockQueryProfile(...args) }
+}));
+
 import NostrUtils from './NostrUtils';
 
 describe('NostrUtils', () => {
@@ -288,6 +294,39 @@ describe('NostrUtils', () => {
             expect(nsec).not.toBe(null);
             const hex = NostrUtils.nsecToHex(nsec!);
             expect(hex).toBe(validNsecHex);
+        });
+    });
+
+    describe('queryNip05Profile', () => {
+        beforeEach(() => {
+            mockQueryProfile.mockReset();
+        });
+
+        it('lowercases the identifier before the lookup', async () => {
+            mockQueryProfile.mockResolvedValue({ pubkey: validHex });
+
+            const result = await NostrUtils.queryNip05Profile(
+                'SATOSHI@Domain.COM'
+            );
+
+            expect(mockQueryProfile).toHaveBeenCalledWith('satoshi@domain.com');
+            expect(result).toEqual({ pubkey: validHex });
+        });
+
+        it('returns null when the lookup finds nothing', async () => {
+            mockQueryProfile.mockResolvedValue(null);
+
+            await expect(
+                NostrUtils.queryNip05Profile('satoshi@domain.com')
+            ).resolves.toBe(null);
+        });
+
+        it('passes lookup errors through', async () => {
+            mockQueryProfile.mockRejectedValue(new Error('network'));
+
+            await expect(
+                NostrUtils.queryNip05Profile('satoshi@domain.com')
+            ).rejects.toThrow('network');
         });
     });
 });

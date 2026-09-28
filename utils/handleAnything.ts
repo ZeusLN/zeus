@@ -21,7 +21,7 @@ import Invoice from '../models/Invoice';
 
 // Nostr
 import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
-import { SimplePool, nip05 } from 'nostr-tools';
+import { SimplePool } from 'nostr-tools';
 import wifUtils from './WIFUtils';
 
 const isClipboardValue = (data: string) =>
@@ -188,9 +188,9 @@ const confirmBtcPayFetch = (
         );
     });
 
-const attemptNip05Lookup = async (data: string) => {
+const attemptNip05Lookup = async (identifier: string) => {
     try {
-        const lookup: any = await nip05.queryProfile(data);
+        const lookup: any = await NostrUtils.queryNip05Profile(identifier);
         const pubkey = lookup.pubkey;
         return await nostrProfileLookup(pubkey);
     } catch (e) {
@@ -879,7 +879,7 @@ const handleAnything = async (
                             }
                         ];
                     }
-                    return await attemptNip05Lookup(data);
+                    return await attemptNip05Lookup(value);
                 });
         }
     } else if (value.includes('config=') && value.includes('lnd.config')) {

@@ -9,6 +9,8 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 
 import { Alert } from 'react-native';
 
+import { nip05 } from 'nostr-tools';
+
 import { invoicesStore, settingsStore } from '../stores/Stores';
 import handleAnything, {
     strictUriEncode,
@@ -49,6 +51,7 @@ let mockGetLnurlParams = {};
 let mockBlobUtilFetch = jest.fn();
 const mockSimplePool = jest.fn();
 const mockNip19Decode = jest.fn();
+const mockQuerySync = jest.fn();
 
 const ZEUS_ECASH_GIFT_URL = 'https://zeusln.com/e/';
 jest.mock('./AddressUtils', () => ({
@@ -141,7 +144,7 @@ jest.mock('nostr-tools', () => ({
         constructor(...args: any[]) {
             mockSimplePool(...args);
         }
-        querySync = jest.fn().mockResolvedValue([]);
+        querySync = (...args: any[]) => mockQuerySync(...args);
         close = jest.fn();
     },
     nip05: { queryProfile: jest.fn() },
@@ -164,6 +167,8 @@ describe('handleAnything', () => {
         mockFindLnurl.mockReset();
         mockSimplePool.mockReset();
         mockNip19Decode.mockReset();
+        mockQuerySync.mockReset();
+        mockQuerySync.mockResolvedValue([]);
         mockIsValidNpub = false;
         mockIsValidBitcoinAddress = false;
         mockIsValidLightningPubKey = false;
@@ -1036,6 +1041,180 @@ describe('handleAnything', () => {
                 (settingsStore as any).enableTor = undefined;
                 mockDoTorRequest.mockReset();
             }
+        });
+    });
+
+    describe('NIP-05 fallback', () => {
+        const PUBKEY =
+            '3bf0c63fcb93463407af97a5e5ee64fa883d107ef9e558472c4eb9aaaefa459d';
+        const mockQueryProfile = nip05.queryProfile as jest.Mock;
+        const originalFetch = global.fetch;
+
+        beforeEach(() => {
+            mockIsValidLightningAddress = true;
+            mockQueryProfile.mockReset();
+            // no BIP 353 record and no LNURL endpoint, so NIP-05 is tried
+            global.fetch = jest.fn().mockRejectedValue(new Error('DoH')) as any;
+            mockBlobUtilFetch.mockRejectedValue(new Error('404'));
+        });
+
+        afterEach(() => {
+            global.fetch = originalFetch;
+        });
+
+        it('lowercases an uppercase identifier before the lookup', async () => {
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'SATOSHI@DOMAIN.COM'
+            });
+            mockQueryProfile.mockResolvedValue({ pubkey: PUBKEY });
+            mockQuerySync.mockResolvedValue([
+                {
+                    id: 'event',
+                    created_at: 1,
+                    content: JSON.stringify({ name: 'Satoshi' })
+                }
+            ]);
+
+            const result = await handleAnything('SATOSHI@DOMAIN.COM');
+
+            expect(mockQueryProfile).toHaveBeenCalledWith('satoshi@domain.com');
+            expect(mockQuerySync).toHaveBeenCalledWith(
+                ['wss://relay.example.com'],
+                { authors: [PUBKEY], kinds: [0] }
+            );
+            expect(result[0]).toBe('ContactDetails');
+            expect(result[1].nostrContact.name).toBe('Satoshi');
+        });
+
+        it('looks up the address without its lightning: prefix', async () => {
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'SATOSHI@DOMAIN.COM'
+            });
+            mockQueryProfile.mockResolvedValue(null);
+
+            await expect(
+                handleAnything('LIGHTNING:SATOSHI@DOMAIN.COM')
+            ).rejects.toThrow('Error fetching address');
+
+            expect(mockQueryProfile).toHaveBeenCalledWith('satoshi@domain.com');
+        });
+
+        it('throws the address error when the NIP-05 lookup rejects', async () => {
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'satoshi@domain.com'
+            });
+            mockQueryProfile.mockRejectedValue(new Error('network'));
+
+            await expect(handleAnything('satoshi@domain.com')).rejects.toThrow(
+                'Error fetching address'
+            );
+            expect(mockQuerySync).not.toHaveBeenCalled();
+        });
+
+        it('throws the address error when relays have no profile', async () => {
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'satoshi@domain.com'
+            });
+            mockQueryProfile.mockResolvedValue({ pubkey: PUBKEY });
+            mockQuerySync.mockResolvedValue([]);
+
+            await expect(handleAnything('satoshi@domain.com')).rejects.toThrow(
+                'Error fetching address'
+            );
+        });
+
+        it('uses the newest profile event', async () => {
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'satoshi@domain.com'
+            });
+            mockQueryProfile.mockResolvedValue({ pubkey: PUBKEY });
+            mockQuerySync.mockResolvedValue([
+                {
+                    id: 'old',
+                    created_at: 1,
+                    content: JSON.stringify({ name: 'Old' })
+                },
+                {
+                    id: 'new',
+                    created_at: 3,
+                    content: JSON.stringify({ name: 'New' })
+                },
+                {
+                    id: 'middle',
+                    created_at: 2,
+                    content: JSON.stringify({ name: 'Middle' })
+                }
+            ]);
+
+            const result = await handleAnything('satoshi@domain.com');
+
+            expect(result[1].nostrContact.name).toBe('New');
+        });
+
+        it('does not try NIP-05 when the LNURL lookup succeeds', async () => {
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'satoshi@domain.com'
+            });
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({ status: 200 }),
+                json: () => ({ callback: 'https://domain.com/callback' })
+            });
+
+            const result = await handleAnything('satoshi@domain.com');
+
+            expect(result[0]).toBe('LnurlPay');
+            expect(mockQueryProfile).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('npub', () => {
+        const NPUB =
+            'npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m';
+        const PUBKEY =
+            '82341f882b6eabcd2ba7f1ef90aad961cf074af15b9ef44a09f9d2a8fbfbe6a2';
+
+        beforeEach(() => {
+            mockProcessBIP21Uri.mockReturnValue({ value: NPUB });
+            mockIsValidNpub = true;
+        });
+
+        it('opens the profile for a valid npub', async () => {
+            mockNip19Decode.mockReturnValue({ type: 'npub', data: PUBKEY });
+            mockQuerySync.mockResolvedValue([
+                {
+                    id: 'event',
+                    created_at: 1,
+                    content: JSON.stringify({ display_name: 'Satoshi' })
+                }
+            ]);
+
+            const result = await handleAnything(NPUB);
+
+            expect(mockQuerySync).toHaveBeenCalledWith(
+                ['wss://relay.example.com'],
+                { authors: [PUBKEY], kinds: [0] }
+            );
+            expect(result[0]).toBe('ContactDetails');
+            expect(result[1].isNostrContact).toBe(true);
+            expect(result[1].nostrContact.name).toBe('Satoshi');
+        });
+
+        it('throws the profile error when the npub does not decode', async () => {
+            mockNip19Decode.mockReturnValue({ type: 'nsec', data: PUBKEY });
+
+            await expect(handleAnything(NPUB)).rejects.toThrow(
+                'Error fetching Nostr profile'
+            );
+            expect(mockSimplePool).not.toHaveBeenCalled();
+        });
+
+        it('throws the profile error when relays have no profile', async () => {
+            mockNip19Decode.mockReturnValue({ type: 'npub', data: PUBKEY });
+            mockQuerySync.mockResolvedValue([]);
+
+            await expect(handleAnything(NPUB)).rejects.toThrow(
+                'Error fetching Nostr profile'
+            );
         });
     });
 

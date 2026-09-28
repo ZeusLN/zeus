@@ -1,4 +1,4 @@
-import { nip19 } from 'nostr-tools';
+import { nip05, nip19 } from 'nostr-tools';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 
 /**
@@ -148,6 +148,17 @@ class NostrUtils {
             return null;
         }
     };
+
+    /**
+     * Looks up a NIP-05 identifier (name@domain).
+     * NIP-05 names are case-insensitive, but nostr-tools looks them up
+     * case-sensitively in nostr.json, whose keys are lowercase, so the
+     * identifier is lowercased first.
+     * @param identifier - The NIP-05 identifier to look up
+     * @returns The profile pointer, or null if the lookup found nothing
+     */
+    queryNip05Profile = (identifier: string) =>
+        nip05.queryProfile(identifier.toLowerCase());
 }
 
 const nostrUtils = new NostrUtils();
