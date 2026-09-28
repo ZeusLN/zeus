@@ -350,6 +350,8 @@ export default class LND {
             // ws closed
             console.log('subscribeCustomMessages ws close');
         });
+
+        return ws;
     };
     getNetworkInfo = () => this.getRequest('/v1/graph/info');
     getMyNodeInfo = () => this.getRequest('/v1/getinfo');
@@ -866,7 +868,9 @@ export default class LND {
         // keep pulling in responses until the socket closes
         let resp: any;
 
-        const { zeroConfPeers, lspPubkey } = data;
+        // read per request: the socket can outlive the settings and the LSP
+        // info it was opened with
+        const { getZeroConfPeers, getLspPubkey } = data;
 
         ws.addEventListener('open', (e: any) => {
             console.log('channel acceptor opened', e);
@@ -883,6 +887,8 @@ export default class LND {
                 const requestPubkey = Base64Utils.base64ToHex(resp.node_pubkey);
                 const pending_chan_id = resp.pending_chan_id;
 
+                const lspPubkey = getLspPubkey();
+                const zeroConfPeers = getZeroConfPeers();
                 const isZeroConfAllowed =
                     lspPubkey === requestPubkey ||
                     (zeroConfPeers && zeroConfPeers.includes(requestPubkey));
@@ -907,6 +913,8 @@ export default class LND {
         ws.addEventListener('close', () => {
             console.log('channel acceptor close');
         });
+
+        return ws;
     };
 
     listPeers = async () => {
