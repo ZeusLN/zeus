@@ -158,7 +158,15 @@ export const clearTorData = async (): Promise<void> => {
 const isTorTransportError = (error: any): boolean =>
     error instanceof TorError && TRANSPORT_ERROR_CODES.includes(error.code);
 
-type RequestOutcomeListener = (ok: boolean) => void;
+// NOT_RUNNING means the request never left, so any method can be resent.
+// TOR_STOPPED means it may already have reached the node, so only resend
+// GETs: resending a POST could, for example, pay an invoice twice.
+const isRetryableAfterStop = (error: any, method: RequestMethod): boolean =>
+    error instanceof TorError &&
+    (error.code === 'NOT_RUNNING' ||
+        (error.code === 'TOR_STOPPED' && method === RequestMethod.GET));
+
+type RequestOutcomeListener = (ok: boolean, url: string) => void;
 let requestOutcomeListener: RequestOutcomeListener | null = null;
 
 // Lets TorStore count consecutive transport failures, which catches
@@ -169,9 +177,9 @@ const setTorRequestOutcomeListener = (
     requestOutcomeListener = listener;
 };
 
-const reportOutcome = (ok: boolean) => {
+const reportOutcome = (ok: boolean, url: string) => {
     try {
-        requestOutcomeListener?.(ok);
+        requestOutcomeListener?.(ok, url);
     } catch (e) {
         console.warn('Tor request outcome listener threw', e);
     }
@@ -268,9 +276,8 @@ const torHttpRequest = async ({
         );
     }
 
-    let response;
-    try {
-        response = await Tor.http.request({
+    const send = () =>
+        Tor.http.request({
             url,
             method: httpMethod,
             headers: normalizeHeaders(headers),
@@ -280,13 +287,26 @@ const torHttpRequest = async ({
             allowInvalidCertificates: effectiveTrustInvalidCerts,
             followRedirects
         });
+
+    let response;
+    try {
+        try {
+            response = await send();
+        } catch (e) {
+            if (!isRetryableAfterStop(e, method)) throw e;
+            // The daemon went away under us (Restart Tor, or it died).
+            // Start it again and resend once instead of failing the
+            // caller, which for the wallet means its error screen.
+            await ensureTorStarted();
+            response = await send();
+        }
     } catch (e) {
-        if (isTorTransportError(e)) reportOutcome(false);
+        if (isTorTransportError(e)) reportOutcome(false, url);
         throw e;
     }
     // Any status, 3xx and error statuses included, means the request
     // got an answer over Tor
-    reportOutcome(true);
+    reportOutcome(true, url);
 
     return {
         statusCode: response.statusCode,
