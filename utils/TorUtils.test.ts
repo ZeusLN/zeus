@@ -511,6 +511,46 @@ describe('TorUtils', () => {
             expect(request).toHaveBeenCalledTimes(1);
         });
 
+        it('survives Restart Tor stopping the start it was waiting on', async () => {
+            // Seen on iOS: requests waiting for Tor to start failed with
+            // "Tor stopped during startup" when Restart Tor stopped that
+            // start, although nothing had been sent yet
+            daemon.getStatus.mockResolvedValue({ state: 'stopped' });
+            let failStart: (e: Error) => void = () => {};
+            daemon.start
+                .mockReturnValueOnce(
+                    new Promise((_, reject) => (failStart = reject))
+                )
+                .mockResolvedValue(RUNNING as any);
+            daemon.stop.mockImplementation(async () => {
+                failStart(
+                    new TorError('TOR_STOPPED', 'Tor stopped during startup')
+                );
+            });
+
+            const get = doTorRequest(ONION, RequestMethod.GET);
+            const post = doTorRequest(ONION, RequestMethod.POST, '{"a":1}');
+            await new Promise((r) => setImmediate(r));
+            const restart = restartTor();
+
+            await expect(get).resolves.toEqual({});
+            await expect(post).resolves.toEqual({});
+            await restart;
+            expect(request).toHaveBeenCalledTimes(2);
+        });
+
+        it('still fails a start that fails with no restart involved', async () => {
+            daemon.getStatus.mockResolvedValue({ state: 'stopped' });
+            daemon.start.mockRejectedValue(
+                new TorError('BOOTSTRAP_TIMEOUT', 'timed out')
+            );
+
+            await expect(
+                doTorRequest(ONION, RequestMethod.GET)
+            ).rejects.toThrow('timed out');
+            expect(request).not.toHaveBeenCalled();
+        });
+
         it('does not retry a POST transport error even when Tor restarted', async () => {
             daemon.stop.mockResolvedValue(undefined);
             let restart: Promise<void> = Promise.resolve();
