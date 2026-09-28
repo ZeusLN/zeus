@@ -21,7 +21,7 @@ import Invoice from '../models/Invoice';
 
 // Nostr
 import { DEFAULT_NOSTR_RELAYS } from '../stores/SettingsStore';
-import { SimplePool, nip05 } from 'nostr-tools';
+import { SimplePool } from 'nostr-tools';
 import wifUtils from './WIFUtils';
 
 const isClipboardValue = (data: string) =>
@@ -190,9 +190,7 @@ const confirmBtcPayFetch = (
 
 const attemptNip05Lookup = async (identifier: string) => {
     try {
-        // NIP-05 names are case-insensitive, but nostr-tools looks them up
-        // case-sensitively in nostr.json, whose keys are lowercase
-        const lookup: any = await nip05.queryProfile(identifier.toLowerCase());
+        const lookup: any = await NostrUtils.queryNip05Profile(identifier);
         const pubkey = lookup.pubkey;
         return await nostrProfileLookup(pubkey);
     } catch (e) {

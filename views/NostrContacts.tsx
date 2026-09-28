@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { CheckBox } from '@rneui/themed';
-import { SimplePool, nip05, nip19 } from 'nostr-tools';
+import { SimplePool, nip19 } from 'nostr-tools';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { SharedScreen, SharedText } from '../components/SharedTransition';
@@ -258,11 +258,7 @@ export default class NostrContacts extends React.Component<
             pubkey = NostrUtils.npubToHex(account) || '';
         } else if (this.state.isValidNip05) {
             try {
-                // NIP-05 names are case-insensitive, but nostr-tools looks
-                // them up case-sensitively in nostr.json
-                const lookup: any = await nip05.queryProfile(
-                    account.toLowerCase()
-                );
+                const lookup: any = await NostrUtils.queryNip05Profile(account);
                 pubkey = lookup.pubkey;
             } catch (e) {
                 this.setState({
