@@ -65,6 +65,7 @@ import {
     NWC_LUD16_ENABLED,
     NWC_PERSISTENT_SERVICE_ENABLED
 } from '../stores/NostrWalletConnectStore';
+import { TOR_PERSISTENT_SERVICE_ENABLED } from '../stores/TorStore';
 import { PAYMENT_COUNT_KEY, RATING_DISMISSED_KEY } from '../utils/RatingUtils';
 import { deriveEmbeddedNodeId } from './AezeedUtils';
 import { deleteLndWallet } from './LndMobileUtils';
@@ -113,6 +114,7 @@ const STORAGE_KEYS = [
     NWC_CASHU_ENABLED,
     NWC_LUD16_ENABLED,
     NWC_PERSISTENT_SERVICE_ENABLED,
+    TOR_PERSISTENT_SERVICE_ENABLED,
     // Rating prompt state
     PAYMENT_COUNT_KEY,
     RATING_DISMISSED_KEY,
