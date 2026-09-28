@@ -71,13 +71,30 @@ const isOnionHttpsUrl = (url: string): boolean => {
 const isTorTransportError = (error: any): boolean =>
     error instanceof TorError && TRANSPORT_ERROR_CODES.includes(error.code);
 
-// NOT_RUNNING means the request never left, so any method can be resent.
-// TOR_STOPPED means it may already have reached the node, so only resend
-// GETs: resending a POST could, for example, pay an invoice twice.
-const isRetryableAfterStop = (error: any, method: RequestMethod): boolean =>
-    error instanceof TorError &&
-    (error.code === 'NOT_RUNNING' ||
-        (error.code === 'TOR_STOPPED' && method === RequestMethod.GET));
+// Bumped by every restartTor, so a request can tell whether Tor was
+// restarted while it was in flight
+let restartGeneration = 0;
+let restartPromise: Promise<void> | null = null;
+
+// Whether a failed request can be resent once Tor is back:
+// - NOT_RUNNING: the request never left, so any method is safe.
+// - TOR_STOPPED, or any transport error when Tor was restarted during the
+//   request (a request cut off mid SOCKS connect reports
+//   HTTP_TRANSPORT_ERROR): the request may already have reached the node,
+//   so only GETs. Resending a POST could, for example, pay an invoice twice.
+const isRetryableAfterStop = (
+    error: any,
+    method: RequestMethod,
+    restartedDuringRequest: boolean
+): boolean => {
+    if (!(error instanceof TorError)) return false;
+    if (error.code === 'NOT_RUNNING') return true;
+    if (method !== RequestMethod.GET) return false;
+    return (
+        error.code === 'TOR_STOPPED' ||
+        (restartedDuringRequest && TRANSPORT_ERROR_CODES.includes(error.code))
+    );
+};
 
 type RequestOutcomeListener = (ok: boolean, url: string) => void;
 let requestOutcomeListener: RequestOutcomeListener | null = null;
@@ -164,13 +181,19 @@ const doTorRequest = async (
 
     let response;
     try {
+        const generation = restartGeneration;
         try {
             response = await send();
         } catch (e) {
-            if (!isRetryableAfterStop(e, method)) throw e;
+            const restartedDuringRequest = generation !== restartGeneration;
+            if (!isRetryableAfterStop(e, method, restartedDuringRequest)) {
+                throw e;
+            }
             // The daemon went away under us (Restart Tor, or it died).
-            // Start it again and resend once instead of failing the
-            // caller, which for the wallet means its error screen.
+            // Let a restart in progress finish, start Tor if needed and
+            // resend once instead of failing the caller, which for the
+            // wallet means its error screen.
+            if (restartPromise) await restartPromise.catch(() => {});
             await ensureTorStarted();
             response = await send();
         }
@@ -205,8 +228,17 @@ const doTorRequest = async (
 };
 
 const restartTor = async () => {
-    await Tor.daemon.stop();
-    await ensureTorStarted();
+    restartGeneration += 1;
+    const restart = (async () => {
+        await Tor.daemon.stop();
+        await ensureTorStarted();
+    })();
+    restartPromise = restart;
+    try {
+        await restart;
+    } finally {
+        if (restartPromise === restart) restartPromise = null;
+    }
 };
 
 const requestNewTorIdentity = () => Tor.daemon.requestNewIdentity();

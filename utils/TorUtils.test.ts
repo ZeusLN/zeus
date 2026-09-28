@@ -441,6 +441,96 @@ describe('TorUtils', () => {
 
             expect(request).toHaveBeenCalledTimes(2);
         });
+
+        it('retries a GET that hit a transport error because Tor restarted during it', async () => {
+            // On device a GET cut off mid SOCKS connect by Restart Tor
+            // fails with HTTP_TRANSPORT_ERROR, not TOR_STOPPED
+            daemon.stop.mockResolvedValue(undefined);
+            let restart: Promise<void> = Promise.resolve();
+            request
+                .mockImplementationOnce(() => {
+                    restart = restartTor();
+                    return Promise.reject(
+                        new TorError(
+                            'HTTP_TRANSPORT_ERROR',
+                            'socks connect error: unexpected end of file'
+                        )
+                    );
+                })
+                .mockResolvedValueOnce(ok('{"alias":"node"}'));
+
+            await expect(
+                doTorRequest(ONION, RequestMethod.GET)
+            ).resolves.toEqual({ alias: 'node' });
+            await restart;
+
+            expect(request).toHaveBeenCalledTimes(2);
+        });
+
+        it('resends only after the restart has finished', async () => {
+            let finishStop: () => void = () => {};
+            daemon.stop.mockReturnValue(
+                new Promise<void>((resolve) => (finishStop = resolve))
+            );
+            daemon.getStatus
+                .mockResolvedValueOnce(RUNNING as any)
+                .mockResolvedValue({ state: 'stopped' });
+            let restart: Promise<void> = Promise.resolve();
+            request
+                .mockImplementationOnce(() => {
+                    restart = restartTor();
+                    return Promise.reject(
+                        new TorError('TOR_STOPPED', 'Tor stopped')
+                    );
+                })
+                .mockResolvedValueOnce(ok('{}'));
+
+            const pending = doTorRequest(ONION, RequestMethod.GET);
+            await new Promise((r) => setImmediate(r));
+            expect(request).toHaveBeenCalledTimes(1);
+
+            finishStop();
+            await pending;
+            await restart;
+
+            expect(request).toHaveBeenCalledTimes(2);
+            expect(daemon.start.mock.invocationCallOrder[0]).toBeLessThan(
+                request.mock.invocationCallOrder[1]
+            );
+        });
+
+        it('does not retry a transport error when Tor was not restarted', async () => {
+            request.mockRejectedValue(
+                new TorError('HTTP_TRANSPORT_ERROR', 'connection refused')
+            );
+
+            await expect(
+                doTorRequest(ONION, RequestMethod.GET)
+            ).rejects.toThrow('connection refused');
+
+            expect(request).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not retry a POST transport error even when Tor restarted', async () => {
+            daemon.stop.mockResolvedValue(undefined);
+            let restart: Promise<void> = Promise.resolve();
+            request.mockImplementationOnce(() => {
+                restart = restartTor();
+                return Promise.reject(
+                    new TorError(
+                        'HTTP_TRANSPORT_ERROR',
+                        'unexpected end of file'
+                    )
+                );
+            });
+
+            await expect(
+                doTorRequest(ONION, RequestMethod.POST, '{"amt":1}')
+            ).rejects.toThrow('unexpected end of file');
+            await restart;
+
+            expect(request).toHaveBeenCalledTimes(1);
+        });
     });
 
     describe('restartTor', () => {
