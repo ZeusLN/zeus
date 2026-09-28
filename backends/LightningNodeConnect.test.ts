@@ -217,6 +217,26 @@ describe('LightningNodeConnect', () => {
             expect(await backend.isConnected()).toBe(true);
         });
 
+        it('is false when the mailbox session has died', async () => {
+            // native IsConnected is lndConn != nil and stays true after the
+            // session dies (#1483)
+            const backend = new LightningNodeConnect();
+            const lnc = await openWallet(backend, 'phrase-a');
+            lnc.connected = true;
+            lnc.mailboxStatus = 'Not Connected';
+
+            expect(await backend.isConnected()).toBe(false);
+        });
+
+        it('trusts the connection when the status call fails', async () => {
+            const backend = new LightningNodeConnect();
+            const lnc = await openWallet(backend, 'phrase-a');
+            lnc.connected = true;
+            lnc.status.mockRejectedValueOnce(new Error('bridge error'));
+
+            expect(await backend.isConnected()).toBe(true);
+        });
+
         it('is false when the native check rejects', async () => {
             const backend = new LightningNodeConnect();
             const lnc = await openWallet(backend, 'phrase-a');
