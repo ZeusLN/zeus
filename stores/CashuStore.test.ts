@@ -1,7 +1,12 @@
 jest.mock('./Stores', () => ({}));
-jest.mock('./SettingsStore', () => ({ DEFAULT_NOSTR_RELAYS: [] }));
+jest.mock('./SettingsStore', () => ({
+    DEFAULT_NOSTR_RELAYS: ['wss://relay.one', 'wss://relay.two']
+}));
 jest.mock('react-native-blob-util', () => ({}));
-jest.mock('@nostr-dev-kit/ndk', () => ({}));
+jest.mock('@nostr-dev-kit/ndk', () => ({
+    __esModule: true,
+    default: jest.fn()
+}));
 jest.mock('../utils/NostrUtils', () => ({}));
 jest.mock('../utils/NostrMintBackup', () => ({}));
 jest.mock('../utils/MigrationUtils', () => ({}));
@@ -20,6 +25,7 @@ jest.mock('../storage', () => ({
 
 import { Platform } from 'react-native';
 import { validateMnemonic } from '@scure/bip39';
+import NDK from '@nostr-dev-kit/ndk';
 import CashuStore from './CashuStore';
 import Storage, { getRawItem } from '../storage';
 import CashuDevKit from '../cashu-cdk';
@@ -199,5 +205,91 @@ describe('CashuStore checkAndSweepMints', () => {
         });
         await store.checkAndSweepMints();
         expect(sweepMint).toHaveBeenCalledWith('https://mint.example.com');
+    });
+});
+
+describe('CashuStore NDK instance', () => {
+    const MockNDK = NDK as unknown as jest.Mock;
+    let connect: jest.Mock;
+
+    beforeEach(() => {
+        connect = jest.fn().mockResolvedValue(undefined);
+        MockNDK.mockReset().mockImplementation(() => ({
+            connect,
+            // Emit EOSE right away so subscribeAndCollectEvents resolves
+            // without waiting out its 10s timeout.
+            subscribe: jest.fn(() => ({
+                on: (event: string, cb: () => void) => {
+                    if (event === 'eose') cb();
+                },
+                stop: jest.fn()
+            })),
+            fetchEvents: jest.fn().mockResolvedValue(new Set())
+        }));
+        jest.useFakeTimers();
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+        jest.restoreAllMocks();
+    });
+
+    it('opts out of the outbox model and connects with a timeout', async () => {
+        await newStore().fetchMints();
+
+        expect(MockNDK).toHaveBeenCalledWith({
+            explicitRelayUrls: ['wss://relay.one', 'wss://relay.two'],
+            enableOutboxModel: false
+        });
+        expect(connect).toHaveBeenCalledWith(2000);
+    });
+
+    it('reuses one instance across repeated Discover Mints loads', async () => {
+        const store = newStore();
+
+        await store.fetchMints();
+        await store.fetchMints();
+
+        expect(MockNDK).toHaveBeenCalledTimes(1);
+        expect(connect).toHaveBeenCalledTimes(1);
+        expect(store.error).toBe(false);
+    });
+
+    it('makes concurrent callers wait on a single connect', async () => {
+        let finishConnect!: () => void;
+        connect.mockReturnValue(
+            new Promise<void>((resolve) => (finishConnect = resolve))
+        );
+        const store = newStore() as any;
+
+        let settled = 0;
+        const calls = [store.getNdk(), store.getNdk()].map((p) =>
+            p.then((ndk: any) => {
+                settled++;
+                return ndk;
+            })
+        );
+        await Promise.resolve();
+        expect(settled).toBe(0);
+
+        finishConnect();
+        const [first, second] = await Promise.all(calls);
+
+        expect(first).toBe(second);
+        expect(MockNDK).toHaveBeenCalledTimes(1);
+        expect(connect).toHaveBeenCalledTimes(1);
+    });
+
+    it('starts over after a failed connect', async () => {
+        connect.mockRejectedValueOnce(new Error('connect failed'));
+        const store = newStore() as any;
+
+        await expect(store.getNdk()).rejects.toThrow('connect failed');
+        await expect(store.getNdk()).resolves.toBeDefined();
+
+        expect(MockNDK).toHaveBeenCalledTimes(2);
+        expect(connect).toHaveBeenCalledTimes(2);
     });
 });
