@@ -193,19 +193,16 @@ describe('KeychainRecoveryUtils', () => {
             );
         });
 
-        // otherDataFound drives a "recover orphaned data" list. Anything the
-        // app can already read is not orphaned, so including it would offer a
-        // pointless restore of a key over itself.
-        it('lists only orphaned copies of non-settings keys', async () => {
+        // otherDataFound drives a "recover orphaned data" list. A key the app
+        // can already read is live, and its legacy copies are older snapshots,
+        // so none of them may be offered.
+        it('offers nothing for a key current storage can read', async () => {
             storage.getItem.mockResolvedValue('live' as any);
             encrypted.getItem.mockResolvedValue('stale' as any);
 
             const result = await utils.scanForRecoverableData();
 
-            expect(result.otherDataFound.length).toBeGreaterThan(0);
-            expect(
-                result.otherDataFound.every((r) => r.source !== 'current')
-            ).toBe(true);
+            expect(result.otherDataFound).toEqual([]);
         });
 
         it('does not set hasCurrentSettings from the legacy key alone', async () => {
@@ -491,10 +488,10 @@ describe('KeychainRecoveryUtils', () => {
             ]);
 
             expect(grouped.get('contacts')!.map((r) => r.source)).toEqual([
-                'encrypted-storage',
+                'prefixed-cloud',
                 'unprefixed-local',
                 'unprefixed-cloud',
-                'prefixed-cloud'
+                'encrypted-storage'
             ]);
         });
 
@@ -543,7 +540,7 @@ describe('KeychainRecoveryUtils', () => {
 
             const result = await utils.restoreOtherData([
                 at('contacts', 'unprefixed-cloud', '["stale"]'),
-                at('contacts', 'encrypted-storage', '["fresh"]'),
+                at('contacts', 'prefixed-cloud', '["fresh"]'),
                 at('notes', 'unprefixed-local', '["note"]')
             ]);
 
@@ -588,6 +585,58 @@ describe('KeychainRecoveryUtils', () => {
                 failed: []
             });
             expect(storage.setItem).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('scan -> restoreOtherData', () => {
+        const roundTrip = (store: Record<string, string>) => {
+            storage.getItem.mockImplementation(
+                async (key: string) => store[key] ?? (false as any)
+            );
+            storage.setItem.mockImplementation(
+                async (key: string, value: string) => {
+                    store[key] = value;
+                    return true as any;
+                }
+            );
+        };
+
+        it('does not overwrite a live key with a stale legacy copy', async () => {
+            setPlatform('android');
+            const store: Record<string, string> = { contacts: '["live"]' };
+            roundTrip(store);
+            keychain.getInternetCredentials.mockImplementation(
+                async (key: string) =>
+                    key === 'contacts'
+                        ? ({ password: '["jan-2026"]' } as any)
+                        : (false as any)
+            );
+
+            const scan = await utils.scanForRecoverableData();
+            await utils.restoreOtherData(scan.otherDataFound);
+
+            expect(store.contacts).toBe('["live"]');
+        });
+
+        it('restores the newer prefixed-cloud copy over the older unprefixed one', async () => {
+            const store: Record<string, string> = {};
+            roundTrip(store);
+            rawItem.mockImplementation(async (server: string, cloud: any) =>
+                server === 'zeus:contacts' && cloud
+                    ? '["2026-08"]'
+                    : (null as any)
+            );
+            keychain.getInternetCredentials.mockImplementation(
+                async (key: string, opts?: any) =>
+                    key === 'contacts' && !opts
+                        ? ({ password: '["2026-01"]' } as any)
+                        : (false as any)
+            );
+
+            const scan = await utils.scanForRecoverableData();
+            await utils.restoreOtherData(scan.otherDataFound);
+
+            expect(store.contacts).toBe('["2026-08"]');
         });
     });
 });

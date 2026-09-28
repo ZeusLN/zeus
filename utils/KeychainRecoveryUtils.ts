@@ -262,12 +262,12 @@ class KeychainRecoveryUtils {
             // Scan other data keys
             for (const { key, description } of OTHER_KEYS) {
                 const keyResults = await this.scanKey(key, description);
-                // Only add results that are NOT from current storage
-                // (we're looking for orphaned/lost data)
-                const orphanedResults = keyResults.filter(
-                    (r) => r.source !== 'current'
-                );
-                result.otherDataFound.push(...orphanedResults);
+                // A key current storage can read is live, not orphaned.
+                // Legacy copies of it are older snapshots (the migration
+                // never deleted them), so offering them would invite
+                // overwriting live data.
+                if (keyResults.some((r) => r.source === 'current')) continue;
+                result.otherDataFound.push(...keyResults);
             }
 
             console.log(
@@ -405,22 +405,29 @@ class KeychainRecoveryUtils {
      * would write the key several times and leave whichever came last in the
      * array, which is arbitrary.
      *
-     * The order below is a starting assumption, not a measurement: the
-     * encrypted store was the newest writer before the migration, and the
-     * cloud copies are the likeliest to be stale. `scanKey` already encodes
-     * the last part of that — it drops `prefixed-cloud` when the current read
-     * succeeds, on the grounds that the synchronizable copy is the stale one.
+     * Newest writer first, from git history:
+     * - EncryptedStorage: v0.7.1 to v0.9.4. It never held any of the
+     *   `OTHER_KEYS` names, so it can't produce a result here.
+     * - Unprefixed keychain: from v0.9.5, which also renamed the keys.
+     * - `zeus:` prefix: from v0.12.2. `prefixed-cloud` only shows up when
+     *   the current read misses (the stuck-desync case), and then it is newer
+     *   than the unprefixed copies.
+     *
+     * Whether `unprefixed-local` should rank above `unprefixed-cloud` is
+     * unverified: before v0.12.2 `Storage` wrote with `cloudSync: false`, but
+     * on iOS that flag may not have controlled which partition was used.
+     * Local stays first to match `migrateKey`, which reads local first.
      */
     private static readonly SOURCE_PRECEDENCE: Array<RecoveryResult['source']> =
         [
-            'encrypted-storage',
+            'prefixed-cloud',
             'unprefixed-local',
             'unprefixed-cloud',
-            'prefixed-cloud'
+            'encrypted-storage'
         ];
 
     /**
-     * Groups recovery results by key, keeping one per key.
+     * Groups recovery results by key: one group per key, most trusted first.
      *
      * Results for a key are returned newest-trusted-first, so `[0]` is the
      * copy `restoreOtherData` would write and the rest are what a UI can offer
