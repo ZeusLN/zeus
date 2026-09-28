@@ -128,7 +128,11 @@ class TorService : Service() {
             .setContentIntent(contentIntent)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .addAction(Notification.Action.Builder(null, newIdentityLabel, newIdentityPendingIntent).build())
+
+        // TorStore sends an empty label while Tor is not running
+        if (newIdentityLabel.isNotEmpty()) {
+            builder.addAction(Notification.Action.Builder(null, newIdentityLabel, newIdentityPendingIntent).build())
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             builder.setForegroundServiceBehavior(Notification.FOREGROUND_SERVICE_IMMEDIATE)
