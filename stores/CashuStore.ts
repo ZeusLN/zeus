@@ -83,6 +83,16 @@ const UPGRADE_TITLES: { [key: number]: string } = {
     100000: 'cashu.upgradePrompt.title100k'
 };
 
+// NDK's pool connect resolves only once EVERY relay reports CONNECTED, or once
+// this timeout elapses. Without a timeout it waits forever, and our default
+// relay set is never fully reachable (some require auth, some are often down).
+//
+// We also opt out of NDK's outbox model, which defaults to on. Mint discovery
+// subscribes with hundreds of authors, and outbox tracking resolves each
+// author's relay list and reconnects the subscription as those arrive, growing
+// the pool past 40 relays and starving the JS thread for minutes.
+const NDK_CONNECT_TIMEOUT_MS = 2000;
+
 // ZEUS official npub for trusted mint recommendations
 const ZEUS_NPUB =
     'npub1xnf02f60r9v0e5kty33a404dm79zr7z2eepyrk5gsq3m7pwvsz2sazlpr5';
@@ -299,7 +309,8 @@ export default class CashuStore {
     channelsStore: ChannelsStore;
     modalStore: ModalStore;
 
-    ndk: NDK;
+    private ndk?: NDK;
+    private ndkConnect?: Promise<void>;
 
     constructor(
         settingsStore: SettingsStore,
@@ -1964,16 +1975,44 @@ export default class CashuStore {
     };
 
     /**
+     * Returns the shared NDK instance, creating and connecting it on first
+     * use. Concurrent callers wait on the same connect. A failed connect is
+     * dropped so the next call starts over.
+     */
+    private getNdk = async (): Promise<NDK> => {
+        if (!this.ndk || !this.ndkConnect) {
+            const ndk = new NDK({
+                explicitRelayUrls: DEFAULT_NOSTR_RELAYS,
+                enableOutboxModel: false
+            });
+            this.ndk = ndk;
+            this.ndkConnect = ndk
+                .connect(NDK_CONNECT_TIMEOUT_MS)
+                .catch((e: any) => {
+                    if (this.ndk === ndk) {
+                        this.ndk = undefined;
+                        this.ndkConnect = undefined;
+                    }
+                    throw e;
+                });
+        }
+        const ndk = this.ndk;
+        await this.ndkConnect;
+        return ndk;
+    };
+
+    /**
      * Helper: Subscribe to NDK and collect events with EOSE handling and timeout.
      */
     private subscribeAndCollectEvents = async (
+        ndk: NDK,
         filter: NDKFilter,
         logPrefix: string
     ): Promise<Set<NDKEvent>> => {
         const events = new Set<NDKEvent>();
         let eoseCount = 0;
         const totalRelays = DEFAULT_NOSTR_RELAYS.length;
-        const sub = this.ndk.subscribe(filter, { closeOnEose: true });
+        const sub = ndk.subscribe(filter, { closeOnEose: true });
 
         await new Promise<void>((resolve) => {
             sub.on('event', (event: NDKEvent) => {
@@ -2160,10 +2199,7 @@ export default class CashuStore {
                 this.error_msg = undefined;
             });
 
-            this.ndk = new NDK({
-                explicitRelayUrls: DEFAULT_NOSTR_RELAYS
-            });
-            await this.ndk.connect();
+            const ndk = await this.getNdk();
 
             const filter: NDKFilter = {
                 kinds: [38000 as NDKKind],
@@ -2171,6 +2207,7 @@ export default class CashuStore {
             };
 
             const events = await this.subscribeAndCollectEvents(
+                ndk,
                 filter,
                 'Mint discovery'
             );
@@ -2230,13 +2267,7 @@ export default class CashuStore {
                 return [];
             }
 
-            // Initialize NDK if not already done
-            if (!this.ndk) {
-                this.ndk = new NDK({
-                    explicitRelayUrls: DEFAULT_NOSTR_RELAYS
-                });
-                await this.ndk.connect();
-            }
+            const ndk = await this.getNdk();
 
             // Fetch follow list (kind 3)
             const followFilter: NDKFilter = {
@@ -2245,7 +2276,7 @@ export default class CashuStore {
                 limit: 1
             };
 
-            const followEvents = await this.ndk.fetchEvents(followFilter);
+            const followEvents = await ndk.fetchEvents(followFilter);
             const followEvent = Array.from(followEvents)[0];
 
             if (!followEvent) {
@@ -2285,6 +2316,7 @@ export default class CashuStore {
             };
 
             const events = await this.subscribeAndCollectEvents(
+                ndk,
                 mintFilter,
                 'Trusted mint discovery'
             );
@@ -2340,13 +2372,7 @@ export default class CashuStore {
                 return;
             }
 
-            // Initialize NDK if not already done
-            if (!this.ndk) {
-                this.ndk = new NDK({
-                    explicitRelayUrls: DEFAULT_NOSTR_RELAYS
-                });
-                await this.ndk.connect();
-            }
+            const ndk = await this.getNdk();
 
             // Fetch profiles (kind 0)
             const profileFilter: NDKFilter = {
@@ -2355,7 +2381,7 @@ export default class CashuStore {
                 limit: newPubkeys.length
             };
 
-            const events = await this.ndk.fetchEvents(profileFilter);
+            const events = await ndk.fetchEvents(profileFilter);
 
             const profilesMap = new Map<string, ReviewerProfile>();
 
