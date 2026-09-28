@@ -38,7 +38,7 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
   fun registerLocalPrivCreateCallback(namespace: String, eventName: String) {
      val lpccb = AndroidStreamingCallback()
      lpccb.setEventName(eventName)
-     lpccb.setCallback(::sendEvent)
+     lpccb.setCallback { event, data -> sendKeyEvent(namespace, event, data) }
 
      Lndmobile.registerLocalPrivCreateCallback(namespace, lpccb)
   }
@@ -47,7 +47,7 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
   fun registerRemoteKeyReceiveCallback(namespace: String, eventName: String) {
      val rkrcb = AndroidStreamingCallback()
      rkrcb.setEventName(eventName)
-     rkrcb.setCallback(::sendEvent)
+     rkrcb.setCallback { event, data -> sendKeyEvent(namespace, event, data) }
 
      Lndmobile.registerRemoteKeyReceiveCallback(namespace, rkrcb)
   }
@@ -56,7 +56,7 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
   fun registerAuthDataCallback(namespace: String, eventName: String) {
      val oacb = AndroidStreamingCallback()
      oacb.setEventName(eventName)
-     oacb.setCallback(::sendEvent)
+     oacb.setCallback { event, data -> sendKeyEvent(namespace, event, data) }
 
      Lndmobile.registerAuthDataCallback(namespace, oacb)
   }
@@ -167,6 +167,19 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
   private fun sendEvent(event: String, data: String) {
       val params = Arguments.createMap().apply {
         putString("result", data)
+      }
+      getReactApplicationContext()
+        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+        .emit(event, params)
+  }
+
+  // The key callbacks share one event name across namespaces, and a dial
+  // that outlives a wallet switch keeps reporting on it, so they carry the
+  // namespace for JS to filter on.
+  private fun sendKeyEvent(namespace: String, event: String, data: String) {
+      val params = Arguments.createMap().apply {
+        putString("result", data)
+        putString("namespace", namespace)
       }
       getReactApplicationContext()
         .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)

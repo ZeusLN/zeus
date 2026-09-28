@@ -15,7 +15,10 @@
     if (data == nil) {
         return;
     }
-    [self.delegate sendEventWithName:self.eventId body:@{@"result": data}];
+    NSDictionary *body = self.nameSpace
+        ? @{@"result": data, @"namespace": self.nameSpace}
+        : @{@"result": data};
+    [self.delegate sendEventWithName:self.eventId body:body];
 }
 
 @end

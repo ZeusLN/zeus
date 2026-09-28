@@ -18,6 +18,8 @@ const DEFAULT_CONFIG = {
 
 // Native event names emitted by LncModule for the persistent register callbacks.
 // Kept in sync with ios/LncMobile/LncModule.mm and android/.../LncModule.kt.
+// The names are shared by every namespace (iOS requires a static list), so the
+// payload carries the namespace that produced it.
 const EVENT_LOCAL_PRIV_CREATE = 'lnc.localPrivCreate';
 const EVENT_REMOTE_KEY_RECEIVE = 'lnc.remoteKeyReceive';
 const EVENT_AUTH_DATA = 'lnc.authData';
@@ -37,6 +39,14 @@ export default class LNC {
     // failures from every subsequent call.
     private _initPromise: Promise<void>;
     private _initError: Error | null = null;
+    // Set once ConnectServer has accepted a dial on this namespace. The Go
+    // side dials with grpc.WithBlock and a background context, so that
+    // goroutine keeps retrying until it connects and cannot be cancelled:
+    // Disconnect only closes an established connection, and InitLNC swaps
+    // the namespace's client without stopping it. Dialing again, or
+    // re-initializing, would put a second client on the same mailbox
+    // session and the two evict each other.
+    private _dialing = false;
 
     constructor(lncConfig?: LncConfig) {
         // merge the passed in config with the defaults
@@ -86,6 +96,20 @@ export default class LNC {
         return await NativeModules.LncModule.isConnected(this._namespace);
     }
 
+    /**
+     * Whether a dial started by connect() is still in progress. The native
+     * client keeps retrying on its own until it connects, so callers should
+     * wait on it rather than dial or re-initialize.
+     */
+    async isDialing() {
+        if (!this._dialing) return false;
+        if (await this.isConnected()) {
+            this._dialing = false;
+            return false;
+        }
+        return true;
+    }
+
     async status() {
         return await NativeModules.LncModule.status(this._namespace);
     }
@@ -116,7 +140,12 @@ export default class LNC {
 
         // do not attempt to connect multiple times
         const connected = await this.isConnected();
-        if (connected) return;
+        if (connected) {
+            this._dialing = false;
+            return;
+        }
+        // the native client is still retrying the previous dial
+        if (this._dialing) return;
 
         // Under React Native's new architecture, RCTResponseSenderBlock /
         // com.facebook.react.bridge.Callback may only be invoked once. The Go
@@ -126,17 +155,15 @@ export default class LNC {
         this._subscriptions = [
             this._emitter.addListener(
                 EVENT_LOCAL_PRIV_CREATE,
-                ({ result }: { result: string }) =>
-                    this.onLocalPrivCreate(result)
+                this._forNamespace(this.onLocalPrivCreate)
             ),
             this._emitter.addListener(
                 EVENT_REMOTE_KEY_RECEIVE,
-                ({ result }: { result: string }) =>
-                    this.onRemoteKeyReceive(result)
+                this._forNamespace(this.onRemoteKeyReceive)
             ),
             this._emitter.addListener(
                 EVENT_AUTH_DATA,
-                ({ result }: { result: string }) => this.onAuthData(result)
+                this._forNamespace(this.onAuthData)
             )
         ];
 
@@ -166,6 +193,8 @@ export default class LNC {
             remoteKey
         );
 
+        if (!error) this._dialing = true;
+
         return error;
     }
 
@@ -175,11 +204,36 @@ export default class LNC {
      * Awaitable: callers that immediately re-init the same namespace must
      * know the previous connection is closed first, because InitLNC replaces
      * the namespace's mobile client outright without closing what was there.
+     *
+     * A dial that is still in progress cannot be stopped, so it is left
+     * running with its key listeners attached: when it completes, the remote
+     * key it reports still has to reach this namespace's credential store
+     * (a pairing phrase is single use). Calling the native Disconnect here
+     * would do nothing until the dial lands, and would close it if it landed
+     * in between, leaving _dialing set with no dial behind it.
      */
     async disconnect() {
+        if (await this.isDialing()) return;
         this._removeSubscriptions();
         await NativeModules.LncModule.disconnect(this._namespace);
     }
+
+    /**
+     * Stops listening for key events without touching the native client.
+     * Used when this instance is replaced by a fresh InitLNC on the same
+     * namespace, which then owns that namespace's events.
+     */
+    dispose() {
+        this._removeSubscriptions();
+        this._dialing = false;
+    }
+
+    private _forNamespace =
+        (handler: (result: string) => void) =>
+        ({ result, namespace }: { result: string; namespace?: string }) => {
+            if (namespace !== this._namespace) return;
+            handler(result);
+        };
 
     private _removeSubscriptions() {
         for (const sub of this._subscriptions) {
