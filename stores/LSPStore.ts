@@ -383,7 +383,7 @@ export default class LSPStore {
         if (
             settings.enableLSP &&
             (implementation !== 'lnd' ||
-                !this.nodeInfoStore.flowLspNotConfigured)
+                !this.nodeInfoStore.flowLspNotConfigured().flowLspNotConfigured)
         ) {
             try {
                 await this.getLSPInfo();
