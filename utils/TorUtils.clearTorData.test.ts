@@ -2,7 +2,8 @@ jest.mock('react-native-nitro-tor', () => ({
     Tor: {
         daemon: {
             start: jest.fn(),
-            stop: jest.fn()
+            stop: jest.fn(),
+            getStatus: jest.fn()
         },
         http: {
             request: jest.fn()
@@ -23,6 +24,7 @@ import RNFS from 'react-native-fs';
 
 const mockedStart = Tor.daemon.start as jest.Mock;
 const mockedShutdown = Tor.daemon.stop as jest.Mock;
+const mockedGetStatus = Tor.daemon.getStatus as jest.Mock;
 const mockedRequest = Tor.http.request as jest.Mock;
 const mockedExists = RNFS.exists as jest.Mock;
 const mockedUnlink = RNFS.unlink as jest.Mock;
@@ -57,6 +59,7 @@ describe('clearTorData', () => {
         jest.spyOn(console, 'warn').mockImplementation(() => {});
         mockedStart.mockResolvedValue(RUNNING);
         mockedShutdown.mockResolvedValue(undefined);
+        mockedGetStatus.mockResolvedValue({ state: 'stopped' });
         mockedRequest.mockResolvedValue({
             statusCode: 200,
             headers: {},
@@ -111,6 +114,30 @@ describe('clearTorData', () => {
         expect(mockedShutdown.mock.invocationCallOrder[0]).toBeLessThan(
             mockedUnlink.mock.invocationCallOrder[0]
         );
+    });
+
+    it('stops a Tor that was already running when this session first used it', async () => {
+        mockedGetStatus.mockResolvedValue(RUNNING);
+        const torUtils = loadTorUtils();
+        await startTor(torUtils);
+        expect(mockedStart).not.toHaveBeenCalled();
+
+        await torUtils.clearTorData();
+
+        expect(mockedShutdown).toHaveBeenCalledTimes(1);
+        expect(mockedShutdown.mock.invocationCallOrder[0]).toBeLessThan(
+            mockedUnlink.mock.invocationCallOrder[0]
+        );
+    });
+
+    it('does not stop Tor a second time on a second clear', async () => {
+        const torUtils = loadTorUtils();
+        await startTor(torUtils);
+        await torUtils.clearTorData();
+
+        await torUtils.clearTorData();
+
+        expect(mockedShutdown).toHaveBeenCalledTimes(1);
     });
 
     it('starts Tor again on the next request after clearing', async () => {

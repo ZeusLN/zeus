@@ -1,5 +1,9 @@
-import { Tor } from 'react-native-nitro-tor';
-import type { HttpMethod } from 'react-native-nitro-tor';
+import { Tor, TorError } from 'react-native-nitro-tor';
+import type {
+    HttpMethod,
+    TorStatus,
+    TorStatusListener
+} from 'react-native-nitro-tor';
 import RNFS from 'react-native-fs';
 import {
     grpcErrorCode,
@@ -28,6 +32,15 @@ const HTTP_METHODS: { [key in RequestMethod]: HttpMethod } = {
     [RequestMethod.POST]: 'POST',
     [RequestMethod.DELETE]: 'DELETE'
 };
+
+// Error codes that mean the request never got an answer over Tor, as
+// opposed to the remote end answering with an error
+const TRANSPORT_ERROR_CODES = [
+    'HTTP_TIMEOUT',
+    'HTTP_TRANSPORT_ERROR',
+    'NOT_RUNNING',
+    'TOR_STOPPED'
+];
 
 // nitro-tor 1.x takes headers as an object of string values. Callers
 // pass either an object or, as with 0.6.x, a JSON string.
@@ -100,8 +113,9 @@ const deleteTorDirs = async (): Promise<void> => {
 // step is best effort, so one failure does not keep the others from running.
 export const clearTorData = async (): Promise<void> => {
     const pending = startPromise;
-    if (pending) {
+    if (pending || torStarted) {
         startPromise = null;
+        torStarted = false;
         // Let a start in progress finish first: a shutdown that runs before
         // the daemon is up can leave it running, writing new state after
         // the directories are gone. The wait and the shutdown are bounded so
@@ -110,7 +124,7 @@ export const clearTorData = async (): Promise<void> => {
         let timer: ReturnType<typeof setTimeout> | undefined;
         let timedOut = false;
         const stop = (async () => {
-            await pending.catch(() => {});
+            if (pending) await pending.catch(() => {});
             await Tor.daemon.stop();
         })();
         try {
@@ -141,24 +155,62 @@ export const clearTorData = async (): Promise<void> => {
     await deleteTorDirs();
 };
 
-let startPromise: Promise<void> | null = null;
+const isTorTransportError = (error: any): boolean =>
+    error instanceof TorError && TRANSPORT_ERROR_CODES.includes(error.code);
 
-// Shares one start between concurrent callers. A failed start is
-// cleared so the next request tries again.
+type RequestOutcomeListener = (ok: boolean) => void;
+let requestOutcomeListener: RequestOutcomeListener | null = null;
+
+// Lets TorStore count consecutive transport failures, which catches
+// stale circuits that the daemon still reports as running
+const setTorRequestOutcomeListener = (
+    listener: RequestOutcomeListener | null
+) => {
+    requestOutcomeListener = listener;
+};
+
+const reportOutcome = (ok: boolean) => {
+    try {
+        requestOutcomeListener?.(ok);
+    } catch (e) {
+        console.warn('Tor request outcome listener threw', e);
+    }
+};
+
+// Shares one start() between concurrent callers. Cleared once it
+// settles, so a failed start is tried again on the next request and a
+// daemon that later dies or is stopped gets started again instead of
+// every request failing until relaunch.
+let startPromise: Promise<void> | null = null;
+// Set once this JS context has started the daemon or found it running.
+// startPromise is cleared when a start settles, so clearTorData checks
+// this to know whether there is a daemon to stop.
+let torStarted = false;
+
 const ensureTorStarted = (): Promise<void> => {
     if (!startPromise) {
-        startPromise = Tor.daemon
-            .start({
-                dataDirectory: TOR_DATA_PATH,
-                socksPort: SOCKS_PORT,
-                bootstrapTimeoutMs: START_TIMEOUT_MS
-            })
-            .then(() => undefined)
+        // Set before the status check so that clearTorData sees a start
+        // that is still checking the status as in progress
+        const start: Promise<void> = (async () => {
+            const status = await Tor.daemon.getStatus();
+            if (status.state !== 'running') {
+                await Tor.daemon.start({
+                    dataDirectory: TOR_DATA_PATH,
+                    socksPort: SOCKS_PORT,
+                    bootstrapTimeoutMs: START_TIMEOUT_MS
+                });
+            }
+            torStarted = true;
+        })()
             .catch((e) => {
-                startPromise = null;
                 // the request that needed Tor never went out
                 throw markRequestNotSent(e);
+            })
+            .finally(() => {
+                // restartTor may already have replaced it
+                if (startPromise === start) startPromise = null;
             });
+        startPromise = start;
     }
     return startPromise;
 };
@@ -216,16 +268,25 @@ const torHttpRequest = async ({
         );
     }
 
-    const response = await Tor.http.request({
-        url,
-        method: httpMethod,
-        headers: normalizeHeaders(headers),
-        // GET and DELETE never sent a body with nitro-tor 0.6.x
-        body: method === RequestMethod.POST ? data || '' : undefined,
-        timeoutMs,
-        allowInvalidCertificates: effectiveTrustInvalidCerts,
-        followRedirects
-    });
+    let response;
+    try {
+        response = await Tor.http.request({
+            url,
+            method: httpMethod,
+            headers: normalizeHeaders(headers),
+            // GET and DELETE never sent a body with nitro-tor 0.6.x
+            body: method === RequestMethod.POST ? data || '' : undefined,
+            timeoutMs,
+            allowInvalidCertificates: effectiveTrustInvalidCerts,
+            followRedirects
+        });
+    } catch (e) {
+        if (isTorTransportError(e)) reportOutcome(false);
+        throw e;
+    }
+    // Any status, 3xx and error statuses included, means the request
+    // got an answer over Tor
+    reportOutcome(true);
 
     return {
         statusCode: response.statusCode,
@@ -294,11 +355,22 @@ const restartTor = async () => {
     await ensureTorStarted();
 };
 
+const requestNewTorIdentity = () => Tor.daemon.requestNewIdentity();
+
+const getTorStatus = (): Promise<TorStatus> => Tor.daemon.getStatus();
+
+const subscribeTorStatus = (listener: TorStatusListener): (() => void) =>
+    Tor.daemon.subscribe(listener);
+
 export {
     doTorRequest,
     torHttpRequest,
     restartTor,
+    requestNewTorIdentity,
+    getTorStatus,
+    subscribeTorStatus,
+    setTorRequestOutcomeListener,
     isOnionHttpsUrl,
     RequestMethod
 };
-export type { TorHttpRequest, TorHttpResponse };
+export type { TorHttpRequest, TorHttpResponse, TorStatus };
