@@ -1,9 +1,15 @@
-import { RnTor } from 'react-native-nitro-tor';
+import { Tor, TorError } from 'react-native-nitro-tor';
+import type {
+    HttpMethod,
+    TorStatus,
+    TorStatusListener
+} from 'react-native-nitro-tor';
 import RNFS from 'react-native-fs';
 
 const SOCKS_PORT = 9056;
-const TARGET_PORT = 9057;
-const START_TIMEOUT_MS = 30000;
+// start() resolves only once Tor reaches 100% bootstrap, which can take
+// well over 30s on a cold start over a slow mobile link
+const BOOTSTRAP_TIMEOUT_MS = 60000;
 const REQUEST_TIMEOUT_MS = 60000;
 const TOR_DATA_PATH = `${RNFS.DocumentDirectoryPath}/tor_data`;
 
@@ -13,10 +19,32 @@ enum RequestMethod {
     DELETE = 'delete'
 }
 
-const headersToString = (headers?: any): string => {
-    if (!headers) return '';
-    if (typeof headers === 'string') return headers;
-    return JSON.stringify(headers);
+const HTTP_METHODS: { [key in RequestMethod]: HttpMethod } = {
+    [RequestMethod.GET]: 'GET',
+    [RequestMethod.POST]: 'POST',
+    [RequestMethod.DELETE]: 'DELETE'
+};
+
+// Error codes that mean the request never got an answer over Tor, as
+// opposed to the remote end answering with an error
+const TRANSPORT_ERROR_CODES = [
+    'HTTP_TIMEOUT',
+    'HTTP_TRANSPORT_ERROR',
+    'NOT_RUNNING',
+    'TOR_STOPPED'
+];
+
+const normalizeHeaders = (headers?: any): Record<string, string> => {
+    if (!headers) return {};
+    const parsed =
+        typeof headers === 'string' ? JSON.parse(headers || '{}') : headers;
+    const result: Record<string, string> = {};
+    Object.keys(parsed).forEach((key) => {
+        if (parsed[key] !== undefined && parsed[key] !== null) {
+            result[key] = String(parsed[key]);
+        }
+    });
+    return result;
 };
 
 // Whether a URL targets a Tor v3 hidden service over HTTPS. For such
@@ -40,24 +68,48 @@ const isOnionHttpsUrl = (url: string): boolean => {
     }
 };
 
+const isTorTransportError = (error: any): boolean =>
+    error instanceof TorError && TRANSPORT_ERROR_CODES.includes(error.code);
+
+type RequestOutcomeListener = (ok: boolean) => void;
+let requestOutcomeListener: RequestOutcomeListener | null = null;
+
+// Lets TorStore count consecutive transport failures, which catches
+// stale circuits that the daemon still reports as running
+const setTorRequestOutcomeListener = (
+    listener: RequestOutcomeListener | null
+) => {
+    requestOutcomeListener = listener;
+};
+
+const reportOutcome = (ok: boolean) => {
+    try {
+        requestOutcomeListener?.(ok);
+    } catch (e) {
+        console.warn('Tor request outcome listener threw', e);
+    }
+};
+
+// Shares one start() between concurrent callers. Cleared once it
+// settles so a daemon that later dies or is stopped gets started again
+// on the next request instead of every request failing until relaunch.
 let startPromise: Promise<void> | null = null;
 
-const ensureTorStarted = (): Promise<void> => {
+const ensureTorStarted = async (): Promise<void> => {
+    if (startPromise) return startPromise;
+    const status = await Tor.daemon.getStatus();
+    if (status.state === 'running') return;
     if (!startPromise) {
-        startPromise = (async () => {
-            const result = await RnTor.startTorIfNotRunning({
-                data_dir: TOR_DATA_PATH,
-                socks_port: SOCKS_PORT,
-                target_port: TARGET_PORT,
-                timeout_ms: START_TIMEOUT_MS
+        startPromise = Tor.daemon
+            .start({
+                dataDirectory: TOR_DATA_PATH,
+                socksPort: SOCKS_PORT,
+                bootstrapTimeoutMs: BOOTSTRAP_TIMEOUT_MS
+            })
+            .then(() => undefined)
+            .finally(() => {
+                startPromise = null;
             });
-            if (!result.is_success) {
-                throw new Error(result.error_message || 'Failed to start Tor');
-            }
-        })().catch((e) => {
-            startPromise = null;
-            throw e;
-        });
     }
     return startPromise;
 };
@@ -73,8 +125,12 @@ const doTorRequest = async (
     // longer timeout or the request dies before the node can answer.
     timeoutMs: number = REQUEST_TIMEOUT_MS
 ) => {
+    const httpMethod = HTTP_METHODS[method];
+    if (!httpMethod) {
+        throw new Error(`Unsupported method: ${method}`);
+    }
+
     await ensureTorStarted();
-    const headerStr = headersToString(headers);
 
     // Defense in depth: only honor trustInvalidCerts for HTTPS .onion
     // URLs. If a caller passes true for a clearnet URL we drop it on
@@ -89,39 +145,20 @@ const doTorRequest = async (
     }
 
     let response;
-    switch (method) {
-        case RequestMethod.GET:
-            response = await RnTor.httpGet({
-                url,
-                headers: headerStr,
-                timeout_ms: timeoutMs,
-                trust_invalid_certs: effectiveTrustInvalidCerts
-            });
-            break;
-        case RequestMethod.POST:
-            response = await RnTor.httpPost({
-                url,
-                body: data || '',
-                headers: headerStr,
-                timeout_ms: timeoutMs,
-                trust_invalid_certs: effectiveTrustInvalidCerts
-            });
-            break;
-        case RequestMethod.DELETE:
-            response = await RnTor.httpDelete({
-                url,
-                headers: headerStr,
-                timeout_ms: timeoutMs,
-                trust_invalid_certs: effectiveTrustInvalidCerts
-            });
-            break;
-        default:
-            throw new Error(`Unsupported method: ${method}`);
+    try {
+        response = await Tor.http.request({
+            url,
+            method: httpMethod,
+            headers: normalizeHeaders(headers),
+            body: method === RequestMethod.POST ? data || '' : undefined,
+            timeoutMs,
+            allowInvalidCertificates: effectiveTrustInvalidCerts
+        });
+    } catch (e) {
+        if (isTorTransportError(e)) reportOutcome(false);
+        throw e;
     }
-
-    if (response.error) {
-        throw new Error(response.error);
-    }
+    reportOutcome(true);
 
     let parsedBody: any;
     if (response.body) {
@@ -132,7 +169,7 @@ const doTorRequest = async (
         }
     }
 
-    if (response.status_code >= 300) {
+    if (response.statusCode >= 300) {
         const message =
             (parsedBody &&
                 typeof parsedBody === 'object' &&
@@ -140,7 +177,7 @@ const doTorRequest = async (
                     parsedBody.message ||
                     parsedBody.error)) ||
             (typeof parsedBody === 'string' && parsedBody) ||
-            `HTTP ${response.status_code}`;
+            `HTTP ${response.statusCode}`;
         throw new Error(message);
     }
 
@@ -148,9 +185,25 @@ const doTorRequest = async (
 };
 
 const restartTor = async () => {
-    await RnTor.shutdownService();
-    startPromise = null;
+    await Tor.daemon.stop();
     await ensureTorStarted();
 };
 
-export { doTorRequest, restartTor, isOnionHttpsUrl, RequestMethod };
+const requestNewTorIdentity = () => Tor.daemon.requestNewIdentity();
+
+const getTorStatus = (): Promise<TorStatus> => Tor.daemon.getStatus();
+
+const subscribeTorStatus = (listener: TorStatusListener): (() => void) =>
+    Tor.daemon.subscribe(listener);
+
+export {
+    doTorRequest,
+    restartTor,
+    requestNewTorIdentity,
+    getTorStatus,
+    subscribeTorStatus,
+    setTorRequestOutcomeListener,
+    isOnionHttpsUrl,
+    RequestMethod
+};
+export type { TorStatus };
