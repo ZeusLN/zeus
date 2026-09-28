@@ -695,12 +695,27 @@ const handleAnything = async (
             const name = `${username}.user._bitcoin-payment.${domain}`;
 
             try {
-                const res = await fetch(`${dnsUrl}?name=${name}&type=TXT`, {
-                    headers: {
-                        accept: 'application/dns-json'
+                // The local part may contain URL syntax such as '&', '=',
+                // '?' and '#'. Unencoded, 'a&name=evil.example&z@good.com'
+                // would add a second name parameter, and the resolver would
+                // look up evil.example instead.
+                const res = await fetch(
+                    `${dnsUrl}?name=${encodeURIComponent(name)}&type=TXT`,
+                    {
+                        headers: {
+                            accept: 'application/dns-json'
+                        }
                     }
-                });
+                );
                 const json = await res.json();
+
+                // The resolver echoes the name it looked up. Only use the
+                // answer if that is the name we asked for.
+                const question = json?.Question?.[0]?.name;
+                const questionMatches =
+                    typeof question === 'string' &&
+                    question.replace(/\.$/, '').toLowerCase() ===
+                        name.toLowerCase();
 
                 // BIP 353 requires the payment instructions to be secured by
                 // DNSSEC. Cloudflare performs the validation and reports the
@@ -729,7 +744,11 @@ const handleAnything = async (
                         data.toLowerCase().startsWith('bitcoin:')
                     );
 
-                if (dnssecValidated && bitcoinTxts.length === 1) {
+                if (
+                    questionMatches &&
+                    dnssecValidated &&
+                    bitcoinTxts.length === 1
+                ) {
                     bolt12 = bitcoinTxts[0].replace(/^bitcoin:b12=/i, '');
 
                     const {
