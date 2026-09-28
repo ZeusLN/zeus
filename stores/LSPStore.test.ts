@@ -23,6 +23,8 @@ jest.mock('../utils/ClientInfoUtils', () => ({ getClientInfo: jest.fn() }));
 jest.mock('../utils/BackendUtils', () => ({
     sendCustomMessage: jest.fn(),
     subscribeCustomMessages: jest.fn(),
+    initChanAcceptor: jest.fn(),
+    supportsFlowLSP: jest.fn(() => true),
     supportsLSPScustomMessage: () => true,
     supportsLSPS7native: () => false
 }));
@@ -37,6 +39,8 @@ jest.mock('./SettingsStore', () => ({
     default: class {},
     getLspConfigForNetwork: () => ({ lsps1Pubkey: 'lsp-pubkey' })
 }));
+
+import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import LSPStore from './LSPStore';
 import BackendUtils from '../utils/BackendUtils';
@@ -208,5 +212,99 @@ describe('LSPStore custom-message request timeouts', () => {
 
         expect(store.error).toBe(false);
         expect(store.error_msg).toBe('');
+    });
+});
+
+describe('LSPStore.initFlowLSP', () => {
+    const makeFlowStore = (implementation: string, enableLSP = true) => {
+        const store = new LSPStore(
+            { implementation, settings: { enableLSP } } as any,
+            { channels: [] } as any,
+            {
+                nodeInfo: {},
+                getNodeInfo: jest.fn(),
+                flowLspNotConfigured: jest.fn(() => ({
+                    flowLspNotConfigured: false
+                }))
+            } as any
+        );
+        jest.spyOn(store, 'subscribeCustomMessages').mockResolvedValue(
+            undefined
+        );
+        jest.spyOn(store, 'initChannelAcceptor').mockResolvedValue(undefined);
+        return store;
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.mocked(BackendUtils.supportsFlowLSP).mockReturnValue(true);
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        jest.mocked(console.warn).mockRestore();
+    });
+
+    it('resolves and finishes setup when the LSP cannot be reached (#4779)', async () => {
+        jest.mocked(ReactNativeBlobUtil.fetch).mockRejectedValue(
+            new Error('connection refused')
+        );
+        const store = makeFlowStore('ldk-node');
+
+        await expect(store.initFlowLSP()).resolves.toBeUndefined();
+
+        expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledTimes(1);
+        expect(store.flow_error).toBe(true);
+        expect(store.flow_error_msg).toBe('stores.LSPStore.connectionError');
+        expect(store.subscribeCustomMessages).toHaveBeenCalled();
+        expect(store.initChannelAcceptor).toHaveBeenCalled();
+    });
+
+    it('resolves when the LSP answers with an error status', async () => {
+        jest.mocked(ReactNativeBlobUtil.fetch).mockResolvedValue({
+            info: () => ({ status: 403 }),
+            json: () => ({ message: 'unavailable in your country' }),
+            text: () => ''
+        } as any);
+        const store = makeFlowStore('embedded-lnd');
+
+        await expect(store.initFlowLSP()).resolves.toBeUndefined();
+
+        expect(store.flow_error).toBe(true);
+        expect(store.showLspSettings).toBe(true);
+        expect(store.initChannelAcceptor).toHaveBeenCalled();
+    });
+
+    it('fetches LSP info for embedded LND', async () => {
+        const store = makeFlowStore('embedded-lnd');
+        const getLSPInfo = jest
+            .spyOn(store, 'getLSPInfo')
+            .mockResolvedValue({});
+
+        await store.initFlowLSP();
+
+        expect(getLSPInfo).toHaveBeenCalledTimes(1);
+    });
+
+    it('skips LSP info when the LSP is turned off', async () => {
+        const store = makeFlowStore('ldk-node', false);
+        const getLSPInfo = jest.spyOn(store, 'getLSPInfo');
+
+        await store.initFlowLSP();
+
+        expect(getLSPInfo).not.toHaveBeenCalled();
+        expect(store.initChannelAcceptor).toHaveBeenCalled();
+    });
+
+    it('does nothing on backends without Flow LSP support', async () => {
+        jest.mocked(BackendUtils.supportsFlowLSP).mockReturnValue(false);
+        const store = makeFlowStore('cln-rest');
+        const getLSPInfo = jest.spyOn(store, 'getLSPInfo');
+
+        await store.initFlowLSP();
+
+        expect(getLSPInfo).not.toHaveBeenCalled();
+        expect(store.subscribeCustomMessages).not.toHaveBeenCalled();
+        expect(store.initChannelAcceptor).not.toHaveBeenCalled();
     });
 });
