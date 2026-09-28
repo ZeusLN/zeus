@@ -417,7 +417,8 @@ describe('BalanceUtils', () => {
 
         it('counts a force close with an unconfirmed sweep once', () => {
             // regtest vector from #4740: 96,860 sats of limbo, swept one
-            // block before maturity for 96,395 sats after a 465 sat fee
+            // block before maturity for 96,395 sats. The other 465 are the
+            // 330 sat anchor, still in limbo, and a 135 sat sweep fee
             const external = getExternalUnconfirmedBalance(
                 [sweepOf('sweep', 96395, 'commit:0')],
                 96395
@@ -435,7 +436,8 @@ describe('BalanceUtils', () => {
             );
             expect(overlap).toEqual(96395);
             // the sweep output is no longer counted a second time; only the
-            // 465 sat fee stays on the pending line until it confirms
+            // anchor and the fee (465 sats) stay on the pending line until
+            // the sweep confirms
             expect(pendingLine(96860, external.amount, overlap)).toEqual(96860);
         });
 

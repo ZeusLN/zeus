@@ -203,8 +203,9 @@ export function getForceCloses(
  * channels that share a sweep are settled as one group. Each group drops
  * min(limbo, swept): a sweep can only take out of limbo what it actually
  * spent, so a small spend of the closing transaction, such as an anchor,
- * never removes limbo that is still locked. The sweep fee stays on the
- * pending line until the sweep confirms.
+ * never removes limbo that is still locked. What the sweep didn't take out
+ * of limbo (its fee, and any output it left alone, such as the anchor) stays
+ * on the pending line until the sweep confirms.
  *
  * The result is clamped to [0, pendingCloseBalance].
  */

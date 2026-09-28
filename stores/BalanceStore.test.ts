@@ -177,8 +177,9 @@ describe('BalanceStore force close sweep overlap', () => {
 
         expect(store.forceCloseSweepOverlap).toEqual(96395);
         // total + pending is 1,088,275 rather than 1,184,670: the sweep
-        // output is counted once, and only its 465 sat fee sits on top of
-        // the 1,087,810 sat wallet total until the sweep confirms
+        // output is counted once, and only the 330 sat anchor and the
+        // 135 sat fee sit on top of the 1,087,810 sat wallet total until
+        // the sweep confirms
         const pending =
             96860 +
             store.externalUnconfirmedBalance -
