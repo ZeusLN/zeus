@@ -23,6 +23,7 @@ import PosStore from './PosStore';
 import SettingsStore from './SettingsStore';
 import SwapStore from './SwapStore';
 import SyncStore from './SyncStore';
+import TorStore from './TorStore';
 import TransactionsStore from './TransactionsStore';
 import UnitsStore from './UnitsStore';
 import UTXOsStore from './UTXOsStore';
@@ -31,6 +32,7 @@ import NostrWalletConnectStore from './NostrWalletConnectStore';
 
 export const settingsStore = new SettingsStore();
 export const connectivityStore = new ConnectivityStore(settingsStore);
+export const torStore = new TorStore(settingsStore);
 export const modalStore = new ModalStore();
 export const offersStore = new OffersStore();
 export const fiatStore = new FiatStore(settingsStore);

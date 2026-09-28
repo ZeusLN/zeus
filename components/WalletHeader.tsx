@@ -34,6 +34,7 @@ import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 import PosStore from '../stores/PosStore';
 import SyncStore from '../stores/SyncStore';
+import TorStore, { TOR_INDICATOR_COLORS } from '../stores/TorStore';
 import NostrWalletConnectStore from '../stores/NostrWalletConnectStore';
 
 import Header from './Header';
@@ -307,6 +308,7 @@ interface WalletHeaderProps {
     LightningAddressStore?: LightningAddressStore;
     PosStore?: PosStore;
     SyncStore?: SyncStore;
+    TorStore?: TorStore;
     NostrWalletConnectStore?: NostrWalletConnectStore;
     navigation: NativeStackNavigationProp<any, any>;
     connecting?: boolean;
@@ -331,6 +333,7 @@ interface WalletHeaderState {
     'NodeInfoStore',
     'PosStore',
     'SyncStore',
+    'TorStore',
     'NostrWalletConnectStore'
 )
 @observer
@@ -403,6 +406,7 @@ export default class WalletHeader extends React.Component<
             ModalStore,
             PosStore,
             SyncStore,
+            TorStore,
             NostrWalletConnectStore
         } = this.props;
         const { sentTokens } = CashuStore!!;
@@ -460,7 +464,6 @@ export default class WalletHeader extends React.Component<
         );
 
         const displayName = selectedNode && selectedNode.nickname;
-        const nodeAddress = SettingsStore!.host || SettingsStore!.url;
 
         let infoValue: string;
         if (NodeInfoStore!.nodeInfo.isMutinynet) {
@@ -510,28 +513,34 @@ export default class WalletHeader extends React.Component<
             ) : null;
         };
 
-        const TorBadge = () => (
-            <>
-                {nodeAddress && nodeAddress.includes('.onion') ? (
-                    <TouchableOpacity
-                        onPress={() => navigation.navigate('NodeInfo')}
-                    >
-                        <Image
-                            style={{
-                                marginLeft: 5,
-                                marginRight: 5,
-                                width: 25,
-                                height: 25
-                            }}
-                            source={TorIcon}
-                            accessibilityLabel={localeString(
-                                'general.torEnabled'
-                            )}
-                        />
-                    </TouchableOpacity>
-                ) : null}
-            </>
-        );
+        const TorBadge = () =>
+            TorStore!.torInUse ? (
+                <TouchableOpacity
+                    onPress={() => navigation.navigate('Networking')}
+                    accessibilityLabel={`${localeString(
+                        'views.Settings.Networking.tor'
+                    )}: ${TorStore!.statusText}`}
+                >
+                    <Image
+                        style={{
+                            marginLeft: 5,
+                            marginRight: 5,
+                            width: 25,
+                            height: 25
+                        }}
+                        source={TorIcon}
+                    />
+                    <View
+                        style={{
+                            ...styles.torStatusDot,
+                            backgroundColor: themeColor(
+                                TOR_INDICATOR_COLORS[TorStore!.indicator]
+                            ),
+                            borderColor: themeColor('background')
+                        }}
+                    />
+                </TouchableOpacity>
+            ) : null;
 
         const ReadOnlyBadge = () => {
             return !BackendUtils.supportsLightningSends() ? (
@@ -836,5 +845,14 @@ const styles = StyleSheet.create({
         width: 38,
         height: 38,
         borderRadius: 68
+    },
+    torStatusDot: {
+        position: 'absolute',
+        right: 3,
+        bottom: 0,
+        width: 10,
+        height: 10,
+        borderRadius: 5,
+        borderWidth: 1.5
     }
 });
