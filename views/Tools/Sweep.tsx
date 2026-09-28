@@ -7,7 +7,6 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import BalanceStore from '../../stores/BalanceStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 import ModalStore from '../../stores/ModalStore';
-import NodeInfoStore from '../../stores/NodeInfoStore';
 import SettingsStore from '../../stores/SettingsStore';
 import TransactionsStore from '../../stores/TransactionsStore';
 
@@ -31,7 +30,6 @@ interface SweepProps {
     BalanceStore: BalanceStore;
     InvoicesStore: InvoicesStore;
     ModalStore: ModalStore;
-    NodeInfoStore: NodeInfoStore;
     TransactionsStore: TransactionsStore;
     SettingsStore: SettingsStore;
     route: Route<'Sweep', { destination: string }>;
@@ -46,7 +44,6 @@ interface SweepState {
 @inject(
     'InvoicesStore',
     'ModalStore',
-    'NodeInfoStore',
     'TransactionsStore',
     'BalanceStore',
     'SettingsStore'
@@ -107,13 +104,7 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
     };
 
     validateAddress = (destination: string) => {
-        const { NodeInfoStore } = this.props;
-        const { nodeInfo } = NodeInfoStore;
-        const { isTestNet, isRegTest } = nodeInfo;
-        const isValid = AddressUtils.isValidBitcoinAddress(
-            destination,
-            isTestNet || isRegTest
-        );
+        const isValid = AddressUtils.isValidBitcoinAddressForNode(destination);
         this.setState({
             isValid,
             destination

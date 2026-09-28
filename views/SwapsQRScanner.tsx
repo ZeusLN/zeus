@@ -2,8 +2,6 @@ import { observer } from 'mobx-react';
 
 import BaseQRScanner from './QRScanner/BaseQRScanner';
 
-import { nodeInfoStore } from '../stores/Stores';
-
 import Invoice from '../models/Invoice';
 
 import { localeString } from '../utils/LocaleUtils';
@@ -16,16 +14,8 @@ export default class SwapsQRScanner extends BaseQRScanner {
         const { navigation } = this.props;
         const { value, satAmount } = AddressUtils.processBIP21Uri(data);
 
-        const { nodeInfo } = nodeInfoStore;
-        const { isTestNet, isRegTest, isSigNet } = nodeInfo;
-
         // Reverse Swap - Bitcoin address
-        if (
-            AddressUtils.isValidBitcoinAddress(
-                value,
-                isTestNet || isRegTest || isSigNet
-            )
-        ) {
+        if (AddressUtils.isValidBitcoinAddressForNode(value)) {
             navigation.goBack();
             navigation.navigate({
                 name: 'Swaps',
