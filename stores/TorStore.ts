@@ -37,7 +37,9 @@ export const TOR_INDICATOR_COLORS: { [key in TorIndicator]: string } = {
     connected: 'success',
     connecting: 'bitcoin',
     degraded: 'bitcoin',
-    error: 'error',
+    // warning is a brighter red than error, which is also the background
+    // of the wallet's connection error screen
+    error: 'warning',
     off: 'secondaryText'
 };
 

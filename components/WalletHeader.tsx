@@ -542,14 +542,22 @@ export default class WalletHeader extends React.Component<
             ) : null;
         };
 
+        // Read in render, not inside TorBadge: TorBadge is its own
+        // component, so reads there are not tracked by this observer
+        const {
+            torInUse,
+            indicator: torIndicator,
+            statusText: torStatusText
+        } = TorStore!;
+
         const TorBadge = () =>
-            TorStore!.torInUse ? (
+            torInUse ? (
                 <TouchableOpacity
                     disabled={!sessionStarted}
                     onPress={() => navigation.navigate('Networking')}
                     accessibilityLabel={`${localeString(
                         'views.Settings.Networking.tor'
-                    )}: ${TorStore!.statusText}`}
+                    )}: ${torStatusText}`}
                 >
                     <Image
                         style={{
@@ -564,7 +572,7 @@ export default class WalletHeader extends React.Component<
                         style={{
                             ...styles.torStatusDot,
                             backgroundColor: themeColor(
-                                TOR_INDICATOR_COLORS[TorStore!.indicator]
+                                TOR_INDICATOR_COLORS[torIndicator]
                             ),
                             borderColor: themeColor('background')
                         }}
