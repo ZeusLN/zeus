@@ -436,14 +436,22 @@ export default class Send extends React.Component<SendProps, SendState> {
             // out properly rather than splitting on '=', which mangles URIs
             // carrying more than one parameter (BIP 353 records commonly
             // pair an offer with a silent payment address, eg.
-            // bitcoin:?sp=sp1q...&lno=lno1...).
-            const { offer } = AddressUtils.processBIP21Uri(bolt12);
+            // bitcoin:?sp=sp1q...&lno=lno1...). Anything that isn't a valid
+            // offer stops here instead of reaching the backend.
+            const offer = AddressUtils.extractBolt12Offer(bolt12);
+            if (!offer) {
+                this.setState({
+                    loading: false,
+                    error_msg: localeString('views.Send.payBolt12.invalidOffer')
+                });
+                return;
+            }
             this.setState({
                 loading: true,
                 error_msg: ''
             });
             const res = await BackendUtils.fetchInvoiceFromOffer(
-                offer || bolt12,
+                offer,
                 satAmount,
                 timeoutSeconds
             );
