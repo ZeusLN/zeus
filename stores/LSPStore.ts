@@ -371,6 +371,37 @@ export default class LSPStore {
         });
     };
 
+    // Flow LSP setup run by the wallet on every fetch. getLSPInfo rejects
+    // when the LSP can't be reached, answers with an error (including the
+    // geoblock reply) or returns a non-JSON body. It records the error in
+    // flow_error for the UI, so a rejection is caught here and must not stop
+    // the steps below or the rest of wallet startup
+    public initFlowLSP = async () => {
+        if (!BackendUtils.supportsFlowLSP()) return;
+
+        const { implementation, settings } = this.settingsStore;
+        if (
+            settings.enableLSP &&
+            (implementation !== 'lnd' ||
+                !this.nodeInfoStore.flowLspNotConfigured)
+        ) {
+            try {
+                await this.getLSPInfo();
+            } catch {
+                // getLSPInfo rejects without a reason; the message is in
+                // flow_error_msg
+                console.warn(
+                    'Failed to fetch Flow LSP info:',
+                    this.flow_error_msg
+                );
+            }
+        }
+        if (BackendUtils.supportsLSPScustomMessage()) {
+            this.subscribeCustomMessages();
+        }
+        this.initChannelAcceptor();
+    };
+
     @action
     public getZeroConfFee = (amount_msat: number) => {
         const { settings } = this.settingsStore;
