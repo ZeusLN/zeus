@@ -249,13 +249,17 @@ describe('LSPStore.initFlowLSP', () => {
         jest.mocked(console.warn).mockRestore();
     });
 
-    it('resolves and finishes setup when the LSP cannot be reached (#4779)', async () => {
+    // getLSPInfo is not awaited; let its rejection and catch run
+    const settle = () => new Promise((resolve) => setImmediate(resolve));
+
+    it('finishes setup when the LSP cannot be reached (#4779)', async () => {
         jest.mocked(ReactNativeBlobUtil.fetch).mockRejectedValue(
             new Error('connection refused')
         );
         const store = makeFlowStore('ldk-node');
 
-        await expect(store.initFlowLSP()).resolves.toBeUndefined();
+        store.initFlowLSP();
+        await settle();
 
         expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledTimes(1);
         expect(store.flow_error).toBe(true);
@@ -264,7 +268,7 @@ describe('LSPStore.initFlowLSP', () => {
         expect(store.initChannelAcceptor).toHaveBeenCalled();
     });
 
-    it('resolves when the LSP answers with an error status', async () => {
+    it('handles an error status from the LSP', async () => {
         jest.mocked(ReactNativeBlobUtil.fetch).mockResolvedValue({
             info: () => ({ status: 403 }),
             json: () => ({ message: 'unavailable in your country' }),
@@ -272,10 +276,21 @@ describe('LSPStore.initFlowLSP', () => {
         } as any);
         const store = makeFlowStore('embedded-lnd');
 
-        await expect(store.initFlowLSP()).resolves.toBeUndefined();
+        store.initFlowLSP();
+        await settle();
 
         expect(store.flow_error).toBe(true);
         expect(store.showLspSettings).toBe(true);
+        expect(store.initChannelAcceptor).toHaveBeenCalled();
+    });
+
+    it('does not wait for an LSP that never answers', () => {
+        const store = makeFlowStore('embedded-lnd');
+        jest.spyOn(store, 'getLSPInfo').mockReturnValue(new Promise(() => {}));
+
+        expect(store.initFlowLSP()).toBeUndefined();
+
+        expect(store.subscribeCustomMessages).toHaveBeenCalled();
         expect(store.initChannelAcceptor).toHaveBeenCalled();
     });
 
@@ -285,7 +300,7 @@ describe('LSPStore.initFlowLSP', () => {
             .spyOn(store, 'getLSPInfo')
             .mockResolvedValue({});
 
-        await store.initFlowLSP();
+        store.initFlowLSP();
 
         expect(getLSPInfo).toHaveBeenCalledTimes(1);
     });
@@ -296,7 +311,7 @@ describe('LSPStore.initFlowLSP', () => {
             .spyOn(store, 'getLSPInfo')
             .mockResolvedValue({});
 
-        await store.initFlowLSP();
+        store.initFlowLSP();
 
         expect(getLSPInfo).toHaveBeenCalledTimes(1);
     });
@@ -305,7 +320,7 @@ describe('LSPStore.initFlowLSP', () => {
         const store = makeFlowStore('lnd', true, true);
         const getLSPInfo = jest.spyOn(store, 'getLSPInfo');
 
-        await store.initFlowLSP();
+        store.initFlowLSP();
 
         expect(getLSPInfo).not.toHaveBeenCalled();
         expect(store.subscribeCustomMessages).toHaveBeenCalled();
@@ -316,7 +331,7 @@ describe('LSPStore.initFlowLSP', () => {
         const store = makeFlowStore('ldk-node', false);
         const getLSPInfo = jest.spyOn(store, 'getLSPInfo');
 
-        await store.initFlowLSP();
+        store.initFlowLSP();
 
         expect(getLSPInfo).not.toHaveBeenCalled();
         expect(store.initChannelAcceptor).toHaveBeenCalled();
@@ -327,10 +342,99 @@ describe('LSPStore.initFlowLSP', () => {
         const store = makeFlowStore('cln-rest');
         const getLSPInfo = jest.spyOn(store, 'getLSPInfo');
 
-        await store.initFlowLSP();
+        store.initFlowLSP();
 
         expect(getLSPInfo).not.toHaveBeenCalled();
         expect(store.subscribeCustomMessages).not.toHaveBeenCalled();
         expect(store.initChannelAcceptor).not.toHaveBeenCalled();
+    });
+});
+
+describe('LSPStore remote LND sockets', () => {
+    class FakeSocket {
+        listeners: { [event: string]: Array<() => void> } = {};
+        addEventListener(event: string, fn: () => void) {
+            (this.listeners[event] ||= []).push(fn);
+        }
+        emit(event: string) {
+            (this.listeners[event] || []).forEach((fn) => fn());
+        }
+    }
+
+    let sockets: FakeSocket[];
+    const openSocket = () => {
+        const ws = new FakeSocket();
+        sockets.push(ws);
+        return ws;
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        sockets = [];
+        jest.mocked(BackendUtils.initChanAcceptor).mockImplementation(
+            openSocket as any
+        );
+        jest.mocked(BackendUtils.subscribeCustomMessages).mockImplementation(
+            openSocket as any
+        );
+    });
+
+    it('keeps one channel acceptor open across fetches', async () => {
+        const store = makeStore('lnd');
+
+        await store.initChannelAcceptor();
+        await store.initChannelAcceptor();
+
+        expect(BackendUtils.initChanAcceptor).toHaveBeenCalledTimes(1);
+        expect(store.channelAcceptor).toBe(sockets[0]);
+    });
+
+    it('opens a new channel acceptor after the socket closes', async () => {
+        const store = makeStore('lnd');
+
+        await store.initChannelAcceptor();
+        sockets[0].emit('close');
+        await store.initChannelAcceptor();
+
+        expect(BackendUtils.initChanAcceptor).toHaveBeenCalledTimes(2);
+        expect(store.channelAcceptor).toBe(sockets[1]);
+    });
+
+    it('ignores a close from a socket that was already replaced', async () => {
+        const store = makeStore('lnd');
+
+        await store.initChannelAcceptor();
+        sockets[0].emit('error');
+        await store.initChannelAcceptor();
+        sockets[0].emit('close');
+
+        expect(store.channelAcceptor).toBe(sockets[1]);
+    });
+
+    it('gives the acceptor the current LSP pubkey and zeroConfPeers', async () => {
+        const store = makeStore('lnd');
+
+        await store.initChannelAcceptor();
+        const { getLspPubkey, getZeroConfPeers } = jest.mocked(
+            BackendUtils.initChanAcceptor
+        ).mock.calls[0][0];
+
+        expect(getLspPubkey()).toBeUndefined();
+        store.info = { pubkey: 'lsp' };
+        store.settingsStore.settings.zeroConfPeers = ['peer'];
+        expect(getLspPubkey()).toBe('lsp');
+        expect(getZeroConfPeers()).toEqual(['peer']);
+    });
+
+    it('keeps one custom message subscription open across fetches', async () => {
+        const store = makeStore('lnd');
+
+        await store.subscribeCustomMessages();
+        await store.subscribeCustomMessages();
+        expect(BackendUtils.subscribeCustomMessages).toHaveBeenCalledTimes(1);
+
+        sockets[0].emit('error');
+        await store.subscribeCustomMessages();
+        expect(BackendUtils.subscribeCustomMessages).toHaveBeenCalledTimes(2);
     });
 });

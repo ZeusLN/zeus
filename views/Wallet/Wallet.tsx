@@ -1380,7 +1380,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         }
 
-        await LSPStore.initFlowLSP();
+        LSPStore.initFlowLSP();
 
         if (connecting && BackendUtils.supportsNostrWalletConnectService()) {
             try {
