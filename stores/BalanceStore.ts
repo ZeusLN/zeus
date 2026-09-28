@@ -5,8 +5,11 @@ import SettingsStore from './SettingsStore';
 import BackendUtils from './../utils/BackendUtils';
 import {
     CooperativeClose,
+    ExternalUnconfirmedTransaction,
+    ForceClose,
     getCooperativeCloseOverlap,
-    getExternalUnconfirmedBalance
+    getExternalUnconfirmedBalance,
+    getForceCloseSweepOverlap
 } from './../utils/BalanceUtils';
 
 export default class BalanceStore {
@@ -22,6 +25,9 @@ export default class BalanceStore {
     @observable public externalUnconfirmedBalance: number;
     // txids of the transactions counted in externalUnconfirmedBalance
     @observable public externalUnconfirmedTxids: string[] = [];
+    // the same transactions with their amounts and the txids they spend
+    @observable
+    public externalUnconfirmedTransactions: ExternalUnconfirmedTransaction[] = [];
     @observable public loadingBlockchainBalance = false;
     @observable public loadingLightningBalance = false;
     @observable public error = false;
@@ -34,6 +40,9 @@ export default class BalanceStore {
     // waiting close channels being closed cooperatively, used to find
     // limbo balance that is also reported as unconfirmed on-chain funds
     @observable public cooperativeCloses: CooperativeClose[] = [];
+    // pending force closes, used to find limbo balance whose sweep is
+    // also reported as unconfirmed on-chain funds
+    @observable public forceCloses: ForceClose[] = [];
     @observable public lightningBalance: number | string;
     @observable public otherAccounts: any = {};
     settingsStore: SettingsStore;
@@ -68,6 +77,7 @@ export default class BalanceStore {
         this.unconfirmedBlockchainBalance = 0;
         this.externalUnconfirmedBalance = 0;
         this.externalUnconfirmedTxids = [];
+        this.externalUnconfirmedTransactions = [];
         this.confirmedBlockchainBalance = 0;
         this.totalBlockchainBalance = 0;
         this.otherAccounts = {};
@@ -78,6 +88,7 @@ export default class BalanceStore {
         this.pendingOpenBalance = 0;
         this.pendingCloseBalance = 0;
         this.cooperativeCloses = [];
+        this.forceCloses = [];
         this.lightningBalance = 0;
         this.loadingLightningBalance = false;
     };
@@ -85,10 +96,12 @@ export default class BalanceStore {
     @action
     public setPendingCloseBalance = (
         value: number | string,
-        cooperativeCloses: CooperativeClose[] = []
+        cooperativeCloses: CooperativeClose[] = [],
+        forceCloses: ForceClose[] = []
     ) => {
         this.pendingCloseBalance = Number(value || 0);
         this.cooperativeCloses = cooperativeCloses;
+        this.forceCloses = forceCloses;
     };
 
     // limbo balance of unconfirmed cooperative closes whose closing output
@@ -98,6 +111,20 @@ export default class BalanceStore {
             this.cooperativeCloses,
             this.externalUnconfirmedTxids,
             this.pendingCloseBalance
+        );
+    }
+
+    // limbo balance of force closes whose unconfirmed sweep is already
+    // counted in externalUnconfirmedBalance. Clamped to what the
+    // cooperative close overlap leaves, so together they never exceed
+    // pendingCloseBalance
+    @computed public get forceCloseSweepOverlap(): number {
+        return getForceCloseSweepOverlap(
+            this.forceCloses,
+            this.externalUnconfirmedTransactions,
+            new BigNumber(this.pendingCloseBalance || 0)
+                .minus(this.cooperativeCloseOverlap)
+                .toNumber()
         );
     }
 
@@ -154,6 +181,8 @@ export default class BalanceStore {
             // Change from the wallet's own spends stays in the total (#2167)
             let externalUnconfirmedBalance = 0;
             let externalUnconfirmedTxids: string[] = [];
+            let externalUnconfirmedTransactions: ExternalUnconfirmedTransaction[] =
+                [];
             if (
                 unconfirmedBlockchainBalance > 0 &&
                 BackendUtils.supportsUnconfirmedTransactionOrigin()
@@ -166,6 +195,7 @@ export default class BalanceStore {
                     );
                     externalUnconfirmedBalance = external.amount;
                     externalUnconfirmedTxids = external.txids;
+                    externalUnconfirmedTransactions = external.transactions;
                 } catch {
                     // if classification fails, treat unconfirmed funds as
                     // the wallet's own: they stay in the total balance and
@@ -184,6 +214,8 @@ export default class BalanceStore {
                     this.externalUnconfirmedBalance =
                         externalUnconfirmedBalance;
                     this.externalUnconfirmedTxids = externalUnconfirmedTxids;
+                    this.externalUnconfirmedTransactions =
+                        externalUnconfirmedTransactions;
                     this.confirmedBlockchainBalance =
                         confirmedBlockchainBalance;
                     this.totalBlockchainBalance = totalBlockchainBalance;
@@ -196,6 +228,7 @@ export default class BalanceStore {
                 unconfirmedBlockchainBalance,
                 externalUnconfirmedBalance,
                 externalUnconfirmedTxids,
+                externalUnconfirmedTransactions,
                 confirmedBlockchainBalance,
                 totalBlockchainBalance,
                 accounts
@@ -253,6 +286,8 @@ export default class BalanceStore {
                 onChain?.externalUnconfirmedBalance || 0;
             this.externalUnconfirmedTxids =
                 onChain?.externalUnconfirmedTxids || [];
+            this.externalUnconfirmedTransactions =
+                onChain?.externalUnconfirmedTransactions || [];
             this.confirmedBlockchainBalance =
                 onChain?.confirmedBlockchainBalance || 0;
             this.totalBlockchainBalance = onChain?.totalBlockchainBalance || 0;
