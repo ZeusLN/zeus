@@ -45,18 +45,55 @@ export default class LightningNodeConnect {
     permForwardingHistory: boolean = true;
     permSignMessage: boolean = true;
 
+    // Instances moved off while their native dial was still in progress,
+    // keyed by namespace. The dial cannot be cancelled (see LNC.disconnect),
+    // so the instance is kept until the dial lands or its wallet is opened
+    // again, rather than stacking a second client on the same session.
+    private parked = new Map<string, any>();
+
     initLNC = async () => {
         const { pairingPhrase, mailboxServer, customMailboxServer } =
             settingsStore;
 
+        // One namespace per wallet. Upstream keys its mobile clients by
+        // namespace, so the shared 'default' meant every LNC wallet fought
+        // over a single native connection.
+        const namespace = hash(pairingPhrase || '');
+        const serverHost =
+            mailboxServer === 'custom-defined'
+                ? customMailboxServer
+                : mailboxServer;
+
+        // Same wallet and mailbox with a native client that is connected or
+        // still dialing: keep it. The native client redials on its own, and
+        // InitLNC would replace it without stopping it, leaving two clients
+        // on one mailbox session.
+        if (await this.isReusable(this.lnc, namespace, serverHost)) return;
+
         // Upstream's InitLNC replaces the namespace's mobile client outright
         // (m[nameSpace] = newMobileClient()) without closing the connection
-        // already on it, orphaning a live mailbox session that keeps holding
-        // this wallet's session keys server side, and leaving the JS
-        // instance's global 'lnc.localPrivCreate' / 'lnc.remoteKeyReceive'
-        // listeners attached so the next wallet's keys get written under the
-        // old wallet's storage key. Tear the previous session down first.
+        // already on it. Tear the previous session down first; a dial still
+        // in progress cannot be torn down, so park it instead.
         await this.disconnect();
+        if (this.lnc && (await this.isDialing(this.lnc))) {
+            this.parked.set(this.lnc._namespace, this.lnc);
+        }
+        this.lnc = undefined;
+
+        await this.releaseLandedDials(namespace);
+
+        const parked = this.parked.get(namespace);
+        if (parked) {
+            this.parked.delete(namespace);
+            if (await this.isReusable(parked, namespace, serverHost)) {
+                this.lnc = parked;
+                return;
+            }
+            // The mailbox changed. The old dial keeps running against the
+            // old host; stop routing its events to a credential store that
+            // the fresh client below now owns.
+            parked.dispose();
+        }
 
         const credentialStore = await new CredentialStore(
             pairingPhrase
@@ -66,18 +103,44 @@ export default class LightningNodeConnect {
         // whole persisted blob, so anything assigned beforehand is discarded.
         await credentialStore.load(pairingPhrase);
         credentialStore.pairingPhrase = pairingPhrase;
-        credentialStore.serverHost =
-            mailboxServer === 'custom-defined'
-                ? customMailboxServer
-                : mailboxServer;
+        credentialStore.serverHost = serverHost;
 
-        this.lnc = new LNC({
-            // One namespace per wallet. Upstream keys its mobile clients by
-            // namespace, so the shared 'default' meant every LNC wallet
-            // fought over a single native connection.
-            namespace: hash(pairingPhrase || ''),
-            credentialStore
-        });
+        this.lnc = new LNC({ namespace, credentialStore });
+    };
+
+    private isDialing = async (lnc: any) => {
+        try {
+            return await lnc.isDialing();
+        } catch (e) {
+            console.log('LNC: isDialing check failed', e);
+            return false;
+        }
+    };
+
+    private isReusable = async (
+        lnc: any,
+        namespace: string,
+        serverHost: string
+    ) => {
+        if (!lnc) return false;
+        if (lnc._namespace !== namespace) return false;
+        if (lnc.credentials?.serverHost !== serverHost) return false;
+        if (await this.isDialing(lnc)) return true;
+        try {
+            return await lnc.isConnected();
+        } catch (e) {
+            return false;
+        }
+    };
+
+    // A parked dial that has since connected is a live session for a wallet
+    // that is not open. Its keys have been reported by now, so close it.
+    private releaseLandedDials = async (keep: string) => {
+        for (const [namespace, lnc] of [...this.parked]) {
+            if (namespace === keep || (await this.isDialing(lnc))) continue;
+            this.parked.delete(namespace);
+            await this.closeSession(lnc);
+        }
     };
 
     connect = async () => await this.lnc.connect();
@@ -128,16 +191,19 @@ export default class LightningNodeConnect {
     };
     disconnect = async () => {
         if (!this.lnc) return;
+        await this.closeSession(this.lnc);
+    };
+    private closeSession = async (lnc: any) => {
         // Let queued credential writes land before the session goes away. An
         // LNC pairing phrase is single use, so a wallet whose freshly paired
         // localKey/remoteKey never reached the keychain can never reconnect.
         try {
-            await this.lnc.credentials?.flushWrites?.();
+            await lnc.credentials?.flushWrites?.();
         } catch (e) {
             console.log('LNC: error flushing credential writes', e);
         }
         try {
-            await this.lnc.disconnect();
+            await lnc.disconnect();
         } catch (e) {
             console.log('LNC: error disconnecting', e);
         }
