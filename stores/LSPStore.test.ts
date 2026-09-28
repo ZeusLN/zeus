@@ -216,7 +216,11 @@ describe('LSPStore custom-message request timeouts', () => {
 });
 
 describe('LSPStore.initFlowLSP', () => {
-    const makeFlowStore = (implementation: string, enableLSP = true) => {
+    const makeFlowStore = (
+        implementation: string,
+        enableLSP = true,
+        flowLspNotConfigured = false
+    ) => {
         const store = new LSPStore(
             { implementation, settings: { enableLSP } } as any,
             { channels: [] } as any,
@@ -224,7 +228,7 @@ describe('LSPStore.initFlowLSP', () => {
                 nodeInfo: {},
                 getNodeInfo: jest.fn(),
                 flowLspNotConfigured: jest.fn(() => ({
-                    flowLspNotConfigured: false
+                    flowLspNotConfigured
                 }))
             } as any
         );
@@ -284,6 +288,28 @@ describe('LSPStore.initFlowLSP', () => {
         await store.initFlowLSP();
 
         expect(getLSPInfo).toHaveBeenCalledTimes(1);
+    });
+
+    it('fetches LSP info for remote LND set up for Flow', async () => {
+        const store = makeFlowStore('lnd');
+        const getLSPInfo = jest
+            .spyOn(store, 'getLSPInfo')
+            .mockResolvedValue({});
+
+        await store.initFlowLSP();
+
+        expect(getLSPInfo).toHaveBeenCalledTimes(1);
+    });
+
+    it('skips LSP info for remote LND not set up for Flow', async () => {
+        const store = makeFlowStore('lnd', true, true);
+        const getLSPInfo = jest.spyOn(store, 'getLSPInfo');
+
+        await store.initFlowLSP();
+
+        expect(getLSPInfo).not.toHaveBeenCalled();
+        expect(store.subscribeCustomMessages).toHaveBeenCalled();
+        expect(store.initChannelAcceptor).toHaveBeenCalled();
     });
 
     it('skips LSP info when the LSP is turned off', async () => {
