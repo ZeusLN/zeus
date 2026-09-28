@@ -232,7 +232,7 @@ const ensureTorStarted = (): Promise<void> => {
                 throw markRequestNotSent(e);
             })
             .finally(() => {
-                // restartTor may already have replaced it
+                // clearTorData may already have replaced it
                 if (startPromise === start) startPromise = null;
             });
         startPromise = start;
@@ -279,7 +279,20 @@ const torHttpRequest = async ({
         throw new Error(`Unsupported method: ${method}`);
     }
 
-    await ensureTorStarted();
+    const generation = restartGeneration;
+    try {
+        await ensureTorStarted();
+    } catch (e) {
+        // Restart Tor stopped the start this request was waiting on.
+        // Nothing has been sent yet, so wait for the restart and go on.
+        const stoppedByRestart =
+            e instanceof TorError &&
+            e.code === 'TOR_STOPPED' &&
+            generation !== restartGeneration;
+        if (!stoppedByRestart) throw e;
+        if (restartPromise) await restartPromise.catch(() => {});
+        await ensureTorStarted();
+    }
 
     // Defense in depth: only honor trustInvalidCerts for HTTPS .onion
     // URLs. If a caller passes true for a clearnet URL we drop it on
@@ -307,7 +320,6 @@ const torHttpRequest = async ({
 
     let response;
     try {
-        const generation = restartGeneration;
         try {
             response = await send();
         } catch (e) {
@@ -396,7 +408,9 @@ const restartTor = async () => {
     restartGeneration += 1;
     const restart = (async () => {
         await Tor.daemon.stop();
-        startPromise = null;
+        // stop() fails a start in progress; let it settle so the start
+        // below is a new one rather than that failing one
+        if (startPromise) await startPromise.catch(() => {});
         await ensureTorStarted();
     })();
     restartPromise = restart;
