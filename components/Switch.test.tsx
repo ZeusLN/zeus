@@ -41,6 +41,11 @@ describe('Switch', () => {
         expect(props.thumbColor).toBe('theme:highlight');
     });
 
+    it('aligns itself to the end of its row', () => {
+        const props = renderSwitch({ value: false });
+        expect(props.style).toEqual({ alignSelf: 'flex-end' });
+    });
+
     it('passes value, onValueChange and disabled through', () => {
         const onValueChange = jest.fn();
         const props = renderSwitch({
