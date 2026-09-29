@@ -65,7 +65,7 @@ export default class SetDuressPassphrase extends React.Component<
     saveSettings = async () => {
         const { SettingsStore, navigation } = this.props;
         const { duressPassphrase, duressPassphraseConfirm } = this.state;
-        const { getSettings, updateSettings } = SettingsStore;
+        const { settings, updateSettings } = SettingsStore;
 
         if (duressPassphrase !== duressPassphraseConfirm) {
             this.setState({
@@ -75,8 +75,11 @@ export default class SetDuressPassphrase extends React.Component<
             return;
         }
 
-        const settings = await getSettings();
-
+        // In-memory settings are current here: every write of
+        // passphrase/duressPassphrase goes through updateSettings, which
+        // updates this.settings once the write has landed, and those flows
+        // only navigate afterwards. Re-reading the keychain would only add
+        // latency and a full re-render.
         if (
             duressPassphrase !== '' &&
             duressPassphrase === settings.passphrase
@@ -96,7 +99,6 @@ export default class SetDuressPassphrase extends React.Component<
         }
 
         await updateSettings({ duressPassphrase }).then(() => {
-            getSettings();
             navigation.popTo('Security');
         });
     };

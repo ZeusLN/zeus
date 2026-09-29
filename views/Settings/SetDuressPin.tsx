@@ -71,7 +71,7 @@ export default class SetDuressPin extends React.Component<
     saveSettings = async () => {
         const { SettingsStore, navigation } = this.props;
         const { duressPin, duressPinConfirm } = this.state;
-        const { getSettings, updateSettings } = SettingsStore;
+        const { settings, updateSettings } = SettingsStore;
 
         if (duressPin !== duressPinConfirm) {
             this.setState({
@@ -83,8 +83,11 @@ export default class SetDuressPin extends React.Component<
             return;
         }
 
-        const settings = await getSettings();
-
+        // In-memory settings are current here: every write of pin/duressPin
+        // goes through updateSettings, which updates this.settings once the
+        // write has landed, and those flows only navigate afterwards.
+        // Re-reading the keychain would only add latency and a full
+        // re-render.
         if (duressPin === settings.pin) {
             this.setState({
                 duressPinInvalidError: true,
@@ -96,7 +99,6 @@ export default class SetDuressPin extends React.Component<
         }
 
         await updateSettings({ duressPin }).then(() => {
-            getSettings();
             navigation.popTo('Security');
         });
     };
