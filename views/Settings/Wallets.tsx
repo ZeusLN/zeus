@@ -332,6 +332,10 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                     selectedNode: nodeIndex
                 }).then(() => {
                     setConnectingStatus(true);
+                    // Request the refetch explicitly instead of relying on
+                    // the write above: picking the already selected wallet
+                    // from the startup list changes no settings
+                    SettingsStore.triggerSettingsRefresh = true;
                     this.navigateAfterWalletSelection();
                 });
             }
