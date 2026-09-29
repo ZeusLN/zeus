@@ -1351,12 +1351,26 @@ describe('handleAnything', () => {
         const originalFetch = global.fetch;
         let mockDnsFetch: jest.Mock;
 
+        // Unless the test sets Question, echo the queried name the way
+        // Cloudflare does: when name is repeated, the last one wins
         const mockDoHResponse = (json: any) => {
-            mockDnsFetch = jest.fn().mockResolvedValue({
-                json: async () => json
+            mockDnsFetch = jest.fn().mockImplementation(async (url: string) => {
+                const queried = new URL(url).searchParams.getAll('name').pop();
+                return {
+                    json: async () =>
+                        'Question' in json
+                            ? json
+                            : {
+                                  ...json,
+                                  Question: [{ name: queried, type: 16 }]
+                              }
+                };
             });
             global.fetch = mockDnsFetch as any;
         };
+
+        const queriedNames = () =>
+            new URL(mockDnsFetch.mock.calls[0][0]).searchParams.getAll('name');
 
         const bitcoinUriCalls = () =>
             mockProcessBIP21Uri.mock.calls.filter((call: any[]) =>
@@ -1473,6 +1487,172 @@ describe('handleAnything', () => {
 
             expect(bitcoinUriCalls()).toHaveLength(0);
             expect(result[0]).toBe('LnurlPay');
+        });
+
+        describe('DoH query name', () => {
+            beforeEach(() => {
+                mockDoHResponse({
+                    Status: 0,
+                    AD: true,
+                    Answer: [txt(REAL_TXT)]
+                });
+            });
+
+            it('encodes a local part that would add a second name parameter', async () => {
+                await handleAnything('a&name=x.attacker.example&z=@bank.com');
+
+                expect(queriedNames()).toEqual([
+                    'a&name=x.attacker.example&z=.user._bitcoin-payment.bank.com'
+                ]);
+            });
+
+            it('encodes a local part with # so the query is not truncated', async () => {
+                await handleAnything('a#b@bank.com');
+
+                const url = new URL(mockDnsFetch.mock.calls[0][0]);
+                expect(url.searchParams.getAll('name')).toEqual([
+                    'a#b.user._bitcoin-payment.bank.com'
+                ]);
+                expect(url.searchParams.get('type')).toBe('TXT');
+                expect(url.hash).toBe('');
+            });
+
+            it('rejects an answer for a different name than the one queried', async () => {
+                mockDoHResponse({
+                    Status: 0,
+                    AD: true,
+                    Question: [{ name: 'x.attacker.example', type: 16 }],
+                    Answer: [txt(REAL_TXT)]
+                });
+
+                const result = await handleAnything(ADDRESS);
+
+                expect(bitcoinUriCalls()).toHaveLength(0);
+                expect(result[0]).toBe('LnurlPay');
+            });
+
+            it('rejects an answer with no Question section', async () => {
+                mockDoHResponse({
+                    Status: 0,
+                    AD: true,
+                    Question: [],
+                    Answer: [txt(REAL_TXT)]
+                });
+
+                const result = await handleAnything(ADDRESS);
+
+                expect(bitcoinUriCalls()).toHaveLength(0);
+                expect(result[0]).toBe('LnurlPay');
+            });
+
+            it('matches the echoed name ignoring case and a trailing dot', async () => {
+                mockDoHResponse({
+                    Status: 0,
+                    AD: true,
+                    Question: [
+                        {
+                            name: 'MATT.user._bitcoin-payment.mattcorallo.com.',
+                            type: 16
+                        }
+                    ],
+                    Answer: [txt(REAL_TXT)]
+                });
+                mockBlobUtilFetch.mockRejectedValue(new Error('404'));
+
+                const result = await handleAnything(ADDRESS);
+
+                expect(mockProcessBIP21Uri).toHaveBeenCalledWith(
+                    RECONSTRUCTED_URI
+                );
+                expect(result[0]).toBe('ChoosePaymentMethod');
+            });
+        });
+
+        // .onion has no DNS records (RFC 7686), so a DoH lookup can never
+        // resolve and would only send the onion address to the resolver
+        // over clearnet
+        describe('.onion Lightning addresses', () => {
+            const ONION =
+                'zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion';
+            const ONION_ADDRESS = `satoshi@${ONION}`;
+            const ONION_LNURLP = `http://${ONION}/.well-known/lnurlp/satoshi`;
+
+            let settingsStore: any;
+
+            beforeEach(() => {
+                settingsStore = require('../stores/Stores').settingsStore;
+                mockDoTorRequest.mockReset();
+                mockDoHResponse({
+                    Status: 0,
+                    AD: true,
+                    Answer: [txt(REAL_TXT)]
+                });
+            });
+
+            afterEach(() => {
+                delete settingsStore.enableTor;
+            });
+
+            it('makes no DoH request with Tor enabled', async () => {
+                settingsStore.enableTor = true;
+                const lnurlParams = { callback: `http://${ONION}/callback` };
+                mockDoTorRequest.mockResolvedValue(lnurlParams);
+
+                const result = await handleAnything(ONION_ADDRESS);
+
+                expect(mockDnsFetch).not.toHaveBeenCalled();
+                expect(mockDoTorRequest).toHaveBeenCalledWith(
+                    ONION_LNURLP,
+                    'GET'
+                );
+                expect(result).toEqual([
+                    'LnurlPay',
+                    {
+                        lnurlParams,
+                        satAmount: undefined,
+                        ecash: false,
+                        lightningAddress: ONION_ADDRESS
+                    }
+                ]);
+            });
+
+            it('rejects with the Tor request error when the LNURL fetch fails', async () => {
+                settingsStore.enableTor = true;
+                mockDoTorRequest.mockRejectedValue(new Error('tor failure'));
+
+                await expect(handleAnything(ONION_ADDRESS)).rejects.toThrow(
+                    'tor failure'
+                );
+                expect(mockDnsFetch).not.toHaveBeenCalled();
+            });
+
+            it('makes no DoH request with Tor disabled', async () => {
+                const result = await handleAnything(ONION_ADDRESS);
+
+                expect(mockDnsFetch).not.toHaveBeenCalled();
+                expect(mockDoTorRequest).not.toHaveBeenCalled();
+                expect(mockBlobUtilFetch).toHaveBeenCalledWith(
+                    'get',
+                    ONION_LNURLP
+                );
+                expect(result[0]).toBe('LnurlPay');
+            });
+
+            it('still looks up a clearnet domain with an .onion label', async () => {
+                settingsStore.enableTor = true;
+
+                const result = await handleAnything(
+                    'satoshi@pay.onion.example.com'
+                );
+
+                expect(mockDnsFetch).toHaveBeenCalledTimes(1);
+                expect(mockDoTorRequest).not.toHaveBeenCalled();
+                expect(mockBlobUtilFetch).toHaveBeenCalledWith(
+                    'get',
+                    'https://pay.onion.example.com/.well-known/lnurlp/satoshi'
+                );
+                expect(result[0]).toBe('ChoosePaymentMethod');
+            });
         });
     });
 
