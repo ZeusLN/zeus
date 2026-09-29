@@ -4,6 +4,7 @@ import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Header from '../../components/Header';
+import LoadingIndicator from '../../components/LoadingIndicator';
 import Pin from '../../components/Pin';
 import Screen from '../../components/Screen';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
@@ -23,6 +24,7 @@ interface SetDuressPinState {
     duressPinConfirm: string;
     duressPinMismatchError: boolean;
     duressPinInvalidError: boolean;
+    saving: boolean;
 }
 
 @inject('SettingsStore')
@@ -35,7 +37,8 @@ export default class SetDuressPin extends React.Component<
         duressPin: '',
         duressPinConfirm: '',
         duressPinMismatchError: false,
-        duressPinInvalidError: false
+        duressPinInvalidError: false,
+        saving: false
     };
 
     renderSeparator = () => (
@@ -98,20 +101,37 @@ export default class SetDuressPin extends React.Component<
             return;
         }
 
-        await updateSettings({ duressPin }).then(() => {
-            navigation.popTo('Security');
-        });
+        this.setState({ saving: true });
+        try {
+            await updateSettings({ duressPin });
+        } catch (error) {
+            console.error('Could not save duress PIN', error);
+            this.setState({ saving: false });
+            return;
+        }
+
+        navigation.popTo('Security');
     };
 
     render() {
         const { navigation, SettingsStore } = this.props;
         const { settings } = SettingsStore;
-        const { duressPin, duressPinMismatchError, duressPinInvalidError } =
-            this.state;
+        const {
+            duressPin,
+            duressPinMismatchError,
+            duressPinInvalidError,
+            saving
+        } = this.state;
 
         return (
             <Screen>
-                <Header leftComponent="Back" navigation={navigation} />
+                <Header
+                    leftComponent="Back"
+                    rightComponent={
+                        saving ? <LoadingIndicator size={30} /> : undefined
+                    }
+                    navigation={navigation}
+                />
                 <View
                     style={{
                         paddingTop: 10,
@@ -215,6 +235,7 @@ export default class SetDuressPin extends React.Component<
                                     pinConfirm={true}
                                     pinLength={duressPin.length}
                                     shuffle={settings.scramblePin}
+                                    disabled={saving}
                                 />
                             </View>
                         </>

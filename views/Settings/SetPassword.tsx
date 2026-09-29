@@ -5,6 +5,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
+import LoadingIndicator from '../../components/LoadingIndicator';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
@@ -30,6 +31,7 @@ interface SetPassphraseState {
     passphraseInvalidError: boolean;
     passphraseEmptyError: boolean;
     isBiometryEnabled: boolean;
+    saving: boolean;
 }
 
 @inject('SettingsStore', 'ModalStore')
@@ -45,7 +47,8 @@ export default class SetPassphrase extends React.Component<
         passphraseMismatchError: false,
         passphraseInvalidError: false,
         passphraseEmptyError: false,
-        isBiometryEnabled: false
+        isBiometryEnabled: false,
+        saving: false
     };
 
     private firstInput = React.createRef<any>();
@@ -107,11 +110,18 @@ export default class SetPassphrase extends React.Component<
             return;
         }
 
-        await updateSettings({ passphrase }).then(() => {
-            setLoginStatus(true);
-            navigation.popTo('Security', {
-                enableBiometrics: route.params?.forBiometrics
-            });
+        this.setState({ saving: true });
+        try {
+            await updateSettings({ passphrase });
+        } catch (error) {
+            console.error('Could not save password', error);
+            this.setState({ saving: false });
+            return;
+        }
+
+        setLoginStatus(true);
+        navigation.popTo('Security', {
+            enableBiometrics: route.params?.forBiometrics
         });
     };
 
@@ -137,7 +147,8 @@ export default class SetPassphrase extends React.Component<
             savedPassphrase,
             passphraseMismatchError,
             passphraseInvalidError,
-            passphraseEmptyError
+            passphraseEmptyError,
+            saving
         } = this.state;
 
         return (
@@ -155,6 +166,9 @@ export default class SetPassphrase extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
+                    rightComponent={
+                        saving ? <LoadingIndicator size={30} /> : undefined
+                    }
                     navigation={navigation}
                 />
                 <View
@@ -204,6 +218,7 @@ export default class SetPassphrase extends React.Component<
                         autoCapitalize="none"
                         autoCorrect={false}
                         secureTextEntry={true}
+                        locked={saving}
                         style={{
                             paddingLeft: 10,
                             paddingTop:
@@ -236,6 +251,7 @@ export default class SetPassphrase extends React.Component<
                         autoCapitalize="none"
                         autoCorrect={false}
                         secureTextEntry={true}
+                        locked={saving}
                         style={{
                             paddingLeft: 10,
                             paddingTop:
@@ -255,6 +271,7 @@ export default class SetPassphrase extends React.Component<
                                 'views.Settings.SetPassword.save'
                             )}
                             onPress={() => this.saveSettings()}
+                            disabled={saving}
                         />
                     </View>
                     {!!savedPassphrase && (
@@ -312,6 +329,7 @@ export default class SetPassphrase extends React.Component<
                                     );
                                 }}
                                 warning
+                                disabled={saving}
                             />
                         </View>
                     )}

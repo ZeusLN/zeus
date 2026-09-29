@@ -5,6 +5,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../components/Button';
 import Header from '../../components/Header';
+import LoadingIndicator from '../../components/LoadingIndicator';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
@@ -26,6 +27,7 @@ interface SetDuressPassphraseState {
     duressPassphraseMismatchError: boolean;
     duressPassphraseInvalidError: boolean;
     duressPassphraseEmptyError: boolean;
+    saving: boolean;
 }
 
 @inject('SettingsStore')
@@ -40,7 +42,8 @@ export default class SetDuressPassphrase extends React.Component<
         savedDuressPassphrase: '',
         duressPassphraseMismatchError: false,
         duressPassphraseInvalidError: false,
-        duressPassphraseEmptyError: false
+        duressPassphraseEmptyError: false,
+        saving: false
     };
 
     async componentDidMount() {
@@ -98,9 +101,16 @@ export default class SetDuressPassphrase extends React.Component<
             return;
         }
 
-        await updateSettings({ duressPassphrase }).then(() => {
-            navigation.popTo('Security');
-        });
+        this.setState({ saving: true });
+        try {
+            await updateSettings({ duressPassphrase });
+        } catch (error) {
+            console.error('Could not save duress password', error);
+            this.setState({ saving: false });
+            return;
+        }
+
+        navigation.popTo('Security');
     };
 
     deleteDuressPassword = async () => {
@@ -120,7 +130,8 @@ export default class SetDuressPassphrase extends React.Component<
             savedDuressPassphrase,
             duressPassphraseMismatchError,
             duressPassphraseInvalidError,
-            duressPassphraseEmptyError
+            duressPassphraseEmptyError,
+            saving
         } = this.state;
 
         return (
@@ -138,6 +149,9 @@ export default class SetDuressPassphrase extends React.Component<
                             fontFamily: 'PPNeueMontreal-Book'
                         }
                     }}
+                    rightComponent={
+                        saving ? <LoadingIndicator size={30} /> : undefined
+                    }
                     navigation={navigation}
                 />
                 <View
@@ -186,6 +200,7 @@ export default class SetDuressPassphrase extends React.Component<
                         autoCapitalize="none"
                         autoCorrect={false}
                         secureTextEntry={true}
+                        locked={saving}
                         style={{
                             paddingLeft: 10,
                             paddingTop:
@@ -214,6 +229,7 @@ export default class SetDuressPassphrase extends React.Component<
                         autoCapitalize="none"
                         autoCorrect={false}
                         secureTextEntry={true}
+                        locked={saving}
                         style={{
                             paddingLeft: 10,
                             paddingTop:
@@ -239,6 +255,7 @@ export default class SetDuressPassphrase extends React.Component<
                                 'views.Settings.SetPassword.save'
                             )}
                             onPress={() => this.saveSettings()}
+                            disabled={saving}
                         />
                     </View>
                     {!!savedDuressPassphrase && (
@@ -273,6 +290,7 @@ export default class SetDuressPassphrase extends React.Component<
                                     );
                                 }}
                                 warning
+                                disabled={saving}
                             />
                         </View>
                     )}
