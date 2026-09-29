@@ -67,6 +67,7 @@ import {
 } from '../../utils/LdkNodeUtils';
 import { localeString, bridgeJavaStrings } from '../../utils/LocaleUtils';
 import { isBatterySaverEnabled } from '../../utils/BatteryUtils';
+import { fetchLncData } from '../../utils/LncFetchUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
@@ -603,7 +604,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             login,
             connecting,
             setConnectingStatus,
-            connect,
             connectNWC,
             posStatus,
             walletPassword,
@@ -1217,42 +1217,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 BalanceStore.getLightningBalance(true);
             }
         } else if (implementation === 'lightning-node-connect') {
-            let error;
-            // An LNC session can die while the app is suspended or offline.
-            // isConnected checks the mailbox session, not only that a
-            // connection was once established, so a dead session goes
-            // through connect(), which prompts the native client's own
-            // redial (or starts a dial if there is none) and reports an
-            // error after its budget instead of every call below timing out.
-            const reconnectNeeded =
-                connecting || !(await BackendUtils.isConnected());
-            if (reconnectNeeded) {
-                try {
-                    error = await connect();
-                } catch (connectError: any) {
-                    console.log('LNC connect failed:', connectError);
-                    error = connectError?.message ?? String(connectError);
-                }
-            }
-            if (!error) {
-                try {
-                    await BackendUtils.checkPerms();
-                    await NodeInfoStore.getNodeInfo();
-                    if (BackendUtils.supportsAccounts())
-                        await UTXOsStore.listAccounts();
-                    await BalanceStore.getCombinedBalance();
-                    if (BackendUtils.supportsChannelManagement())
-                        await ChannelsStore.getChannels();
-                    // The session may have come up in the background after
-                    // an earlier connect() timed out and left its error set
-                    if (SettingsStore.error) {
-                        SettingsStore.clearConnectError();
-                    }
-                } catch (connectionError) {
-                    console.log('LNC connection failed:', connectionError);
-                    return;
-                }
-            }
+            const fetched = await fetchLncData(connecting, {
+                SettingsStore,
+                NodeInfoStore,
+                UTXOsStore,
+                BalanceStore,
+                ChannelsStore
+            });
+            if (!fetched) return;
         } else if (implementation === 'nostr-wallet-connect') {
             let error;
             if (connecting) {
