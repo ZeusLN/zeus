@@ -297,11 +297,9 @@ class MigrationsUtils {
             newSettings.lspTestnet = DEFAULT_LSP_TESTNET;
         }
 
-        // lightningAddress, and every other top-level group missing from
-        // this blob, is backfilled from DEFAULT_SETTINGS by
-        // applyMissingSettingsGroups below. It used to be hand-written
-        // here, which is how it drifted from DEFAULT_SETTINGS.lightningAddress
-        // (missing the later-added `posEnabled` field) until #4776.
+        // Every top-level group missing from this blob (lightningAddress,
+        // etc.) is backfilled from DEFAULT_SETTINGS by
+        // applyMissingSettingsGroups below.
 
         // migrate locale to ISO 639-1
         if (
@@ -548,31 +546,28 @@ class MigrationsUtils {
     }
 
     // True when `settings` is missing at least one top-level group that
-    // DEFAULT_SETTINGS defines. Read-only — lets runSettingsMigrations
-    // decide whether a migration write is needed without mutating a
-    // possibly-stale snapshot outside the update queue.
+    // DEFAULT_SETTINGS defines. Read-only.
     public hasMissingSettingsGroups(settings: any): boolean {
         return this.missingSettingsGroupKeys(settings).length > 0;
     }
 
-    // Backfills any top-level settings group (privacy, ecash, networking,
-    // ...) that is entirely missing from `settings`, from DEFAULT_SETTINGS.
+    // Per-group field overrides applied on top of DEFAULT_SETTINGS when
+    // backfilling a missing group, so a group's absence and its backfilled
+    // presence read the same to call sites that treat an absent group as
+    // that field being off (clipboard reads, mempool-rate fetches).
+    private static readonly BACKFILL_OVERRIDES: {
+        [group: string]: Record<string, unknown>;
+    } = {
+        privacy: { clipboard: false, enableMempoolRates: false }
+    };
+
+    // Backfills any top-level settings group that is entirely missing from
+    // `settings`, from DEFAULT_SETTINGS (with BACKFILL_OVERRIDES applied).
     // Only a group that is entirely ABSENT is filled in; a group that
-    // already exists, even partially populated, is left untouched, so no
-    // user setting is silently reset.
+    // already exists, even partially populated, is left untouched.
     //
-    // Deliberately independent of SETTINGS_VERSION and run unconditionally
-    // wherever getSettings loads a blob: a group can be missing from an
-    // install that has always been stamped at the current version, because
-    // it predates that group's addition to DEFAULT_SETTINGS and the
-    // install never wrote to it since. Fixing individual unguarded reads of
-    // a missing group (as #4763 did for `ecash`) closes each crash as it
-    // is found; this closes the class of bug, for any group added to
-    // DEFAULT_SETTINGS from here on, without needing a version bump or a
-    // new migration block each time.
-    //
-    // Idempotent: a no-op scan once every group is present, so it costs
-    // nothing on the common, already-backfilled path. (#4776)
+    // Deliberately independent of SETTINGS_VERSION and safe to call on
+    // every settings load: a no-op once every group is present. (#4776)
     public applyMissingSettingsGroups(settings: any): boolean {
         const missing = this.missingSettingsGroupKeys(settings);
         for (const key of missing) {
@@ -581,9 +576,10 @@ class MigrationsUtils {
             // would let a later in-place mutation of the backfilled group
             // (rather than a full replacement) corrupt the shared default
             // for the next settings load.
-            settings[key] = JSON.parse(
-                JSON.stringify((DEFAULT_SETTINGS as any)[key])
-            );
+            settings[key] = {
+                ...JSON.parse(JSON.stringify((DEFAULT_SETTINGS as any)[key])),
+                ...MigrationsUtils.BACKFILL_OVERRIDES[key]
+            };
         }
         return missing.length > 0;
     }

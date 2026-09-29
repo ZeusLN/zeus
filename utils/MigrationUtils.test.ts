@@ -296,13 +296,16 @@ describe('MigrationUtils', () => {
         requestSimpleTaproot: true,
         settingsVersion: SETTINGS_VERSION,
         speedloader: 'https://egs.lnze.us/',
-        // backfilled by applyMissingSettingsGroups, matching DEFAULT_SETTINGS
+        // backfilled by applyMissingSettingsGroups. clipboard/enableMempoolRates
+        // are false here, not DEFAULT_SETTINGS' true: BACKFILL_OVERRIDES keeps
+        // them off so a blob that never had this group doesn't start reading
+        // the clipboard or fetching mempool rates without having opted in.
         privacy: {
             defaultBlockExplorer: 'mempool.space',
             customBlockExplorer: '',
-            clipboard: true,
+            clipboard: false,
             lurkerMode: false,
-            enableMempoolRates: true,
+            enableMempoolRates: false,
             mempoolInstance: 'electrs.zeusln.com',
             customMempoolInstance: '',
             stealthMode: false,
@@ -990,7 +993,7 @@ describe('MigrationUtils', () => {
             expect(changed).toBe(true);
             expect(settings.ecash).toEqual(DEFAULT_SETTINGS.ecash);
             expect(settings.networking).toEqual(DEFAULT_SETTINGS.networking);
-            expect(settings.privacy).toEqual(DEFAULT_SETTINGS.privacy);
+            // privacy is overridden — see the dedicated test below
             expect(settings.pos).toEqual(DEFAULT_SETTINGS.pos);
             expect(settings.invoices).toEqual(DEFAULT_SETTINGS.invoices);
             expect(settings.channels).toEqual(DEFAULT_SETTINGS.channels);
@@ -1003,6 +1006,39 @@ describe('MigrationUtils', () => {
             );
             expect(settings.display).toEqual(DEFAULT_SETTINGS.display);
             expect(settings.payments).toEqual(DEFAULT_SETTINGS.payments);
+        });
+
+        // clipboard/enableMempoolRates default to true for a fresh install,
+        // but existing read sites (OpenChannel.tsx, WalletConfiguration.tsx,
+        // SeedRecovery.tsx, Send.tsx, WalletHeader.tsx, ChoosePaymentMethod.tsx)
+        // guard on `settings.privacy && settings.privacy.<field>`, so an
+        // absent privacy group already reads as both fields off. Backfilling
+        // the literal DEFAULT_SETTINGS value would flip that on for an
+        // install that never opted in.
+        it('overrides clipboard and enableMempoolRates to false when backfilling privacy', () => {
+            const settings: any = { settingsVersion: SETTINGS_VERSION };
+
+            MigrationUtils.applyMissingSettingsGroups(settings);
+
+            expect(settings.privacy).toEqual({
+                ...DEFAULT_SETTINGS.privacy,
+                clipboard: false,
+                enableMempoolRates: false
+            });
+            // the override didn't mutate the shared default
+            expect(DEFAULT_SETTINGS.privacy.clipboard).toBe(true);
+            expect(DEFAULT_SETTINGS.privacy.enableMempoolRates).toBe(true);
+        });
+
+        it('leaves an existing privacy group untouched, override included', () => {
+            const settings: any = {
+                settingsVersion: SETTINGS_VERSION,
+                privacy: { clipboard: true } // a real, deliberate user choice
+            };
+
+            MigrationUtils.applyMissingSettingsGroups(settings);
+
+            expect(settings.privacy).toEqual({ clipboard: true });
         });
 
         it('never touches a group that already exists, even partially', () => {
@@ -1073,23 +1109,25 @@ describe('MigrationUtils', () => {
                     return false;
                 });
 
-            await MigrationUtils.legacySettingsMigrations('{}');
-            expect(calls).toEqual([
-                'applySettingsMigrations',
-                'applyMissingSettingsGroups'
-            ]);
+            try {
+                await MigrationUtils.legacySettingsMigrations('{}');
+                expect(calls).toEqual([
+                    'applySettingsMigrations',
+                    'applyMissingSettingsGroups'
+                ]);
 
-            calls.length = 0;
-            const EncryptedStorage = require('react-native-encrypted-storage');
-            EncryptedStorage.getItem.mockResolvedValue(null);
-            await MigrationUtils.runSettingsMigrations({}, true);
-            expect(calls).toEqual([
-                'applySettingsMigrations',
-                'applyMissingSettingsGroups'
-            ]);
-
-            applySettingsMigrationsSpy.mockRestore();
-            applyMissingSettingsGroupsSpy.mockRestore();
+                calls.length = 0;
+                const EncryptedStorage = require('react-native-encrypted-storage');
+                EncryptedStorage.getItem.mockResolvedValue(null);
+                await MigrationUtils.runSettingsMigrations({}, true);
+                expect(calls).toEqual([
+                    'applySettingsMigrations',
+                    'applyMissingSettingsGroups'
+                ]);
+            } finally {
+                applySettingsMigrationsSpy.mockRestore();
+                applyMissingSettingsGroupsSpy.mockRestore();
+            }
         });
     });
 

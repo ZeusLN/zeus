@@ -81,6 +81,7 @@ jest.mock('../storage', () => {
 });
 
 import SettingsStore, {
+    DEFAULT_SETTINGS,
     DEFAULT_LSP_MAINNET,
     DEFAULT_LSP_MUTINYNET,
     DEFAULT_LSP_TESTNET,
@@ -128,6 +129,56 @@ afterEach(() => {
     ).toEqual([]);
     errorSpy.mockRestore();
     logSpy.mockRestore();
+});
+
+describe('SettingsStore DEFAULT_SETTINGS', () => {
+    // Object-valued top-level groups DEFAULT_SETTINGS is expected to have.
+    // MigrationUtils.test.ts hand-copies these groups into its own mock, so
+    // a group added here without updating that mock would go unexercised by
+    // the migration backfill tests. Pin the list so that drift fails CI.
+    const EXPECTED_GROUP_KEYS = [
+        'privacy',
+        'display',
+        'pos',
+        'payments',
+        'invoices',
+        'channels',
+        'swaps',
+        'lightningAddress',
+        'bolt12Address',
+        'ecash',
+        'networking'
+    ];
+
+    it('has exactly the expected object-valued top-level groups', () => {
+        const groupKeys = Object.keys(DEFAULT_SETTINGS).filter((key) => {
+            const value = (DEFAULT_SETTINGS as any)[key];
+            return (
+                value !== null &&
+                typeof value === 'object' &&
+                !Array.isArray(value)
+            );
+        });
+        expect(groupKeys.sort()).toEqual([...EXPECTED_GROUP_KEYS].sort());
+    });
+
+    it('initializes settings equal to DEFAULT_SETTINGS', () => {
+        const store = new SettingsStore();
+        // supportedBiometryType is set to `undefined` in the DEFAULT_SETTINGS
+        // literal, which JSON.parse(JSON.stringify(...)) drops entirely from
+        // the clone; toEqual treats an absent key the same as an undefined
+        // one, so this still holds.
+        expect(store.settings).toEqual(DEFAULT_SETTINGS);
+    });
+
+    it('does not let mutating a store instance affect the shared default', () => {
+        const store = new SettingsStore();
+        store.settings.privacy.lurkerMode = true;
+        expect(DEFAULT_SETTINGS.privacy.lurkerMode).toBe(false);
+
+        const otherStore = new SettingsStore();
+        expect(otherStore.settings.privacy.lurkerMode).toBe(false);
+    });
 });
 
 describe('SettingsStore startup wallet selection', () => {

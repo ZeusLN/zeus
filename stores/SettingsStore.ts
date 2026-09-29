@@ -1511,11 +1511,9 @@ export const DEFAULT_SLIDE_TO_PAY_THRESHOLD = 10000;
 
 // The full set of top-level settings and their default values. A fresh
 // install's initial `settings` and MigrationUtils.applyMissingSettingsGroups
-// (which backfills a top-level group that is entirely missing from an
-// existing blob, e.g. one saved before that group existed) both read from
-// this single constant, so the two can never drift apart the way the
-// class field literal and legacySettingsMigrations's own ad hoc
-// `lightningAddress` default once did (#4776).
+// (which backfills a top-level group entirely missing from an existing
+// blob, e.g. one saved before that group existed) both read from this
+// single constant so the two cannot drift apart.
 export const DEFAULT_SETTINGS: Settings = {
     settingsVersion: SETTINGS_VERSION,
     privacy: {
