@@ -1,4 +1,4 @@
-// Session reuse in LightningNodeConnect.initLNC. The native LNC client dials
+// Session reuse in LightningNodeConnect.initLNC and connect(). The native LNC client dials
 // with grpc.WithBlock on a background context: a dial keeps retrying until
 // it connects and nothing can cancel it (Disconnect only closes an
 // established connection, InitLNC swaps the namespace's client without
@@ -47,6 +47,11 @@ jest.mock('../zeus_modules/@lightninglabs/lnc-rn', () => {
         mailboxStatus = 'Connected';
         disconnectCalls = 0;
         disposed = false;
+        lnd = {
+            lightning: {
+                getInfo: jest.fn(() => Promise.reject(new Error('gbn exited')))
+            }
+        };
         constructor(config: any) {
             this._namespace = config.namespace;
             this.credentials = config.credentialStore;
@@ -245,6 +250,55 @@ describe('LightningNodeConnect', () => {
             );
 
             expect(await backend.isConnected()).toBe(false);
+        });
+    });
+
+    describe('connect', () => {
+        // grpc-go only redials an idle channel when an RPC is made, and
+        // lnc-rn's connect() returns early while native IsConnected is true
+        it('makes an RPC to redial a dead session', async () => {
+            const backend = new LightningNodeConnect();
+            const lnc = await openWallet(backend, 'phrase-a');
+            lnc.connected = true;
+            lnc.mailboxStatus = 'Session Not Found';
+
+            await backend.connect();
+
+            expect(lnc.lnd.lightning.getInfo).toHaveBeenCalledTimes(1);
+        });
+
+        it('makes no RPC for a live session', async () => {
+            const backend = new LightningNodeConnect();
+            const lnc = await openWallet(backend, 'phrase-a');
+            lnc.connected = true;
+
+            await backend.connect();
+
+            expect(lnc.lnd.lightning.getInfo).not.toHaveBeenCalled();
+        });
+
+        it('makes no RPC while the first dial is in progress', async () => {
+            const backend = new LightningNodeConnect();
+            const lnc = await openWallet(backend, 'phrase-a');
+            lnc.mailboxStatus = 'Not Connected';
+
+            await backend.connect();
+
+            expect(lnc.dialing).toBe(true);
+            expect(lnc.lnd.lightning.getInfo).not.toHaveBeenCalled();
+        });
+
+        it('still connects when the liveness check fails', async () => {
+            const backend = new LightningNodeConnect();
+            const lnc = await openWallet(backend, 'phrase-a');
+            lnc.connected = true;
+            lnc.status.mockRejectedValueOnce(new Error('bridge error'));
+            lnc.connect.mockClear();
+
+            await backend.connect();
+
+            expect(lnc.lnd.lightning.getInfo).not.toHaveBeenCalled();
+            expect(lnc.connect).toHaveBeenCalledTimes(1);
         });
     });
 });

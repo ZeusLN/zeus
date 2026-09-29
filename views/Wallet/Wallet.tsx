@@ -1225,7 +1225,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             // An LNC session can die while the app is suspended or offline.
             // isConnected checks the mailbox session, not only that a
             // connection was once established, so a dead session goes
-            // through connect(), which waits for the native client's own
+            // through connect(), which prompts the native client's own
             // redial (or starts a dial if there is none) and reports an
             // error after its budget instead of every call below timing out.
             const reconnectNeeded =
