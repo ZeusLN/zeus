@@ -1015,6 +1015,13 @@ describe('MigrationUtils', () => {
         // absent privacy group already reads as both fields off. Backfilling
         // the literal DEFAULT_SETTINGS value would flip that on for an
         // install that never opted in.
+        //
+        // Onboarding/RecommendedSettings.tsx and Onboarding/WalletSettings.tsx
+        // read `settings.privacy?.clipboard ?? true`, so an absent group
+        // currently prefills that screen's clipboard toggle as on; with the
+        // override it prefills off instead. The user sees and can change the
+        // toggle before it's saved, so this is a prefill difference, not a
+        // silent setting change.
         it('overrides clipboard and enableMempoolRates to false when backfilling privacy', () => {
             const settings: any = { settingsVersion: SETTINGS_VERSION };
 
