@@ -187,6 +187,25 @@ describe('activityCsvUtils', () => {
             );
         });
 
+        it('preserves negative numeric string amounts in transaction CSV output', async () => {
+            const mockTransactions = [
+                {
+                    tx: 'txhash1',
+                    getAmount: '-21',
+                    getFee: '1000',
+                    getNote: '',
+                    getDate: '2024-02-09'
+                }
+            ];
+
+            const result = await convertActivityToCsv(
+                mockTransactions,
+                CSV_KEYS.transaction
+            );
+
+            expect(result).toContain('"txhash1","-21","1000","","2024-02-09"');
+        });
+
         it('escapes quotes and neutralizes spreadsheet formulas', async () => {
             const mockPayments = [
                 {

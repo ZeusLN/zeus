@@ -35,6 +35,8 @@ const sanitizeCsvCell = (value: unknown): string => {
     if (typeof value === 'number') return String(value);
 
     const stringValue = String(value);
+    if (/^-?\d+(?:\.\d+)?$/.test(stringValue)) return stringValue;
+
     const escapedValue = stringValue.replace(/"/g, '""');
 
     if (/^\s*[=+\-@]/.test(escapedValue)) {
