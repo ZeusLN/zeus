@@ -1247,6 +1247,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     await BalanceStore.getCombinedBalance();
                     if (BackendUtils.supportsChannelManagement())
                         await ChannelsStore.getChannels();
+                    // The session may have come up in the background after
+                    // an earlier connect() timed out and left its error set
+                    if (SettingsStore.error) {
+                        SettingsStore.clearConnectError();
+                    }
                 } catch (connectionError) {
                     console.log('LNC connection failed:', connectionError);
                     return;

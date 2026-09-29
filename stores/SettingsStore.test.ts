@@ -277,6 +277,21 @@ describe('SettingsStore.connect (LNC)', () => {
         expect(store.error).toBe(true);
         expect(BackendUtilsMock.connect).not.toHaveBeenCalled();
     });
+
+    it('clears a timeout error once the session comes up later', async () => {
+        const store = new SettingsStore();
+
+        const result = store.connect();
+        await settle(61000);
+        await result;
+        expect(store.error).toBe(true);
+
+        store.clearConnectError();
+
+        expect(store.error).toBe(false);
+        expect(store.errorMsg).toBe('');
+        expect(BackendUtilsMock.connect).toHaveBeenCalledTimes(1);
+    });
 });
 
 describe('SettingsStore.setConnectingStatus', () => {
