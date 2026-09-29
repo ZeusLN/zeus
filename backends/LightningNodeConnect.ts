@@ -143,7 +143,26 @@ export default class LightningNodeConnect {
         }
     };
 
-    connect = async () => await this.lnc.connect();
+    connect = async () => {
+        await this.wakeDeadSession();
+        return await this.lnc.connect();
+    };
+
+    // A client whose mailbox session died keeps its gRPC channel (native
+    // IsConnected stays true), and connect() leaves it alone. grpc-go puts a
+    // channel that lost its transport into IDLE and only redials when an RPC
+    // is made, so without one the session never comes back (litd restart,
+    // airplane mode). The RPC's own result does not matter.
+    private wakeDeadSession = async () => {
+        try {
+            if (!(await this.lnc.isConnected())) return;
+            const status = await this.lnc.status();
+            if (!status || status === 'Connected') return;
+        } catch (e) {
+            return;
+        }
+        this.lnc.lnd.lightning.getInfo({}).catch(() => {});
+    };
     checkPerms = async () => {
         // ZEUS-3642: we are temporarily returning all perms
         // as true until resolved
