@@ -56,8 +56,8 @@ export const verifyReverseSwapInvoice = (
  * Derives a reverse swap's preimage from the rescue key's child private
  * key at that swap's key index.
  *
- * The preimage is never sent to or stored by the swap host — only
- * sha256(preimage), as the hold invoice's payment hash — so it exists
+ * The preimage is never sent to or stored by the swap host (only
+ * sha256(preimage), as the hold invoice's payment hash), so it exists
  * nowhere but this derivation. Deriving it deterministically from the
  * rescue key is what makes a reverse swap claimable after restoring that
  * key on another device.

@@ -648,49 +648,35 @@ export default class SwapDetails extends React.Component<
     /**
      * Resolve the address a reverse swap's claim should pay out to.
      *
-     * A swap created on this device carries the destination the user picked.
-     * A rescued one does not: ZEUS attaches the address client-side and
-     * never sends it to the host — only claimPublicKey and preimageHash go
-     * over the wire — so /swap/restore has nothing to return. Fall back to a
-     * fresh address from the wallet in use, which is the same source the
-     * swap creation screen defaults to, and persist it so a later attempt
-     * claims to the same address instead of generating another.
+     * A rescued swap has none: ZEUS attaches the address client-side and
+     * never sends it to the host (only claimPublicKey and preimageHash go
+     * over the wire), so /swap/restore has nothing to return. SwapStore
+     * falls back to a fresh address from the wallet in use, which is the
+     * same source the swap creation screen defaults to.
      */
     resolveDestinationAddress = async (swapId: string): Promise<string> => {
         const { InvoicesStore, SwapStore } = this.props;
 
-        const resolved = this.state.swapData?.destinationAddress;
-        if (resolved) return resolved;
-
-        if (!BackendUtils.supportsOnchainReceiving()) {
-            console.error(
-                'Cannot claim swap: this wallet cannot generate an on-chain address'
-            );
-            return '';
-        }
-
-        try {
-            const destinationAddress = await InvoicesStore?.getNewAddress({
-                unified: true
-            });
-            if (!destinationAddress) return '';
-
-            await SwapStore?.updateSwapDestinationAddress(
+        const existing = this.state.swapData?.destinationAddress;
+        const destinationAddress =
+            (await SwapStore?.resolveClaimAddress({
                 swapId,
-                destinationAddress
-            );
+                destinationAddress: existing,
+                canReceiveOnchain: BackendUtils.supportsOnchainReceiving(),
+                getNewAddress: () =>
+                    InvoicesStore!.getNewAddress({ unified: true })
+            })) || '';
+
+        if (destinationAddress && destinationAddress !== existing) {
             this.setState((prevState) => ({
                 swapData: new Swap({
                     ...prevState.swapData,
                     destinationAddress
                 })
             }));
-
-            return destinationAddress;
-        } catch (e) {
-            console.error('Error generating an address to claim swap to', e);
-            return '';
         }
+
+        return destinationAddress;
     };
 
     /**

@@ -781,6 +781,47 @@ export default class SwapStore {
         }
     };
 
+    /**
+     * Resolves the address a reverse swap's claim should pay out to.
+     *
+     * A swap created on this device carries the destination the user picked.
+     * A rescued one does not, so fall back to a fresh address from the wallet
+     * in use and persist it, so a later attempt claims to the same address
+     * instead of generating another. Returns '' when there is nowhere to
+     * claim to.
+     */
+    public resolveClaimAddress = async ({
+        swapId,
+        destinationAddress,
+        canReceiveOnchain,
+        getNewAddress
+    }: {
+        swapId: string;
+        destinationAddress?: string;
+        canReceiveOnchain: boolean;
+        getNewAddress: () => Promise<string | undefined>;
+    }): Promise<string> => {
+        if (destinationAddress) return destinationAddress;
+
+        if (!canReceiveOnchain) {
+            console.error(
+                'Cannot claim swap: this wallet cannot generate an on-chain address'
+            );
+            return '';
+        }
+
+        try {
+            const address = await getNewAddress();
+            if (!address) return '';
+
+            await this.updateSwapDestinationAddress(swapId, address);
+            return address;
+        } catch (e) {
+            console.error('Error generating an address to claim swap to', e);
+            return '';
+        }
+    };
+
     @action
     public updateSwapOnRefund = async (swapId: string, txid: string) => {
         try {
