@@ -2399,6 +2399,16 @@ export default class SettingsStore {
         return this.errorMsg;
     };
 
+    // An LNC dial keeps running after connect() gives up, so the session
+    // can come up later on its own. The Wallet calls this once RPCs succeed
+    // on such a session, since connect() is not called again to clear its
+    // timeout error.
+    @action
+    public clearConnectError = () => {
+        this.error = false;
+        this.errorMsg = '';
+    };
+
     // NWC
     @action
     public connectNWC = async () => {
