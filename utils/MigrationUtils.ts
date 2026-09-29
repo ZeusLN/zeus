@@ -5,6 +5,7 @@ import { sleep } from './SleepUtils';
 import { settingsStore } from '../stores/Stores';
 import {
     Settings,
+    DEFAULT_SETTINGS,
     DEFAULT_FIAT_RATES_SOURCE,
     DEFAULT_FIAT,
     DEFAULT_LSP_MAINNET,
@@ -296,22 +297,9 @@ class MigrationsUtils {
             newSettings.lspTestnet = DEFAULT_LSP_TESTNET;
         }
 
-        // default Lightning Address settings
-        if (!newSettings.lightningAddress) {
-            newSettings.lightningAddress = {
-                enabled: false,
-                automaticallyAccept: true,
-                automaticallyAcceptAttestationLevel: 2,
-                automaticallyRequestOlympusChannels: false, // deprecated
-                routeHints: false,
-                allowComments: true,
-                zapReceiptsEnabled: true,
-                nostrPrivateKey: '',
-                nostrRelays: DEFAULT_NOSTR_RELAYS,
-                notifications: 0,
-                mintUrl: '' // Cashu
-            };
-        }
+        // Every top-level group missing from this blob (lightningAddress,
+        // etc.) is backfilled from DEFAULT_SETTINGS by
+        // applyMissingSettingsGroups below.
 
         // migrate locale to ISO 639-1
         if (
@@ -458,6 +446,19 @@ class MigrationsUtils {
         // is persisted once by storageMigrationV2
         await this.applySettingsMigrations(newSettings);
 
+        // Any top-level group not already set above (lightningAddress,
+        // privacy, ecash, networking, ...) gets the same default a fresh
+        // install would get. Groups this function has already narrowly
+        // repaired (display, payments) are left as they are. Runs AFTER
+        // applySettingsMigrations, matching the queued path in
+        // runSettingsMigrations: a version-gated migration must see the
+        // blob as the install actually had it, not a group we have
+        // already defaulted, or a migration that builds a group from
+        // older flat keys (guarded on that group being absent) would
+        // find it already present and skip, discarding the user's
+        // legacy values.
+        this.applyMissingSettingsGroups(newSettings);
+
         return newSettings;
     }
 
@@ -493,10 +494,6 @@ class MigrationsUtils {
         settings: any,
         inQueue: boolean = false
     ) {
-        if ((settings?.settingsVersion ?? 0) >= SETTINGS_VERSION) {
-            return settings;
-        }
-
         if (inQueue) {
             // Inside the updateSettings queue's critical section
             // (applySettingsUpdate -> getSettings(fromQueue) -> here):
@@ -508,7 +505,19 @@ class MigrationsUtils {
             // because settingsStore.settingsUpdateInProgress only says
             // some update is in flight somewhere, not that we are on the
             // queue's call stack.
-            await this.applySettingsMigrations(settings);
+            if ((settings?.settingsVersion ?? 0) < SETTINGS_VERSION) {
+                await this.applySettingsMigrations(settings);
+            }
+            // Independent of the version gate above and always run: see
+            // applyMissingSettingsGroups.
+            this.applyMissingSettingsGroups(settings);
+            return settings;
+        }
+
+        if (
+            (settings?.settingsVersion ?? 0) >= SETTINGS_VERSION &&
+            !this.hasMissingSettingsGroups(settings)
+        ) {
             return settings;
         }
 
@@ -520,6 +529,59 @@ class MigrationsUtils {
         // getSettings on fresh state, which re-enters this method through
         // the inQueue branch above.
         return await settingsStore.updateSettings({});
+    }
+
+    // Keys of DEFAULT_SETTINGS whose default value is a plain settings
+    // group (not a scalar or an array) and which are entirely absent from
+    // `settings`. Read-only.
+    private missingSettingsGroupKeys(settings: any): string[] {
+        return Object.keys(DEFAULT_SETTINGS).filter((key) => {
+            const defaultValue = (DEFAULT_SETTINGS as any)[key];
+            const isGroup =
+                defaultValue !== null &&
+                typeof defaultValue === 'object' &&
+                !Array.isArray(defaultValue);
+            return isGroup && settings?.[key] === undefined;
+        });
+    }
+
+    // True when `settings` is missing at least one top-level group that
+    // DEFAULT_SETTINGS defines. Read-only.
+    public hasMissingSettingsGroups(settings: any): boolean {
+        return this.missingSettingsGroupKeys(settings).length > 0;
+    }
+
+    // Per-group field overrides applied on top of DEFAULT_SETTINGS when
+    // backfilling a missing group, so a group's absence and its backfilled
+    // presence read the same to call sites that treat an absent group as
+    // that field being off (clipboard reads, mempool-rate fetches).
+    private static readonly BACKFILL_OVERRIDES: {
+        [group: string]: Record<string, unknown>;
+    } = {
+        privacy: { clipboard: false, enableMempoolRates: false }
+    };
+
+    // Backfills any top-level settings group that is entirely missing from
+    // `settings`, from DEFAULT_SETTINGS (with BACKFILL_OVERRIDES applied).
+    // Only a group that is entirely ABSENT is filled in; a group that
+    // already exists, even partially populated, is left untouched.
+    //
+    // Deliberately independent of SETTINGS_VERSION and safe to call on
+    // every settings load: a no-op once every group is present. (#4776)
+    public applyMissingSettingsGroups(settings: any): boolean {
+        const missing = this.missingSettingsGroupKeys(settings);
+        for (const key of missing) {
+            // Deep clone: DEFAULT_SETTINGS is a module-level object shared
+            // by every caller. Assigning the same nested object reference
+            // would let a later in-place mutation of the backfilled group
+            // (rather than a full replacement) corrupt the shared default
+            // for the next settings load.
+            settings[key] = {
+                ...JSON.parse(JSON.stringify((DEFAULT_SETTINGS as any)[key])),
+                ...MigrationsUtils.BACKFILL_OVERRIDES[key]
+            };
+        }
+        return missing.length > 0;
     }
 
     // Applies every migration between the blob's prior version and the

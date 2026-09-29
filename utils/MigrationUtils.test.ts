@@ -88,6 +88,120 @@ jest.mock('../stores/SettingsStore', () => ({
         Disabled: 'disabled',
         Square: 'square',
         Standalone: 'standalone'
+    },
+    // Mirrors SettingsStore.DEFAULT_SETTINGS's top-level groups (the
+    // scalar defaults above are unused by applyMissingSettingsGroups,
+    // which only backfills object-valued top-level keys). Keep in sync
+    // with the real constant by hand, same as every other DEFAULT_* value
+    // in this mock.
+    DEFAULT_SETTINGS: {
+        settingsVersion: 2,
+        privacy: {
+            defaultBlockExplorer: 'mempool.space',
+            customBlockExplorer: '',
+            clipboard: true,
+            lurkerMode: false,
+            enableMempoolRates: true,
+            mempoolInstance: 'electrs.zeusln.com',
+            customMempoolInstance: '',
+            stealthMode: false,
+            stealthApp: 'calculator',
+            stealthPinLength: 5,
+            stealthVpnCountry: 'Switzerland',
+            stealthVpnServer: 'Geneva'
+        },
+        display: {
+            theme: 'Dark',
+            defaultView: 'Keypad',
+            displayNickname: false,
+            bigKeypadButtons: false,
+            showAllDecimalPlaces: false,
+            removeDecimalSpaces: false,
+            showMillisatoshiAmounts: false
+        },
+        pos: {
+            posEnabled: 'disabled',
+            squareEnabled: false,
+            squareAccessToken: '',
+            squareLocationId: '',
+            merchantName: '',
+            confirmationPreference: 'lnOnly',
+            disableTips: false,
+            squareDevMode: false,
+            showKeypad: true,
+            taxPercentage: '',
+            enablePrinter: false,
+            defaultView: 'Products'
+        },
+        payments: {
+            defaultFeeMethod: 'fixed',
+            defaultFeePercentage: '5.0',
+            defaultFeeFixed: '1000',
+            timeoutSeconds: '60',
+            preferredMempoolRate: 'fastestFee',
+            slideToPayThreshold: 10000,
+            enableDonations: false,
+            defaultDonationPercentage: 5
+        },
+        invoices: {
+            addressType: '0',
+            memo: '',
+            receiverName: '',
+            expiry: '1',
+            timePeriod: 'Hours',
+            expirySeconds: '3600',
+            routeHints: false,
+            ampInvoice: false,
+            blindedPaths: false,
+            showCustomPreimageField: false,
+            displayAmountOnInvoice: false,
+            defaultInvoiceType: 'lightning'
+        },
+        channels: {
+            min_confs: 1,
+            privateChannel: true,
+            scidAlias: true,
+            simpleTaprootChannel: false
+        },
+        swaps: {
+            hostMainnet: 'https://satsrouting.exchange/v2',
+            hostTestnet: 'https://api.testnet.boltz.exchange/v2',
+            customHost: '',
+            proEnabled: false
+        },
+        lightningAddress: {
+            enabled: false,
+            automaticallyAccept: true,
+            automaticallyAcceptAttestationLevel: 2,
+            automaticallyRequestOlympusChannels: false,
+            routeHints: false,
+            allowComments: true,
+            zapReceiptsEnabled: true,
+            nostrPrivateKey: '',
+            nostrRelays: [
+                'wss://relay.damus.io',
+                'wss://nostr.land',
+                'wss://nostr.wine',
+                'wss://nos.lol',
+                'wss://relay.snort.social'
+            ],
+            notifications: 0,
+            mintUrl: '',
+            posEnabled: false
+        },
+        bolt12Address: {
+            localPart: ''
+        },
+        ecash: {
+            enableCashu: false,
+            enableMultiMint: false,
+            automaticallySweep: false,
+            sweepThresholdSats: 10000
+        },
+        networking: {
+            disableOfflineCheck: false
+        },
+        selectNodeOnStartup: false
     }
 }));
 jest.mock('../storage', () => ({
@@ -106,6 +220,8 @@ import MigrationUtils from './MigrationUtils';
 // the real constant, deliberately not mocked: after a version bump these
 // gating tests must run against the bumped value
 import { SETTINGS_VERSION } from './SettingsVersion';
+// resolves to the mocked ../stores/SettingsStore above
+import { DEFAULT_SETTINGS } from '../stores/SettingsStore';
 
 // Mock console logs to keep test output clean
 const mockConsoleLog = jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -114,6 +230,14 @@ const mockConsoleError = jest
     .mockImplementation(() => {});
 
 describe('MigrationUtils', () => {
+    // Everything below the `payments` line is a group legacySettingsMigrations
+    // leaves entirely to applyMissingSettingsGroups: on an empty/legacy blob
+    // it comes out identical to SettingsStore.DEFAULT_SETTINGS's own value,
+    // since nothing else in the function touches these groups (#4776).
+    // `display` and `payments` above keep their existing partial shape:
+    // mod5 and the payments block each narrowly create/repair only the one
+    // field they're responsible for, so applyMissingSettingsGroups finds
+    // them already present and leaves the rest of those two groups alone.
     const defaultSettings = {
         customSpeedloader: '',
         display: {
@@ -140,7 +264,8 @@ describe('MigrationUtils', () => {
             ],
             notifications: 0,
             routeHints: false,
-            zapReceiptsEnabled: true
+            zapReceiptsEnabled: true,
+            posEnabled: false
         },
         lspMainnet: 'https://flow.zeuslsp.com',
         lspTestnet: 'https://flow.testnet.zeuslsp.com',
@@ -170,7 +295,77 @@ describe('MigrationUtils', () => {
         },
         requestSimpleTaproot: true,
         settingsVersion: SETTINGS_VERSION,
-        speedloader: 'https://egs.lnze.us/'
+        speedloader: 'https://egs.lnze.us/',
+        // backfilled by applyMissingSettingsGroups. clipboard/enableMempoolRates
+        // are false here, not DEFAULT_SETTINGS' true: BACKFILL_OVERRIDES keeps
+        // them off so a blob that never had this group doesn't start reading
+        // the clipboard or fetching mempool rates without having opted in.
+        privacy: {
+            defaultBlockExplorer: 'mempool.space',
+            customBlockExplorer: '',
+            clipboard: false,
+            lurkerMode: false,
+            enableMempoolRates: false,
+            mempoolInstance: 'electrs.zeusln.com',
+            customMempoolInstance: '',
+            stealthMode: false,
+            stealthApp: 'calculator',
+            stealthPinLength: 5,
+            stealthVpnCountry: 'Switzerland',
+            stealthVpnServer: 'Geneva'
+        },
+        pos: {
+            posEnabled: 'disabled',
+            squareEnabled: false,
+            squareAccessToken: '',
+            squareLocationId: '',
+            merchantName: '',
+            confirmationPreference: 'lnOnly',
+            disableTips: false,
+            squareDevMode: false,
+            showKeypad: true,
+            taxPercentage: '',
+            enablePrinter: false,
+            defaultView: 'Products'
+        },
+        invoices: {
+            addressType: '0',
+            memo: '',
+            receiverName: '',
+            expiry: '1',
+            timePeriod: 'Hours',
+            expirySeconds: '3600',
+            routeHints: false,
+            ampInvoice: false,
+            blindedPaths: false,
+            showCustomPreimageField: false,
+            displayAmountOnInvoice: false,
+            defaultInvoiceType: 'lightning'
+        },
+        channels: {
+            min_confs: 1,
+            privateChannel: true,
+            scidAlias: true,
+            simpleTaprootChannel: false
+        },
+        swaps: {
+            hostMainnet: 'https://satsrouting.exchange/v2',
+            hostTestnet: 'https://api.testnet.boltz.exchange/v2',
+            customHost: '',
+            proEnabled: false
+        },
+        bolt12Address: {
+            localPart: ''
+        },
+        ecash: {
+            enableCashu: false,
+            enableMultiMint: false,
+            automaticallySweep: false,
+            sweepThresholdSats: 10000
+        },
+        networking: {
+            disableOfflineCheck: false
+        }
     };
 
     describe('MigrationUtils', () => {
@@ -291,7 +486,15 @@ describe('MigrationUtils', () => {
                     })
                 )
             ).resolves.toEqual({
-                ...defaultSettings
+                ...defaultSettings,
+                // The input already has a lightningAddress group (just with
+                // stale nostrRelays), so applyMissingSettingsGroups leaves
+                // it as-is rather than backfilling the later-added
+                // posEnabled field into an existing group
+                lightningAddress: {
+                    ...defaultSettings.lightningAddress,
+                    posEnabled: undefined
+                }
             });
         });
         it('migrates old POS squareEnabled setting to posEnabled', async () => {
@@ -776,6 +979,189 @@ describe('MigrationUtils', () => {
         });
     });
 
+    // #4776: SettingsStore.getSettings replaces the in-memory settings
+    // with whatever was stored, so a top-level group added to
+    // DEFAULT_SETTINGS after an install last wrote its blob is missing
+    // from `settings` entirely, and any unguarded nested read of it
+    // (settings.ecash.enableCashu, as #4763 hit) crashes.
+    describe('applyMissingSettingsGroups', () => {
+        it('backfills every missing top-level group from DEFAULT_SETTINGS', () => {
+            const settings: any = { settingsVersion: SETTINGS_VERSION };
+
+            const changed = MigrationUtils.applyMissingSettingsGroups(settings);
+
+            expect(changed).toBe(true);
+            expect(settings.ecash).toEqual(DEFAULT_SETTINGS.ecash);
+            expect(settings.networking).toEqual(DEFAULT_SETTINGS.networking);
+            // privacy is overridden — see the dedicated test below
+            expect(settings.pos).toEqual(DEFAULT_SETTINGS.pos);
+            expect(settings.invoices).toEqual(DEFAULT_SETTINGS.invoices);
+            expect(settings.channels).toEqual(DEFAULT_SETTINGS.channels);
+            expect(settings.swaps).toEqual(DEFAULT_SETTINGS.swaps);
+            expect(settings.bolt12Address).toEqual(
+                DEFAULT_SETTINGS.bolt12Address
+            );
+            expect(settings.lightningAddress).toEqual(
+                DEFAULT_SETTINGS.lightningAddress
+            );
+            expect(settings.display).toEqual(DEFAULT_SETTINGS.display);
+            expect(settings.payments).toEqual(DEFAULT_SETTINGS.payments);
+        });
+
+        // clipboard/enableMempoolRates default to true for a fresh install,
+        // but existing read sites (OpenChannel.tsx, WalletConfiguration.tsx,
+        // SeedRecovery.tsx, Send.tsx, WalletHeader.tsx, ChoosePaymentMethod.tsx)
+        // guard on `settings.privacy && settings.privacy.<field>`, so an
+        // absent privacy group already reads as both fields off. Backfilling
+        // the literal DEFAULT_SETTINGS value would flip that on for an
+        // install that never opted in.
+        //
+        // Onboarding/RecommendedSettings.tsx and Onboarding/WalletSettings.tsx
+        // read `settings.privacy?.clipboard ?? true`, so an absent group
+        // currently prefills that screen's clipboard toggle as on; with the
+        // override it prefills off instead. The user sees and can change the
+        // toggle before it's saved, so this is a prefill difference, not a
+        // silent setting change.
+        it('overrides clipboard and enableMempoolRates to false when backfilling privacy', () => {
+            const settings: any = { settingsVersion: SETTINGS_VERSION };
+
+            MigrationUtils.applyMissingSettingsGroups(settings);
+
+            expect(settings.privacy).toEqual({
+                ...DEFAULT_SETTINGS.privacy,
+                clipboard: false,
+                enableMempoolRates: false
+            });
+            // the override didn't mutate the shared default
+            expect(DEFAULT_SETTINGS.privacy.clipboard).toBe(true);
+            expect(DEFAULT_SETTINGS.privacy.enableMempoolRates).toBe(true);
+        });
+
+        it('leaves an existing privacy group untouched, override included', () => {
+            const settings: any = {
+                settingsVersion: SETTINGS_VERSION,
+                privacy: { clipboard: true } // a real, deliberate user choice
+            };
+
+            MigrationUtils.applyMissingSettingsGroups(settings);
+
+            expect(settings.privacy).toEqual({ clipboard: true });
+        });
+
+        it('never touches a group that already exists, even partially', () => {
+            const settings: any = {
+                settingsVersion: SETTINGS_VERSION,
+                ecash: { enableCashu: true } // real user data, missing fields
+            };
+
+            const changed = MigrationUtils.applyMissingSettingsGroups(settings);
+
+            // other groups were still missing
+            expect(changed).toBe(true);
+            // the partial group is untouched, not merged with the default
+            expect(settings.ecash).toEqual({ enableCashu: true });
+        });
+
+        it('is a no-op once every group is present', () => {
+            const settings: any = { ...DEFAULT_SETTINGS };
+
+            expect(MigrationUtils.applyMissingSettingsGroups(settings)).toBe(
+                false
+            );
+        });
+
+        it('leaves scalar and array defaults alone', () => {
+            // settingsVersion (number), neutrinoPeersMainnet (array):
+            // backfilling these is out of scope, and out of the crash
+            // class this closes — a missing scalar or array does not throw
+            // on read the way `settings.group.field` does when `group`
+            // itself is undefined
+            const settings: any = {};
+
+            MigrationUtils.applyMissingSettingsGroups(settings);
+
+            expect(settings.settingsVersion).toBeUndefined();
+            expect(settings.neutrinoPeersMainnet).toBeUndefined();
+        });
+
+        it('does not alias DEFAULT_SETTINGS: mutating a backfilled group leaves the default untouched', () => {
+            const settings: any = { settingsVersion: SETTINGS_VERSION };
+            MigrationUtils.applyMissingSettingsGroups(settings);
+
+            settings.ecash.enableCashu = true;
+
+            expect(DEFAULT_SETTINGS.ecash.enableCashu).toBe(false);
+        });
+
+        // A version-gated migration in applySettingsMigrations must see
+        // the blob as the install actually had it, not a group this
+        // function has already defaulted — a future migration guarded on
+        // a group being absent (building it from older flat keys, the
+        // way applyInvoiceExpiryDisplay's `if (!invoices) return false`
+        // is shaped) would otherwise find the group already present and
+        // skip, discarding the user's legacy values. Both entry points
+        // must therefore run applySettingsMigrations first.
+        it('runs after applySettingsMigrations on both the legacy and queued paths', async () => {
+            const calls: string[] = [];
+            const applySettingsMigrationsSpy = jest
+                .spyOn(MigrationUtils, 'applySettingsMigrations')
+                .mockImplementation(async () => {
+                    calls.push('applySettingsMigrations');
+                    return false;
+                });
+            const applyMissingSettingsGroupsSpy = jest
+                .spyOn(MigrationUtils, 'applyMissingSettingsGroups')
+                .mockImplementation(() => {
+                    calls.push('applyMissingSettingsGroups');
+                    return false;
+                });
+
+            try {
+                await MigrationUtils.legacySettingsMigrations('{}');
+                expect(calls).toEqual([
+                    'applySettingsMigrations',
+                    'applyMissingSettingsGroups'
+                ]);
+
+                calls.length = 0;
+                const EncryptedStorage = require('react-native-encrypted-storage');
+                EncryptedStorage.getItem.mockResolvedValue(null);
+                await MigrationUtils.runSettingsMigrations({}, true);
+                expect(calls).toEqual([
+                    'applySettingsMigrations',
+                    'applyMissingSettingsGroups'
+                ]);
+            } finally {
+                applySettingsMigrationsSpy.mockRestore();
+                applyMissingSettingsGroupsSpy.mockRestore();
+            }
+        });
+    });
+
+    describe('hasMissingSettingsGroups', () => {
+        it('is true when a group is absent and false once backfilled', () => {
+            const settings: any = { settingsVersion: SETTINGS_VERSION };
+
+            expect(MigrationUtils.hasMissingSettingsGroups(settings)).toBe(
+                true
+            );
+
+            MigrationUtils.applyMissingSettingsGroups(settings);
+
+            expect(MigrationUtils.hasMissingSettingsGroups(settings)).toBe(
+                false
+            );
+        });
+
+        it('is false for a blob with every group present', () => {
+            expect(
+                MigrationUtils.hasMissingSettingsGroups({
+                    ...DEFAULT_SETTINGS
+                })
+            ).toBe(false);
+        });
+    });
+
     describe('runSettingsMigrations', () => {
         const EncryptedStorage = require('react-native-encrypted-storage');
         const { settingsStore } = require('../stores/Stores');
@@ -791,9 +1177,11 @@ describe('MigrationUtils', () => {
             settingsStore.settingsUpdateInProgress = false;
         });
 
-        it('skips everything when the blob is already stamped', async () => {
+        it('skips everything when the blob is already stamped and has every group', async () => {
+            // a real modern blob: every group DEFAULT_SETTINGS defines is
+            // present, so there is truly nothing left to do
             const settings: any = {
-                settingsVersion: SETTINGS_VERSION,
+                ...DEFAULT_SETTINGS,
                 lspMainnet: 'https://0conf.lnolymp.us'
             };
 
@@ -803,6 +1191,32 @@ describe('MigrationUtils', () => {
             expect(EncryptedStorage.getItem).not.toHaveBeenCalled();
             expect(settingsStore.setSettings).not.toHaveBeenCalled();
             expect(settingsStore.updateSettings).not.toHaveBeenCalled();
+        });
+
+        // #4776: a blob stamped at the current version is not necessarily
+        // complete — it can predate a group's addition to DEFAULT_SETTINGS
+        // and never have written to it since. Unlike every other case in
+        // this file, the version gate alone must not skip the write.
+        it('still enqueues a write when a stamped blob is missing a group', async () => {
+            const settings: any = {
+                settingsVersion: SETTINGS_VERSION,
+                lspMainnet: 'https://0conf.lnolymp.us'
+                // no `ecash`, `privacy`, etc: an install that migrated
+                // before those groups existed
+            };
+            settingsStore.updateSettings.mockImplementation(
+                async () =>
+                    await MigrationUtils.runSettingsMigrations(settings, true)
+            );
+
+            const result = await MigrationUtils.runSettingsMigrations(settings);
+
+            expect(settingsStore.updateSettings).toHaveBeenCalledWith({});
+            // the missing groups are filled from DEFAULT_SETTINGS
+            expect(result.ecash).toEqual(DEFAULT_SETTINGS.ecash);
+            expect(result.networking).toEqual(DEFAULT_SETTINGS.networking);
+            // the pre-existing, unrelated field is untouched
+            expect(result.lspMainnet).toBe('https://0conf.lnolymp.us');
         });
 
         it('routes the write through the updateSettings queue when outside it', async () => {

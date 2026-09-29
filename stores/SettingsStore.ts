@@ -1509,157 +1509,171 @@ export const DEFAULT_NEUTRINO_PEERS_TESTNET = [
 
 export const DEFAULT_SLIDE_TO_PAY_THRESHOLD = 10000;
 
+// The full set of top-level settings and their default values. A fresh
+// install's initial `settings` and MigrationUtils.applyMissingSettingsGroups
+// (which backfills a top-level group entirely missing from an existing
+// blob, e.g. one saved before that group existed) both read from this
+// single constant so the two cannot drift apart.
+export const DEFAULT_SETTINGS: Settings = {
+    settingsVersion: SETTINGS_VERSION,
+    privacy: {
+        defaultBlockExplorer: 'mempool.space',
+        customBlockExplorer: '',
+        clipboard: true,
+        lurkerMode: false,
+        enableMempoolRates: true,
+        mempoolInstance: DEFAULT_MEMPOOL_INSTANCE,
+        customMempoolInstance: '',
+        stealthMode: false,
+        stealthApp: 'calculator',
+        stealthPinLength: 5,
+        stealthVpnCountry: 'Switzerland',
+        stealthVpnServer: 'Geneva'
+    },
+    display: {
+        theme: DEFAULT_THEME,
+        defaultView: 'Keypad',
+        displayNickname: false,
+        bigKeypadButtons: false,
+        showAllDecimalPlaces: false,
+        removeDecimalSpaces: false,
+        showMillisatoshiAmounts: false
+    },
+    pos: {
+        posEnabled: PosEnabled.Disabled,
+        squareEnabled: false, // deprecated
+        squareAccessToken: '',
+        squareLocationId: '',
+        merchantName: '',
+        confirmationPreference: 'lnOnly',
+        disableTips: false,
+        squareDevMode: false,
+        showKeypad: true,
+        taxPercentage: '',
+        enablePrinter: false,
+        defaultView: 'Products'
+    },
+    payments: {
+        defaultFeeMethod: 'fixed', // deprecated
+        defaultFeePercentage: '5.0',
+        defaultFeeFixed: '1000',
+        timeoutSeconds: '60',
+        preferredMempoolRate: 'fastestFee',
+        slideToPayThreshold: DEFAULT_SLIDE_TO_PAY_THRESHOLD,
+        enableDonations: false,
+        defaultDonationPercentage: 5
+    },
+    invoices: {
+        addressType: '0',
+        memo: '',
+        receiverName: '',
+        expiry: '1',
+        timePeriod: 'Hours',
+        expirySeconds: '3600',
+        routeHints: false,
+        ampInvoice: false,
+        blindedPaths: false,
+        showCustomPreimageField: false,
+        displayAmountOnInvoice: false, // deprecated
+        defaultInvoiceType: DefaultInvoiceType.Lightning
+    },
+    channels: {
+        min_confs: 1,
+        privateChannel: true,
+        scidAlias: true,
+        simpleTaprootChannel: false
+    },
+    supportedBiometryType: undefined,
+    isBiometryEnabled: false,
+    scramblePin: true,
+    loginBackground: false,
+    fiatEnabled: true,
+    fiat: DEFAULT_FIAT,
+    fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE,
+    // embedded node
+    automaticDisasterRecoveryBackup: true,
+    expressGraphSync: false,
+    resetExpressGraphSyncOnStartup: false,
+    bimodalPathfinding: true,
+    graphSyncPromptNeverAsk: false,
+    graphSyncPromptIgnoreOnce: false,
+    dontAllowOtherPeers: false,
+    neutrinoPeersMainnet: DEFAULT_NEUTRINO_PEERS_MAINNET,
+    neutrinoPeersTestnet: DEFAULT_NEUTRINO_PEERS_TESTNET,
+    zeroConfPeers: [],
+    rescan: false,
+    compactDb: false,
+    recovery: false,
+    initialLoad: true,
+    embeddedTor: false,
+    feeEstimator: DEFAULT_FEE_ESTIMATOR,
+    customFeeEstimator: '',
+    speedloader: DEFAULT_SPEEDLOADER,
+    customSpeedloader: '',
+    // LSP
+    enableLSP: true,
+    lspMainnet: DEFAULT_LSP_MAINNET,
+    lspTestnet: DEFAULT_LSP_TESTNET,
+    lspMutinynet: DEFAULT_LSP_MUTINYNET,
+    lspAccessKey: '',
+    requestSimpleTaproot: true,
+    //lsps1
+    lsps1RestMainnet: DEFAULT_LSPS1_REST_MAINNET,
+    lsps1RestTestnet: DEFAULT_LSPS1_REST_TESTNET,
+    lsps1RestMutinynet: DEFAULT_LSPS1_REST_MUTINYNET,
+    lsps1PubkeyMainnet: DEFAULT_LSPS1_PUBKEY_MAINNET,
+    lsps1PubkeyTestnet: DEFAULT_LSPS1_PUBKEY_TESTNET,
+    lsps1PubkeyMutinynet: DEFAULT_LSPS1_PUBKEY_MUTINYNET,
+    lsps1HostMainnet: DEFAULT_LSPS1_HOST_MAINNET,
+    lsps1HostTestnet: DEFAULT_LSPS1_HOST_TESTNET,
+    lsps1HostMutinynet: DEFAULT_LSPS1_HOST_MUTINYNET,
+    lsps1Token: '',
+    //swaps
+    swaps: {
+        hostMainnet: DEFAULT_SWAP_HOST_MAINNET,
+        hostTestnet: DEFAULT_SWAP_HOST_TESTNET,
+        customHost: '',
+        proEnabled: false
+    },
+    // Lightning Address
+    lightningAddress: {
+        enabled: false,
+        automaticallyAccept: true,
+        automaticallyAcceptAttestationLevel: 2,
+        automaticallyRequestOlympusChannels: false, // deprecated
+        routeHints: false,
+        allowComments: true,
+        zapReceiptsEnabled: true,
+        nostrPrivateKey: '',
+        nostrRelays: DEFAULT_NOSTR_RELAYS,
+        notifications: 0,
+        mintUrl: '',
+        posEnabled: false // ZEUS Pay+
+    },
+    bolt12Address: {
+        localPart: ''
+    },
+    ecash: {
+        enableCashu: false,
+        enableMultiMint: false,
+        automaticallySweep: false,
+        sweepThresholdSats: 10000
+    },
+    networking: {
+        disableOfflineCheck: false
+    },
+    selectNodeOnStartup: false
+};
+
 export default class SettingsStore {
-    @observable settings: Settings = {
-        settingsVersion: SETTINGS_VERSION,
-        privacy: {
-            defaultBlockExplorer: 'mempool.space',
-            customBlockExplorer: '',
-            clipboard: true,
-            lurkerMode: false,
-            enableMempoolRates: true,
-            mempoolInstance: DEFAULT_MEMPOOL_INSTANCE,
-            customMempoolInstance: '',
-            stealthMode: false,
-            stealthApp: 'calculator',
-            stealthPinLength: 5,
-            stealthVpnCountry: 'Switzerland',
-            stealthVpnServer: 'Geneva'
-        },
-        display: {
-            theme: DEFAULT_THEME,
-            defaultView: 'Keypad',
-            displayNickname: false,
-            bigKeypadButtons: false,
-            showAllDecimalPlaces: false,
-            removeDecimalSpaces: false,
-            showMillisatoshiAmounts: false
-        },
-        pos: {
-            posEnabled: PosEnabled.Disabled,
-            squareEnabled: false, // deprecated
-            squareAccessToken: '',
-            squareLocationId: '',
-            merchantName: '',
-            confirmationPreference: 'lnOnly',
-            disableTips: false,
-            squareDevMode: false,
-            showKeypad: true,
-            taxPercentage: '',
-            enablePrinter: false,
-            defaultView: 'Products'
-        },
-        payments: {
-            defaultFeeMethod: 'fixed', // deprecated
-            defaultFeePercentage: '5.0',
-            defaultFeeFixed: '1000',
-            timeoutSeconds: '60',
-            preferredMempoolRate: 'fastestFee',
-            slideToPayThreshold: DEFAULT_SLIDE_TO_PAY_THRESHOLD,
-            enableDonations: false,
-            defaultDonationPercentage: 5
-        },
-        invoices: {
-            addressType: '0',
-            memo: '',
-            receiverName: '',
-            expiry: '1',
-            timePeriod: 'Hours',
-            expirySeconds: '3600',
-            routeHints: false,
-            ampInvoice: false,
-            blindedPaths: false,
-            showCustomPreimageField: false,
-            displayAmountOnInvoice: false, // deprecated
-            defaultInvoiceType: DefaultInvoiceType.Lightning
-        },
-        channels: {
-            min_confs: 1,
-            privateChannel: true,
-            scidAlias: true,
-            simpleTaprootChannel: false
-        },
-        supportedBiometryType: undefined,
-        isBiometryEnabled: false,
-        scramblePin: true,
-        loginBackground: false,
-        fiatEnabled: true,
-        fiat: DEFAULT_FIAT,
-        fiatRatesSource: DEFAULT_FIAT_RATES_SOURCE,
-        // embedded node
-        automaticDisasterRecoveryBackup: true,
-        expressGraphSync: false,
-        resetExpressGraphSyncOnStartup: false,
-        bimodalPathfinding: true,
-        graphSyncPromptNeverAsk: false,
-        graphSyncPromptIgnoreOnce: false,
-        dontAllowOtherPeers: false,
-        neutrinoPeersMainnet: DEFAULT_NEUTRINO_PEERS_MAINNET,
-        neutrinoPeersTestnet: DEFAULT_NEUTRINO_PEERS_TESTNET,
-        zeroConfPeers: [],
-        rescan: false,
-        compactDb: false,
-        recovery: false,
-        initialLoad: true,
-        embeddedTor: false,
-        feeEstimator: DEFAULT_FEE_ESTIMATOR,
-        customFeeEstimator: '',
-        speedloader: DEFAULT_SPEEDLOADER,
-        customSpeedloader: '',
-        // LSP
-        enableLSP: true,
-        lspMainnet: DEFAULT_LSP_MAINNET,
-        lspTestnet: DEFAULT_LSP_TESTNET,
-        lspMutinynet: DEFAULT_LSP_MUTINYNET,
-        lspAccessKey: '',
-        requestSimpleTaproot: true,
-        //lsps1
-        lsps1RestMainnet: DEFAULT_LSPS1_REST_MAINNET,
-        lsps1RestTestnet: DEFAULT_LSPS1_REST_TESTNET,
-        lsps1RestMutinynet: DEFAULT_LSPS1_REST_MUTINYNET,
-        lsps1PubkeyMainnet: DEFAULT_LSPS1_PUBKEY_MAINNET,
-        lsps1PubkeyTestnet: DEFAULT_LSPS1_PUBKEY_TESTNET,
-        lsps1PubkeyMutinynet: DEFAULT_LSPS1_PUBKEY_MUTINYNET,
-        lsps1HostMainnet: DEFAULT_LSPS1_HOST_MAINNET,
-        lsps1HostTestnet: DEFAULT_LSPS1_HOST_TESTNET,
-        lsps1HostMutinynet: DEFAULT_LSPS1_HOST_MUTINYNET,
-        lsps1Token: '',
-        //swaps
-        swaps: {
-            hostMainnet: DEFAULT_SWAP_HOST_MAINNET,
-            hostTestnet: DEFAULT_SWAP_HOST_TESTNET,
-            customHost: '',
-            proEnabled: false
-        },
-        // Lightning Address
-        lightningAddress: {
-            enabled: false,
-            automaticallyAccept: true,
-            automaticallyAcceptAttestationLevel: 2,
-            automaticallyRequestOlympusChannels: false, // deprecated
-            routeHints: false,
-            allowComments: true,
-            zapReceiptsEnabled: true,
-            nostrPrivateKey: '',
-            nostrRelays: DEFAULT_NOSTR_RELAYS,
-            notifications: 0,
-            mintUrl: '',
-            posEnabled: false // ZEUS Pay+
-        },
-        bolt12Address: {
-            localPart: ''
-        },
-        ecash: {
-            enableCashu: false,
-            enableMultiMint: false,
-            automaticallySweep: false,
-            sweepThresholdSats: 10000
-        },
-        networking: {
-            disableOfflineCheck: false
-        },
-        selectNodeOnStartup: false
-    };
+    // Deep clone: DEFAULT_SETTINGS is a module-level object. Referencing
+    // its nested groups directly would let an in-place mutation of one
+    // (e.g. toggleLurker's `this.settings.privacy.lurkerMode = ...`)
+    // corrupt the shared default for the next settings load in this
+    // process.
+    @observable settings: Settings = JSON.parse(
+        JSON.stringify(DEFAULT_SETTINGS)
+    );
     @observable public posStatus: string = 'unselected';
     @observable public posWasEnabled: boolean = false;
     @observable public loading = false;
