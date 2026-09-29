@@ -761,6 +761,9 @@ export default class SwapDetails extends React.Component<
                         'Reverse claim transaction submitted successfully.',
                         { attempt: i + 1 }
                     );
+                    // an earlier attempt (e.g. on transaction.mempool) may
+                    // have failed and set an error that no longer applies
+                    this.setState({ error: null });
                     return true;
                 } catch (error) {
                     console.log('Error submitting reverse claim tx', {
