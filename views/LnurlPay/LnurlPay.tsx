@@ -173,7 +173,17 @@ export default class LnurlPay extends React.Component<
         let finalSatAmount: string | number;
         let fiatError: string | undefined;
 
-        if (satAmount && satAmount != 0) {
+        if (isFixedAmount(lnurl)) {
+            // Fixed amount: the request is paid exactly as asked, so prefill
+            // the locked input with the required amount and ignore any
+            // amount or satAmount handed in by the caller (Send forwards its
+            // own), which the server would reject. Asking for sats explicitly
+            // keeps the prefill correct whether or not resetUnits() above has
+            // run, so the value and the unit the input renders in are decided
+            // here and not by the global unit.
+            finalAmount = getRawAmountFromSats(minSendableSats, 'sats').amount;
+            finalSatAmount = minSendableSats;
+        } else if (satAmount && satAmount != 0) {
             // If satAmount is provided, always derive display amount from it
             // (ignore any `amount` param as it may be in a different unit)
             const { amount: displayAmount, error } =
@@ -185,13 +195,6 @@ export default class LnurlPay extends React.Component<
             // If only amount is provided, use it and derive satAmount
             finalAmount = amount;
             finalSatAmount = getSatAmount(amount);
-        } else if (lnurl.minSendable === lnurl.maxSendable) {
-            // Fixed amount: prefill the locked input with the required amount.
-            // Asking for sats explicitly keeps the prefill correct whether or
-            // not resetUnits() above has run, so the value and the unit the
-            // input renders in are decided here and not by the global unit.
-            finalAmount = getRawAmountFromSats(minSendableSats, 'sats').amount;
-            finalSatAmount = minSendableSats;
         } else {
             // Variable amount: start empty so the user doesn't have to
             // delete a prefilled value
