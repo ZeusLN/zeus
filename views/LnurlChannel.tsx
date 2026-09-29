@@ -1,6 +1,5 @@
 import url from 'url';
 import * as React from 'react';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Alert, StyleSheet, Switch, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import querystring from 'querystring-es3';
@@ -19,6 +18,8 @@ import {
 import ChannelsStore from '../stores/ChannelsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 
+import { isLnurlCallbackAllowed } from '../utils/LnurlPayUtils';
+import { fetchLnurlUrl } from '../utils/LnurlFetchUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import NodeUriUtils from '../utils/NodeUriUtils';
@@ -132,6 +133,19 @@ export default class LnurlChannel extends React.Component<
         const { route, NodeInfoStore } = this.props;
         const { domain, k1 } = this.state;
         const lnurl = route.params?.lnurlParams;
+        if (!isLnurlCallbackAllowed(lnurl.callback).ok) {
+            // Never fetch a callback that would reach internal infrastructure
+            // or leak in cleartext (SSRF-by-callback)
+            this.setState({ connectingToPeer: false });
+            Alert.alert(
+                localeString('general.error'),
+                localeString('utils.lnurl.unsafeCallback'),
+                [{ text: localeString('general.ok'), onPress: () => void 0 }],
+                { cancelable: false }
+            );
+            return;
+        }
+
         const u = url.parse(lnurl.callback);
         const qs = querystring.parse(u.query);
         qs.k1 = k1;
@@ -144,7 +158,7 @@ export default class LnurlChannel extends React.Component<
         u.search = querystring.stringify(qs);
         u.query = querystring.stringify(qs);
 
-        ReactNativeBlobUtil.fetch('get', url.format(u))
+        fetchLnurlUrl(url.format(u))
             .then((response: any) => {
                 try {
                     const data = response.json();

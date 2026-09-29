@@ -1,7 +1,6 @@
 import url from 'url';
 import { action, observable, reaction, runInAction } from 'mobx';
 import BigNumber from 'bignumber.js';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Alert } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import querystring from 'querystring-es3';
@@ -15,6 +14,8 @@ import BackendUtils from '../utils/BackendUtils';
 import { toWalletrpcAddressTypeName } from '../utils/LndUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
+import { isLnurlCallbackAllowed } from '../utils/LnurlPayUtils';
+import { fetchLnurlUrl } from '../utils/LnurlFetchUtils';
 import LdkNodeInjection from '../ldknode/LdkNodeInjection';
 import ChannelsStore from './ChannelsStore';
 import NodeInfoStore from './NodeInfoStore';
@@ -490,6 +491,29 @@ export default class InvoicesStore {
                 }
 
                 if (lnurl) {
+                    if (!isLnurlCallbackAllowed(lnurl.callback).ok) {
+                        // Never fetch a callback that would reach internal
+                        // infrastructure or leak in cleartext
+                        // (SSRF-by-callback)
+                        Alert.alert(
+                            localeString('general.error'),
+                            localeString('utils.lnurl.unsafeCallback'),
+                            [
+                                {
+                                    text: localeString('general.ok'),
+                                    onPress: () => void 0
+                                }
+                            ],
+                            { cancelable: false }
+                        );
+                        return {
+                            rHash: invoice.getFormattedRhash,
+                            paymentRequest: jit_bolt11
+                                ? jit_bolt11
+                                : invoice.getPaymentRequest
+                        };
+                    }
+
                     const u = url.parse(lnurl.callback);
                     const qs = querystring.parse(u.query);
                     qs.k1 = lnurl.k1;
@@ -497,7 +521,7 @@ export default class InvoicesStore {
                     u.search = querystring.stringify(qs);
                     u.query = querystring.stringify(qs);
 
-                    ReactNativeBlobUtil.fetch('get', url.format(u))
+                    fetchLnurlUrl(url.format(u))
                         .then((response: any) => {
                             try {
                                 const data = response.json();
