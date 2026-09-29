@@ -69,7 +69,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
     saveSettings = async () => {
         const { SettingsStore, navigation, route } = this.props;
         const { pin, pinConfirm } = this.state;
-        const { getSettings, updateSettings, setLoginStatus } = SettingsStore;
+        const { settings, updateSettings, setLoginStatus } = SettingsStore;
 
         if (pin !== pinConfirm) {
             this.setState({
@@ -81,8 +81,11 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
             return;
         }
 
-        const settings = await getSettings();
-
+        // In-memory settings are current here: every write of pin/duressPin
+        // goes through updateSettings, which updates this.settings once the
+        // write has landed, and those flows only navigate afterwards.
+        // Re-reading the keychain would only add latency and a full
+        // re-render.
         if (pin === settings.duressPin) {
             this.setState({
                 pinInvalidError: true,
@@ -95,7 +98,6 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
 
         await updateSettings({ pin }).then(() => {
             setLoginStatus(true);
-            getSettings();
             navigation.popTo('Security', {
                 enableBiometrics: route.params?.forBiometrics
             });
