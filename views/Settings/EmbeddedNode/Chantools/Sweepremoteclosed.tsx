@@ -365,6 +365,7 @@ export default class Sweepremoteclosed extends React.Component<
                                                     }
                                                     autoCapitalize="none"
                                                     autoCorrect={false}
+                                                    keyboardType="url"
                                                     locked={loading}
                                                 />
                                             </>

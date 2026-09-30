@@ -270,6 +270,7 @@ export default class NeutrinoPeers extends React.Component<
                                         style={{ flex: 1 }}
                                         autoCapitalize="none"
                                         autoCorrect={false}
+                                        keyboardType="url"
                                     />
                                     <Row>
                                         <View

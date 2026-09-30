@@ -598,6 +598,7 @@ export default class AddMint extends React.Component<
                                 locked={false}
                                 autoCapitalize="none"
                                 autoCorrect={false}
+                                keyboardType="url"
                             />
                         </>
 

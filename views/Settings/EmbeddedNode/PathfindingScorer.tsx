@@ -122,6 +122,7 @@ export default class PathfindingScorer extends React.Component<
                             }}
                             autoCapitalize="none"
                             autoCorrect={false}
+                            keyboardType="url"
                         />
 
                         {showInvalidUrlError && (

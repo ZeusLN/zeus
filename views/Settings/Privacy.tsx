@@ -209,6 +209,7 @@ export default class Privacy extends React.Component<
                                 error={customBlockExplorerError}
                                 autoCapitalize="none"
                                 autoCorrect={false}
+                                keyboardType="url"
                                 onChangeText={async (text: string) => {
                                     this.setState({
                                         customBlockExplorer: text
@@ -419,6 +420,7 @@ export default class Privacy extends React.Component<
                                     error={customMempoolInstanceError}
                                     autoCapitalize="none"
                                     autoCorrect={false}
+                                    keyboardType="url"
                                     onChangeText={async (text: string) => {
                                         this.setState({
                                             customMempoolInstance: text

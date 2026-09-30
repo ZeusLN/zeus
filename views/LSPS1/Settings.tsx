@@ -287,6 +287,7 @@ export default class LSPS1Settings extends React.Component<
                                 }}
                                 autoCapitalize="none"
                                 autoCorrect={false}
+                                keyboardType="url"
                             />
 
                             <Text
@@ -388,6 +389,7 @@ export default class LSPS1Settings extends React.Component<
                                 }}
                                 autoCapitalize="none"
                                 autoCorrect={false}
+                                keyboardType="url"
                             />
                         </>
                     )}
@@ -417,6 +419,7 @@ export default class LSPS1Settings extends React.Component<
                                 }}
                                 autoCapitalize="none"
                                 autoCorrect={false}
+                                keyboardType="url"
                             />
                         </>
                     )}

@@ -150,6 +150,7 @@ export default class NostrRelays extends React.Component<
                                     }}
                                     autoCapitalize="none"
                                     autoCorrect={false}
+                                    keyboardType="url"
                                 />
                                 <View style={{ width: 50, height: 60 }}>
                                     <Button

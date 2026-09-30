@@ -1377,6 +1377,7 @@ export default class SeedRecovery extends React.PureComponent<
                                                     }}
                                                     autoCapitalize="none"
                                                     autoCorrect={false}
+                                                    keyboardType="url"
                                                     error={!customRescueHost}
                                                 />
                                             </>

@@ -181,6 +181,7 @@ export default class EsploraServer extends React.Component<
                                     }}
                                     autoCapitalize="none"
                                     autoCorrect={false}
+                                    keyboardType="url"
                                 />
                                 {showCustomUrlError && (
                                     <Text

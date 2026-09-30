@@ -74,6 +74,7 @@ export default function VssServerPicker({
                         }
                         autoCapitalize="none"
                         autoCorrect={false}
+                        keyboardType="url"
                         locked={locked}
                     />
                     {showInvalidUrlError && (
