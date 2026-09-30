@@ -7,6 +7,62 @@ import fs from 'fs';
 export function patchReactNativeNotifications() {
     console.log('Patching react-native-notifications');
 
+    // Fix autolinking config for RN 0.84+
+    // The library's react-native.config.js uses reactNativeHost.getApplication()
+    // but in RN 0.84, PackageList(Application) sets reactNativeHost to null.
+    // Change to use the application field directly.
+    const configPath =
+        './node_modules/react-native-notifications/react-native.config.js';
+
+    if (fs.existsSync(configPath)) {
+        let configContent = fs.readFileSync(configPath, 'utf8');
+        if (configContent.includes('reactNativeHost.getApplication()')) {
+            configContent = configContent.replace(
+                'reactNativeHost.getApplication()',
+                'application'
+            );
+            fs.writeFileSync(configPath, configContent);
+            console.log('  - Patched react-native.config.js for RN 0.84 compatibility');
+        }
+    }
+
+    // Fix the release buildType for AGP 9 (RN 0.87+)
+    // AGP 9 removed getDefaultProguardFile('proguard-android.txt') because it
+    // pulls in -dontoptimize, and hard-errors at configuration time rather than
+    // warning. The library still calls it, which fails the whole Android build
+    // even though it sets minifyEnabled false. Throw if the file or call site
+    // changes shape, so a skipped patch fails postinstall instead of surfacing
+    // later as an unrelated-looking Gradle configuration error.
+    const buildGradlePath =
+        './node_modules/react-native-notifications/lib/android/app/build.gradle';
+
+    if (!fs.existsSync(buildGradlePath)) {
+        throw new Error(
+            'patch-react-native-notifications: lib/android/app/build.gradle not found; ' +
+                'the AGP 9 proguard fix cannot be applied'
+        );
+    }
+
+    const buildGradle = fs.readFileSync(buildGradlePath, 'utf8');
+    const patchedBuildGradle = buildGradle.replace(
+        /getDefaultProguardFile\(\s*(['"])proguard-android\.txt\1\s*\)/g,
+        "getDefaultProguardFile('proguard-android-optimize.txt')"
+    );
+
+    if (patchedBuildGradle.includes('proguard-android.txt')) {
+        throw new Error(
+            'patch-react-native-notifications: build.gradle still references ' +
+                'proguard-android.txt in a form this patch does not recognize. ' +
+                'AGP 9 rejects it at configuration time; update the patch for ' +
+                'this react-native-notifications version before building.'
+        );
+    }
+
+    if (patchedBuildGradle !== buildGradle) {
+        fs.writeFileSync(buildGradlePath, patchedBuildGradle);
+        console.log('  - Patched build.gradle proguard file for AGP 9');
+    }
+
     const fcmTokenPath =
         './node_modules/react-native-notifications/lib/android/app/src/main/java/com/wix/reactnativenotifications/fcm/FcmToken.java';
 
@@ -139,23 +195,4 @@ public class FcmToken implements IFcmToken {
 
     fs.writeFileSync(fcmTokenPath, fcmTokenContent);
     console.log('  - Patched FcmToken.java for New Architecture support');
-
-    // Fix autolinking config for RN 0.84+
-    // The library's react-native.config.js uses reactNativeHost.getApplication()
-    // but in RN 0.84, PackageList(Application) sets reactNativeHost to null.
-    // Change to use the application field directly.
-    const configPath =
-        './node_modules/react-native-notifications/react-native.config.js';
-
-    if (fs.existsSync(configPath)) {
-        let configContent = fs.readFileSync(configPath, 'utf8');
-        if (configContent.includes('reactNativeHost.getApplication()')) {
-            configContent = configContent.replace(
-                'reactNativeHost.getApplication()',
-                'application'
-            );
-            fs.writeFileSync(configPath, configContent);
-            console.log('  - Patched react-native.config.js for RN 0.84 compatibility');
-        }
-    }
 }

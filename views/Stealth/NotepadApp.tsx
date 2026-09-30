@@ -167,7 +167,7 @@ const NotepadApp: React.FC<NotepadAppProps> = ({
 
     return (
         <View style={styles.container}>
-            <StatusBar barStyle="dark-content" backgroundColor="#FFF9C4" />
+            <StatusBar barStyle="dark-content" />
 
             {/* Header */}
             <View style={styles.header}>
