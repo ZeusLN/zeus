@@ -941,6 +941,7 @@
     "views.Send.payBolt12.offerFetchFailure": "ऑफर प्राप्त नहीं कर सका",
     "views.Send.payBolt12.invoiceFetchFailure": "इनवॉइस प्राप्त नहीं कर सका",
     "views.Send.payBolt12.specifyAmount": "राशि निर्दिष्ट की जानी चाहिए",
+    "views.Send.payBolt12.invalidOffer": "Invalid BOLT 12 offer",
     "views.Send.payBolt12.offersNotSupported": "बैकेंड BOLT 12 का समर्थन नहीं करता है",
     "views.ClinkPay.title": "Pay CLINK Offer",
     "views.ClinkPay.invalidOffer": "Invalid CLINK offer",
