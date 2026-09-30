@@ -941,6 +941,7 @@
     "views.Send.payBolt12.offerFetchFailure": "无法获取报价",
     "views.Send.payBolt12.invoiceFetchFailure": "无法获取发票",
     "views.Send.payBolt12.specifyAmount": "必须指定金额",
+    "views.Send.payBolt12.invalidOffer": "Invalid BOLT 12 offer",
     "views.Send.payBolt12.offersNotSupported": "后端不支持 BOLT 12",
     "views.ClinkPay.title": "支付 CLINK 报价",
     "views.ClinkPay.invalidOffer": "无效的 CLINK 报价",
