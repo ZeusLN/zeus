@@ -182,6 +182,15 @@ class AddressUtils {
         return { value, satAmount, lightning, offer, clinkNoffer };
     };
 
+    // Returns the BOLT 12 offer from a bare lno1... or a Bitcoin URI
+    // carrying an lno parameter, or undefined if there isn't a valid one
+    extractBolt12Offer = (input: string): string | undefined => {
+        if (!input) return undefined;
+        const { offer } = this.processBIP21Uri(input);
+        const candidate = offer || input;
+        return this.isValidLightningOffer(candidate) ? candidate : undefined;
+    };
+
     processLNDHubAddress = (input: string) => {
         if (!this.isValidLNDHubAddress(input)) {
             throw new Error('Could not process invalid LNDHub account address');

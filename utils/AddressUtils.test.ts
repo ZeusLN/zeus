@@ -190,6 +190,17 @@ describe('AddressUtils', () => {
                 value: '',
                 offer: 'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
             });
+            // BIP 353 records commonly pair a silent payment address with
+            // an offer; the offer must survive alongside params ZEUS can't
+            // pay to
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'bitcoin:?sp=sp1qqgste7k9hx0qftg6qmwlkqtwuy6cycyavzmzj85c6qdfhjdpdjtdgqjuexzk6murw56suy3e0rd2cgqvycxttddwsvgxe2usfpxumr70xc9pkqwv&lno=lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+                )
+            ).toEqual({
+                value: '',
+                offer: 'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes'
+            });
 
             // lightning invoices
             expect(
@@ -229,6 +240,63 @@ describe('AddressUtils', () => {
                 clinkNoffer:
                     'noffer1qqsx7zhgr59uem4khsejw3w43hzpqfd23xz6kdpst40zsfh89yqkawcprpmhxue69uhhqctjwss8w6t5dqsr2dnz'
             });
+        });
+    });
+
+    describe('extractBolt12Offer', () => {
+        const offer =
+            'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes';
+        const sp =
+            'sp1qqgste7k9hx0qftg6qmwlkqtwuy6cycyavzmzj85c6qdfhjdpdjtdgqjuexzk6murw56suy3e0rd2cgqvycxttddwsvgxe2usfpxumr70xc9pkqwv';
+
+        it('returns a bare offer as is', () => {
+            expect(AddressUtils.extractBolt12Offer(offer)).toEqual(offer);
+        });
+
+        it('pulls the offer out of a Bitcoin URI', () => {
+            expect(
+                AddressUtils.extractBolt12Offer(`bitcoin:?lno=${offer}`)
+            ).toEqual(offer);
+            expect(
+                AddressUtils.extractBolt12Offer(`BITCOIN:?LNO=${offer}`)
+            ).toEqual(offer);
+            expect(
+                AddressUtils.extractBolt12Offer(
+                    `bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.001&lno=${offer}`
+                )
+            ).toEqual(offer);
+        });
+
+        // BIP 353 records commonly pair a silent payment address with an
+        // offer; splitting on '=' used to yield 'sp1q...&lno' here
+        it('pulls the offer out of a URI with more than one param', () => {
+            expect(
+                AddressUtils.extractBolt12Offer(
+                    `bitcoin:?sp=${sp}&lno=${offer}`
+                )
+            ).toEqual(offer);
+        });
+
+        // Neither may fall through to the backend as an offer
+        it('rejects a URI without an lno param', () => {
+            expect(
+                AddressUtils.extractBolt12Offer(`bitcoin:?sp=${sp}`)
+            ).toBeUndefined();
+            expect(
+                AddressUtils.extractBolt12Offer(
+                    'bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu'
+                )
+            ).toBeUndefined();
+        });
+
+        it('rejects a malformed lno param', () => {
+            expect(
+                AddressUtils.extractBolt12Offer('bitcoin:?lno=garbage')
+            ).toBeUndefined();
+        });
+
+        it('rejects empty input', () => {
+            expect(AddressUtils.extractBolt12Offer('')).toBeUndefined();
         });
     });
 
