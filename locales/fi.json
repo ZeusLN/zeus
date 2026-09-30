@@ -941,6 +941,7 @@
     "views.Send.payBolt12.offerFetchFailure": "Couldn't fetch offer",
     "views.Send.payBolt12.invoiceFetchFailure": "Couldn't fetch invoice",
     "views.Send.payBolt12.specifyAmount": "Määrä on määriteltävä",
+    "views.Send.payBolt12.invalidOffer": "Invalid BOLT 12 offer",
     "views.Send.payBolt12.offersNotSupported": "Taustajärjestelmä ei tue BOLT 12",
     "views.ClinkPay.title": "Pay CLINK Offer",
     "views.ClinkPay.invalidOffer": "Invalid CLINK offer",
