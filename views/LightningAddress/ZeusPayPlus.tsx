@@ -186,10 +186,10 @@ export default class ZeusPayPlus extends React.Component<ZeusPayPlusProps, {}> {
                                       )
                             }
                             onPress={() => {
-                                createZeusPayPlusOrder().then(
-                                    (response: any) => {
+                                createZeusPayPlusOrder()
+                                    .then((response: any) => {
                                         if (response.bolt11) {
-                                            handleAnything(
+                                            return handleAnything(
                                                 response.bolt11
                                             ).then(([route, props]) => {
                                                 navigation.navigate(
@@ -198,8 +198,13 @@ export default class ZeusPayPlus extends React.Component<ZeusPayPlusProps, {}> {
                                                 );
                                             });
                                         }
-                                    }
-                                );
+                                    })
+                                    .catch((e) =>
+                                        console.log(
+                                            'Error creating ZEUS Pay+ order',
+                                            e
+                                        )
+                                    );
                             }}
                             disabled={loading}
                             tertiary={!zeusPayPlus}

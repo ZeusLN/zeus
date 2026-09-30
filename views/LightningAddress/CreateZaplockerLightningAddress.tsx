@@ -329,13 +329,20 @@ export default class CreateZaplockerLightningAddress extends React.Component<
                                                     nostrPublicKey,
                                                     nostrPrivateKey,
                                                     nostrRelays
-                                                ).then((response) => {
-                                                    if (response.success) {
-                                                        navigation.popTo(
-                                                            'LightningAddress'
-                                                        );
-                                                    }
-                                                });
+                                                )
+                                                    .then((response) => {
+                                                        if (response.success) {
+                                                            navigation.popTo(
+                                                                'LightningAddress'
+                                                            );
+                                                        }
+                                                    })
+                                                    .catch((e) =>
+                                                        console.log(
+                                                            'Error creating Zaplocker Lightning address',
+                                                            e
+                                                        )
+                                                    );
                                             }
                                         }}
                                         disabled={

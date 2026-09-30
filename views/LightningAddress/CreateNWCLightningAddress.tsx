@@ -191,13 +191,20 @@ export default class CreateNWCLightningAddress extends React.Component<
                                             if (!tested) {
                                                 testNWCConnectionString(
                                                     nwcConnectionString
-                                                ).then((response) => {
-                                                    if (response.success) {
-                                                        this.setState({
-                                                            tested: true
-                                                        });
-                                                    }
-                                                });
+                                                )
+                                                    .then((response) => {
+                                                        if (response.success) {
+                                                            this.setState({
+                                                                tested: true
+                                                            });
+                                                        }
+                                                    })
+                                                    .catch((e) =>
+                                                        console.log(
+                                                            'Error testing NWC connection string',
+                                                            e
+                                                        )
+                                                    );
                                             } else {
                                                 if (
                                                     switchTo ||
@@ -230,13 +237,22 @@ export default class CreateNWCLightningAddress extends React.Component<
                                                 } else {
                                                     createNWC(
                                                         nwcConnectionString
-                                                    ).then((response) => {
-                                                        if (response.success) {
-                                                            navigation.popTo(
-                                                                'LightningAddress'
-                                                            );
-                                                        }
-                                                    });
+                                                    )
+                                                        .then((response) => {
+                                                            if (
+                                                                response.success
+                                                            ) {
+                                                                navigation.popTo(
+                                                                    'LightningAddress'
+                                                                );
+                                                            }
+                                                        })
+                                                        .catch((e) =>
+                                                            console.log(
+                                                                'Error creating NWC Lightning address',
+                                                                e
+                                                            )
+                                                        );
                                                 }
                                             }
                                         }}

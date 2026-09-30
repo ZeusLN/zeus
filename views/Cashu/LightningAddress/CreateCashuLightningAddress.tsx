@@ -238,15 +238,20 @@ export default class CreateCashuLightningAddress extends React.Component<
                                                     loading: false
                                                 });
                                             } else {
-                                                createCashu(mintUrl).then(
-                                                    (response) => {
+                                                createCashu(mintUrl)
+                                                    .then((response) => {
                                                         if (response.success) {
                                                             navigation.popTo(
                                                                 'LightningAddress'
                                                             );
                                                         }
-                                                    }
-                                                );
+                                                    })
+                                                    .catch((e) =>
+                                                        console.log(
+                                                            'Error creating Cashu Lightning address',
+                                                            e
+                                                        )
+                                                    );
                                             }
                                         }}
                                         disabled={mintsNotConfigured}

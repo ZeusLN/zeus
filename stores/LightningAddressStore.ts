@@ -363,7 +363,9 @@ export default class LightningAddressStore {
             runInAction(() => {
                 // ensure push credentials are in place
                 // right after creation
-                this.updatePushCredentials();
+                this.updatePushCredentials().catch((e) =>
+                    console.log('Failed to update push credentials', e)
+                );
                 this.loading = false;
             });
 
@@ -429,7 +431,9 @@ export default class LightningAddressStore {
             runInAction(() => {
                 // ensure push credentials are in place
                 // right after creation
-                this.updatePushCredentials();
+                this.updatePushCredentials().catch((e) =>
+                    console.log('Failed to update push credentials', e)
+                );
                 this.loading = false;
             });
 
@@ -489,7 +493,9 @@ export default class LightningAddressStore {
             runInAction(() => {
                 // ensure push credentials are in place
                 // right after creation
-                this.updatePushCredentials();
+                this.updatePushCredentials().catch((e) =>
+                    console.log('Failed to update push credentials', e)
+                );
                 this.loading = false;
             });
 
@@ -1235,11 +1241,9 @@ export default class LightningAddressStore {
         localNotification?: boolean
     ) => {
         this.redeemingAll = true;
-        const attestationLevel = this.settingsStore?.settings?.lightningAddress
-            ?.automaticallyAcceptAttestationLevel
-            ? this.settingsStore.settings.lightningAddress
-                  .automaticallyAcceptAttestationLevel
-            : 2;
+        const attestationLevel =
+            this.settingsStore?.settings?.lightningAddress
+                ?.automaticallyAcceptAttestationLevel ?? 2;
 
         // disabled
         if (attestationLevel === 0) {
@@ -1327,11 +1331,9 @@ export default class LightningAddressStore {
         this.socket.on('paid', (data: any) => {
             const { hash, amount_msat, comment } = data;
 
-            const attestationLevel = this.settingsStore?.settings
-                ?.lightningAddress?.automaticallyAcceptAttestationLevel
-                ? this.settingsStore.settings.lightningAddress
-                      .automaticallyAcceptAttestationLevel
-                : 2;
+            const attestationLevel =
+                this.settingsStore?.settings?.lightningAddress
+                    ?.automaticallyAcceptAttestationLevel ?? 2;
 
             if (attestationLevel === 0) {
                 this.lookupPreimageAndRedeemZaplocker(

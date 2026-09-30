@@ -78,9 +78,16 @@ export default class NWCAddressSettings extends React.Component<
                     text: localeString('general.delete'),
                     onPress: () => {
                         const { LightningAddressStore } = this.props;
-                        LightningAddressStore.deleteAddress().then(() => {
-                            this.props.navigation.goBack();
-                        });
+                        LightningAddressStore.deleteAddress()
+                            .then(() => {
+                                this.props.navigation.goBack();
+                            })
+                            .catch((e) =>
+                                console.log(
+                                    'Error deleting Lightning address',
+                                    e
+                                )
+                            );
                     },
                     style: 'destructive'
                 }
