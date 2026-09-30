@@ -778,6 +778,7 @@ export default class OpenChannel extends React.Component<
                                                 })
                                             }
                                             autoCapitalize="none"
+                                            autoCorrect={false}
                                             locked={openingChannel}
                                         />
                                     </>
@@ -920,6 +921,8 @@ export default class OpenChannel extends React.Component<
                                                                     newChannels
                                                             });
                                                         }}
+                                                        autoCapitalize="none"
+                                                        autoCorrect={false}
                                                     />
                                                     <AmountInput
                                                         amount={

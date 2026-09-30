@@ -142,6 +142,7 @@ export default class EmbeddedNodeAdvancedSettings extends React.Component<
                                             });
                                         }}
                                         autoCapitalize="none"
+                                        autoCorrect={false}
                                         error={!customFeeEstimator}
                                     />
                                 </>

@@ -285,6 +285,8 @@ export default class LSPS1Settings extends React.Component<
                                             : { lsps1HostMainnet: text }
                                     );
                                 }}
+                                autoCapitalize="none"
+                                autoCorrect={false}
                             />
 
                             <Text
@@ -384,6 +386,8 @@ export default class LSPS1Settings extends React.Component<
                                               }
                                     );
                                 }}
+                                autoCapitalize="none"
+                                autoCorrect={false}
                             />
                         </>
                     )}
@@ -411,6 +415,8 @@ export default class LSPS1Settings extends React.Component<
                                             : { lsps1RestMainnet: text }
                                     );
                                 }}
+                                autoCapitalize="none"
+                                autoCorrect={false}
                             />
                         </>
                     )}

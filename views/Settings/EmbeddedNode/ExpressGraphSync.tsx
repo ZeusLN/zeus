@@ -246,6 +246,7 @@ export default class ExpressGraphSync extends React.Component<
                                             });
                                         }}
                                         autoCapitalize="none"
+                                        autoCorrect={false}
                                         error={!customSpeedloader}
                                     />
                                 </>

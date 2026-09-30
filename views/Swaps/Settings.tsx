@@ -157,6 +157,7 @@ export default class SwapSettings extends React.Component<
                                     });
                                 }}
                                 autoCapitalize="none"
+                                autoCorrect={false}
                                 error={!customHost}
                             />
                         </>
