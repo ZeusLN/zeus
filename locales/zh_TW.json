@@ -941,6 +941,7 @@
     "views.Send.payBolt12.offerFetchFailure": "無法取得供應資料",
     "views.Send.payBolt12.invoiceFetchFailure": "無法取得帳單",
     "views.Send.payBolt12.specifyAmount": "金額必須要指定",
+    "views.Send.payBolt12.invalidOffer": "Invalid BOLT 12 offer",
     "views.Send.payBolt12.offersNotSupported": "後台不支援 BOLT 12",
     "views.ClinkPay.title": "Pay CLINK Offer",
     "views.ClinkPay.invalidOffer": "Invalid CLINK offer",
