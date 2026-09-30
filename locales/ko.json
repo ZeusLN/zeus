@@ -941,6 +941,7 @@
     "views.Send.payBolt12.offerFetchFailure": "오퍼를 가져올 수 없습니다.",
     "views.Send.payBolt12.invoiceFetchFailure": "인보이스를 가져올 수 없습니다.",
     "views.Send.payBolt12.specifyAmount": "수량을 지정해야 합니다.",
+    "views.Send.payBolt12.invalidOffer": "Invalid BOLT 12 offer",
     "views.Send.payBolt12.offersNotSupported": "백엔드에서 BOLT 12를 지원하지 않습니다.",
     "views.ClinkPay.title": "CLINK 오퍼 결제",
     "views.ClinkPay.invalidOffer": "유효하지 않은 CLINK 오퍼",
