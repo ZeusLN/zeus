@@ -2094,7 +2094,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.LookupHtlcResolutionRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** LookupHtlcResolutionRequest chan_id. */
@@ -2214,7 +2214,7 @@ export namespace lnrpc {
             /** LookupHtlcResolutionRequest htlc_index */
             htlc_index?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -2239,7 +2239,7 @@ export namespace lnrpc {
             properties?: lnrpc.LookupHtlcResolutionResponse.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** LookupHtlcResolutionResponse settled. */
@@ -2359,7 +2359,7 @@ export namespace lnrpc {
             /** LookupHtlcResolutionResponse offchain */
             offchain?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -2384,7 +2384,7 @@ export namespace lnrpc {
             properties?: lnrpc.SubscribeCustomMessagesRequest.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -2492,7 +2492,7 @@ export namespace lnrpc {
     namespace SubscribeCustomMessagesRequest {
         /** Properties of a SubscribeCustomMessagesRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -2514,7 +2514,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.CustomMessage.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** CustomMessage peer. */
@@ -2635,7 +2635,7 @@ export namespace lnrpc {
             /** CustomMessage data */
             data?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -2658,7 +2658,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.SendCustomMessageRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SendCustomMessageRequest peer. */
@@ -2784,7 +2784,7 @@ export namespace lnrpc {
             /** SendCustomMessageRequest data */
             data?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -2807,7 +2807,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.SendCustomMessageResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SendCustomMessageResponse status. */
@@ -2921,7 +2921,7 @@ export namespace lnrpc {
             /** SendCustomMessageResponse status */
             status?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -2943,7 +2943,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.Utxo.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** Utxo address_type. */
@@ -3080,7 +3080,7 @@ export namespace lnrpc {
             /** Utxo confirmations */
             confirmations?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -3135,7 +3135,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.OutputDetail.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** OutputDetail output_type. */
@@ -3274,7 +3274,7 @@ export namespace lnrpc {
             /** OutputDetail is_our_address */
             is_our_address?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -3296,7 +3296,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.Transaction.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** Transaction tx_hash. */
@@ -3471,7 +3471,7 @@ export namespace lnrpc {
             /** Transaction previous_outpoints */
             previous_outpoints?: lnrpc.PreviousOutPoint.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -3494,7 +3494,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.GetTransactionsRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** GetTransactionsRequest start_height. */
@@ -3629,7 +3629,7 @@ export namespace lnrpc {
             /** GetTransactionsRequest max_transactions */
             max_transactions?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -3652,7 +3652,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.TransactionDetails.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** TransactionDetails transactions. */
@@ -3775,7 +3775,7 @@ export namespace lnrpc {
             /** TransactionDetails first_index */
             first_index?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -3797,7 +3797,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.FeeLimit.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** FeeLimit fixed. */
@@ -3922,7 +3922,7 @@ export namespace lnrpc {
             /** FeeLimit limit */
             limit?: 'fixed' | 'fixed_msat' | 'percent';
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -3974,7 +3974,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.SendRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SendRequest dest. */
@@ -4173,7 +4173,7 @@ export namespace lnrpc {
             /** SendRequest payment_addr */
             payment_addr?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -4213,7 +4213,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.SendResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SendResponse payment_error. */
@@ -4340,7 +4340,7 @@ export namespace lnrpc {
             /** SendResponse payment_hash */
             payment_hash?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -4363,7 +4363,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.SendToRouteRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SendToRouteRequest payment_hash. */
@@ -4486,7 +4486,7 @@ export namespace lnrpc {
             /** SendToRouteRequest route */
             route?: lnrpc.Route.$Properties | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -4509,7 +4509,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChannelAcceptRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChannelAcceptRequest node_pubkey. */
@@ -4710,7 +4710,7 @@ export namespace lnrpc {
             /** ChannelAcceptRequest wants_scid_alias */
             wants_scid_alias?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -4733,7 +4733,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChannelAcceptResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChannelAcceptResponse accept. */
@@ -4904,7 +4904,7 @@ export namespace lnrpc {
             /** ChannelAcceptResponse zero_conf */
             zero_conf?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -4926,7 +4926,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChannelPoint.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChannelPoint funding_txid_bytes. */
@@ -5053,7 +5053,7 @@ export namespace lnrpc {
             /** ChannelPoint funding_txid */
             funding_txid?: 'funding_txid_bytes' | 'funding_txid_str';
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -5096,7 +5096,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.OutPoint.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** OutPoint txid_bytes. */
@@ -5215,7 +5215,7 @@ export namespace lnrpc {
             /** OutPoint output_index */
             output_index?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -5237,7 +5237,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.PreviousOutPoint.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** PreviousOutPoint outpoint. */
@@ -5352,7 +5352,7 @@ export namespace lnrpc {
             /** PreviousOutPoint is_our_output */
             is_our_output?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -5374,7 +5374,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.LightningAddress.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** LightningAddress pubkey. */
@@ -5489,7 +5489,7 @@ export namespace lnrpc {
             /** LightningAddress host */
             host?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -5524,7 +5524,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.EstimateFeeRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** EstimateFeeRequest AddrToAmount. */
@@ -5659,7 +5659,7 @@ export namespace lnrpc {
             /** EstimateFeeRequest coin_selection_strategy */
             coin_selection_strategy?: lnrpc.CoinSelectionStrategy | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -5682,7 +5682,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.EstimateFeeResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** EstimateFeeResponse fee_sat. */
@@ -5805,7 +5805,7 @@ export namespace lnrpc {
             /** EstimateFeeResponse sat_per_vbyte */
             sat_per_vbyte?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -5827,7 +5827,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.SendManyRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SendManyRequest AddrToAmount. */
@@ -5978,7 +5978,7 @@ export namespace lnrpc {
             /** SendManyRequest coin_selection_strategy */
             coin_selection_strategy?: lnrpc.CoinSelectionStrategy | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -6000,7 +6000,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.SendManyResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SendManyResponse txid. */
@@ -6109,7 +6109,7 @@ export namespace lnrpc {
             /** SendManyResponse txid */
             txid?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -6131,7 +6131,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.SendCoinsRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SendCoinsRequest addr. */
@@ -6300,7 +6300,7 @@ export namespace lnrpc {
             /** SendCoinsRequest outpoints */
             outpoints?: lnrpc.OutPoint.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -6322,7 +6322,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.SendCoinsResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SendCoinsResponse txid. */
@@ -6433,7 +6433,7 @@ export namespace lnrpc {
             /** SendCoinsResponse txid */
             txid?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -6456,7 +6456,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ListUnspentRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListUnspentRequest min_confs. */
@@ -6579,7 +6579,7 @@ export namespace lnrpc {
             /** ListUnspentRequest account */
             account?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -6602,7 +6602,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ListUnspentResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListUnspentResponse utxos. */
@@ -6713,7 +6713,7 @@ export namespace lnrpc {
             /** ListUnspentResponse utxos */
             utxos?: lnrpc.Utxo.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -6756,7 +6756,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.NewAddressRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** NewAddressRequest type. */
@@ -6873,7 +6873,7 @@ export namespace lnrpc {
             /** NewAddressRequest account */
             account?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -6896,7 +6896,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.NewAddressResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** NewAddressResponse address. */
@@ -7007,7 +7007,7 @@ export namespace lnrpc {
             /** NewAddressResponse address */
             address?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -7030,7 +7030,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.SignMessageRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SignMessageRequest msg. */
@@ -7147,7 +7147,7 @@ export namespace lnrpc {
             /** SignMessageRequest single_hash */
             single_hash?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -7170,7 +7170,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.SignMessageResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SignMessageResponse signature. */
@@ -7281,7 +7281,7 @@ export namespace lnrpc {
             /** SignMessageResponse signature */
             signature?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -7304,7 +7304,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.VerifyMessageRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** VerifyMessageRequest msg. */
@@ -7421,7 +7421,7 @@ export namespace lnrpc {
             /** VerifyMessageRequest signature */
             signature?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -7444,7 +7444,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.VerifyMessageResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** VerifyMessageResponse valid. */
@@ -7561,7 +7561,7 @@ export namespace lnrpc {
             /** VerifyMessageResponse pubkey */
             pubkey?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -7584,7 +7584,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ConnectPeerRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ConnectPeerRequest addr. */
@@ -7707,7 +7707,7 @@ export namespace lnrpc {
             /** ConnectPeerRequest timeout */
             timeout?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -7730,7 +7730,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ConnectPeerResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ConnectPeerResponse status. */
@@ -7841,7 +7841,7 @@ export namespace lnrpc {
             /** ConnectPeerResponse status */
             status?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -7864,7 +7864,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.DisconnectPeerRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** DisconnectPeerRequest pub_key. */
@@ -7975,7 +7975,7 @@ export namespace lnrpc {
             /** DisconnectPeerRequest pub_key */
             pub_key?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -7998,7 +7998,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.DisconnectPeerResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** DisconnectPeerResponse status. */
@@ -8109,7 +8109,7 @@ export namespace lnrpc {
             /** DisconnectPeerResponse status */
             status?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -8131,7 +8131,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.HTLC.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** HTLC incoming. */
@@ -8280,7 +8280,7 @@ export namespace lnrpc {
             /** HTLC locked_in */
             locked_in?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -8327,7 +8327,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChannelConstraints.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChannelConstraints csv_delay. */
@@ -8468,7 +8468,7 @@ export namespace lnrpc {
             /** ChannelConstraints max_accepted_htlcs */
             max_accepted_htlcs?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -8490,7 +8490,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.Channel.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** Channel active. */
@@ -8813,7 +8813,7 @@ export namespace lnrpc {
             /** Channel custom_channel_data */
             custom_channel_data?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -8836,7 +8836,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ListChannelsRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListChannelsRequest active_only. */
@@ -8977,7 +8977,7 @@ export namespace lnrpc {
             /** ListChannelsRequest peer_alias_lookup */
             peer_alias_lookup?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -9000,7 +9000,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ListChannelsResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListChannelsResponse channels. */
@@ -9111,7 +9111,7 @@ export namespace lnrpc {
             /** ListChannelsResponse channels */
             channels?: lnrpc.Channel.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -9133,7 +9133,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.AliasMap.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** AliasMap base_scid. */
@@ -9246,7 +9246,7 @@ export namespace lnrpc {
             /** AliasMap aliases */
             aliases?: Long[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -9269,7 +9269,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ListAliasesRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -9374,7 +9374,7 @@ export namespace lnrpc {
     namespace ListAliasesRequest {
         /** Properties of a ListAliasesRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -9397,7 +9397,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ListAliasesResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListAliasesResponse alias_maps. */
@@ -9508,7 +9508,7 @@ export namespace lnrpc {
             /** ListAliasesResponse alias_maps */
             alias_maps?: lnrpc.AliasMap.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -9546,7 +9546,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChannelCloseSummary.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChannelCloseSummary channel_point. */
@@ -9747,7 +9747,7 @@ export namespace lnrpc {
             /** ChannelCloseSummary custom_channel_data */
             custom_channel_data?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -9829,7 +9829,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.Resolution.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** Resolution resolution_type. */
@@ -9962,7 +9962,7 @@ export namespace lnrpc {
             /** Resolution sweep_txid */
             sweep_txid?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -9985,7 +9985,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ClosedChannelsRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ClosedChannelsRequest cooperative. */
@@ -10126,7 +10126,7 @@ export namespace lnrpc {
             /** ClosedChannelsRequest abandoned */
             abandoned?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -10149,7 +10149,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ClosedChannelsResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ClosedChannelsResponse channels. */
@@ -10260,7 +10260,7 @@ export namespace lnrpc {
             /** ClosedChannelsResponse channels */
             channels?: lnrpc.ChannelCloseSummary.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -10282,7 +10282,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.Peer.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** Peer pub_key. */
@@ -10467,7 +10467,7 @@ export namespace lnrpc {
             /** Peer last_ping_payload */
             last_ping_payload?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -10504,7 +10504,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.TimestampedError.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** TimestampedError timestamp. */
@@ -10619,7 +10619,7 @@ export namespace lnrpc {
             /** TimestampedError error */
             error?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -10641,7 +10641,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ListPeersRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListPeersRequest latest_error. */
@@ -10750,7 +10750,7 @@ export namespace lnrpc {
             /** ListPeersRequest latest_error */
             latest_error?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -10772,7 +10772,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ListPeersResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListPeersResponse peers. */
@@ -10883,7 +10883,7 @@ export namespace lnrpc {
             /** ListPeersResponse peers */
             peers?: lnrpc.Peer.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -10906,7 +10906,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.PeerEventSubscription.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -11011,7 +11011,7 @@ export namespace lnrpc {
     namespace PeerEventSubscription {
         /** Properties of a PeerEventSubscription. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -11033,7 +11033,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.PeerEvent.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** PeerEvent pub_key. */
@@ -11148,7 +11148,7 @@ export namespace lnrpc {
             /** PeerEvent type */
             type?: lnrpc.PeerEvent.EventType | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -11179,7 +11179,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.GetInfoRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -11282,7 +11282,7 @@ export namespace lnrpc {
     namespace GetInfoRequest {
         /** Properties of a GetInfoRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -11304,7 +11304,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.GetInfoResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** GetInfoResponse version. */
@@ -11527,7 +11527,7 @@ export namespace lnrpc {
             /** GetInfoResponse store_final_htlc_resolutions */
             store_final_htlc_resolutions?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -11550,7 +11550,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.GetDebugInfoRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -11655,7 +11655,7 @@ export namespace lnrpc {
     namespace GetDebugInfoRequest {
         /** Properties of a GetDebugInfoRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -11678,7 +11678,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.GetDebugInfoResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** GetDebugInfoResponse config. */
@@ -11795,7 +11795,7 @@ export namespace lnrpc {
             /** GetDebugInfoResponse log */
             log?: string[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -11818,7 +11818,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.GetRecoveryInfoRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -11923,7 +11923,7 @@ export namespace lnrpc {
     namespace GetRecoveryInfoRequest {
         /** Properties of a GetRecoveryInfoRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -11946,7 +11946,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.GetRecoveryInfoResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** GetRecoveryInfoResponse recovery_mode. */
@@ -12069,7 +12069,7 @@ export namespace lnrpc {
             /** GetRecoveryInfoResponse progress */
             progress?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -12091,7 +12091,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.Chain.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** Chain chain. */
@@ -12204,7 +12204,7 @@ export namespace lnrpc {
             /** Chain network */
             network?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -12226,7 +12226,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChannelOpenUpdate.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChannelOpenUpdate channel_point. */
@@ -12337,7 +12337,7 @@ export namespace lnrpc {
             /** ChannelOpenUpdate channel_point */
             channel_point?: lnrpc.ChannelPoint.$Properties | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -12362,7 +12362,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.CloseOutput.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** CloseOutput amount_sat. */
@@ -12489,7 +12489,7 @@ export namespace lnrpc {
             /** CloseOutput custom_channel_data */
             custom_channel_data?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -12512,7 +12512,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChannelCloseUpdate.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChannelCloseUpdate closing_txid. */
@@ -12647,7 +12647,7 @@ export namespace lnrpc {
             /** ChannelCloseUpdate additional_outputs */
             additional_outputs?: lnrpc.CloseOutput.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -12670,7 +12670,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.CloseChannelRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** CloseChannelRequest channel_point. */
@@ -12823,7 +12823,7 @@ export namespace lnrpc {
             /** CloseChannelRequest no_wait */
             no_wait?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -12855,7 +12855,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.CloseStatusUpdate.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** CloseStatusUpdate close_pending. */
@@ -12984,7 +12984,7 @@ export namespace lnrpc {
             /** CloseStatusUpdate update */
             update?: 'close_pending' | 'chan_close' | 'close_instant';
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -13036,7 +13036,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.PendingUpdate.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** PendingUpdate txid. */
@@ -13163,7 +13163,7 @@ export namespace lnrpc {
             /** PendingUpdate local_close_tx */
             local_close_tx?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -13185,7 +13185,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.InstantUpdate.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** InstantUpdate num_pending_htlcs. */
@@ -13294,7 +13294,7 @@ export namespace lnrpc {
             /** InstantUpdate num_pending_htlcs */
             num_pending_htlcs?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -13317,7 +13317,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ReadyForPsbtFunding.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ReadyForPsbtFunding funding_address. */
@@ -13440,7 +13440,7 @@ export namespace lnrpc {
             /** ReadyForPsbtFunding psbt */
             psbt?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -13463,7 +13463,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.BatchOpenChannelRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** BatchOpenChannelRequest channels. */
@@ -13610,7 +13610,7 @@ export namespace lnrpc {
             /** BatchOpenChannelRequest coin_selection_strategy */
             coin_selection_strategy?: lnrpc.CoinSelectionStrategy | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -13632,7 +13632,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.BatchOpenChannel.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** BatchOpenChannel node_pubkey. */
@@ -13855,7 +13855,7 @@ export namespace lnrpc {
             /** BatchOpenChannel memo */
             memo?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -13878,7 +13878,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.BatchOpenChannelResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** BatchOpenChannelResponse pending_channels. */
@@ -13992,7 +13992,7 @@ export namespace lnrpc {
             /** BatchOpenChannelResponse pending_channels */
             pending_channels?: lnrpc.PendingUpdate.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -14015,7 +14015,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.OpenChannelRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** OpenChannelRequest sat_per_vbyte. */
@@ -14288,7 +14288,7 @@ export namespace lnrpc {
             /** OpenChannelRequest outpoints */
             outpoints?: lnrpc.OutPoint.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -14340,7 +14340,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.OpenStatusUpdate.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** OpenStatusUpdate chan_pending. */
@@ -14473,7 +14473,7 @@ export namespace lnrpc {
             /** OpenStatusUpdate update */
             update?: 'chan_pending' | 'chan_open' | 'psbt_fund';
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -14526,7 +14526,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.KeyLocator.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** KeyLocator key_family. */
@@ -14641,7 +14641,7 @@ export namespace lnrpc {
             /** KeyLocator key_index */
             key_index?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -14663,7 +14663,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.KeyDescriptor.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** KeyDescriptor raw_key_bytes. */
@@ -14778,7 +14778,7 @@ export namespace lnrpc {
             /** KeyDescriptor key_loc */
             key_loc?: lnrpc.KeyLocator.$Properties | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -14800,7 +14800,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChanPointShim.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChanPointShim amt. */
@@ -14945,7 +14945,7 @@ export namespace lnrpc {
             /** ChanPointShim musig2 */
             musig2?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -14976,7 +14976,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.PsbtShim.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** PsbtShim pending_chan_id. */
@@ -15095,7 +15095,7 @@ export namespace lnrpc {
             /** PsbtShim no_publish */
             no_publish?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -15117,7 +15117,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.FundingShim.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** FundingShim chan_point_shim. */
@@ -15238,7 +15238,7 @@ export namespace lnrpc {
             /** FundingShim shim */
             shim?: 'chan_point_shim' | 'psbt_shim';
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -15276,7 +15276,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.FundingShimCancel.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** FundingShimCancel pending_chan_id. */
@@ -15387,7 +15387,7 @@ export namespace lnrpc {
             /** FundingShimCancel pending_chan_id */
             pending_chan_id?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -15409,7 +15409,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.FundingPsbtVerify.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** FundingPsbtVerify funded_psbt. */
@@ -15532,7 +15532,7 @@ export namespace lnrpc {
             /** FundingPsbtVerify skip_finalize */
             skip_finalize?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -15555,7 +15555,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.FundingPsbtFinalize.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** FundingPsbtFinalize signed_psbt. */
@@ -15678,7 +15678,7 @@ export namespace lnrpc {
             /** FundingPsbtFinalize final_raw_tx */
             final_raw_tx?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -15701,7 +15701,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.FundingTransitionMsg.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** FundingTransitionMsg shim_register. */
@@ -15844,7 +15844,7 @@ export namespace lnrpc {
                 | 'psbt_verify'
                 | 'psbt_finalize';
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -15909,7 +15909,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.FundingStateStepResp.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -16014,7 +16014,7 @@ export namespace lnrpc {
     namespace FundingStateStepResp {
         /** Properties of a FundingStateStepResp. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -16036,7 +16036,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.PendingHTLC.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** PendingHTLC incoming. */
@@ -16175,7 +16175,7 @@ export namespace lnrpc {
             /** PendingHTLC stage */
             stage?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -16198,7 +16198,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.PendingChannelsRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** PendingChannelsRequest include_raw_tx. */
@@ -16309,7 +16309,7 @@ export namespace lnrpc {
             /** PendingChannelsRequest include_raw_tx */
             include_raw_tx?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -16332,7 +16332,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.PendingChannelsResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** PendingChannelsResponse total_limbo_balance. */
@@ -16475,7 +16475,7 @@ export namespace lnrpc {
                 | lnrpc.PendingChannelsResponse.WaitingCloseChannel.$Properties[]
                 | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -16499,7 +16499,7 @@ export namespace lnrpc {
                 properties?: lnrpc.PendingChannelsResponse.PendingChannel.$Properties
             );
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
 
             /** PendingChannel remote_node_pub. */
@@ -16691,7 +16691,7 @@ export namespace lnrpc {
                 /** PendingChannel custom_channel_data */
                 custom_channel_data?: Uint8Array | null;
 
-                /** Unknown fields preserved while decoding */
+                /** Unknown fields preserved while decoding when enabled */
                 $unknowns?: Uint8Array[];
             }
 
@@ -16718,7 +16718,7 @@ export namespace lnrpc {
                 properties?: lnrpc.PendingChannelsResponse.PendingOpenChannel.$Properties
             );
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
 
             /** PendingOpenChannel channel. */
@@ -16868,7 +16868,7 @@ export namespace lnrpc {
                 /** PendingOpenChannel confirmation_height */
                 confirmation_height?: number | null;
 
-                /** Unknown fields preserved while decoding */
+                /** Unknown fields preserved while decoding when enabled */
                 $unknowns?: Uint8Array[];
             }
 
@@ -16895,7 +16895,7 @@ export namespace lnrpc {
                 properties?: lnrpc.PendingChannelsResponse.WaitingCloseChannel.$Properties
             );
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
 
             /** WaitingCloseChannel channel. */
@@ -17033,7 +17033,7 @@ export namespace lnrpc {
                 /** WaitingCloseChannel closing_tx_hex */
                 closing_tx_hex?: string | null;
 
-                /** Unknown fields preserved while decoding */
+                /** Unknown fields preserved while decoding when enabled */
                 $unknowns?: Uint8Array[];
             }
 
@@ -17059,7 +17059,7 @@ export namespace lnrpc {
                 properties?: lnrpc.PendingChannelsResponse.Commitments.$Properties
             );
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
 
             /** Commitments local_txid. */
@@ -17203,7 +17203,7 @@ export namespace lnrpc {
                 /** Commitments remote_pending_commit_fee_sat */
                 remote_pending_commit_fee_sat?: Long | null;
 
-                /** Unknown fields preserved while decoding */
+                /** Unknown fields preserved while decoding when enabled */
                 $unknowns?: Uint8Array[];
             }
 
@@ -17228,7 +17228,7 @@ export namespace lnrpc {
                 properties?: lnrpc.PendingChannelsResponse.ClosedChannel.$Properties
             );
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
 
             /** ClosedChannel channel. */
@@ -17348,7 +17348,7 @@ export namespace lnrpc {
                 /** ClosedChannel closing_txid */
                 closing_txid?: string | null;
 
-                /** Unknown fields preserved while decoding */
+                /** Unknown fields preserved while decoding when enabled */
                 $unknowns?: Uint8Array[];
             }
 
@@ -17375,7 +17375,7 @@ export namespace lnrpc {
                 properties?: lnrpc.PendingChannelsResponse.ForceClosedChannel.$Properties
             );
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
 
             /** ForceClosedChannel channel. */
@@ -17531,7 +17531,7 @@ export namespace lnrpc {
                 /** ForceClosedChannel anchor */
                 anchor?: lnrpc.PendingChannelsResponse.ForceClosedChannel.AnchorState | null;
 
-                /** Unknown fields preserved while decoding */
+                /** Unknown fields preserved while decoding when enabled */
                 $unknowns?: Uint8Array[];
             }
 
@@ -17568,7 +17568,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChannelEventSubscription.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -17676,7 +17676,7 @@ export namespace lnrpc {
     namespace ChannelEventSubscription {
         /** Properties of a ChannelEventSubscription. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -17699,7 +17699,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChannelEventUpdate.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChannelEventUpdate open_channel. */
@@ -17872,7 +17872,7 @@ export namespace lnrpc {
                 | 'fully_resolved_channel'
                 | 'channel_funding_timeout';
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -18010,7 +18010,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.WalletAccountBalance.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** WalletAccountBalance confirmed_balance. */
@@ -18127,7 +18127,7 @@ export namespace lnrpc {
             /** WalletAccountBalance unconfirmed_balance */
             unconfirmed_balance?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -18150,7 +18150,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.WalletBalanceRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** WalletBalanceRequest account. */
@@ -18267,7 +18267,7 @@ export namespace lnrpc {
             /** WalletBalanceRequest min_confs */
             min_confs?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -18290,7 +18290,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.WalletBalanceResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** WalletBalanceResponse total_balance. */
@@ -18435,7 +18435,7 @@ export namespace lnrpc {
                 [k: string]: lnrpc.WalletAccountBalance.$Properties;
             } | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -18457,7 +18457,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.Amount.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** Amount sat. */
@@ -18570,7 +18570,7 @@ export namespace lnrpc {
             /** Amount msat */
             msat?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -18593,7 +18593,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChannelBalanceRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -18698,7 +18698,7 @@ export namespace lnrpc {
     namespace ChannelBalanceRequest {
         /** Properties of a ChannelBalanceRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -18721,7 +18721,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChannelBalanceResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChannelBalanceResponse balance. */
@@ -18880,7 +18880,7 @@ export namespace lnrpc {
             /** ChannelBalanceResponse custom_channel_data */
             custom_channel_data?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -18903,7 +18903,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.QueryRoutesRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** QueryRoutesRequest pub_key. */
@@ -19124,7 +19124,7 @@ export namespace lnrpc {
             /** QueryRoutesRequest outgoing_chan_ids */
             outgoing_chan_ids?: Long[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -19167,7 +19167,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.NodePair.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** NodePair from. */
@@ -19280,7 +19280,7 @@ export namespace lnrpc {
             /** NodePair to */
             to?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -19302,7 +19302,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.EdgeLocator.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** EdgeLocator channel_id. */
@@ -19417,7 +19417,7 @@ export namespace lnrpc {
             /** EdgeLocator direction_reverse */
             direction_reverse?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -19440,7 +19440,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.QueryRoutesResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** QueryRoutesResponse routes. */
@@ -19557,7 +19557,7 @@ export namespace lnrpc {
             /** QueryRoutesResponse success_prob */
             success_prob?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -19579,7 +19579,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.Hop.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** Hop chan_id. */
@@ -19776,7 +19776,7 @@ export namespace lnrpc {
             /** Hop total_amt_msat */
             total_amt_msat?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -19798,7 +19798,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.MPPRecord.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** MPPRecord payment_addr. */
@@ -19913,7 +19913,7 @@ export namespace lnrpc {
             /** MPPRecord total_amt_msat */
             total_amt_msat?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -19935,7 +19935,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.AMPRecord.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** AMPRecord root_share. */
@@ -20056,7 +20056,7 @@ export namespace lnrpc {
             /** AMPRecord child_index */
             child_index?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -20078,7 +20078,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.Route.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** Route total_time_lock. */
@@ -20227,7 +20227,7 @@ export namespace lnrpc {
             /** Route custom_channel_data */
             custom_channel_data?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -20249,7 +20249,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.NodeInfoRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** NodeInfoRequest pub_key. */
@@ -20370,7 +20370,7 @@ export namespace lnrpc {
             /** NodeInfoRequest include_auth_proof */
             include_auth_proof?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -20392,7 +20392,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.NodeInfo.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** NodeInfo node. */
@@ -20517,7 +20517,7 @@ export namespace lnrpc {
             /** NodeInfo channels */
             channels?: lnrpc.ChannelEdge.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -20539,7 +20539,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.LightningNode.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** LightningNode last_update. */
@@ -20684,7 +20684,7 @@ export namespace lnrpc {
             /** LightningNode custom_records */
             custom_records?: { [k: string]: Uint8Array } | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -20706,7 +20706,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.NodeAddress.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** NodeAddress network. */
@@ -20821,7 +20821,7 @@ export namespace lnrpc {
             /** NodeAddress addr */
             addr?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -20843,7 +20843,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.RoutingPolicy.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** RoutingPolicy time_lock_delta. */
@@ -21006,7 +21006,7 @@ export namespace lnrpc {
             /** RoutingPolicy inbound_fee_rate_milli_msat */
             inbound_fee_rate_milli_msat?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -21028,7 +21028,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChannelAuthProof.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChannelAuthProof node_sig1. */
@@ -21155,7 +21155,7 @@ export namespace lnrpc {
             /** ChannelAuthProof bitcoin_sig2 */
             bitcoin_sig2?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -21177,7 +21177,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChannelEdge.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChannelEdge channel_id. */
@@ -21340,7 +21340,7 @@ export namespace lnrpc {
             /** ChannelEdge auth_proof */
             auth_proof?: lnrpc.ChannelAuthProof.$Properties | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -21363,7 +21363,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChannelGraphRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChannelGraphRequest include_unannounced. */
@@ -21480,7 +21480,7 @@ export namespace lnrpc {
             /** ChannelGraphRequest include_auth_proof */
             include_auth_proof?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -21502,7 +21502,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChannelGraph.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChannelGraph nodes. */
@@ -21617,7 +21617,7 @@ export namespace lnrpc {
             /** ChannelGraph edges */
             edges?: lnrpc.ChannelEdge.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -21649,7 +21649,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.NodeMetricsRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** NodeMetricsRequest types. */
@@ -21760,7 +21760,7 @@ export namespace lnrpc {
             /** NodeMetricsRequest types */
             types?: lnrpc.NodeMetricType[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -21783,7 +21783,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.NodeMetricsResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** NodeMetricsResponse betweenness_centrality. */
@@ -21896,7 +21896,7 @@ export namespace lnrpc {
                 [k: string]: lnrpc.FloatMetric.$Properties;
             } | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -21918,7 +21918,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.FloatMetric.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** FloatMetric value. */
@@ -22033,7 +22033,7 @@ export namespace lnrpc {
             /** FloatMetric normalized_value */
             normalized_value?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -22055,7 +22055,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChanInfoRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChanInfoRequest chan_id. */
@@ -22176,7 +22176,7 @@ export namespace lnrpc {
             /** ChanInfoRequest include_auth_proof */
             include_auth_proof?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -22199,7 +22199,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.NetworkInfoRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -22304,7 +22304,7 @@ export namespace lnrpc {
     namespace NetworkInfoRequest {
         /** Properties of a NetworkInfoRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -22326,7 +22326,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.NetworkInfo.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** NetworkInfo graph_diameter. */
@@ -22495,7 +22495,7 @@ export namespace lnrpc {
             /** NetworkInfo num_zombie_chans */
             num_zombie_chans?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -22517,7 +22517,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.StopRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -22620,7 +22620,7 @@ export namespace lnrpc {
     namespace StopRequest {
         /** Properties of a StopRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -22642,7 +22642,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.StopResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** StopResponse status. */
@@ -22751,7 +22751,7 @@ export namespace lnrpc {
             /** StopResponse status */
             status?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -22774,7 +22774,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.GraphTopologySubscription.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -22882,7 +22882,7 @@ export namespace lnrpc {
     namespace GraphTopologySubscription {
         /** Properties of a GraphTopologySubscription. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -22905,7 +22905,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.GraphTopologyUpdate.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** GraphTopologyUpdate node_updates. */
@@ -23028,7 +23028,7 @@ export namespace lnrpc {
             /** GraphTopologyUpdate closed_chans */
             closed_chans?: lnrpc.ClosedChannelUpdate.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -23055,7 +23055,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.NodeUpdate.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** NodeUpdate addresses. */
@@ -23200,7 +23200,7 @@ export namespace lnrpc {
             /** NodeUpdate features */
             features?: { [k: string]: lnrpc.Feature.$Properties } | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -23222,7 +23222,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChannelEdgeUpdate.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChannelEdgeUpdate chan_id. */
@@ -23363,7 +23363,7 @@ export namespace lnrpc {
             /** ChannelEdgeUpdate connecting_node */
             connecting_node?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -23394,7 +23394,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ClosedChannelUpdate.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ClosedChannelUpdate chan_id. */
@@ -23523,7 +23523,7 @@ export namespace lnrpc {
             /** ClosedChannelUpdate chan_point */
             chan_point?: lnrpc.ChannelPoint.$Properties | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -23551,7 +23551,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.HopHint.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** HopHint node_id. */
@@ -23682,7 +23682,7 @@ export namespace lnrpc {
             /** HopHint cltv_expiry_delta */
             cltv_expiry_delta?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -23704,7 +23704,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.SetID.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SetID set_id. */
@@ -23811,7 +23811,7 @@ export namespace lnrpc {
             /** SetID set_id */
             set_id?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -23833,7 +23833,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.RouteHint.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** RouteHint hop_hints. */
@@ -23942,7 +23942,7 @@ export namespace lnrpc {
             /** RouteHint hop_hints */
             hop_hints?: lnrpc.HopHint.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -23965,7 +23965,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.BlindedPaymentPath.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** BlindedPaymentPath blinded_path. */
@@ -24112,7 +24112,7 @@ export namespace lnrpc {
             /** BlindedPaymentPath features */
             features?: lnrpc.FeatureBit[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -24134,7 +24134,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.BlindedPath.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** BlindedPath introduction_node. */
@@ -24255,7 +24255,7 @@ export namespace lnrpc {
             /** BlindedPath blinded_hops */
             blinded_hops?: lnrpc.BlindedHop.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -24277,7 +24277,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.BlindedHop.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** BlindedHop blinded_node. */
@@ -24392,7 +24392,7 @@ export namespace lnrpc {
             /** BlindedHop encrypted_data */
             encrypted_data?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -24414,7 +24414,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.AMPInvoiceState.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** AMPInvoiceState state. */
@@ -24541,7 +24541,7 @@ export namespace lnrpc {
             /** AMPInvoiceState amt_paid_msat */
             amt_paid_msat?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -24563,7 +24563,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.Invoice.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** Invoice memo. */
@@ -24846,7 +24846,7 @@ export namespace lnrpc {
             /** Invoice min_hop_hints */
             min_hop_hints?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -24883,7 +24883,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.BlindedPathConfig.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** BlindedPathConfig min_num_real_hops. */
@@ -25018,7 +25018,7 @@ export namespace lnrpc {
             /** BlindedPathConfig incoming_channel_list */
             incoming_channel_list?: Long[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -25052,7 +25052,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.InvoiceHTLC.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** InvoiceHTLC chan_id. */
@@ -25227,7 +25227,7 @@ export namespace lnrpc {
             /** InvoiceHTLC custom_channel_data */
             custom_channel_data?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -25249,7 +25249,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.AMP.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** AMP root_share. */
@@ -25380,7 +25380,7 @@ export namespace lnrpc {
             /** AMP preimage */
             preimage?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -25403,7 +25403,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.AddInvoiceResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** AddInvoiceResponse r_hash. */
@@ -25532,7 +25532,7 @@ export namespace lnrpc {
             /** AddInvoiceResponse payment_addr */
             payment_addr?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -25554,7 +25554,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.PaymentHash.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** PaymentHash r_hash_str. */
@@ -25669,7 +25669,7 @@ export namespace lnrpc {
             /** PaymentHash r_hash */
             r_hash?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -25692,7 +25692,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ListInvoiceRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListInvoiceRequest pending_only. */
@@ -25833,7 +25833,7 @@ export namespace lnrpc {
             /** ListInvoiceRequest creation_date_end */
             creation_date_end?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -25856,7 +25856,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ListInvoiceResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListInvoiceResponse invoices. */
@@ -25979,7 +25979,7 @@ export namespace lnrpc {
             /** ListInvoiceResponse first_index_offset */
             first_index_offset?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -26002,7 +26002,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.InvoiceSubscription.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** InvoiceSubscription add_index. */
@@ -26119,7 +26119,7 @@ export namespace lnrpc {
             /** InvoiceSubscription settle_index */
             settle_index?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -26142,7 +26142,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.DelCanceledInvoiceReq.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** DelCanceledInvoiceReq invoice_hash. */
@@ -26253,7 +26253,7 @@ export namespace lnrpc {
             /** DelCanceledInvoiceReq invoice_hash */
             invoice_hash?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -26276,7 +26276,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.DelCanceledInvoiceResp.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** DelCanceledInvoiceResp status. */
@@ -26387,7 +26387,7 @@ export namespace lnrpc {
             /** DelCanceledInvoiceResp status */
             status?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -26433,7 +26433,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.Payment.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** Payment payment_hash. */
@@ -26630,7 +26630,7 @@ export namespace lnrpc {
             /** Payment first_hop_custom_records */
             first_hop_custom_records?: { [k: string]: Uint8Array } | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -26670,7 +26670,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.HTLCAttempt.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** HTLCAttempt attempt_id. */
@@ -26815,7 +26815,7 @@ export namespace lnrpc {
             /** HTLCAttempt preimage */
             preimage?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -26850,7 +26850,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ListPaymentsRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListPaymentsRequest include_incomplete. */
@@ -26997,7 +26997,7 @@ export namespace lnrpc {
             /** ListPaymentsRequest creation_date_end */
             creation_date_end?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -27020,7 +27020,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ListPaymentsResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListPaymentsResponse payments. */
@@ -27149,7 +27149,7 @@ export namespace lnrpc {
             /** ListPaymentsResponse total_num_payments */
             total_num_payments?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -27172,7 +27172,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.DeletePaymentRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** DeletePaymentRequest payment_hash. */
@@ -27289,7 +27289,7 @@ export namespace lnrpc {
             /** DeletePaymentRequest failed_htlcs_only */
             failed_htlcs_only?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -27312,7 +27312,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.DeleteAllPaymentsRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** DeleteAllPaymentsRequest failed_payments_only. */
@@ -27438,7 +27438,7 @@ export namespace lnrpc {
             /** DeleteAllPaymentsRequest all_payments */
             all_payments?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -27461,7 +27461,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.DeletePaymentResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** DeletePaymentResponse status. */
@@ -27572,7 +27572,7 @@ export namespace lnrpc {
             /** DeletePaymentResponse status */
             status?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -27595,7 +27595,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.DeleteAllPaymentsResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** DeleteAllPaymentsResponse status. */
@@ -27709,7 +27709,7 @@ export namespace lnrpc {
             /** DeleteAllPaymentsResponse status */
             status?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -27732,7 +27732,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.AbandonChannelRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** AbandonChannelRequest channel_point. */
@@ -27855,7 +27855,7 @@ export namespace lnrpc {
             /** AbandonChannelRequest i_know_what_i_am_doing */
             i_know_what_i_am_doing?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -27883,7 +27883,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.AbandonChannelResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** AbandonChannelResponse status. */
@@ -27994,7 +27994,7 @@ export namespace lnrpc {
             /** AbandonChannelResponse status */
             status?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -28016,7 +28016,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.DebugLevelRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** DebugLevelRequest show. */
@@ -28133,7 +28133,7 @@ export namespace lnrpc {
             /** DebugLevelRequest level_spec */
             level_spec?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -28156,7 +28156,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.DebugLevelResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** DebugLevelResponse sub_systems. */
@@ -28267,7 +28267,7 @@ export namespace lnrpc {
             /** DebugLevelResponse sub_systems */
             sub_systems?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -28289,7 +28289,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.PayReqString.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** PayReqString pay_req. */
@@ -28398,7 +28398,7 @@ export namespace lnrpc {
             /** PayReqString pay_req */
             pay_req?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -28420,7 +28420,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.PayReq.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** PayReq destination. */
@@ -28605,7 +28605,7 @@ export namespace lnrpc {
             /** PayReq blinded_paths */
             blinded_paths?: lnrpc.BlindedPaymentPath.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -28711,7 +28711,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.Feature.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** Feature name. */
@@ -28830,7 +28830,7 @@ export namespace lnrpc {
             /** Feature is_known */
             is_known?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -28852,7 +28852,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.FeeReportRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -28955,7 +28955,7 @@ export namespace lnrpc {
     namespace FeeReportRequest {
         /** Properties of a FeeReportRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -28977,7 +28977,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChannelFeeReport.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChannelFeeReport chan_id. */
@@ -29122,7 +29122,7 @@ export namespace lnrpc {
             /** ChannelFeeReport inbound_fee_per_mil */
             inbound_fee_per_mil?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -29144,7 +29144,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.FeeReportResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** FeeReportResponse channel_fees. */
@@ -29273,7 +29273,7 @@ export namespace lnrpc {
             /** FeeReportResponse month_fee_sum */
             month_fee_sum?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -29295,7 +29295,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.InboundFee.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** InboundFee base_fee_msat. */
@@ -29410,7 +29410,7 @@ export namespace lnrpc {
             /** InboundFee fee_rate_ppm */
             fee_rate_ppm?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -29433,7 +29433,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.PolicyUpdateRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** PolicyUpdateRequest global. */
@@ -29610,7 +29610,7 @@ export namespace lnrpc {
             /** PolicyUpdateRequest scope */
             scope?: 'global' | 'chan_point';
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -29671,7 +29671,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.FailedUpdate.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** FailedUpdate outpoint. */
@@ -29792,7 +29792,7 @@ export namespace lnrpc {
             /** FailedUpdate update_error */
             update_error?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -29815,7 +29815,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.PolicyUpdateResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** PolicyUpdateResponse failed_updates. */
@@ -29926,7 +29926,7 @@ export namespace lnrpc {
             /** PolicyUpdateResponse failed_updates */
             failed_updates?: lnrpc.FailedUpdate.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -29949,7 +29949,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ForwardingHistoryRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ForwardingHistoryRequest start_time. */
@@ -30099,7 +30099,7 @@ export namespace lnrpc {
             /** ForwardingHistoryRequest outgoing_chan_ids */
             outgoing_chan_ids?: Long[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -30121,7 +30121,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ForwardingEvent.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ForwardingEvent timestamp. */
@@ -30308,7 +30308,7 @@ export namespace lnrpc {
             /** ForwardingEvent outgoing_htlc_id */
             outgoing_htlc_id?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -30331,7 +30331,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ForwardingHistoryResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ForwardingHistoryResponse forwarding_events. */
@@ -30451,7 +30451,7 @@ export namespace lnrpc {
             /** ForwardingHistoryResponse last_offset_index */
             last_offset_index?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -30474,7 +30474,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ExportChannelBackupRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ExportChannelBackupRequest chan_point. */
@@ -30588,7 +30588,7 @@ export namespace lnrpc {
             /** ExportChannelBackupRequest chan_point */
             chan_point?: lnrpc.ChannelPoint.$Properties | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -30613,7 +30613,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChannelBackup.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChannelBackup chan_point. */
@@ -30728,7 +30728,7 @@ export namespace lnrpc {
             /** ChannelBackup chan_backup */
             chan_backup?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -30754,7 +30754,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.MultiChanBackup.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** MultiChanBackup chan_points. */
@@ -30869,7 +30869,7 @@ export namespace lnrpc {
             /** MultiChanBackup multi_chan_backup */
             multi_chan_backup?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -30896,7 +30896,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChanBackupExportRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -31001,7 +31001,7 @@ export namespace lnrpc {
     namespace ChanBackupExportRequest {
         /** Properties of a ChanBackupExportRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -31024,7 +31024,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChanBackupSnapshot.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChanBackupSnapshot single_chan_backups. */
@@ -31141,7 +31141,7 @@ export namespace lnrpc {
             /** ChanBackupSnapshot multi_chan_backup */
             multi_chan_backup?: lnrpc.MultiChanBackup.$Properties | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -31167,7 +31167,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChannelBackups.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChannelBackups chan_backups. */
@@ -31276,7 +31276,7 @@ export namespace lnrpc {
             /** ChannelBackups chan_backups */
             chan_backups?: lnrpc.ChannelBackup.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -31302,7 +31302,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.RestoreChanBackupRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** RestoreChanBackupRequest chan_backups. */
@@ -31428,7 +31428,7 @@ export namespace lnrpc {
             /** RestoreChanBackupRequest backup */
             backup?: 'chan_backups' | 'multi_chan_backup';
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -31471,7 +31471,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.RestoreBackupResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** RestoreBackupResponse num_restored. */
@@ -31582,7 +31582,7 @@ export namespace lnrpc {
             /** RestoreBackupResponse num_restored */
             num_restored?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -31605,7 +31605,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChannelBackupSubscription.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -31713,7 +31713,7 @@ export namespace lnrpc {
     namespace ChannelBackupSubscription {
         /** Properties of a ChannelBackupSubscription. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -31736,7 +31736,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.VerifyChanBackupResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** VerifyChanBackupResponse chan_points. */
@@ -31850,7 +31850,7 @@ export namespace lnrpc {
             /** VerifyChanBackupResponse chan_points */
             chan_points?: string[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -31873,7 +31873,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.MacaroonPermission.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** MacaroonPermission entity. */
@@ -31990,7 +31990,7 @@ export namespace lnrpc {
             /** MacaroonPermission action */
             action?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -32013,7 +32013,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.BakeMacaroonRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** BakeMacaroonRequest permissions. */
@@ -32136,7 +32136,7 @@ export namespace lnrpc {
             /** BakeMacaroonRequest allow_external_permissions */
             allow_external_permissions?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -32159,7 +32159,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.BakeMacaroonResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** BakeMacaroonResponse macaroon. */
@@ -32270,7 +32270,7 @@ export namespace lnrpc {
             /** BakeMacaroonResponse macaroon */
             macaroon?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -32293,7 +32293,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ListMacaroonIDsRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -32398,7 +32398,7 @@ export namespace lnrpc {
     namespace ListMacaroonIDsRequest {
         /** Properties of a ListMacaroonIDsRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -32421,7 +32421,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ListMacaroonIDsResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListMacaroonIDsResponse root_key_ids. */
@@ -32532,7 +32532,7 @@ export namespace lnrpc {
             /** ListMacaroonIDsResponse root_key_ids */
             root_key_ids?: Long[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -32555,7 +32555,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.DeleteMacaroonIDRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** DeleteMacaroonIDRequest root_key_id. */
@@ -32666,7 +32666,7 @@ export namespace lnrpc {
             /** DeleteMacaroonIDRequest root_key_id */
             root_key_id?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -32689,7 +32689,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.DeleteMacaroonIDResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** DeleteMacaroonIDResponse deleted. */
@@ -32803,7 +32803,7 @@ export namespace lnrpc {
             /** DeleteMacaroonIDResponse deleted */
             deleted?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -32826,7 +32826,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.MacaroonPermissionList.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** MacaroonPermissionList permissions. */
@@ -32937,7 +32937,7 @@ export namespace lnrpc {
             /** MacaroonPermissionList permissions */
             permissions?: lnrpc.MacaroonPermission.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -32960,7 +32960,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ListPermissionsRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -33065,7 +33065,7 @@ export namespace lnrpc {
     namespace ListPermissionsRequest {
         /** Properties of a ListPermissionsRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -33088,7 +33088,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ListPermissionsResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListPermissionsResponse method_permissions. */
@@ -33203,7 +33203,7 @@ export namespace lnrpc {
                 [k: string]: lnrpc.MacaroonPermissionList.$Properties;
             } | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -33225,7 +33225,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.Failure.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** Failure code. */
@@ -33374,7 +33374,7 @@ export namespace lnrpc {
             /** Failure height */
             height?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -33486,7 +33486,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChannelUpdate.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChannelUpdate signature. */
@@ -33661,7 +33661,7 @@ export namespace lnrpc {
             /** ChannelUpdate extra_opaque_data */
             extra_opaque_data?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -33683,7 +33683,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.MacaroonId.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** MacaroonId nonce. */
@@ -33804,7 +33804,7 @@ export namespace lnrpc {
             /** MacaroonId ops */
             ops?: lnrpc.Op.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -33826,7 +33826,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.Op.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** Op entity. */
@@ -33937,7 +33937,7 @@ export namespace lnrpc {
             /** Op actions */
             actions?: string[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -33960,7 +33960,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.CheckMacPermRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** CheckMacPermRequest macaroon. */
@@ -34089,7 +34089,7 @@ export namespace lnrpc {
             /** CheckMacPermRequest check_default_perms_from_full_method */
             check_default_perms_from_full_method?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -34112,7 +34112,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.CheckMacPermResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** CheckMacPermResponse valid. */
@@ -34223,7 +34223,7 @@ export namespace lnrpc {
             /** CheckMacPermResponse valid */
             valid?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -34246,7 +34246,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.RPCMiddlewareRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** RPCMiddlewareRequest request_id. */
@@ -34421,7 +34421,7 @@ export namespace lnrpc {
                 | 'response'
                 | 'reg_complete';
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -34492,7 +34492,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.MetadataValues.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** MetadataValues values. */
@@ -34601,7 +34601,7 @@ export namespace lnrpc {
             /** MetadataValues values */
             values?: string[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -34623,7 +34623,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.StreamAuth.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** StreamAuth method_full_uri. */
@@ -34732,7 +34732,7 @@ export namespace lnrpc {
             /** StreamAuth method_full_uri */
             method_full_uri?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -34754,7 +34754,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.RPCMessage.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** RPCMessage method_full_uri. */
@@ -34887,7 +34887,7 @@ export namespace lnrpc {
             /** RPCMessage is_error */
             is_error?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -34910,7 +34910,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.RPCMiddlewareResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** RPCMiddlewareResponse ref_msg_id. */
@@ -35039,7 +35039,7 @@ export namespace lnrpc {
             /** RPCMiddlewareResponse middleware_message */
             middleware_message?: 'register' | 'feedback';
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -35083,7 +35083,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.MiddlewareRegistration.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** MiddlewareRegistration middleware_name. */
@@ -35206,7 +35206,7 @@ export namespace lnrpc {
             /** MiddlewareRegistration read_only_mode */
             read_only_mode?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -35228,7 +35228,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.InterceptFeedback.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** InterceptFeedback error. */
@@ -35351,7 +35351,7 @@ export namespace lnrpc {
             /** InterceptFeedback replacement_serialized */
             replacement_serialized?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -35483,7 +35483,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.SubscribeStateRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -35588,7 +35588,7 @@ export namespace lnrpc {
     namespace SubscribeStateRequest {
         /** Properties of a SubscribeStateRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -35611,7 +35611,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.SubscribeStateResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SubscribeStateResponse state. */
@@ -35722,7 +35722,7 @@ export namespace lnrpc {
             /** SubscribeStateResponse state */
             state?: lnrpc.WalletState | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -35744,7 +35744,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.GetStateRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -35847,7 +35847,7 @@ export namespace lnrpc {
     namespace GetStateRequest {
         /** Properties of a GetStateRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -35869,7 +35869,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.GetStateResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** GetStateResponse state. */
@@ -35978,7 +35978,7 @@ export namespace lnrpc {
             /** GetStateResponse state */
             state?: lnrpc.WalletState | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -36148,7 +36148,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.GenSeedRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** GenSeedRequest aezeed_passphrase. */
@@ -36263,7 +36263,7 @@ export namespace lnrpc {
             /** GenSeedRequest seed_entropy */
             seed_entropy?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -36285,7 +36285,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.GenSeedResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** GenSeedResponse cipher_seed_mnemonic. */
@@ -36400,7 +36400,7 @@ export namespace lnrpc {
             /** GenSeedResponse enciphered_seed */
             enciphered_seed?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -36422,7 +36422,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.InitWalletRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** InitWalletRequest wallet_password. */
@@ -36587,7 +36587,7 @@ export namespace lnrpc {
             /** InitWalletRequest macaroon_root_key */
             macaroon_root_key?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -36622,7 +36622,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.InitWalletResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** InitWalletResponse admin_macaroon. */
@@ -36733,7 +36733,7 @@ export namespace lnrpc {
             /** InitWalletResponse admin_macaroon */
             admin_macaroon?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -36755,7 +36755,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.WatchOnly.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** WatchOnly master_key_birthday_timestamp. */
@@ -36876,7 +36876,7 @@ export namespace lnrpc {
             /** WatchOnly accounts */
             accounts?: lnrpc.WatchOnlyAccount.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -36898,7 +36898,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.WatchOnlyAccount.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** WatchOnlyAccount purpose. */
@@ -37025,7 +37025,7 @@ export namespace lnrpc {
             /** WatchOnlyAccount xpub */
             xpub?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -37048,7 +37048,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.UnlockWalletRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** UnlockWalletRequest wallet_password. */
@@ -37177,7 +37177,7 @@ export namespace lnrpc {
             /** UnlockWalletRequest stateless_init */
             stateless_init?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -37206,7 +37206,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.UnlockWalletResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -37311,7 +37311,7 @@ export namespace lnrpc {
     namespace UnlockWalletResponse {
         /** Properties of an UnlockWalletResponse. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -37334,7 +37334,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChangePasswordRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChangePasswordRequest current_password. */
@@ -37463,7 +37463,7 @@ export namespace lnrpc {
             /** ChangePasswordRequest new_macaroon_root_key */
             new_macaroon_root_key?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -37486,7 +37486,7 @@ export namespace lnrpc {
          */
         constructor(properties?: lnrpc.ChangePasswordResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ChangePasswordResponse admin_macaroon. */
@@ -37597,7 +37597,7 @@ export namespace lnrpc {
             /** ChangePasswordResponse admin_macaroon */
             admin_macaroon?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -37772,7 +37772,7 @@ export namespace autopilotrpc {
          */
         constructor(properties?: autopilotrpc.StatusRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -37877,7 +37877,7 @@ export namespace autopilotrpc {
     namespace StatusRequest {
         /** Properties of a StatusRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -37899,7 +37899,7 @@ export namespace autopilotrpc {
          */
         constructor(properties?: autopilotrpc.StatusResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** StatusResponse active. */
@@ -38010,7 +38010,7 @@ export namespace autopilotrpc {
             /** StatusResponse active */
             active?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -38033,7 +38033,7 @@ export namespace autopilotrpc {
          */
         constructor(properties?: autopilotrpc.ModifyStatusRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ModifyStatusRequest enable. */
@@ -38147,7 +38147,7 @@ export namespace autopilotrpc {
             /** ModifyStatusRequest enable */
             enable?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -38170,7 +38170,7 @@ export namespace autopilotrpc {
          */
         constructor(properties?: autopilotrpc.ModifyStatusResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -38278,7 +38278,7 @@ export namespace autopilotrpc {
     namespace ModifyStatusResponse {
         /** Properties of a ModifyStatusResponse. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -38301,7 +38301,7 @@ export namespace autopilotrpc {
          */
         constructor(properties?: autopilotrpc.QueryScoresRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** QueryScoresRequest pubkeys. */
@@ -38421,7 +38421,7 @@ export namespace autopilotrpc {
             /** QueryScoresRequest ignore_local_state */
             ignore_local_state?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -38444,7 +38444,7 @@ export namespace autopilotrpc {
          */
         constructor(properties?: autopilotrpc.QueryScoresResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** QueryScoresResponse results. */
@@ -38560,7 +38560,7 @@ export namespace autopilotrpc {
                 | autopilotrpc.QueryScoresResponse.HeuristicResult.$Properties[]
                 | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -38585,7 +38585,7 @@ export namespace autopilotrpc {
                 properties?: autopilotrpc.QueryScoresResponse.HeuristicResult.$Properties
             );
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
 
             /** HeuristicResult heuristic. */
@@ -38705,7 +38705,7 @@ export namespace autopilotrpc {
                 /** HeuristicResult scores */
                 scores?: { [k: string]: number } | null;
 
-                /** Unknown fields preserved while decoding */
+                /** Unknown fields preserved while decoding when enabled */
                 $unknowns?: Uint8Array[];
             }
 
@@ -38730,7 +38730,7 @@ export namespace autopilotrpc {
          */
         constructor(properties?: autopilotrpc.SetScoresRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SetScoresRequest heuristic. */
@@ -38847,7 +38847,7 @@ export namespace autopilotrpc {
             /** SetScoresRequest scores */
             scores?: { [k: string]: number } | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -38870,7 +38870,7 @@ export namespace autopilotrpc {
          */
         constructor(properties?: autopilotrpc.SetScoresResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -38978,7 +38978,7 @@ export namespace autopilotrpc {
     namespace SetScoresResponse {
         /** Properties of a SetScoresResponse. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -39117,7 +39117,7 @@ export namespace chainrpc {
          */
         constructor(properties?: chainrpc.ConfRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ConfRequest txid. */
@@ -39250,7 +39250,7 @@ export namespace chainrpc {
             /** ConfRequest include_block */
             include_block?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -39272,7 +39272,7 @@ export namespace chainrpc {
          */
         constructor(properties?: chainrpc.ConfDetails.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ConfDetails raw_tx. */
@@ -39405,7 +39405,7 @@ export namespace chainrpc {
             /** ConfDetails raw_block */
             raw_block?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -39427,7 +39427,7 @@ export namespace chainrpc {
          */
         constructor(properties?: chainrpc.Reorg.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -39528,7 +39528,7 @@ export namespace chainrpc {
     namespace Reorg {
         /** Properties of a Reorg. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -39550,7 +39550,7 @@ export namespace chainrpc {
          */
         constructor(properties?: chainrpc.ConfEvent.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ConfEvent conf. */
@@ -39671,7 +39671,7 @@ export namespace chainrpc {
             /** ConfEvent event */
             event?: 'conf' | 'reorg';
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -39705,7 +39705,7 @@ export namespace chainrpc {
          */
         constructor(properties?: chainrpc.Outpoint.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** Outpoint hash. */
@@ -39820,7 +39820,7 @@ export namespace chainrpc {
             /** Outpoint index */
             index?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -39842,7 +39842,7 @@ export namespace chainrpc {
          */
         constructor(properties?: chainrpc.SpendRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SpendRequest outpoint. */
@@ -39963,7 +39963,7 @@ export namespace chainrpc {
             /** SpendRequest height_hint */
             height_hint?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -39985,7 +39985,7 @@ export namespace chainrpc {
          */
         constructor(properties?: chainrpc.SpendDetails.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SpendDetails spending_outpoint. */
@@ -40118,7 +40118,7 @@ export namespace chainrpc {
             /** SpendDetails spending_height */
             spending_height?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -40140,7 +40140,7 @@ export namespace chainrpc {
          */
         constructor(properties?: chainrpc.SpendEvent.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SpendEvent spend. */
@@ -40261,7 +40261,7 @@ export namespace chainrpc {
             /** SpendEvent event */
             event?: 'spend' | 'reorg';
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -40295,7 +40295,7 @@ export namespace chainrpc {
          */
         constructor(properties?: chainrpc.BlockEpoch.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** BlockEpoch hash. */
@@ -40410,7 +40410,7 @@ export namespace chainrpc {
             /** BlockEpoch height */
             height?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -40644,7 +40644,7 @@ export namespace invoicesrpc {
          */
         constructor(properties?: invoicesrpc.CancelInvoiceMsg.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** CancelInvoiceMsg payment_hash. */
@@ -40755,7 +40755,7 @@ export namespace invoicesrpc {
             /** CancelInvoiceMsg payment_hash */
             payment_hash?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -40778,7 +40778,7 @@ export namespace invoicesrpc {
          */
         constructor(properties?: invoicesrpc.CancelInvoiceResp.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -40883,7 +40883,7 @@ export namespace invoicesrpc {
     namespace CancelInvoiceResp {
         /** Properties of a CancelInvoiceResp. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -40906,7 +40906,7 @@ export namespace invoicesrpc {
          */
         constructor(properties?: invoicesrpc.AddHoldInvoiceRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** AddHoldInvoiceRequest memo. */
@@ -41074,7 +41074,7 @@ export namespace invoicesrpc {
             /** AddHoldInvoiceRequest private */
             private?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -41097,7 +41097,7 @@ export namespace invoicesrpc {
          */
         constructor(properties?: invoicesrpc.AddHoldInvoiceResp.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** AddHoldInvoiceResp payment_request. */
@@ -41223,7 +41223,7 @@ export namespace invoicesrpc {
             /** AddHoldInvoiceResp payment_addr */
             payment_addr?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -41246,7 +41246,7 @@ export namespace invoicesrpc {
          */
         constructor(properties?: invoicesrpc.SettleInvoiceMsg.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SettleInvoiceMsg preimage. */
@@ -41357,7 +41357,7 @@ export namespace invoicesrpc {
             /** SettleInvoiceMsg preimage */
             preimage?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -41380,7 +41380,7 @@ export namespace invoicesrpc {
          */
         constructor(properties?: invoicesrpc.SettleInvoiceResp.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -41485,7 +41485,7 @@ export namespace invoicesrpc {
     namespace SettleInvoiceResp {
         /** Properties of a SettleInvoiceResp. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -41510,7 +41510,7 @@ export namespace invoicesrpc {
             properties?: invoicesrpc.SubscribeSingleInvoiceRequest.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SubscribeSingleInvoiceRequest r_hash. */
@@ -41624,7 +41624,7 @@ export namespace invoicesrpc {
             /** SubscribeSingleInvoiceRequest r_hash */
             r_hash?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -41659,7 +41659,7 @@ export namespace invoicesrpc {
          */
         constructor(properties?: invoicesrpc.LookupInvoiceMsg.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** LookupInvoiceMsg payment_hash. */
@@ -41794,7 +41794,7 @@ export namespace invoicesrpc {
             /** LookupInvoiceMsg invoice_ref */
             invoice_ref?: 'payment_hash' | 'payment_addr' | 'set_id';
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -41847,7 +41847,7 @@ export namespace invoicesrpc {
          */
         constructor(properties?: invoicesrpc.CircuitKey.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** CircuitKey chan_id. */
@@ -41962,7 +41962,7 @@ export namespace invoicesrpc {
             /** CircuitKey htlc_id */
             htlc_id?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -41985,7 +41985,7 @@ export namespace invoicesrpc {
          */
         constructor(properties?: invoicesrpc.HtlcModifyRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** HtlcModifyRequest invoice. */
@@ -42126,7 +42126,7 @@ export namespace invoicesrpc {
             /** HtlcModifyRequest exit_htlc_wire_custom_records */
             exit_htlc_wire_custom_records?: { [k: string]: Uint8Array } | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -42149,7 +42149,7 @@ export namespace invoicesrpc {
          */
         constructor(properties?: invoicesrpc.HtlcModifyResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** HtlcModifyResponse circuit_key. */
@@ -42275,7 +42275,7 @@ export namespace invoicesrpc {
             /** HtlcModifyResponse cancel_set */
             cancel_set?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -42570,7 +42570,7 @@ export namespace neutrinorpc {
          */
         constructor(properties?: neutrinorpc.StatusRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -42675,7 +42675,7 @@ export namespace neutrinorpc {
     namespace StatusRequest {
         /** Properties of a StatusRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -42697,7 +42697,7 @@ export namespace neutrinorpc {
          */
         constructor(properties?: neutrinorpc.StatusResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** StatusResponse active. */
@@ -42832,7 +42832,7 @@ export namespace neutrinorpc {
             /** StatusResponse peers */
             peers?: string[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -42854,7 +42854,7 @@ export namespace neutrinorpc {
          */
         constructor(properties?: neutrinorpc.AddPeerRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** AddPeerRequest peer_addrs. */
@@ -42965,7 +42965,7 @@ export namespace neutrinorpc {
             /** AddPeerRequest peer_addrs */
             peer_addrs?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -42988,7 +42988,7 @@ export namespace neutrinorpc {
          */
         constructor(properties?: neutrinorpc.AddPeerResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -43093,7 +43093,7 @@ export namespace neutrinorpc {
     namespace AddPeerResponse {
         /** Properties of an AddPeerResponse. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -43116,7 +43116,7 @@ export namespace neutrinorpc {
          */
         constructor(properties?: neutrinorpc.DisconnectPeerRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** DisconnectPeerRequest peer_addrs. */
@@ -43230,7 +43230,7 @@ export namespace neutrinorpc {
             /** DisconnectPeerRequest peer_addrs */
             peer_addrs?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -43255,7 +43255,7 @@ export namespace neutrinorpc {
             properties?: neutrinorpc.DisconnectPeerResponse.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -43363,7 +43363,7 @@ export namespace neutrinorpc {
     namespace DisconnectPeerResponse {
         /** Properties of a DisconnectPeerResponse. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -43386,7 +43386,7 @@ export namespace neutrinorpc {
          */
         constructor(properties?: neutrinorpc.IsBannedRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** IsBannedRequest peer_addrs. */
@@ -43497,7 +43497,7 @@ export namespace neutrinorpc {
             /** IsBannedRequest peer_addrs */
             peer_addrs?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -43520,7 +43520,7 @@ export namespace neutrinorpc {
          */
         constructor(properties?: neutrinorpc.IsBannedResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** IsBannedResponse banned. */
@@ -43631,7 +43631,7 @@ export namespace neutrinorpc {
             /** IsBannedResponse banned */
             banned?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -43654,7 +43654,7 @@ export namespace neutrinorpc {
          */
         constructor(properties?: neutrinorpc.GetBlockHeaderRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** GetBlockHeaderRequest hash. */
@@ -43768,7 +43768,7 @@ export namespace neutrinorpc {
             /** GetBlockHeaderRequest hash */
             hash?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -43793,7 +43793,7 @@ export namespace neutrinorpc {
             properties?: neutrinorpc.GetBlockHeaderResponse.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** GetBlockHeaderResponse hash. */
@@ -43991,7 +43991,7 @@ export namespace neutrinorpc {
             /** GetBlockHeaderResponse raw_hex */
             raw_hex?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -44014,7 +44014,7 @@ export namespace neutrinorpc {
          */
         constructor(properties?: neutrinorpc.GetBlockRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** GetBlockRequest hash. */
@@ -44125,7 +44125,7 @@ export namespace neutrinorpc {
             /** GetBlockRequest hash */
             hash?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -44148,7 +44148,7 @@ export namespace neutrinorpc {
          */
         constructor(properties?: neutrinorpc.GetBlockResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** GetBlockResponse hash. */
@@ -44349,7 +44349,7 @@ export namespace neutrinorpc {
             /** GetBlockResponse raw_hex */
             raw_hex?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -44372,7 +44372,7 @@ export namespace neutrinorpc {
          */
         constructor(properties?: neutrinorpc.GetCFilterRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** GetCFilterRequest hash. */
@@ -44483,7 +44483,7 @@ export namespace neutrinorpc {
             /** GetCFilterRequest hash */
             hash?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -44506,7 +44506,7 @@ export namespace neutrinorpc {
          */
         constructor(properties?: neutrinorpc.GetCFilterResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** GetCFilterResponse filter. */
@@ -44620,7 +44620,7 @@ export namespace neutrinorpc {
             /** GetCFilterResponse filter */
             filter?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -44643,7 +44643,7 @@ export namespace neutrinorpc {
          */
         constructor(properties?: neutrinorpc.GetBlockHashRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** GetBlockHashRequest height. */
@@ -44757,7 +44757,7 @@ export namespace neutrinorpc {
             /** GetBlockHashRequest height */
             height?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -44780,7 +44780,7 @@ export namespace neutrinorpc {
          */
         constructor(properties?: neutrinorpc.GetBlockHashResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** GetBlockHashResponse hash. */
@@ -44894,7 +44894,7 @@ export namespace neutrinorpc {
             /** GetBlockHashResponse hash */
             hash?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -45586,7 +45586,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.SendPaymentRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SendPaymentRequest dest. */
@@ -45841,7 +45841,7 @@ export namespace routerrpc {
             /** SendPaymentRequest first_hop_custom_records */
             first_hop_custom_records?: { [k: string]: Uint8Array } | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -45864,7 +45864,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.TrackPaymentRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** TrackPaymentRequest payment_hash. */
@@ -45981,7 +45981,7 @@ export namespace routerrpc {
             /** TrackPaymentRequest no_inflight_updates */
             no_inflight_updates?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -46004,7 +46004,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.TrackPaymentsRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** TrackPaymentsRequest no_inflight_updates. */
@@ -46118,7 +46118,7 @@ export namespace routerrpc {
             /** TrackPaymentsRequest no_inflight_updates */
             no_inflight_updates?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -46140,7 +46140,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.RouteFeeRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** RouteFeeRequest dest. */
@@ -46269,7 +46269,7 @@ export namespace routerrpc {
             /** RouteFeeRequest timeout */
             timeout?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -46292,7 +46292,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.RouteFeeResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** RouteFeeResponse routing_fee_msat. */
@@ -46415,7 +46415,7 @@ export namespace routerrpc {
             /** RouteFeeResponse failure_reason */
             failure_reason?: lnrpc.PaymentFailureReason | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -46438,7 +46438,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.SendToRouteRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SendToRouteRequest payment_hash. */
@@ -46567,7 +46567,7 @@ export namespace routerrpc {
             /** SendToRouteRequest first_hop_custom_records */
             first_hop_custom_records?: { [k: string]: Uint8Array } | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -46590,7 +46590,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.SendToRouteResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SendToRouteResponse preimage. */
@@ -46707,7 +46707,7 @@ export namespace routerrpc {
             /** SendToRouteResponse failure */
             failure?: lnrpc.Failure.$Properties | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -46732,7 +46732,7 @@ export namespace routerrpc {
             properties?: routerrpc.ResetMissionControlRequest.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -46840,7 +46840,7 @@ export namespace routerrpc {
     namespace ResetMissionControlRequest {
         /** Properties of a ResetMissionControlRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -46865,7 +46865,7 @@ export namespace routerrpc {
             properties?: routerrpc.ResetMissionControlResponse.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -46973,7 +46973,7 @@ export namespace routerrpc {
     namespace ResetMissionControlResponse {
         /** Properties of a ResetMissionControlResponse. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -46998,7 +46998,7 @@ export namespace routerrpc {
             properties?: routerrpc.QueryMissionControlRequest.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -47106,7 +47106,7 @@ export namespace routerrpc {
     namespace QueryMissionControlRequest {
         /** Properties of a QueryMissionControlRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -47131,7 +47131,7 @@ export namespace routerrpc {
             properties?: routerrpc.QueryMissionControlResponse.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** QueryMissionControlResponse pairs. */
@@ -47245,7 +47245,7 @@ export namespace routerrpc {
             /** QueryMissionControlResponse pairs */
             pairs?: routerrpc.PairHistory.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -47270,7 +47270,7 @@ export namespace routerrpc {
             properties?: routerrpc.XImportMissionControlRequest.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** XImportMissionControlRequest pairs. */
@@ -47390,7 +47390,7 @@ export namespace routerrpc {
             /** XImportMissionControlRequest force */
             force?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -47415,7 +47415,7 @@ export namespace routerrpc {
             properties?: routerrpc.XImportMissionControlResponse.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -47523,7 +47523,7 @@ export namespace routerrpc {
     namespace XImportMissionControlResponse {
         /** Properties of a XImportMissionControlResponse. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -47545,7 +47545,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.PairHistory.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** PairHistory node_from. */
@@ -47666,7 +47666,7 @@ export namespace routerrpc {
             /** PairHistory history */
             history?: routerrpc.PairData.$Properties | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -47688,7 +47688,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.PairData.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** PairData fail_time. */
@@ -47827,7 +47827,7 @@ export namespace routerrpc {
             /** PairData success_amt_msat */
             success_amt_msat?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -47852,7 +47852,7 @@ export namespace routerrpc {
             properties?: routerrpc.GetMissionControlConfigRequest.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -47960,7 +47960,7 @@ export namespace routerrpc {
     namespace GetMissionControlConfigRequest {
         /** Properties of a GetMissionControlConfigRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -47985,7 +47985,7 @@ export namespace routerrpc {
             properties?: routerrpc.GetMissionControlConfigResponse.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** GetMissionControlConfigResponse config. */
@@ -48099,7 +48099,7 @@ export namespace routerrpc {
             /** GetMissionControlConfigResponse config */
             config?: routerrpc.MissionControlConfig.$Properties | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -48127,7 +48127,7 @@ export namespace routerrpc {
             properties?: routerrpc.SetMissionControlConfigRequest.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SetMissionControlConfigRequest config. */
@@ -48241,7 +48241,7 @@ export namespace routerrpc {
             /** SetMissionControlConfigRequest config */
             config?: routerrpc.MissionControlConfig.$Properties | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -48269,7 +48269,7 @@ export namespace routerrpc {
             properties?: routerrpc.SetMissionControlConfigResponse.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -48377,7 +48377,7 @@ export namespace routerrpc {
     namespace SetMissionControlConfigResponse {
         /** Properties of a SetMissionControlConfigResponse. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -48400,7 +48400,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.MissionControlConfig.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** MissionControlConfig half_life_seconds. */
@@ -48562,7 +48562,7 @@ export namespace routerrpc {
             /** MissionControlConfig EstimatorConfig */
             EstimatorConfig?: 'apriori' | 'bimodal';
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -48616,7 +48616,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.BimodalParameters.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** BimodalParameters node_weight. */
@@ -48739,7 +48739,7 @@ export namespace routerrpc {
             /** BimodalParameters decay_time */
             decay_time?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -48762,7 +48762,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.AprioriParameters.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** AprioriParameters half_life_seconds. */
@@ -48891,7 +48891,7 @@ export namespace routerrpc {
             /** AprioriParameters capacity_fraction */
             capacity_fraction?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -48914,7 +48914,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.QueryProbabilityRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** QueryProbabilityRequest from_node. */
@@ -49040,7 +49040,7 @@ export namespace routerrpc {
             /** QueryProbabilityRequest amt_msat */
             amt_msat?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -49065,7 +49065,7 @@ export namespace routerrpc {
             properties?: routerrpc.QueryProbabilityResponse.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** QueryProbabilityResponse probability. */
@@ -49185,7 +49185,7 @@ export namespace routerrpc {
             /** QueryProbabilityResponse history */
             history?: routerrpc.PairData.$Properties | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -49208,7 +49208,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.BuildRouteRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** BuildRouteRequest amt_msat. */
@@ -49349,7 +49349,7 @@ export namespace routerrpc {
             /** BuildRouteRequest first_hop_custom_records */
             first_hop_custom_records?: { [k: string]: Uint8Array } | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -49372,7 +49372,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.BuildRouteResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** BuildRouteResponse route. */
@@ -49483,7 +49483,7 @@ export namespace routerrpc {
             /** BuildRouteResponse route */
             route?: lnrpc.Route.$Properties | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -49508,7 +49508,7 @@ export namespace routerrpc {
             properties?: routerrpc.SubscribeHtlcEventsRequest.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -49616,7 +49616,7 @@ export namespace routerrpc {
     namespace SubscribeHtlcEventsRequest {
         /** Properties of a SubscribeHtlcEventsRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -49638,7 +49638,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.HtlcEvent.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** HtlcEvent incoming_channel_id. */
@@ -49831,7 +49831,7 @@ export namespace routerrpc {
                 | 'subscribed_event'
                 | 'final_htlc_event';
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -49946,7 +49946,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.HtlcInfo.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** HtlcInfo incoming_timelock. */
@@ -50073,7 +50073,7 @@ export namespace routerrpc {
             /** HtlcInfo outgoing_amt_msat */
             outgoing_amt_msat?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -50095,7 +50095,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.ForwardEvent.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ForwardEvent info. */
@@ -50204,7 +50204,7 @@ export namespace routerrpc {
             /** ForwardEvent info */
             info?: routerrpc.HtlcInfo.$Properties | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -50227,7 +50227,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.ForwardFailEvent.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -50332,7 +50332,7 @@ export namespace routerrpc {
     namespace ForwardFailEvent {
         /** Properties of a ForwardFailEvent. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -50354,7 +50354,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.SettleEvent.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SettleEvent preimage. */
@@ -50463,7 +50463,7 @@ export namespace routerrpc {
             /** SettleEvent preimage */
             preimage?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -50485,7 +50485,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.FinalHtlcEvent.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** FinalHtlcEvent settled. */
@@ -50602,7 +50602,7 @@ export namespace routerrpc {
             /** FinalHtlcEvent offchain */
             offchain?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -50624,7 +50624,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.SubscribedEvent.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -50729,7 +50729,7 @@ export namespace routerrpc {
     namespace SubscribedEvent {
         /** Properties of a SubscribedEvent. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -50751,7 +50751,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.LinkFailEvent.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** LinkFailEvent info. */
@@ -50880,7 +50880,7 @@ export namespace routerrpc {
             /** LinkFailEvent failure_string */
             failure_string?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -50998,7 +50998,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.PaymentStatus.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** PaymentStatus state. */
@@ -51121,7 +51121,7 @@ export namespace routerrpc {
             /** PaymentStatus htlcs */
             htlcs?: lnrpc.HTLCAttempt.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -51143,7 +51143,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.CircuitKey.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** The id of the channel that the is part of this circuit. */
@@ -51258,7 +51258,7 @@ export namespace routerrpc {
             /** The index of the incoming htlc in the incoming channel. */
             htlc_id?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -51283,7 +51283,7 @@ export namespace routerrpc {
             properties?: routerrpc.ForwardHtlcInterceptRequest.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ForwardHtlcInterceptRequest incoming_circuit_key. */
@@ -51457,7 +51457,7 @@ export namespace routerrpc {
             /** ForwardHtlcInterceptRequest in_wire_custom_records */
             in_wire_custom_records?: { [k: string]: Uint8Array } | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -51490,7 +51490,7 @@ export namespace routerrpc {
             properties?: routerrpc.ForwardHtlcInterceptResponse.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -51652,7 +51652,7 @@ export namespace routerrpc {
             /** ForwardHtlcInterceptResponse out_wire_custom_records */
             out_wire_custom_records?: { [k: string]: Uint8Array } | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -51690,7 +51690,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.UpdateChanStatusRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** UpdateChanStatusRequest chan_point. */
@@ -51810,7 +51810,7 @@ export namespace routerrpc {
             /** UpdateChanStatusRequest action */
             action?: routerrpc.ChanStatusAction | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -51851,7 +51851,7 @@ export namespace routerrpc {
             properties?: routerrpc.UpdateChanStatusResponse.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -51959,7 +51959,7 @@ export namespace routerrpc {
     namespace UpdateChanStatusResponse {
         /** Properties of an UpdateChanStatusResponse. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -51982,7 +51982,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.AddAliasesRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** AddAliasesRequest alias_maps. */
@@ -52093,7 +52093,7 @@ export namespace routerrpc {
             /** AddAliasesRequest alias_maps */
             alias_maps?: lnrpc.AliasMap.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -52116,7 +52116,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.AddAliasesResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** AddAliasesResponse alias_maps. */
@@ -52227,7 +52227,7 @@ export namespace routerrpc {
             /** AddAliasesResponse alias_maps */
             alias_maps?: lnrpc.AliasMap.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -52250,7 +52250,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.DeleteAliasesRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** DeleteAliasesRequest alias_maps. */
@@ -52364,7 +52364,7 @@ export namespace routerrpc {
             /** DeleteAliasesRequest alias_maps */
             alias_maps?: lnrpc.AliasMap.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -52387,7 +52387,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.DeleteAliasesResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** DeleteAliasesResponse alias_maps. */
@@ -52501,7 +52501,7 @@ export namespace routerrpc {
             /** DeleteAliasesResponse alias_maps */
             alias_maps?: lnrpc.AliasMap.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -52524,7 +52524,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.FindBaseAliasRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** FindBaseAliasRequest alias. */
@@ -52638,7 +52638,7 @@ export namespace routerrpc {
             /** FindBaseAliasRequest alias */
             alias?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -52661,7 +52661,7 @@ export namespace routerrpc {
          */
         constructor(properties?: routerrpc.FindBaseAliasResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** FindBaseAliasResponse base. */
@@ -52775,7 +52775,7 @@ export namespace routerrpc {
             /** FindBaseAliasResponse base */
             base?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -53156,7 +53156,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.KeyLocator.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** KeyLocator key_family. */
@@ -53271,7 +53271,7 @@ export namespace signrpc {
             /** KeyLocator key_index */
             key_index?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -53293,7 +53293,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.KeyDescriptor.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** KeyDescriptor raw_key_bytes. */
@@ -53408,7 +53408,7 @@ export namespace signrpc {
             /** KeyDescriptor key_loc */
             key_loc?: signrpc.KeyLocator.$Properties | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -53430,7 +53430,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.TxOut.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** TxOut value. */
@@ -53543,7 +53543,7 @@ export namespace signrpc {
             /** TxOut pk_script */
             pk_script?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -53580,7 +53580,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.SignDescriptor.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SignDescriptor key_desc. */
@@ -53737,7 +53737,7 @@ export namespace signrpc {
             /** SignDescriptor sign_method */
             sign_method?: signrpc.SignMethod | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -53759,7 +53759,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.SignReq.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SignReq raw_tx_bytes. */
@@ -53880,7 +53880,7 @@ export namespace signrpc {
             /** SignReq prev_outputs */
             prev_outputs?: signrpc.TxOut.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -53902,7 +53902,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.SignResp.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SignResp raw_sigs. */
@@ -54011,7 +54011,7 @@ export namespace signrpc {
             /** SignResp raw_sigs */
             raw_sigs?: Uint8Array[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -54033,7 +54033,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.InputScript.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** InputScript witness. */
@@ -54148,7 +54148,7 @@ export namespace signrpc {
             /** InputScript sig_script */
             sig_script?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -54170,7 +54170,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.InputScriptResp.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** InputScriptResp input_scripts. */
@@ -54281,7 +54281,7 @@ export namespace signrpc {
             /** InputScriptResp input_scripts */
             input_scripts?: signrpc.InputScript.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -54303,7 +54303,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.SignMessageReq.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SignMessageReq msg. */
@@ -54448,7 +54448,7 @@ export namespace signrpc {
             /** SignMessageReq tag */
             tag?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -54470,7 +54470,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.SignMessageResp.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SignMessageResp signature. */
@@ -54581,7 +54581,7 @@ export namespace signrpc {
             /** SignMessageResp signature */
             signature?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -54603,7 +54603,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.VerifyMessageReq.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** VerifyMessageReq msg. */
@@ -54738,7 +54738,7 @@ export namespace signrpc {
             /** VerifyMessageReq tag */
             tag?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -54761,7 +54761,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.VerifyMessageResp.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** VerifyMessageResp valid. */
@@ -54872,7 +54872,7 @@ export namespace signrpc {
             /** VerifyMessageResp valid */
             valid?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -54894,7 +54894,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.SharedKeyRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SharedKeyRequest ephemeral_pubkey. */
@@ -55017,7 +55017,7 @@ export namespace signrpc {
             /** SharedKeyRequest key_desc */
             key_desc?: signrpc.KeyDescriptor.$Properties | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -55040,7 +55040,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.SharedKeyResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SharedKeyResponse shared_key. */
@@ -55151,7 +55151,7 @@ export namespace signrpc {
             /** SharedKeyResponse shared_key */
             shared_key?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -55173,7 +55173,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.TweakDesc.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** TweakDesc tweak. */
@@ -55288,7 +55288,7 @@ export namespace signrpc {
             /** TweakDesc is_x_only */
             is_x_only?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -55310,7 +55310,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.TaprootTweakDesc.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** TaprootTweakDesc script_root. */
@@ -55427,7 +55427,7 @@ export namespace signrpc {
             /** TaprootTweakDesc key_spend_only */
             key_spend_only?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -55462,7 +55462,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.MuSig2CombineKeysRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** MuSig2CombineKeysRequest all_signer_pubkeys. */
@@ -55594,7 +55594,7 @@ export namespace signrpc {
             /** MuSig2CombineKeysRequest version */
             version?: signrpc.MuSig2Version | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -55617,7 +55617,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.MuSig2CombineKeysResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** MuSig2CombineKeysResponse combined_key. */
@@ -55743,7 +55743,7 @@ export namespace signrpc {
             /** MuSig2CombineKeysResponse version */
             version?: signrpc.MuSig2Version | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -55766,7 +55766,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.MuSig2SessionRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** MuSig2SessionRequest key_loc. */
@@ -55913,7 +55913,7 @@ export namespace signrpc {
             /** MuSig2SessionRequest pregenerated_local_nonce */
             pregenerated_local_nonce?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -55936,7 +55936,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.MuSig2SessionResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** MuSig2SessionResponse session_id. */
@@ -56077,7 +56077,7 @@ export namespace signrpc {
             /** MuSig2SessionResponse version */
             version?: signrpc.MuSig2Version | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -56102,7 +56102,7 @@ export namespace signrpc {
             properties?: signrpc.MuSig2RegisterNoncesRequest.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** MuSig2RegisterNoncesRequest session_id. */
@@ -56222,7 +56222,7 @@ export namespace signrpc {
             /** MuSig2RegisterNoncesRequest other_signer_public_nonces */
             other_signer_public_nonces?: Uint8Array[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -56247,7 +56247,7 @@ export namespace signrpc {
             properties?: signrpc.MuSig2RegisterNoncesResponse.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** MuSig2RegisterNoncesResponse have_all_nonces. */
@@ -56361,7 +56361,7 @@ export namespace signrpc {
             /** MuSig2RegisterNoncesResponse have_all_nonces */
             have_all_nonces?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -56384,7 +56384,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.MuSig2SignRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** MuSig2SignRequest session_id. */
@@ -56507,7 +56507,7 @@ export namespace signrpc {
             /** MuSig2SignRequest cleanup */
             cleanup?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -56530,7 +56530,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.MuSig2SignResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** MuSig2SignResponse local_partial_signature. */
@@ -56641,7 +56641,7 @@ export namespace signrpc {
             /** MuSig2SignResponse local_partial_signature */
             local_partial_signature?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -56664,7 +56664,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.MuSig2CombineSigRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** MuSig2CombineSigRequest session_id. */
@@ -56784,7 +56784,7 @@ export namespace signrpc {
             /** MuSig2CombineSigRequest other_partial_signatures */
             other_partial_signatures?: Uint8Array[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -56807,7 +56807,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.MuSig2CombineSigResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** MuSig2CombineSigResponse have_all_signatures. */
@@ -56927,7 +56927,7 @@ export namespace signrpc {
             /** MuSig2CombineSigResponse final_signature */
             final_signature?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -56950,7 +56950,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.MuSig2CleanupRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** MuSig2CleanupRequest session_id. */
@@ -57061,7 +57061,7 @@ export namespace signrpc {
             /** MuSig2CleanupRequest session_id */
             session_id?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -57084,7 +57084,7 @@ export namespace signrpc {
          */
         constructor(properties?: signrpc.MuSig2CleanupResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -57189,7 +57189,7 @@ export namespace signrpc {
     namespace MuSig2CleanupResponse {
         /** Properties of a MuSig2CleanupResponse. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -58109,7 +58109,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.ListUnspentRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListUnspentRequest min_confs. */
@@ -58238,7 +58238,7 @@ export namespace walletrpc {
             /** ListUnspentRequest unconfirmed_only */
             unconfirmed_only?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -58261,7 +58261,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.ListUnspentResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListUnspentResponse utxos. */
@@ -58372,7 +58372,7 @@ export namespace walletrpc {
             /** ListUnspentResponse utxos */
             utxos?: lnrpc.Utxo.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -58395,7 +58395,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.LeaseOutputRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** LeaseOutputRequest id. */
@@ -58518,7 +58518,7 @@ export namespace walletrpc {
             /** LeaseOutputRequest expiration_seconds */
             expiration_seconds?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -58541,7 +58541,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.LeaseOutputResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** LeaseOutputResponse expiration. */
@@ -58652,7 +58652,7 @@ export namespace walletrpc {
             /** LeaseOutputResponse expiration */
             expiration?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -58675,7 +58675,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.ReleaseOutputRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ReleaseOutputRequest id. */
@@ -58795,7 +58795,7 @@ export namespace walletrpc {
             /** ReleaseOutputRequest outpoint */
             outpoint?: lnrpc.OutPoint.$Properties | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -58818,7 +58818,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.ReleaseOutputResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ReleaseOutputResponse status. */
@@ -58932,7 +58932,7 @@ export namespace walletrpc {
             /** ReleaseOutputResponse status */
             status?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -58954,7 +58954,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.KeyReq.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** KeyReq key_finger_print. */
@@ -59069,7 +59069,7 @@ export namespace walletrpc {
             /** KeyReq key_family */
             key_family?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -59091,7 +59091,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.AddrRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** AddrRequest account. */
@@ -59212,7 +59212,7 @@ export namespace walletrpc {
             /** AddrRequest change */
             change?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -59234,7 +59234,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.AddrResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** AddrResponse addr. */
@@ -59343,7 +59343,7 @@ export namespace walletrpc {
             /** AddrResponse addr */
             addr?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -59383,7 +59383,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.Account.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** Account name. */
@@ -59534,7 +59534,7 @@ export namespace walletrpc {
             /** Account watch_only */
             watch_only?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -59556,7 +59556,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.AddressProperty.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** AddressProperty address. */
@@ -59691,7 +59691,7 @@ export namespace walletrpc {
             /** AddressProperty public_key */
             public_key?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -59714,7 +59714,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.AccountWithAddresses.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** AccountWithAddresses name. */
@@ -59846,7 +59846,7 @@ export namespace walletrpc {
             /** AccountWithAddresses addresses */
             addresses?: walletrpc.AddressProperty.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -59869,7 +59869,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.ListAccountsRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListAccountsRequest name. */
@@ -59986,7 +59986,7 @@ export namespace walletrpc {
             /** ListAccountsRequest address_type */
             address_type?: walletrpc.AddressType | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -60009,7 +60009,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.ListAccountsResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListAccountsResponse accounts. */
@@ -60123,7 +60123,7 @@ export namespace walletrpc {
             /** ListAccountsResponse accounts */
             accounts?: walletrpc.Account.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -60146,7 +60146,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.RequiredReserveRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** RequiredReserveRequest additional_public_channels. */
@@ -60260,7 +60260,7 @@ export namespace walletrpc {
             /** RequiredReserveRequest additional_public_channels */
             additional_public_channels?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -60283,7 +60283,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.RequiredReserveResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** RequiredReserveResponse required_reserve. */
@@ -60397,7 +60397,7 @@ export namespace walletrpc {
             /** RequiredReserveResponse required_reserve */
             required_reserve?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -60420,7 +60420,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.ListAddressesRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListAddressesRequest account_name. */
@@ -60540,7 +60540,7 @@ export namespace walletrpc {
             /** ListAddressesRequest show_custom_accounts */
             show_custom_accounts?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -60563,7 +60563,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.ListAddressesResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListAddressesResponse account_with_addresses. */
@@ -60679,7 +60679,7 @@ export namespace walletrpc {
                 | walletrpc.AccountWithAddresses.$Properties[]
                 | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -60702,7 +60702,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.GetTransactionRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** GetTransactionRequest txid. */
@@ -60816,7 +60816,7 @@ export namespace walletrpc {
             /** GetTransactionRequest txid */
             txid?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -60841,7 +60841,7 @@ export namespace walletrpc {
             properties?: walletrpc.SignMessageWithAddrRequest.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SignMessageWithAddrRequest msg. */
@@ -60961,7 +60961,7 @@ export namespace walletrpc {
             /** SignMessageWithAddrRequest addr */
             addr?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -60986,7 +60986,7 @@ export namespace walletrpc {
             properties?: walletrpc.SignMessageWithAddrResponse.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SignMessageWithAddrResponse signature. */
@@ -61100,7 +61100,7 @@ export namespace walletrpc {
             /** SignMessageWithAddrResponse signature */
             signature?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -61125,7 +61125,7 @@ export namespace walletrpc {
             properties?: walletrpc.VerifyMessageWithAddrRequest.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** VerifyMessageWithAddrRequest msg. */
@@ -61251,7 +61251,7 @@ export namespace walletrpc {
             /** VerifyMessageWithAddrRequest addr */
             addr?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -61276,7 +61276,7 @@ export namespace walletrpc {
             properties?: walletrpc.VerifyMessageWithAddrResponse.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** VerifyMessageWithAddrResponse valid. */
@@ -61396,7 +61396,7 @@ export namespace walletrpc {
             /** VerifyMessageWithAddrResponse pubkey */
             pubkey?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -61419,7 +61419,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.ImportAccountRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ImportAccountRequest name. */
@@ -61563,7 +61563,7 @@ export namespace walletrpc {
             /** ImportAccountRequest birthday_height */
             birthday_height?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -61586,7 +61586,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.ImportAccountResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ImportAccountResponse account. */
@@ -61712,7 +61712,7 @@ export namespace walletrpc {
             /** ImportAccountResponse dry_run_internal_addrs */
             dry_run_internal_addrs?: string[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -61734,7 +61734,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.RescanRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** RescanRequest start_height. */
@@ -61845,7 +61845,7 @@ export namespace walletrpc {
             /** RescanRequest start_height */
             start_height?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -61867,7 +61867,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.RescanResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** RescanResponse status. */
@@ -61978,7 +61978,7 @@ export namespace walletrpc {
             /** RescanResponse status */
             status?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -62001,7 +62001,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.ImportPublicKeyRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ImportPublicKeyRequest public_key. */
@@ -62133,7 +62133,7 @@ export namespace walletrpc {
             /** ImportPublicKeyRequest birthday_height */
             birthday_height?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -62156,7 +62156,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.ImportPublicKeyResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ImportPublicKeyResponse status. */
@@ -62270,7 +62270,7 @@ export namespace walletrpc {
             /** ImportPublicKeyResponse status */
             status?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -62293,7 +62293,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.ImportTapscriptRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ImportTapscriptRequest internal_public_key. */
@@ -62445,7 +62445,7 @@ export namespace walletrpc {
                 | 'root_hash_only'
                 | 'full_key_only';
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -62511,7 +62511,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.TapscriptFullTree.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** TapscriptFullTree all_leaves. */
@@ -62622,7 +62622,7 @@ export namespace walletrpc {
             /** TapscriptFullTree all_leaves */
             all_leaves?: walletrpc.TapLeaf.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -62644,7 +62644,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.TapLeaf.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** TapLeaf leaf_version. */
@@ -62759,7 +62759,7 @@ export namespace walletrpc {
             /** TapLeaf script */
             script?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -62782,7 +62782,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.TapscriptPartialReveal.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** TapscriptPartialReveal revealed_leaf. */
@@ -62902,7 +62902,7 @@ export namespace walletrpc {
             /** TapscriptPartialReveal full_inclusion_proof */
             full_inclusion_proof?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -62925,7 +62925,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.ImportTapscriptResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ImportTapscriptResponse p2tr_address. */
@@ -63039,7 +63039,7 @@ export namespace walletrpc {
             /** ImportTapscriptResponse p2tr_address */
             p2tr_address?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -63061,7 +63061,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.Transaction.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** Transaction tx_hex. */
@@ -63176,7 +63176,7 @@ export namespace walletrpc {
             /** Transaction label */
             label?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -63198,7 +63198,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.PublishResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** PublishResponse publish_error. */
@@ -63309,7 +63309,7 @@ export namespace walletrpc {
             /** PublishResponse publish_error */
             publish_error?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -63334,7 +63334,7 @@ export namespace walletrpc {
             properties?: walletrpc.RemoveTransactionResponse.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** RemoveTransactionResponse status. */
@@ -63448,7 +63448,7 @@ export namespace walletrpc {
             /** RemoveTransactionResponse status */
             status?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -63471,7 +63471,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.SendOutputsRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SendOutputsRequest sat_per_kw. */
@@ -63612,7 +63612,7 @@ export namespace walletrpc {
             /** SendOutputsRequest coin_selection_strategy */
             coin_selection_strategy?: lnrpc.CoinSelectionStrategy | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -63635,7 +63635,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.SendOutputsResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SendOutputsResponse raw_tx. */
@@ -63746,7 +63746,7 @@ export namespace walletrpc {
             /** SendOutputsResponse raw_tx */
             raw_tx?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -63769,7 +63769,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.EstimateFeeRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** EstimateFeeRequest conf_target. */
@@ -63880,7 +63880,7 @@ export namespace walletrpc {
             /** EstimateFeeRequest conf_target */
             conf_target?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -63903,7 +63903,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.EstimateFeeResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** EstimateFeeResponse sat_per_kw. */
@@ -64020,7 +64020,7 @@ export namespace walletrpc {
             /** EstimateFeeResponse min_relay_fee_sat_per_kw */
             min_relay_fee_sat_per_kw?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -64153,7 +64153,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.PendingSweep.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** PendingSweep outpoint. */
@@ -64346,7 +64346,7 @@ export namespace walletrpc {
             /** PendingSweep maturity_height */
             maturity_height?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -64369,7 +64369,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.PendingSweepsRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -64477,7 +64477,7 @@ export namespace walletrpc {
     namespace PendingSweepsRequest {
         /** Properties of a PendingSweepsRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -64500,7 +64500,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.PendingSweepsResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** PendingSweepsResponse pending_sweeps. */
@@ -64614,7 +64614,7 @@ export namespace walletrpc {
             /** PendingSweepsResponse pending_sweeps */
             pending_sweeps?: walletrpc.PendingSweep.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -64636,7 +64636,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.BumpFeeRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** BumpFeeRequest outpoint. */
@@ -64789,7 +64789,7 @@ export namespace walletrpc {
             /** BumpFeeRequest deadline_delta */
             deadline_delta?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -64811,7 +64811,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.BumpFeeResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** BumpFeeResponse status. */
@@ -64922,7 +64922,7 @@ export namespace walletrpc {
             /** BumpFeeResponse status */
             status?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -64947,7 +64947,7 @@ export namespace walletrpc {
             properties?: walletrpc.BumpForceCloseFeeRequest.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** BumpForceCloseFeeRequest chan_point. */
@@ -65091,7 +65091,7 @@ export namespace walletrpc {
             /** BumpForceCloseFeeRequest target_conf */
             target_conf?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -65124,7 +65124,7 @@ export namespace walletrpc {
             properties?: walletrpc.BumpForceCloseFeeResponse.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** BumpForceCloseFeeResponse status. */
@@ -65238,7 +65238,7 @@ export namespace walletrpc {
             /** BumpForceCloseFeeResponse status */
             status?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -65261,7 +65261,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.ListSweepsRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListSweepsRequest verbose. */
@@ -65378,7 +65378,7 @@ export namespace walletrpc {
             /** ListSweepsRequest start_height */
             start_height?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -65401,7 +65401,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.ListSweepsResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListSweepsResponse transaction_details. */
@@ -65524,7 +65524,7 @@ export namespace walletrpc {
             /** ListSweepsResponse sweeps */
             sweeps?: 'transaction_details' | 'transaction_ids';
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -65568,7 +65568,7 @@ export namespace walletrpc {
                 properties?: walletrpc.ListSweepsResponse.TransactionIDs.$Properties
             );
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
 
             /** TransactionIDs transaction_ids. */
@@ -65682,7 +65682,7 @@ export namespace walletrpc {
                 /** TransactionIDs transaction_ids */
                 transaction_ids?: string[] | null;
 
-                /** Unknown fields preserved while decoding */
+                /** Unknown fields preserved while decoding when enabled */
                 $unknowns?: Uint8Array[];
             }
 
@@ -65707,7 +65707,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.LabelTransactionRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** LabelTransactionRequest txid. */
@@ -65833,7 +65833,7 @@ export namespace walletrpc {
             /** LabelTransactionRequest overwrite */
             overwrite?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -65858,7 +65858,7 @@ export namespace walletrpc {
             properties?: walletrpc.LabelTransactionResponse.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** LabelTransactionResponse status. */
@@ -65972,7 +65972,7 @@ export namespace walletrpc {
             /** LabelTransactionResponse status */
             status?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -66003,7 +66003,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.FundPsbtRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** FundPsbtRequest psbt. */
@@ -66204,7 +66204,7 @@ export namespace walletrpc {
             /** FundPsbtRequest fees */
             fees?: 'target_conf' | 'sat_per_vbyte' | 'sat_per_kw';
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -66294,7 +66294,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.FundPsbtResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** FundPsbtResponse funded_psbt. */
@@ -66417,7 +66417,7 @@ export namespace walletrpc {
             /** FundPsbtResponse locked_utxos */
             locked_utxos?: walletrpc.UtxoLease.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -66439,7 +66439,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.TxTemplate.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** TxTemplate inputs. */
@@ -66554,7 +66554,7 @@ export namespace walletrpc {
             /** TxTemplate outputs */
             outputs?: { [k: string]: Long } | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -66576,7 +66576,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.PsbtCoinSelect.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** PsbtCoinSelect psbt. */
@@ -66705,7 +66705,7 @@ export namespace walletrpc {
             /** PsbtCoinSelect change_output */
             change_output?: 'existing_output_index' | 'add';
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -66748,7 +66748,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.UtxoLease.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** UtxoLease id. */
@@ -66881,7 +66881,7 @@ export namespace walletrpc {
             /** UtxoLease value */
             value?: Long | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -66903,7 +66903,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.SignPsbtRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SignPsbtRequest funded_psbt. */
@@ -67014,7 +67014,7 @@ export namespace walletrpc {
             /** SignPsbtRequest funded_psbt */
             funded_psbt?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -67037,7 +67037,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.SignPsbtResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** SignPsbtResponse signed_psbt. */
@@ -67154,7 +67154,7 @@ export namespace walletrpc {
             /** SignPsbtResponse signed_inputs */
             signed_inputs?: number[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -67177,7 +67177,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.FinalizePsbtRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** FinalizePsbtRequest funded_psbt. */
@@ -67294,7 +67294,7 @@ export namespace walletrpc {
             /** FinalizePsbtRequest account */
             account?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -67317,7 +67317,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.FinalizePsbtResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** FinalizePsbtResponse signed_psbt. */
@@ -67437,7 +67437,7 @@ export namespace walletrpc {
             /** FinalizePsbtResponse raw_final_tx */
             raw_final_tx?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -67460,7 +67460,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.ListLeasesRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -67565,7 +67565,7 @@ export namespace walletrpc {
     namespace ListLeasesRequest {
         /** Properties of a ListLeasesRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -67588,7 +67588,7 @@ export namespace walletrpc {
          */
         constructor(properties?: walletrpc.ListLeasesResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListLeasesResponse locked_utxos. */
@@ -67699,7 +67699,7 @@ export namespace walletrpc {
             /** ListLeasesResponse locked_utxos */
             locked_utxos?: walletrpc.UtxoLease.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -67995,7 +67995,7 @@ export namespace wtclientrpc {
          */
         constructor(properties?: wtclientrpc.AddTowerRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** AddTowerRequest pubkey. */
@@ -68112,7 +68112,7 @@ export namespace wtclientrpc {
             /** AddTowerRequest address */
             address?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -68135,7 +68135,7 @@ export namespace wtclientrpc {
          */
         constructor(properties?: wtclientrpc.AddTowerResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -68240,7 +68240,7 @@ export namespace wtclientrpc {
     namespace AddTowerResponse {
         /** Properties of an AddTowerResponse. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -68263,7 +68263,7 @@ export namespace wtclientrpc {
          */
         constructor(properties?: wtclientrpc.RemoveTowerRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** RemoveTowerRequest pubkey. */
@@ -68383,7 +68383,7 @@ export namespace wtclientrpc {
             /** RemoveTowerRequest address */
             address?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -68406,7 +68406,7 @@ export namespace wtclientrpc {
          */
         constructor(properties?: wtclientrpc.RemoveTowerResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -68514,7 +68514,7 @@ export namespace wtclientrpc {
     namespace RemoveTowerResponse {
         /** Properties of a RemoveTowerResponse. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -68539,7 +68539,7 @@ export namespace wtclientrpc {
             properties?: wtclientrpc.DeactivateTowerRequest.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** DeactivateTowerRequest pubkey. */
@@ -68653,7 +68653,7 @@ export namespace wtclientrpc {
             /** DeactivateTowerRequest pubkey */
             pubkey?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -68678,7 +68678,7 @@ export namespace wtclientrpc {
             properties?: wtclientrpc.DeactivateTowerResponse.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** DeactivateTowerResponse status. */
@@ -68792,7 +68792,7 @@ export namespace wtclientrpc {
             /** DeactivateTowerResponse status */
             status?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -68817,7 +68817,7 @@ export namespace wtclientrpc {
             properties?: wtclientrpc.TerminateSessionRequest.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** TerminateSessionRequest session_id. */
@@ -68931,7 +68931,7 @@ export namespace wtclientrpc {
             /** TerminateSessionRequest session_id */
             session_id?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -68956,7 +68956,7 @@ export namespace wtclientrpc {
             properties?: wtclientrpc.TerminateSessionResponse.$Properties
         );
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** TerminateSessionResponse status. */
@@ -69070,7 +69070,7 @@ export namespace wtclientrpc {
             /** TerminateSessionResponse status */
             status?: string | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -69093,7 +69093,7 @@ export namespace wtclientrpc {
          */
         constructor(properties?: wtclientrpc.GetTowerInfoRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** GetTowerInfoRequest pubkey. */
@@ -69219,7 +69219,7 @@ export namespace wtclientrpc {
             /** GetTowerInfoRequest exclude_exhausted_sessions */
             exclude_exhausted_sessions?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -69241,7 +69241,7 @@ export namespace wtclientrpc {
          */
         constructor(properties?: wtclientrpc.TowerSession.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** TowerSession num_backups. */
@@ -69382,7 +69382,7 @@ export namespace wtclientrpc {
             /** TowerSession id */
             id?: Uint8Array | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -69404,7 +69404,7 @@ export namespace wtclientrpc {
          */
         constructor(properties?: wtclientrpc.Tower.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** Tower pubkey. */
@@ -69543,7 +69543,7 @@ export namespace wtclientrpc {
             /** Tower session_info */
             session_info?: wtclientrpc.TowerSessionInfo.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -69566,7 +69566,7 @@ export namespace wtclientrpc {
          */
         constructor(properties?: wtclientrpc.TowerSessionInfo.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** TowerSessionInfo active_session_candidate. */
@@ -69695,7 +69695,7 @@ export namespace wtclientrpc {
             /** TowerSessionInfo policy_type */
             policy_type?: wtclientrpc.PolicyType | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -69718,7 +69718,7 @@ export namespace wtclientrpc {
          */
         constructor(properties?: wtclientrpc.ListTowersRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListTowersRequest include_sessions. */
@@ -69835,7 +69835,7 @@ export namespace wtclientrpc {
             /** ListTowersRequest exclude_exhausted_sessions */
             exclude_exhausted_sessions?: boolean | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -69858,7 +69858,7 @@ export namespace wtclientrpc {
          */
         constructor(properties?: wtclientrpc.ListTowersResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** ListTowersResponse towers. */
@@ -69972,7 +69972,7 @@ export namespace wtclientrpc {
             /** ListTowersResponse towers */
             towers?: wtclientrpc.Tower.$Properties[] | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -69994,7 +69994,7 @@ export namespace wtclientrpc {
          */
         constructor(properties?: wtclientrpc.StatsRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /**
@@ -70099,7 +70099,7 @@ export namespace wtclientrpc {
     namespace StatsRequest {
         /** Properties of a StatsRequest. */
         interface $Properties {
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -70121,7 +70121,7 @@ export namespace wtclientrpc {
          */
         constructor(properties?: wtclientrpc.StatsResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** StatsResponse num_backups. */
@@ -70256,7 +70256,7 @@ export namespace wtclientrpc {
             /** StatsResponse num_sessions_exhausted */
             num_sessions_exhausted?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -70290,7 +70290,7 @@ export namespace wtclientrpc {
          */
         constructor(properties?: wtclientrpc.PolicyRequest.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** PolicyRequest policy_type. */
@@ -70401,7 +70401,7 @@ export namespace wtclientrpc {
             /** PolicyRequest policy_type */
             policy_type?: wtclientrpc.PolicyType | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
@@ -70423,7 +70423,7 @@ export namespace wtclientrpc {
          */
         constructor(properties?: wtclientrpc.PolicyResponse.$Properties);
 
-        /** Unknown fields preserved while decoding */
+        /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
 
         /** PolicyResponse max_updates. */
@@ -70546,7 +70546,7 @@ export namespace wtclientrpc {
             /** PolicyResponse sweep_sat_per_vbyte */
             sweep_sat_per_vbyte?: number | null;
 
-            /** Unknown fields preserved while decoding */
+            /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
 
