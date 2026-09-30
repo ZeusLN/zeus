@@ -125,6 +125,39 @@ describe('ActivityFilterUtils', () => {
         ]);
     });
 
+    it.each([
+        ['month end', [2000, 0, 31], [2000, 1, 1]],
+        ['year end', [1999, 11, 31], [2000, 0, 1]],
+        ['leap day', [2000, 1, 29], [2000, 2, 1]]
+    ])(
+        'includes the whole end date and nothing after it at %s',
+        (_label, [y, m, d], [nextY, nextM, nextD]) => {
+            const txAt = (amount: number, date: Date) =>
+                new Transaction({
+                    amount,
+                    time_stamp: (date.getTime() / 1000).toString()
+                });
+            const activities: any[] = [
+                txAt(1, new Date(y, m, d, 0, 0, 0)),
+                txAt(2, new Date(y, m, d, 23, 59, 59)),
+                txAt(3, new Date(nextY, nextM, nextD, 0, 0, 0)),
+                txAt(4, new Date(nextY, nextM, nextD, 12, 0, 0))
+            ];
+            const filter = getDefaultFilter();
+            filter.endDate = new Date(y, m, d, 12, 0, 0);
+
+            const filteredActivities = ActivityFilterUtils.filterActivities(
+                activities,
+                filter
+            );
+
+            expect(filteredActivities.map((a) => a.getAmount)).toEqual([
+                '1',
+                '2'
+            ]);
+        }
+    );
+
     it('supports filtering unconfirmed transactions', () => {
         const activities: any[] = [
             new Transaction({
