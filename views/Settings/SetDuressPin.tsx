@@ -24,6 +24,7 @@ interface SetDuressPinState {
     duressPinConfirm: string;
     duressPinMismatchError: boolean;
     duressPinInvalidError: boolean;
+    duressPinSaveError: boolean;
     saving: boolean;
 }
 
@@ -38,6 +39,7 @@ export default class SetDuressPin extends React.Component<
         duressPinConfirm: '',
         duressPinMismatchError: false,
         duressPinInvalidError: false,
+        duressPinSaveError: false,
         saving: false
     };
 
@@ -55,7 +57,8 @@ export default class SetDuressPin extends React.Component<
             this.setState({
                 duressPin: value,
                 duressPinMismatchError: false,
-                duressPinInvalidError: false
+                duressPinInvalidError: false,
+                duressPinSaveError: false
             });
         } else {
             this.setState({ duressPinConfirm: value }, () => {
@@ -67,7 +70,8 @@ export default class SetDuressPin extends React.Component<
     onPinChange = () => {
         this.setState({
             duressPinMismatchError: false,
-            duressPinInvalidError: false
+            duressPinInvalidError: false,
+            duressPinSaveError: false
         });
     };
 
@@ -106,7 +110,7 @@ export default class SetDuressPin extends React.Component<
             await updateSettings({ duressPin });
         } catch (error) {
             console.error('Could not save duress PIN', error);
-            this.setState({ saving: false });
+            this.setState({ saving: false, duressPinSaveError: true });
             return;
         }
 
@@ -120,6 +124,7 @@ export default class SetDuressPin extends React.Component<
             duressPin,
             duressPinMismatchError,
             duressPinInvalidError,
+            duressPinSaveError,
             saving
         } = this.state;
 
@@ -150,6 +155,13 @@ export default class SetDuressPin extends React.Component<
                             <ErrorMessage
                                 message={localeString(
                                     'views.Settings.SetPin.invalid'
+                                )}
+                            />
+                        )}
+                        {duressPinSaveError && (
+                            <ErrorMessage
+                                message={localeString(
+                                    'views.Settings.SetPin.saveError'
                                 )}
                             />
                         )}

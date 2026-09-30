@@ -30,6 +30,7 @@ interface SetPassphraseState {
     passphraseMismatchError: boolean;
     passphraseInvalidError: boolean;
     passphraseEmptyError: boolean;
+    passphraseSaveError: boolean;
     isBiometryEnabled: boolean;
     saving: boolean;
 }
@@ -47,6 +48,7 @@ export default class SetPassphrase extends React.Component<
         passphraseMismatchError: false,
         passphraseInvalidError: false,
         passphraseEmptyError: false,
+        passphraseSaveError: false,
         isBiometryEnabled: false,
         saving: false
     };
@@ -110,12 +112,12 @@ export default class SetPassphrase extends React.Component<
             return;
         }
 
-        this.setState({ saving: true });
+        this.setState({ saving: true, passphraseSaveError: false });
         try {
             await updateSettings({ passphrase });
         } catch (error) {
             console.error('Could not save password', error);
-            this.setState({ saving: false });
+            this.setState({ saving: false, passphraseSaveError: true });
             return;
         }
 
@@ -148,6 +150,7 @@ export default class SetPassphrase extends React.Component<
             passphraseMismatchError,
             passphraseInvalidError,
             passphraseEmptyError,
+            passphraseSaveError,
             saving
         } = this.state;
 
@@ -199,6 +202,13 @@ export default class SetPassphrase extends React.Component<
                             )}
                         />
                     )}
+                    {passphraseSaveError && (
+                        <ErrorMessage
+                            message={localeString(
+                                'views.Settings.SetPassword.saveError'
+                            )}
+                        />
+                    )}
                     <Text style={{ ...styles.text, color: themeColor('text') }}>
                         {localeString('views.Settings.newPassword')}
                     </Text>
@@ -212,7 +222,8 @@ export default class SetPassphrase extends React.Component<
                                 passphrase: text,
                                 passphraseMismatchError: false,
                                 passphraseInvalidError: false,
-                                passphraseEmptyError: false
+                                passphraseEmptyError: false,
+                                passphraseSaveError: false
                             })
                         }
                         autoCapitalize="none"
@@ -245,7 +256,8 @@ export default class SetPassphrase extends React.Component<
                                 passphraseConfirm: text,
                                 passphraseMismatchError: false,
                                 passphraseInvalidError: false,
-                                passphraseEmptyError: false
+                                passphraseEmptyError: false,
+                                passphraseSaveError: false
                             })
                         }
                         autoCapitalize="none"

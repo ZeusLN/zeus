@@ -27,6 +27,7 @@ interface SetDuressPassphraseState {
     duressPassphraseMismatchError: boolean;
     duressPassphraseInvalidError: boolean;
     duressPassphraseEmptyError: boolean;
+    duressPassphraseSaveError: boolean;
     saving: boolean;
 }
 
@@ -43,6 +44,7 @@ export default class SetDuressPassphrase extends React.Component<
         duressPassphraseMismatchError: false,
         duressPassphraseInvalidError: false,
         duressPassphraseEmptyError: false,
+        duressPassphraseSaveError: false,
         saving: false
     };
 
@@ -101,12 +103,12 @@ export default class SetDuressPassphrase extends React.Component<
             return;
         }
 
-        this.setState({ saving: true });
+        this.setState({ saving: true, duressPassphraseSaveError: false });
         try {
             await updateSettings({ duressPassphrase });
         } catch (error) {
             console.error('Could not save duress password', error);
-            this.setState({ saving: false });
+            this.setState({ saving: false, duressPassphraseSaveError: true });
             return;
         }
 
@@ -131,6 +133,7 @@ export default class SetDuressPassphrase extends React.Component<
             duressPassphraseMismatchError,
             duressPassphraseInvalidError,
             duressPassphraseEmptyError,
+            duressPassphraseSaveError,
             saving
         } = this.state;
 
@@ -182,6 +185,13 @@ export default class SetDuressPassphrase extends React.Component<
                             )}
                         />
                     )}
+                    {duressPassphraseSaveError && (
+                        <ErrorMessage
+                            message={localeString(
+                                'views.Settings.SetPassword.saveError'
+                            )}
+                        />
+                    )}
                     <Text style={{ ...styles.text, color: themeColor('text') }}>
                         {localeString('views.Settings.newDuressPassword')}
                     </Text>
@@ -194,7 +204,8 @@ export default class SetDuressPassphrase extends React.Component<
                                 duressPassphrase: text,
                                 duressPassphraseMismatchError: false,
                                 duressPassphraseInvalidError: false,
-                                duressPassphraseEmptyError: false
+                                duressPassphraseEmptyError: false,
+                                duressPassphraseSaveError: false
                             })
                         }
                         autoCapitalize="none"
@@ -223,7 +234,8 @@ export default class SetDuressPassphrase extends React.Component<
                                 duressPassphraseConfirm: text,
                                 duressPassphraseMismatchError: false,
                                 duressPassphraseInvalidError: false,
-                                duressPassphraseEmptyError: false
+                                duressPassphraseEmptyError: false,
+                                duressPassphraseSaveError: false
                             })
                         }
                         autoCapitalize="none"
