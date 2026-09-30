@@ -941,6 +941,7 @@
     "views.Send.payBolt12.offerFetchFailure": "Não foi possível buscar a oferta",
     "views.Send.payBolt12.invoiceFetchFailure": "Não foi possível buscar a fatura",
     "views.Send.payBolt12.specifyAmount": "O valor deve ser especificado",
+    "views.Send.payBolt12.invalidOffer": "Invalid BOLT 12 offer",
     "views.Send.payBolt12.offersNotSupported": "O backend não suporta BOLT 12",
     "views.ClinkPay.title": "Pay CLINK Offer",
     "views.ClinkPay.invalidOffer": "Invalid CLINK offer",
