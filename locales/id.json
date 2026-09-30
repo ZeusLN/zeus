@@ -941,6 +941,7 @@
     "views.Send.payBolt12.offerFetchFailure": "Tidak dapat mengambil data tawaran",
     "views.Send.payBolt12.invoiceFetchFailure": "Tidak dapat mengambil data faktur",
     "views.Send.payBolt12.specifyAmount": "Jumlah harus ditentukan",
+    "views.Send.payBolt12.invalidOffer": "Invalid BOLT 12 offer",
     "views.Send.payBolt12.offersNotSupported": "Backend tidak mendukung BOLT 12",
     "views.ClinkPay.title": "Pay CLINK Offer",
     "views.ClinkPay.invalidOffer": "Invalid CLINK offer",
