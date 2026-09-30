@@ -25,6 +25,7 @@ interface SetPinState {
     pinConfirm: string;
     pinMismatchError: boolean;
     pinInvalidError: boolean;
+    pinSaveError: boolean;
     saving: boolean;
 }
 
@@ -36,6 +37,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
         pinConfirm: '',
         pinMismatchError: false,
         pinInvalidError: false,
+        pinSaveError: false,
         saving: false
     };
 
@@ -53,7 +55,8 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
             this.setState({
                 pin: value,
                 pinMismatchError: false,
-                pinInvalidError: false
+                pinInvalidError: false,
+                pinSaveError: false
             });
         } else {
             this.setState({ pinConfirm: value }, () => {
@@ -65,7 +68,8 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
     onPinChange = () => {
         this.setState({
             pinMismatchError: false,
-            pinInvalidError: false
+            pinInvalidError: false,
+            pinSaveError: false
         });
     };
 
@@ -104,7 +108,7 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
             await updateSettings({ pin });
         } catch (error) {
             console.error('Could not save PIN', error);
-            this.setState({ saving: false });
+            this.setState({ saving: false, pinSaveError: true });
             return;
         }
 
@@ -117,7 +121,8 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
     render() {
         const { navigation, SettingsStore } = this.props;
         const { settings } = SettingsStore;
-        const { pin, pinMismatchError, pinInvalidError, saving } = this.state;
+        const { pin, pinMismatchError, pinInvalidError, pinSaveError, saving } =
+            this.state;
 
         return (
             <Screen>
@@ -146,6 +151,13 @@ export default class SetPin extends React.Component<SetPinProps, SetPinState> {
                             <ErrorMessage
                                 message={localeString(
                                     'views.Settings.SetPin.invalid'
+                                )}
+                            />
+                        )}
+                        {pinSaveError && (
+                            <ErrorMessage
+                                message={localeString(
+                                    'views.Settings.SetPin.saveError'
                                 )}
                             />
                         )}
