@@ -941,6 +941,7 @@
     "views.Send.payBolt12.offerFetchFailure": "Offer konnte nicht abgerufen werden",
     "views.Send.payBolt12.invoiceFetchFailure": "Rechnung konnte nicht abgerufen werden",
     "views.Send.payBolt12.specifyAmount": "Es muss ein Betrag eingegeben werden",
+    "views.Send.payBolt12.invalidOffer": "Invalid BOLT 12 offer",
     "views.Send.payBolt12.offersNotSupported": "Backend unterstützt BOLT 12 nicht",
     "views.ClinkPay.title": "Pay CLINK Offer",
     "views.ClinkPay.invalidOffer": "Invalid CLINK offer",
