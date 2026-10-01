@@ -27,7 +27,7 @@ option go_package = "github.com/lightningnetwork/lnd/lnrpc/routerrpc";
 // Router is a service that offers advanced interaction with the router
 // subsystem of the daemon.
 service Router {
-    /*
+    /* lncli: `sendpayment`
     SendPaymentV2 attempts to route a payment described by the passed
     PaymentRequest to the final destination. The call returns a stream of
     payment updates. When using this RPC, make sure to set a fee limit, as the
@@ -53,24 +53,13 @@ service Router {
     */
     rpc TrackPayments (TrackPaymentsRequest) returns (stream lnrpc.Payment);
 
-    /*
+    /* lncli: `estimateroutefee`
     EstimateRouteFee allows callers to obtain a lower bound w.r.t how much it
     may cost to send an HTLC to the target end destination.
     */
     rpc EstimateRouteFee (RouteFeeRequest) returns (RouteFeeResponse);
 
-    /*
-    Deprecated, use SendToRouteV2. SendToRoute attempts to make a payment via
-    the specified route. This method differs from SendPayment in that it
-    allows users to specify a full route manually. This can be used for
-    things like rebalancing, and atomic swaps. It differs from the newer
-    SendToRouteV2 in that it doesn't return the full HTLC information.
-    */
-    rpc SendToRoute (SendToRouteRequest) returns (SendToRouteResponse) {
-        option deprecated = true;
-    }
-
-    /*
+    /* lncli: `sendtoroute`
     SendToRouteV2 attempts to make a payment via the specified route. This
     method differs from SendPayment in that it allows users to specify a full
     route manually. This can be used for things like rebalancing, and atomic
@@ -141,23 +130,6 @@ service Router {
     rpc SubscribeHtlcEvents (SubscribeHtlcEventsRequest)
         returns (stream HtlcEvent);
 
-    /*
-    Deprecated, use SendPaymentV2. SendPayment attempts to route a payment
-    described by the passed PaymentRequest to the final destination. The call
-    returns a stream of payment status updates.
-    */
-    rpc SendPayment (SendPaymentRequest) returns (stream PaymentStatus) {
-        option deprecated = true;
-    }
-
-    /*
-    Deprecated, use TrackPaymentV2. TrackPayment returns an update stream for
-    the payment identified by the payment hash.
-    */
-    rpc TrackPayment (TrackPaymentRequest) returns (stream PaymentStatus) {
-        option deprecated = true;
-    }
-
     /**
     HtlcInterceptor dispatches a bi-directional streaming RPC in which
     Forwarded HTLC requests are sent to the client and the client responds with
@@ -202,6 +174,18 @@ service Router {
     */
     rpc XFindBaseLocalChanAlias (FindBaseAliasRequest)
         returns (FindBaseAliasResponse);
+
+    /* lncli: `deletefwdhistory`
+    DeleteForwardingHistory allows the caller to delete forwarding history
+    events with a timestamp at or before a specified time. This is useful
+    for implementing data retention policies for privacy purposes. The call
+    deletes events in batches and returns statistics including the total number
+    of events deleted and the aggregate fees earned from those events. The
+    deletion is performed in a transaction-safe manner with configurable batch
+    sizes to avoid holding large database locks.
+    */
+    rpc DeleteForwardingHistory (DeleteForwardingHistoryRequest)
+        returns (DeleteForwardingHistoryResponse);
 }
 
 message SendPaymentRequest {
@@ -252,12 +236,7 @@ message SendPaymentRequest {
     */
     int64 fee_limit_sat = 7;
 
-    /*
-    Deprecated, use outgoing_chan_ids. The channel id of the channel that must
-    be taken to the first hop. If zero, any channel may be used (unless
-    outgoing_chan_ids are set).
-    */
-    uint64 outgoing_chan_id = 8 [jstype = JS_STRING, deprecated = true];
+    reserved 8;
 
     /*
     An optional maximum total time lock for the route. This should not
@@ -477,14 +456,6 @@ message SendToRouteRequest {
     base64.
     */
     map<uint64, bytes> first_hop_custom_records = 4;
-}
-
-message SendToRouteResponse {
-    // The preimage obtained by making the payment.
-    bytes preimage = 1;
-
-    // The failure message in case the payment failed.
-    lnrpc.Failure failure = 2;
 }
 
 message ResetMissionControlRequest {
@@ -911,62 +882,12 @@ enum FailureDetail {
     INVALID_KEYSEND = 20;
     MPP_IN_PROGRESS = 21;
     CIRCULAR_ROUTE = 22;
-}
-
-enum PaymentState {
-    /*
-    Payment is still in flight.
-    */
-    IN_FLIGHT = 0;
-
-    /*
-    Payment completed successfully.
-    */
-    SUCCEEDED = 1;
-
-    /*
-    There are more routes to try, but the payment timeout was exceeded.
-    */
-    FAILED_TIMEOUT = 2;
-
-    /*
-    All possible routes were tried and failed permanently. Or were no
-    routes to the destination at all.
-    */
-    FAILED_NO_ROUTE = 3;
-
-    /*
-    A non-recoverable error has occurred.
-    */
-    FAILED_ERROR = 4;
-
-    /*
-    Payment details incorrect (unknown hash, invalid amt or
-    invalid final cltv delta)
-    */
-    FAILED_INCORRECT_PAYMENT_DETAILS = 5;
-
-    /*
-    Insufficient local balance.
-    */
-    FAILED_INSUFFICIENT_BALANCE = 6;
-}
-
-message PaymentStatus {
-    // Current state the payment is in.
-    PaymentState state = 1;
-
-    /*
-    The pre-image of the payment when state is SUCCEEDED.
-    */
-    bytes preimage = 2;
-
-    reserved 3;
-
-    /*
-    The HTLCs made in attempt to settle the payment [EXPERIMENTAL].
-    */
-    repeated lnrpc.HTLCAttempt htlcs = 4;
+    INVOICE_ALREADY_SETTLED = 23;
+    HTLC_INVOICE_TYPE_MISMATCH = 24;
+    AMP_ERROR = 25;
+    AMP_RECONSTRUCTION = 26;
+    EXTERNAL_VALIDATION_FAILED = 27;
+    INVOICE_INTERCEPTOR_ERROR = 28;
 }
 
 message CircuitKey {
@@ -981,10 +902,16 @@ message ForwardHtlcInterceptRequest {
     /*
     The key of this forwarded htlc. It defines the incoming channel id and
     the index in this channel.
+
+    Interceptor clients should handle requests for the same circuit key
+    idempotently. Requests may be replayed after reconnect, and an htlc that was
+    previously offered off-chain may be offered again after it moves on-chain.
     */
     CircuitKey incoming_circuit_key = 1;
 
-    // The incoming htlc amount.
+    // The incoming htlc amount. This is the amount the incoming peer actually
+    // committed to on the channel and is the only amount that can be trusted
+    // when deciding how to resolve the HTLC.
     uint64 incoming_amount_msat = 5;
 
     // The incoming htlc expiry.
@@ -999,10 +926,17 @@ message ForwardHtlcInterceptRequest {
     // The requested outgoing channel id for this forwarded htlc. Because of
     // non-strict forwarding, this isn't necessarily the channel over which the
     // packet will be forwarded eventually. A different channel to the same peer
-    // may be selected as well.
+    // may be selected as well. This is set to a sentinel value (all bits set)
+    // if the outgoing_requested_node_id is specified for blinded routes.
     uint64 outgoing_requested_chan_id = 7;
 
-    // The outgoing htlc amount.
+    // The outgoing htlc amount. NOTE: this is the amount the sender requested
+    // in the onion payload (amt_to_forward). It has NOT been validated against
+    // incoming_amount_msat or the forwarding policy of the outgoing channel
+    // yet. That validation only happens if the HTLC is resumed; a SETTLE
+    // response skips it entirely. An interceptor that settles or otherwise
+    // accounts for the HTLC must treat this value as untrusted sender input and
+    // rely on incoming_amount_msat instead.
     uint64 outgoing_amount_msat = 3;
 
     // The outgoing htlc expiry.
@@ -1015,11 +949,25 @@ message ForwardHtlcInterceptRequest {
     bytes onion_blob = 9;
 
     // The block height at which this htlc will be auto-failed to prevent the
-    // channel from force-closing.
+    // channel from force-closing. For on-chain htlcs, this field is the
+    // settlement deadline instead and no automatic fail-back is attempted.
     int32 auto_fail_height = 10;
 
     // The custom records of the peer's incoming p2p wire message.
     map<uint64, bytes> in_wire_custom_records = 11;
+
+    // The requested outgoing node for a blinded forward. When non-empty, this
+    // field contains exactly one 33-byte compressed public key and
+    // outgoing_requested_chan_id is set to 18446744073709551615
+    // (0xffffffffffffffff). Clients MUST NOT interpret that value as an actual
+    // channel ID; the presence of this field identifies a node-addressed
+    // forward.
+    //
+    // The possible next-hop representations are:
+    //   node ID empty, channel ID 0: final receive;
+    //   node ID empty, ordinary channel ID: channel-addressed forward;
+    //   node ID present, channel ID MaxUint64: node-addressed forward.
+    bytes outgoing_requested_node_id = 12;
 }
 
 /**
@@ -1030,6 +978,14 @@ forward. The caller can choose either to:
                     field modifications.
 - `Reject`: Fail the htlc backwards.
 - `Settle`: Settle this htlc with a given preimage.
+
+Once the incoming channel has force-closed and the HTLC is being resolved
+on-chain (see auto_fail_height), only `Settle` has any effect. The HTLC can no
+longer be resumed or failed back off-chain, so `Resume`, `ResumeModified`, and
+`Fail` return a stream-terminating error. The HTLC stays held until it is
+settled with a preimage, the on-chain resolver completes, or it expires
+on-chain. Clients should reconnect to receive any held HTLCs that remain
+unresolved.
 */
 message ForwardHtlcInterceptResponse {
     /**
@@ -1059,9 +1015,12 @@ message ForwardHtlcInterceptResponse {
     // default value for this field.
     lnrpc.Failure.FailureCode failure_code = 5;
 
-    // The amount that was set on the p2p wire message of the incoming HTLC.
-    // This field is ignored if the action is not RESUME_MODIFIED or the amount
-    // is zero.
+    // The amount to use in place of the actual incoming HTLC amount when
+    // resuming with RESUME_MODIFIED. This does not change the amount committed
+    // by the incoming peer. The override is used for forwarding validation
+    // (effective incoming - outgoing >= outbound fee + inbound fee), incoming
+    // dust exposure, and forwarding-history accounting. A value of zero leaves
+    // the actual incoming amount unchanged.
     uint64 in_amount_msat = 6;
 
     // The amount to set on the p2p wire message of the resumed HTLC. This field
@@ -1133,4 +1092,36 @@ message FindBaseAliasRequest {
 message FindBaseAliasResponse {
     // The base scid that resulted from the base scid look up.
     uint64 base = 1;
+}
+
+message DeleteForwardingHistoryRequest {
+    // Specify the cutoff time for deletion using one of the following options.
+    // Events with a timestamp at or before the cutoff are deleted.
+    oneof time_spec {
+        // Absolute Unix timestamp (seconds). Events at or before this time
+        // are deleted.
+        uint64 delete_before_time = 1;
+
+        // Relative duration string indicating how far back to delete, e.g.
+        // "-30d" deletes events at or before 30 days ago.
+        // Standard Go: "-24h", "-1.5h"
+        // Custom units: "-1d", "-1w", "-1M", "-1y"
+        // Supported: ns, us/µs, ms, s, m, h, d (days), w (weeks),
+        // M (months=30.44d), y (years=365.25d).
+        // Use negative values to specify time in the past.
+        string delete_before_duration = 2;
+    }
+}
+
+message DeleteForwardingHistoryResponse {
+    // Number of forwarding events deleted.
+    uint64 events_deleted = 1;
+
+    // Total fees earned from deleted events (in millisatoshis).
+    // This is the sum of (amt_in - amt_out) for all deleted events, which
+    // can be used for accounting purposes.
+    int64 total_fee_msat = 2;
+
+    // Status message.
+    string status = 3;
 }

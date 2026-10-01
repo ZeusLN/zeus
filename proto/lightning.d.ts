@@ -122,18 +122,6 @@ export namespace lnrpc {
         /** Calls AbandonChannel. */
         abandonChannel: lnrpc.Lightning.AbandonChannel;
 
-        /** Calls SendPayment. */
-        sendPayment: lnrpc.Lightning.SendPayment;
-
-        /** Calls SendPaymentSync. */
-        sendPaymentSync: lnrpc.Lightning.SendPaymentSync;
-
-        /** Calls SendToRoute. */
-        sendToRoute: lnrpc.Lightning.SendToRoute;
-
-        /** Calls SendToRouteSync. */
-        sendToRouteSync: lnrpc.Lightning.SendToRouteSync;
-
         /** Calls AddInvoice. */
         addInvoice: lnrpc.Lightning.AddInvoice;
 
@@ -235,6 +223,12 @@ export namespace lnrpc {
 
         /** Calls SubscribeCustomMessages. */
         subscribeCustomMessages: lnrpc.Lightning.SubscribeCustomMessages;
+
+        /** Calls SendOnionMessage. */
+        sendOnionMessage: lnrpc.Lightning.SendOnionMessage;
+
+        /** Calls SubscribeOnionMessages. */
+        subscribeOnionMessages: lnrpc.Lightning.SubscribeOnionMessages;
 
         /** Calls ListAliases. */
         listAliases: lnrpc.Lightning.ListAliases;
@@ -1020,106 +1014,6 @@ export namespace lnrpc {
             readonly path: '/lnrpc.Lightning/AbandonChannel';
             readonly requestType: 'AbandonChannelRequest';
             readonly responseType: 'AbandonChannelResponse';
-            readonly requestStream: undefined;
-            readonly responseStream: undefined;
-        };
-
-        /**
-         * Callback as used by {@link lnrpc.Lightning#sendPayment}.
-         * @param error Error, if any
-         * @param [response] SendResponse
-         */
-        type SendPaymentCallback = (
-            error: Error | null,
-            response?: lnrpc.SendResponse
-        ) => void;
-
-        /** Calls SendPayment. */
-        type SendPayment = {
-            (
-                request: lnrpc.ISendRequest,
-                callback: lnrpc.Lightning.SendPaymentCallback
-            ): void;
-            (request: lnrpc.ISendRequest): Promise<lnrpc.SendResponse>;
-            readonly name: 'SendPayment';
-            readonly path: '/lnrpc.Lightning/SendPayment';
-            readonly requestType: 'SendRequest';
-            readonly responseType: 'SendResponse';
-            readonly requestStream: true;
-            readonly responseStream: true;
-        };
-
-        /**
-         * Callback as used by {@link lnrpc.Lightning#sendPaymentSync}.
-         * @param error Error, if any
-         * @param [response] SendResponse
-         */
-        type SendPaymentSyncCallback = (
-            error: Error | null,
-            response?: lnrpc.SendResponse
-        ) => void;
-
-        /** Calls SendPaymentSync. */
-        type SendPaymentSync = {
-            (
-                request: lnrpc.ISendRequest,
-                callback: lnrpc.Lightning.SendPaymentSyncCallback
-            ): void;
-            (request: lnrpc.ISendRequest): Promise<lnrpc.SendResponse>;
-            readonly name: 'SendPaymentSync';
-            readonly path: '/lnrpc.Lightning/SendPaymentSync';
-            readonly requestType: 'SendRequest';
-            readonly responseType: 'SendResponse';
-            readonly requestStream: undefined;
-            readonly responseStream: undefined;
-        };
-
-        /**
-         * Callback as used by {@link lnrpc.Lightning#sendToRoute}.
-         * @param error Error, if any
-         * @param [response] SendResponse
-         */
-        type SendToRouteCallback = (
-            error: Error | null,
-            response?: lnrpc.SendResponse
-        ) => void;
-
-        /** Calls SendToRoute. */
-        type SendToRoute = {
-            (
-                request: lnrpc.ISendToRouteRequest,
-                callback: lnrpc.Lightning.SendToRouteCallback
-            ): void;
-            (request: lnrpc.ISendToRouteRequest): Promise<lnrpc.SendResponse>;
-            readonly name: 'SendToRoute';
-            readonly path: '/lnrpc.Lightning/SendToRoute';
-            readonly requestType: 'SendToRouteRequest';
-            readonly responseType: 'SendResponse';
-            readonly requestStream: true;
-            readonly responseStream: true;
-        };
-
-        /**
-         * Callback as used by {@link lnrpc.Lightning#sendToRouteSync}.
-         * @param error Error, if any
-         * @param [response] SendResponse
-         */
-        type SendToRouteSyncCallback = (
-            error: Error | null,
-            response?: lnrpc.SendResponse
-        ) => void;
-
-        /** Calls SendToRouteSync. */
-        type SendToRouteSync = {
-            (
-                request: lnrpc.ISendToRouteRequest,
-                callback: lnrpc.Lightning.SendToRouteSyncCallback
-            ): void;
-            (request: lnrpc.ISendToRouteRequest): Promise<lnrpc.SendResponse>;
-            readonly name: 'SendToRouteSync';
-            readonly path: '/lnrpc.Lightning/SendToRouteSync';
-            readonly requestType: 'SendToRouteRequest';
-            readonly responseType: 'SendResponse';
             readonly requestStream: undefined;
             readonly responseStream: undefined;
         };
@@ -2020,6 +1914,60 @@ export namespace lnrpc {
             readonly path: '/lnrpc.Lightning/SubscribeCustomMessages';
             readonly requestType: 'SubscribeCustomMessagesRequest';
             readonly responseType: 'CustomMessage';
+            readonly requestStream: undefined;
+            readonly responseStream: true;
+        };
+
+        /**
+         * Callback as used by {@link lnrpc.Lightning#sendOnionMessage}.
+         * @param error Error, if any
+         * @param [response] SendOnionMessageResponse
+         */
+        type SendOnionMessageCallback = (
+            error: Error | null,
+            response?: lnrpc.SendOnionMessageResponse
+        ) => void;
+
+        /** Calls SendOnionMessage. */
+        type SendOnionMessage = {
+            (
+                request: lnrpc.ISendOnionMessageRequest,
+                callback: lnrpc.Lightning.SendOnionMessageCallback
+            ): void;
+            (
+                request: lnrpc.ISendOnionMessageRequest
+            ): Promise<lnrpc.SendOnionMessageResponse>;
+            readonly name: 'SendOnionMessage';
+            readonly path: '/lnrpc.Lightning/SendOnionMessage';
+            readonly requestType: 'SendOnionMessageRequest';
+            readonly responseType: 'SendOnionMessageResponse';
+            readonly requestStream: undefined;
+            readonly responseStream: undefined;
+        };
+
+        /**
+         * Callback as used by {@link lnrpc.Lightning#subscribeOnionMessages}.
+         * @param error Error, if any
+         * @param [response] OnionMessageUpdate
+         */
+        type SubscribeOnionMessagesCallback = (
+            error: Error | null,
+            response?: lnrpc.OnionMessageUpdate
+        ) => void;
+
+        /** Calls SubscribeOnionMessages. */
+        type SubscribeOnionMessages = {
+            (
+                request: lnrpc.ISubscribeOnionMessagesRequest,
+                callback: lnrpc.Lightning.SubscribeOnionMessagesCallback
+            ): void;
+            (
+                request: lnrpc.ISubscribeOnionMessagesRequest
+            ): Promise<lnrpc.OnionMessageUpdate>;
+            readonly name: 'SubscribeOnionMessages';
+            readonly path: '/lnrpc.Lightning/SubscribeOnionMessages';
+            readonly requestType: 'SubscribeOnionMessagesRequest';
+            readonly responseType: 'OnionMessageUpdate';
             readonly requestStream: undefined;
             readonly responseStream: true;
         };
@@ -2927,6 +2875,586 @@ export namespace lnrpc {
 
         /** Shape of a SendCustomMessageResponse. */
         type $Shape = lnrpc.SendCustomMessageResponse.$Properties;
+    }
+
+    /**
+     * Properties of a SubscribeOnionMessagesRequest.
+     * @deprecated Use lnrpc.SubscribeOnionMessagesRequest.$Properties instead.
+     */
+    interface ISubscribeOnionMessagesRequest
+        extends lnrpc.SubscribeOnionMessagesRequest.$Properties {}
+
+    /** Represents a SubscribeOnionMessagesRequest. */
+    class SubscribeOnionMessagesRequest {
+        /**
+         * Constructs a new SubscribeOnionMessagesRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(
+            properties?: lnrpc.SubscribeOnionMessagesRequest.$Properties
+        );
+
+        /** Unknown fields preserved while decoding when enabled */
+        $unknowns?: Uint8Array[];
+
+        /**
+         * Creates a new SubscribeOnionMessagesRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns SubscribeOnionMessagesRequest instance
+         */
+        static create(
+            properties: lnrpc.SubscribeOnionMessagesRequest.$Shape
+        ): lnrpc.SubscribeOnionMessagesRequest &
+            lnrpc.SubscribeOnionMessagesRequest.$Shape;
+        static create(
+            properties?: lnrpc.SubscribeOnionMessagesRequest.$Properties
+        ): lnrpc.SubscribeOnionMessagesRequest;
+
+        /**
+         * Encodes the specified SubscribeOnionMessagesRequest message. Does not implicitly {@link lnrpc.SubscribeOnionMessagesRequest.verify|verify} messages.
+         * @param message SubscribeOnionMessagesRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encode(
+            message: lnrpc.SubscribeOnionMessagesRequest.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified SubscribeOnionMessagesRequest message, length delimited. Does not implicitly {@link lnrpc.SubscribeOnionMessagesRequest.verify|verify} messages.
+         * @param message SubscribeOnionMessagesRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encodeDelimited(
+            message: lnrpc.SubscribeOnionMessagesRequest.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a SubscribeOnionMessagesRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns {lnrpc.SubscribeOnionMessagesRequest & lnrpc.SubscribeOnionMessagesRequest.$Shape} SubscribeOnionMessagesRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): lnrpc.SubscribeOnionMessagesRequest &
+            lnrpc.SubscribeOnionMessagesRequest.$Shape;
+
+        /**
+         * Decodes a SubscribeOnionMessagesRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns {lnrpc.SubscribeOnionMessagesRequest & lnrpc.SubscribeOnionMessagesRequest.$Shape} SubscribeOnionMessagesRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): lnrpc.SubscribeOnionMessagesRequest &
+            lnrpc.SubscribeOnionMessagesRequest.$Shape;
+
+        /**
+         * Verifies a SubscribeOnionMessagesRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a SubscribeOnionMessagesRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns SubscribeOnionMessagesRequest
+         */
+        static fromObject(object: {
+            [k: string]: any;
+        }): lnrpc.SubscribeOnionMessagesRequest;
+
+        /**
+         * Creates a plain object from a SubscribeOnionMessagesRequest message. Also converts values to other types if specified.
+         * @param message SubscribeOnionMessagesRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        static toObject(
+            message: lnrpc.SubscribeOnionMessagesRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this SubscribeOnionMessagesRequest to JSON.
+         * @returns JSON object
+         */
+        toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the type url for SubscribeOnionMessagesRequest
+         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns The type url
+         */
+        static getTypeUrl(prefix?: string): string;
+    }
+
+    namespace SubscribeOnionMessagesRequest {
+        /** Properties of a SubscribeOnionMessagesRequest. */
+        interface $Properties {
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+        }
+
+        /** Shape of a SubscribeOnionMessagesRequest. */
+        type $Shape = lnrpc.SubscribeOnionMessagesRequest.$Properties;
+    }
+
+    /**
+     * Properties of an OnionMessageUpdate.
+     * @deprecated Use lnrpc.OnionMessageUpdate.$Properties instead.
+     */
+    interface IOnionMessageUpdate
+        extends lnrpc.OnionMessageUpdate.$Properties {}
+
+    /** Represents an OnionMessageUpdate. */
+    class OnionMessageUpdate {
+        /**
+         * Constructs a new OnionMessageUpdate.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: lnrpc.OnionMessageUpdate.$Properties);
+
+        /** Unknown fields preserved while decoding when enabled */
+        $unknowns?: Uint8Array[];
+
+        /** OnionMessageUpdate peer. */
+        peer: Uint8Array;
+
+        /** OnionMessageUpdate path_key. */
+        path_key: Uint8Array;
+
+        /** OnionMessageUpdate onion. */
+        onion: Uint8Array;
+
+        /** OnionMessageUpdate reply_path. */
+        reply_path?: lnrpc.BlindedPath.$Properties | null;
+
+        /** OnionMessageUpdate encrypted_recipient_data. */
+        encrypted_recipient_data: Uint8Array;
+
+        /** OnionMessageUpdate custom_records. */
+        custom_records: { [k: string]: Uint8Array };
+
+        /**
+         * Creates a new OnionMessageUpdate instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns OnionMessageUpdate instance
+         */
+        static create(
+            properties: lnrpc.OnionMessageUpdate.$Shape
+        ): lnrpc.OnionMessageUpdate & lnrpc.OnionMessageUpdate.$Shape;
+        static create(
+            properties?: lnrpc.OnionMessageUpdate.$Properties
+        ): lnrpc.OnionMessageUpdate;
+
+        /**
+         * Encodes the specified OnionMessageUpdate message. Does not implicitly {@link lnrpc.OnionMessageUpdate.verify|verify} messages.
+         * @param message OnionMessageUpdate message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encode(
+            message: lnrpc.OnionMessageUpdate.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified OnionMessageUpdate message, length delimited. Does not implicitly {@link lnrpc.OnionMessageUpdate.verify|verify} messages.
+         * @param message OnionMessageUpdate message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encodeDelimited(
+            message: lnrpc.OnionMessageUpdate.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes an OnionMessageUpdate message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns {lnrpc.OnionMessageUpdate & lnrpc.OnionMessageUpdate.$Shape} OnionMessageUpdate
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): lnrpc.OnionMessageUpdate & lnrpc.OnionMessageUpdate.$Shape;
+
+        /**
+         * Decodes an OnionMessageUpdate message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns {lnrpc.OnionMessageUpdate & lnrpc.OnionMessageUpdate.$Shape} OnionMessageUpdate
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): lnrpc.OnionMessageUpdate & lnrpc.OnionMessageUpdate.$Shape;
+
+        /**
+         * Verifies an OnionMessageUpdate message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates an OnionMessageUpdate message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns OnionMessageUpdate
+         */
+        static fromObject(object: {
+            [k: string]: any;
+        }): lnrpc.OnionMessageUpdate;
+
+        /**
+         * Creates a plain object from an OnionMessageUpdate message. Also converts values to other types if specified.
+         * @param message OnionMessageUpdate
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        static toObject(
+            message: lnrpc.OnionMessageUpdate,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this OnionMessageUpdate to JSON.
+         * @returns JSON object
+         */
+        toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the type url for OnionMessageUpdate
+         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns The type url
+         */
+        static getTypeUrl(prefix?: string): string;
+    }
+
+    namespace OnionMessageUpdate {
+        /** Properties of an OnionMessageUpdate. */
+        interface $Properties {
+            /** OnionMessageUpdate peer */
+            peer?: Uint8Array | null;
+
+            /** OnionMessageUpdate path_key */
+            path_key?: Uint8Array | null;
+
+            /** OnionMessageUpdate onion */
+            onion?: Uint8Array | null;
+
+            /** OnionMessageUpdate reply_path */
+            reply_path?: lnrpc.BlindedPath.$Properties | null;
+
+            /** OnionMessageUpdate encrypted_recipient_data */
+            encrypted_recipient_data?: Uint8Array | null;
+
+            /** OnionMessageUpdate custom_records */
+            custom_records?: { [k: string]: Uint8Array } | null;
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+        }
+
+        /** Shape of an OnionMessageUpdate. */
+        type $Shape = lnrpc.OnionMessageUpdate.$Properties;
+    }
+
+    /**
+     * Properties of a SendOnionMessageRequest.
+     * @deprecated Use lnrpc.SendOnionMessageRequest.$Properties instead.
+     */
+    interface ISendOnionMessageRequest
+        extends lnrpc.SendOnionMessageRequest.$Properties {}
+
+    /** Represents a SendOnionMessageRequest. */
+    class SendOnionMessageRequest {
+        /**
+         * Constructs a new SendOnionMessageRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: lnrpc.SendOnionMessageRequest.$Properties);
+
+        /** Unknown fields preserved while decoding when enabled */
+        $unknowns?: Uint8Array[];
+
+        /** SendOnionMessageRequest peer. */
+        peer: Uint8Array;
+
+        /** SendOnionMessageRequest path_key. */
+        path_key: Uint8Array;
+
+        /** SendOnionMessageRequest onion. */
+        onion: Uint8Array;
+
+        /**
+         * Creates a new SendOnionMessageRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns SendOnionMessageRequest instance
+         */
+        static create(
+            properties: lnrpc.SendOnionMessageRequest.$Shape
+        ): lnrpc.SendOnionMessageRequest & lnrpc.SendOnionMessageRequest.$Shape;
+        static create(
+            properties?: lnrpc.SendOnionMessageRequest.$Properties
+        ): lnrpc.SendOnionMessageRequest;
+
+        /**
+         * Encodes the specified SendOnionMessageRequest message. Does not implicitly {@link lnrpc.SendOnionMessageRequest.verify|verify} messages.
+         * @param message SendOnionMessageRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encode(
+            message: lnrpc.SendOnionMessageRequest.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified SendOnionMessageRequest message, length delimited. Does not implicitly {@link lnrpc.SendOnionMessageRequest.verify|verify} messages.
+         * @param message SendOnionMessageRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encodeDelimited(
+            message: lnrpc.SendOnionMessageRequest.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a SendOnionMessageRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns {lnrpc.SendOnionMessageRequest & lnrpc.SendOnionMessageRequest.$Shape} SendOnionMessageRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): lnrpc.SendOnionMessageRequest & lnrpc.SendOnionMessageRequest.$Shape;
+
+        /**
+         * Decodes a SendOnionMessageRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns {lnrpc.SendOnionMessageRequest & lnrpc.SendOnionMessageRequest.$Shape} SendOnionMessageRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): lnrpc.SendOnionMessageRequest & lnrpc.SendOnionMessageRequest.$Shape;
+
+        /**
+         * Verifies a SendOnionMessageRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a SendOnionMessageRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns SendOnionMessageRequest
+         */
+        static fromObject(object: {
+            [k: string]: any;
+        }): lnrpc.SendOnionMessageRequest;
+
+        /**
+         * Creates a plain object from a SendOnionMessageRequest message. Also converts values to other types if specified.
+         * @param message SendOnionMessageRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        static toObject(
+            message: lnrpc.SendOnionMessageRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this SendOnionMessageRequest to JSON.
+         * @returns JSON object
+         */
+        toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the type url for SendOnionMessageRequest
+         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns The type url
+         */
+        static getTypeUrl(prefix?: string): string;
+    }
+
+    namespace SendOnionMessageRequest {
+        /** Properties of a SendOnionMessageRequest. */
+        interface $Properties {
+            /** SendOnionMessageRequest peer */
+            peer?: Uint8Array | null;
+
+            /** SendOnionMessageRequest path_key */
+            path_key?: Uint8Array | null;
+
+            /** SendOnionMessageRequest onion */
+            onion?: Uint8Array | null;
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+        }
+
+        /** Shape of a SendOnionMessageRequest. */
+        type $Shape = lnrpc.SendOnionMessageRequest.$Properties;
+    }
+
+    /**
+     * Properties of a SendOnionMessageResponse.
+     * @deprecated Use lnrpc.SendOnionMessageResponse.$Properties instead.
+     */
+    interface ISendOnionMessageResponse
+        extends lnrpc.SendOnionMessageResponse.$Properties {}
+
+    /** Represents a SendOnionMessageResponse. */
+    class SendOnionMessageResponse {
+        /**
+         * Constructs a new SendOnionMessageResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: lnrpc.SendOnionMessageResponse.$Properties);
+
+        /** Unknown fields preserved while decoding when enabled */
+        $unknowns?: Uint8Array[];
+
+        /** SendOnionMessageResponse status. */
+        status: string;
+
+        /**
+         * Creates a new SendOnionMessageResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns SendOnionMessageResponse instance
+         */
+        static create(
+            properties: lnrpc.SendOnionMessageResponse.$Shape
+        ): lnrpc.SendOnionMessageResponse &
+            lnrpc.SendOnionMessageResponse.$Shape;
+        static create(
+            properties?: lnrpc.SendOnionMessageResponse.$Properties
+        ): lnrpc.SendOnionMessageResponse;
+
+        /**
+         * Encodes the specified SendOnionMessageResponse message. Does not implicitly {@link lnrpc.SendOnionMessageResponse.verify|verify} messages.
+         * @param message SendOnionMessageResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encode(
+            message: lnrpc.SendOnionMessageResponse.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified SendOnionMessageResponse message, length delimited. Does not implicitly {@link lnrpc.SendOnionMessageResponse.verify|verify} messages.
+         * @param message SendOnionMessageResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encodeDelimited(
+            message: lnrpc.SendOnionMessageResponse.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a SendOnionMessageResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns {lnrpc.SendOnionMessageResponse & lnrpc.SendOnionMessageResponse.$Shape} SendOnionMessageResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): lnrpc.SendOnionMessageResponse &
+            lnrpc.SendOnionMessageResponse.$Shape;
+
+        /**
+         * Decodes a SendOnionMessageResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns {lnrpc.SendOnionMessageResponse & lnrpc.SendOnionMessageResponse.$Shape} SendOnionMessageResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): lnrpc.SendOnionMessageResponse &
+            lnrpc.SendOnionMessageResponse.$Shape;
+
+        /**
+         * Verifies a SendOnionMessageResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a SendOnionMessageResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns SendOnionMessageResponse
+         */
+        static fromObject(object: {
+            [k: string]: any;
+        }): lnrpc.SendOnionMessageResponse;
+
+        /**
+         * Creates a plain object from a SendOnionMessageResponse message. Also converts values to other types if specified.
+         * @param message SendOnionMessageResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        static toObject(
+            message: lnrpc.SendOnionMessageResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this SendOnionMessageResponse to JSON.
+         * @returns JSON object
+         */
+        toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the type url for SendOnionMessageResponse
+         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns The type url
+         */
+        static getTypeUrl(prefix?: string): string;
+    }
+
+    namespace SendOnionMessageResponse {
+        /** Properties of a SendOnionMessageResponse. */
+        interface $Properties {
+            /** SendOnionMessageResponse status */
+            status?: string | null;
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+        }
+
+        /** Shape of a SendOnionMessageResponse. */
+        type $Shape = lnrpc.SendOnionMessageResponse.$Properties;
     }
 
     /**
@@ -3958,540 +4486,6 @@ export namespace lnrpc {
                   percent: Long;
               }
         );
-    }
-
-    /**
-     * Properties of a SendRequest.
-     * @deprecated Use lnrpc.SendRequest.$Properties instead.
-     */
-    interface ISendRequest extends lnrpc.SendRequest.$Properties {}
-
-    /** Represents a SendRequest. */
-    class SendRequest {
-        /**
-         * Constructs a new SendRequest.
-         * @param [properties] Properties to set
-         */
-        constructor(properties?: lnrpc.SendRequest.$Properties);
-
-        /** Unknown fields preserved while decoding when enabled */
-        $unknowns?: Uint8Array[];
-
-        /** SendRequest dest. */
-        dest: Uint8Array;
-
-        /** SendRequest dest_string. */
-        dest_string: string;
-
-        /** SendRequest amt. */
-        amt: Long;
-
-        /** SendRequest amt_msat. */
-        amt_msat: Long;
-
-        /** SendRequest payment_hash. */
-        payment_hash: Uint8Array;
-
-        /** SendRequest payment_hash_string. */
-        payment_hash_string: string;
-
-        /** SendRequest payment_request. */
-        payment_request: string;
-
-        /** SendRequest final_cltv_delta. */
-        final_cltv_delta: number;
-
-        /** SendRequest fee_limit. */
-        fee_limit?: lnrpc.FeeLimit.$Properties | null;
-
-        /** SendRequest outgoing_chan_id. */
-        outgoing_chan_id: Long;
-
-        /** SendRequest last_hop_pubkey. */
-        last_hop_pubkey: Uint8Array;
-
-        /** SendRequest cltv_limit. */
-        cltv_limit: number;
-
-        /** SendRequest dest_custom_records. */
-        dest_custom_records: { [k: string]: Uint8Array };
-
-        /** SendRequest allow_self_payment. */
-        allow_self_payment: boolean;
-
-        /** SendRequest dest_features. */
-        dest_features: lnrpc.FeatureBit[];
-
-        /** SendRequest payment_addr. */
-        payment_addr: Uint8Array;
-
-        /**
-         * Creates a new SendRequest instance using the specified properties.
-         * @param [properties] Properties to set
-         * @returns SendRequest instance
-         */
-        static create(
-            properties: lnrpc.SendRequest.$Shape
-        ): lnrpc.SendRequest & lnrpc.SendRequest.$Shape;
-        static create(
-            properties?: lnrpc.SendRequest.$Properties
-        ): lnrpc.SendRequest;
-
-        /**
-         * Encodes the specified SendRequest message. Does not implicitly {@link lnrpc.SendRequest.verify|verify} messages.
-         * @param message SendRequest message or plain object to encode
-         * @param [writer] Writer to encode to
-         * @returns Writer
-         */
-        static encode(
-            message: lnrpc.SendRequest.$Properties,
-            writer?: $protobuf.Writer
-        ): $protobuf.Writer;
-
-        /**
-         * Encodes the specified SendRequest message, length delimited. Does not implicitly {@link lnrpc.SendRequest.verify|verify} messages.
-         * @param message SendRequest message or plain object to encode
-         * @param [writer] Writer to encode to
-         * @returns Writer
-         */
-        static encodeDelimited(
-            message: lnrpc.SendRequest.$Properties,
-            writer?: $protobuf.Writer
-        ): $protobuf.Writer;
-
-        /**
-         * Decodes a SendRequest message from the specified reader or buffer.
-         * @param reader Reader or buffer to decode from
-         * @param [length] Message length if known beforehand
-         * @returns {lnrpc.SendRequest & lnrpc.SendRequest.$Shape} SendRequest
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        static decode(
-            reader: $protobuf.Reader | Uint8Array,
-            length?: number
-        ): lnrpc.SendRequest & lnrpc.SendRequest.$Shape;
-
-        /**
-         * Decodes a SendRequest message from the specified reader or buffer, length delimited.
-         * @param reader Reader or buffer to decode from
-         * @returns {lnrpc.SendRequest & lnrpc.SendRequest.$Shape} SendRequest
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        static decodeDelimited(
-            reader: $protobuf.Reader | Uint8Array
-        ): lnrpc.SendRequest & lnrpc.SendRequest.$Shape;
-
-        /**
-         * Verifies a SendRequest message.
-         * @param message Plain object to verify
-         * @returns `null` if valid, otherwise the reason why it is not
-         */
-        static verify(message: { [k: string]: any }): string | null;
-
-        /**
-         * Creates a SendRequest message from a plain object. Also converts values to their respective internal types.
-         * @param object Plain object
-         * @returns SendRequest
-         */
-        static fromObject(object: { [k: string]: any }): lnrpc.SendRequest;
-
-        /**
-         * Creates a plain object from a SendRequest message. Also converts values to other types if specified.
-         * @param message SendRequest
-         * @param [options] Conversion options
-         * @returns Plain object
-         */
-        static toObject(
-            message: lnrpc.SendRequest,
-            options?: $protobuf.IConversionOptions
-        ): { [k: string]: any };
-
-        /**
-         * Converts this SendRequest to JSON.
-         * @returns JSON object
-         */
-        toJSON(): { [k: string]: any };
-
-        /**
-         * Gets the type url for SendRequest
-         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
-         * @returns The type url
-         */
-        static getTypeUrl(prefix?: string): string;
-    }
-
-    namespace SendRequest {
-        /** Properties of a SendRequest. */
-        interface $Properties {
-            /** SendRequest dest */
-            dest?: Uint8Array | null;
-
-            /** SendRequest dest_string */
-            dest_string?: string | null;
-
-            /** SendRequest amt */
-            amt?: Long | null;
-
-            /** SendRequest amt_msat */
-            amt_msat?: Long | null;
-
-            /** SendRequest payment_hash */
-            payment_hash?: Uint8Array | null;
-
-            /** SendRequest payment_hash_string */
-            payment_hash_string?: string | null;
-
-            /** SendRequest payment_request */
-            payment_request?: string | null;
-
-            /** SendRequest final_cltv_delta */
-            final_cltv_delta?: number | null;
-
-            /** SendRequest fee_limit */
-            fee_limit?: lnrpc.FeeLimit.$Properties | null;
-
-            /** SendRequest outgoing_chan_id */
-            outgoing_chan_id?: Long | null;
-
-            /** SendRequest last_hop_pubkey */
-            last_hop_pubkey?: Uint8Array | null;
-
-            /** SendRequest cltv_limit */
-            cltv_limit?: number | null;
-
-            /** SendRequest dest_custom_records */
-            dest_custom_records?: { [k: string]: Uint8Array } | null;
-
-            /** SendRequest allow_self_payment */
-            allow_self_payment?: boolean | null;
-
-            /** SendRequest dest_features */
-            dest_features?: lnrpc.FeatureBit[] | null;
-
-            /** SendRequest payment_addr */
-            payment_addr?: Uint8Array | null;
-
-            /** Unknown fields preserved while decoding when enabled */
-            $unknowns?: Uint8Array[];
-        }
-
-        /** Shape of a SendRequest. */
-        type $Shape = {
-            dest?: Uint8Array | null;
-            dest_string?: string | null;
-            amt?: Long | null;
-            amt_msat?: Long | null;
-            payment_hash?: Uint8Array | null;
-            payment_hash_string?: string | null;
-            payment_request?: string | null;
-            final_cltv_delta?: number | null;
-            fee_limit?: lnrpc.FeeLimit.$Shape | null;
-            outgoing_chan_id?: Long | null;
-            last_hop_pubkey?: Uint8Array | null;
-            cltv_limit?: number | null;
-            dest_custom_records?: { [k: string]: Uint8Array } | null;
-            allow_self_payment?: boolean | null;
-            dest_features?: lnrpc.FeatureBit[] | null;
-            payment_addr?: Uint8Array | null;
-            $unknowns?: Uint8Array[];
-        };
-    }
-
-    /**
-     * Properties of a SendResponse.
-     * @deprecated Use lnrpc.SendResponse.$Properties instead.
-     */
-    interface ISendResponse extends lnrpc.SendResponse.$Properties {}
-
-    /** Represents a SendResponse. */
-    class SendResponse {
-        /**
-         * Constructs a new SendResponse.
-         * @param [properties] Properties to set
-         */
-        constructor(properties?: lnrpc.SendResponse.$Properties);
-
-        /** Unknown fields preserved while decoding when enabled */
-        $unknowns?: Uint8Array[];
-
-        /** SendResponse payment_error. */
-        payment_error: string;
-
-        /** SendResponse payment_preimage. */
-        payment_preimage: Uint8Array;
-
-        /** SendResponse payment_route. */
-        payment_route?: lnrpc.Route.$Properties | null;
-
-        /** SendResponse payment_hash. */
-        payment_hash: Uint8Array;
-
-        /**
-         * Creates a new SendResponse instance using the specified properties.
-         * @param [properties] Properties to set
-         * @returns SendResponse instance
-         */
-        static create(
-            properties: lnrpc.SendResponse.$Shape
-        ): lnrpc.SendResponse & lnrpc.SendResponse.$Shape;
-        static create(
-            properties?: lnrpc.SendResponse.$Properties
-        ): lnrpc.SendResponse;
-
-        /**
-         * Encodes the specified SendResponse message. Does not implicitly {@link lnrpc.SendResponse.verify|verify} messages.
-         * @param message SendResponse message or plain object to encode
-         * @param [writer] Writer to encode to
-         * @returns Writer
-         */
-        static encode(
-            message: lnrpc.SendResponse.$Properties,
-            writer?: $protobuf.Writer
-        ): $protobuf.Writer;
-
-        /**
-         * Encodes the specified SendResponse message, length delimited. Does not implicitly {@link lnrpc.SendResponse.verify|verify} messages.
-         * @param message SendResponse message or plain object to encode
-         * @param [writer] Writer to encode to
-         * @returns Writer
-         */
-        static encodeDelimited(
-            message: lnrpc.SendResponse.$Properties,
-            writer?: $protobuf.Writer
-        ): $protobuf.Writer;
-
-        /**
-         * Decodes a SendResponse message from the specified reader or buffer.
-         * @param reader Reader or buffer to decode from
-         * @param [length] Message length if known beforehand
-         * @returns {lnrpc.SendResponse & lnrpc.SendResponse.$Shape} SendResponse
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        static decode(
-            reader: $protobuf.Reader | Uint8Array,
-            length?: number
-        ): lnrpc.SendResponse & lnrpc.SendResponse.$Shape;
-
-        /**
-         * Decodes a SendResponse message from the specified reader or buffer, length delimited.
-         * @param reader Reader or buffer to decode from
-         * @returns {lnrpc.SendResponse & lnrpc.SendResponse.$Shape} SendResponse
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        static decodeDelimited(
-            reader: $protobuf.Reader | Uint8Array
-        ): lnrpc.SendResponse & lnrpc.SendResponse.$Shape;
-
-        /**
-         * Verifies a SendResponse message.
-         * @param message Plain object to verify
-         * @returns `null` if valid, otherwise the reason why it is not
-         */
-        static verify(message: { [k: string]: any }): string | null;
-
-        /**
-         * Creates a SendResponse message from a plain object. Also converts values to their respective internal types.
-         * @param object Plain object
-         * @returns SendResponse
-         */
-        static fromObject(object: { [k: string]: any }): lnrpc.SendResponse;
-
-        /**
-         * Creates a plain object from a SendResponse message. Also converts values to other types if specified.
-         * @param message SendResponse
-         * @param [options] Conversion options
-         * @returns Plain object
-         */
-        static toObject(
-            message: lnrpc.SendResponse,
-            options?: $protobuf.IConversionOptions
-        ): { [k: string]: any };
-
-        /**
-         * Converts this SendResponse to JSON.
-         * @returns JSON object
-         */
-        toJSON(): { [k: string]: any };
-
-        /**
-         * Gets the type url for SendResponse
-         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
-         * @returns The type url
-         */
-        static getTypeUrl(prefix?: string): string;
-    }
-
-    namespace SendResponse {
-        /** Properties of a SendResponse. */
-        interface $Properties {
-            /** SendResponse payment_error */
-            payment_error?: string | null;
-
-            /** SendResponse payment_preimage */
-            payment_preimage?: Uint8Array | null;
-
-            /** SendResponse payment_route */
-            payment_route?: lnrpc.Route.$Properties | null;
-
-            /** SendResponse payment_hash */
-            payment_hash?: Uint8Array | null;
-
-            /** Unknown fields preserved while decoding when enabled */
-            $unknowns?: Uint8Array[];
-        }
-
-        /** Shape of a SendResponse. */
-        type $Shape = lnrpc.SendResponse.$Properties;
-    }
-
-    /**
-     * Properties of a SendToRouteRequest.
-     * @deprecated Use lnrpc.SendToRouteRequest.$Properties instead.
-     */
-    interface ISendToRouteRequest
-        extends lnrpc.SendToRouteRequest.$Properties {}
-
-    /** Represents a SendToRouteRequest. */
-    class SendToRouteRequest {
-        /**
-         * Constructs a new SendToRouteRequest.
-         * @param [properties] Properties to set
-         */
-        constructor(properties?: lnrpc.SendToRouteRequest.$Properties);
-
-        /** Unknown fields preserved while decoding when enabled */
-        $unknowns?: Uint8Array[];
-
-        /** SendToRouteRequest payment_hash. */
-        payment_hash: Uint8Array;
-
-        /** SendToRouteRequest payment_hash_string. */
-        payment_hash_string: string;
-
-        /** SendToRouteRequest route. */
-        route?: lnrpc.Route.$Properties | null;
-
-        /**
-         * Creates a new SendToRouteRequest instance using the specified properties.
-         * @param [properties] Properties to set
-         * @returns SendToRouteRequest instance
-         */
-        static create(
-            properties: lnrpc.SendToRouteRequest.$Shape
-        ): lnrpc.SendToRouteRequest & lnrpc.SendToRouteRequest.$Shape;
-        static create(
-            properties?: lnrpc.SendToRouteRequest.$Properties
-        ): lnrpc.SendToRouteRequest;
-
-        /**
-         * Encodes the specified SendToRouteRequest message. Does not implicitly {@link lnrpc.SendToRouteRequest.verify|verify} messages.
-         * @param message SendToRouteRequest message or plain object to encode
-         * @param [writer] Writer to encode to
-         * @returns Writer
-         */
-        static encode(
-            message: lnrpc.SendToRouteRequest.$Properties,
-            writer?: $protobuf.Writer
-        ): $protobuf.Writer;
-
-        /**
-         * Encodes the specified SendToRouteRequest message, length delimited. Does not implicitly {@link lnrpc.SendToRouteRequest.verify|verify} messages.
-         * @param message SendToRouteRequest message or plain object to encode
-         * @param [writer] Writer to encode to
-         * @returns Writer
-         */
-        static encodeDelimited(
-            message: lnrpc.SendToRouteRequest.$Properties,
-            writer?: $protobuf.Writer
-        ): $protobuf.Writer;
-
-        /**
-         * Decodes a SendToRouteRequest message from the specified reader or buffer.
-         * @param reader Reader or buffer to decode from
-         * @param [length] Message length if known beforehand
-         * @returns {lnrpc.SendToRouteRequest & lnrpc.SendToRouteRequest.$Shape} SendToRouteRequest
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        static decode(
-            reader: $protobuf.Reader | Uint8Array,
-            length?: number
-        ): lnrpc.SendToRouteRequest & lnrpc.SendToRouteRequest.$Shape;
-
-        /**
-         * Decodes a SendToRouteRequest message from the specified reader or buffer, length delimited.
-         * @param reader Reader or buffer to decode from
-         * @returns {lnrpc.SendToRouteRequest & lnrpc.SendToRouteRequest.$Shape} SendToRouteRequest
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        static decodeDelimited(
-            reader: $protobuf.Reader | Uint8Array
-        ): lnrpc.SendToRouteRequest & lnrpc.SendToRouteRequest.$Shape;
-
-        /**
-         * Verifies a SendToRouteRequest message.
-         * @param message Plain object to verify
-         * @returns `null` if valid, otherwise the reason why it is not
-         */
-        static verify(message: { [k: string]: any }): string | null;
-
-        /**
-         * Creates a SendToRouteRequest message from a plain object. Also converts values to their respective internal types.
-         * @param object Plain object
-         * @returns SendToRouteRequest
-         */
-        static fromObject(object: {
-            [k: string]: any;
-        }): lnrpc.SendToRouteRequest;
-
-        /**
-         * Creates a plain object from a SendToRouteRequest message. Also converts values to other types if specified.
-         * @param message SendToRouteRequest
-         * @param [options] Conversion options
-         * @returns Plain object
-         */
-        static toObject(
-            message: lnrpc.SendToRouteRequest,
-            options?: $protobuf.IConversionOptions
-        ): { [k: string]: any };
-
-        /**
-         * Converts this SendToRouteRequest to JSON.
-         * @returns JSON object
-         */
-        toJSON(): { [k: string]: any };
-
-        /**
-         * Gets the type url for SendToRouteRequest
-         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
-         * @returns The type url
-         */
-        static getTypeUrl(prefix?: string): string;
-    }
-
-    namespace SendToRouteRequest {
-        /** Properties of a SendToRouteRequest. */
-        interface $Properties {
-            /** SendToRouteRequest payment_hash */
-            payment_hash?: Uint8Array | null;
-
-            /** SendToRouteRequest payment_hash_string */
-            payment_hash_string?: string | null;
-
-            /** SendToRouteRequest route */
-            route?: lnrpc.Route.$Properties | null;
-
-            /** Unknown fields preserved while decoding when enabled */
-            $unknowns?: Uint8Array[];
-        }
-
-        /** Shape of a SendToRouteRequest. */
-        type $Shape = lnrpc.SendToRouteRequest.$Properties;
     }
 
     /**
@@ -5542,6 +5536,9 @@ export namespace lnrpc {
         /** EstimateFeeRequest coin_selection_strategy. */
         coin_selection_strategy: lnrpc.CoinSelectionStrategy;
 
+        /** EstimateFeeRequest inputs. */
+        inputs: lnrpc.OutPoint.$Properties[];
+
         /**
          * Creates a new EstimateFeeRequest instance using the specified properties.
          * @param [properties] Properties to set
@@ -5659,6 +5656,9 @@ export namespace lnrpc {
             /** EstimateFeeRequest coin_selection_strategy */
             coin_selection_strategy?: lnrpc.CoinSelectionStrategy | null;
 
+            /** EstimateFeeRequest inputs */
+            inputs?: lnrpc.OutPoint.$Properties[] | null;
+
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
@@ -5693,6 +5693,9 @@ export namespace lnrpc {
 
         /** EstimateFeeResponse sat_per_vbyte. */
         sat_per_vbyte: Long;
+
+        /** EstimateFeeResponse inputs. */
+        inputs: lnrpc.OutPoint.$Properties[];
 
         /**
          * Creates a new EstimateFeeResponse instance using the specified properties.
@@ -5804,6 +5807,9 @@ export namespace lnrpc {
 
             /** EstimateFeeResponse sat_per_vbyte */
             sat_per_vbyte?: Long | null;
+
+            /** EstimateFeeResponse inputs */
+            inputs?: lnrpc.OutPoint.$Properties[] | null;
 
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
@@ -8304,6 +8310,12 @@ export namespace lnrpc {
 
         /** SCRIPT_ENFORCED_LEASE value */
         SCRIPT_ENFORCED_LEASE = 4,
+
+        /** TAPROOT value */
+        TAPROOT = 7,
+
+        /** SIMPLE_TAPROOT_FINAL value */
+        SIMPLE_TAPROOT_FINAL = 7,
 
         /** SIMPLE_TAPROOT value */
         SIMPLE_TAPROOT = 5,
@@ -11290,6 +11302,21 @@ export namespace lnrpc {
         type $Shape = lnrpc.GetInfoRequest.$Properties;
     }
 
+    /** GraphCacheStatus enum. */
+    enum GraphCacheStatus {
+        /** GRAPH_CACHE_STATUS_DISABLED value */
+        GRAPH_CACHE_STATUS_DISABLED = 0,
+
+        /** GRAPH_CACHE_STATUS_LOADING value */
+        GRAPH_CACHE_STATUS_LOADING = 1,
+
+        /** GRAPH_CACHE_STATUS_LOADED value */
+        GRAPH_CACHE_STATUS_LOADED = 2,
+
+        /** GRAPH_CACHE_STATUS_FAILED value */
+        GRAPH_CACHE_STATUS_FAILED = 3
+    }
+
     /**
      * Properties of a GetInfoResponse.
      * @deprecated Use lnrpc.GetInfoResponse.$Properties instead.
@@ -11366,6 +11393,12 @@ export namespace lnrpc {
 
         /** GetInfoResponse store_final_htlc_resolutions. */
         store_final_htlc_resolutions: boolean;
+
+        /** GetInfoResponse wallet_synced. */
+        wallet_synced: boolean;
+
+        /** GetInfoResponse graph_cache_status. */
+        graph_cache_status: lnrpc.GraphCacheStatus;
 
         /**
          * Creates a new GetInfoResponse instance using the specified properties.
@@ -11527,6 +11560,12 @@ export namespace lnrpc {
             /** GetInfoResponse store_final_htlc_resolutions */
             store_final_htlc_resolutions?: boolean | null;
 
+            /** GetInfoResponse wallet_synced */
+            wallet_synced?: boolean | null;
+
+            /** GetInfoResponse graph_cache_status */
+            graph_cache_status?: lnrpc.GraphCacheStatus | null;
+
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
@@ -11552,6 +11591,9 @@ export namespace lnrpc {
 
         /** Unknown fields preserved while decoding when enabled */
         $unknowns?: Uint8Array[];
+
+        /** GetDebugInfoRequest include_log. */
+        include_log: boolean;
 
         /**
          * Creates a new GetDebugInfoRequest instance using the specified properties.
@@ -11655,6 +11697,9 @@ export namespace lnrpc {
     namespace GetDebugInfoRequest {
         /** Properties of a GetDebugInfoRequest. */
         interface $Properties {
+            /** GetDebugInfoRequest include_log */
+            include_log?: boolean | null;
+
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
@@ -16913,6 +16958,12 @@ export namespace lnrpc {
             /** WaitingCloseChannel closing_tx_hex. */
             closing_tx_hex: string;
 
+            /** WaitingCloseChannel blocks_til_close_confirmed. */
+            blocks_til_close_confirmed: number;
+
+            /** WaitingCloseChannel close_height. */
+            close_height: number;
+
             /**
              * Creates a new WaitingCloseChannel instance using the specified properties.
              * @param [properties] Properties to set
@@ -17032,6 +17083,12 @@ export namespace lnrpc {
 
                 /** WaitingCloseChannel closing_tx_hex */
                 closing_tx_hex?: string | null;
+
+                /** WaitingCloseChannel blocks_til_close_confirmed */
+                blocks_til_close_confirmed?: number | null;
+
+                /** WaitingCloseChannel close_height */
+                close_height?: number | null;
 
                 /** Unknown fields preserved while decoding when enabled */
                 $unknowns?: Uint8Array[];
@@ -17685,6 +17742,140 @@ export namespace lnrpc {
     }
 
     /**
+     * Properties of a ChannelCommitUpdate.
+     * @deprecated Use lnrpc.ChannelCommitUpdate.$Properties instead.
+     */
+    interface IChannelCommitUpdate
+        extends lnrpc.ChannelCommitUpdate.$Properties {}
+
+    /** Represents a ChannelCommitUpdate. */
+    class ChannelCommitUpdate {
+        /**
+         * Constructs a new ChannelCommitUpdate.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: lnrpc.ChannelCommitUpdate.$Properties);
+
+        /** Unknown fields preserved while decoding when enabled */
+        $unknowns?: Uint8Array[];
+
+        /** ChannelCommitUpdate channel. */
+        channel?: lnrpc.Channel.$Properties | null;
+
+        /**
+         * Creates a new ChannelCommitUpdate instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns ChannelCommitUpdate instance
+         */
+        static create(
+            properties: lnrpc.ChannelCommitUpdate.$Shape
+        ): lnrpc.ChannelCommitUpdate & lnrpc.ChannelCommitUpdate.$Shape;
+        static create(
+            properties?: lnrpc.ChannelCommitUpdate.$Properties
+        ): lnrpc.ChannelCommitUpdate;
+
+        /**
+         * Encodes the specified ChannelCommitUpdate message. Does not implicitly {@link lnrpc.ChannelCommitUpdate.verify|verify} messages.
+         * @param message ChannelCommitUpdate message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encode(
+            message: lnrpc.ChannelCommitUpdate.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified ChannelCommitUpdate message, length delimited. Does not implicitly {@link lnrpc.ChannelCommitUpdate.verify|verify} messages.
+         * @param message ChannelCommitUpdate message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encodeDelimited(
+            message: lnrpc.ChannelCommitUpdate.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a ChannelCommitUpdate message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns {lnrpc.ChannelCommitUpdate & lnrpc.ChannelCommitUpdate.$Shape} ChannelCommitUpdate
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): lnrpc.ChannelCommitUpdate & lnrpc.ChannelCommitUpdate.$Shape;
+
+        /**
+         * Decodes a ChannelCommitUpdate message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns {lnrpc.ChannelCommitUpdate & lnrpc.ChannelCommitUpdate.$Shape} ChannelCommitUpdate
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): lnrpc.ChannelCommitUpdate & lnrpc.ChannelCommitUpdate.$Shape;
+
+        /**
+         * Verifies a ChannelCommitUpdate message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a ChannelCommitUpdate message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns ChannelCommitUpdate
+         */
+        static fromObject(object: {
+            [k: string]: any;
+        }): lnrpc.ChannelCommitUpdate;
+
+        /**
+         * Creates a plain object from a ChannelCommitUpdate message. Also converts values to other types if specified.
+         * @param message ChannelCommitUpdate
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        static toObject(
+            message: lnrpc.ChannelCommitUpdate,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this ChannelCommitUpdate to JSON.
+         * @returns JSON object
+         */
+        toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the type url for ChannelCommitUpdate
+         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns The type url
+         */
+        static getTypeUrl(prefix?: string): string;
+    }
+
+    namespace ChannelCommitUpdate {
+        /** Properties of a ChannelCommitUpdate. */
+        interface $Properties {
+            /** ChannelCommitUpdate channel */
+            channel?: lnrpc.Channel.$Properties | null;
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+        }
+
+        /** Shape of a ChannelCommitUpdate. */
+        type $Shape = lnrpc.ChannelCommitUpdate.$Properties;
+    }
+
+    /**
      * Properties of a ChannelEventUpdate.
      * @deprecated Use lnrpc.ChannelEventUpdate.$Properties instead.
      */
@@ -17723,6 +17914,9 @@ export namespace lnrpc {
         /** ChannelEventUpdate channel_funding_timeout. */
         channel_funding_timeout?: lnrpc.ChannelPoint.$Properties | null;
 
+        /** ChannelEventUpdate updated_channel. */
+        updated_channel?: lnrpc.ChannelCommitUpdate.$Properties | null;
+
         /** ChannelEventUpdate type. */
         type: lnrpc.ChannelEventUpdate.UpdateType;
 
@@ -17734,7 +17928,8 @@ export namespace lnrpc {
             | 'inactive_channel'
             | 'pending_open_channel'
             | 'fully_resolved_channel'
-            | 'channel_funding_timeout';
+            | 'channel_funding_timeout'
+            | 'updated_channel';
 
         /**
          * Creates a new ChannelEventUpdate instance using the specified properties.
@@ -17859,6 +18054,9 @@ export namespace lnrpc {
             /** ChannelEventUpdate channel_funding_timeout */
             channel_funding_timeout?: lnrpc.ChannelPoint.$Properties | null;
 
+            /** ChannelEventUpdate updated_channel */
+            updated_channel?: lnrpc.ChannelCommitUpdate.$Properties | null;
+
             /** ChannelEventUpdate type */
             type?: lnrpc.ChannelEventUpdate.UpdateType | null;
 
@@ -17870,7 +18068,8 @@ export namespace lnrpc {
                 | 'inactive_channel'
                 | 'pending_open_channel'
                 | 'fully_resolved_channel'
-                | 'channel_funding_timeout';
+                | 'channel_funding_timeout'
+                | 'updated_channel';
 
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
@@ -17885,6 +18084,7 @@ export namespace lnrpc {
             pending_open_channel?: lnrpc.PendingUpdate.$Shape | null;
             fully_resolved_channel?: lnrpc.ChannelPoint.$Shape | null;
             channel_funding_timeout?: lnrpc.ChannelPoint.$Shape | null;
+            updated_channel?: lnrpc.ChannelCommitUpdate.$Shape | null;
             type?: lnrpc.ChannelEventUpdate.UpdateType | null;
             $unknowns?: Uint8Array[];
         } & (
@@ -17897,6 +18097,7 @@ export namespace lnrpc {
                   pending_open_channel?: null;
                   fully_resolved_channel?: null;
                   channel_funding_timeout?: null;
+                  updated_channel?: null;
               }
             | {
                   channel?: 'open_channel';
@@ -17907,6 +18108,7 @@ export namespace lnrpc {
                   pending_open_channel?: null;
                   fully_resolved_channel?: null;
                   channel_funding_timeout?: null;
+                  updated_channel?: null;
               }
             | {
                   channel?: 'closed_channel';
@@ -17917,6 +18119,7 @@ export namespace lnrpc {
                   pending_open_channel?: null;
                   fully_resolved_channel?: null;
                   channel_funding_timeout?: null;
+                  updated_channel?: null;
               }
             | {
                   channel?: 'active_channel';
@@ -17927,6 +18130,7 @@ export namespace lnrpc {
                   pending_open_channel?: null;
                   fully_resolved_channel?: null;
                   channel_funding_timeout?: null;
+                  updated_channel?: null;
               }
             | {
                   channel?: 'inactive_channel';
@@ -17937,6 +18141,7 @@ export namespace lnrpc {
                   pending_open_channel?: null;
                   fully_resolved_channel?: null;
                   channel_funding_timeout?: null;
+                  updated_channel?: null;
               }
             | {
                   channel?: 'pending_open_channel';
@@ -17947,6 +18152,7 @@ export namespace lnrpc {
                   pending_open_channel: lnrpc.PendingUpdate.$Shape;
                   fully_resolved_channel?: null;
                   channel_funding_timeout?: null;
+                  updated_channel?: null;
               }
             | {
                   channel?: 'fully_resolved_channel';
@@ -17957,6 +18163,7 @@ export namespace lnrpc {
                   pending_open_channel?: null;
                   fully_resolved_channel: lnrpc.ChannelPoint.$Shape;
                   channel_funding_timeout?: null;
+                  updated_channel?: null;
               }
             | {
                   channel?: 'channel_funding_timeout';
@@ -17967,6 +18174,18 @@ export namespace lnrpc {
                   pending_open_channel?: null;
                   fully_resolved_channel?: null;
                   channel_funding_timeout: lnrpc.ChannelPoint.$Shape;
+                  updated_channel?: null;
+              }
+            | {
+                  channel?: 'updated_channel';
+                  open_channel?: null;
+                  closed_channel?: null;
+                  active_channel?: null;
+                  inactive_channel?: null;
+                  pending_open_channel?: null;
+                  fully_resolved_channel?: null;
+                  channel_funding_timeout?: null;
+                  updated_channel: lnrpc.ChannelCommitUpdate.$Shape;
               }
         );
 
@@ -17991,7 +18210,10 @@ export namespace lnrpc {
             FULLY_RESOLVED_CHANNEL = 5,
 
             /** CHANNEL_FUNDING_TIMEOUT value */
-            CHANNEL_FUNDING_TIMEOUT = 6
+            CHANNEL_FUNDING_TIMEOUT = 6,
+
+            /** CHANNEL_UPDATE value */
+            CHANNEL_UPDATE = 7
         }
     }
 
@@ -18942,9 +19164,6 @@ export namespace lnrpc {
         /** QueryRoutesRequest dest_custom_records. */
         dest_custom_records: { [k: string]: Uint8Array };
 
-        /** QueryRoutesRequest outgoing_chan_id. */
-        outgoing_chan_id: Long;
-
         /** QueryRoutesRequest last_hop_pubkey. */
         last_hop_pubkey: Uint8Array;
 
@@ -19101,9 +19320,6 @@ export namespace lnrpc {
             /** QueryRoutesRequest dest_custom_records */
             dest_custom_records?: { [k: string]: Uint8Array } | null;
 
-            /** QueryRoutesRequest outgoing_chan_id */
-            outgoing_chan_id?: Long | null;
-
             /** QueryRoutesRequest last_hop_pubkey */
             last_hop_pubkey?: Uint8Array | null;
 
@@ -19142,7 +19358,6 @@ export namespace lnrpc {
             ignored_pairs?: lnrpc.NodePair.$Shape[] | null;
             cltv_limit?: number | null;
             dest_custom_records?: { [k: string]: Uint8Array } | null;
-            outgoing_chan_id?: Long | null;
             last_hop_pubkey?: Uint8Array | null;
             route_hints?: lnrpc.RouteHint.$Shape[] | null;
             blinded_payment_paths?: lnrpc.BlindedPaymentPath.$Shape[] | null;
@@ -26874,6 +27089,9 @@ export namespace lnrpc {
         /** ListPaymentsRequest creation_date_end. */
         creation_date_end: Long;
 
+        /** ListPaymentsRequest omit_hops. */
+        omit_hops: boolean;
+
         /**
          * Creates a new ListPaymentsRequest instance using the specified properties.
          * @param [properties] Properties to set
@@ -26996,6 +27214,9 @@ export namespace lnrpc {
 
             /** ListPaymentsRequest creation_date_end */
             creation_date_end?: Long | null;
+
+            /** ListPaymentsRequest omit_hops */
+            omit_hops?: boolean | null;
 
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
@@ -44944,9 +45165,6 @@ export namespace routerrpc {
         /** Calls EstimateRouteFee. */
         estimateRouteFee: routerrpc.Router.EstimateRouteFee;
 
-        /** Calls SendToRoute. */
-        sendToRoute: routerrpc.Router.SendToRoute;
-
         /** Calls SendToRouteV2. */
         sendToRouteV2: routerrpc.Router.SendToRouteV2;
 
@@ -44974,12 +45192,6 @@ export namespace routerrpc {
         /** Calls SubscribeHtlcEvents. */
         subscribeHtlcEvents: routerrpc.Router.SubscribeHtlcEvents;
 
-        /** Calls SendPayment. */
-        sendPayment: routerrpc.Router.SendPayment;
-
-        /** Calls TrackPayment. */
-        trackPayment: routerrpc.Router.TrackPayment;
-
         /**
          * HtlcInterceptor dispatches a bi-directional streaming RPC in which
          * Forwarded HTLC requests are sent to the client and the client responds with
@@ -45000,6 +45212,9 @@ export namespace routerrpc {
 
         /** Calls XFindBaseLocalChanAlias. */
         xFindBaseLocalChanAlias: routerrpc.Router.XFindBaseLocalChanAlias;
+
+        /** Calls DeleteForwardingHistory. */
+        deleteForwardingHistory: routerrpc.Router.DeleteForwardingHistory;
     }
 
     namespace Router {
@@ -45101,33 +45316,6 @@ export namespace routerrpc {
             readonly path: '/routerrpc.Router/EstimateRouteFee';
             readonly requestType: 'RouteFeeRequest';
             readonly responseType: 'RouteFeeResponse';
-            readonly requestStream: undefined;
-            readonly responseStream: undefined;
-        };
-
-        /**
-         * Callback as used by {@link routerrpc.Router#sendToRoute}.
-         * @param error Error, if any
-         * @param [response] SendToRouteResponse
-         */
-        type SendToRouteCallback = (
-            error: Error | null,
-            response?: routerrpc.SendToRouteResponse
-        ) => void;
-
-        /** Calls SendToRoute. */
-        type SendToRoute = {
-            (
-                request: routerrpc.ISendToRouteRequest,
-                callback: routerrpc.Router.SendToRouteCallback
-            ): void;
-            (
-                request: routerrpc.ISendToRouteRequest
-            ): Promise<routerrpc.SendToRouteResponse>;
-            readonly name: 'SendToRoute';
-            readonly path: '/routerrpc.Router/SendToRoute';
-            readonly requestType: 'SendToRouteRequest';
-            readonly responseType: 'SendToRouteResponse';
             readonly requestStream: undefined;
             readonly responseStream: undefined;
         };
@@ -45376,60 +45564,6 @@ export namespace routerrpc {
         };
 
         /**
-         * Callback as used by {@link routerrpc.Router#sendPayment}.
-         * @param error Error, if any
-         * @param [response] PaymentStatus
-         */
-        type SendPaymentCallback = (
-            error: Error | null,
-            response?: routerrpc.PaymentStatus
-        ) => void;
-
-        /** Calls SendPayment. */
-        type SendPayment = {
-            (
-                request: routerrpc.ISendPaymentRequest,
-                callback: routerrpc.Router.SendPaymentCallback
-            ): void;
-            (
-                request: routerrpc.ISendPaymentRequest
-            ): Promise<routerrpc.PaymentStatus>;
-            readonly name: 'SendPayment';
-            readonly path: '/routerrpc.Router/SendPayment';
-            readonly requestType: 'SendPaymentRequest';
-            readonly responseType: 'PaymentStatus';
-            readonly requestStream: undefined;
-            readonly responseStream: true;
-        };
-
-        /**
-         * Callback as used by {@link routerrpc.Router#trackPayment}.
-         * @param error Error, if any
-         * @param [response] PaymentStatus
-         */
-        type TrackPaymentCallback = (
-            error: Error | null,
-            response?: routerrpc.PaymentStatus
-        ) => void;
-
-        /** Calls TrackPayment. */
-        type TrackPayment = {
-            (
-                request: routerrpc.ITrackPaymentRequest,
-                callback: routerrpc.Router.TrackPaymentCallback
-            ): void;
-            (
-                request: routerrpc.ITrackPaymentRequest
-            ): Promise<routerrpc.PaymentStatus>;
-            readonly name: 'TrackPayment';
-            readonly path: '/routerrpc.Router/TrackPayment';
-            readonly requestType: 'TrackPaymentRequest';
-            readonly responseType: 'PaymentStatus';
-            readonly requestStream: undefined;
-            readonly responseStream: true;
-        };
-
-        /**
          * Callback as used by {@link routerrpc.Router#htlcInterceptor}.
          * @param error Error, if any
          * @param [response] ForwardHtlcInterceptRequest
@@ -45569,6 +45703,33 @@ export namespace routerrpc {
             readonly requestStream: undefined;
             readonly responseStream: undefined;
         };
+
+        /**
+         * Callback as used by {@link routerrpc.Router#deleteForwardingHistory}.
+         * @param error Error, if any
+         * @param [response] DeleteForwardingHistoryResponse
+         */
+        type DeleteForwardingHistoryCallback = (
+            error: Error | null,
+            response?: routerrpc.DeleteForwardingHistoryResponse
+        ) => void;
+
+        /** Calls DeleteForwardingHistory. */
+        type DeleteForwardingHistory = {
+            (
+                request: routerrpc.IDeleteForwardingHistoryRequest,
+                callback: routerrpc.Router.DeleteForwardingHistoryCallback
+            ): void;
+            (
+                request: routerrpc.IDeleteForwardingHistoryRequest
+            ): Promise<routerrpc.DeleteForwardingHistoryResponse>;
+            readonly name: 'DeleteForwardingHistory';
+            readonly path: '/routerrpc.Router/DeleteForwardingHistory';
+            readonly requestType: 'DeleteForwardingHistoryRequest';
+            readonly responseType: 'DeleteForwardingHistoryResponse';
+            readonly requestStream: undefined;
+            readonly responseStream: undefined;
+        };
     }
 
     /**
@@ -45609,9 +45770,6 @@ export namespace routerrpc {
 
         /** SendPaymentRequest fee_limit_sat. */
         fee_limit_sat: Long;
-
-        /** SendPaymentRequest outgoing_chan_id. */
-        outgoing_chan_id: Long;
 
         /** SendPaymentRequest cltv_limit. */
         cltv_limit: number;
@@ -45786,9 +45944,6 @@ export namespace routerrpc {
 
             /** SendPaymentRequest fee_limit_sat */
             fee_limit_sat?: Long | null;
-
-            /** SendPaymentRequest outgoing_chan_id */
-            outgoing_chan_id?: Long | null;
 
             /** SendPaymentRequest cltv_limit */
             cltv_limit?: number | null;
@@ -46573,146 +46728,6 @@ export namespace routerrpc {
 
         /** Shape of a SendToRouteRequest. */
         type $Shape = routerrpc.SendToRouteRequest.$Properties;
-    }
-
-    /**
-     * Properties of a SendToRouteResponse.
-     * @deprecated Use routerrpc.SendToRouteResponse.$Properties instead.
-     */
-    interface ISendToRouteResponse
-        extends routerrpc.SendToRouteResponse.$Properties {}
-
-    /** Represents a SendToRouteResponse. */
-    class SendToRouteResponse {
-        /**
-         * Constructs a new SendToRouteResponse.
-         * @param [properties] Properties to set
-         */
-        constructor(properties?: routerrpc.SendToRouteResponse.$Properties);
-
-        /** Unknown fields preserved while decoding when enabled */
-        $unknowns?: Uint8Array[];
-
-        /** SendToRouteResponse preimage. */
-        preimage: Uint8Array;
-
-        /** SendToRouteResponse failure. */
-        failure?: lnrpc.Failure.$Properties | null;
-
-        /**
-         * Creates a new SendToRouteResponse instance using the specified properties.
-         * @param [properties] Properties to set
-         * @returns SendToRouteResponse instance
-         */
-        static create(
-            properties: routerrpc.SendToRouteResponse.$Shape
-        ): routerrpc.SendToRouteResponse & routerrpc.SendToRouteResponse.$Shape;
-        static create(
-            properties?: routerrpc.SendToRouteResponse.$Properties
-        ): routerrpc.SendToRouteResponse;
-
-        /**
-         * Encodes the specified SendToRouteResponse message. Does not implicitly {@link routerrpc.SendToRouteResponse.verify|verify} messages.
-         * @param message SendToRouteResponse message or plain object to encode
-         * @param [writer] Writer to encode to
-         * @returns Writer
-         */
-        static encode(
-            message: routerrpc.SendToRouteResponse.$Properties,
-            writer?: $protobuf.Writer
-        ): $protobuf.Writer;
-
-        /**
-         * Encodes the specified SendToRouteResponse message, length delimited. Does not implicitly {@link routerrpc.SendToRouteResponse.verify|verify} messages.
-         * @param message SendToRouteResponse message or plain object to encode
-         * @param [writer] Writer to encode to
-         * @returns Writer
-         */
-        static encodeDelimited(
-            message: routerrpc.SendToRouteResponse.$Properties,
-            writer?: $protobuf.Writer
-        ): $protobuf.Writer;
-
-        /**
-         * Decodes a SendToRouteResponse message from the specified reader or buffer.
-         * @param reader Reader or buffer to decode from
-         * @param [length] Message length if known beforehand
-         * @returns {routerrpc.SendToRouteResponse & routerrpc.SendToRouteResponse.$Shape} SendToRouteResponse
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        static decode(
-            reader: $protobuf.Reader | Uint8Array,
-            length?: number
-        ): routerrpc.SendToRouteResponse & routerrpc.SendToRouteResponse.$Shape;
-
-        /**
-         * Decodes a SendToRouteResponse message from the specified reader or buffer, length delimited.
-         * @param reader Reader or buffer to decode from
-         * @returns {routerrpc.SendToRouteResponse & routerrpc.SendToRouteResponse.$Shape} SendToRouteResponse
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        static decodeDelimited(
-            reader: $protobuf.Reader | Uint8Array
-        ): routerrpc.SendToRouteResponse & routerrpc.SendToRouteResponse.$Shape;
-
-        /**
-         * Verifies a SendToRouteResponse message.
-         * @param message Plain object to verify
-         * @returns `null` if valid, otherwise the reason why it is not
-         */
-        static verify(message: { [k: string]: any }): string | null;
-
-        /**
-         * Creates a SendToRouteResponse message from a plain object. Also converts values to their respective internal types.
-         * @param object Plain object
-         * @returns SendToRouteResponse
-         */
-        static fromObject(object: {
-            [k: string]: any;
-        }): routerrpc.SendToRouteResponse;
-
-        /**
-         * Creates a plain object from a SendToRouteResponse message. Also converts values to other types if specified.
-         * @param message SendToRouteResponse
-         * @param [options] Conversion options
-         * @returns Plain object
-         */
-        static toObject(
-            message: routerrpc.SendToRouteResponse,
-            options?: $protobuf.IConversionOptions
-        ): { [k: string]: any };
-
-        /**
-         * Converts this SendToRouteResponse to JSON.
-         * @returns JSON object
-         */
-        toJSON(): { [k: string]: any };
-
-        /**
-         * Gets the type url for SendToRouteResponse
-         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
-         * @returns The type url
-         */
-        static getTypeUrl(prefix?: string): string;
-    }
-
-    namespace SendToRouteResponse {
-        /** Properties of a SendToRouteResponse. */
-        interface $Properties {
-            /** SendToRouteResponse preimage */
-            preimage?: Uint8Array | null;
-
-            /** SendToRouteResponse failure */
-            failure?: lnrpc.Failure.$Properties | null;
-
-            /** Unknown fields preserved while decoding when enabled */
-            $unknowns?: Uint8Array[];
-        }
-
-        /** Shape of a SendToRouteResponse. */
-        type $Shape = routerrpc.SendToRouteResponse.$Properties;
     }
 
     /**
@@ -50957,176 +50972,25 @@ export namespace routerrpc {
         MPP_IN_PROGRESS = 21,
 
         /** CIRCULAR_ROUTE value */
-        CIRCULAR_ROUTE = 22
-    }
+        CIRCULAR_ROUTE = 22,
 
-    /** PaymentState enum. */
-    enum PaymentState {
-        /** IN_FLIGHT value */
-        IN_FLIGHT = 0,
+        /** INVOICE_ALREADY_SETTLED value */
+        INVOICE_ALREADY_SETTLED = 23,
 
-        /** SUCCEEDED value */
-        SUCCEEDED = 1,
+        /** HTLC_INVOICE_TYPE_MISMATCH value */
+        HTLC_INVOICE_TYPE_MISMATCH = 24,
 
-        /** FAILED_TIMEOUT value */
-        FAILED_TIMEOUT = 2,
+        /** AMP_ERROR value */
+        AMP_ERROR = 25,
 
-        /** FAILED_NO_ROUTE value */
-        FAILED_NO_ROUTE = 3,
+        /** AMP_RECONSTRUCTION value */
+        AMP_RECONSTRUCTION = 26,
 
-        /** FAILED_ERROR value */
-        FAILED_ERROR = 4,
+        /** EXTERNAL_VALIDATION_FAILED value */
+        EXTERNAL_VALIDATION_FAILED = 27,
 
-        /** FAILED_INCORRECT_PAYMENT_DETAILS value */
-        FAILED_INCORRECT_PAYMENT_DETAILS = 5,
-
-        /** FAILED_INSUFFICIENT_BALANCE value */
-        FAILED_INSUFFICIENT_BALANCE = 6
-    }
-
-    /**
-     * Properties of a PaymentStatus.
-     * @deprecated Use routerrpc.PaymentStatus.$Properties instead.
-     */
-    interface IPaymentStatus extends routerrpc.PaymentStatus.$Properties {}
-
-    /** Represents a PaymentStatus. */
-    class PaymentStatus {
-        /**
-         * Constructs a new PaymentStatus.
-         * @param [properties] Properties to set
-         */
-        constructor(properties?: routerrpc.PaymentStatus.$Properties);
-
-        /** Unknown fields preserved while decoding when enabled */
-        $unknowns?: Uint8Array[];
-
-        /** PaymentStatus state. */
-        state: routerrpc.PaymentState;
-
-        /** PaymentStatus preimage. */
-        preimage: Uint8Array;
-
-        /** PaymentStatus htlcs. */
-        htlcs: lnrpc.HTLCAttempt.$Properties[];
-
-        /**
-         * Creates a new PaymentStatus instance using the specified properties.
-         * @param [properties] Properties to set
-         * @returns PaymentStatus instance
-         */
-        static create(
-            properties: routerrpc.PaymentStatus.$Shape
-        ): routerrpc.PaymentStatus & routerrpc.PaymentStatus.$Shape;
-        static create(
-            properties?: routerrpc.PaymentStatus.$Properties
-        ): routerrpc.PaymentStatus;
-
-        /**
-         * Encodes the specified PaymentStatus message. Does not implicitly {@link routerrpc.PaymentStatus.verify|verify} messages.
-         * @param message PaymentStatus message or plain object to encode
-         * @param [writer] Writer to encode to
-         * @returns Writer
-         */
-        static encode(
-            message: routerrpc.PaymentStatus.$Properties,
-            writer?: $protobuf.Writer
-        ): $protobuf.Writer;
-
-        /**
-         * Encodes the specified PaymentStatus message, length delimited. Does not implicitly {@link routerrpc.PaymentStatus.verify|verify} messages.
-         * @param message PaymentStatus message or plain object to encode
-         * @param [writer] Writer to encode to
-         * @returns Writer
-         */
-        static encodeDelimited(
-            message: routerrpc.PaymentStatus.$Properties,
-            writer?: $protobuf.Writer
-        ): $protobuf.Writer;
-
-        /**
-         * Decodes a PaymentStatus message from the specified reader or buffer.
-         * @param reader Reader or buffer to decode from
-         * @param [length] Message length if known beforehand
-         * @returns {routerrpc.PaymentStatus & routerrpc.PaymentStatus.$Shape} PaymentStatus
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        static decode(
-            reader: $protobuf.Reader | Uint8Array,
-            length?: number
-        ): routerrpc.PaymentStatus & routerrpc.PaymentStatus.$Shape;
-
-        /**
-         * Decodes a PaymentStatus message from the specified reader or buffer, length delimited.
-         * @param reader Reader or buffer to decode from
-         * @returns {routerrpc.PaymentStatus & routerrpc.PaymentStatus.$Shape} PaymentStatus
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        static decodeDelimited(
-            reader: $protobuf.Reader | Uint8Array
-        ): routerrpc.PaymentStatus & routerrpc.PaymentStatus.$Shape;
-
-        /**
-         * Verifies a PaymentStatus message.
-         * @param message Plain object to verify
-         * @returns `null` if valid, otherwise the reason why it is not
-         */
-        static verify(message: { [k: string]: any }): string | null;
-
-        /**
-         * Creates a PaymentStatus message from a plain object. Also converts values to their respective internal types.
-         * @param object Plain object
-         * @returns PaymentStatus
-         */
-        static fromObject(object: {
-            [k: string]: any;
-        }): routerrpc.PaymentStatus;
-
-        /**
-         * Creates a plain object from a PaymentStatus message. Also converts values to other types if specified.
-         * @param message PaymentStatus
-         * @param [options] Conversion options
-         * @returns Plain object
-         */
-        static toObject(
-            message: routerrpc.PaymentStatus,
-            options?: $protobuf.IConversionOptions
-        ): { [k: string]: any };
-
-        /**
-         * Converts this PaymentStatus to JSON.
-         * @returns JSON object
-         */
-        toJSON(): { [k: string]: any };
-
-        /**
-         * Gets the type url for PaymentStatus
-         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
-         * @returns The type url
-         */
-        static getTypeUrl(prefix?: string): string;
-    }
-
-    namespace PaymentStatus {
-        /** Properties of a PaymentStatus. */
-        interface $Properties {
-            /** PaymentStatus state */
-            state?: routerrpc.PaymentState | null;
-
-            /** PaymentStatus preimage */
-            preimage?: Uint8Array | null;
-
-            /** PaymentStatus htlcs */
-            htlcs?: lnrpc.HTLCAttempt.$Properties[] | null;
-
-            /** Unknown fields preserved while decoding when enabled */
-            $unknowns?: Uint8Array[];
-        }
-
-        /** Shape of a PaymentStatus. */
-        type $Shape = routerrpc.PaymentStatus.$Properties;
+        /** INVOICE_INTERCEPTOR_ERROR value */
+        INVOICE_INTERCEPTOR_ERROR = 28
     }
 
     /**
@@ -51319,6 +51183,9 @@ export namespace routerrpc {
         /** ForwardHtlcInterceptRequest in_wire_custom_records. */
         in_wire_custom_records: { [k: string]: Uint8Array };
 
+        /** ForwardHtlcInterceptRequest outgoing_requested_node_id. */
+        outgoing_requested_node_id: Uint8Array;
+
         /**
          * Creates a new ForwardHtlcInterceptRequest instance using the specified properties.
          * @param [properties] Properties to set
@@ -51457,6 +51324,9 @@ export namespace routerrpc {
             /** ForwardHtlcInterceptRequest in_wire_custom_records */
             in_wire_custom_records?: { [k: string]: Uint8Array } | null;
 
+            /** ForwardHtlcInterceptRequest outgoing_requested_node_id */
+            outgoing_requested_node_id?: Uint8Array | null;
+
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
@@ -51480,6 +51350,14 @@ export namespace routerrpc {
      * field modifications.
      * - `Reject`: Fail the htlc backwards.
      * - `Settle`: Settle this htlc with a given preimage.
+     *
+     * Once the incoming channel has force-closed and the HTLC is being resolved
+     * on-chain (see auto_fail_height), only `Settle` has any effect. The HTLC can no
+     * longer be resumed or failed back off-chain, so `Resume`, `ResumeModified`, and
+     * `Fail` return a stream-terminating error. The HTLC stays held until it is
+     * settled with a preimage, the on-chain resolver completes, or it expires
+     * on-chain. Clients should reconnect to receive any held HTLCs that remain
+     * unresolved.
      */
     class ForwardHtlcInterceptResponse {
         /**
@@ -52782,6 +52660,328 @@ export namespace routerrpc {
         /** Shape of a FindBaseAliasResponse. */
         type $Shape = routerrpc.FindBaseAliasResponse.$Properties;
     }
+
+    /**
+     * Properties of a DeleteForwardingHistoryRequest.
+     * @deprecated Use routerrpc.DeleteForwardingHistoryRequest.$Properties instead.
+     */
+    interface IDeleteForwardingHistoryRequest
+        extends routerrpc.DeleteForwardingHistoryRequest.$Properties {}
+
+    /** Represents a DeleteForwardingHistoryRequest. */
+    class DeleteForwardingHistoryRequest {
+        /**
+         * Constructs a new DeleteForwardingHistoryRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(
+            properties?: routerrpc.DeleteForwardingHistoryRequest.$Properties
+        );
+
+        /** Unknown fields preserved while decoding when enabled */
+        $unknowns?: Uint8Array[];
+
+        /** DeleteForwardingHistoryRequest delete_before_time. */
+        delete_before_time?: Long | null;
+
+        /** DeleteForwardingHistoryRequest delete_before_duration. */
+        delete_before_duration?: string | null;
+
+        /** DeleteForwardingHistoryRequest time_spec. */
+        time_spec?: 'delete_before_time' | 'delete_before_duration';
+
+        /**
+         * Creates a new DeleteForwardingHistoryRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns DeleteForwardingHistoryRequest instance
+         */
+        static create(
+            properties: routerrpc.DeleteForwardingHistoryRequest.$Shape
+        ): routerrpc.DeleteForwardingHistoryRequest &
+            routerrpc.DeleteForwardingHistoryRequest.$Shape;
+        static create(
+            properties?: routerrpc.DeleteForwardingHistoryRequest.$Properties
+        ): routerrpc.DeleteForwardingHistoryRequest;
+
+        /**
+         * Encodes the specified DeleteForwardingHistoryRequest message. Does not implicitly {@link routerrpc.DeleteForwardingHistoryRequest.verify|verify} messages.
+         * @param message DeleteForwardingHistoryRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encode(
+            message: routerrpc.DeleteForwardingHistoryRequest.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified DeleteForwardingHistoryRequest message, length delimited. Does not implicitly {@link routerrpc.DeleteForwardingHistoryRequest.verify|verify} messages.
+         * @param message DeleteForwardingHistoryRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encodeDelimited(
+            message: routerrpc.DeleteForwardingHistoryRequest.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a DeleteForwardingHistoryRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns {routerrpc.DeleteForwardingHistoryRequest & routerrpc.DeleteForwardingHistoryRequest.$Shape} DeleteForwardingHistoryRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): routerrpc.DeleteForwardingHistoryRequest &
+            routerrpc.DeleteForwardingHistoryRequest.$Shape;
+
+        /**
+         * Decodes a DeleteForwardingHistoryRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns {routerrpc.DeleteForwardingHistoryRequest & routerrpc.DeleteForwardingHistoryRequest.$Shape} DeleteForwardingHistoryRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): routerrpc.DeleteForwardingHistoryRequest &
+            routerrpc.DeleteForwardingHistoryRequest.$Shape;
+
+        /**
+         * Verifies a DeleteForwardingHistoryRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a DeleteForwardingHistoryRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns DeleteForwardingHistoryRequest
+         */
+        static fromObject(object: {
+            [k: string]: any;
+        }): routerrpc.DeleteForwardingHistoryRequest;
+
+        /**
+         * Creates a plain object from a DeleteForwardingHistoryRequest message. Also converts values to other types if specified.
+         * @param message DeleteForwardingHistoryRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        static toObject(
+            message: routerrpc.DeleteForwardingHistoryRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this DeleteForwardingHistoryRequest to JSON.
+         * @returns JSON object
+         */
+        toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the type url for DeleteForwardingHistoryRequest
+         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns The type url
+         */
+        static getTypeUrl(prefix?: string): string;
+    }
+
+    namespace DeleteForwardingHistoryRequest {
+        /** Properties of a DeleteForwardingHistoryRequest. */
+        interface $Properties {
+            /** DeleteForwardingHistoryRequest delete_before_time */
+            delete_before_time?: Long | null;
+
+            /** DeleteForwardingHistoryRequest delete_before_duration */
+            delete_before_duration?: string | null;
+
+            /** DeleteForwardingHistoryRequest time_spec */
+            time_spec?: 'delete_before_time' | 'delete_before_duration';
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+        }
+
+        /** Narrowed shape of a DeleteForwardingHistoryRequest. */
+        type $Shape = {
+            delete_before_time?: Long | null;
+            delete_before_duration?: string | null;
+            $unknowns?: Uint8Array[];
+        } & (
+            | {
+                  time_spec?: undefined;
+                  delete_before_time?: null;
+                  delete_before_duration?: null;
+              }
+            | {
+                  time_spec?: 'delete_before_time';
+                  delete_before_time: Long;
+                  delete_before_duration?: null;
+              }
+            | {
+                  time_spec?: 'delete_before_duration';
+                  delete_before_time?: null;
+                  delete_before_duration: string;
+              }
+        );
+    }
+
+    /**
+     * Properties of a DeleteForwardingHistoryResponse.
+     * @deprecated Use routerrpc.DeleteForwardingHistoryResponse.$Properties instead.
+     */
+    interface IDeleteForwardingHistoryResponse
+        extends routerrpc.DeleteForwardingHistoryResponse.$Properties {}
+
+    /** Represents a DeleteForwardingHistoryResponse. */
+    class DeleteForwardingHistoryResponse {
+        /**
+         * Constructs a new DeleteForwardingHistoryResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(
+            properties?: routerrpc.DeleteForwardingHistoryResponse.$Properties
+        );
+
+        /** Unknown fields preserved while decoding when enabled */
+        $unknowns?: Uint8Array[];
+
+        /** DeleteForwardingHistoryResponse events_deleted. */
+        events_deleted: Long;
+
+        /** DeleteForwardingHistoryResponse total_fee_msat. */
+        total_fee_msat: Long;
+
+        /** DeleteForwardingHistoryResponse status. */
+        status: string;
+
+        /**
+         * Creates a new DeleteForwardingHistoryResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns DeleteForwardingHistoryResponse instance
+         */
+        static create(
+            properties: routerrpc.DeleteForwardingHistoryResponse.$Shape
+        ): routerrpc.DeleteForwardingHistoryResponse &
+            routerrpc.DeleteForwardingHistoryResponse.$Shape;
+        static create(
+            properties?: routerrpc.DeleteForwardingHistoryResponse.$Properties
+        ): routerrpc.DeleteForwardingHistoryResponse;
+
+        /**
+         * Encodes the specified DeleteForwardingHistoryResponse message. Does not implicitly {@link routerrpc.DeleteForwardingHistoryResponse.verify|verify} messages.
+         * @param message DeleteForwardingHistoryResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encode(
+            message: routerrpc.DeleteForwardingHistoryResponse.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified DeleteForwardingHistoryResponse message, length delimited. Does not implicitly {@link routerrpc.DeleteForwardingHistoryResponse.verify|verify} messages.
+         * @param message DeleteForwardingHistoryResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encodeDelimited(
+            message: routerrpc.DeleteForwardingHistoryResponse.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a DeleteForwardingHistoryResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns {routerrpc.DeleteForwardingHistoryResponse & routerrpc.DeleteForwardingHistoryResponse.$Shape} DeleteForwardingHistoryResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): routerrpc.DeleteForwardingHistoryResponse &
+            routerrpc.DeleteForwardingHistoryResponse.$Shape;
+
+        /**
+         * Decodes a DeleteForwardingHistoryResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns {routerrpc.DeleteForwardingHistoryResponse & routerrpc.DeleteForwardingHistoryResponse.$Shape} DeleteForwardingHistoryResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): routerrpc.DeleteForwardingHistoryResponse &
+            routerrpc.DeleteForwardingHistoryResponse.$Shape;
+
+        /**
+         * Verifies a DeleteForwardingHistoryResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a DeleteForwardingHistoryResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns DeleteForwardingHistoryResponse
+         */
+        static fromObject(object: {
+            [k: string]: any;
+        }): routerrpc.DeleteForwardingHistoryResponse;
+
+        /**
+         * Creates a plain object from a DeleteForwardingHistoryResponse message. Also converts values to other types if specified.
+         * @param message DeleteForwardingHistoryResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        static toObject(
+            message: routerrpc.DeleteForwardingHistoryResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this DeleteForwardingHistoryResponse to JSON.
+         * @returns JSON object
+         */
+        toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the type url for DeleteForwardingHistoryResponse
+         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns The type url
+         */
+        static getTypeUrl(prefix?: string): string;
+    }
+
+    namespace DeleteForwardingHistoryResponse {
+        /** Properties of a DeleteForwardingHistoryResponse. */
+        interface $Properties {
+            /** DeleteForwardingHistoryResponse events_deleted */
+            events_deleted?: Long | null;
+
+            /** DeleteForwardingHistoryResponse total_fee_msat */
+            total_fee_msat?: Long | null;
+
+            /** DeleteForwardingHistoryResponse status */
+            status?: string | null;
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+        }
+
+        /** Shape of a DeleteForwardingHistoryResponse. */
+        type $Shape = routerrpc.DeleteForwardingHistoryResponse.$Properties;
+    }
 }
 
 /** Namespace signrpc. */
@@ -52836,6 +53036,12 @@ export namespace signrpc {
 
         /** Calls MuSig2RegisterNonces. */
         muSig2RegisterNonces: signrpc.Signer.MuSig2RegisterNonces;
+
+        /** Calls MuSig2RegisterCombinedNonce. */
+        muSig2RegisterCombinedNonce: signrpc.Signer.MuSig2RegisterCombinedNonce;
+
+        /** Calls MuSig2GetCombinedNonce. */
+        muSig2GetCombinedNonce: signrpc.Signer.MuSig2GetCombinedNonce;
 
         /** Calls MuSig2Sign. */
         muSig2Sign: signrpc.Signer.MuSig2Sign;
@@ -53056,6 +53262,60 @@ export namespace signrpc {
             readonly path: '/signrpc.Signer/MuSig2RegisterNonces';
             readonly requestType: 'MuSig2RegisterNoncesRequest';
             readonly responseType: 'MuSig2RegisterNoncesResponse';
+            readonly requestStream: undefined;
+            readonly responseStream: undefined;
+        };
+
+        /**
+         * Callback as used by {@link signrpc.Signer#muSig2RegisterCombinedNonce}.
+         * @param error Error, if any
+         * @param [response] MuSig2RegisterCombinedNonceResponse
+         */
+        type MuSig2RegisterCombinedNonceCallback = (
+            error: Error | null,
+            response?: signrpc.MuSig2RegisterCombinedNonceResponse
+        ) => void;
+
+        /** Calls MuSig2RegisterCombinedNonce. */
+        type MuSig2RegisterCombinedNonce = {
+            (
+                request: signrpc.IMuSig2RegisterCombinedNonceRequest,
+                callback: signrpc.Signer.MuSig2RegisterCombinedNonceCallback
+            ): void;
+            (
+                request: signrpc.IMuSig2RegisterCombinedNonceRequest
+            ): Promise<signrpc.MuSig2RegisterCombinedNonceResponse>;
+            readonly name: 'MuSig2RegisterCombinedNonce';
+            readonly path: '/signrpc.Signer/MuSig2RegisterCombinedNonce';
+            readonly requestType: 'MuSig2RegisterCombinedNonceRequest';
+            readonly responseType: 'MuSig2RegisterCombinedNonceResponse';
+            readonly requestStream: undefined;
+            readonly responseStream: undefined;
+        };
+
+        /**
+         * Callback as used by {@link signrpc.Signer#muSig2GetCombinedNonce}.
+         * @param error Error, if any
+         * @param [response] MuSig2GetCombinedNonceResponse
+         */
+        type MuSig2GetCombinedNonceCallback = (
+            error: Error | null,
+            response?: signrpc.MuSig2GetCombinedNonceResponse
+        ) => void;
+
+        /** Calls MuSig2GetCombinedNonce. */
+        type MuSig2GetCombinedNonce = {
+            (
+                request: signrpc.IMuSig2GetCombinedNonceRequest,
+                callback: signrpc.Signer.MuSig2GetCombinedNonceCallback
+            ): void;
+            (
+                request: signrpc.IMuSig2GetCombinedNonceRequest
+            ): Promise<signrpc.MuSig2GetCombinedNonceResponse>;
+            readonly name: 'MuSig2GetCombinedNonce';
+            readonly path: '/signrpc.Signer/MuSig2GetCombinedNonce';
+            readonly requestType: 'MuSig2GetCombinedNonceRequest';
+            readonly responseType: 'MuSig2GetCombinedNonceResponse';
             readonly requestStream: undefined;
             readonly responseStream: undefined;
         };
@@ -56370,6 +56630,562 @@ export namespace signrpc {
     }
 
     /**
+     * Properties of a MuSig2RegisterCombinedNonceRequest.
+     * @deprecated Use signrpc.MuSig2RegisterCombinedNonceRequest.$Properties instead.
+     */
+    interface IMuSig2RegisterCombinedNonceRequest
+        extends signrpc.MuSig2RegisterCombinedNonceRequest.$Properties {}
+
+    /** Represents a MuSig2RegisterCombinedNonceRequest. */
+    class MuSig2RegisterCombinedNonceRequest {
+        /**
+         * Constructs a new MuSig2RegisterCombinedNonceRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(
+            properties?: signrpc.MuSig2RegisterCombinedNonceRequest.$Properties
+        );
+
+        /** Unknown fields preserved while decoding when enabled */
+        $unknowns?: Uint8Array[];
+
+        /** MuSig2RegisterCombinedNonceRequest session_id. */
+        session_id: Uint8Array;
+
+        /** MuSig2RegisterCombinedNonceRequest combined_public_nonce. */
+        combined_public_nonce: Uint8Array;
+
+        /**
+         * Creates a new MuSig2RegisterCombinedNonceRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns MuSig2RegisterCombinedNonceRequest instance
+         */
+        static create(
+            properties: signrpc.MuSig2RegisterCombinedNonceRequest.$Shape
+        ): signrpc.MuSig2RegisterCombinedNonceRequest &
+            signrpc.MuSig2RegisterCombinedNonceRequest.$Shape;
+        static create(
+            properties?: signrpc.MuSig2RegisterCombinedNonceRequest.$Properties
+        ): signrpc.MuSig2RegisterCombinedNonceRequest;
+
+        /**
+         * Encodes the specified MuSig2RegisterCombinedNonceRequest message. Does not implicitly {@link signrpc.MuSig2RegisterCombinedNonceRequest.verify|verify} messages.
+         * @param message MuSig2RegisterCombinedNonceRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encode(
+            message: signrpc.MuSig2RegisterCombinedNonceRequest.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified MuSig2RegisterCombinedNonceRequest message, length delimited. Does not implicitly {@link signrpc.MuSig2RegisterCombinedNonceRequest.verify|verify} messages.
+         * @param message MuSig2RegisterCombinedNonceRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encodeDelimited(
+            message: signrpc.MuSig2RegisterCombinedNonceRequest.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a MuSig2RegisterCombinedNonceRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns {signrpc.MuSig2RegisterCombinedNonceRequest & signrpc.MuSig2RegisterCombinedNonceRequest.$Shape} MuSig2RegisterCombinedNonceRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): signrpc.MuSig2RegisterCombinedNonceRequest &
+            signrpc.MuSig2RegisterCombinedNonceRequest.$Shape;
+
+        /**
+         * Decodes a MuSig2RegisterCombinedNonceRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns {signrpc.MuSig2RegisterCombinedNonceRequest & signrpc.MuSig2RegisterCombinedNonceRequest.$Shape} MuSig2RegisterCombinedNonceRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): signrpc.MuSig2RegisterCombinedNonceRequest &
+            signrpc.MuSig2RegisterCombinedNonceRequest.$Shape;
+
+        /**
+         * Verifies a MuSig2RegisterCombinedNonceRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a MuSig2RegisterCombinedNonceRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns MuSig2RegisterCombinedNonceRequest
+         */
+        static fromObject(object: {
+            [k: string]: any;
+        }): signrpc.MuSig2RegisterCombinedNonceRequest;
+
+        /**
+         * Creates a plain object from a MuSig2RegisterCombinedNonceRequest message. Also converts values to other types if specified.
+         * @param message MuSig2RegisterCombinedNonceRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        static toObject(
+            message: signrpc.MuSig2RegisterCombinedNonceRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this MuSig2RegisterCombinedNonceRequest to JSON.
+         * @returns JSON object
+         */
+        toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the type url for MuSig2RegisterCombinedNonceRequest
+         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns The type url
+         */
+        static getTypeUrl(prefix?: string): string;
+    }
+
+    namespace MuSig2RegisterCombinedNonceRequest {
+        /** Properties of a MuSig2RegisterCombinedNonceRequest. */
+        interface $Properties {
+            /** MuSig2RegisterCombinedNonceRequest session_id */
+            session_id?: Uint8Array | null;
+
+            /** MuSig2RegisterCombinedNonceRequest combined_public_nonce */
+            combined_public_nonce?: Uint8Array | null;
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+        }
+
+        /** Shape of a MuSig2RegisterCombinedNonceRequest. */
+        type $Shape = signrpc.MuSig2RegisterCombinedNonceRequest.$Properties;
+    }
+
+    /**
+     * Properties of a MuSig2RegisterCombinedNonceResponse.
+     * @deprecated Use signrpc.MuSig2RegisterCombinedNonceResponse.$Properties instead.
+     */
+    interface IMuSig2RegisterCombinedNonceResponse
+        extends signrpc.MuSig2RegisterCombinedNonceResponse.$Properties {}
+
+    /** Represents a MuSig2RegisterCombinedNonceResponse. */
+    class MuSig2RegisterCombinedNonceResponse {
+        /**
+         * Constructs a new MuSig2RegisterCombinedNonceResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(
+            properties?: signrpc.MuSig2RegisterCombinedNonceResponse.$Properties
+        );
+
+        /** Unknown fields preserved while decoding when enabled */
+        $unknowns?: Uint8Array[];
+
+        /**
+         * Creates a new MuSig2RegisterCombinedNonceResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns MuSig2RegisterCombinedNonceResponse instance
+         */
+        static create(
+            properties: signrpc.MuSig2RegisterCombinedNonceResponse.$Shape
+        ): signrpc.MuSig2RegisterCombinedNonceResponse &
+            signrpc.MuSig2RegisterCombinedNonceResponse.$Shape;
+        static create(
+            properties?: signrpc.MuSig2RegisterCombinedNonceResponse.$Properties
+        ): signrpc.MuSig2RegisterCombinedNonceResponse;
+
+        /**
+         * Encodes the specified MuSig2RegisterCombinedNonceResponse message. Does not implicitly {@link signrpc.MuSig2RegisterCombinedNonceResponse.verify|verify} messages.
+         * @param message MuSig2RegisterCombinedNonceResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encode(
+            message: signrpc.MuSig2RegisterCombinedNonceResponse.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified MuSig2RegisterCombinedNonceResponse message, length delimited. Does not implicitly {@link signrpc.MuSig2RegisterCombinedNonceResponse.verify|verify} messages.
+         * @param message MuSig2RegisterCombinedNonceResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encodeDelimited(
+            message: signrpc.MuSig2RegisterCombinedNonceResponse.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a MuSig2RegisterCombinedNonceResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns {signrpc.MuSig2RegisterCombinedNonceResponse & signrpc.MuSig2RegisterCombinedNonceResponse.$Shape} MuSig2RegisterCombinedNonceResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): signrpc.MuSig2RegisterCombinedNonceResponse &
+            signrpc.MuSig2RegisterCombinedNonceResponse.$Shape;
+
+        /**
+         * Decodes a MuSig2RegisterCombinedNonceResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns {signrpc.MuSig2RegisterCombinedNonceResponse & signrpc.MuSig2RegisterCombinedNonceResponse.$Shape} MuSig2RegisterCombinedNonceResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): signrpc.MuSig2RegisterCombinedNonceResponse &
+            signrpc.MuSig2RegisterCombinedNonceResponse.$Shape;
+
+        /**
+         * Verifies a MuSig2RegisterCombinedNonceResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a MuSig2RegisterCombinedNonceResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns MuSig2RegisterCombinedNonceResponse
+         */
+        static fromObject(object: {
+            [k: string]: any;
+        }): signrpc.MuSig2RegisterCombinedNonceResponse;
+
+        /**
+         * Creates a plain object from a MuSig2RegisterCombinedNonceResponse message. Also converts values to other types if specified.
+         * @param message MuSig2RegisterCombinedNonceResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        static toObject(
+            message: signrpc.MuSig2RegisterCombinedNonceResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this MuSig2RegisterCombinedNonceResponse to JSON.
+         * @returns JSON object
+         */
+        toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the type url for MuSig2RegisterCombinedNonceResponse
+         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns The type url
+         */
+        static getTypeUrl(prefix?: string): string;
+    }
+
+    namespace MuSig2RegisterCombinedNonceResponse {
+        /** Properties of a MuSig2RegisterCombinedNonceResponse. */
+        interface $Properties {
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+        }
+
+        /** Shape of a MuSig2RegisterCombinedNonceResponse. */
+        type $Shape = signrpc.MuSig2RegisterCombinedNonceResponse.$Properties;
+    }
+
+    /**
+     * Properties of a MuSig2GetCombinedNonceRequest.
+     * @deprecated Use signrpc.MuSig2GetCombinedNonceRequest.$Properties instead.
+     */
+    interface IMuSig2GetCombinedNonceRequest
+        extends signrpc.MuSig2GetCombinedNonceRequest.$Properties {}
+
+    /** Represents a MuSig2GetCombinedNonceRequest. */
+    class MuSig2GetCombinedNonceRequest {
+        /**
+         * Constructs a new MuSig2GetCombinedNonceRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(
+            properties?: signrpc.MuSig2GetCombinedNonceRequest.$Properties
+        );
+
+        /** Unknown fields preserved while decoding when enabled */
+        $unknowns?: Uint8Array[];
+
+        /** MuSig2GetCombinedNonceRequest session_id. */
+        session_id: Uint8Array;
+
+        /**
+         * Creates a new MuSig2GetCombinedNonceRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns MuSig2GetCombinedNonceRequest instance
+         */
+        static create(
+            properties: signrpc.MuSig2GetCombinedNonceRequest.$Shape
+        ): signrpc.MuSig2GetCombinedNonceRequest &
+            signrpc.MuSig2GetCombinedNonceRequest.$Shape;
+        static create(
+            properties?: signrpc.MuSig2GetCombinedNonceRequest.$Properties
+        ): signrpc.MuSig2GetCombinedNonceRequest;
+
+        /**
+         * Encodes the specified MuSig2GetCombinedNonceRequest message. Does not implicitly {@link signrpc.MuSig2GetCombinedNonceRequest.verify|verify} messages.
+         * @param message MuSig2GetCombinedNonceRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encode(
+            message: signrpc.MuSig2GetCombinedNonceRequest.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified MuSig2GetCombinedNonceRequest message, length delimited. Does not implicitly {@link signrpc.MuSig2GetCombinedNonceRequest.verify|verify} messages.
+         * @param message MuSig2GetCombinedNonceRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encodeDelimited(
+            message: signrpc.MuSig2GetCombinedNonceRequest.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a MuSig2GetCombinedNonceRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns {signrpc.MuSig2GetCombinedNonceRequest & signrpc.MuSig2GetCombinedNonceRequest.$Shape} MuSig2GetCombinedNonceRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): signrpc.MuSig2GetCombinedNonceRequest &
+            signrpc.MuSig2GetCombinedNonceRequest.$Shape;
+
+        /**
+         * Decodes a MuSig2GetCombinedNonceRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns {signrpc.MuSig2GetCombinedNonceRequest & signrpc.MuSig2GetCombinedNonceRequest.$Shape} MuSig2GetCombinedNonceRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): signrpc.MuSig2GetCombinedNonceRequest &
+            signrpc.MuSig2GetCombinedNonceRequest.$Shape;
+
+        /**
+         * Verifies a MuSig2GetCombinedNonceRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a MuSig2GetCombinedNonceRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns MuSig2GetCombinedNonceRequest
+         */
+        static fromObject(object: {
+            [k: string]: any;
+        }): signrpc.MuSig2GetCombinedNonceRequest;
+
+        /**
+         * Creates a plain object from a MuSig2GetCombinedNonceRequest message. Also converts values to other types if specified.
+         * @param message MuSig2GetCombinedNonceRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        static toObject(
+            message: signrpc.MuSig2GetCombinedNonceRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this MuSig2GetCombinedNonceRequest to JSON.
+         * @returns JSON object
+         */
+        toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the type url for MuSig2GetCombinedNonceRequest
+         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns The type url
+         */
+        static getTypeUrl(prefix?: string): string;
+    }
+
+    namespace MuSig2GetCombinedNonceRequest {
+        /** Properties of a MuSig2GetCombinedNonceRequest. */
+        interface $Properties {
+            /** MuSig2GetCombinedNonceRequest session_id */
+            session_id?: Uint8Array | null;
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+        }
+
+        /** Shape of a MuSig2GetCombinedNonceRequest. */
+        type $Shape = signrpc.MuSig2GetCombinedNonceRequest.$Properties;
+    }
+
+    /**
+     * Properties of a MuSig2GetCombinedNonceResponse.
+     * @deprecated Use signrpc.MuSig2GetCombinedNonceResponse.$Properties instead.
+     */
+    interface IMuSig2GetCombinedNonceResponse
+        extends signrpc.MuSig2GetCombinedNonceResponse.$Properties {}
+
+    /** Represents a MuSig2GetCombinedNonceResponse. */
+    class MuSig2GetCombinedNonceResponse {
+        /**
+         * Constructs a new MuSig2GetCombinedNonceResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(
+            properties?: signrpc.MuSig2GetCombinedNonceResponse.$Properties
+        );
+
+        /** Unknown fields preserved while decoding when enabled */
+        $unknowns?: Uint8Array[];
+
+        /** MuSig2GetCombinedNonceResponse combined_public_nonce. */
+        combined_public_nonce: Uint8Array;
+
+        /**
+         * Creates a new MuSig2GetCombinedNonceResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns MuSig2GetCombinedNonceResponse instance
+         */
+        static create(
+            properties: signrpc.MuSig2GetCombinedNonceResponse.$Shape
+        ): signrpc.MuSig2GetCombinedNonceResponse &
+            signrpc.MuSig2GetCombinedNonceResponse.$Shape;
+        static create(
+            properties?: signrpc.MuSig2GetCombinedNonceResponse.$Properties
+        ): signrpc.MuSig2GetCombinedNonceResponse;
+
+        /**
+         * Encodes the specified MuSig2GetCombinedNonceResponse message. Does not implicitly {@link signrpc.MuSig2GetCombinedNonceResponse.verify|verify} messages.
+         * @param message MuSig2GetCombinedNonceResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encode(
+            message: signrpc.MuSig2GetCombinedNonceResponse.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified MuSig2GetCombinedNonceResponse message, length delimited. Does not implicitly {@link signrpc.MuSig2GetCombinedNonceResponse.verify|verify} messages.
+         * @param message MuSig2GetCombinedNonceResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encodeDelimited(
+            message: signrpc.MuSig2GetCombinedNonceResponse.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a MuSig2GetCombinedNonceResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns {signrpc.MuSig2GetCombinedNonceResponse & signrpc.MuSig2GetCombinedNonceResponse.$Shape} MuSig2GetCombinedNonceResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): signrpc.MuSig2GetCombinedNonceResponse &
+            signrpc.MuSig2GetCombinedNonceResponse.$Shape;
+
+        /**
+         * Decodes a MuSig2GetCombinedNonceResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns {signrpc.MuSig2GetCombinedNonceResponse & signrpc.MuSig2GetCombinedNonceResponse.$Shape} MuSig2GetCombinedNonceResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): signrpc.MuSig2GetCombinedNonceResponse &
+            signrpc.MuSig2GetCombinedNonceResponse.$Shape;
+
+        /**
+         * Verifies a MuSig2GetCombinedNonceResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a MuSig2GetCombinedNonceResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns MuSig2GetCombinedNonceResponse
+         */
+        static fromObject(object: {
+            [k: string]: any;
+        }): signrpc.MuSig2GetCombinedNonceResponse;
+
+        /**
+         * Creates a plain object from a MuSig2GetCombinedNonceResponse message. Also converts values to other types if specified.
+         * @param message MuSig2GetCombinedNonceResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        static toObject(
+            message: signrpc.MuSig2GetCombinedNonceResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this MuSig2GetCombinedNonceResponse to JSON.
+         * @returns JSON object
+         */
+        toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the type url for MuSig2GetCombinedNonceResponse
+         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns The type url
+         */
+        static getTypeUrl(prefix?: string): string;
+    }
+
+    namespace MuSig2GetCombinedNonceResponse {
+        /** Properties of a MuSig2GetCombinedNonceResponse. */
+        interface $Properties {
+            /** MuSig2GetCombinedNonceResponse combined_public_nonce */
+            combined_public_nonce?: Uint8Array | null;
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+        }
+
+        /** Shape of a MuSig2GetCombinedNonceResponse. */
+        type $Shape = signrpc.MuSig2GetCombinedNonceResponse.$Properties;
+    }
+
+    /**
      * Properties of a MuSig2SignRequest.
      * @deprecated Use signrpc.MuSig2SignRequest.$Properties instead.
      */
@@ -57254,6 +58070,9 @@ export namespace walletrpc {
         /** Calls ListAccounts. */
         listAccounts: walletrpc.WalletKit.ListAccounts;
 
+        /** Calls XCreateAccount. */
+        xCreateAccount: walletrpc.WalletKit.XCreateAccount;
+
         /** Calls RequiredReserve. */
         requiredReserve: walletrpc.WalletKit.RequiredReserve;
 
@@ -57277,6 +58096,9 @@ export namespace walletrpc {
 
         /** Calls PublishTransaction. */
         publishTransaction: walletrpc.WalletKit.PublishTransaction;
+
+        /** Calls SubmitPackage. */
+        submitPackage: walletrpc.WalletKit.SubmitPackage;
 
         /** Calls RemoveTransaction. */
         removeTransaction: walletrpc.WalletKit.RemoveTransaction;
@@ -57554,6 +58376,33 @@ export namespace walletrpc {
         };
 
         /**
+         * Callback as used by {@link walletrpc.WalletKit#xCreateAccount}.
+         * @param error Error, if any
+         * @param [response] XCreateAccountResponse
+         */
+        type XCreateAccountCallback = (
+            error: Error | null,
+            response?: walletrpc.XCreateAccountResponse
+        ) => void;
+
+        /** Calls XCreateAccount. */
+        type XCreateAccount = {
+            (
+                request: walletrpc.IXCreateAccountRequest,
+                callback: walletrpc.WalletKit.XCreateAccountCallback
+            ): void;
+            (
+                request: walletrpc.IXCreateAccountRequest
+            ): Promise<walletrpc.XCreateAccountResponse>;
+            readonly name: 'XCreateAccount';
+            readonly path: '/walletrpc.WalletKit/XCreateAccount';
+            readonly requestType: 'XCreateAccountRequest';
+            readonly responseType: 'XCreateAccountResponse';
+            readonly requestStream: undefined;
+            readonly responseStream: undefined;
+        };
+
+        /**
          * Callback as used by {@link walletrpc.WalletKit#requiredReserve}.
          * @param error Error, if any
          * @param [response] RequiredReserveResponse
@@ -57765,6 +58614,33 @@ export namespace walletrpc {
             readonly path: '/walletrpc.WalletKit/PublishTransaction';
             readonly requestType: 'Transaction';
             readonly responseType: 'PublishResponse';
+            readonly requestStream: undefined;
+            readonly responseStream: undefined;
+        };
+
+        /**
+         * Callback as used by {@link walletrpc.WalletKit#submitPackage}.
+         * @param error Error, if any
+         * @param [response] SubmitPackageResponse
+         */
+        type SubmitPackageCallback = (
+            error: Error | null,
+            response?: walletrpc.SubmitPackageResponse
+        ) => void;
+
+        /** Calls SubmitPackage. */
+        type SubmitPackage = {
+            (
+                request: walletrpc.ISubmitPackageRequest,
+                callback: walletrpc.WalletKit.SubmitPackageCallback
+            ): void;
+            (
+                request: walletrpc.ISubmitPackageRequest
+            ): Promise<walletrpc.SubmitPackageResponse>;
+            readonly name: 'SubmitPackage';
+            readonly path: '/walletrpc.WalletKit/SubmitPackage';
+            readonly requestType: 'SubmitPackageRequest';
+            readonly responseType: 'SubmitPackageResponse';
             readonly requestStream: undefined;
             readonly responseStream: undefined;
         };
@@ -58407,6 +59283,9 @@ export namespace walletrpc {
         /** LeaseOutputRequest expiration_seconds. */
         expiration_seconds: Long;
 
+        /** LeaseOutputRequest release_after_spend_confs. */
+        release_after_spend_confs: number;
+
         /**
          * Creates a new LeaseOutputRequest instance using the specified properties.
          * @param [properties] Properties to set
@@ -58518,6 +59397,9 @@ export namespace walletrpc {
             /** LeaseOutputRequest expiration_seconds */
             expiration_seconds?: Long | null;
 
+            /** LeaseOutputRequest release_after_spend_confs */
+            release_after_spend_confs?: number | null;
+
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
         }
@@ -58546,6 +59428,9 @@ export namespace walletrpc {
 
         /** LeaseOutputResponse expiration. */
         expiration: Long;
+
+        /** LeaseOutputResponse release_after_spend_confs. */
+        release_after_spend_confs: number;
 
         /**
          * Creates a new LeaseOutputResponse instance using the specified properties.
@@ -58651,6 +59536,9 @@ export namespace walletrpc {
         interface $Properties {
             /** LeaseOutputResponse expiration */
             expiration?: Long | null;
+
+            /** LeaseOutputResponse release_after_spend_confs */
+            release_after_spend_confs?: number | null;
 
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
@@ -60129,6 +61017,292 @@ export namespace walletrpc {
 
         /** Shape of a ListAccountsResponse. */
         type $Shape = walletrpc.ListAccountsResponse.$Properties;
+    }
+
+    /**
+     * Properties of a XCreateAccountRequest.
+     * @deprecated Use walletrpc.XCreateAccountRequest.$Properties instead.
+     */
+    interface IXCreateAccountRequest
+        extends walletrpc.XCreateAccountRequest.$Properties {}
+
+    /** Represents a XCreateAccountRequest. */
+    class XCreateAccountRequest {
+        /**
+         * Constructs a new XCreateAccountRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: walletrpc.XCreateAccountRequest.$Properties);
+
+        /** Unknown fields preserved while decoding when enabled */
+        $unknowns?: Uint8Array[];
+
+        /** XCreateAccountRequest name. */
+        name: string;
+
+        /** XCreateAccountRequest address_type. */
+        address_type: walletrpc.AddressType;
+
+        /** XCreateAccountRequest i_know_what_i_am_doing. */
+        i_know_what_i_am_doing: boolean;
+
+        /**
+         * Creates a new XCreateAccountRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns XCreateAccountRequest instance
+         */
+        static create(
+            properties: walletrpc.XCreateAccountRequest.$Shape
+        ): walletrpc.XCreateAccountRequest &
+            walletrpc.XCreateAccountRequest.$Shape;
+        static create(
+            properties?: walletrpc.XCreateAccountRequest.$Properties
+        ): walletrpc.XCreateAccountRequest;
+
+        /**
+         * Encodes the specified XCreateAccountRequest message. Does not implicitly {@link walletrpc.XCreateAccountRequest.verify|verify} messages.
+         * @param message XCreateAccountRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encode(
+            message: walletrpc.XCreateAccountRequest.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified XCreateAccountRequest message, length delimited. Does not implicitly {@link walletrpc.XCreateAccountRequest.verify|verify} messages.
+         * @param message XCreateAccountRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encodeDelimited(
+            message: walletrpc.XCreateAccountRequest.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a XCreateAccountRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns {walletrpc.XCreateAccountRequest & walletrpc.XCreateAccountRequest.$Shape} XCreateAccountRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): walletrpc.XCreateAccountRequest &
+            walletrpc.XCreateAccountRequest.$Shape;
+
+        /**
+         * Decodes a XCreateAccountRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns {walletrpc.XCreateAccountRequest & walletrpc.XCreateAccountRequest.$Shape} XCreateAccountRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): walletrpc.XCreateAccountRequest &
+            walletrpc.XCreateAccountRequest.$Shape;
+
+        /**
+         * Verifies a XCreateAccountRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a XCreateAccountRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns XCreateAccountRequest
+         */
+        static fromObject(object: {
+            [k: string]: any;
+        }): walletrpc.XCreateAccountRequest;
+
+        /**
+         * Creates a plain object from a XCreateAccountRequest message. Also converts values to other types if specified.
+         * @param message XCreateAccountRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        static toObject(
+            message: walletrpc.XCreateAccountRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this XCreateAccountRequest to JSON.
+         * @returns JSON object
+         */
+        toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the type url for XCreateAccountRequest
+         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns The type url
+         */
+        static getTypeUrl(prefix?: string): string;
+    }
+
+    namespace XCreateAccountRequest {
+        /** Properties of a XCreateAccountRequest. */
+        interface $Properties {
+            /** XCreateAccountRequest name */
+            name?: string | null;
+
+            /** XCreateAccountRequest address_type */
+            address_type?: walletrpc.AddressType | null;
+
+            /** XCreateAccountRequest i_know_what_i_am_doing */
+            i_know_what_i_am_doing?: boolean | null;
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+        }
+
+        /** Shape of a XCreateAccountRequest. */
+        type $Shape = walletrpc.XCreateAccountRequest.$Properties;
+    }
+
+    /**
+     * Properties of a XCreateAccountResponse.
+     * @deprecated Use walletrpc.XCreateAccountResponse.$Properties instead.
+     */
+    interface IXCreateAccountResponse
+        extends walletrpc.XCreateAccountResponse.$Properties {}
+
+    /** Represents a XCreateAccountResponse. */
+    class XCreateAccountResponse {
+        /**
+         * Constructs a new XCreateAccountResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: walletrpc.XCreateAccountResponse.$Properties);
+
+        /** Unknown fields preserved while decoding when enabled */
+        $unknowns?: Uint8Array[];
+
+        /** XCreateAccountResponse account. */
+        account?: walletrpc.Account.$Properties | null;
+
+        /**
+         * Creates a new XCreateAccountResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns XCreateAccountResponse instance
+         */
+        static create(
+            properties: walletrpc.XCreateAccountResponse.$Shape
+        ): walletrpc.XCreateAccountResponse &
+            walletrpc.XCreateAccountResponse.$Shape;
+        static create(
+            properties?: walletrpc.XCreateAccountResponse.$Properties
+        ): walletrpc.XCreateAccountResponse;
+
+        /**
+         * Encodes the specified XCreateAccountResponse message. Does not implicitly {@link walletrpc.XCreateAccountResponse.verify|verify} messages.
+         * @param message XCreateAccountResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encode(
+            message: walletrpc.XCreateAccountResponse.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified XCreateAccountResponse message, length delimited. Does not implicitly {@link walletrpc.XCreateAccountResponse.verify|verify} messages.
+         * @param message XCreateAccountResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encodeDelimited(
+            message: walletrpc.XCreateAccountResponse.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a XCreateAccountResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns {walletrpc.XCreateAccountResponse & walletrpc.XCreateAccountResponse.$Shape} XCreateAccountResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): walletrpc.XCreateAccountResponse &
+            walletrpc.XCreateAccountResponse.$Shape;
+
+        /**
+         * Decodes a XCreateAccountResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns {walletrpc.XCreateAccountResponse & walletrpc.XCreateAccountResponse.$Shape} XCreateAccountResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): walletrpc.XCreateAccountResponse &
+            walletrpc.XCreateAccountResponse.$Shape;
+
+        /**
+         * Verifies a XCreateAccountResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a XCreateAccountResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns XCreateAccountResponse
+         */
+        static fromObject(object: {
+            [k: string]: any;
+        }): walletrpc.XCreateAccountResponse;
+
+        /**
+         * Creates a plain object from a XCreateAccountResponse message. Also converts values to other types if specified.
+         * @param message XCreateAccountResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        static toObject(
+            message: walletrpc.XCreateAccountResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this XCreateAccountResponse to JSON.
+         * @returns JSON object
+         */
+        toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the type url for XCreateAccountResponse
+         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns The type url
+         */
+        static getTypeUrl(prefix?: string): string;
+    }
+
+    namespace XCreateAccountResponse {
+        /** Properties of a XCreateAccountResponse. */
+        interface $Properties {
+            /** XCreateAccountResponse account */
+            account?: walletrpc.Account.$Properties | null;
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+        }
+
+        /** Shape of a XCreateAccountResponse. */
+        type $Shape = walletrpc.XCreateAccountResponse.$Properties;
     }
 
     /**
@@ -63318,6 +64492,451 @@ export namespace walletrpc {
     }
 
     /**
+     * Properties of a SubmitPackageRequest.
+     * @deprecated Use walletrpc.SubmitPackageRequest.$Properties instead.
+     */
+    interface ISubmitPackageRequest
+        extends walletrpc.SubmitPackageRequest.$Properties {}
+
+    /** Represents a SubmitPackageRequest. */
+    class SubmitPackageRequest {
+        /**
+         * Constructs a new SubmitPackageRequest.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: walletrpc.SubmitPackageRequest.$Properties);
+
+        /** Unknown fields preserved while decoding when enabled */
+        $unknowns?: Uint8Array[];
+
+        /** SubmitPackageRequest raw_txs. */
+        raw_txs: Uint8Array[];
+
+        /** SubmitPackageRequest sat_per_vbyte. */
+        sat_per_vbyte?: Long | null;
+
+        /**
+         * Creates a new SubmitPackageRequest instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns SubmitPackageRequest instance
+         */
+        static create(
+            properties: walletrpc.SubmitPackageRequest.$Shape
+        ): walletrpc.SubmitPackageRequest &
+            walletrpc.SubmitPackageRequest.$Shape;
+        static create(
+            properties?: walletrpc.SubmitPackageRequest.$Properties
+        ): walletrpc.SubmitPackageRequest;
+
+        /**
+         * Encodes the specified SubmitPackageRequest message. Does not implicitly {@link walletrpc.SubmitPackageRequest.verify|verify} messages.
+         * @param message SubmitPackageRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encode(
+            message: walletrpc.SubmitPackageRequest.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified SubmitPackageRequest message, length delimited. Does not implicitly {@link walletrpc.SubmitPackageRequest.verify|verify} messages.
+         * @param message SubmitPackageRequest message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encodeDelimited(
+            message: walletrpc.SubmitPackageRequest.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a SubmitPackageRequest message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns {walletrpc.SubmitPackageRequest & walletrpc.SubmitPackageRequest.$Shape} SubmitPackageRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): walletrpc.SubmitPackageRequest &
+            walletrpc.SubmitPackageRequest.$Shape;
+
+        /**
+         * Decodes a SubmitPackageRequest message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns {walletrpc.SubmitPackageRequest & walletrpc.SubmitPackageRequest.$Shape} SubmitPackageRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): walletrpc.SubmitPackageRequest &
+            walletrpc.SubmitPackageRequest.$Shape;
+
+        /**
+         * Verifies a SubmitPackageRequest message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a SubmitPackageRequest message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns SubmitPackageRequest
+         */
+        static fromObject(object: {
+            [k: string]: any;
+        }): walletrpc.SubmitPackageRequest;
+
+        /**
+         * Creates a plain object from a SubmitPackageRequest message. Also converts values to other types if specified.
+         * @param message SubmitPackageRequest
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        static toObject(
+            message: walletrpc.SubmitPackageRequest,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this SubmitPackageRequest to JSON.
+         * @returns JSON object
+         */
+        toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the type url for SubmitPackageRequest
+         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns The type url
+         */
+        static getTypeUrl(prefix?: string): string;
+    }
+
+    namespace SubmitPackageRequest {
+        /** Properties of a SubmitPackageRequest. */
+        interface $Properties {
+            /** SubmitPackageRequest raw_txs */
+            raw_txs?: Uint8Array[] | null;
+
+            /** SubmitPackageRequest sat_per_vbyte */
+            sat_per_vbyte?: Long | null;
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+        }
+
+        /** Shape of a SubmitPackageRequest. */
+        type $Shape = walletrpc.SubmitPackageRequest.$Properties;
+    }
+
+    /**
+     * Properties of a SubmitPackageTxResult.
+     * @deprecated Use walletrpc.SubmitPackageTxResult.$Properties instead.
+     */
+    interface ISubmitPackageTxResult
+        extends walletrpc.SubmitPackageTxResult.$Properties {}
+
+    /** Represents a SubmitPackageTxResult. */
+    class SubmitPackageTxResult {
+        /**
+         * Constructs a new SubmitPackageTxResult.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: walletrpc.SubmitPackageTxResult.$Properties);
+
+        /** Unknown fields preserved while decoding when enabled */
+        $unknowns?: Uint8Array[];
+
+        /** SubmitPackageTxResult txid. */
+        txid: string;
+
+        /** SubmitPackageTxResult error. */
+        error: string;
+
+        /** SubmitPackageTxResult other_wtxid. */
+        other_wtxid: string;
+
+        /**
+         * Creates a new SubmitPackageTxResult instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns SubmitPackageTxResult instance
+         */
+        static create(
+            properties: walletrpc.SubmitPackageTxResult.$Shape
+        ): walletrpc.SubmitPackageTxResult &
+            walletrpc.SubmitPackageTxResult.$Shape;
+        static create(
+            properties?: walletrpc.SubmitPackageTxResult.$Properties
+        ): walletrpc.SubmitPackageTxResult;
+
+        /**
+         * Encodes the specified SubmitPackageTxResult message. Does not implicitly {@link walletrpc.SubmitPackageTxResult.verify|verify} messages.
+         * @param message SubmitPackageTxResult message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encode(
+            message: walletrpc.SubmitPackageTxResult.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified SubmitPackageTxResult message, length delimited. Does not implicitly {@link walletrpc.SubmitPackageTxResult.verify|verify} messages.
+         * @param message SubmitPackageTxResult message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encodeDelimited(
+            message: walletrpc.SubmitPackageTxResult.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a SubmitPackageTxResult message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns {walletrpc.SubmitPackageTxResult & walletrpc.SubmitPackageTxResult.$Shape} SubmitPackageTxResult
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): walletrpc.SubmitPackageTxResult &
+            walletrpc.SubmitPackageTxResult.$Shape;
+
+        /**
+         * Decodes a SubmitPackageTxResult message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns {walletrpc.SubmitPackageTxResult & walletrpc.SubmitPackageTxResult.$Shape} SubmitPackageTxResult
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): walletrpc.SubmitPackageTxResult &
+            walletrpc.SubmitPackageTxResult.$Shape;
+
+        /**
+         * Verifies a SubmitPackageTxResult message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a SubmitPackageTxResult message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns SubmitPackageTxResult
+         */
+        static fromObject(object: {
+            [k: string]: any;
+        }): walletrpc.SubmitPackageTxResult;
+
+        /**
+         * Creates a plain object from a SubmitPackageTxResult message. Also converts values to other types if specified.
+         * @param message SubmitPackageTxResult
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        static toObject(
+            message: walletrpc.SubmitPackageTxResult,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this SubmitPackageTxResult to JSON.
+         * @returns JSON object
+         */
+        toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the type url for SubmitPackageTxResult
+         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns The type url
+         */
+        static getTypeUrl(prefix?: string): string;
+    }
+
+    namespace SubmitPackageTxResult {
+        /** Properties of a SubmitPackageTxResult. */
+        interface $Properties {
+            /** SubmitPackageTxResult txid */
+            txid?: string | null;
+
+            /** SubmitPackageTxResult error */
+            error?: string | null;
+
+            /** SubmitPackageTxResult other_wtxid */
+            other_wtxid?: string | null;
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+        }
+
+        /** Shape of a SubmitPackageTxResult. */
+        type $Shape = walletrpc.SubmitPackageTxResult.$Properties;
+    }
+
+    /**
+     * Properties of a SubmitPackageResponse.
+     * @deprecated Use walletrpc.SubmitPackageResponse.$Properties instead.
+     */
+    interface ISubmitPackageResponse
+        extends walletrpc.SubmitPackageResponse.$Properties {}
+
+    /** Represents a SubmitPackageResponse. */
+    class SubmitPackageResponse {
+        /**
+         * Constructs a new SubmitPackageResponse.
+         * @param [properties] Properties to set
+         */
+        constructor(properties?: walletrpc.SubmitPackageResponse.$Properties);
+
+        /** Unknown fields preserved while decoding when enabled */
+        $unknowns?: Uint8Array[];
+
+        /** SubmitPackageResponse package_msg. */
+        package_msg: string;
+
+        /** SubmitPackageResponse tx_results. */
+        tx_results: {
+            [k: string]: walletrpc.SubmitPackageTxResult.$Properties;
+        };
+
+        /** SubmitPackageResponse replaced_transactions. */
+        replaced_transactions: string[];
+
+        /**
+         * Creates a new SubmitPackageResponse instance using the specified properties.
+         * @param [properties] Properties to set
+         * @returns SubmitPackageResponse instance
+         */
+        static create(
+            properties: walletrpc.SubmitPackageResponse.$Shape
+        ): walletrpc.SubmitPackageResponse &
+            walletrpc.SubmitPackageResponse.$Shape;
+        static create(
+            properties?: walletrpc.SubmitPackageResponse.$Properties
+        ): walletrpc.SubmitPackageResponse;
+
+        /**
+         * Encodes the specified SubmitPackageResponse message. Does not implicitly {@link walletrpc.SubmitPackageResponse.verify|verify} messages.
+         * @param message SubmitPackageResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encode(
+            message: walletrpc.SubmitPackageResponse.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Encodes the specified SubmitPackageResponse message, length delimited. Does not implicitly {@link walletrpc.SubmitPackageResponse.verify|verify} messages.
+         * @param message SubmitPackageResponse message or plain object to encode
+         * @param [writer] Writer to encode to
+         * @returns Writer
+         */
+        static encodeDelimited(
+            message: walletrpc.SubmitPackageResponse.$Properties,
+            writer?: $protobuf.Writer
+        ): $protobuf.Writer;
+
+        /**
+         * Decodes a SubmitPackageResponse message from the specified reader or buffer.
+         * @param reader Reader or buffer to decode from
+         * @param [length] Message length if known beforehand
+         * @returns {walletrpc.SubmitPackageResponse & walletrpc.SubmitPackageResponse.$Shape} SubmitPackageResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decode(
+            reader: $protobuf.Reader | Uint8Array,
+            length?: number
+        ): walletrpc.SubmitPackageResponse &
+            walletrpc.SubmitPackageResponse.$Shape;
+
+        /**
+         * Decodes a SubmitPackageResponse message from the specified reader or buffer, length delimited.
+         * @param reader Reader or buffer to decode from
+         * @returns {walletrpc.SubmitPackageResponse & walletrpc.SubmitPackageResponse.$Shape} SubmitPackageResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        static decodeDelimited(
+            reader: $protobuf.Reader | Uint8Array
+        ): walletrpc.SubmitPackageResponse &
+            walletrpc.SubmitPackageResponse.$Shape;
+
+        /**
+         * Verifies a SubmitPackageResponse message.
+         * @param message Plain object to verify
+         * @returns `null` if valid, otherwise the reason why it is not
+         */
+        static verify(message: { [k: string]: any }): string | null;
+
+        /**
+         * Creates a SubmitPackageResponse message from a plain object. Also converts values to their respective internal types.
+         * @param object Plain object
+         * @returns SubmitPackageResponse
+         */
+        static fromObject(object: {
+            [k: string]: any;
+        }): walletrpc.SubmitPackageResponse;
+
+        /**
+         * Creates a plain object from a SubmitPackageResponse message. Also converts values to other types if specified.
+         * @param message SubmitPackageResponse
+         * @param [options] Conversion options
+         * @returns Plain object
+         */
+        static toObject(
+            message: walletrpc.SubmitPackageResponse,
+            options?: $protobuf.IConversionOptions
+        ): { [k: string]: any };
+
+        /**
+         * Converts this SubmitPackageResponse to JSON.
+         * @returns JSON object
+         */
+        toJSON(): { [k: string]: any };
+
+        /**
+         * Gets the type url for SubmitPackageResponse
+         * @param [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns The type url
+         */
+        static getTypeUrl(prefix?: string): string;
+    }
+
+    namespace SubmitPackageResponse {
+        /** Properties of a SubmitPackageResponse. */
+        interface $Properties {
+            /** SubmitPackageResponse package_msg */
+            package_msg?: string | null;
+
+            /** SubmitPackageResponse tx_results */
+            tx_results?: {
+                [k: string]: walletrpc.SubmitPackageTxResult.$Properties;
+            } | null;
+
+            /** SubmitPackageResponse replaced_transactions */
+            replaced_transactions?: string[] | null;
+
+            /** Unknown fields preserved while decoding when enabled */
+            $unknowns?: Uint8Array[];
+        }
+
+        /** Shape of a SubmitPackageResponse. */
+        type $Shape = walletrpc.SubmitPackageResponse.$Properties;
+    }
+
+    /**
      * Properties of a RemoveTransactionResponse.
      * @deprecated Use walletrpc.RemoveTransactionResponse.$Properties instead.
      */
@@ -64136,7 +65755,28 @@ export namespace walletrpc {
         TAPROOT_HTLC_ACCEPTED_LOCAL_SUCCESS = 34,
 
         /** TAPROOT_COMMITMENT_REVOKE value */
-        TAPROOT_COMMITMENT_REVOKE = 35
+        TAPROOT_COMMITMENT_REVOKE = 35,
+
+        /** TAPROOT_LOCAL_COMMIT_SPEND_FINAL value */
+        TAPROOT_LOCAL_COMMIT_SPEND_FINAL = 36,
+
+        /** TAPROOT_REMOTE_COMMIT_SPEND_FINAL value */
+        TAPROOT_REMOTE_COMMIT_SPEND_FINAL = 37,
+
+        /** TAPROOT_HTLC_OFFERED_TIMEOUT_SECOND_LEVEL_FINAL value */
+        TAPROOT_HTLC_OFFERED_TIMEOUT_SECOND_LEVEL_FINAL = 38,
+
+        /** TAPROOT_HTLC_ACCEPTED_SUCCESS_SECOND_LEVEL_FINAL value */
+        TAPROOT_HTLC_ACCEPTED_SUCCESS_SECOND_LEVEL_FINAL = 39,
+
+        /** TAPROOT_HTLC_OFFERED_REMOTE_TIMEOUT_FINAL value */
+        TAPROOT_HTLC_OFFERED_REMOTE_TIMEOUT_FINAL = 40,
+
+        /** TAPROOT_HTLC_ACCEPTED_REMOTE_SUCCESS_FINAL value */
+        TAPROOT_HTLC_ACCEPTED_REMOTE_SUCCESS_FINAL = 41,
+
+        /** TAPROOT_COMMITMENT_REVOKE_FINAL value */
+        TAPROOT_COMMITMENT_REVOKE_FINAL = 42
     }
 
     /**
@@ -66048,6 +67688,9 @@ export namespace walletrpc {
         /** FundPsbtRequest lock_expiration_seconds. */
         lock_expiration_seconds: Long;
 
+        /** FundPsbtRequest input_release_after_spend_confs. */
+        input_release_after_spend_confs: number;
+
         /** FundPsbtRequest template. */
         template?: 'psbt' | 'raw' | 'coin_select';
 
@@ -66198,6 +67841,9 @@ export namespace walletrpc {
             /** FundPsbtRequest lock_expiration_seconds */
             lock_expiration_seconds?: Long | null;
 
+            /** FundPsbtRequest input_release_after_spend_confs */
+            input_release_after_spend_confs?: number | null;
+
             /** FundPsbtRequest template */
             template?: 'psbt' | 'raw' | 'coin_select';
 
@@ -66224,6 +67870,7 @@ export namespace walletrpc {
             max_fee_ratio?: number | null;
             custom_lock_id?: Uint8Array | null;
             lock_expiration_seconds?: Long | null;
+            input_release_after_spend_confs?: number | null;
             $unknowns?: Uint8Array[];
         } & (
             | {
@@ -66766,6 +68413,12 @@ export namespace walletrpc {
         /** UtxoLease value. */
         value: Long;
 
+        /** UtxoLease release_after_spend_confs. */
+        release_after_spend_confs: number;
+
+        /** UtxoLease confirmed_spend_height. */
+        confirmed_spend_height: number;
+
         /**
          * Creates a new UtxoLease instance using the specified properties.
          * @param [properties] Properties to set
@@ -66880,6 +68533,12 @@ export namespace walletrpc {
 
             /** UtxoLease value */
             value?: Long | null;
+
+            /** UtxoLease release_after_spend_confs */
+            release_after_spend_confs?: number | null;
+
+            /** UtxoLease confirmed_spend_height */
+            confirmed_spend_height?: number | null;
 
             /** Unknown fields preserved while decoding when enabled */
             $unknowns?: Uint8Array[];
