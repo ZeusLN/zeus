@@ -6,6 +6,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Pin from '../../components/Pin';
+import PreventRemove from '../../components/PreventRemove';
 import Screen from '../../components/Screen';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
@@ -26,6 +27,7 @@ interface SetDuressPinState {
     duressPinInvalidError: boolean;
     duressPinSaveError: boolean;
     saving: boolean;
+    saved: boolean;
 }
 
 @inject('SettingsStore')
@@ -40,7 +42,8 @@ export default class SetDuressPin extends React.Component<
         duressPinMismatchError: false,
         duressPinInvalidError: false,
         duressPinSaveError: false,
-        saving: false
+        saving: false,
+        saved: false
     };
 
     renderSeparator = () => (
@@ -114,7 +117,9 @@ export default class SetDuressPin extends React.Component<
             return;
         }
 
-        navigation.popTo('Security');
+        // PreventRemove would also block this popTo; navigate only once
+        // `saved` has been committed and lifted the block
+        this.setState({ saved: true }, () => navigation.popTo('Security'));
     };
 
     render() {
@@ -125,13 +130,19 @@ export default class SetDuressPin extends React.Component<
             duressPinMismatchError,
             duressPinInvalidError,
             duressPinSaveError,
-            saving
+            saving,
+            saved
         } = this.state;
 
         return (
             <Screen>
+                {/* Leaving mid-save would let Security read the old settings */}
+                <PreventRemove
+                    enabled={saving && !saved}
+                    onAttempt={() => void 0}
+                />
                 <Header
-                    leftComponent="Back"
+                    leftComponent={saving ? undefined : 'Back'}
                     rightComponent={
                         saving ? <LoadingIndicator size={30} /> : undefined
                     }

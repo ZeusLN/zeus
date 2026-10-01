@@ -6,6 +6,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Button from '../../components/Button';
 import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
+import PreventRemove from '../../components/PreventRemove';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
@@ -33,6 +34,7 @@ interface SetPassphraseState {
     passphraseSaveError: boolean;
     isBiometryEnabled: boolean;
     saving: boolean;
+    saved: boolean;
 }
 
 @inject('SettingsStore', 'ModalStore')
@@ -50,7 +52,8 @@ export default class SetPassphrase extends React.Component<
         passphraseEmptyError: false,
         passphraseSaveError: false,
         isBiometryEnabled: false,
-        saving: false
+        saving: false,
+        saved: false
     };
 
     private firstInput = React.createRef<any>();
@@ -121,9 +124,13 @@ export default class SetPassphrase extends React.Component<
             return;
         }
 
-        setLoginStatus(true);
-        navigation.popTo('Security', {
-            enableBiometrics: route.params?.forBiometrics
+        // PreventRemove would also block this popTo; navigate only once
+        // `saved` has been committed and lifted the block
+        this.setState({ saved: true }, () => {
+            setLoginStatus(true);
+            navigation.popTo('Security', {
+                enableBiometrics: route.params?.forBiometrics
+            });
         });
     };
 
@@ -151,13 +158,19 @@ export default class SetPassphrase extends React.Component<
             passphraseInvalidError,
             passphraseEmptyError,
             passphraseSaveError,
-            saving
+            saving,
+            saved
         } = this.state;
 
         return (
             <Screen>
+                {/* Leaving mid-save would let Security read the old settings */}
+                <PreventRemove
+                    enabled={saving && !saved}
+                    onAttempt={() => void 0}
+                />
                 <Header
-                    leftComponent="Back"
+                    leftComponent={saving ? undefined : 'Back'}
                     centerComponent={{
                         text: localeString(
                             savedPassphrase
