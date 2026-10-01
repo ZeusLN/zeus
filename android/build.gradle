@@ -50,7 +50,7 @@ buildscript {
     // their versions come from the React Native Gradle plugin -- so the lock
     // file is what actually records what was used.
     //
-    // Lock state: android/gradle.lockfile
+    // Lock state: android/buildscript-gradle.lockfile
     // Regenerate with: ./build.sh --write-locks
     configurations.classpath {
         resolutionStrategy.activateDependencyLocking()

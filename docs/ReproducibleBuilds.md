@@ -37,14 +37,16 @@ Direct Maven coordinates are written out in the `build.gradle` files, but their 
 
 Two lock files are kept:
 
-- `android/gradle.lockfile` — the buildscript classpath (Android Gradle Plugin, Kotlin plugin, React Native Gradle plugin). Several of these are declared without a version, so the lock file is the only record of what was used.
-- `android/app/gradle.lockfile` — `releaseRuntimeClasspath` and `releaseCompileClasspath`, which together determine what ends up in the APK. `:app` resolves the full closure, including the external dependencies contributed by `:lndmobile` and the autolinked React Native libraries.
+- `android/buildscript-gradle.lockfile`: the buildscript classpath (Android Gradle Plugin, Kotlin plugin, React Native Gradle plugin). Several of these are declared without a version, so the lock file is the only record of what was used.
+- `android/app/gradle.lockfile`: `releaseRuntimeClasspath` and `releaseCompileClasspath`, which together determine what ends up in the APK. `:app` resolves the full closure, including the external dependencies contributed by `:lndmobile` and the autolinked React Native libraries.
+
+Gradle also writes `android/settings-gradle.lockfile` on the same run. It holds no coordinates (only an `empty=` entry for the version catalog) but should be committed with the other two so the next `--write-locks` run produces no diff.
 
 To regenerate them after changing an Android dependency, run the build with `--write-locks` and commit the result:
 
 ```
 ./build.sh --write-locks
-git diff --stat android/gradle.lockfile android/app/gradle.lockfile
+git diff --stat android/buildscript-gradle.lockfile android/app/gradle.lockfile
 ```
 
 Locks are generated inside the pinned builder image on purpose, so the recorded graph matches the toolchain that actually builds releases rather than whatever a contributor has installed locally.
