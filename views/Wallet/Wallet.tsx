@@ -72,6 +72,7 @@ import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { applySystemNavigationBarTheme } from '../../utils/SystemNavigationBarUtils';
+import { isLiquidGlassEnabled } from '../../utils/LiquidGlassUtils';
 import { restartNeeded } from '../../utils/RestartUtils';
 import WalletRefreshRunner from '../../utils/WalletRefreshRunner';
 
@@ -128,12 +129,12 @@ import Scan from '../../assets/images/SVG/Scan.svg';
 import { version } from '../../package.json';
 
 // On iOS the native tab bar gets Liquid Glass on iOS 26+ when built with
-// Xcode 26. Android keeps the JS implementation: the native one caps tabs
-// at 5 and drops the custom styling below.
-const isIOS = Platform.OS === 'ios';
-const Tab: any = isIOS
-    ? createNativeBottomTabNavigator()
-    : createBottomTabNavigator();
+// Xcode 26, unless the user turned Liquid Glass off in Display settings.
+// Android keeps the JS implementation: the native one caps tabs at 5 and
+// drops the custom styling below.
+const JsTab = createBottomTabNavigator();
+const NativeTab: any =
+    Platform.OS === 'ios' ? createNativeBottomTabNavigator() : undefined;
 
 const getNativeTabIcon = (
     routeName: string,
@@ -176,7 +177,7 @@ const TabScreenContent: React.FC<{ children?: React.ReactNode }> = ({
     children
 }) => {
     const { bottom } = useSafeAreaInsets();
-    if (!isIOS) return <>{children}</>;
+    if (!isLiquidGlassEnabled()) return <>{children}</>;
     // a margin rather than padding, so absolutely positioned children are
     // also placed above the bar
     return (
@@ -1653,6 +1654,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const showKeypad: boolean = settings?.pos?.showKeypad || false;
         const posView = SettingsStore.posViewActive();
 
+        const nativeTabs = isLiquidGlassEnabled();
+        const Tab: any = nativeTabs ? NativeTab : JsTab;
+
         const dataAvailable =
             implementation === 'lndhub' ||
             implementation === 'nostr-wallet-connect' ||
@@ -1759,7 +1763,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 <Animated.View
                                     style={{
                                         position: 'absolute',
-                                        bottom: isIOS ? 4 : 10,
+                                        bottom: nativeTabs ? 4 : 10,
                                         width: '100%',
                                         height: 80,
                                         transform: [{ translateY: this.pan.y }],
@@ -1870,6 +1874,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     (!loginRequired || posEnabled !== PosEnabled.Disabled) && (
                         <NavigationIndependentTree>
                             <NavigationContainer
+                                // fresh tab state when the Liquid Glass
+                                // setting swaps the navigator type
+                                key={nativeTabs ? 'native-tabs' : 'js-tabs'}
                                 theme={Theme}
                                 ref={this.tabNavigationRef}
                             >
@@ -1893,7 +1900,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     }
                                     backBehavior="none"
                                     screenOptions={({ route }: any) =>
-                                        isIOS
+                                        nativeTabs
                                             ? {
                                                   headerShown: false,
                                                   tabBarActiveTintColor: error
@@ -2004,7 +2011,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                                   },
                                                   // Disable top safe area - WalletHeader handles it
                                                   safeAreaInsets: { top: 0 },
-                                                  animation: 'shift'
+                                                  // TODO re-enable for iOS once ZEUS-3514 is resolved
+                                                  animation:
+                                                      Platform.OS === 'android'
+                                                          ? 'shift'
+                                                          : undefined
                                               }
                                     }
                                 >
@@ -2054,7 +2065,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                         <Tab.Screen
                                             name="Camera"
                                             options={
-                                                isIOS
+                                                nativeTabs
                                                     ? {
                                                           // native tabPress can't be
                                                           // prevented; this keeps the
@@ -2066,7 +2077,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                             }
                                             listeners={{
                                                 tabPress: (e: any) => {
-                                                    if (!isIOS) {
+                                                    if (!nativeTabs) {
                                                         // Prevent default action
                                                         e.preventDefault();
                                                     }

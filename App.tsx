@@ -310,6 +310,7 @@ import ShareIntentProcessing from './views/ShareIntentProcessing';
 import WIFSweeper from './views/Tools/WIFSweeper';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
+import { isLiquidGlassEnabled } from './utils/LiquidGlassUtils';
 import LinkingUtils from './utils/LinkingUtils';
 import { lockRouteGuard } from './utils/NavigationUtils';
 import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
@@ -319,9 +320,10 @@ import RedeemWithdrawalRequest from './views/RedeemWithdrawalRequest';
 const Stack = createNativeStackNavigator();
 
 // On iOS the root SafeAreaView skips the bottom edge so the native tab bar
-// on Wallet can reach the screen bottom; every other screen gets the bottom
-// inset here. The insets come from the provider so they follow changes
-// after launch (iPad multitasking, Stage Manager).
+// on Wallet can reach the screen bottom; every other screen, and Wallet with
+// the JS tab bar (Liquid Glass off), gets the bottom inset here. The insets
+// come from the provider so they follow changes after launch (iPad
+// multitasking, Stage Manager).
 const ScreenBottomInset = ({
     applyInset,
     children
@@ -344,7 +346,9 @@ const renderIosScreenLayout = ({
     route: { name: string };
     children: React.ReactElement;
 }) => (
-    <ScreenBottomInset applyInset={route.name !== 'Wallet'}>
+    <ScreenBottomInset
+        applyInset={route.name !== 'Wallet' || !isLiquidGlassEnabled()}
+    >
         {children}
     </ScreenBottomInset>
 );

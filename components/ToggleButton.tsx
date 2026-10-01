@@ -9,11 +9,9 @@ import {
     Dimensions
 } from 'react-native';
 
-import {
-    LiquidGlassView,
-    isLiquidGlassSupported
-} from '@callstack/liquid-glass';
+import { LiquidGlassView } from '@callstack/liquid-glass';
 
+import { isGlassEffectEnabled } from '../utils/LiquidGlassUtils';
 import { isLightTheme, themeColor } from '../utils/ThemeUtils';
 
 interface ToggleOption {
@@ -49,21 +47,20 @@ export default class ToggleButton extends React.Component<ToggleButtonProps> {
     render() {
         const { options, value, onToggle } = this.props;
         const screenWidth = Dimensions.get('window').width;
+        const glass = isGlassEffectEnabled();
         // glass toggles match the native tab bar platter's 21pt margins
-        const horizontalPadding = isLiquidGlassSupported ? 42 : 32;
+        const horizontalPadding = glass ? 42 : 32;
         const toggleWidth = screenWidth - horizontalPadding;
         const thumbWidth = toggleWidth / options.length;
-        const styles = getStyles(toggleWidth, thumbWidth);
+        const styles = getStyles(toggleWidth, thumbWidth, glass);
 
         const translateX = this.animation.interpolate({
             inputRange: options.map((_, i) => i),
             outputRange: options.map((_, i) => i * thumbWidth + 2)
         });
 
-        const Track: React.ElementType = isLiquidGlassSupported
-            ? LiquidGlassView
-            : View;
-        const trackProps = isLiquidGlassSupported
+        const Track: React.ElementType = glass ? LiquidGlassView : View;
+        const trackProps = glass
             ? {
                   effect: 'regular' as const,
                   colorScheme: (isLightTheme() ? 'light' : 'dark') as
@@ -106,7 +103,7 @@ export default class ToggleButton extends React.Component<ToggleButtonProps> {
     }
 }
 
-const getStyles = (toggleWidth: number, thumbWidth: number) =>
+const getStyles = (toggleWidth: number, thumbWidth: number, glass: boolean) =>
     StyleSheet.create({
         container: {
             alignItems: 'center',
@@ -116,10 +113,8 @@ const getStyles = (toggleWidth: number, thumbWidth: number) =>
         toggleButton: {
             width: toggleWidth,
             height: 40,
-            borderRadius: isLiquidGlassSupported ? 20 : 8,
-            backgroundColor: isLiquidGlassSupported
-                ? 'transparent'
-                : themeColor('secondary'),
+            borderRadius: glass ? 20 : 8,
+            backgroundColor: glass ? 'transparent' : themeColor('secondary'),
             position: 'relative',
             justifyContent: 'center',
             overflow: 'hidden'
@@ -127,8 +122,8 @@ const getStyles = (toggleWidth: number, thumbWidth: number) =>
         thumb: {
             position: 'absolute',
             height: 36,
-            borderRadius: isLiquidGlassSupported ? 18 : 8,
-            backgroundColor: isLiquidGlassSupported
+            borderRadius: glass ? 18 : 8,
+            backgroundColor: glass
                 ? themeColor('secondary')
                 : themeColor('text'),
             top: 2,
@@ -155,9 +150,7 @@ const getStyles = (toggleWidth: number, thumbWidth: number) =>
             textAlign: 'center'
         },
         activeText: {
-            color: isLiquidGlassSupported
-                ? themeColor('text')
-                : themeColor('background'),
+            color: glass ? themeColor('text') : themeColor('background'),
             fontFamily: 'PPNeueMontreal-Medium'
         }
     });

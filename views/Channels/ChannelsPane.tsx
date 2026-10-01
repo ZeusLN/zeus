@@ -35,10 +35,7 @@ import ChannelsStore, {
 import LSPStore from '../../stores/LSPStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 
-import {
-    LiquidGlassView,
-    isLiquidGlassSupported
-} from '@callstack/liquid-glass';
+import { LiquidGlassView } from '@callstack/liquid-glass';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -47,6 +44,7 @@ import {
     getRenewalInfo
 } from '../../utils/LeaseUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
+import { isGlassEffectEnabled } from '../../utils/LiquidGlassUtils';
 
 import Channel from '../../models/Channel';
 import { Status } from '../../models/Status';
@@ -407,6 +405,8 @@ export default class ChannelsPane extends React.PureComponent<
             initialRoute = CLOSED_TAB_ROUTE;
         }
 
+        const glass = isGlassEffectEnabled();
+
         const getTabScreenOptions = ({ route }: { route: any }) => {
             let label: string;
             if (route.name === PENDING_TAB_ROUTE) {
@@ -421,7 +421,7 @@ export default class ChannelsPane extends React.PureComponent<
                 tabBarActiveTintColor: themeColor('text'),
                 tabBarInactiveTintColor: 'gray',
                 tabBarShowLabel: true,
-                ...(isLiquidGlassSupported
+                ...(glass
                     ? {
                           tabBarBackground: () => (
                               <LiquidGlassView
@@ -493,7 +493,7 @@ export default class ChannelsPane extends React.PureComponent<
                     );
                     // the item's pressable is top-aligned internally;
                     // stretch and center the label within it
-                    return isLiquidGlassSupported ? (
+                    return glass ? (
                         <View style={{ flex: 1, justifyContent: 'center' }}>
                             {labelText}
                         </View>
