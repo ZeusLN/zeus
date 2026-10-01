@@ -2,16 +2,11 @@ import React from 'react';
 import { StyleProp, StyleSheet, ViewStyle } from 'react-native';
 import { ButtonGroup, ButtonGroupProps } from '@rneui/themed';
 
-import {
-    LiquidGlassView,
-    isLiquidGlassSupported
-} from '@callstack/liquid-glass';
+import { LiquidGlassView } from '@callstack/liquid-glass';
 
+import { isGlassEffectEnabled } from '../utils/LiquidGlassUtils';
 import { isLightTheme, themeColor } from '../utils/ThemeUtils';
 
-// Drop-in replacement for @rneui/themed's ButtonGroup that renders the
-// group on a Liquid Glass track with a capsule selection on iOS 26+,
-// matching the app's tab bars. Elsewhere it passes through unchanged.
 export const getGlassSelectedButtonStyle = (
     selectedButtonStyle: StyleProp<ViewStyle>,
     borderRadius: number
@@ -26,8 +21,12 @@ export const getGlassSelectedButtonStyle = (
     };
 };
 
+// Drop-in replacement for @rneui/themed's ButtonGroup that renders the
+// group on a Liquid Glass track with a capsule selection on iOS 26+,
+// matching the app's tab bars, unless the user turned Liquid Glass off.
+// Elsewhere it passes through unchanged.
 const GlassButtonGroup: React.FC<ButtonGroupProps> = (props) => {
-    if (!isLiquidGlassSupported) {
+    if (!isGlassEffectEnabled()) {
         return <ButtonGroup {...props} />;
     }
 
