@@ -1,23 +1,41 @@
-module.exports = {
-  // RN 0.87 changed the preset's default transform profile from 'default' to
-  // 'hermes-stable', which sets preserveClasses and therefore stops shipping
-  // @babel/plugin-transform-class-properties. MobX 5's legacy decorators
-  // require that transform, so without it every @observable class property
-  // throws "Decorating class property failed" at runtime.
-  //
-  // We pin the profile rather than re-adding the plugin ourselves: a plugin
-  // listed here runs *before* the preset strips TypeScript types, so it would
-  // treat type-only declarations (`payment_hash: string;`) as real class
-  // fields and emit `this.payment_hash = void 0` after super(). That silently
-  // wipes everything BaseModel's constructor assigns.
-  //
-  // TODO: migrate the models' type-only fields to `declare` so the
-  // hermes-stable profile (and its Hermes V1 optimisations) can be restored.
-  presets: [
-    ["module:@react-native/babel-preset", { unstable_transformProfile: "default" }]
-  ],
-  plugins: [
-    ["@babel/plugin-proposal-decorators", { legacy: true }],
-    'react-native-reanimated/plugin'
-  ]
-}
+module.exports = (api) => {
+    // RN 0.87's preset defaults to the 'hermes-stable' transform profile when
+    // the caller does not choose one (Jest). Metro passes 'default' unless the
+    // bundle is built with --unstable-transform-profile hermes-stable.
+    const profile = api.caller(
+        (caller) => caller?.unstable_transformProfile ?? 'hermes-stable'
+    );
+    const isHermesProfile =
+        profile === 'hermes-stable' || profile === 'hermes-canary';
+
+    return {
+        presets: [
+            // Hermes profiles preserve classes and drop
+            // @babel/plugin-transform-class-properties, which MobX 5's legacy
+            // decorators need, so add it back for those profiles only. It must run
+            // after the preset's TypeScript transform has stripped type-only fields
+            // (`payment_hash: string;`); otherwise they become real fields and emit
+            // `this.payment_hash = void 0` after super(), wiping what BaseModel's
+            // constructor assigned. Presets run last to first, so listing it ahead
+            // of RN's preset is what places it after the TypeScript transform. Do
+            // not move it into `plugins`, which run before all presets.
+            ...(isHermesProfile
+                ? [
+                      {
+                          plugins: [
+                              [
+                                  '@babel/plugin-transform-class-properties',
+                                  { loose: true }
+                              ]
+                          ]
+                      }
+                  ]
+                : []),
+            'module:@react-native/babel-preset'
+        ],
+        plugins: [
+            ['@babel/plugin-proposal-decorators', { legacy: true }],
+            'react-native-reanimated/plugin'
+        ]
+    };
+};
