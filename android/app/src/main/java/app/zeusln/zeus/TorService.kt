@@ -28,10 +28,27 @@ class TorService : Service() {
         @Volatile private var newIdentityLabel: String = ""
         @Volatile private var running = false
 
+        // Stopping a service started with startForegroundService before it
+        // reaches startForeground crashes the app with
+        // ForegroundServiceDidNotStartInTimeException. A stop that arrives
+        // while starts are pending is deferred to onStartCommand instead.
+        private val lock = Any()
+        private var pendingStarts = 0
+        private var stopRequested = false
+
         @JvmStatic
         fun startService(context: Context, title: String, text: String, newIdentityLabel: String) {
             setContent(title, text, newIdentityLabel)
-            context.startForegroundService(Intent(context, TorService::class.java))
+            synchronized(lock) {
+                pendingStarts++
+                stopRequested = false
+            }
+            try {
+                context.startForegroundService(Intent(context, TorService::class.java))
+            } catch (e: Exception) {
+                synchronized(lock) { pendingStarts-- }
+                throw e
+            }
         }
 
         @JvmStatic
@@ -45,6 +62,12 @@ class TorService : Service() {
 
         @JvmStatic
         fun stopService(context: Context) {
+            synchronized(lock) {
+                if (pendingStarts > 0) {
+                    stopRequested = true
+                    return
+                }
+            }
             context.stopService(Intent(context, TorService::class.java))
         }
 
@@ -90,6 +113,21 @@ class TorService : Service() {
             startForeground(ONGOING_NOTIFICATION_ID, buildNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         } else {
             startForeground(ONGOING_NOTIFICATION_ID, buildNotification())
+        }
+
+        // Only the last pending start acts on a deferred stop; stopping
+        // while another start is still queued would crash the same way.
+        // stopSelf(startId) also leaves the service up if a newer start
+        // reached the system after the check below.
+        val stop = synchronized(lock) {
+            if (pendingStarts > 0) pendingStarts--
+            val stopNow = pendingStarts == 0 && stopRequested
+            if (stopNow) stopRequested = false
+            stopNow
+        }
+        if (stop) {
+            stopSelf(startId)
+            return START_NOT_STICKY
         }
         running = true
         return START_NOT_STICKY
