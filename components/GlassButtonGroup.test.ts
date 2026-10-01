@@ -1,5 +1,9 @@
 jest.mock('@rneui/themed', () => ({ ButtonGroup: () => null }));
 
+jest.mock('../utils/LiquidGlassUtils', () => ({
+    isGlassEffectEnabled: () => true
+}));
+
 jest.mock('../utils/ThemeUtils', () => ({
     isLightTheme: () => false,
     themeColor: (key: string) => `theme-${key}`

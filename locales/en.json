@@ -1256,6 +1256,8 @@
     "views.Settings.Display.removeDecimalSpaces": "Remove decimal spaces from Bitcoin denominated amounts",
     "views.Settings.Display.showMillisatoshiAmounts": "Show millisatoshi amounts",
     "views.Settings.Display.selectNodeOnStartup": "Select wallet on startup",
+    "views.Settings.Display.liquidGlass": "Liquid Glass",
+    "views.Settings.Display.liquidGlass.subtitle": "Use the native iOS tab bar and Liquid Glass controls. Turn off to use the previous style.",
     "views.Settings.networking": "Networking",
     "views.Settings.Networking.disableOfflineCheck": "Disable offline detection",
     "views.Settings.Networking.disableOfflineCheck.subtitle": "Disables automatic offline detection if you are incorrectly shown as offline.",
