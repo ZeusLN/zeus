@@ -62,10 +62,9 @@ export default class LightningAddressSettings extends React.Component<
             automaticallyAccept: settings.lightningAddress?.automaticallyAccept
                 ? true
                 : false,
-            automaticallyAcceptAttestationLevel: settings.lightningAddress
-                ?.automaticallyAcceptAttestationLevel
-                ? settings.lightningAddress.automaticallyAcceptAttestationLevel
-                : 2,
+            automaticallyAcceptAttestationLevel:
+                settings.lightningAddress
+                    ?.automaticallyAcceptAttestationLevel ?? 2,
             routeHints: settings.lightningAddress?.routeHints ? true : false,
             allowComments: settings.lightningAddress?.allowComments
                 ? true
@@ -96,9 +95,16 @@ export default class LightningAddressSettings extends React.Component<
                     text: localeString('general.delete'),
                     onPress: () => {
                         const { LightningAddressStore } = this.props;
-                        LightningAddressStore.deleteAddress().then(() => {
-                            this.props.navigation.goBack();
-                        });
+                        LightningAddressStore.deleteAddress()
+                            .then(() => {
+                                this.props.navigation.goBack();
+                            })
+                            .catch((e) =>
+                                console.log(
+                                    'Error deleting Lightning address',
+                                    e
+                                )
+                            );
                     },
                     style: 'destructive'
                 }

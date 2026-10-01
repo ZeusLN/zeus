@@ -175,15 +175,14 @@ export default class ChangeAddress extends React.Component<
                                             title={localeString(
                                                 'views.Settings.LightningAddress.change'
                                             )}
-                                            onPress={() => {
+                                            onPress={async () => {
                                                 try {
-                                                    update({
+                                                    await update({
                                                         handle: newLightningAddress,
                                                         domain: newLightningDomain
-                                                    }).then(() =>
-                                                        navigation.popTo(
-                                                            'LightningAddress'
-                                                        )
+                                                    });
+                                                    navigation.popTo(
+                                                        'LightningAddress'
                                                     );
                                                 } catch (e) {}
                                             }}

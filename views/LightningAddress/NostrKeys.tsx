@@ -338,7 +338,7 @@ export default class NostrKey extends React.Component<
                                         title={localeString(
                                             'views.Settings.SetPassword.save'
                                         )}
-                                        onPress={() => {
+                                        onPress={async () => {
                                             if (setup) {
                                                 navigation.popTo(
                                                     'CreateZaplockerLightningAddress',
@@ -366,23 +366,22 @@ export default class NostrKey extends React.Component<
                                                     )
                                                 );
                                                 try {
-                                                    update({
+                                                    await update({
                                                         nostr_pk:
                                                             nostrPublicKey,
                                                         relays,
                                                         relays_sig
-                                                    }).then(async () => {
-                                                        this.setState({
-                                                            existingNostrPrivateKey:
-                                                                nostrPrivateKey,
-                                                            editMode: false
-                                                        });
-                                                        await updateSettings({
-                                                            lightningAddress: {
-                                                                ...settings.lightningAddress,
-                                                                nostrPrivateKey
-                                                            }
-                                                        });
+                                                    });
+                                                    this.setState({
+                                                        existingNostrPrivateKey:
+                                                            nostrPrivateKey,
+                                                        editMode: false
+                                                    });
+                                                    await updateSettings({
+                                                        lightningAddress: {
+                                                            ...settings.lightningAddress,
+                                                            nostrPrivateKey
+                                                        }
                                                     });
                                                 } catch (e) {}
                                             }
