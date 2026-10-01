@@ -40,14 +40,18 @@ class MainActivity : ReactActivity() {
         }
 
         // With edge-to-edge on, adjustResize no longer shrinks the window for
-        // the keyboard, so pad the content by the IME height to restore it.
+        // the keyboard on API 30+, so pad the content by the IME height to
+        // restore it. Below API 30 the window is still resized, and padding
+        // would lift the content a second time.
         // Insets are passed on unconsumed for safe-area handling below.
-        ViewCompat.setOnApplyWindowInsetsListener(
-            findViewById<View>(android.R.id.content)
-        ) { view, insets ->
-            val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
-            view.setPadding(0, 0, 0, imeBottom)
-            insets
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            ViewCompat.setOnApplyWindowInsetsListener(
+                findViewById<View>(android.R.id.content)
+            ) { view, insets ->
+                val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+                view.setPadding(0, 0, 0, imeBottom)
+                insets
+            }
         }
 
         currentActivity = WeakReference(this@MainActivity)
