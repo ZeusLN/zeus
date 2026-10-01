@@ -9,6 +9,7 @@ import {
     StatusBar,
     Animated
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface VPNAppProps {
     onUnlock: () => void;
@@ -93,6 +94,7 @@ const VPNApp: React.FC<VPNAppProps> = ({
     unlockCountry = 'Switzerland',
     unlockServer = 'Geneva'
 }) => {
+    const insets = useSafeAreaInsets();
     const [status, setStatus] =
         React.useState<ConnectionStatus>('disconnected');
     const [selectedLocation, setSelectedLocation] =
@@ -330,7 +332,12 @@ const VPNApp: React.FC<VPNAppProps> = ({
                 transparent
             >
                 <View style={styles.modalContainer}>
-                    <View style={styles.modalContent}>
+                    <View
+                        style={[
+                            styles.modalContent,
+                            { paddingBottom: insets.bottom }
+                        ]}
+                    >
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>
                                 Select Location
@@ -353,7 +360,12 @@ const VPNApp: React.FC<VPNAppProps> = ({
             {/* Server Picker Modal */}
             <Modal visible={showServerPicker} animationType="slide" transparent>
                 <View style={styles.modalContainer}>
-                    <View style={styles.modalContent}>
+                    <View
+                        style={[
+                            styles.modalContent,
+                            { paddingBottom: insets.bottom }
+                        ]}
+                    >
                         <View style={styles.modalHeader}>
                             <Text style={styles.modalTitle}>
                                 {selectedLocation?.flag}{' '}
