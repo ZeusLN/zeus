@@ -177,6 +177,7 @@ export default class RapidGossipSync extends React.Component<
                                     }}
                                     autoCapitalize="none"
                                     autoCorrect={false}
+                                    keyboardType="url"
                                 />
                                 {showCustomUrlError && (
                                     <Text

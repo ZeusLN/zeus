@@ -1044,6 +1044,8 @@ export default class AddOrEditNWCConnection extends React.Component<
                                             })
                                         }
                                         autoCapitalize="none"
+                                        autoCorrect={false}
+                                        keyboardType="url"
                                         style={styles.textInput}
                                         textColor={
                                             customRelayUrl.trim().length > 0 &&

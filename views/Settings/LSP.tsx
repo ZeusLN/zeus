@@ -247,6 +247,7 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                     locked={!enableLSP}
                                     autoCapitalize="none"
                                     autoCorrect={false}
+                                    keyboardType="url"
                                 />
                             </View>
                             <View

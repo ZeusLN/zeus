@@ -237,6 +237,7 @@ export default class AddWatchtower extends React.Component<
                             )}
                             autoCapitalize="none"
                             autoCorrect={false}
+                            keyboardType="url"
                         />
                     </View>
 

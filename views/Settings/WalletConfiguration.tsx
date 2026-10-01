@@ -2124,6 +2124,7 @@ export default class WalletConfiguration extends React.Component<
                                         value={lndhubUrl}
                                         autoCorrect={false}
                                         autoCapitalize="none"
+                                        keyboardType="url"
                                         onChangeText={(text: string) => {
                                             this.setState({
                                                 lndhubUrlError: false
@@ -2380,6 +2381,7 @@ export default class WalletConfiguration extends React.Component<
                                         }
                                         autoCorrect={false}
                                         autoCapitalize="none"
+                                        keyboardType="url"
                                         value={host}
                                         onChangeText={(text: string) => {
                                             this.setState({ hostError: false });
@@ -2748,6 +2750,7 @@ export default class WalletConfiguration extends React.Component<
                                                 }
                                                 autoCorrect={false}
                                                 autoCapitalize="none"
+                                                keyboardType="url"
                                                 value={customMailboxServer}
                                                 onChangeText={(
                                                     text: string

@@ -162,6 +162,7 @@ export default class CreateNWCLightningAddress extends React.Component<
                                                         }
                                                         autoCapitalize="none"
                                                         autoCorrect={false}
+                                                        keyboardType="url"
                                                     />
                                                 </>
                                             )}
