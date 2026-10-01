@@ -1,5 +1,12 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, Alert, Modal } from 'react-native';
+import {
+    StyleSheet,
+    View,
+    Alert,
+    Modal,
+    KeyboardAvoidingView,
+    Platform
+} from 'react-native';
 
 import Invoice from '../../models/Invoice';
 import Payment from '../../models/Payment';
@@ -111,7 +118,10 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
             animationType="slide"
             onRequestClose={closeAndClearInput}
         >
-            <View style={styles.modalOverlay}>
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'android' ? 'padding' : undefined}
+                style={styles.modalOverlay}
+            >
                 <View
                     style={{
                         width: '80%',
@@ -152,7 +162,7 @@ const ActivityToCsv: React.FC<ActivityProps> = ({
                         </>
                     )}
                 </View>
-            </View>
+            </KeyboardAvoidingView>
         </Modal>
     );
 };
