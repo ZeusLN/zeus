@@ -77,7 +77,6 @@ jest.mock('../storage', () => {
 import { reaction } from 'mobx';
 
 import SettingsStore, { STORAGE_KEY } from './SettingsStore';
-import BalanceStore from './BalanceStore';
 import BackendUtils from '../utils/BackendUtils';
 
 const StorageMock: any = jest.requireMock('../storage');
@@ -172,33 +171,6 @@ describe('startup wallet selection', () => {
         expect(settingsStore.macaroonHex).toEqual('bbbb');
     });
 
-    it('does not fetch balances from the previous wallet while a switch commits', async () => {
-        seedStartupSettings();
-        const settingsStore = new SettingsStore();
-        new BalanceStore(settingsStore);
-        await settingsStore.getSettings();
-
-        await commitSwitch(settingsStore);
-
-        expect(BackendUtils.getBlockchainBalance).not.toHaveBeenCalled();
-        expect(BackendUtils.getLightningBalance).not.toHaveBeenCalled();
-    });
-
-    it('fetches again once the switch is confirmed', async () => {
-        seedStartupSettings();
-        const settingsStore = new SettingsStore();
-        new BalanceStore(settingsStore);
-        await settingsStore.getSettings();
-        await commitSwitch(settingsStore);
-
-        // What the wallet list calls when it activates the picked wallet
-        settingsStore.setConnectingStatus(true);
-        await settingsStore.updateSettings({ nodes, selectedNode: 1 } as any);
-
-        expect(BackendUtils.getBlockchainBalance).toHaveBeenCalled();
-        expect(BackendUtils.getLightningBalance).toHaveBeenCalled();
-    });
-
     it('leaves the latch down when the setting is disabled', async () => {
         StorageMock._backing[STORAGE_KEY] = JSON.stringify({
             selectNodeOnStartup: false,
@@ -206,12 +178,10 @@ describe('startup wallet selection', () => {
             nodes
         });
         const settingsStore = new SettingsStore();
-        new BalanceStore(settingsStore);
         await settingsStore.getSettings();
 
         await commitSwitch(settingsStore);
 
         expect(settingsStore.walletSelectionPending).toBe(false);
-        expect(BackendUtils.getLightningBalance).toHaveBeenCalled();
     });
 });

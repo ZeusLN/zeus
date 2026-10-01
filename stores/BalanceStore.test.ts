@@ -1,7 +1,6 @@
 jest.mock('./Stores', () => ({}));
 jest.mock('react-native-blob-util', () => ({}));
 jest.mock('../ldknode/LdkNodeInjection', () => ({}));
-jest.mock('./SettingsStore', () => ({}));
 jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
     default: {
@@ -13,7 +12,7 @@ jest.mock('../utils/BackendUtils', () => ({
     }
 }));
 
-import { observable, runInAction } from 'mobx';
+import { runInAction } from 'mobx';
 
 import BalanceStore from './BalanceStore';
 import BackendUtils from '../utils/BackendUtils';
@@ -23,69 +22,6 @@ const blockchainBalance = {
     confirmed_balance: '0',
     unconfirmed_balance: '0'
 };
-const lightningBalance = { balance: '0', pending_open_balance: '0' };
-
-const newSettingsStore = (walletSelectionPending: boolean) =>
-    observable({
-        settings: { nodes: [{}], selectedNode: 0 } as any,
-        walletSelectionPending,
-        hasCredentials: () => true
-    });
-
-// Writing settings again is what startup does: getSettings() runs several
-// times and assigns a freshly parsed object each time.
-const rewriteSettings = (settingsStore: any) =>
-    runInAction(() => {
-        settingsStore.settings = { nodes: [{}], selectedNode: 0 };
-    });
-
-describe('BalanceStore settings reaction', () => {
-    beforeEach(() => {
-        jest.clearAllMocks();
-        (BackendUtils.getBlockchainBalance as jest.Mock).mockResolvedValue(
-            blockchainBalance
-        );
-        (BackendUtils.getLightningBalance as jest.Mock).mockResolvedValue(
-            lightningBalance
-        );
-    });
-
-    it('does not reach a node while the user is still choosing a wallet on startup', () => {
-        const settingsStore = newSettingsStore(true);
-        new BalanceStore(settingsStore as any);
-
-        rewriteSettings(settingsStore);
-
-        expect(BackendUtils.getBlockchainBalance).not.toHaveBeenCalled();
-        expect(BackendUtils.getLightningBalance).not.toHaveBeenCalled();
-    });
-
-    it('fetches balances when no wallet selection is pending', () => {
-        const settingsStore = newSettingsStore(false);
-        new BalanceStore(settingsStore as any);
-
-        rewriteSettings(settingsStore);
-
-        expect(BackendUtils.getBlockchainBalance).toHaveBeenCalled();
-        expect(BackendUtils.getLightningBalance).toHaveBeenCalled();
-    });
-
-    it('fetches again once the wallet has been picked', () => {
-        const settingsStore = newSettingsStore(true);
-        new BalanceStore(settingsStore as any);
-
-        rewriteSettings(settingsStore);
-        expect(BackendUtils.getLightningBalance).not.toHaveBeenCalled();
-
-        runInAction(() => {
-            settingsStore.walletSelectionPending = false;
-        });
-        rewriteSettings(settingsStore);
-
-        expect(BackendUtils.getBlockchainBalance).toHaveBeenCalled();
-        expect(BackendUtils.getLightningBalance).toHaveBeenCalled();
-    });
-});
 
 describe('BalanceStore cooperative close overlap', () => {
     beforeEach(() => {
@@ -110,7 +46,7 @@ describe('BalanceStore cooperative close overlap', () => {
                 }
             ]
         });
-        const store = new BalanceStore(newSettingsStore(true) as any);
+        const store = new BalanceStore();
 
         await store.getBlockchainBalance(true, false);
         store.setPendingCloseBalance(47151, [
@@ -126,7 +62,7 @@ describe('BalanceStore cooperative close overlap', () => {
         (BackendUtils.getBlockchainBalance as jest.Mock).mockResolvedValue(
             blockchainBalance
         );
-        const store = new BalanceStore(newSettingsStore(true) as any);
+        const store = new BalanceStore();
 
         await store.getBlockchainBalance(true, false);
         store.setPendingCloseBalance(47151);
@@ -166,7 +102,7 @@ describe('BalanceStore force close sweep overlap', () => {
 
     it('counts a force close with an unconfirmed sweep once', async () => {
         mockUnconfirmedSweep();
-        const store = new BalanceStore(newSettingsStore(true) as any);
+        const store = new BalanceStore();
 
         await store.getBlockchainBalance(true, false);
         store.setPendingCloseBalance(
@@ -190,7 +126,7 @@ describe('BalanceStore force close sweep overlap', () => {
 
     it('never drops more than the cooperative close overlap leaves', async () => {
         mockUnconfirmedSweep();
-        const store = new BalanceStore(newSettingsStore(true) as any);
+        const store = new BalanceStore();
 
         await store.getBlockchainBalance(true, false);
         store.setPendingCloseBalance(
@@ -225,7 +161,7 @@ describe('BalanceStore settled blockchain balance', () => {
                 }
             ]
         });
-        const store = new BalanceStore(newSettingsStore(true) as any);
+        const store = new BalanceStore();
 
         await store.getBlockchainBalance(true, false);
 
@@ -249,7 +185,7 @@ describe('BalanceStore settled blockchain balance', () => {
                 }
             ]
         });
-        const store = new BalanceStore(newSettingsStore(true) as any);
+        const store = new BalanceStore();
 
         await store.getBlockchainBalance(true, false);
 
@@ -258,7 +194,7 @@ describe('BalanceStore settled blockchain balance', () => {
     });
 
     it('handles a string total before any external balance is set', () => {
-        const store = new BalanceStore(newSettingsStore(true) as any);
+        const store = new BalanceStore();
         runInAction(() => {
             store.totalBlockchainBalance = '25000';
         });
