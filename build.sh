@@ -44,8 +44,9 @@ Usage: ./build.sh [options]
                         the published release hashes.
   --gradle-cache DIR    Use DIR as the Gradle cache instead of ./.gradle-cache,
                         so multiple checkouts share one (~6GB) cache.
-  --write-locks         Regenerate android/gradle.lockfile and
-                        android/app/gradle.lockfile from this build.
+  --write-locks         Regenerate the Gradle dependency lock files
+                        (android/buildscript-gradle.lockfile and
+                        android/app/gradle.lockfile) from this build.
   -h, --help            Show this message.
 USAGE
 }
