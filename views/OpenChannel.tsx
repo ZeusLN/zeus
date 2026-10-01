@@ -320,13 +320,22 @@ export default class OpenChannel extends React.Component<
         const isInvalidFeeRate =
             supportsChannelOpenFeeRate &&
             (sat_per_vbyte === '0' || !sat_per_vbyte);
+        // AmountInput reports satAmount '0' for an empty field
+        const isInvalidAmount =
+            !connectPeerOnly && !fundMax && !Number(satAmount);
+        const isSubmitDisabled =
+            loading ||
+            (!connectPeerOnly && isInvalidFeeRate) ||
+            isInvalidAmount ||
+            isInvalidPeer;
 
         const peerAlias =
             ChannelsStore.aliasesByPubkey[node_pubkey_string] ||
             ChannelsStore.nodes[node_pubkey_string]?.alias;
 
-        // When fundMax is on, AmountInput is locked so onAmountChange never fires and
-        // satAmount stays ''. Use the same value the locked AmountInput displays instead.
+        // When fundMax is on, AmountInput only reports satAmount once when it is
+        // turned on, not for later balance or UTXO changes. Use the same value the
+        // locked AmountInput displays instead.
         const displaySatAmount = fundMax
             ? utxoBalance > 0
                 ? utxoBalance
@@ -843,7 +852,10 @@ export default class OpenChannel extends React.Component<
                                                                 implementation ===
                                                                     'cln-rest'
                                                                     ? 'all'
-                                                                    : ''
+                                                                    : '',
+                                                            // AmountInput does not report the cleared
+                                                            // amount when fund max is turned off
+                                                            satAmount: ''
                                                         });
                                                     }}
                                                 />
@@ -1287,10 +1299,9 @@ export default class OpenChannel extends React.Component<
                                     icon={{
                                         name: 'swap-horiz',
                                         size: 25,
-                                        color:
-                                            isInvalidFeeRate || isInvalidPeer
-                                                ? themeColor('secondaryText')
-                                                : themeColor('background')
+                                        color: isSubmitDisabled
+                                            ? themeColor('secondaryText')
+                                            : themeColor('background')
                                     }}
                                     onPress={() => {
                                         this.scrollViewRef.current?.scrollTo({
@@ -1311,12 +1322,7 @@ export default class OpenChannel extends React.Component<
                                             connectPeerOnly
                                         ).catch(() => {});
                                     }}
-                                    disabled={
-                                        loading ||
-                                        (!connectPeerOnly &&
-                                            isInvalidFeeRate) ||
-                                        isInvalidPeer
-                                    }
+                                    disabled={isSubmitDisabled}
                                 />
                             </View>
 
