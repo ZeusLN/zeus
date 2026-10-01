@@ -6,6 +6,7 @@ jest.mock('./BackendUtils', () => ({
 
 import BackendUtils from './BackendUtils';
 import {
+    MAX_REPAIR_ATTEMPTS,
     repairMissingChannelEdges,
     resetChannelEdgeRepairState
 } from './ChannelEdgeRepairUtils';
@@ -57,7 +58,12 @@ describe('repairMissingChannelEdges', () => {
 
         expect(getChannelInfo).toHaveBeenCalledTimes(2);
         expect(updateChannelPolicy).not.toHaveBeenCalled();
-        expect(result).toEqual({ checked: 2, repaired: [], failed: [] });
+        expect(result).toEqual({
+            checked: 2,
+            repaired: [],
+            failed: [],
+            skipped: []
+        });
     });
 
     it('recreates only the channel whose edge is missing', async () => {
@@ -86,7 +92,8 @@ describe('repairMissingChannelEdges', () => {
         expect(result).toEqual({
             checked: 3,
             repaired: [`${TXID_B}:3`],
-            failed: []
+            failed: [],
+            skipped: []
         });
     });
 
@@ -103,7 +110,7 @@ describe('repairMissingChannelEdges', () => {
         expect(data.chan_point).toBeDefined();
     });
 
-    it('does not repair on errors other than edge not found', async () => {
+    it('skips instead of repairing on errors other than edge not found', async () => {
         getChannels.mockResolvedValue({
             channels: [channel('1', TXID_A, 0), channel('2', TXID_B, 0)]
         });
@@ -114,7 +121,12 @@ describe('repairMissingChannelEdges', () => {
         const result = await repairMissingChannelEdges('lnd');
 
         expect(updateChannelPolicy).not.toHaveBeenCalled();
-        expect(result).toEqual({ checked: 2, repaired: [], failed: [] });
+        expect(result).toEqual({
+            checked: 2,
+            repaired: [],
+            failed: [],
+            skipped: [`${TXID_A}:0`, `${TXID_B}:0`]
+        });
     });
 
     it('matches string rejections', async () => {
@@ -184,7 +196,8 @@ describe('repairMissingChannelEdges', () => {
         expect(result).toEqual({
             checked: 2,
             repaired: [`${TXID_B}:0`],
-            failed: [`${TXID_A}:0`]
+            failed: [`${TXID_A}:0`],
+            skipped: []
         });
     });
 
@@ -205,7 +218,8 @@ describe('repairMissingChannelEdges', () => {
         expect(result).toEqual({
             checked: 2,
             repaired: [`${TXID_B}:0`],
-            failed: [`${TXID_A}:0`]
+            failed: [`${TXID_A}:0`],
+            skipped: []
         });
     });
 
@@ -233,7 +247,159 @@ describe('repairMissingChannelEdges', () => {
 
         expect(getChannelInfo).not.toHaveBeenCalled();
         expect(updateChannelPolicy).not.toHaveBeenCalled();
-        expect(result).toEqual({ checked: 0, repaired: [], failed: [] });
+        expect(result).toEqual({
+            checked: 0,
+            repaired: [],
+            failed: [],
+            skipped: []
+        });
+    });
+
+    it('treats the edge as present if it is found under the confirmed scid', async () => {
+        getChannels.mockResolvedValue({
+            channels: [
+                {
+                    ...channel('100', TXID_A, 0, '1000'),
+                    zero_conf_confirmed_scid: '200',
+                    alias_scids: [{ toString: () => '300' }]
+                }
+            ]
+        });
+        getChannelInfo.mockImplementation((scid: string) =>
+            scid === '200' ? Promise.resolve({}) : edgeNotFound()
+        );
+
+        const result = await repairMissingChannelEdges('lnd');
+
+        expect(getChannelInfo.mock.calls.map(([scid]) => scid)).toEqual([
+            '100',
+            '200'
+        ]);
+        expect(updateChannelPolicy).not.toHaveBeenCalled();
+        expect(result?.repaired).toEqual([]);
+    });
+
+    it('treats the edge as present if it is found under an alias scid', async () => {
+        getChannels.mockResolvedValue({
+            channels: [
+                {
+                    ...channel('100', TXID_A, 0, '1000'),
+                    zero_conf_confirmed_scid: '0',
+                    alias_scids: [
+                        { toString: () => '100' },
+                        { toString: () => '300' }
+                    ]
+                }
+            ]
+        });
+        getChannelInfo.mockImplementation((scid: string) =>
+            scid === '300' ? Promise.resolve({}) : edgeNotFound()
+        );
+
+        await repairMissingChannelEdges('lnd');
+
+        // '0' and the duplicate of chan_id are not looked up
+        expect(getChannelInfo.mock.calls.map(([scid]) => scid)).toEqual([
+            '100',
+            '300'
+        ]);
+        expect(updateChannelPolicy).not.toHaveBeenCalled();
+    });
+
+    it('repairs only when every scid reports edge not found', async () => {
+        getChannels.mockResolvedValue({
+            channels: [
+                {
+                    ...channel('100', TXID_A, 0, '1000'),
+                    zero_conf_confirmed_scid: '200',
+                    alias_scids: ['300']
+                }
+            ]
+        });
+        getChannelInfo.mockImplementation(edgeNotFound);
+
+        const result = await repairMissingChannelEdges('lnd');
+
+        expect(getChannelInfo).toHaveBeenCalledTimes(3);
+        expect(result?.repaired).toEqual([`${TXID_A}:0`]);
+    });
+
+    it('skips the channel if a later scid lookup errors', async () => {
+        getChannels.mockResolvedValue({
+            channels: [
+                {
+                    ...channel('100', TXID_A, 0, '1000'),
+                    zero_conf_confirmed_scid: '200'
+                }
+            ]
+        });
+        getChannelInfo
+            .mockImplementationOnce(edgeNotFound)
+            .mockRejectedValueOnce(new Error('context deadline exceeded'));
+
+        const result = await repairMissingChannelEdges('lnd');
+
+        expect(updateChannelPolicy).not.toHaveBeenCalled();
+        expect(result?.skipped).toEqual([`${TXID_A}:0`]);
+    });
+
+    it('runs separate repairs for concurrent calls on different nodes', async () => {
+        getChannels.mockResolvedValue({
+            channels: [channel('1', TXID_A, 0)]
+        });
+        getChannelInfo.mockResolvedValue({});
+
+        const [first, second] = await Promise.all([
+            repairMissingChannelEdges('lnd'),
+            repairMissingChannelEdges('lnd2')
+        ]);
+
+        expect(getChannels).toHaveBeenCalledTimes(2);
+        expect(first).toBeDefined();
+        expect(second).toBeDefined();
+        expect(second).not.toBe(first);
+    });
+
+    it('retries the node on the next call after a skipped channel', async () => {
+        getChannels.mockResolvedValue({
+            channels: [channel('1', TXID_A, 0, '1000')]
+        });
+        getChannelInfo
+            .mockRejectedValueOnce(new Error('context deadline exceeded'))
+            .mockImplementationOnce(edgeNotFound);
+
+        const first = await repairMissingChannelEdges('lnd');
+        expect(first?.skipped).toEqual([`${TXID_A}:0`]);
+
+        const second = await repairMissingChannelEdges('lnd');
+        expect(second?.repaired).toEqual([`${TXID_A}:0`]);
+
+        // The second pass was clean, so the node is done
+        expect(await repairMissingChannelEdges('lnd')).toBeUndefined();
+        expect(getChannels).toHaveBeenCalledTimes(2);
+    });
+
+    it('retries failed repairs at most MAX_REPAIR_ATTEMPTS times', async () => {
+        getChannels.mockResolvedValue({
+            channels: [channel('1', TXID_A, 0, '1000')]
+        });
+        getChannelInfo.mockImplementation(edgeNotFound);
+        updateChannelPolicy.mockResolvedValue({
+            failed_updates: [{ update_error: 'could not add edge' }]
+        });
+
+        for (let i = 0; i < MAX_REPAIR_ATTEMPTS; i++) {
+            const result = await repairMissingChannelEdges('lnd');
+            expect(result?.failed).toEqual([`${TXID_A}:0`]);
+        }
+        expect(await repairMissingChannelEdges('lnd')).toBeUndefined();
+        expect(updateChannelPolicy).toHaveBeenCalledTimes(MAX_REPAIR_ATTEMPTS);
+
+        // The cap is per node
+        await repairMissingChannelEdges('lnd2');
+        expect(updateChannelPolicy).toHaveBeenCalledTimes(
+            MAX_REPAIR_ATTEMPTS + 1
+        );
     });
 
     it('runs once per node per session', async () => {
@@ -277,6 +443,11 @@ describe('repairMissingChannelEdges', () => {
         const result = await repairMissingChannelEdges('lnd');
 
         expect(getChannels).toHaveBeenCalledTimes(2);
-        expect(result).toEqual({ checked: 0, repaired: [], failed: [] });
+        expect(result).toEqual({
+            checked: 0,
+            repaired: [],
+            failed: [],
+            skipped: []
+        });
     });
 });
