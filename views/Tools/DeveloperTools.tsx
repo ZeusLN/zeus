@@ -21,6 +21,11 @@ import TextInput from '../../components/TextInput';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import BackendUtils from '../../utils/BackendUtils';
+import {
+    DEFAULT_POLICY_BASE_FEE_MSAT,
+    DEFAULT_POLICY_FEE_RATE_PPM,
+    DEFAULT_POLICY_TIME_LOCK_DELTA
+} from '../../utils/ChannelEdgeRepairUtils';
 
 import SettingsStore, { Implementations } from '../../stores/SettingsStore';
 import Accordion from '../../components/Accordion';
@@ -323,10 +328,9 @@ class Command extends React.Component<CommandProps, CommandState> {
         expanded: false,
         pendingFundingShimOnly: false,
         iKnowWhatIAmDoing: false,
-        // lnd defaults for lncli updatechanpolicy
-        baseFeeMsat: '1000',
-        feeRatePpm: '1',
-        timeLockDelta: '80',
+        baseFeeMsat: DEFAULT_POLICY_BASE_FEE_MSAT,
+        feeRatePpm: String(DEFAULT_POLICY_FEE_RATE_PPM),
+        timeLockDelta: String(DEFAULT_POLICY_TIME_LOCK_DELTA),
         minHtlcMsat: '',
         maxHtlcMsat: '',
         createMissingEdge: false
