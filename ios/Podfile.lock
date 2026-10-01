@@ -1424,7 +1424,7 @@ PODS:
     - Yoga
   - react-native-biometrics (3.0.1):
     - React-Core
-  - react-native-blob-util (0.24.10):
+  - react-native-blob-util (0.25.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1545,7 +1545,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context (5.9.1):
+  - react-native-safe-area-context (5.10.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1557,8 +1557,8 @@ PODS:
     - React-graphics
     - React-ImageManager
     - React-jsi
-    - react-native-safe-area-context/common (= 5.9.1)
-    - react-native-safe-area-context/fabric (= 5.9.1)
+    - react-native-safe-area-context/common (= 5.10.0)
+    - react-native-safe-area-context/fabric (= 5.10.0)
     - React-NativeModulesApple
     - React-RCTFabric
     - React-renderercss
@@ -1568,7 +1568,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context/common (5.9.1):
+  - react-native-safe-area-context/common (5.10.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1589,7 +1589,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context/fabric (5.9.1):
+  - react-native-safe-area-context/fabric (5.10.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2162,7 +2162,7 @@ PODS:
     - React-Core
   - RNFS (2.20.0):
     - React-Core
-  - RNGestureHandler (3.2.1):
+  - RNGestureHandler (3.3.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2321,7 +2321,7 @@ PODS:
     - ReactNativeDependencies
     - RNWorklets
     - Yoga
-  - RNScreens (4.27.0):
+  - RNScreens (4.28.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2342,9 +2342,9 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
-    - RNScreens/common (= 4.27.0)
+    - RNScreens/common (= 4.28.0)
     - Yoga
-  - RNScreens/common (4.27.0):
+  - RNScreens/common (4.28.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2955,7 +2955,7 @@ SPEC CHECKSUMS:
   React-microtasksnativemodule: 701227a2db4b26d438dbb08e4f9e5c9c49079fe3
   React-mutationobservernativemodule: 4614b4f0c60f09c2d88ab86d03cdb4a346a550f0
   react-native-biometrics: 43ed5b828646a7862dbc7945556446be00798e7d
-  react-native-blob-util: 9a0ec0df57321755d956bd42369fe9f91e61eeb2
+  react-native-blob-util: e1d422f28e1ae7af97150c7bf5812c96e66f568c
   react-native-document-picker: 419fc2eb9ebc9ff7dcfa284b92a223343d602c24
   react-native-encrypted-storage: 569d114e329b1c2c2d9f8c84bcdbe4478dda2258
   react-native-get-random-values: 97114ff96e0874df4e84f1dc11568764dadf10c6
@@ -2968,7 +2968,7 @@ SPEC CHECKSUMS:
   react-native-qr-kit: a40acb98a771a6e614602b5dd53546a5c51e8af4
   react-native-randombytes: 4eeddad82d1fd57adda1cd5beffe67d041c9d6de
   react-native-restart: 9b4e1d24e03c8d7354e76c1f85013e17fe543885
-  react-native-safe-area-context: 66d12f37271cec232fc7fd28320fc209cbc128a6
+  react-native-safe-area-context: f124ba47d08525ce61c9549274c2a5b7ba2ad097
   react-native-slider: 8ed38813dee46289070f2009680e537161b7df91
   react-native-udp: 806f16ab890dd838bc073afcebd6a221d4965572
   react-native-vector-icons-feather: b0c81b5240bc89ba1546220b694fc5f7b660258d
@@ -3019,11 +3019,11 @@ SPEC CHECKSUMS:
   RNDateTimePicker: 9970e63dd8ec97ff495f644ccb5b6cdb5b2c0bfe
   RNDeviceInfo: 4c852998208b60dc192ae3529e5867817719ad1e
   RNFS: 89de7d7f4c0f6bafa05343c578f61118c8282ed8
-  RNGestureHandler: 0aba342d016ae2338905e7dc48653e5c661f29b8
+  RNGestureHandler: 4228f0a91ebe7c53cc508481da8273f86e96f1a9
   RNKeychain: bf4c20ea9a035f99aed8623a56cbfa1c9093634b
   RNReactNativeHapticFeedback: 4e9fb92a6c5d9f6e5ca5b84d56c5de07bc6cc261
   RNReanimated: 08e15384162a179af55494638707283747b85164
-  RNScreens: b3b0a0f3424f12044de0475fff559d0edc2b9593
+  RNScreens: 639aff03a0b6ae42564e94fe2393f438bd51f39e
   RNSecureRandom: b64d263529492a6897e236a22a2c4249aa1b53dc
   RNShare: cca9107c0dcfdd92fa228116226d1189663265b4
   RNSVG: aacbdedbac719eef30569be569c9d87e08aaefce
