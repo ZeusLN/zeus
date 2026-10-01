@@ -323,10 +323,25 @@ export default class OpenChannel extends React.Component<
         // AmountInput reports satAmount '0' for an empty field
         const isInvalidAmount =
             !connectPeerOnly && !fundMax && !Number(satAmount);
+        const isValidAdditionalPubkey = (channel: AdditionalChannel) =>
+            ValidationUtils.validateNodePubkey(channel.node_pubkey_string);
+        // an empty host is left to the store, which treats the peer as
+        // already connected
+        const isValidAdditionalHost = (channel: AdditionalChannel) =>
+            !channel.host || ValidationUtils.validateNodeHost(channel.host);
+        const isInvalidAdditionalChannel =
+            !connectPeerOnly &&
+            additionalChannels.some(
+                (channel) =>
+                    !Number(channel.satAmount) ||
+                    !isValidAdditionalPubkey(channel) ||
+                    !isValidAdditionalHost(channel)
+            );
         const isSubmitDisabled =
             loading ||
             (!connectPeerOnly && isInvalidFeeRate) ||
             isInvalidAmount ||
+            isInvalidAdditionalChannel ||
             isInvalidPeer;
 
         const peerAlias =
@@ -881,6 +896,17 @@ export default class OpenChannel extends React.Component<
                                                         )}
                                                     </Text>
                                                     <TextInput
+                                                        textColor={
+                                                            isValidAdditionalPubkey(
+                                                                channel
+                                                            )
+                                                                ? themeColor(
+                                                                      'text'
+                                                                  )
+                                                                : themeColor(
+                                                                      'error'
+                                                                  )
+                                                        }
                                                         placeholder={'0A...'}
                                                         value={
                                                             channel?.node_pubkey_string
@@ -915,6 +941,17 @@ export default class OpenChannel extends React.Component<
                                                         )}
                                                     </Text>
                                                     <TextInput
+                                                        textColor={
+                                                            isValidAdditionalHost(
+                                                                channel
+                                                            )
+                                                                ? themeColor(
+                                                                      'text'
+                                                                  )
+                                                                : themeColor(
+                                                                      'error'
+                                                                  )
+                                                        }
                                                         value={channel?.host}
                                                         placeholder={localeString(
                                                             'views.OpenChannel.hostPort'
