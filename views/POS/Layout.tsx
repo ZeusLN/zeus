@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { Animated, View, Text, TouchableOpacity } from 'react-native';
+import {
+    Animated,
+    ScrollView,
+    View,
+    Text,
+    TouchableOpacity
+} from 'react-native';
 import { ButtonGroup, ButtonGroupProps } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -36,48 +42,62 @@ interface LayoutProps {
 @observer
 export default class Layout extends React.PureComponent<LayoutProps> {
     renderErrorScreen = () => {
-        const { SettingsStore, NodeInfoStore, navigation } = this.props;
+        const { SettingsStore, NodeInfoStore, navigation, title } = this.props;
         return (
             <View
                 style={{
                     backgroundColor: themeColor('error'),
-                    paddingTop: 20,
-                    paddingLeft: 10,
                     flex: 1
                 }}
             >
-                <Text
-                    style={{
-                        fontFamily: 'PPNeueMontreal-Book',
-                        color: '#fff',
-                        fontSize: 20,
-                        marginTop: 20,
-                        marginBottom: 25
-                    }}
-                >
-                    {SettingsStore?.errorMsg ||
-                        NodeInfoStore?.errorMsg ||
-                        localeString('views.Wallet.MainPane.error')}
-                </Text>
-                <Button
-                    icon={{ name: 'settings', size: 25, color: '#fff' }}
-                    title={localeString('views.Wallet.MainPane.goToSettings')}
-                    buttonStyle={{ backgroundColor: 'gray' }}
-                    containerStyle={{ alignItems: 'center' }}
-                    onPress={() => protectedNavigation(navigation, 'Menu')}
-                    adaptiveWidth
+                {/* title is required: without it WalletHeader falls back to the
+                nickname/status-badge center component, which navigates out of
+                POS mode without passing through the lockscreen */}
+                <WalletHeader
+                    title={title}
+                    navigation={navigation}
+                    SettingsStore={SettingsStore}
                 />
-                <Text
-                    style={{
-                        fontFamily: 'PPNeueMontreal-Book',
-                        color: '#fff',
-                        fontSize: 12,
-                        marginTop: 20,
-                        marginBottom: -40
+                <ScrollView
+                    contentContainerStyle={{
+                        paddingTop: 20,
+                        paddingHorizontal: 10,
+                        paddingBottom: 20
                     }}
                 >
-                    {`v${version}`}
-                </Text>
+                    <Text
+                        style={{
+                            fontFamily: 'PPNeueMontreal-Book',
+                            color: '#fff',
+                            fontSize: 20,
+                            marginBottom: 25
+                        }}
+                    >
+                        {SettingsStore?.errorMsg ||
+                            NodeInfoStore?.errorMsg ||
+                            localeString('views.Wallet.MainPane.error')}
+                    </Text>
+                    <Button
+                        icon={{ name: 'settings', size: 25, color: '#fff' }}
+                        title={localeString(
+                            'views.Wallet.MainPane.goToSettings'
+                        )}
+                        buttonStyle={{ backgroundColor: 'gray' }}
+                        containerStyle={{ alignItems: 'center' }}
+                        onPress={() => protectedNavigation(navigation, 'Menu')}
+                        adaptiveWidth
+                    />
+                    <Text
+                        style={{
+                            fontFamily: 'PPNeueMontreal-Book',
+                            color: '#fff',
+                            fontSize: 12,
+                            marginTop: 20
+                        }}
+                    >
+                        {`v${version}`}
+                    </Text>
+                </ScrollView>
             </View>
         );
     };
