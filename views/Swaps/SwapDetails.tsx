@@ -24,6 +24,7 @@ import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import { Row } from '../../components/layout/Row';
 import Text from '../../components/Text';
 
+import BackendUtils from '../../utils/BackendUtils';
 import handleAnything from '../../utils/handleAnything';
 import { localeString, pascalToHumanReadable } from '../../utils/LocaleUtils';
 import { sleep } from '../../utils/SleepUtils';
@@ -33,6 +34,7 @@ import { numberWithCommas } from '../../utils/UnitsUtils';
 import { swapWebSocketUrl } from '../../utils/SwapUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
+import InvoicesStore from '../../stores/InvoicesStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SwapStore from '../../stores/SwapStore';
 import { nodeInfoStore, unitsStore } from '../../stores/Stores';
@@ -60,6 +62,7 @@ interface SwapDetailsProps {
             fee: string;
         }
     >;
+    InvoicesStore?: InvoicesStore;
     NodeInfoStore?: NodeInfoStore;
     SwapStore?: SwapStore;
 }
@@ -74,7 +77,7 @@ interface SwapDetailsState {
     swapData: Swap;
 }
 
-@inject('NodeInfoStore', 'SwapStore')
+@inject('InvoicesStore', 'NodeInfoStore', 'SwapStore')
 @observer
 export default class SwapDetails extends React.Component<
     SwapDetailsProps,
@@ -643,6 +646,40 @@ export default class SwapDetails extends React.Component<
     };
 
     /**
+     * Resolve the address a reverse swap's claim should pay out to.
+     *
+     * A rescued swap has none: ZEUS attaches the address client-side and
+     * never sends it to the host (only claimPublicKey and preimageHash go
+     * over the wire), so /swap/restore has nothing to return. SwapStore
+     * falls back to a fresh address from the wallet in use, which is the
+     * same source the swap creation screen defaults to.
+     */
+    resolveDestinationAddress = async (swapId: string): Promise<string> => {
+        const { InvoicesStore, SwapStore } = this.props;
+
+        const existing = this.state.swapData?.destinationAddress;
+        const destinationAddress =
+            (await SwapStore?.resolveClaimAddress({
+                swapId,
+                destinationAddress: existing,
+                canReceiveOnchain: BackendUtils.supportsOnchainReceiving(),
+                getNewAddress: () =>
+                    InvoicesStore!.getNewAddress({ unified: true })
+            })) || '';
+
+        if (destinationAddress && destinationAddress !== existing) {
+            this.setState((prevState) => ({
+                swapData: new Swap({
+                    ...prevState.swapData,
+                    destinationAddress
+                })
+            }));
+        }
+
+        return destinationAddress;
+    };
+
+    /**
      * Create and send a claim transaction for a reverse swap
      */
     createReverseClaimTransaction = async (
@@ -675,13 +712,26 @@ export default class SwapDetails extends React.Component<
                 }
             }
 
+            // a rescued swap arrives without one, and a claim cannot be
+            // built - let alone paid out - without somewhere to pay to
+            const claimAddress =
+                destinationAddress ||
+                (await this.resolveDestinationAddress(createdResponse.id));
+            if (!claimAddress) {
+                this.setState({
+                    error: localeString('views.SwapDetails.claimAddressFailed'),
+                    loading: false
+                });
+                return false;
+            }
+
             const claim = ReverseClaimTransaction.build({
                 swap: new Swap({
                     ...createdResponse,
                     keys,
                     preimage,
                     lockupAddress,
-                    destinationAddress
+                    destinationAddress: claimAddress
                 }),
                 endpoint,
                 transactionHex,
@@ -689,7 +739,15 @@ export default class SwapDetails extends React.Component<
                 minerFee,
                 isTestnet: !!this.props.NodeInfoStore!.nodeInfo.isTestNet
             });
-            if (!claim) return false;
+            // build fails closed on a swap missing the material a valid
+            // claim needs; say so rather than leaving the screen spinning
+            if (!claim) {
+                this.setState({
+                    error: localeString('views.SwapDetails.claimFailed'),
+                    loading: false
+                });
+                return false;
+            }
 
             // allow some retries in case of alt network
             // tx propagation issues
@@ -703,6 +761,9 @@ export default class SwapDetails extends React.Component<
                         'Reverse claim transaction submitted successfully.',
                         { attempt: i + 1 }
                     );
+                    // an earlier attempt (e.g. on transaction.mempool) may
+                    // have failed and set an error that no longer applies
+                    this.setState({ error: null });
                     return true;
                 } catch (error) {
                     console.log('Error submitting reverse claim tx', {
@@ -711,9 +772,17 @@ export default class SwapDetails extends React.Component<
                     });
                 }
             }
+            this.setState({
+                error: localeString('views.SwapDetails.claimBroadcastFailed'),
+                loading: false
+            });
             return false;
         } catch (e) {
             console.log('Error creating reverse claim tx ', e);
+            this.setState({
+                error: localeString('views.SwapDetails.claimFailed'),
+                loading: false
+            });
             return false;
         }
     };
