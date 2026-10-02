@@ -266,8 +266,10 @@ export default class CollapsedQR extends React.Component<
                     <View
                         style={{
                             position: 'absolute',
+                            /* eslint-disable zeus/no-negative-layout-offset -- intentional: renders off-screen for QR image capture */
                             left: -10000,
                             top: -10000,
+                            /* eslint-enable zeus/no-negative-layout-offset */
                             width: 800,
                             height: 800,
                             pointerEvents: 'none'
@@ -392,6 +394,7 @@ export default class CollapsedQR extends React.Component<
                                         width: qrSize,
                                         borderBottomLeftRadius: 12,
                                         borderBottomRightRadius: 12,
+                                        // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                                         marginTop: -10,
                                         margin: 15,
                                         padding: 15
@@ -583,6 +586,7 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         borderBottomLeftRadius: 12,
         borderBottomRightRadius: 12,
+        // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
         marginTop: -10,
         margin: 15,
         paddingHorizontal: 15,

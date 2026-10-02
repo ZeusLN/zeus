@@ -316,10 +316,12 @@ export default class Menu extends React.Component<MenuProps, MenuState> {
                                     <View
                                         style={{
                                             position: 'absolute',
+                                            /* eslint-disable zeus/no-negative-layout-offset -- intentional: ring drawn outside the card border */
                                             top: -(1 + t * 1.5),
                                             left: -(1 + t * 1.5),
                                             right: -(1 + t * 1.5),
                                             bottom: -(1 + t * 1.5),
+                                            /* eslint-enable zeus/no-negative-layout-offset */
                                             borderRadius: 10 + 1 + t * 1.5,
                                             borderWidth: 1 + t * 1.5,
                                             borderColor: themeColor('highlight')

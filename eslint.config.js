@@ -1,6 +1,7 @@
 const reactNativeConfig = require('@react-native/eslint-config/flat');
 const importPlugin = require('eslint-plugin-import');
 const prettierPlugin = require('eslint-plugin-prettier');
+const noNegativeLayoutOffset = require('./eslint-rules/no-negative-layout-offset');
 
 module.exports = [
     // Ignore patterns (must be first for ESLint 9 global ignores)
@@ -139,6 +140,29 @@ module.exports = [
         },
         plugins: {
             prettier: prettierPlugin
+        }
+    },
+
+    // Fail on disable directives that no longer suppress anything (e.g. after
+    // a negative layout offset has been fixed)
+    {
+        linterOptions: {
+            reportUnusedDisableDirectives: 'error'
+        }
+    },
+
+    // Zeus-specific rules
+    {
+        files: ['**/*.js', '**/*.jsx', '**/*.ts', '**/*.tsx'],
+        plugins: {
+            zeus: {
+                rules: {
+                    'no-negative-layout-offset': noNegativeLayoutOffset
+                }
+            }
+        },
+        rules: {
+            'zeus/no-negative-layout-offset': 'error'
         }
     }
 ];

@@ -73,6 +73,7 @@ export default function DonationInfoModal({
                             <View
                                 style={{
                                     width: '100%',
+                                    // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                                     marginBottom: -10
                                 }}
                             >

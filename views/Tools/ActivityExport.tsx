@@ -601,6 +601,7 @@ export default class ActivityExport extends React.Component<
                                 <></>
                             ) : (
                                 <TouchableOpacity
+                                    // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                                     style={{ marginRight: 4, marginTop: -4 }}
                                     onPress={() =>
                                         this.setState({ showInfoModal: true })

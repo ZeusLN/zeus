@@ -452,6 +452,7 @@ export default class ContactDetails extends React.Component<
                                 sharedTransitionEntering={
                                     sharedTransitionEntering
                                 }
+                                // eslint-disable-next-line zeus/no-negative-layout-offset -- intentional: avatar overlaps the banner
                                 style={{ marginTop: contact.banner ? -100 : 0 }}
                                 contactId={contactId}
                                 contactHasOnlyCashuPubkey={

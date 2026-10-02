@@ -838,6 +838,7 @@ export default class OpenChannel extends React.Component<
                                             <>
                                                 <Text
                                                     style={{
+                                                        // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                                                         marginTop: -20,
                                                         top: 20,
                                                         color: themeColor(
