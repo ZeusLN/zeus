@@ -27,6 +27,8 @@ interface EcashMintPickerProps {
     overrideMintUrl?: string;
     isReceiveView?: boolean;
     isMultiMintView?: boolean;
+    // Replaces opening the Mints list, which changes the selected mint
+    onPress?: () => void;
 }
 
 @inject('CashuStore', 'SettingsStore')
@@ -45,7 +47,8 @@ export default class EcashMintPicker extends React.Component<
             navigation,
             overrideMintUrl,
             isReceiveView,
-            isMultiMintView
+            isMultiMintView,
+            onPress
         } = this.props;
         const {
             cashuWallets,
@@ -273,12 +276,16 @@ export default class EcashMintPicker extends React.Component<
         return (
             <View style={styles.wrapperRow}>
                 <TouchableOpacity
-                    onPress={() => {
-                        navigation.navigate('Mints', {
-                            disableRandom,
-                            forceSingleMint: multiMintEnabled && isReceiveView
-                        });
-                    }}
+                    onPress={
+                        onPress ||
+                        (() => {
+                            navigation.navigate('Mints', {
+                                disableRandom,
+                                forceSingleMint:
+                                    multiMintEnabled && isReceiveView
+                            });
+                        })
+                    }
                     style={pickerTouchableStyle}
                 >
                     <Row style={{ flex: 1 }}>
