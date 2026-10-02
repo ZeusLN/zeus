@@ -23,6 +23,75 @@ const blockchainBalance = {
     unconfirmed_balance: '0'
 };
 
+describe('BalanceStore balance fetch', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    const mockBalances = () => {
+        (BackendUtils.getLightningBalance as jest.Mock).mockResolvedValue({
+            balance: '50000',
+            pending_open_balance: '1000'
+        });
+        (BackendUtils.getBlockchainBalance as jest.Mock).mockResolvedValue({
+            total_balance: '100000',
+            confirmed_balance: '100000',
+            unconfirmed_balance: '0'
+        });
+    };
+
+    it('writes both balances in getCombinedBalance', async () => {
+        mockBalances();
+        const store = new BalanceStore();
+
+        await store.getCombinedBalance();
+
+        expect(store.lightningBalance).toEqual(50000);
+        expect(store.pendingOpenBalance).toEqual(1000);
+        expect(store.confirmedBlockchainBalance).toEqual(100000);
+        expect(store.totalBlockchainBalance).toEqual(100000);
+        expect(store.error).toBe(false);
+    });
+
+    it('sets error when the Lightning balance request fails', async () => {
+        (BackendUtils.getLightningBalance as jest.Mock).mockRejectedValue(
+            new Error('Request timeout')
+        );
+        const store = new BalanceStore();
+
+        await store.getLightningBalance(true);
+
+        expect(store.error).toBe(true);
+        expect(store.loadingLightningBalance).toBe(false);
+    });
+
+    it('sets error when the on-chain balance request fails', async () => {
+        (BackendUtils.getBlockchainBalance as jest.Mock).mockRejectedValue(
+            new Error('Request timeout')
+        );
+        const store = new BalanceStore();
+
+        await store.getBlockchainBalance(true, false);
+
+        expect(store.error).toBe(true);
+        expect(store.loadingBlockchainBalance).toBe(false);
+    });
+
+    it('sets error in getCombinedBalance when one request fails', async () => {
+        mockBalances();
+        (BackendUtils.getLightningBalance as jest.Mock).mockRejectedValue(
+            new Error('Request timeout')
+        );
+        const store = new BalanceStore();
+
+        await store.getCombinedBalance();
+
+        expect(store.error).toBe(true);
+        expect(store.lightningBalance).toEqual(0);
+        expect(store.totalBlockchainBalance).toEqual(100000);
+    });
+});
+
 describe('BalanceStore cooperative close overlap', () => {
     beforeEach(() => {
         jest.clearAllMocks();
