@@ -4,6 +4,11 @@ import * as CryptoJS from 'crypto-js';
 import moment from 'moment';
 
 import SettingsStore, { Node } from '../stores/SettingsStore';
+import {
+    NODE_CONFIG_EXPORT_SUFFIX,
+    nodeConfigStagingPaths,
+    safeUnlinkStagingPath
+} from './NodeConfigStagingUtils';
 import { encryptFile, decryptFile } from './ZipUtils';
 
 // Bump when the on-disk export format changes. v1 = legacy CryptoJS
@@ -33,15 +38,9 @@ interface NodeConfigExport {
         | string;
 }
 
-const safeUnlink = async (path: string): Promise<void> => {
-    try {
-        if (await RNFS.exists(path)) {
-            await RNFS.unlink(path);
-        }
-    } catch (e) {
-        console.warn('Failed to remove temp node-config file:', e);
-    }
-};
+// Shared with the staging sweep so both remove files the same way: quietly,
+// and without letting a failed unlink abort the caller.
+const safeUnlink = safeUnlinkStagingPath;
 
 export const saveNodeConfigs = async (
     nodes: Node[],
@@ -76,11 +75,14 @@ export const exportNodeConfigs = async (
     }
 
     const timestamp = moment().format('YYYYMMDD-HHmmss');
-    const filename = `${timestamp}.zeus-wallet-config-backup`;
+    const filename = `${timestamp}${NODE_CONFIG_EXPORT_SUFFIX}`;
 
     const cacheDir = RNFS.CachesDirectoryPath;
-    const plainPath = `${cacheDir}/zeus-nodeconfig-plain.tmp`;
-    const encPath = `${cacheDir}/zeus-nodeconfig-enc.tmp`;
+    const {
+        exportPlain: plainPath,
+        exportEnc: encPath,
+        legacyExportDir
+    } = nodeConfigStagingPaths();
     const stagingPath = `${cacheDir}/${filename}`;
 
     try {
@@ -89,7 +91,7 @@ export const exportNodeConfigs = async (
 
         // Sweep the share-sheet staging dir used by earlier builds of this
         // flow, in case a ciphertext envelope is still lingering in cache.
-        await safeUnlink(`${cacheDir}/nodeconfig-exports`);
+        await safeUnlink(legacyExportDir);
 
         // 1. Stage the plaintext payload (the native crypto API is file-based).
         const payload = JSON.stringify({ nodes });
@@ -140,9 +142,8 @@ export const decryptExportDataV2 = async (
     encryptedBase64: string,
     password: string
 ): Promise<Node[]> => {
-    const cacheDir = RNFS.CachesDirectoryPath;
-    const encPath = `${cacheDir}/zeus-nodeconfig-import-enc.tmp`;
-    const plainPath = `${cacheDir}/zeus-nodeconfig-import-plain.tmp`;
+    const { importEnc: encPath, importPlain: plainPath } =
+        nodeConfigStagingPaths();
 
     try {
         await safeUnlink(encPath);
