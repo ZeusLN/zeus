@@ -3,7 +3,12 @@
 // and CashuDevKit.removeProofs.
 const mockCallLog: string[] = [];
 const mockBacking: Record<string, string> = {};
+// mockProofPool is the database native currently has open. Other wallets'
+// databases sit in mockWalletPools keyed by node dir, and
+// initializeWallet('mnemonic-<nodeDir>') swaps them like the native module.
 const mockProofPool: { current: any[] } = { current: [] };
+const mockOpenWallet: { current: string } = { current: '' };
+const mockWalletPools: Record<string, any[]> = {};
 
 jest.mock('./Stores', () => ({
     activityStore: { getSortedActivity: jest.fn() },
@@ -43,6 +48,14 @@ jest.mock('../cashu-cdk', () => ({
     __esModule: true,
     default: {
         isAvailable: jest.fn(() => true),
+        initializeWallet: jest.fn(async (mnemonic: string) => {
+            mockCallLog.push(`initializeWallet:${mnemonic}`);
+            mockWalletPools[mockOpenWallet.current] = mockProofPool.current;
+            mockOpenWallet.current = mnemonic.replace('mnemonic-', '');
+            mockProofPool.current =
+                mockWalletPools[mockOpenWallet.current] || [];
+        }),
+        deleteWalletDatabase: jest.fn(async () => true),
         getUnspentProofs: jest.fn(async () => [...mockProofPool.current]),
         removeProofs: jest.fn(async (ys: string[]) => {
             mockCallLog.push(`removeProofs:${ys.join(',')}`);
@@ -102,8 +115,10 @@ import CashuStore from './CashuStore';
 const mockGetUnspentProofs = CashuDevKit.getUnspentProofs as jest.Mock;
 const mockRemoveProofs = CashuDevKit.removeProofs as jest.Mock;
 const mockGetMintBalance = CashuDevKit.getMintBalance as jest.Mock;
+const mockInitializeWallet = CashuDevKit.initializeWallet as jest.Mock;
 
 const NODE_DIR = 'testnode';
+const OTHER_DIR = 'othernode';
 const MINT_URL = 'https://mint.example.com';
 const PENDING_KEY = `${NODE_DIR}-cashu-pending-offline-sends`;
 const SENT_KEY = `${NODE_DIR}-cashu-sent-tokens`;
@@ -128,10 +143,17 @@ function buildStore() {
         {} as any
     );
     store.cdkInitialized = true;
+    (store as any).cdkNodeDir = NODE_DIR;
+    // Mnemonics name their wallet so the CDK mock can swap databases.
+    (store as any).getCDKMnemonic = () => `mnemonic-${store.getNodeDir()}`;
     store.selectedMintUrl = MINT_URL;
     store.sentTokens = [];
     return store;
 }
+
+const flushMicrotasks = async () => {
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+};
 
 const getPendingRecords = () =>
     PENDING_KEY in mockBacking ? JSON.parse(mockBacking[PENDING_KEY]) : [];
@@ -144,6 +166,10 @@ describe('CashuStore offline send safety', () => {
         mockCallLog.length = 0;
         for (const key of Object.keys(mockBacking)) delete mockBacking[key];
         mockProofPool.current = [];
+        mockOpenWallet.current = NODE_DIR;
+        for (const key of Object.keys(mockWalletPools)) {
+            delete mockWalletPools[key];
+        }
         jest.spyOn(console, 'log').mockImplementation(() => undefined);
         jest.spyOn(console, 'warn').mockImplementation(() => undefined);
         jest.spyOn(console, 'error').mockImplementation(() => undefined);
@@ -217,7 +243,7 @@ describe('CashuStore offline send safety', () => {
             const store = buildStore();
             // Simulate a wallet switch between the pin (mintToken entry)
             // and the queued critical section running.
-            (store as any).settingsStore.lndDir = 'othernode';
+            (store as any).settingsStore.lndDir = OTHER_DIR;
 
             await expect(
                 store.sendTokenCDK(
@@ -237,6 +263,78 @@ describe('CashuStore offline send safety', () => {
             expect(
                 mockBacking['othernode-cashu-pending-offline-sends']
             ).toBeUndefined();
+        });
+
+        it('holds a wallet switch until the in-flight offline send finishes', async () => {
+            mockProofPool.current = [proof(16, 'a')];
+            mockWalletPools[OTHER_DIR] = [proof(16, 'b')];
+            const store = buildStore();
+            // The lookup reads the database when it resolves, like the
+            // native coroutine, so a swap landing first would hand back
+            // the other wallet's proofs.
+            let releaseLookup = () => undefined as void;
+            mockGetUnspentProofs.mockImplementationOnce(async () => {
+                await new Promise<void>((resolve) => {
+                    releaseLookup = resolve;
+                });
+                return [...mockProofPool.current];
+            });
+
+            const send = store.sendTokenCDK(MINT_URL, 16);
+            await flushMicrotasks();
+            expect(mockGetUnspentProofs).toHaveBeenCalledTimes(1);
+
+            (store as any).settingsStore.lndDir = OTHER_DIR;
+            const init = store.initializeCDK();
+            await flushMicrotasks();
+            expect(mockInitializeWallet).not.toHaveBeenCalled();
+
+            releaseLookup();
+            const token = await send;
+            await expect(init).resolves.toBe(true);
+
+            expect(token.proofs.map((p) => p.secret)).toEqual(['secret-a']);
+            expect(mockRemoveProofs).toHaveBeenCalledWith(['y-a']);
+            expect(mockCallLog.indexOf('removeProofs:y-a')).toBeLessThan(
+                mockCallLog.indexOf(`initializeWallet:mnemonic-${OTHER_DIR}`)
+            );
+            expect(mockWalletPools[NODE_DIR]).toEqual([]);
+            expect(mockProofPool.current.map((p) => p.y)).toEqual(['y-b']);
+            expect(getPendingRecords()[0].proofs[0].y).toBe('y-a');
+            expect((store as any).cdkNodeDir).toBe(OTHER_DIR);
+        });
+
+        it("aborts when native still has another wallet's database open", async () => {
+            // Settings already point at this wallet, but its CDK init has
+            // not run yet, so native still holds the previous wallet's
+            // database.
+            mockOpenWallet.current = OTHER_DIR;
+            mockProofPool.current = [proof(16, 'b')];
+            const store = buildStore();
+            (store as any).cdkNodeDir = OTHER_DIR;
+
+            await expect(store.sendTokenCDK(MINT_URL, 16)).rejects.toThrow(
+                'Active wallet changed'
+            );
+
+            expect(mockGetUnspentProofs).not.toHaveBeenCalled();
+            expect(mockRemoveProofs).not.toHaveBeenCalled();
+            expect(mockProofPool.current).toHaveLength(1);
+            expect(getPendingRecords()).toEqual([]);
+        });
+
+        it('refuses offline sends after the CDK database is deleted', async () => {
+            mockProofPool.current = [proof(16, 'a')];
+            const store = buildStore();
+            store.mintUrls = [];
+
+            await store.deleteCashuData();
+
+            expect((store as any).cdkNodeDir).toBeUndefined();
+            await expect(store.sendTokenCDK(MINT_URL, 16)).rejects.toThrow(
+                'Active wallet changed'
+            );
+            expect(mockRemoveProofs).not.toHaveBeenCalled();
         });
 
         it('clears the pending record when proof deletion rejects', async () => {
@@ -315,7 +413,7 @@ describe('CashuStore offline send safety', () => {
                 mockProofPool.current = mockProofPool.current.filter(
                     (p) => !ys.includes(p.y)
                 );
-                (store as any).settingsStore.lndDir = 'othernode';
+                (store as any).settingsStore.lndDir = OTHER_DIR;
             });
 
             const result = await store.mintToken({ memo: '', value: '16' });
@@ -428,6 +526,54 @@ describe('CashuStore offline send safety', () => {
             expect(records).toHaveLength(1);
             expect(records[0].attempts).toBe(1);
             expect(store.sentTokens).toHaveLength(0);
+        });
+
+        it("leaves records alone while another wallet's database is open", async () => {
+            seedPendingRecord([proof(16, 'a')]);
+            const store = buildStore();
+            (store as any).cdkNodeDir = OTHER_DIR;
+
+            await store.reconcilePendingOfflineSends();
+
+            expect(mockGetUnspentProofs).not.toHaveBeenCalled();
+            expect(getPendingRecords()).toHaveLength(1);
+            expect(store.sentTokens).toHaveLength(0);
+        });
+
+        it('promotes into the reconciled wallet when the wallet switches mid-pass', async () => {
+            seedPendingRecord([proof(16, 'a')]);
+            const store = buildStore();
+            mockGetUnspentProofs.mockImplementationOnce(async () => {
+                (store as any).settingsStore.lndDir = OTHER_DIR;
+                return [];
+            });
+
+            await store.reconcilePendingOfflineSends();
+
+            expect(getSentTokens()).toHaveLength(1);
+            expect(getSentTokens()[0].encodedToken).toBe('cashuAtest');
+            expect(store.sentTokens).toHaveLength(0);
+            expect(
+                mockBacking[`${OTHER_DIR}-cashu-sent-tokens`]
+            ).toBeUndefined();
+            expect(getPendingRecords()).toEqual([]);
+        });
+
+        it('does not duplicate a token already in a switched-away wallet history', async () => {
+            seedPendingRecord([proof(16, 'a')], 'cashuAdup');
+            mockBacking[SENT_KEY] = JSON.stringify([
+                { encodedToken: 'cashuAdup' }
+            ]);
+            const store = buildStore();
+            mockGetUnspentProofs.mockImplementationOnce(async () => {
+                (store as any).settingsStore.lndDir = OTHER_DIR;
+                return [];
+            });
+
+            await store.reconcilePendingOfflineSends();
+
+            expect(getSentTokens()).toHaveLength(1);
+            expect(getPendingRecords()).toEqual([]);
         });
 
         it('is a no-op when CDK is not initialized', async () => {
