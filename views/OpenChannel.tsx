@@ -27,6 +27,7 @@ import handleAnything from '../utils/handleAnything';
 import { scanNfcTag } from '../utils/NFCUtils';
 import NodeUriUtils from '../utils/NodeUriUtils';
 import BackendUtils from '../utils/BackendUtils';
+import OpenChannelUtils from '../utils/OpenChannelUtils';
 import ValidationUtils from '../utils/ValidationUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -320,22 +321,15 @@ export default class OpenChannel extends React.Component<
         const isInvalidFeeRate =
             supportsChannelOpenFeeRate &&
             (sat_per_vbyte === '0' || !sat_per_vbyte);
-        // AmountInput reports satAmount '0' for an empty field
-        const isInvalidAmount =
-            !connectPeerOnly && !fundMax && !Number(satAmount);
-        const isValidAdditionalPubkey = (channel: AdditionalChannel) =>
-            ValidationUtils.validateNodePubkey(channel.node_pubkey_string);
-        // an empty host is left to the store, which treats the peer as
-        // already connected
-        const isValidAdditionalHost = (channel: AdditionalChannel) =>
-            !channel.host || ValidationUtils.validateNodeHost(channel.host);
+        const isInvalidAmount = OpenChannelUtils.isInvalidMainChannelAmount({
+            satAmount,
+            fundMax,
+            connectPeerOnly
+        });
         const isInvalidAdditionalChannel =
-            !connectPeerOnly &&
-            additionalChannels.some(
-                (channel) =>
-                    !Number(channel.satAmount) ||
-                    !isValidAdditionalPubkey(channel) ||
-                    !isValidAdditionalHost(channel)
+            OpenChannelUtils.hasInvalidAdditionalChannels(
+                additionalChannels,
+                connectPeerOnly
             );
         const isSubmitDisabled =
             loading ||
@@ -897,7 +891,7 @@ export default class OpenChannel extends React.Component<
                                                     </Text>
                                                     <TextInput
                                                         textColor={
-                                                            isValidAdditionalPubkey(
+                                                            OpenChannelUtils.isValidAdditionalChannelPubkey(
                                                                 channel
                                                             )
                                                                 ? themeColor(
@@ -942,7 +936,7 @@ export default class OpenChannel extends React.Component<
                                                     </Text>
                                                     <TextInput
                                                         textColor={
-                                                            isValidAdditionalHost(
+                                                            OpenChannelUtils.isValidAdditionalChannelHost(
                                                                 channel
                                                             )
                                                                 ? themeColor(
