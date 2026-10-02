@@ -323,6 +323,12 @@ export default class CashuStore {
     // operations can never select or remove the same proofs. Pattern mirrors
     // SettingsStore.updateSettingsQueue.
     private offlineProofOpQueue: Promise<unknown> = Promise.resolve();
+    // Node dir whose CDK database the native module has open. Native holds
+    // one database and only swaps it when initializeWallet resolves, which
+    // lags the settings switch by the whole node startup, so getNodeDir()
+    // can't tell which wallet's proofs a native call will touch. Written
+    // only inside offlineProofOpQueue.
+    private cdkNodeDir?: string;
 
     settingsStore: SettingsStore;
     invoicesStore: InvoicesStore;
@@ -381,6 +387,7 @@ export default class CashuStore {
         }
 
         try {
+            const walletNodeDir = this.getNodeDir();
             // Get mnemonic from seed derivation
             let mnemonic = this.getCDKMnemonic();
             if (!mnemonic) {
@@ -428,7 +435,15 @@ export default class CashuStore {
                 );
             }
 
-            await CashuDevKit.initializeWallet(mnemonic, 'sat');
+            // Swapping the native database inside the queue keeps it from
+            // landing in the middle of an offline send's critical section,
+            // which would point getUnspentProofs/removeProofs at another
+            // wallet's proofs.
+            const cdkMnemonic = mnemonic;
+            await this.enqueueOfflineProofOp(async () => {
+                await CashuDevKit.initializeWallet(cdkMnemonic, 'sat');
+                this.cdkNodeDir = walletNodeDir;
+            });
 
             runInAction(() => {
                 this.cdkInitialized = true;
@@ -1664,6 +1679,47 @@ export default class CashuStore {
         return task;
     };
 
+    /**
+     * Append a sent token to nodeDir's history, skipping one already
+     * recorded. If the active wallet changed since nodeDir was pinned,
+     * this.sentTokens holds the other wallet's history, so append to
+     * nodeDir's stored list instead of pushing to (and persisting) the
+     * wrong one.
+     */
+    private recordSentToken = async (nodeDir: string, token: CashuToken) => {
+        const sentKey = `${nodeDir}-cashu-sent-tokens`;
+        if (this.getNodeDir() === nodeDir) {
+            if (
+                this.sentTokens?.some(
+                    (t) => t.encodedToken === token.encodedToken
+                )
+            ) {
+                return;
+            }
+            runInAction(() => {
+                this.sentTokens?.push(token);
+            });
+            await Storage.setItem(sentKey, this.sentTokens);
+            return;
+        }
+
+        let storedTokens: any[] = [];
+        try {
+            const stored = await Storage.getItem(sentKey);
+            if (stored) {
+                const parsed = JSON.parse(stored);
+                if (Array.isArray(parsed)) storedTokens = parsed;
+            }
+        } catch (e) {
+            console.warn('Failed to load sent tokens:', e);
+        }
+        if (storedTokens.some((t) => t?.encodedToken === token.encodedToken)) {
+            return;
+        }
+        storedTokens.push(token);
+        await Storage.setItem(sentKey, storedTokens);
+    };
+
     private pendingOfflineSendsKey = (lndDir?: string) =>
         `${lndDir ?? this.getNodeDir()}-cashu-pending-offline-sends`;
 
@@ -1729,8 +1785,13 @@ export default class CashuStore {
      */
     public reconcilePendingOfflineSends = async (): Promise<void> => {
         if (!this.cdkInitialized) return;
-        const key = this.pendingOfflineSendsKey();
         return this.enqueueOfflineProofOp(async () => {
+            // Proof lookups hit whichever database native has open, so
+            // reconcile that wallet's records, and only while it is still
+            // the active one. Otherwise leave them for its next startup.
+            const nodeDir = this.cdkNodeDir;
+            if (!nodeDir || nodeDir !== this.getNodeDir()) return;
+            const key = this.pendingOfflineSendsKey(nodeDir);
             const records = await this.loadPendingOfflineSends(key);
             if (records.length === 0) return;
 
@@ -1756,11 +1817,9 @@ export default class CashuStore {
                         await CashuDevKit.removeProofs(stillPresent);
                     }
 
-                    const alreadyRecorded = this.sentTokens?.some(
-                        (t) => t.encodedToken === record.encodedToken
-                    );
-                    if (!alreadyRecorded) {
-                        const decoded = new CashuToken({
+                    await this.recordSentToken(
+                        nodeDir,
+                        new CashuToken({
                             mint: record.mintUrl,
                             memo: record.memo || '',
                             unit: 'sat',
@@ -1775,15 +1834,8 @@ export default class CashuStore {
                                 keyset_id: p.keyset_id
                             })),
                             created_at: record.createdAt / 1000
-                        });
-                        runInAction(() => {
-                            this.sentTokens?.push(decoded);
-                        });
-                        await Storage.setItem(
-                            `${this.getNodeDir()}-cashu-sent-tokens`,
-                            this.sentTokens
-                        );
-                    }
+                        })
+                    );
                     mutated = true;
                 } catch (e) {
                     console.warn(
@@ -1920,10 +1972,16 @@ export default class CashuStore {
             // select the same proofs: the second send re-reads the database
             // only after the first send's proofs have been removed.
             return this.enqueueOfflineProofOp(async () => {
-                // The queue can run after a wallet switch; selecting from
-                // the now-active wallet would burn its proofs under a
-                // record pinned to the original wallet. Abort instead.
-                if (this.getNodeDir() !== sendNodeDir) {
+                // The queue can run after a wallet switch, and native may
+                // still hold the previous wallet's database after the
+                // settings switch. Either way, selecting would burn another
+                // wallet's proofs under a record pinned to this one. Abort
+                // instead. The database can't change until this task ends
+                // because initializeCDK swaps it through the same queue.
+                if (
+                    this.getNodeDir() !== sendNodeDir ||
+                    this.cdkNodeDir !== sendNodeDir
+                ) {
                     throw new Error(
                         'Active wallet changed during offline send'
                     );
@@ -5938,31 +5996,7 @@ export default class CashuStore {
             });
 
             // Record sent token activity
-            if (this.getNodeDir() === nodeDir) {
-                this.sentTokens?.push(decoded);
-                await Storage.setItem(
-                    `${nodeDir}-cashu-sent-tokens`,
-                    this.sentTokens
-                );
-            } else {
-                // The active wallet changed while the send was in flight,
-                // so this.sentTokens now holds the other wallet's history.
-                // Append to the initiating wallet's stored list instead of
-                // pushing to (and persisting) the wrong one.
-                const sentKey = `${nodeDir}-cashu-sent-tokens`;
-                let storedTokens: any[] = [];
-                try {
-                    const stored = await Storage.getItem(sentKey);
-                    if (stored) {
-                        const parsed = JSON.parse(stored);
-                        if (Array.isArray(parsed)) storedTokens = parsed;
-                    }
-                } catch (e) {
-                    console.warn('Failed to load sent tokens:', e);
-                }
-                storedTokens.push(decoded);
-                await Storage.setItem(sentKey, storedTokens);
-            }
+            await this.recordSentToken(nodeDir, decoded);
 
             // The token is now durably recorded; drop the offline pending
             // record. Must never fail the send at this point: a leftover
@@ -6032,7 +6066,10 @@ export default class CashuStore {
             // the seed-phrase key removed below. A failure here must not abort
             // the rest of the cleanup.
             try {
-                await CashuDevKit.deleteWalletDatabase();
+                await this.enqueueOfflineProofOp(async () => {
+                    this.cdkNodeDir = undefined;
+                    await CashuDevKit.deleteWalletDatabase();
+                });
             } catch (e) {
                 console.warn('CDK: Failed to delete wallet database:', e);
             }
