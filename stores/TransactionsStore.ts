@@ -600,22 +600,7 @@ export default class TransactionsStore {
             return;
         }
 
-        const seq = ++this.paymentSequence;
-        if (!background) {
-            this.paymentInFlight = true;
-            this.inFlightOwnerSeq = seq;
-        }
-        this.paymentStartTime = Date.now();
-        this.paymentDuration = null;
-        this.loading = true;
-        this.error_msg = null;
-        this.error = false;
-        this.payment_route = null;
-        this.payment_preimage = null;
-        this.isIncomplete = null;
-        this.payment_hash = null;
-        this.payment_error = null;
-        this.status = null;
+        const seq = this.startPayment(background);
 
         const data: any = {};
         if (payment_request) {
@@ -691,14 +676,8 @@ export default class TransactionsStore {
             data.timeout_seconds = Number(timeout_seconds) || 60;
         }
 
-        // Backstop for the in-flight guard: if the completion callback is
-        // lost (e.g. a dropped LNC stream, or a hung request on a backend
-        // that gets no timeout_seconds), the flag would otherwise stay set
-        // and block all sends until the next reconnect. Clear it once the
-        // payment's timeout plus a grace period has elapsed.
         if (!background) {
-            const backstopMs = ((data.timeout_seconds ?? 300) + 60) * 1000;
-            setTimeout(() => this.clearPaymentInFlight(seq), backstopMs);
+            this.armInFlightBackstop(seq, data.timeout_seconds ?? 300);
         }
 
         const payFunc =
@@ -717,6 +696,72 @@ export default class TransactionsStore {
             .catch((err: Error) => {
                 this.handlePaymentError(err, seq);
             });
+    };
+
+    // Pays a BOLT 12 offer on backends whose fetchInvoiceFromOffer sends the
+    // payment itself (LDK Node) rather than returning an invoice to confirm.
+    // Runs through the same in-flight state as sendPayment so
+    // SendingLightning shows its loading animation while the payment routes.
+    @action
+    public sendOfferPayment = ({
+        offer,
+        amount,
+        timeout_seconds,
+        fee_limit_sat
+    }: {
+        offer: string;
+        amount: string;
+        timeout_seconds?: number | string;
+        fee_limit_sat?: number | string;
+    }) => {
+        if (this.paymentInFlight) return;
+
+        const seq = this.startPayment();
+        this.armInFlightBackstop(seq, Number(timeout_seconds) || 60);
+
+        return BackendUtils.fetchInvoiceFromOffer(
+            offer,
+            amount,
+            timeout_seconds,
+            fee_limit_sat
+        )
+            .then((result: any) => this.handlePayment(result, seq))
+            .catch((err: Error) => this.handlePaymentError(err, seq));
+    };
+
+    // Marks a payment as started and clears the previous payment's outcome.
+    // Returns the payment's sequence number.
+    @action
+    private startPayment = (background?: boolean) => {
+        const seq = ++this.paymentSequence;
+        if (!background) {
+            this.paymentInFlight = true;
+            this.inFlightOwnerSeq = seq;
+        }
+        this.paymentStartTime = Date.now();
+        this.paymentDuration = null;
+        this.loading = true;
+        this.error_msg = null;
+        this.error = false;
+        this.payment_route = null;
+        this.payment_preimage = null;
+        this.isIncomplete = null;
+        this.payment_hash = null;
+        this.payment_error = null;
+        this.status = null;
+        return seq;
+    };
+
+    // Backstop for the in-flight guard: if the completion callback is
+    // lost (e.g. a dropped LNC stream, or a hung request on a backend
+    // that gets no timeout_seconds), the flag would otherwise stay set
+    // and block all sends until the next reconnect. Clear it once the
+    // payment's timeout plus a grace period has elapsed.
+    private armInFlightBackstop = (seq: number, timeoutSeconds: number) => {
+        setTimeout(
+            () => this.clearPaymentInFlight(seq),
+            (timeoutSeconds + 60) * 1000
+        );
     };
 
     // Clears the in-flight guard on behalf of payment `seq`. Callers that
