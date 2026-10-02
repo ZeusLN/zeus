@@ -262,47 +262,6 @@ service Lightning {
     */
     rpc AbandonChannel (AbandonChannelRequest) returns (AbandonChannelResponse);
 
-    /* lncli: `sendpayment`
-    Deprecated, use routerrpc.SendPaymentV2. SendPayment dispatches a
-    bi-directional streaming RPC for sending payments through the Lightning
-    Network. A single RPC invocation creates a persistent bi-directional
-    stream allowing clients to rapidly send payments through the Lightning
-    Network with a single persistent connection.
-    */
-    rpc SendPayment (stream SendRequest) returns (stream SendResponse) {
-        option deprecated = true;
-    }
-
-    /*
-    Deprecated, use routerrpc.SendPaymentV2. SendPaymentSync is the synchronous
-    non-streaming version of SendPayment. This RPC is intended to be consumed by
-    clients of the REST proxy. Additionally, this RPC expects the destination's
-    public key and the payment hash (if any) to be encoded as hex strings.
-    */
-    rpc SendPaymentSync (SendRequest) returns (SendResponse) {
-        option deprecated = true;
-    }
-
-    /* lncli: `sendtoroute`
-    Deprecated, use routerrpc.SendToRouteV2. SendToRoute is a bi-directional
-    streaming RPC for sending payment through the Lightning Network. This
-    method differs from SendPayment in that it allows users to specify a full
-    route manually. This can be used for things like rebalancing, and atomic
-    swaps.
-    */
-    rpc SendToRoute (stream SendToRouteRequest) returns (stream SendResponse) {
-        option deprecated = true;
-    }
-
-    /*
-    Deprecated, use routerrpc.SendToRouteV2. SendToRouteSync is a synchronous
-    version of SendToRoute. It Will block until the payment either fails or
-    succeeds.
-    */
-    rpc SendToRouteSync (SendToRouteRequest) returns (SendResponse) {
-        option deprecated = true;
-    }
-
     /* lncli: `addinvoice`
     AddInvoice attempts to add a new invoice to the invoice database. Any
     duplicated invoices are rejected, therefore all invoices *must* have a
@@ -597,6 +556,18 @@ service Lightning {
     rpc SubscribeCustomMessages (SubscribeCustomMessagesRequest)
         returns (stream CustomMessage);
 
+    /* lncli: `sendonion`
+    SendOnionMessage sends an onion message to a peer.
+    */
+    rpc SendOnionMessage (SendOnionMessageRequest)
+        returns (SendOnionMessageResponse);
+
+    /* lncli: `subscribeonion`
+    SubscribeOnionMessages subscribes to a stream of incoming onion messages.
+    */
+    rpc SubscribeOnionMessages (SubscribeOnionMessagesRequest)
+        returns (stream OnionMessageUpdate);
+
     /* lncli: `listaliases`
     ListAliases returns the set of all aliases that have ever existed with
     their confirmed SCID (if it exists) and/or the base SCID (in the case of
@@ -642,7 +613,8 @@ message CustomMessage {
 }
 
 message SendCustomMessageRequest {
-    // Peer to send the message to
+    // Peer to which the message will be sent. Represented as a byte-encoded
+    // public key
     bytes peer = 1;
 
     // Message type. This value needs to be in the custom range (>= 32768).
@@ -657,6 +629,67 @@ message SendCustomMessageRequest {
 
 message SendCustomMessageResponse {
     // The status of the send operation.
+    string status = 1;
+}
+
+message SubscribeOnionMessagesRequest {
+}
+
+message OnionMessageUpdate {
+    // Peer from which this message originates. Represented as a byte-encoded
+    // public key.
+    bytes peer = 1;
+
+    // PathKey is used to derive the blinded node id by tweaking the hop's
+    // static public key. The hop uses the corresponding blinded private key
+    // together with the sender's ephemeral key to perform ECDH and obtain the
+    // shared secret for decrypting the onion payload. Separately, for
+    // decrypting `encrypted_recipient_data`, the recipient performs ECDH
+    // between its static node private key and the path_key to derive the
+    // decryption key.
+    bytes path_key = 2;
+
+    // Serialized Sphinx onion packet (BOLT 4) containing the layered, per-hop
+    // encrypted payloads and routing instructions used to forward this message
+    // along its designated path.
+    bytes onion = 3;
+
+    // reply_path is the blinded path that should be used when replying to a
+    // received message.
+    BlindedPath reply_path = 4;
+
+    // encrypted_recipient_data is the encrypted data that contains the
+    // forwarding information for an onion message. It contains either
+    // next_node_id or short_channel_id for each non-final node. It MAY contain
+    // the path_id for the final node.
+    bytes encrypted_recipient_data = 5;
+
+    // Custom onion message tlv records. These are customized fields that are
+    // not defined by LND and cannot be extracted.
+    map<uint64, bytes> custom_records = 6;
+}
+
+message SendOnionMessageRequest {
+    // Peer to send the message to
+    bytes peer = 1;
+
+    // PathKey is used to derive the blinded node id by tweaking the hop's
+    // static public key. The hop uses the corresponding blinded private key
+    // together with the sender's ephemeral key to perform ECDH and obtain the
+    // shared secret for decrypting the onion payload. Separately, for
+    // decrypting `encrypted_recipient_data`, the recipient performs ECDH
+    // between its static node private key and the path_key to derive the
+    // decryption key.
+    bytes path_key = 2;
+
+    // Serialized Sphinx onion packet (BOLT 4) containing the layered, per-hop
+    // encrypted payloads and routing instructions used to forward this message
+    // along its designated path.
+    bytes onion = 3;
+}
+
+message SendOnionMessageResponse {
+    // The status of the onion message send operation.
     string status = 1;
 }
 
@@ -820,139 +853,6 @@ message FeeLimit {
         // The fee limit expressed as a percentage of the payment amount.
         int64 percent = 2;
     }
-}
-
-message SendRequest {
-    /*
-    The identity pubkey of the payment recipient. When using REST, this field
-    must be encoded as base64.
-    */
-    bytes dest = 1;
-
-    /*
-    The hex-encoded identity pubkey of the payment recipient. Deprecated now
-    that the REST gateway supports base64 encoding of bytes fields.
-    */
-    string dest_string = 2 [deprecated = true];
-
-    /*
-    The amount to send expressed in satoshis.
-
-    The fields amt and amt_msat are mutually exclusive.
-    */
-    int64 amt = 3;
-
-    /*
-    The amount to send expressed in millisatoshis.
-
-    The fields amt and amt_msat are mutually exclusive.
-    */
-    int64 amt_msat = 12;
-
-    /*
-    The hash to use within the payment's HTLC. When using REST, this field
-    must be encoded as base64.
-    */
-    bytes payment_hash = 4;
-
-    /*
-    The hex-encoded hash to use within the payment's HTLC. Deprecated now
-    that the REST gateway supports base64 encoding of bytes fields.
-    */
-    string payment_hash_string = 5 [deprecated = true];
-
-    /*
-    A bare-bones invoice for a payment within the Lightning Network. With the
-    details of the invoice, the sender has all the data necessary to send a
-    payment to the recipient.
-    */
-    string payment_request = 6;
-
-    /*
-    The CLTV delta from the current height that should be used to set the
-    timelock for the final hop.
-    */
-    int32 final_cltv_delta = 7;
-
-    /*
-    The maximum number of satoshis that will be paid as a fee of the payment.
-    This value can be represented either as a percentage of the amount being
-    sent, or as a fixed amount of the maximum fee the user is willing the pay to
-    send the payment. If not specified, lnd will use a default value of 100%
-    fees for small amounts (<=1k sat) or 5% fees for larger amounts.
-    */
-    FeeLimit fee_limit = 8;
-
-    /*
-    The channel id of the channel that must be taken to the first hop. If zero,
-    any channel may be used.
-    */
-    uint64 outgoing_chan_id = 9 [jstype = JS_STRING];
-
-    /*
-    The pubkey of the last hop of the route. If empty, any hop may be used.
-    */
-    bytes last_hop_pubkey = 13;
-
-    /*
-    An optional maximum total time lock for the route. This should not exceed
-    lnd's `--max-cltv-expiry` setting. If zero, then the value of
-    `--max-cltv-expiry` is enforced.
-    */
-    uint32 cltv_limit = 10;
-
-    /*
-    An optional field that can be used to pass an arbitrary set of TLV records
-    to a peer which understands the new records. This can be used to pass
-    application specific data during the payment attempt. Record types are
-    required to be in the custom range >= 65536. When using REST, the values
-    must be encoded as base64.
-    */
-    map<uint64, bytes> dest_custom_records = 11;
-
-    // If set, circular payments to self are permitted.
-    bool allow_self_payment = 14;
-
-    /*
-    Features assumed to be supported by the final node. All transitive feature
-    dependencies must also be set properly. For a given feature bit pair, either
-    optional or remote may be set, but not both. If this field is nil or empty,
-    the router will try to load destination features from the graph as a
-    fallback.
-    */
-    repeated FeatureBit dest_features = 15;
-
-    /*
-    The payment address of the generated invoice.  This is also called
-    payment secret in specifications (e.g. BOLT 11).
-    */
-    bytes payment_addr = 16;
-}
-
-message SendResponse {
-    string payment_error = 1;
-    bytes payment_preimage = 2;
-    Route payment_route = 3;
-    bytes payment_hash = 4;
-}
-
-message SendToRouteRequest {
-    /*
-    The payment hash to use for the HTLC. When using REST, this field must be
-    encoded as base64.
-    */
-    bytes payment_hash = 1;
-
-    /*
-    An optional hex-encoded payment hash to be used for the HTLC. Deprecated now
-    that the REST gateway supports base64 encoding of bytes fields.
-    */
-    string payment_hash_string = 2 [deprecated = true];
-
-    reserved 3;
-
-    // Route that should be used to attempt to complete the payment.
-    Route route = 4;
 }
 
 message ChannelAcceptRequest {
@@ -1159,6 +1059,9 @@ message EstimateFeeRequest {
 
     // The strategy to use for selecting coins during fees estimation.
     CoinSelectionStrategy coin_selection_strategy = 5;
+
+    // A list of selected inputs for the transaction.
+    repeated OutPoint inputs = 6;
 }
 
 message EstimateFeeResponse {
@@ -1171,6 +1074,9 @@ message EstimateFeeResponse {
 
     // The fee rate in satoshi/vbyte.
     uint64 sat_per_vbyte = 3;
+
+    // A list of selected inputs for the transaction the estimate is for.
+    repeated OutPoint inputs = 4;
 }
 
 message SendManyRequest {
@@ -1399,6 +1305,11 @@ message HTLC {
 }
 
 enum CommitmentType {
+    // Allow multiple enum names to map to the same numeric value so the
+    // taproot channel types can expose short, canonical aliases without
+    // breaking on-wire compatibility with the historic names.
+    option allow_alias = true;
+
     /*
     Returned when the commitment type isn't known or unavailable.
     */
@@ -1407,6 +1318,10 @@ enum CommitmentType {
     /*
     A channel using the legacy commitment format having tweaked to_remote
     keys.
+
+    This value is only reported for channels that already exist. It is
+    rejected as an input when opening a channel, since lnd no longer opens
+    or accepts channels of this type.
     */
     LEGACY = 1;
 
@@ -1435,8 +1350,25 @@ enum CommitmentType {
     SCRIPT_ENFORCED_LEASE = 4;
 
     /*
-    A channel that uses musig2 for the funding output, and the new tapscript
-    features where relevant.
+    The production taproot channel type that uses musig2 for the funding
+    output and the new tapscript features, with final scripts and feature
+    bits 80/81. This is the recommended taproot variant; new integrations
+    should select this enum value.
+    */
+    TAPROOT = 7;
+
+    /*
+    Deprecated alias for TAPROOT, preserved so existing clients that select
+    the production taproot channel type by its historic name continue to
+    compile and serialize against the same wire value.
+    */
+    SIMPLE_TAPROOT_FINAL = 7;
+
+    /*
+    A legacy taproot channel type that uses musig2 for the funding output and
+    the new tapscript features, but with development scripts and the staging
+    feature bits. Retained for compatibility with peers that have not upgraded
+    to TAPROOT; new integrations should prefer TAPROOT.
     */
     SIMPLE_TAPROOT = 5;
 
@@ -1978,6 +1910,13 @@ message PeerEvent {
 
 message GetInfoRequest {
 }
+enum GraphCacheStatus {
+    GRAPH_CACHE_STATUS_DISABLED = 0;
+    GRAPH_CACHE_STATUS_LOADING = 1;
+    GRAPH_CACHE_STATUS_LOADED = 2;
+    GRAPH_CACHE_STATUS_FAILED = 3;
+}
+
 message GetInfoResponse {
     // The version of the LND software that the node is running.
     string version = 14;
@@ -2052,9 +1991,19 @@ message GetInfoResponse {
 
     // Indicates whether final htlc resolutions are stored on disk.
     bool store_final_htlc_resolutions = 22;
+
+    // Whether the wallet is fully synced to the best chain. This indicates the
+    // wallet's internal sync state with the backing chain source.
+    bool wallet_synced = 23;
+
+    // The current status of the in-memory graph cache.
+    GraphCacheStatus graph_cache_status = 24;
 }
 
 message GetDebugInfoRequest {
+    // If set to true, the log file content will be included in the response.
+    // By default, only the config information is returned.
+    bool include_log = 1;
 }
 
 message GetDebugInfoResponse {
@@ -2285,8 +2234,13 @@ message BatchOpenChannel {
     bytes pending_chan_id = 8;
 
     /*
-    The explicit commitment type to use. Note this field will only be used if
-    the remote peer supports explicit channel negotiation.
+    The commitment type to request. If UNKNOWN, lnd selects a default from
+    both peers' supported features; the selected type is always sent
+    explicitly.
+
+    LEGACY is rejected: lnd no longer opens or accepts channels of that
+    type. Note that an empty channel type on the wire requests it too, so
+    there is no way to ask for it at all.
     */
     CommitmentType commitment_type = 9;
 
@@ -2458,8 +2412,13 @@ message OpenChannelRequest {
     uint32 max_local_csv = 17;
 
     /*
-    The explicit commitment type to use. Note this field will only be used if
-    the remote peer supports explicit channel negotiation.
+    The commitment type to request. If UNKNOWN, lnd selects a default from
+    both peers' supported features; the selected type is always sent
+    explicitly.
+
+    LEGACY is rejected: lnd no longer opens or accepts channels of that
+    type. Note that an empty channel type on the wire requests it too, so
+    there is no way to ask for it at all.
     */
     CommitmentType commitment_type = 18;
 
@@ -2890,6 +2849,24 @@ message PendingChannelsResponse {
         // The raw hex encoded bytes of the closing transaction. Included if
         // include_raw_tx in the request is true.
         string closing_tx_hex = 5;
+
+        /*
+        Remaining number of confirmations until the channel closure is
+        considered final and removed from waiting close. Channel closes
+        require multiple confirmations for reorg protection — the exact
+        number scales with channel capacity. A closing transaction that
+        gets reorganized out of the chain resets this counter. When the
+        closing transaction is not yet confirmed, this value equals the
+        total number of confirmations required.
+        */
+        uint32 blocks_til_close_confirmed = 6;
+
+        /*
+        The block height at which the closing transaction was first confirmed.
+        This will be zero if the closing transaction has not yet confirmed, or
+        if this information is not available for older channels.
+        */
+        uint32 close_height = 7;
     }
 
     message Commitments {
@@ -2994,6 +2971,10 @@ message PendingChannelsResponse {
 message ChannelEventSubscription {
 }
 
+message ChannelCommitUpdate {
+    Channel channel = 1;
+}
+
 message ChannelEventUpdate {
     oneof channel {
         Channel open_channel = 1;
@@ -3003,6 +2984,7 @@ message ChannelEventUpdate {
         PendingUpdate pending_open_channel = 6;
         ChannelPoint fully_resolved_channel = 7;
         ChannelPoint channel_funding_timeout = 8;
+        ChannelCommitUpdate updated_channel = 9;
     }
 
     enum UpdateType {
@@ -3013,6 +2995,7 @@ message ChannelEventUpdate {
         PENDING_OPEN_CHANNEL = 4;
         FULLY_RESOLVED_CHANNEL = 5;
         CHANNEL_FUNDING_TIMEOUT = 6;
+        CHANNEL_UPDATE = 7;
     }
 
     UpdateType type = 5;
@@ -3186,11 +3169,7 @@ message QueryRoutesRequest {
     */
     map<uint64, bytes> dest_custom_records = 13;
 
-    /*
-    Deprecated, use outgoing_chan_ids. The channel id of the channel that must
-    be taken to the first hop. If zero, any channel may be used.
-    */
-    uint64 outgoing_chan_id = 14 [jstype = JS_STRING, deprecated = true];
+    reserved 14;
 
     /*
     The pubkey of the last hop of the route. If empty, any hop may be used.
@@ -4466,6 +4445,10 @@ message ListPaymentsRequest {
     // If set, returns all payments with a creation date less than or equal to
     // it. Measured in seconds since the unix epoch.
     uint64 creation_date_end = 7;
+
+    // If set, omit hop-level route data for HTLC attempts to reduce query
+    // cost and response size.
+    bool omit_hops = 8;
 }
 
 message ListPaymentsResponse {

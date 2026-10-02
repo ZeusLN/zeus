@@ -1245,170 +1245,6 @@ export const lnrpc = $root.lnrpc = (() => {
         });
 
         /**
-         * Callback as used by {@link lnrpc.Lightning#sendPayment}.
-         * @memberof lnrpc.Lightning
-         * @typedef SendPaymentCallback
-         * @type {function}
-         * @param {Error|null} error Error, if any
-         * @param {lnrpc.SendResponse} [response] SendResponse
-         */
-
-        /**
-         * Calls SendPayment.
-         * @memberof lnrpc.Lightning
-         * @typedef SendPayment
-         * @type {{
-         *   (request: lnrpc.ISendRequest, callback: lnrpc.Lightning.SendPaymentCallback): void;
-         *   (request: lnrpc.ISendRequest): Promise<lnrpc.SendResponse>;
-         *   readonly name: "SendPayment";
-         *   readonly path: "/lnrpc.Lightning/SendPayment";
-         *   readonly requestType: "SendRequest";
-         *   readonly responseType: "SendResponse";
-         *   readonly requestStream: true;
-         *   readonly responseStream: true;
-         * }}
-         */
-
-        /**
-         * Calls SendPayment.
-         * @name lnrpc.Lightning#sendPayment
-         * @type {lnrpc.Lightning.SendPayment}
-         */
-        $Object.defineProperties(Lightning.prototype.sendPayment = function(request, callback) {
-            return $protobuf.rpc.Service.prototype.rpcCall.call(this, Lightning.prototype.sendPayment, $root.lnrpc.SendRequest, $root.lnrpc.SendResponse, request, callback);
-        }, {
-            name: { value: "SendPayment" },
-            path: { value: "/lnrpc.Lightning/SendPayment" },
-            requestType: { value: "SendRequest" },
-            responseType: { value: "SendResponse" },
-            requestStream: { value: true },
-            responseStream: { value: true }
-        });
-
-        /**
-         * Callback as used by {@link lnrpc.Lightning#sendPaymentSync}.
-         * @memberof lnrpc.Lightning
-         * @typedef SendPaymentSyncCallback
-         * @type {function}
-         * @param {Error|null} error Error, if any
-         * @param {lnrpc.SendResponse} [response] SendResponse
-         */
-
-        /**
-         * Calls SendPaymentSync.
-         * @memberof lnrpc.Lightning
-         * @typedef SendPaymentSync
-         * @type {{
-         *   (request: lnrpc.ISendRequest, callback: lnrpc.Lightning.SendPaymentSyncCallback): void;
-         *   (request: lnrpc.ISendRequest): Promise<lnrpc.SendResponse>;
-         *   readonly name: "SendPaymentSync";
-         *   readonly path: "/lnrpc.Lightning/SendPaymentSync";
-         *   readonly requestType: "SendRequest";
-         *   readonly responseType: "SendResponse";
-         *   readonly requestStream: undefined;
-         *   readonly responseStream: undefined;
-         * }}
-         */
-
-        /**
-         * Calls SendPaymentSync.
-         * @name lnrpc.Lightning#sendPaymentSync
-         * @type {lnrpc.Lightning.SendPaymentSync}
-         */
-        $Object.defineProperties(Lightning.prototype.sendPaymentSync = function(request, callback) {
-            return $protobuf.rpc.Service.prototype.rpcCall.call(this, Lightning.prototype.sendPaymentSync, $root.lnrpc.SendRequest, $root.lnrpc.SendResponse, request, callback);
-        }, {
-            name: { value: "SendPaymentSync" },
-            path: { value: "/lnrpc.Lightning/SendPaymentSync" },
-            requestType: { value: "SendRequest" },
-            responseType: { value: "SendResponse" },
-            requestStream: { value: $undefined },
-            responseStream: { value: $undefined }
-        });
-
-        /**
-         * Callback as used by {@link lnrpc.Lightning#sendToRoute}.
-         * @memberof lnrpc.Lightning
-         * @typedef SendToRouteCallback
-         * @type {function}
-         * @param {Error|null} error Error, if any
-         * @param {lnrpc.SendResponse} [response] SendResponse
-         */
-
-        /**
-         * Calls SendToRoute.
-         * @memberof lnrpc.Lightning
-         * @typedef SendToRoute
-         * @type {{
-         *   (request: lnrpc.ISendToRouteRequest, callback: lnrpc.Lightning.SendToRouteCallback): void;
-         *   (request: lnrpc.ISendToRouteRequest): Promise<lnrpc.SendResponse>;
-         *   readonly name: "SendToRoute";
-         *   readonly path: "/lnrpc.Lightning/SendToRoute";
-         *   readonly requestType: "SendToRouteRequest";
-         *   readonly responseType: "SendResponse";
-         *   readonly requestStream: true;
-         *   readonly responseStream: true;
-         * }}
-         */
-
-        /**
-         * Calls SendToRoute.
-         * @name lnrpc.Lightning#sendToRoute
-         * @type {lnrpc.Lightning.SendToRoute}
-         */
-        $Object.defineProperties(Lightning.prototype.sendToRoute = function(request, callback) {
-            return $protobuf.rpc.Service.prototype.rpcCall.call(this, Lightning.prototype.sendToRoute, $root.lnrpc.SendToRouteRequest, $root.lnrpc.SendResponse, request, callback);
-        }, {
-            name: { value: "SendToRoute" },
-            path: { value: "/lnrpc.Lightning/SendToRoute" },
-            requestType: { value: "SendToRouteRequest" },
-            responseType: { value: "SendResponse" },
-            requestStream: { value: true },
-            responseStream: { value: true }
-        });
-
-        /**
-         * Callback as used by {@link lnrpc.Lightning#sendToRouteSync}.
-         * @memberof lnrpc.Lightning
-         * @typedef SendToRouteSyncCallback
-         * @type {function}
-         * @param {Error|null} error Error, if any
-         * @param {lnrpc.SendResponse} [response] SendResponse
-         */
-
-        /**
-         * Calls SendToRouteSync.
-         * @memberof lnrpc.Lightning
-         * @typedef SendToRouteSync
-         * @type {{
-         *   (request: lnrpc.ISendToRouteRequest, callback: lnrpc.Lightning.SendToRouteSyncCallback): void;
-         *   (request: lnrpc.ISendToRouteRequest): Promise<lnrpc.SendResponse>;
-         *   readonly name: "SendToRouteSync";
-         *   readonly path: "/lnrpc.Lightning/SendToRouteSync";
-         *   readonly requestType: "SendToRouteRequest";
-         *   readonly responseType: "SendResponse";
-         *   readonly requestStream: undefined;
-         *   readonly responseStream: undefined;
-         * }}
-         */
-
-        /**
-         * Calls SendToRouteSync.
-         * @name lnrpc.Lightning#sendToRouteSync
-         * @type {lnrpc.Lightning.SendToRouteSync}
-         */
-        $Object.defineProperties(Lightning.prototype.sendToRouteSync = function(request, callback) {
-            return $protobuf.rpc.Service.prototype.rpcCall.call(this, Lightning.prototype.sendToRouteSync, $root.lnrpc.SendToRouteRequest, $root.lnrpc.SendResponse, request, callback);
-        }, {
-            name: { value: "SendToRouteSync" },
-            path: { value: "/lnrpc.Lightning/SendToRouteSync" },
-            requestType: { value: "SendToRouteRequest" },
-            responseType: { value: "SendResponse" },
-            requestStream: { value: $undefined },
-            responseStream: { value: $undefined }
-        });
-
-        /**
          * Callback as used by {@link lnrpc.Lightning#addInvoice}.
          * @memberof lnrpc.Lightning
          * @typedef AddInvoiceCallback
@@ -2798,6 +2634,88 @@ export const lnrpc = $root.lnrpc = (() => {
             path: { value: "/lnrpc.Lightning/SubscribeCustomMessages" },
             requestType: { value: "SubscribeCustomMessagesRequest" },
             responseType: { value: "CustomMessage" },
+            requestStream: { value: $undefined },
+            responseStream: { value: true }
+        });
+
+        /**
+         * Callback as used by {@link lnrpc.Lightning#sendOnionMessage}.
+         * @memberof lnrpc.Lightning
+         * @typedef SendOnionMessageCallback
+         * @type {function}
+         * @param {Error|null} error Error, if any
+         * @param {lnrpc.SendOnionMessageResponse} [response] SendOnionMessageResponse
+         */
+
+        /**
+         * Calls SendOnionMessage.
+         * @memberof lnrpc.Lightning
+         * @typedef SendOnionMessage
+         * @type {{
+         *   (request: lnrpc.ISendOnionMessageRequest, callback: lnrpc.Lightning.SendOnionMessageCallback): void;
+         *   (request: lnrpc.ISendOnionMessageRequest): Promise<lnrpc.SendOnionMessageResponse>;
+         *   readonly name: "SendOnionMessage";
+         *   readonly path: "/lnrpc.Lightning/SendOnionMessage";
+         *   readonly requestType: "SendOnionMessageRequest";
+         *   readonly responseType: "SendOnionMessageResponse";
+         *   readonly requestStream: undefined;
+         *   readonly responseStream: undefined;
+         * }}
+         */
+
+        /**
+         * Calls SendOnionMessage.
+         * @name lnrpc.Lightning#sendOnionMessage
+         * @type {lnrpc.Lightning.SendOnionMessage}
+         */
+        $Object.defineProperties(Lightning.prototype.sendOnionMessage = function(request, callback) {
+            return $protobuf.rpc.Service.prototype.rpcCall.call(this, Lightning.prototype.sendOnionMessage, $root.lnrpc.SendOnionMessageRequest, $root.lnrpc.SendOnionMessageResponse, request, callback);
+        }, {
+            name: { value: "SendOnionMessage" },
+            path: { value: "/lnrpc.Lightning/SendOnionMessage" },
+            requestType: { value: "SendOnionMessageRequest" },
+            responseType: { value: "SendOnionMessageResponse" },
+            requestStream: { value: $undefined },
+            responseStream: { value: $undefined }
+        });
+
+        /**
+         * Callback as used by {@link lnrpc.Lightning#subscribeOnionMessages}.
+         * @memberof lnrpc.Lightning
+         * @typedef SubscribeOnionMessagesCallback
+         * @type {function}
+         * @param {Error|null} error Error, if any
+         * @param {lnrpc.OnionMessageUpdate} [response] OnionMessageUpdate
+         */
+
+        /**
+         * Calls SubscribeOnionMessages.
+         * @memberof lnrpc.Lightning
+         * @typedef SubscribeOnionMessages
+         * @type {{
+         *   (request: lnrpc.ISubscribeOnionMessagesRequest, callback: lnrpc.Lightning.SubscribeOnionMessagesCallback): void;
+         *   (request: lnrpc.ISubscribeOnionMessagesRequest): Promise<lnrpc.OnionMessageUpdate>;
+         *   readonly name: "SubscribeOnionMessages";
+         *   readonly path: "/lnrpc.Lightning/SubscribeOnionMessages";
+         *   readonly requestType: "SubscribeOnionMessagesRequest";
+         *   readonly responseType: "OnionMessageUpdate";
+         *   readonly requestStream: undefined;
+         *   readonly responseStream: true;
+         * }}
+         */
+
+        /**
+         * Calls SubscribeOnionMessages.
+         * @name lnrpc.Lightning#subscribeOnionMessages
+         * @type {lnrpc.Lightning.SubscribeOnionMessages}
+         */
+        $Object.defineProperties(Lightning.prototype.subscribeOnionMessages = function(request, callback) {
+            return $protobuf.rpc.Service.prototype.rpcCall.call(this, Lightning.prototype.subscribeOnionMessages, $root.lnrpc.SubscribeOnionMessagesRequest, $root.lnrpc.OnionMessageUpdate, request, callback);
+        }, {
+            name: { value: "SubscribeOnionMessages" },
+            path: { value: "/lnrpc.Lightning/SubscribeOnionMessages" },
+            requestType: { value: "SubscribeOnionMessagesRequest" },
+            responseType: { value: "OnionMessageUpdate" },
             requestStream: { value: $undefined },
             responseStream: { value: true }
         });
@@ -4740,6 +4658,1388 @@ export const lnrpc = $root.lnrpc = (() => {
         };
 
         return SendCustomMessageResponse;
+    })();
+
+    lnrpc.SubscribeOnionMessagesRequest = (function() {
+
+        /**
+         * Properties of a SubscribeOnionMessagesRequest.
+         * @typedef {Object} lnrpc.SubscribeOnionMessagesRequest.$Properties
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+
+        /**
+         * Properties of a SubscribeOnionMessagesRequest.
+         * @memberof lnrpc
+         * @interface ISubscribeOnionMessagesRequest
+         * @augments lnrpc.SubscribeOnionMessagesRequest.$Properties
+         * @deprecated Use lnrpc.SubscribeOnionMessagesRequest.$Properties instead.
+         */
+
+        /**
+         * Shape of a SubscribeOnionMessagesRequest.
+         * @typedef {lnrpc.SubscribeOnionMessagesRequest.$Properties} lnrpc.SubscribeOnionMessagesRequest.$Shape
+         */
+
+        /**
+         * Constructs a new SubscribeOnionMessagesRequest.
+         * @memberof lnrpc
+         * @classdesc Represents a SubscribeOnionMessagesRequest.
+         * @constructor
+         * @param {lnrpc.SubscribeOnionMessagesRequest.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+        const SubscribeOnionMessagesRequest = function (properties) {
+            if (properties)
+                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+        };
+
+        /**
+         * Creates a new SubscribeOnionMessagesRequest instance using the specified properties.
+         * @function create
+         * @memberof lnrpc.SubscribeOnionMessagesRequest
+         * @static
+         * @param {lnrpc.SubscribeOnionMessagesRequest.$Properties=} [properties] Properties to set
+         * @returns {lnrpc.SubscribeOnionMessagesRequest} SubscribeOnionMessagesRequest instance
+         * @type {{
+         *   (properties: lnrpc.SubscribeOnionMessagesRequest.$Shape): lnrpc.SubscribeOnionMessagesRequest & lnrpc.SubscribeOnionMessagesRequest.$Shape;
+         *   (properties?: lnrpc.SubscribeOnionMessagesRequest.$Properties): lnrpc.SubscribeOnionMessagesRequest;
+         * }}
+         */
+        SubscribeOnionMessagesRequest.create = function(properties) {
+            return new SubscribeOnionMessagesRequest(properties);
+        };
+
+        /**
+         * Encodes the specified SubscribeOnionMessagesRequest message. Does not implicitly {@link lnrpc.SubscribeOnionMessagesRequest.verify|verify} messages.
+         * @function encode
+         * @memberof lnrpc.SubscribeOnionMessagesRequest
+         * @static
+         * @param {lnrpc.SubscribeOnionMessagesRequest.$Properties} message SubscribeOnionMessagesRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        SubscribeOnionMessagesRequest.encode = function (message, writer, _depth) {
+            if (!writer)
+                writer = $Writer.create();
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified SubscribeOnionMessagesRequest message, length delimited. Does not implicitly {@link lnrpc.SubscribeOnionMessagesRequest.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof lnrpc.SubscribeOnionMessagesRequest
+         * @static
+         * @param {lnrpc.SubscribeOnionMessagesRequest.$Properties} message SubscribeOnionMessagesRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        SubscribeOnionMessagesRequest.encodeDelimited = function(message, writer) {
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+        };
+
+        /**
+         * Decodes a SubscribeOnionMessagesRequest message from the specified reader or buffer.
+         * @function decode
+         * @memberof lnrpc.SubscribeOnionMessagesRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {lnrpc.SubscribeOnionMessagesRequest & lnrpc.SubscribeOnionMessagesRequest.$Shape} SubscribeOnionMessagesRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        SubscribeOnionMessagesRequest.decode = function (reader, length, _end, _depth, _target) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw $Error("max depth exceeded");
+            let end, message;
+            if (length === $undefined)
+                end = reader.len;
+            else {
+                end = reader.pos + length;
+                if (end > reader.len)
+                    throw $RangeError("index out of range");
+                length = reader.len;
+                reader.len = end;
+            }
+            message = _target || new $root.lnrpc.SubscribeOnionMessagesRequest();
+            while (reader.pos < end) {
+                let start = reader.pos;
+                let tag = reader.tag();
+                if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                }
+                reader.skipType(tag & 7, _depth, tag);
+                if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                }
+            }
+            if (length !== $undefined) {
+                if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                reader.len = length;
+            }
+            if (_end !== $undefined)
+                throw $Error("missing end group");
+            return message;
+        };
+
+        /**
+         * Decodes a SubscribeOnionMessagesRequest message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof lnrpc.SubscribeOnionMessagesRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {lnrpc.SubscribeOnionMessagesRequest & lnrpc.SubscribeOnionMessagesRequest.$Shape} SubscribeOnionMessagesRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        SubscribeOnionMessagesRequest.decodeDelimited = function(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a SubscribeOnionMessagesRequest message.
+         * @function verify
+         * @memberof lnrpc.SubscribeOnionMessagesRequest
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        SubscribeOnionMessagesRequest.verify = function (message, _depth) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
+            return null;
+        };
+
+        /**
+         * Creates a SubscribeOnionMessagesRequest message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof lnrpc.SubscribeOnionMessagesRequest
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {lnrpc.SubscribeOnionMessagesRequest} SubscribeOnionMessagesRequest
+         */
+        SubscribeOnionMessagesRequest.fromObject = function (object, _depth) {
+            if (object instanceof $root.lnrpc.SubscribeOnionMessagesRequest)
+                return object;
+            if (!$util.isObject(object))
+                throw $TypeError(".lnrpc.SubscribeOnionMessagesRequest: object expected");
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            return new $root.lnrpc.SubscribeOnionMessagesRequest();
+        };
+
+        /**
+         * Creates a plain object from a SubscribeOnionMessagesRequest message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof lnrpc.SubscribeOnionMessagesRequest
+         * @static
+         * @param {lnrpc.SubscribeOnionMessagesRequest} message SubscribeOnionMessagesRequest
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        SubscribeOnionMessagesRequest.toObject = function () {
+            return {};
+        };
+
+        /**
+         * Converts this SubscribeOnionMessagesRequest to JSON.
+         * @function toJSON
+         * @memberof lnrpc.SubscribeOnionMessagesRequest
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        SubscribeOnionMessagesRequest.prototype.toJSON = function() {
+            return SubscribeOnionMessagesRequest.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the type url for SubscribeOnionMessagesRequest
+         * @function getTypeUrl
+         * @memberof lnrpc.SubscribeOnionMessagesRequest
+         * @static
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
+         */
+        SubscribeOnionMessagesRequest.getTypeUrl = function(prefix) {
+            if (prefix === $undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/lnrpc.SubscribeOnionMessagesRequest";
+        };
+
+        return SubscribeOnionMessagesRequest;
+    })();
+
+    lnrpc.OnionMessageUpdate = (function() {
+
+        /**
+         * Properties of an OnionMessageUpdate.
+         * @typedef {Object} lnrpc.OnionMessageUpdate.$Properties
+         * @property {Uint8Array|null} [peer] OnionMessageUpdate peer
+         * @property {Uint8Array|null} [path_key] OnionMessageUpdate path_key
+         * @property {Uint8Array|null} [onion] OnionMessageUpdate onion
+         * @property {lnrpc.BlindedPath.$Properties|null} [reply_path] OnionMessageUpdate reply_path
+         * @property {Uint8Array|null} [encrypted_recipient_data] OnionMessageUpdate encrypted_recipient_data
+         * @property {Object.<string,Uint8Array>|null} [custom_records] OnionMessageUpdate custom_records
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+
+        /**
+         * Properties of an OnionMessageUpdate.
+         * @memberof lnrpc
+         * @interface IOnionMessageUpdate
+         * @augments lnrpc.OnionMessageUpdate.$Properties
+         * @deprecated Use lnrpc.OnionMessageUpdate.$Properties instead.
+         */
+
+        /**
+         * Shape of an OnionMessageUpdate.
+         * @typedef {lnrpc.OnionMessageUpdate.$Properties} lnrpc.OnionMessageUpdate.$Shape
+         */
+
+        /**
+         * Constructs a new OnionMessageUpdate.
+         * @memberof lnrpc
+         * @classdesc Represents an OnionMessageUpdate.
+         * @constructor
+         * @param {lnrpc.OnionMessageUpdate.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+        const OnionMessageUpdate = function (properties) {
+            this.custom_records = {};
+            if (properties)
+                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+        };
+
+        /**
+         * OnionMessageUpdate peer.
+         * @member {Uint8Array} peer
+         * @memberof lnrpc.OnionMessageUpdate
+         * @instance
+         */
+        OnionMessageUpdate.prototype.peer = $util.newBuffer([]);
+
+        /**
+         * OnionMessageUpdate path_key.
+         * @member {Uint8Array} path_key
+         * @memberof lnrpc.OnionMessageUpdate
+         * @instance
+         */
+        OnionMessageUpdate.prototype.path_key = $util.newBuffer([]);
+
+        /**
+         * OnionMessageUpdate onion.
+         * @member {Uint8Array} onion
+         * @memberof lnrpc.OnionMessageUpdate
+         * @instance
+         */
+        OnionMessageUpdate.prototype.onion = $util.newBuffer([]);
+
+        /**
+         * OnionMessageUpdate reply_path.
+         * @member {lnrpc.BlindedPath.$Properties|null|undefined} reply_path
+         * @memberof lnrpc.OnionMessageUpdate
+         * @instance
+         */
+        OnionMessageUpdate.prototype.reply_path = null;
+
+        /**
+         * OnionMessageUpdate encrypted_recipient_data.
+         * @member {Uint8Array} encrypted_recipient_data
+         * @memberof lnrpc.OnionMessageUpdate
+         * @instance
+         */
+        OnionMessageUpdate.prototype.encrypted_recipient_data = $util.newBuffer([]);
+
+        /**
+         * OnionMessageUpdate custom_records.
+         * @member {Object.<string,Uint8Array>} custom_records
+         * @memberof lnrpc.OnionMessageUpdate
+         * @instance
+         */
+        OnionMessageUpdate.prototype.custom_records = $util.emptyObject;
+
+        /**
+         * Creates a new OnionMessageUpdate instance using the specified properties.
+         * @function create
+         * @memberof lnrpc.OnionMessageUpdate
+         * @static
+         * @param {lnrpc.OnionMessageUpdate.$Properties=} [properties] Properties to set
+         * @returns {lnrpc.OnionMessageUpdate} OnionMessageUpdate instance
+         * @type {{
+         *   (properties: lnrpc.OnionMessageUpdate.$Shape): lnrpc.OnionMessageUpdate & lnrpc.OnionMessageUpdate.$Shape;
+         *   (properties?: lnrpc.OnionMessageUpdate.$Properties): lnrpc.OnionMessageUpdate;
+         * }}
+         */
+        OnionMessageUpdate.create = function(properties) {
+            return new OnionMessageUpdate(properties);
+        };
+
+        /**
+         * Encodes the specified OnionMessageUpdate message. Does not implicitly {@link lnrpc.OnionMessageUpdate.verify|verify} messages.
+         * @function encode
+         * @memberof lnrpc.OnionMessageUpdate
+         * @static
+         * @param {lnrpc.OnionMessageUpdate.$Properties} message OnionMessageUpdate message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        OnionMessageUpdate.encode = function (message, writer, _depth) {
+            if (!writer)
+                writer = $Writer.create();
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            if (message.peer != null && $Object.hasOwnProperty.call(message, "peer") && message.peer.length)
+                writer.uint32(/* id 1, wireType 2 =*/10).bytes(message.peer);
+            if (message.path_key != null && $Object.hasOwnProperty.call(message, "path_key") && message.path_key.length)
+                writer.uint32(/* id 2, wireType 2 =*/18).bytes(message.path_key);
+            if (message.onion != null && $Object.hasOwnProperty.call(message, "onion") && message.onion.length)
+                writer.uint32(/* id 3, wireType 2 =*/26).bytes(message.onion);
+            if (message.reply_path != null && $Object.hasOwnProperty.call(message, "reply_path"))
+                $root.lnrpc.BlindedPath.encode(message.reply_path, writer.uint32(/* id 4, wireType 2 =*/34).fork(), _depth + 1).ldelim();
+            if (message.encrypted_recipient_data != null && $Object.hasOwnProperty.call(message, "encrypted_recipient_data") && message.encrypted_recipient_data.length)
+                writer.uint32(/* id 5, wireType 2 =*/42).bytes(message.encrypted_recipient_data);
+            if (message.custom_records != null && $Object.hasOwnProperty.call(message, "custom_records"))
+                for (let keys = $Object.keys(message.custom_records), i = 0; i < keys.length; ++i)
+                    writer.uint32(/* id 6, wireType 2 =*/50).fork().uint32(/* id 1, wireType 0 =*/8).uint64($util.longFromKey(keys[i], true)).uint32(/* id 2, wireType 2 =*/18).bytes(message.custom_records[keys[i]]).ldelim();
+            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified OnionMessageUpdate message, length delimited. Does not implicitly {@link lnrpc.OnionMessageUpdate.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof lnrpc.OnionMessageUpdate
+         * @static
+         * @param {lnrpc.OnionMessageUpdate.$Properties} message OnionMessageUpdate message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        OnionMessageUpdate.encodeDelimited = function(message, writer) {
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+        };
+
+        /**
+         * Decodes an OnionMessageUpdate message from the specified reader or buffer.
+         * @function decode
+         * @memberof lnrpc.OnionMessageUpdate
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {lnrpc.OnionMessageUpdate & lnrpc.OnionMessageUpdate.$Shape} OnionMessageUpdate
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        OnionMessageUpdate.decode = function (reader, length, _end, _depth, _target) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw $Error("max depth exceeded");
+            let end, message, key, value;
+            if (length === $undefined)
+                end = reader.len;
+            else {
+                end = reader.pos + length;
+                if (end > reader.len)
+                    throw $RangeError("index out of range");
+                length = reader.len;
+                reader.len = end;
+            }
+            message = _target || new $root.lnrpc.OnionMessageUpdate();
+            while (reader.pos < end) {
+                let start = reader.pos;
+                let tag = reader.tag();
+                if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                }
+                let wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.bytes()).length)
+                            message.peer = value;
+                        else
+                            delete message.peer;
+                        continue;
+                    }
+                case 2: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.bytes()).length)
+                            message.path_key = value;
+                        else
+                            delete message.path_key;
+                        continue;
+                    }
+                case 3: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.bytes()).length)
+                            message.onion = value;
+                        else
+                            delete message.onion;
+                        continue;
+                    }
+                case 4: {
+                        if (wireType !== 2)
+                            break;
+                        message.reply_path = $root.lnrpc.BlindedPath.decode(reader, reader.uint32(), $undefined, _depth + 1, message.reply_path);
+                        continue;
+                    }
+                case 5: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.bytes()).length)
+                            message.encrypted_recipient_data = value;
+                        else
+                            delete message.encrypted_recipient_data;
+                        continue;
+                    }
+                case 6: {
+                        if (wireType !== 2)
+                            break;
+                        if (message.custom_records === $util.emptyObject)
+                            message.custom_records = {};
+                        let end2 = reader.uint32() + reader.pos;
+                        if (end2 > reader.len)
+                            throw $RangeError("index out of range");
+                        reader.len = end2;
+                        key = 0;
+                        value = [];
+                        while (reader.pos < end2) {
+                            let tag2 = reader.tag();
+                            wireType = tag2 & 7;
+                            switch (tag2 >>>= 3) {
+                            case 1:
+                                if (wireType !== 0)
+                                    break;
+                                key = reader.uint64();
+                                continue;
+                            case 2:
+                                if (wireType !== 2)
+                                    break;
+                                value = reader.bytes();
+                                continue;
+                            }
+                            reader.skipType(wireType, _depth, tag2);
+                        }
+                        if (reader.pos !== end2)
+                            throw $RangeError("index out of range");
+                        reader.len = end;
+                        message.custom_records[typeof key === "object" ? $util.longToHash(key) : key] = value;
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                }
+            }
+            if (length !== $undefined) {
+                if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                reader.len = length;
+            }
+            if (_end !== $undefined)
+                throw $Error("missing end group");
+            return message;
+        };
+
+        /**
+         * Decodes an OnionMessageUpdate message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof lnrpc.OnionMessageUpdate
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {lnrpc.OnionMessageUpdate & lnrpc.OnionMessageUpdate.$Shape} OnionMessageUpdate
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        OnionMessageUpdate.decodeDelimited = function(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies an OnionMessageUpdate message.
+         * @function verify
+         * @memberof lnrpc.OnionMessageUpdate
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        OnionMessageUpdate.verify = function (message, _depth) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
+            if (message.peer != null && $Object.hasOwnProperty.call(message, "peer"))
+                if (!(message.peer && typeof message.peer.length === "number" || $util.isString(message.peer)))
+                    return "peer: buffer expected";
+            if (message.path_key != null && $Object.hasOwnProperty.call(message, "path_key"))
+                if (!(message.path_key && typeof message.path_key.length === "number" || $util.isString(message.path_key)))
+                    return "path_key: buffer expected";
+            if (message.onion != null && $Object.hasOwnProperty.call(message, "onion"))
+                if (!(message.onion && typeof message.onion.length === "number" || $util.isString(message.onion)))
+                    return "onion: buffer expected";
+            if (message.reply_path != null && $Object.hasOwnProperty.call(message, "reply_path")) {
+                let error = $root.lnrpc.BlindedPath.verify(message.reply_path, _depth + 1);
+                if (error)
+                    return "reply_path." + error;
+            }
+            if (message.encrypted_recipient_data != null && $Object.hasOwnProperty.call(message, "encrypted_recipient_data"))
+                if (!(message.encrypted_recipient_data && typeof message.encrypted_recipient_data.length === "number" || $util.isString(message.encrypted_recipient_data)))
+                    return "encrypted_recipient_data: buffer expected";
+            if (message.custom_records != null && $Object.hasOwnProperty.call(message, "custom_records")) {
+                if (!$util.isObject(message.custom_records))
+                    return "custom_records: object expected";
+                let key = $Object.keys(message.custom_records);
+                for (let i = 0; i < key.length; ++i) {
+                    if (!$util.key64Re.test(key[i]))
+                        return "custom_records: integer|Long key{k:uint64} expected";
+                    if (!(message.custom_records[key[i]] && typeof message.custom_records[key[i]].length === "number" || $util.isString(message.custom_records[key[i]])))
+                        return "custom_records: buffer{k:uint64} expected";
+                }
+            }
+            return null;
+        };
+
+        /**
+         * Creates an OnionMessageUpdate message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof lnrpc.OnionMessageUpdate
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {lnrpc.OnionMessageUpdate} OnionMessageUpdate
+         */
+        OnionMessageUpdate.fromObject = function (object, _depth) {
+            if (object instanceof $root.lnrpc.OnionMessageUpdate)
+                return object;
+            if (!$util.isObject(object))
+                throw $TypeError(".lnrpc.OnionMessageUpdate: object expected");
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let message = new $root.lnrpc.OnionMessageUpdate();
+            if (object.peer != null)
+                if (object.peer.length)
+                    if (typeof object.peer === "string")
+                        $util.base64.decode(object.peer, message.peer = $util.newBuffer($util.base64.length(object.peer)), 0);
+                    else if (object.peer.length >= 0)
+                        message.peer = object.peer;
+            if (object.path_key != null)
+                if (object.path_key.length)
+                    if (typeof object.path_key === "string")
+                        $util.base64.decode(object.path_key, message.path_key = $util.newBuffer($util.base64.length(object.path_key)), 0);
+                    else if (object.path_key.length >= 0)
+                        message.path_key = object.path_key;
+            if (object.onion != null)
+                if (object.onion.length)
+                    if (typeof object.onion === "string")
+                        $util.base64.decode(object.onion, message.onion = $util.newBuffer($util.base64.length(object.onion)), 0);
+                    else if (object.onion.length >= 0)
+                        message.onion = object.onion;
+            if (object.reply_path != null) {
+                if (!$util.isObject(object.reply_path))
+                    throw $TypeError(".lnrpc.OnionMessageUpdate.reply_path: object expected");
+                message.reply_path = $root.lnrpc.BlindedPath.fromObject(object.reply_path, _depth + 1);
+            }
+            if (object.encrypted_recipient_data != null)
+                if (object.encrypted_recipient_data.length)
+                    if (typeof object.encrypted_recipient_data === "string")
+                        $util.base64.decode(object.encrypted_recipient_data, message.encrypted_recipient_data = $util.newBuffer($util.base64.length(object.encrypted_recipient_data)), 0);
+                    else if (object.encrypted_recipient_data.length >= 0)
+                        message.encrypted_recipient_data = object.encrypted_recipient_data;
+            if (object.custom_records) {
+                if (!$util.isObject(object.custom_records))
+                    throw $TypeError(".lnrpc.OnionMessageUpdate.custom_records: object expected");
+                message.custom_records = {};
+                for (let keys = $Object.keys(object.custom_records), i = 0; i < keys.length; ++i) {
+                    if (keys[i] === "__proto__")
+                        $util.makeProp(message.custom_records, keys[i]);
+                    if (typeof object.custom_records[keys[i]] === "string")
+                        $util.base64.decode(object.custom_records[keys[i]], message.custom_records[keys[i]] = $util.newBuffer($util.base64.length(object.custom_records[keys[i]])), 0);
+                    else if (object.custom_records[keys[i]].length >= 0)
+                        message.custom_records[keys[i]] = object.custom_records[keys[i]];
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Creates a plain object from an OnionMessageUpdate message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof lnrpc.OnionMessageUpdate
+         * @static
+         * @param {lnrpc.OnionMessageUpdate} message OnionMessageUpdate
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        OnionMessageUpdate.toObject = function (message, options, _depth) {
+            if (!options)
+                options = {};
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let object = {};
+            if (options.objects || options.defaults)
+                object.custom_records = {};
+            if (options.defaults) {
+                if (options.bytes === $String)
+                    object.peer = "";
+                else {
+                    object.peer = [];
+                    if (options.bytes !== $Array)
+                        object.peer = $util.newBuffer(object.peer);
+                }
+                if (options.bytes === $String)
+                    object.path_key = "";
+                else {
+                    object.path_key = [];
+                    if (options.bytes !== $Array)
+                        object.path_key = $util.newBuffer(object.path_key);
+                }
+                if (options.bytes === $String)
+                    object.onion = "";
+                else {
+                    object.onion = [];
+                    if (options.bytes !== $Array)
+                        object.onion = $util.newBuffer(object.onion);
+                }
+                object.reply_path = null;
+                if (options.bytes === $String)
+                    object.encrypted_recipient_data = "";
+                else {
+                    object.encrypted_recipient_data = [];
+                    if (options.bytes !== $Array)
+                        object.encrypted_recipient_data = $util.newBuffer(object.encrypted_recipient_data);
+                }
+            }
+            if (message.peer != null && $Object.hasOwnProperty.call(message, "peer"))
+                object.peer = options.bytes === $String ? $util.base64.encode(message.peer, 0, message.peer.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.peer) : message.peer;
+            if (message.path_key != null && $Object.hasOwnProperty.call(message, "path_key"))
+                object.path_key = options.bytes === $String ? $util.base64.encode(message.path_key, 0, message.path_key.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.path_key) : message.path_key;
+            if (message.onion != null && $Object.hasOwnProperty.call(message, "onion"))
+                object.onion = options.bytes === $String ? $util.base64.encode(message.onion, 0, message.onion.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.onion) : message.onion;
+            if (message.reply_path != null && $Object.hasOwnProperty.call(message, "reply_path"))
+                object.reply_path = $root.lnrpc.BlindedPath.toObject(message.reply_path, options, _depth + 1);
+            if (message.encrypted_recipient_data != null && $Object.hasOwnProperty.call(message, "encrypted_recipient_data"))
+                object.encrypted_recipient_data = options.bytes === $String ? $util.base64.encode(message.encrypted_recipient_data, 0, message.encrypted_recipient_data.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.encrypted_recipient_data) : message.encrypted_recipient_data;
+            let keys2;
+            if (message.custom_records && (keys2 = $Object.keys(message.custom_records)).length) {
+                object.custom_records = {};
+                for (let j = 0; j < keys2.length; ++j) {
+                    let k2 = $util.longFromKey(keys2[j], true).toString();
+                    if (keys2[j] === "__proto__")
+                        $util.makeProp(object.custom_records, keys2[j]);
+                    object.custom_records[k2] = options.bytes === $String ? $util.base64.encode(message.custom_records[keys2[j]], 0, message.custom_records[keys2[j]].length) : options.bytes === $Array ? $Array.prototype.slice.call(message.custom_records[keys2[j]]) : message.custom_records[keys2[j]];
+                }
+            }
+            return object;
+        };
+
+        /**
+         * Converts this OnionMessageUpdate to JSON.
+         * @function toJSON
+         * @memberof lnrpc.OnionMessageUpdate
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        OnionMessageUpdate.prototype.toJSON = function() {
+            return OnionMessageUpdate.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the type url for OnionMessageUpdate
+         * @function getTypeUrl
+         * @memberof lnrpc.OnionMessageUpdate
+         * @static
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
+         */
+        OnionMessageUpdate.getTypeUrl = function(prefix) {
+            if (prefix === $undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/lnrpc.OnionMessageUpdate";
+        };
+
+        return OnionMessageUpdate;
+    })();
+
+    lnrpc.SendOnionMessageRequest = (function() {
+
+        /**
+         * Properties of a SendOnionMessageRequest.
+         * @typedef {Object} lnrpc.SendOnionMessageRequest.$Properties
+         * @property {Uint8Array|null} [peer] SendOnionMessageRequest peer
+         * @property {Uint8Array|null} [path_key] SendOnionMessageRequest path_key
+         * @property {Uint8Array|null} [onion] SendOnionMessageRequest onion
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+
+        /**
+         * Properties of a SendOnionMessageRequest.
+         * @memberof lnrpc
+         * @interface ISendOnionMessageRequest
+         * @augments lnrpc.SendOnionMessageRequest.$Properties
+         * @deprecated Use lnrpc.SendOnionMessageRequest.$Properties instead.
+         */
+
+        /**
+         * Shape of a SendOnionMessageRequest.
+         * @typedef {lnrpc.SendOnionMessageRequest.$Properties} lnrpc.SendOnionMessageRequest.$Shape
+         */
+
+        /**
+         * Constructs a new SendOnionMessageRequest.
+         * @memberof lnrpc
+         * @classdesc Represents a SendOnionMessageRequest.
+         * @constructor
+         * @param {lnrpc.SendOnionMessageRequest.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+        const SendOnionMessageRequest = function (properties) {
+            if (properties)
+                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+        };
+
+        /**
+         * SendOnionMessageRequest peer.
+         * @member {Uint8Array} peer
+         * @memberof lnrpc.SendOnionMessageRequest
+         * @instance
+         */
+        SendOnionMessageRequest.prototype.peer = $util.newBuffer([]);
+
+        /**
+         * SendOnionMessageRequest path_key.
+         * @member {Uint8Array} path_key
+         * @memberof lnrpc.SendOnionMessageRequest
+         * @instance
+         */
+        SendOnionMessageRequest.prototype.path_key = $util.newBuffer([]);
+
+        /**
+         * SendOnionMessageRequest onion.
+         * @member {Uint8Array} onion
+         * @memberof lnrpc.SendOnionMessageRequest
+         * @instance
+         */
+        SendOnionMessageRequest.prototype.onion = $util.newBuffer([]);
+
+        /**
+         * Creates a new SendOnionMessageRequest instance using the specified properties.
+         * @function create
+         * @memberof lnrpc.SendOnionMessageRequest
+         * @static
+         * @param {lnrpc.SendOnionMessageRequest.$Properties=} [properties] Properties to set
+         * @returns {lnrpc.SendOnionMessageRequest} SendOnionMessageRequest instance
+         * @type {{
+         *   (properties: lnrpc.SendOnionMessageRequest.$Shape): lnrpc.SendOnionMessageRequest & lnrpc.SendOnionMessageRequest.$Shape;
+         *   (properties?: lnrpc.SendOnionMessageRequest.$Properties): lnrpc.SendOnionMessageRequest;
+         * }}
+         */
+        SendOnionMessageRequest.create = function(properties) {
+            return new SendOnionMessageRequest(properties);
+        };
+
+        /**
+         * Encodes the specified SendOnionMessageRequest message. Does not implicitly {@link lnrpc.SendOnionMessageRequest.verify|verify} messages.
+         * @function encode
+         * @memberof lnrpc.SendOnionMessageRequest
+         * @static
+         * @param {lnrpc.SendOnionMessageRequest.$Properties} message SendOnionMessageRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        SendOnionMessageRequest.encode = function (message, writer, _depth) {
+            if (!writer)
+                writer = $Writer.create();
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            if (message.peer != null && $Object.hasOwnProperty.call(message, "peer") && message.peer.length)
+                writer.uint32(/* id 1, wireType 2 =*/10).bytes(message.peer);
+            if (message.path_key != null && $Object.hasOwnProperty.call(message, "path_key") && message.path_key.length)
+                writer.uint32(/* id 2, wireType 2 =*/18).bytes(message.path_key);
+            if (message.onion != null && $Object.hasOwnProperty.call(message, "onion") && message.onion.length)
+                writer.uint32(/* id 3, wireType 2 =*/26).bytes(message.onion);
+            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified SendOnionMessageRequest message, length delimited. Does not implicitly {@link lnrpc.SendOnionMessageRequest.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof lnrpc.SendOnionMessageRequest
+         * @static
+         * @param {lnrpc.SendOnionMessageRequest.$Properties} message SendOnionMessageRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        SendOnionMessageRequest.encodeDelimited = function(message, writer) {
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+        };
+
+        /**
+         * Decodes a SendOnionMessageRequest message from the specified reader or buffer.
+         * @function decode
+         * @memberof lnrpc.SendOnionMessageRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {lnrpc.SendOnionMessageRequest & lnrpc.SendOnionMessageRequest.$Shape} SendOnionMessageRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        SendOnionMessageRequest.decode = function (reader, length, _end, _depth, _target) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw $Error("max depth exceeded");
+            let end, message, value;
+            if (length === $undefined)
+                end = reader.len;
+            else {
+                end = reader.pos + length;
+                if (end > reader.len)
+                    throw $RangeError("index out of range");
+                length = reader.len;
+                reader.len = end;
+            }
+            message = _target || new $root.lnrpc.SendOnionMessageRequest();
+            while (reader.pos < end) {
+                let start = reader.pos;
+                let tag = reader.tag();
+                if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                }
+                let wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.bytes()).length)
+                            message.peer = value;
+                        else
+                            delete message.peer;
+                        continue;
+                    }
+                case 2: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.bytes()).length)
+                            message.path_key = value;
+                        else
+                            delete message.path_key;
+                        continue;
+                    }
+                case 3: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.bytes()).length)
+                            message.onion = value;
+                        else
+                            delete message.onion;
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                }
+            }
+            if (length !== $undefined) {
+                if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                reader.len = length;
+            }
+            if (_end !== $undefined)
+                throw $Error("missing end group");
+            return message;
+        };
+
+        /**
+         * Decodes a SendOnionMessageRequest message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof lnrpc.SendOnionMessageRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {lnrpc.SendOnionMessageRequest & lnrpc.SendOnionMessageRequest.$Shape} SendOnionMessageRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        SendOnionMessageRequest.decodeDelimited = function(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a SendOnionMessageRequest message.
+         * @function verify
+         * @memberof lnrpc.SendOnionMessageRequest
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        SendOnionMessageRequest.verify = function (message, _depth) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
+            if (message.peer != null && $Object.hasOwnProperty.call(message, "peer"))
+                if (!(message.peer && typeof message.peer.length === "number" || $util.isString(message.peer)))
+                    return "peer: buffer expected";
+            if (message.path_key != null && $Object.hasOwnProperty.call(message, "path_key"))
+                if (!(message.path_key && typeof message.path_key.length === "number" || $util.isString(message.path_key)))
+                    return "path_key: buffer expected";
+            if (message.onion != null && $Object.hasOwnProperty.call(message, "onion"))
+                if (!(message.onion && typeof message.onion.length === "number" || $util.isString(message.onion)))
+                    return "onion: buffer expected";
+            return null;
+        };
+
+        /**
+         * Creates a SendOnionMessageRequest message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof lnrpc.SendOnionMessageRequest
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {lnrpc.SendOnionMessageRequest} SendOnionMessageRequest
+         */
+        SendOnionMessageRequest.fromObject = function (object, _depth) {
+            if (object instanceof $root.lnrpc.SendOnionMessageRequest)
+                return object;
+            if (!$util.isObject(object))
+                throw $TypeError(".lnrpc.SendOnionMessageRequest: object expected");
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let message = new $root.lnrpc.SendOnionMessageRequest();
+            if (object.peer != null)
+                if (object.peer.length)
+                    if (typeof object.peer === "string")
+                        $util.base64.decode(object.peer, message.peer = $util.newBuffer($util.base64.length(object.peer)), 0);
+                    else if (object.peer.length >= 0)
+                        message.peer = object.peer;
+            if (object.path_key != null)
+                if (object.path_key.length)
+                    if (typeof object.path_key === "string")
+                        $util.base64.decode(object.path_key, message.path_key = $util.newBuffer($util.base64.length(object.path_key)), 0);
+                    else if (object.path_key.length >= 0)
+                        message.path_key = object.path_key;
+            if (object.onion != null)
+                if (object.onion.length)
+                    if (typeof object.onion === "string")
+                        $util.base64.decode(object.onion, message.onion = $util.newBuffer($util.base64.length(object.onion)), 0);
+                    else if (object.onion.length >= 0)
+                        message.onion = object.onion;
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a SendOnionMessageRequest message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof lnrpc.SendOnionMessageRequest
+         * @static
+         * @param {lnrpc.SendOnionMessageRequest} message SendOnionMessageRequest
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        SendOnionMessageRequest.toObject = function (message, options, _depth) {
+            if (!options)
+                options = {};
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let object = {};
+            if (options.defaults) {
+                if (options.bytes === $String)
+                    object.peer = "";
+                else {
+                    object.peer = [];
+                    if (options.bytes !== $Array)
+                        object.peer = $util.newBuffer(object.peer);
+                }
+                if (options.bytes === $String)
+                    object.path_key = "";
+                else {
+                    object.path_key = [];
+                    if (options.bytes !== $Array)
+                        object.path_key = $util.newBuffer(object.path_key);
+                }
+                if (options.bytes === $String)
+                    object.onion = "";
+                else {
+                    object.onion = [];
+                    if (options.bytes !== $Array)
+                        object.onion = $util.newBuffer(object.onion);
+                }
+            }
+            if (message.peer != null && $Object.hasOwnProperty.call(message, "peer"))
+                object.peer = options.bytes === $String ? $util.base64.encode(message.peer, 0, message.peer.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.peer) : message.peer;
+            if (message.path_key != null && $Object.hasOwnProperty.call(message, "path_key"))
+                object.path_key = options.bytes === $String ? $util.base64.encode(message.path_key, 0, message.path_key.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.path_key) : message.path_key;
+            if (message.onion != null && $Object.hasOwnProperty.call(message, "onion"))
+                object.onion = options.bytes === $String ? $util.base64.encode(message.onion, 0, message.onion.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.onion) : message.onion;
+            return object;
+        };
+
+        /**
+         * Converts this SendOnionMessageRequest to JSON.
+         * @function toJSON
+         * @memberof lnrpc.SendOnionMessageRequest
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        SendOnionMessageRequest.prototype.toJSON = function() {
+            return SendOnionMessageRequest.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the type url for SendOnionMessageRequest
+         * @function getTypeUrl
+         * @memberof lnrpc.SendOnionMessageRequest
+         * @static
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
+         */
+        SendOnionMessageRequest.getTypeUrl = function(prefix) {
+            if (prefix === $undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/lnrpc.SendOnionMessageRequest";
+        };
+
+        return SendOnionMessageRequest;
+    })();
+
+    lnrpc.SendOnionMessageResponse = (function() {
+
+        /**
+         * Properties of a SendOnionMessageResponse.
+         * @typedef {Object} lnrpc.SendOnionMessageResponse.$Properties
+         * @property {string|null} [status] SendOnionMessageResponse status
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+
+        /**
+         * Properties of a SendOnionMessageResponse.
+         * @memberof lnrpc
+         * @interface ISendOnionMessageResponse
+         * @augments lnrpc.SendOnionMessageResponse.$Properties
+         * @deprecated Use lnrpc.SendOnionMessageResponse.$Properties instead.
+         */
+
+        /**
+         * Shape of a SendOnionMessageResponse.
+         * @typedef {lnrpc.SendOnionMessageResponse.$Properties} lnrpc.SendOnionMessageResponse.$Shape
+         */
+
+        /**
+         * Constructs a new SendOnionMessageResponse.
+         * @memberof lnrpc
+         * @classdesc Represents a SendOnionMessageResponse.
+         * @constructor
+         * @param {lnrpc.SendOnionMessageResponse.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+        const SendOnionMessageResponse = function (properties) {
+            if (properties)
+                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+        };
+
+        /**
+         * SendOnionMessageResponse status.
+         * @member {string} status
+         * @memberof lnrpc.SendOnionMessageResponse
+         * @instance
+         */
+        SendOnionMessageResponse.prototype.status = "";
+
+        /**
+         * Creates a new SendOnionMessageResponse instance using the specified properties.
+         * @function create
+         * @memberof lnrpc.SendOnionMessageResponse
+         * @static
+         * @param {lnrpc.SendOnionMessageResponse.$Properties=} [properties] Properties to set
+         * @returns {lnrpc.SendOnionMessageResponse} SendOnionMessageResponse instance
+         * @type {{
+         *   (properties: lnrpc.SendOnionMessageResponse.$Shape): lnrpc.SendOnionMessageResponse & lnrpc.SendOnionMessageResponse.$Shape;
+         *   (properties?: lnrpc.SendOnionMessageResponse.$Properties): lnrpc.SendOnionMessageResponse;
+         * }}
+         */
+        SendOnionMessageResponse.create = function(properties) {
+            return new SendOnionMessageResponse(properties);
+        };
+
+        /**
+         * Encodes the specified SendOnionMessageResponse message. Does not implicitly {@link lnrpc.SendOnionMessageResponse.verify|verify} messages.
+         * @function encode
+         * @memberof lnrpc.SendOnionMessageResponse
+         * @static
+         * @param {lnrpc.SendOnionMessageResponse.$Properties} message SendOnionMessageResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        SendOnionMessageResponse.encode = function (message, writer, _depth) {
+            if (!writer)
+                writer = $Writer.create();
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            if (message.status != null && $Object.hasOwnProperty.call(message, "status") && message.status !== "")
+                writer.uint32(/* id 1, wireType 2 =*/10).string(message.status);
+            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified SendOnionMessageResponse message, length delimited. Does not implicitly {@link lnrpc.SendOnionMessageResponse.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof lnrpc.SendOnionMessageResponse
+         * @static
+         * @param {lnrpc.SendOnionMessageResponse.$Properties} message SendOnionMessageResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        SendOnionMessageResponse.encodeDelimited = function(message, writer) {
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+        };
+
+        /**
+         * Decodes a SendOnionMessageResponse message from the specified reader or buffer.
+         * @function decode
+         * @memberof lnrpc.SendOnionMessageResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {lnrpc.SendOnionMessageResponse & lnrpc.SendOnionMessageResponse.$Shape} SendOnionMessageResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        SendOnionMessageResponse.decode = function (reader, length, _end, _depth, _target) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw $Error("max depth exceeded");
+            let end, message, value;
+            if (length === $undefined)
+                end = reader.len;
+            else {
+                end = reader.pos + length;
+                if (end > reader.len)
+                    throw $RangeError("index out of range");
+                length = reader.len;
+                reader.len = end;
+            }
+            message = _target || new $root.lnrpc.SendOnionMessageResponse();
+            while (reader.pos < end) {
+                let start = reader.pos;
+                let tag = reader.tag();
+                if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                }
+                let wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.stringVerify()).length)
+                            message.status = value;
+                        else
+                            delete message.status;
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                }
+            }
+            if (length !== $undefined) {
+                if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                reader.len = length;
+            }
+            if (_end !== $undefined)
+                throw $Error("missing end group");
+            return message;
+        };
+
+        /**
+         * Decodes a SendOnionMessageResponse message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof lnrpc.SendOnionMessageResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {lnrpc.SendOnionMessageResponse & lnrpc.SendOnionMessageResponse.$Shape} SendOnionMessageResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        SendOnionMessageResponse.decodeDelimited = function(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a SendOnionMessageResponse message.
+         * @function verify
+         * @memberof lnrpc.SendOnionMessageResponse
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        SendOnionMessageResponse.verify = function (message, _depth) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
+            if (message.status != null && $Object.hasOwnProperty.call(message, "status"))
+                if (!$util.isString(message.status))
+                    return "status: string expected";
+            return null;
+        };
+
+        /**
+         * Creates a SendOnionMessageResponse message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof lnrpc.SendOnionMessageResponse
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {lnrpc.SendOnionMessageResponse} SendOnionMessageResponse
+         */
+        SendOnionMessageResponse.fromObject = function (object, _depth) {
+            if (object instanceof $root.lnrpc.SendOnionMessageResponse)
+                return object;
+            if (!$util.isObject(object))
+                throw $TypeError(".lnrpc.SendOnionMessageResponse: object expected");
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let message = new $root.lnrpc.SendOnionMessageResponse();
+            if (object.status != null)
+                if (typeof object.status !== "string" || object.status.length)
+                    message.status = $String(object.status);
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a SendOnionMessageResponse message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof lnrpc.SendOnionMessageResponse
+         * @static
+         * @param {lnrpc.SendOnionMessageResponse} message SendOnionMessageResponse
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        SendOnionMessageResponse.toObject = function (message, options, _depth) {
+            if (!options)
+                options = {};
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let object = {};
+            if (options.defaults)
+                object.status = "";
+            if (message.status != null && $Object.hasOwnProperty.call(message, "status"))
+                object.status = message.status;
+            return object;
+        };
+
+        /**
+         * Converts this SendOnionMessageResponse to JSON.
+         * @function toJSON
+         * @memberof lnrpc.SendOnionMessageResponse
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        SendOnionMessageResponse.prototype.toJSON = function() {
+            return SendOnionMessageResponse.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the type url for SendOnionMessageResponse
+         * @function getTypeUrl
+         * @memberof lnrpc.SendOnionMessageResponse
+         * @static
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
+         */
+        SendOnionMessageResponse.getTypeUrl = function(prefix) {
+            if (prefix === $undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/lnrpc.SendOnionMessageResponse";
+        };
+
+        return SendOnionMessageResponse;
     })();
 
     lnrpc.Utxo = (function() {
@@ -7614,1730 +8914,6 @@ export const lnrpc = $root.lnrpc = (() => {
         return FeeLimit;
     })();
 
-    lnrpc.SendRequest = (function() {
-
-        /**
-         * Properties of a SendRequest.
-         * @typedef {Object} lnrpc.SendRequest.$Properties
-         * @property {Uint8Array|null} [dest] SendRequest dest
-         * @property {string|null} [dest_string] SendRequest dest_string
-         * @property {Long|null} [amt] SendRequest amt
-         * @property {Long|null} [amt_msat] SendRequest amt_msat
-         * @property {Uint8Array|null} [payment_hash] SendRequest payment_hash
-         * @property {string|null} [payment_hash_string] SendRequest payment_hash_string
-         * @property {string|null} [payment_request] SendRequest payment_request
-         * @property {number|null} [final_cltv_delta] SendRequest final_cltv_delta
-         * @property {lnrpc.FeeLimit.$Properties|null} [fee_limit] SendRequest fee_limit
-         * @property {Long|null} [outgoing_chan_id] SendRequest outgoing_chan_id
-         * @property {Uint8Array|null} [last_hop_pubkey] SendRequest last_hop_pubkey
-         * @property {number|null} [cltv_limit] SendRequest cltv_limit
-         * @property {Object.<string,Uint8Array>|null} [dest_custom_records] SendRequest dest_custom_records
-         * @property {boolean|null} [allow_self_payment] SendRequest allow_self_payment
-         * @property {Array.<lnrpc.FeatureBit>|null} [dest_features] SendRequest dest_features
-         * @property {Uint8Array|null} [payment_addr] SendRequest payment_addr
-         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
-         */
-
-        /**
-         * Properties of a SendRequest.
-         * @memberof lnrpc
-         * @interface ISendRequest
-         * @augments lnrpc.SendRequest.$Properties
-         * @deprecated Use lnrpc.SendRequest.$Properties instead.
-         */
-
-        /**
-         * Shape of a SendRequest.
-         * @typedef {{
-         *   dest?: Uint8Array|null;
-         *   dest_string?: string|null;
-         *   amt?: Long|null;
-         *   amt_msat?: Long|null;
-         *   payment_hash?: Uint8Array|null;
-         *   payment_hash_string?: string|null;
-         *   payment_request?: string|null;
-         *   final_cltv_delta?: number|null;
-         *   fee_limit?: lnrpc.FeeLimit.$Shape|null;
-         *   outgoing_chan_id?: Long|null;
-         *   last_hop_pubkey?: Uint8Array|null;
-         *   cltv_limit?: number|null;
-         *   dest_custom_records?: Object.<string,Uint8Array>|null;
-         *   allow_self_payment?: boolean|null;
-         *   dest_features?: Array.<lnrpc.FeatureBit>|null;
-         *   payment_addr?: Uint8Array|null;
-         *   $unknowns?: Array.<Uint8Array>;
-         * }} lnrpc.SendRequest.$Shape
-         */
-
-        /**
-         * Constructs a new SendRequest.
-         * @memberof lnrpc
-         * @classdesc Represents a SendRequest.
-         * @constructor
-         * @param {lnrpc.SendRequest.$Properties=} [properties] Properties to set
-         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
-         */
-        const SendRequest = function (properties) {
-            this.dest_custom_records = {};
-            this.dest_features = [];
-            if (properties)
-                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
-                        this[keys[i]] = properties[keys[i]];
-        };
-
-        /**
-         * SendRequest dest.
-         * @member {Uint8Array} dest
-         * @memberof lnrpc.SendRequest
-         * @instance
-         */
-        SendRequest.prototype.dest = $util.newBuffer([]);
-
-        /**
-         * SendRequest dest_string.
-         * @member {string} dest_string
-         * @memberof lnrpc.SendRequest
-         * @instance
-         */
-        SendRequest.prototype.dest_string = "";
-
-        /**
-         * SendRequest amt.
-         * @member {Long} amt
-         * @memberof lnrpc.SendRequest
-         * @instance
-         */
-        SendRequest.prototype.amt = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
-
-        /**
-         * SendRequest amt_msat.
-         * @member {Long} amt_msat
-         * @memberof lnrpc.SendRequest
-         * @instance
-         */
-        SendRequest.prototype.amt_msat = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
-
-        /**
-         * SendRequest payment_hash.
-         * @member {Uint8Array} payment_hash
-         * @memberof lnrpc.SendRequest
-         * @instance
-         */
-        SendRequest.prototype.payment_hash = $util.newBuffer([]);
-
-        /**
-         * SendRequest payment_hash_string.
-         * @member {string} payment_hash_string
-         * @memberof lnrpc.SendRequest
-         * @instance
-         */
-        SendRequest.prototype.payment_hash_string = "";
-
-        /**
-         * SendRequest payment_request.
-         * @member {string} payment_request
-         * @memberof lnrpc.SendRequest
-         * @instance
-         */
-        SendRequest.prototype.payment_request = "";
-
-        /**
-         * SendRequest final_cltv_delta.
-         * @member {number} final_cltv_delta
-         * @memberof lnrpc.SendRequest
-         * @instance
-         */
-        SendRequest.prototype.final_cltv_delta = 0;
-
-        /**
-         * SendRequest fee_limit.
-         * @member {lnrpc.FeeLimit.$Properties|null|undefined} fee_limit
-         * @memberof lnrpc.SendRequest
-         * @instance
-         */
-        SendRequest.prototype.fee_limit = null;
-
-        /**
-         * SendRequest outgoing_chan_id.
-         * @member {Long} outgoing_chan_id
-         * @memberof lnrpc.SendRequest
-         * @instance
-         */
-        SendRequest.prototype.outgoing_chan_id = $util.Long ? $util.Long.fromBits(0,0,true) : 0;
-
-        /**
-         * SendRequest last_hop_pubkey.
-         * @member {Uint8Array} last_hop_pubkey
-         * @memberof lnrpc.SendRequest
-         * @instance
-         */
-        SendRequest.prototype.last_hop_pubkey = $util.newBuffer([]);
-
-        /**
-         * SendRequest cltv_limit.
-         * @member {number} cltv_limit
-         * @memberof lnrpc.SendRequest
-         * @instance
-         */
-        SendRequest.prototype.cltv_limit = 0;
-
-        /**
-         * SendRequest dest_custom_records.
-         * @member {Object.<string,Uint8Array>} dest_custom_records
-         * @memberof lnrpc.SendRequest
-         * @instance
-         */
-        SendRequest.prototype.dest_custom_records = $util.emptyObject;
-
-        /**
-         * SendRequest allow_self_payment.
-         * @member {boolean} allow_self_payment
-         * @memberof lnrpc.SendRequest
-         * @instance
-         */
-        SendRequest.prototype.allow_self_payment = false;
-
-        /**
-         * SendRequest dest_features.
-         * @member {Array.<lnrpc.FeatureBit>} dest_features
-         * @memberof lnrpc.SendRequest
-         * @instance
-         */
-        SendRequest.prototype.dest_features = $util.emptyArray;
-
-        /**
-         * SendRequest payment_addr.
-         * @member {Uint8Array} payment_addr
-         * @memberof lnrpc.SendRequest
-         * @instance
-         */
-        SendRequest.prototype.payment_addr = $util.newBuffer([]);
-
-        /**
-         * Creates a new SendRequest instance using the specified properties.
-         * @function create
-         * @memberof lnrpc.SendRequest
-         * @static
-         * @param {lnrpc.SendRequest.$Properties=} [properties] Properties to set
-         * @returns {lnrpc.SendRequest} SendRequest instance
-         * @type {{
-         *   (properties: lnrpc.SendRequest.$Shape): lnrpc.SendRequest & lnrpc.SendRequest.$Shape;
-         *   (properties?: lnrpc.SendRequest.$Properties): lnrpc.SendRequest;
-         * }}
-         */
-        SendRequest.create = function(properties) {
-            return new SendRequest(properties);
-        };
-
-        /**
-         * Encodes the specified SendRequest message. Does not implicitly {@link lnrpc.SendRequest.verify|verify} messages.
-         * @function encode
-         * @memberof lnrpc.SendRequest
-         * @static
-         * @param {lnrpc.SendRequest.$Properties} message SendRequest message or plain object to encode
-         * @param {$protobuf.Writer} [writer] Writer to encode to
-         * @returns {$protobuf.Writer} Writer
-         */
-        SendRequest.encode = function (message, writer, _depth) {
-            if (!writer)
-                writer = $Writer.create();
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $util.recursionLimit)
-                throw $Error("max depth exceeded");
-            if (message.dest != null && $Object.hasOwnProperty.call(message, "dest") && message.dest.length)
-                writer.uint32(/* id 1, wireType 2 =*/10).bytes(message.dest);
-            if (message.dest_string != null && $Object.hasOwnProperty.call(message, "dest_string") && message.dest_string !== "")
-                writer.uint32(/* id 2, wireType 2 =*/18).string(message.dest_string);
-            if (message.amt != null && $Object.hasOwnProperty.call(message, "amt") && (typeof message.amt === "object" ? message.amt.low || message.amt.high : message.amt !== 0))
-                writer.uint32(/* id 3, wireType 0 =*/24).int64(message.amt);
-            if (message.payment_hash != null && $Object.hasOwnProperty.call(message, "payment_hash") && message.payment_hash.length)
-                writer.uint32(/* id 4, wireType 2 =*/34).bytes(message.payment_hash);
-            if (message.payment_hash_string != null && $Object.hasOwnProperty.call(message, "payment_hash_string") && message.payment_hash_string !== "")
-                writer.uint32(/* id 5, wireType 2 =*/42).string(message.payment_hash_string);
-            if (message.payment_request != null && $Object.hasOwnProperty.call(message, "payment_request") && message.payment_request !== "")
-                writer.uint32(/* id 6, wireType 2 =*/50).string(message.payment_request);
-            if (message.final_cltv_delta != null && $Object.hasOwnProperty.call(message, "final_cltv_delta") && message.final_cltv_delta !== 0)
-                writer.uint32(/* id 7, wireType 0 =*/56).int32(message.final_cltv_delta);
-            if (message.fee_limit != null && $Object.hasOwnProperty.call(message, "fee_limit"))
-                $root.lnrpc.FeeLimit.encode(message.fee_limit, writer.uint32(/* id 8, wireType 2 =*/66).fork(), _depth + 1).ldelim();
-            if (message.outgoing_chan_id != null && $Object.hasOwnProperty.call(message, "outgoing_chan_id") && (typeof message.outgoing_chan_id === "object" ? message.outgoing_chan_id.low || message.outgoing_chan_id.high : message.outgoing_chan_id !== 0))
-                writer.uint32(/* id 9, wireType 0 =*/72).uint64(message.outgoing_chan_id);
-            if (message.cltv_limit != null && $Object.hasOwnProperty.call(message, "cltv_limit") && message.cltv_limit !== 0)
-                writer.uint32(/* id 10, wireType 0 =*/80).uint32(message.cltv_limit);
-            if (message.dest_custom_records != null && $Object.hasOwnProperty.call(message, "dest_custom_records"))
-                for (let keys = $Object.keys(message.dest_custom_records), i = 0; i < keys.length; ++i)
-                    writer.uint32(/* id 11, wireType 2 =*/90).fork().uint32(/* id 1, wireType 0 =*/8).uint64($util.longFromKey(keys[i], true)).uint32(/* id 2, wireType 2 =*/18).bytes(message.dest_custom_records[keys[i]]).ldelim();
-            if (message.amt_msat != null && $Object.hasOwnProperty.call(message, "amt_msat") && (typeof message.amt_msat === "object" ? message.amt_msat.low || message.amt_msat.high : message.amt_msat !== 0))
-                writer.uint32(/* id 12, wireType 0 =*/96).int64(message.amt_msat);
-            if (message.last_hop_pubkey != null && $Object.hasOwnProperty.call(message, "last_hop_pubkey") && message.last_hop_pubkey.length)
-                writer.uint32(/* id 13, wireType 2 =*/106).bytes(message.last_hop_pubkey);
-            if (message.allow_self_payment != null && $Object.hasOwnProperty.call(message, "allow_self_payment") && message.allow_self_payment !== false)
-                writer.uint32(/* id 14, wireType 0 =*/112).bool(message.allow_self_payment);
-            if (message.dest_features != null && message.dest_features.length)
-                writer.uint32(/* id 15, wireType 2 =*/122).int32s(message.dest_features);
-            if (message.payment_addr != null && $Object.hasOwnProperty.call(message, "payment_addr") && message.payment_addr.length)
-                writer.uint32(/* id 16, wireType 2 =*/130).bytes(message.payment_addr);
-            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
-                for (let i = 0; i < message.$unknowns.length; ++i)
-                    writer.raw(message.$unknowns[i]);
-            return writer;
-        };
-
-        /**
-         * Encodes the specified SendRequest message, length delimited. Does not implicitly {@link lnrpc.SendRequest.verify|verify} messages.
-         * @function encodeDelimited
-         * @memberof lnrpc.SendRequest
-         * @static
-         * @param {lnrpc.SendRequest.$Properties} message SendRequest message or plain object to encode
-         * @param {$protobuf.Writer} [writer] Writer to encode to
-         * @returns {$protobuf.Writer} Writer
-         */
-        SendRequest.encodeDelimited = function(message, writer) {
-            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
-        };
-
-        /**
-         * Decodes a SendRequest message from the specified reader or buffer.
-         * @function decode
-         * @memberof lnrpc.SendRequest
-         * @static
-         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @param {number} [length] Message length if known beforehand
-         * @returns {lnrpc.SendRequest & lnrpc.SendRequest.$Shape} SendRequest
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        SendRequest.decode = function (reader, length, _end, _depth, _target) {
-            if (!(reader instanceof $Reader))
-                reader = $Reader.create(reader);
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $Reader.recursionLimit)
-                throw $Error("max depth exceeded");
-            let end, message, key, value;
-            if (length === $undefined)
-                end = reader.len;
-            else {
-                end = reader.pos + length;
-                if (end > reader.len)
-                    throw $RangeError("index out of range");
-                length = reader.len;
-                reader.len = end;
-            }
-            message = _target || new $root.lnrpc.SendRequest();
-            while (reader.pos < end) {
-                let start = reader.pos;
-                let tag = reader.tag();
-                if (tag === _end) {
-                    _end = $undefined;
-                    break;
-                }
-                let wireType = tag & 7;
-                switch (tag >>>= 3) {
-                case 1: {
-                        if (wireType !== 2)
-                            break;
-                        if ((value = reader.bytes()).length)
-                            message.dest = value;
-                        else
-                            delete message.dest;
-                        continue;
-                    }
-                case 2: {
-                        if (wireType !== 2)
-                            break;
-                        if ((value = reader.stringVerify()).length)
-                            message.dest_string = value;
-                        else
-                            delete message.dest_string;
-                        continue;
-                    }
-                case 3: {
-                        if (wireType !== 0)
-                            break;
-                        if (typeof (value = reader.int64()) === "object" ? value.low || value.high : value !== 0)
-                            message.amt = value;
-                        else
-                            delete message.amt;
-                        continue;
-                    }
-                case 12: {
-                        if (wireType !== 0)
-                            break;
-                        if (typeof (value = reader.int64()) === "object" ? value.low || value.high : value !== 0)
-                            message.amt_msat = value;
-                        else
-                            delete message.amt_msat;
-                        continue;
-                    }
-                case 4: {
-                        if (wireType !== 2)
-                            break;
-                        if ((value = reader.bytes()).length)
-                            message.payment_hash = value;
-                        else
-                            delete message.payment_hash;
-                        continue;
-                    }
-                case 5: {
-                        if (wireType !== 2)
-                            break;
-                        if ((value = reader.stringVerify()).length)
-                            message.payment_hash_string = value;
-                        else
-                            delete message.payment_hash_string;
-                        continue;
-                    }
-                case 6: {
-                        if (wireType !== 2)
-                            break;
-                        if ((value = reader.stringVerify()).length)
-                            message.payment_request = value;
-                        else
-                            delete message.payment_request;
-                        continue;
-                    }
-                case 7: {
-                        if (wireType !== 0)
-                            break;
-                        if (value = reader.int32())
-                            message.final_cltv_delta = value;
-                        else
-                            delete message.final_cltv_delta;
-                        continue;
-                    }
-                case 8: {
-                        if (wireType !== 2)
-                            break;
-                        message.fee_limit = $root.lnrpc.FeeLimit.decode(reader, reader.uint32(), $undefined, _depth + 1, message.fee_limit);
-                        continue;
-                    }
-                case 9: {
-                        if (wireType !== 0)
-                            break;
-                        if (typeof (value = reader.uint64()) === "object" ? value.low || value.high : value !== 0)
-                            message.outgoing_chan_id = value;
-                        else
-                            delete message.outgoing_chan_id;
-                        continue;
-                    }
-                case 13: {
-                        if (wireType !== 2)
-                            break;
-                        if ((value = reader.bytes()).length)
-                            message.last_hop_pubkey = value;
-                        else
-                            delete message.last_hop_pubkey;
-                        continue;
-                    }
-                case 10: {
-                        if (wireType !== 0)
-                            break;
-                        if (value = reader.uint32())
-                            message.cltv_limit = value;
-                        else
-                            delete message.cltv_limit;
-                        continue;
-                    }
-                case 11: {
-                        if (wireType !== 2)
-                            break;
-                        if (message.dest_custom_records === $util.emptyObject)
-                            message.dest_custom_records = {};
-                        let end2 = reader.uint32() + reader.pos;
-                        if (end2 > reader.len)
-                            throw $RangeError("index out of range");
-                        reader.len = end2;
-                        key = 0;
-                        value = [];
-                        while (reader.pos < end2) {
-                            let tag2 = reader.tag();
-                            wireType = tag2 & 7;
-                            switch (tag2 >>>= 3) {
-                            case 1:
-                                if (wireType !== 0)
-                                    break;
-                                key = reader.uint64();
-                                continue;
-                            case 2:
-                                if (wireType !== 2)
-                                    break;
-                                value = reader.bytes();
-                                continue;
-                            }
-                            reader.skipType(wireType, _depth, tag2);
-                        }
-                        if (reader.pos !== end2)
-                            throw $RangeError("index out of range");
-                        reader.len = end;
-                        message.dest_custom_records[typeof key === "object" ? $util.longToHash(key) : key] = value;
-                        continue;
-                    }
-                case 14: {
-                        if (wireType !== 0)
-                            break;
-                        if (value = reader.bool())
-                            message.allow_self_payment = value;
-                        else
-                            delete message.allow_self_payment;
-                        continue;
-                    }
-                case 15: {
-                        if (wireType === 2) {
-                            if (!(message.dest_features && message.dest_features.length))
-                                message.dest_features = [];
-                            reader.int32s(message.dest_features);
-                            continue;
-                        }
-                        if (wireType !== 0)
-                            break;
-                        if (!(message.dest_features && message.dest_features.length))
-                            message.dest_features = [];
-                        message.dest_features.push(reader.int32());
-                        continue;
-                    }
-                case 16: {
-                        if (wireType !== 2)
-                            break;
-                        if ((value = reader.bytes()).length)
-                            message.payment_addr = value;
-                        else
-                            delete message.payment_addr;
-                        continue;
-                    }
-                }
-                reader.skipType(wireType, _depth, tag);
-                if (!reader.discardUnknown) {
-                    $util.makeProp(message, "$unknowns", false);
-                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
-                }
-            }
-            if (length !== $undefined) {
-                if (reader.pos !== end)
-                    throw $RangeError("index out of range");
-                reader.len = length;
-            }
-            if (_end !== $undefined)
-                throw $Error("missing end group");
-            return message;
-        };
-
-        /**
-         * Decodes a SendRequest message from the specified reader or buffer, length delimited.
-         * @function decodeDelimited
-         * @memberof lnrpc.SendRequest
-         * @static
-         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {lnrpc.SendRequest & lnrpc.SendRequest.$Shape} SendRequest
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        SendRequest.decodeDelimited = function(reader) {
-            if (!(reader instanceof $Reader))
-                reader = new $Reader(reader);
-            return this.decode(reader, reader.uint32());
-        };
-
-        /**
-         * Verifies a SendRequest message.
-         * @function verify
-         * @memberof lnrpc.SendRequest
-         * @static
-         * @param {Object.<string,*>} message Plain object to verify
-         * @returns {string|null} `null` if valid, otherwise the reason why it is not
-         */
-        SendRequest.verify = function (message, _depth) {
-            if (typeof message !== "object" || message === null)
-                return "object expected";
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $util.recursionLimit)
-                return "max depth exceeded";
-            if (message.dest != null && $Object.hasOwnProperty.call(message, "dest"))
-                if (!(message.dest && typeof message.dest.length === "number" || $util.isString(message.dest)))
-                    return "dest: buffer expected";
-            if (message.dest_string != null && $Object.hasOwnProperty.call(message, "dest_string"))
-                if (!$util.isString(message.dest_string))
-                    return "dest_string: string expected";
-            if (message.amt != null && $Object.hasOwnProperty.call(message, "amt"))
-                if (!$util.isInteger(message.amt) && !(message.amt && $util.isInteger(message.amt.low) && $util.isInteger(message.amt.high)))
-                    return "amt: integer|Long expected";
-            if (message.amt_msat != null && $Object.hasOwnProperty.call(message, "amt_msat"))
-                if (!$util.isInteger(message.amt_msat) && !(message.amt_msat && $util.isInteger(message.amt_msat.low) && $util.isInteger(message.amt_msat.high)))
-                    return "amt_msat: integer|Long expected";
-            if (message.payment_hash != null && $Object.hasOwnProperty.call(message, "payment_hash"))
-                if (!(message.payment_hash && typeof message.payment_hash.length === "number" || $util.isString(message.payment_hash)))
-                    return "payment_hash: buffer expected";
-            if (message.payment_hash_string != null && $Object.hasOwnProperty.call(message, "payment_hash_string"))
-                if (!$util.isString(message.payment_hash_string))
-                    return "payment_hash_string: string expected";
-            if (message.payment_request != null && $Object.hasOwnProperty.call(message, "payment_request"))
-                if (!$util.isString(message.payment_request))
-                    return "payment_request: string expected";
-            if (message.final_cltv_delta != null && $Object.hasOwnProperty.call(message, "final_cltv_delta"))
-                if (!$util.isInteger(message.final_cltv_delta))
-                    return "final_cltv_delta: integer expected";
-            if (message.fee_limit != null && $Object.hasOwnProperty.call(message, "fee_limit")) {
-                let error = $root.lnrpc.FeeLimit.verify(message.fee_limit, _depth + 1);
-                if (error)
-                    return "fee_limit." + error;
-            }
-            if (message.outgoing_chan_id != null && $Object.hasOwnProperty.call(message, "outgoing_chan_id"))
-                if (!$util.isInteger(message.outgoing_chan_id) && !(message.outgoing_chan_id && $util.isInteger(message.outgoing_chan_id.low) && $util.isInteger(message.outgoing_chan_id.high)))
-                    return "outgoing_chan_id: integer|Long expected";
-            if (message.last_hop_pubkey != null && $Object.hasOwnProperty.call(message, "last_hop_pubkey"))
-                if (!(message.last_hop_pubkey && typeof message.last_hop_pubkey.length === "number" || $util.isString(message.last_hop_pubkey)))
-                    return "last_hop_pubkey: buffer expected";
-            if (message.cltv_limit != null && $Object.hasOwnProperty.call(message, "cltv_limit"))
-                if (!$util.isInteger(message.cltv_limit))
-                    return "cltv_limit: integer expected";
-            if (message.dest_custom_records != null && $Object.hasOwnProperty.call(message, "dest_custom_records")) {
-                if (!$util.isObject(message.dest_custom_records))
-                    return "dest_custom_records: object expected";
-                let key = $Object.keys(message.dest_custom_records);
-                for (let i = 0; i < key.length; ++i) {
-                    if (!$util.key64Re.test(key[i]))
-                        return "dest_custom_records: integer|Long key{k:uint64} expected";
-                    if (!(message.dest_custom_records[key[i]] && typeof message.dest_custom_records[key[i]].length === "number" || $util.isString(message.dest_custom_records[key[i]])))
-                        return "dest_custom_records: buffer{k:uint64} expected";
-                }
-            }
-            if (message.allow_self_payment != null && $Object.hasOwnProperty.call(message, "allow_self_payment"))
-                if (typeof message.allow_self_payment !== "boolean")
-                    return "allow_self_payment: boolean expected";
-            if (message.dest_features != null && $Object.hasOwnProperty.call(message, "dest_features")) {
-                if (!$Array.isArray(message.dest_features))
-                    return "dest_features: array expected";
-                for (let i = 0; i < message.dest_features.length; ++i)
-                    if (typeof message.dest_features[i] !== "number" || (message.dest_features[i] | 0) !== message.dest_features[i])
-                        return "dest_features: enum value[] expected";
-            }
-            if (message.payment_addr != null && $Object.hasOwnProperty.call(message, "payment_addr"))
-                if (!(message.payment_addr && typeof message.payment_addr.length === "number" || $util.isString(message.payment_addr)))
-                    return "payment_addr: buffer expected";
-            return null;
-        };
-
-        /**
-         * Creates a SendRequest message from a plain object. Also converts values to their respective internal types.
-         * @function fromObject
-         * @memberof lnrpc.SendRequest
-         * @static
-         * @param {Object.<string,*>} object Plain object
-         * @returns {lnrpc.SendRequest} SendRequest
-         */
-        SendRequest.fromObject = function (object, _depth) {
-            if (object instanceof $root.lnrpc.SendRequest)
-                return object;
-            if (!$util.isObject(object))
-                throw $TypeError(".lnrpc.SendRequest: object expected");
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $util.recursionLimit)
-                throw $Error("max depth exceeded");
-            let message = new $root.lnrpc.SendRequest();
-            if (object.dest != null)
-                if (object.dest.length)
-                    if (typeof object.dest === "string")
-                        $util.base64.decode(object.dest, message.dest = $util.newBuffer($util.base64.length(object.dest)), 0);
-                    else if (object.dest.length >= 0)
-                        message.dest = object.dest;
-            if (object.dest_string != null)
-                if (typeof object.dest_string !== "string" || object.dest_string.length)
-                    message.dest_string = $String(object.dest_string);
-            if (object.amt != null)
-                if (typeof object.amt === "object" ? object.amt.low || object.amt.high : $Number(object.amt) !== 0)
-                    if ($util.Long)
-                        message.amt = $util.Long.fromValue(object.amt, false);
-                    else if (typeof object.amt === "string")
-                        message.amt = $parseInt(object.amt, 10);
-                    else if (typeof object.amt === "number")
-                        message.amt = object.amt;
-                    else if (typeof object.amt === "object")
-                        message.amt = new $util.LongBits(object.amt.low >>> 0, object.amt.high >>> 0).toNumber();
-            if (object.amt_msat != null)
-                if (typeof object.amt_msat === "object" ? object.amt_msat.low || object.amt_msat.high : $Number(object.amt_msat) !== 0)
-                    if ($util.Long)
-                        message.amt_msat = $util.Long.fromValue(object.amt_msat, false);
-                    else if (typeof object.amt_msat === "string")
-                        message.amt_msat = $parseInt(object.amt_msat, 10);
-                    else if (typeof object.amt_msat === "number")
-                        message.amt_msat = object.amt_msat;
-                    else if (typeof object.amt_msat === "object")
-                        message.amt_msat = new $util.LongBits(object.amt_msat.low >>> 0, object.amt_msat.high >>> 0).toNumber();
-            if (object.payment_hash != null)
-                if (object.payment_hash.length)
-                    if (typeof object.payment_hash === "string")
-                        $util.base64.decode(object.payment_hash, message.payment_hash = $util.newBuffer($util.base64.length(object.payment_hash)), 0);
-                    else if (object.payment_hash.length >= 0)
-                        message.payment_hash = object.payment_hash;
-            if (object.payment_hash_string != null)
-                if (typeof object.payment_hash_string !== "string" || object.payment_hash_string.length)
-                    message.payment_hash_string = $String(object.payment_hash_string);
-            if (object.payment_request != null)
-                if (typeof object.payment_request !== "string" || object.payment_request.length)
-                    message.payment_request = $String(object.payment_request);
-            if (object.final_cltv_delta != null)
-                if ($Number(object.final_cltv_delta) !== 0)
-                    message.final_cltv_delta = object.final_cltv_delta | 0;
-            if (object.fee_limit != null) {
-                if (!$util.isObject(object.fee_limit))
-                    throw $TypeError(".lnrpc.SendRequest.fee_limit: object expected");
-                message.fee_limit = $root.lnrpc.FeeLimit.fromObject(object.fee_limit, _depth + 1);
-            }
-            if (object.outgoing_chan_id != null)
-                if (typeof object.outgoing_chan_id === "object" ? object.outgoing_chan_id.low || object.outgoing_chan_id.high : $Number(object.outgoing_chan_id) !== 0)
-                    if ($util.Long)
-                        message.outgoing_chan_id = $util.Long.fromValue(object.outgoing_chan_id, true);
-                    else if (typeof object.outgoing_chan_id === "string")
-                        message.outgoing_chan_id = $parseInt(object.outgoing_chan_id, 10);
-                    else if (typeof object.outgoing_chan_id === "number")
-                        message.outgoing_chan_id = object.outgoing_chan_id;
-                    else if (typeof object.outgoing_chan_id === "object")
-                        message.outgoing_chan_id = new $util.LongBits(object.outgoing_chan_id.low >>> 0, object.outgoing_chan_id.high >>> 0).toNumber(true);
-            if (object.last_hop_pubkey != null)
-                if (object.last_hop_pubkey.length)
-                    if (typeof object.last_hop_pubkey === "string")
-                        $util.base64.decode(object.last_hop_pubkey, message.last_hop_pubkey = $util.newBuffer($util.base64.length(object.last_hop_pubkey)), 0);
-                    else if (object.last_hop_pubkey.length >= 0)
-                        message.last_hop_pubkey = object.last_hop_pubkey;
-            if (object.cltv_limit != null)
-                if ($Number(object.cltv_limit) !== 0)
-                    message.cltv_limit = object.cltv_limit >>> 0;
-            if (object.dest_custom_records) {
-                if (!$util.isObject(object.dest_custom_records))
-                    throw $TypeError(".lnrpc.SendRequest.dest_custom_records: object expected");
-                message.dest_custom_records = {};
-                for (let keys = $Object.keys(object.dest_custom_records), i = 0; i < keys.length; ++i) {
-                    if (keys[i] === "__proto__")
-                        $util.makeProp(message.dest_custom_records, keys[i]);
-                    if (typeof object.dest_custom_records[keys[i]] === "string")
-                        $util.base64.decode(object.dest_custom_records[keys[i]], message.dest_custom_records[keys[i]] = $util.newBuffer($util.base64.length(object.dest_custom_records[keys[i]])), 0);
-                    else if (object.dest_custom_records[keys[i]].length >= 0)
-                        message.dest_custom_records[keys[i]] = object.dest_custom_records[keys[i]];
-                }
-            }
-            if (object.allow_self_payment != null)
-                if (object.allow_self_payment)
-                    message.allow_self_payment = $Boolean(object.allow_self_payment);
-            if (object.dest_features) {
-                if (!$Array.isArray(object.dest_features))
-                    throw $TypeError(".lnrpc.SendRequest.dest_features: array expected");
-                message.dest_features = [];
-                for (let i = 0; i < object.dest_features.length; ++i)
-                    switch (object.dest_features[i]) {
-                    case "DATALOSS_PROTECT_REQ":
-                    case 0:
-                        message.dest_features[message.dest_features.length] = 0;
-                        break;
-                    case "DATALOSS_PROTECT_OPT":
-                    case 1:
-                        message.dest_features[message.dest_features.length] = 1;
-                        break;
-                    case "INITIAL_ROUING_SYNC":
-                    case 3:
-                        message.dest_features[message.dest_features.length] = 3;
-                        break;
-                    case "UPFRONT_SHUTDOWN_SCRIPT_REQ":
-                    case 4:
-                        message.dest_features[message.dest_features.length] = 4;
-                        break;
-                    case "UPFRONT_SHUTDOWN_SCRIPT_OPT":
-                    case 5:
-                        message.dest_features[message.dest_features.length] = 5;
-                        break;
-                    case "GOSSIP_QUERIES_REQ":
-                    case 6:
-                        message.dest_features[message.dest_features.length] = 6;
-                        break;
-                    case "GOSSIP_QUERIES_OPT":
-                    case 7:
-                        message.dest_features[message.dest_features.length] = 7;
-                        break;
-                    case "TLV_ONION_REQ":
-                    case 8:
-                        message.dest_features[message.dest_features.length] = 8;
-                        break;
-                    case "TLV_ONION_OPT":
-                    case 9:
-                        message.dest_features[message.dest_features.length] = 9;
-                        break;
-                    case "EXT_GOSSIP_QUERIES_REQ":
-                    case 10:
-                        message.dest_features[message.dest_features.length] = 10;
-                        break;
-                    case "EXT_GOSSIP_QUERIES_OPT":
-                    case 11:
-                        message.dest_features[message.dest_features.length] = 11;
-                        break;
-                    case "STATIC_REMOTE_KEY_REQ":
-                    case 12:
-                        message.dest_features[message.dest_features.length] = 12;
-                        break;
-                    case "STATIC_REMOTE_KEY_OPT":
-                    case 13:
-                        message.dest_features[message.dest_features.length] = 13;
-                        break;
-                    case "PAYMENT_ADDR_REQ":
-                    case 14:
-                        message.dest_features[message.dest_features.length] = 14;
-                        break;
-                    case "PAYMENT_ADDR_OPT":
-                    case 15:
-                        message.dest_features[message.dest_features.length] = 15;
-                        break;
-                    case "MPP_REQ":
-                    case 16:
-                        message.dest_features[message.dest_features.length] = 16;
-                        break;
-                    case "MPP_OPT":
-                    case 17:
-                        message.dest_features[message.dest_features.length] = 17;
-                        break;
-                    case "WUMBO_CHANNELS_REQ":
-                    case 18:
-                        message.dest_features[message.dest_features.length] = 18;
-                        break;
-                    case "WUMBO_CHANNELS_OPT":
-                    case 19:
-                        message.dest_features[message.dest_features.length] = 19;
-                        break;
-                    case "ANCHORS_REQ":
-                    case 20:
-                        message.dest_features[message.dest_features.length] = 20;
-                        break;
-                    case "ANCHORS_OPT":
-                    case 21:
-                        message.dest_features[message.dest_features.length] = 21;
-                        break;
-                    case "ANCHORS_ZERO_FEE_HTLC_REQ":
-                    case 22:
-                        message.dest_features[message.dest_features.length] = 22;
-                        break;
-                    case "ANCHORS_ZERO_FEE_HTLC_OPT":
-                    case 23:
-                        message.dest_features[message.dest_features.length] = 23;
-                        break;
-                    case "ROUTE_BLINDING_REQUIRED":
-                    case 24:
-                        message.dest_features[message.dest_features.length] = 24;
-                        break;
-                    case "ROUTE_BLINDING_OPTIONAL":
-                    case 25:
-                        message.dest_features[message.dest_features.length] = 25;
-                        break;
-                    case "AMP_REQ":
-                    case 30:
-                        message.dest_features[message.dest_features.length] = 30;
-                        break;
-                    case "AMP_OPT":
-                    case 31:
-                        message.dest_features[message.dest_features.length] = 31;
-                        break;
-                    default:
-                        if (typeof object.dest_features[i] === "number" && (object.dest_features[i] | 0) === object.dest_features[i])
-                            message.dest_features[message.dest_features.length] = object.dest_features[i];
-                    }
-            }
-            if (object.payment_addr != null)
-                if (object.payment_addr.length)
-                    if (typeof object.payment_addr === "string")
-                        $util.base64.decode(object.payment_addr, message.payment_addr = $util.newBuffer($util.base64.length(object.payment_addr)), 0);
-                    else if (object.payment_addr.length >= 0)
-                        message.payment_addr = object.payment_addr;
-            return message;
-        };
-
-        /**
-         * Creates a plain object from a SendRequest message. Also converts values to other types if specified.
-         * @function toObject
-         * @memberof lnrpc.SendRequest
-         * @static
-         * @param {lnrpc.SendRequest} message SendRequest
-         * @param {$protobuf.IConversionOptions} [options] Conversion options
-         * @returns {Object.<string,*>} Plain object
-         */
-        SendRequest.toObject = function (message, options, _depth) {
-            if (!options)
-                options = {};
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $util.recursionLimit)
-                throw $Error("max depth exceeded");
-            let object = {};
-            if (options.arrays || options.defaults)
-                object.dest_features = [];
-            if (options.objects || options.defaults)
-                object.dest_custom_records = {};
-            if (options.defaults) {
-                if (options.bytes === $String)
-                    object.dest = "";
-                else {
-                    object.dest = [];
-                    if (options.bytes !== $Array)
-                        object.dest = $util.newBuffer(object.dest);
-                }
-                object.dest_string = "";
-                if ($util.Long) {
-                    let long = new $util.Long(0, 0, false);
-                    object.amt = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
-                } else
-                    object.amt = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
-                if (options.bytes === $String)
-                    object.payment_hash = "";
-                else {
-                    object.payment_hash = [];
-                    if (options.bytes !== $Array)
-                        object.payment_hash = $util.newBuffer(object.payment_hash);
-                }
-                object.payment_hash_string = "";
-                object.payment_request = "";
-                object.final_cltv_delta = 0;
-                object.fee_limit = null;
-                if ($util.Long) {
-                    let long = new $util.Long(0, 0, true);
-                    object.outgoing_chan_id = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
-                } else
-                    object.outgoing_chan_id = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
-                object.cltv_limit = 0;
-                if ($util.Long) {
-                    let long = new $util.Long(0, 0, false);
-                    object.amt_msat = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
-                } else
-                    object.amt_msat = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
-                if (options.bytes === $String)
-                    object.last_hop_pubkey = "";
-                else {
-                    object.last_hop_pubkey = [];
-                    if (options.bytes !== $Array)
-                        object.last_hop_pubkey = $util.newBuffer(object.last_hop_pubkey);
-                }
-                object.allow_self_payment = false;
-                if (options.bytes === $String)
-                    object.payment_addr = "";
-                else {
-                    object.payment_addr = [];
-                    if (options.bytes !== $Array)
-                        object.payment_addr = $util.newBuffer(object.payment_addr);
-                }
-            }
-            if (message.dest != null && $Object.hasOwnProperty.call(message, "dest"))
-                object.dest = options.bytes === $String ? $util.base64.encode(message.dest, 0, message.dest.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.dest) : message.dest;
-            if (message.dest_string != null && $Object.hasOwnProperty.call(message, "dest_string"))
-                object.dest_string = message.dest_string;
-            if (message.amt != null && $Object.hasOwnProperty.call(message, "amt"))
-                if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
-                    object.amt = typeof message.amt === "number" ? $BigInt(message.amt) : $util.Long.fromBits(message.amt.low >>> 0, message.amt.high >>> 0, false).toBigInt();
-                else if (typeof message.amt === "number")
-                    object.amt = options.longs === $String ? $String(message.amt) : message.amt;
-                else
-                    object.amt = options.longs === $String ? $util.Long.prototype.toString.call(message.amt) : options.longs === $Number ? new $util.LongBits(message.amt.low >>> 0, message.amt.high >>> 0).toNumber() : message.amt;
-            if (message.payment_hash != null && $Object.hasOwnProperty.call(message, "payment_hash"))
-                object.payment_hash = options.bytes === $String ? $util.base64.encode(message.payment_hash, 0, message.payment_hash.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.payment_hash) : message.payment_hash;
-            if (message.payment_hash_string != null && $Object.hasOwnProperty.call(message, "payment_hash_string"))
-                object.payment_hash_string = message.payment_hash_string;
-            if (message.payment_request != null && $Object.hasOwnProperty.call(message, "payment_request"))
-                object.payment_request = message.payment_request;
-            if (message.final_cltv_delta != null && $Object.hasOwnProperty.call(message, "final_cltv_delta"))
-                object.final_cltv_delta = message.final_cltv_delta;
-            if (message.fee_limit != null && $Object.hasOwnProperty.call(message, "fee_limit"))
-                object.fee_limit = $root.lnrpc.FeeLimit.toObject(message.fee_limit, options, _depth + 1);
-            if (message.outgoing_chan_id != null && $Object.hasOwnProperty.call(message, "outgoing_chan_id"))
-                if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
-                    object.outgoing_chan_id = typeof message.outgoing_chan_id === "number" ? $BigInt(message.outgoing_chan_id) : $util.Long.fromBits(message.outgoing_chan_id.low >>> 0, message.outgoing_chan_id.high >>> 0, true).toBigInt();
-                else if (typeof message.outgoing_chan_id === "number")
-                    object.outgoing_chan_id = options.longs === $String ? $String(message.outgoing_chan_id) : message.outgoing_chan_id;
-                else
-                    object.outgoing_chan_id = options.longs === $String ? $util.Long.prototype.toString.call(message.outgoing_chan_id) : options.longs === $Number ? new $util.LongBits(message.outgoing_chan_id.low >>> 0, message.outgoing_chan_id.high >>> 0).toNumber(true) : message.outgoing_chan_id;
-            if (message.cltv_limit != null && $Object.hasOwnProperty.call(message, "cltv_limit"))
-                object.cltv_limit = message.cltv_limit;
-            let keys2;
-            if (message.dest_custom_records && (keys2 = $Object.keys(message.dest_custom_records)).length) {
-                object.dest_custom_records = {};
-                for (let j = 0; j < keys2.length; ++j) {
-                    let k2 = $util.longFromKey(keys2[j], true).toString();
-                    if (keys2[j] === "__proto__")
-                        $util.makeProp(object.dest_custom_records, keys2[j]);
-                    object.dest_custom_records[k2] = options.bytes === $String ? $util.base64.encode(message.dest_custom_records[keys2[j]], 0, message.dest_custom_records[keys2[j]].length) : options.bytes === $Array ? $Array.prototype.slice.call(message.dest_custom_records[keys2[j]]) : message.dest_custom_records[keys2[j]];
-                }
-            }
-            if (message.amt_msat != null && $Object.hasOwnProperty.call(message, "amt_msat"))
-                if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
-                    object.amt_msat = typeof message.amt_msat === "number" ? $BigInt(message.amt_msat) : $util.Long.fromBits(message.amt_msat.low >>> 0, message.amt_msat.high >>> 0, false).toBigInt();
-                else if (typeof message.amt_msat === "number")
-                    object.amt_msat = options.longs === $String ? $String(message.amt_msat) : message.amt_msat;
-                else
-                    object.amt_msat = options.longs === $String ? $util.Long.prototype.toString.call(message.amt_msat) : options.longs === $Number ? new $util.LongBits(message.amt_msat.low >>> 0, message.amt_msat.high >>> 0).toNumber() : message.amt_msat;
-            if (message.last_hop_pubkey != null && $Object.hasOwnProperty.call(message, "last_hop_pubkey"))
-                object.last_hop_pubkey = options.bytes === $String ? $util.base64.encode(message.last_hop_pubkey, 0, message.last_hop_pubkey.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.last_hop_pubkey) : message.last_hop_pubkey;
-            if (message.allow_self_payment != null && $Object.hasOwnProperty.call(message, "allow_self_payment"))
-                object.allow_self_payment = message.allow_self_payment;
-            if (message.dest_features && message.dest_features.length) {
-                object.dest_features = $Array(message.dest_features.length);
-                for (let j = 0; j < message.dest_features.length; ++j)
-                    object.dest_features[j] = options.enums === $String ? $root.lnrpc.FeatureBit[message.dest_features[j]] === $undefined ? message.dest_features[j] : $root.lnrpc.FeatureBit[message.dest_features[j]] : message.dest_features[j];
-            }
-            if (message.payment_addr != null && $Object.hasOwnProperty.call(message, "payment_addr"))
-                object.payment_addr = options.bytes === $String ? $util.base64.encode(message.payment_addr, 0, message.payment_addr.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.payment_addr) : message.payment_addr;
-            return object;
-        };
-
-        /**
-         * Converts this SendRequest to JSON.
-         * @function toJSON
-         * @memberof lnrpc.SendRequest
-         * @instance
-         * @returns {Object.<string,*>} JSON object
-         */
-        SendRequest.prototype.toJSON = function() {
-            return SendRequest.toObject(this, $protobuf.util.toJSONOptions);
-        };
-
-        /**
-         * Gets the type url for SendRequest
-         * @function getTypeUrl
-         * @memberof lnrpc.SendRequest
-         * @static
-         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
-         * @returns {string} The type url
-         */
-        SendRequest.getTypeUrl = function(prefix) {
-            if (prefix === $undefined)
-                prefix = "type.googleapis.com";
-            return prefix + "/lnrpc.SendRequest";
-        };
-
-        return SendRequest;
-    })();
-
-    lnrpc.SendResponse = (function() {
-
-        /**
-         * Properties of a SendResponse.
-         * @typedef {Object} lnrpc.SendResponse.$Properties
-         * @property {string|null} [payment_error] SendResponse payment_error
-         * @property {Uint8Array|null} [payment_preimage] SendResponse payment_preimage
-         * @property {lnrpc.Route.$Properties|null} [payment_route] SendResponse payment_route
-         * @property {Uint8Array|null} [payment_hash] SendResponse payment_hash
-         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
-         */
-
-        /**
-         * Properties of a SendResponse.
-         * @memberof lnrpc
-         * @interface ISendResponse
-         * @augments lnrpc.SendResponse.$Properties
-         * @deprecated Use lnrpc.SendResponse.$Properties instead.
-         */
-
-        /**
-         * Shape of a SendResponse.
-         * @typedef {lnrpc.SendResponse.$Properties} lnrpc.SendResponse.$Shape
-         */
-
-        /**
-         * Constructs a new SendResponse.
-         * @memberof lnrpc
-         * @classdesc Represents a SendResponse.
-         * @constructor
-         * @param {lnrpc.SendResponse.$Properties=} [properties] Properties to set
-         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
-         */
-        const SendResponse = function (properties) {
-            if (properties)
-                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
-                        this[keys[i]] = properties[keys[i]];
-        };
-
-        /**
-         * SendResponse payment_error.
-         * @member {string} payment_error
-         * @memberof lnrpc.SendResponse
-         * @instance
-         */
-        SendResponse.prototype.payment_error = "";
-
-        /**
-         * SendResponse payment_preimage.
-         * @member {Uint8Array} payment_preimage
-         * @memberof lnrpc.SendResponse
-         * @instance
-         */
-        SendResponse.prototype.payment_preimage = $util.newBuffer([]);
-
-        /**
-         * SendResponse payment_route.
-         * @member {lnrpc.Route.$Properties|null|undefined} payment_route
-         * @memberof lnrpc.SendResponse
-         * @instance
-         */
-        SendResponse.prototype.payment_route = null;
-
-        /**
-         * SendResponse payment_hash.
-         * @member {Uint8Array} payment_hash
-         * @memberof lnrpc.SendResponse
-         * @instance
-         */
-        SendResponse.prototype.payment_hash = $util.newBuffer([]);
-
-        /**
-         * Creates a new SendResponse instance using the specified properties.
-         * @function create
-         * @memberof lnrpc.SendResponse
-         * @static
-         * @param {lnrpc.SendResponse.$Properties=} [properties] Properties to set
-         * @returns {lnrpc.SendResponse} SendResponse instance
-         * @type {{
-         *   (properties: lnrpc.SendResponse.$Shape): lnrpc.SendResponse & lnrpc.SendResponse.$Shape;
-         *   (properties?: lnrpc.SendResponse.$Properties): lnrpc.SendResponse;
-         * }}
-         */
-        SendResponse.create = function(properties) {
-            return new SendResponse(properties);
-        };
-
-        /**
-         * Encodes the specified SendResponse message. Does not implicitly {@link lnrpc.SendResponse.verify|verify} messages.
-         * @function encode
-         * @memberof lnrpc.SendResponse
-         * @static
-         * @param {lnrpc.SendResponse.$Properties} message SendResponse message or plain object to encode
-         * @param {$protobuf.Writer} [writer] Writer to encode to
-         * @returns {$protobuf.Writer} Writer
-         */
-        SendResponse.encode = function (message, writer, _depth) {
-            if (!writer)
-                writer = $Writer.create();
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $util.recursionLimit)
-                throw $Error("max depth exceeded");
-            if (message.payment_error != null && $Object.hasOwnProperty.call(message, "payment_error") && message.payment_error !== "")
-                writer.uint32(/* id 1, wireType 2 =*/10).string(message.payment_error);
-            if (message.payment_preimage != null && $Object.hasOwnProperty.call(message, "payment_preimage") && message.payment_preimage.length)
-                writer.uint32(/* id 2, wireType 2 =*/18).bytes(message.payment_preimage);
-            if (message.payment_route != null && $Object.hasOwnProperty.call(message, "payment_route"))
-                $root.lnrpc.Route.encode(message.payment_route, writer.uint32(/* id 3, wireType 2 =*/26).fork(), _depth + 1).ldelim();
-            if (message.payment_hash != null && $Object.hasOwnProperty.call(message, "payment_hash") && message.payment_hash.length)
-                writer.uint32(/* id 4, wireType 2 =*/34).bytes(message.payment_hash);
-            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
-                for (let i = 0; i < message.$unknowns.length; ++i)
-                    writer.raw(message.$unknowns[i]);
-            return writer;
-        };
-
-        /**
-         * Encodes the specified SendResponse message, length delimited. Does not implicitly {@link lnrpc.SendResponse.verify|verify} messages.
-         * @function encodeDelimited
-         * @memberof lnrpc.SendResponse
-         * @static
-         * @param {lnrpc.SendResponse.$Properties} message SendResponse message or plain object to encode
-         * @param {$protobuf.Writer} [writer] Writer to encode to
-         * @returns {$protobuf.Writer} Writer
-         */
-        SendResponse.encodeDelimited = function(message, writer) {
-            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
-        };
-
-        /**
-         * Decodes a SendResponse message from the specified reader or buffer.
-         * @function decode
-         * @memberof lnrpc.SendResponse
-         * @static
-         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @param {number} [length] Message length if known beforehand
-         * @returns {lnrpc.SendResponse & lnrpc.SendResponse.$Shape} SendResponse
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        SendResponse.decode = function (reader, length, _end, _depth, _target) {
-            if (!(reader instanceof $Reader))
-                reader = $Reader.create(reader);
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $Reader.recursionLimit)
-                throw $Error("max depth exceeded");
-            let end, message, value;
-            if (length === $undefined)
-                end = reader.len;
-            else {
-                end = reader.pos + length;
-                if (end > reader.len)
-                    throw $RangeError("index out of range");
-                length = reader.len;
-                reader.len = end;
-            }
-            message = _target || new $root.lnrpc.SendResponse();
-            while (reader.pos < end) {
-                let start = reader.pos;
-                let tag = reader.tag();
-                if (tag === _end) {
-                    _end = $undefined;
-                    break;
-                }
-                let wireType = tag & 7;
-                switch (tag >>>= 3) {
-                case 1: {
-                        if (wireType !== 2)
-                            break;
-                        if ((value = reader.stringVerify()).length)
-                            message.payment_error = value;
-                        else
-                            delete message.payment_error;
-                        continue;
-                    }
-                case 2: {
-                        if (wireType !== 2)
-                            break;
-                        if ((value = reader.bytes()).length)
-                            message.payment_preimage = value;
-                        else
-                            delete message.payment_preimage;
-                        continue;
-                    }
-                case 3: {
-                        if (wireType !== 2)
-                            break;
-                        message.payment_route = $root.lnrpc.Route.decode(reader, reader.uint32(), $undefined, _depth + 1, message.payment_route);
-                        continue;
-                    }
-                case 4: {
-                        if (wireType !== 2)
-                            break;
-                        if ((value = reader.bytes()).length)
-                            message.payment_hash = value;
-                        else
-                            delete message.payment_hash;
-                        continue;
-                    }
-                }
-                reader.skipType(wireType, _depth, tag);
-                if (!reader.discardUnknown) {
-                    $util.makeProp(message, "$unknowns", false);
-                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
-                }
-            }
-            if (length !== $undefined) {
-                if (reader.pos !== end)
-                    throw $RangeError("index out of range");
-                reader.len = length;
-            }
-            if (_end !== $undefined)
-                throw $Error("missing end group");
-            return message;
-        };
-
-        /**
-         * Decodes a SendResponse message from the specified reader or buffer, length delimited.
-         * @function decodeDelimited
-         * @memberof lnrpc.SendResponse
-         * @static
-         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {lnrpc.SendResponse & lnrpc.SendResponse.$Shape} SendResponse
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        SendResponse.decodeDelimited = function(reader) {
-            if (!(reader instanceof $Reader))
-                reader = new $Reader(reader);
-            return this.decode(reader, reader.uint32());
-        };
-
-        /**
-         * Verifies a SendResponse message.
-         * @function verify
-         * @memberof lnrpc.SendResponse
-         * @static
-         * @param {Object.<string,*>} message Plain object to verify
-         * @returns {string|null} `null` if valid, otherwise the reason why it is not
-         */
-        SendResponse.verify = function (message, _depth) {
-            if (typeof message !== "object" || message === null)
-                return "object expected";
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $util.recursionLimit)
-                return "max depth exceeded";
-            if (message.payment_error != null && $Object.hasOwnProperty.call(message, "payment_error"))
-                if (!$util.isString(message.payment_error))
-                    return "payment_error: string expected";
-            if (message.payment_preimage != null && $Object.hasOwnProperty.call(message, "payment_preimage"))
-                if (!(message.payment_preimage && typeof message.payment_preimage.length === "number" || $util.isString(message.payment_preimage)))
-                    return "payment_preimage: buffer expected";
-            if (message.payment_route != null && $Object.hasOwnProperty.call(message, "payment_route")) {
-                let error = $root.lnrpc.Route.verify(message.payment_route, _depth + 1);
-                if (error)
-                    return "payment_route." + error;
-            }
-            if (message.payment_hash != null && $Object.hasOwnProperty.call(message, "payment_hash"))
-                if (!(message.payment_hash && typeof message.payment_hash.length === "number" || $util.isString(message.payment_hash)))
-                    return "payment_hash: buffer expected";
-            return null;
-        };
-
-        /**
-         * Creates a SendResponse message from a plain object. Also converts values to their respective internal types.
-         * @function fromObject
-         * @memberof lnrpc.SendResponse
-         * @static
-         * @param {Object.<string,*>} object Plain object
-         * @returns {lnrpc.SendResponse} SendResponse
-         */
-        SendResponse.fromObject = function (object, _depth) {
-            if (object instanceof $root.lnrpc.SendResponse)
-                return object;
-            if (!$util.isObject(object))
-                throw $TypeError(".lnrpc.SendResponse: object expected");
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $util.recursionLimit)
-                throw $Error("max depth exceeded");
-            let message = new $root.lnrpc.SendResponse();
-            if (object.payment_error != null)
-                if (typeof object.payment_error !== "string" || object.payment_error.length)
-                    message.payment_error = $String(object.payment_error);
-            if (object.payment_preimage != null)
-                if (object.payment_preimage.length)
-                    if (typeof object.payment_preimage === "string")
-                        $util.base64.decode(object.payment_preimage, message.payment_preimage = $util.newBuffer($util.base64.length(object.payment_preimage)), 0);
-                    else if (object.payment_preimage.length >= 0)
-                        message.payment_preimage = object.payment_preimage;
-            if (object.payment_route != null) {
-                if (!$util.isObject(object.payment_route))
-                    throw $TypeError(".lnrpc.SendResponse.payment_route: object expected");
-                message.payment_route = $root.lnrpc.Route.fromObject(object.payment_route, _depth + 1);
-            }
-            if (object.payment_hash != null)
-                if (object.payment_hash.length)
-                    if (typeof object.payment_hash === "string")
-                        $util.base64.decode(object.payment_hash, message.payment_hash = $util.newBuffer($util.base64.length(object.payment_hash)), 0);
-                    else if (object.payment_hash.length >= 0)
-                        message.payment_hash = object.payment_hash;
-            return message;
-        };
-
-        /**
-         * Creates a plain object from a SendResponse message. Also converts values to other types if specified.
-         * @function toObject
-         * @memberof lnrpc.SendResponse
-         * @static
-         * @param {lnrpc.SendResponse} message SendResponse
-         * @param {$protobuf.IConversionOptions} [options] Conversion options
-         * @returns {Object.<string,*>} Plain object
-         */
-        SendResponse.toObject = function (message, options, _depth) {
-            if (!options)
-                options = {};
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $util.recursionLimit)
-                throw $Error("max depth exceeded");
-            let object = {};
-            if (options.defaults) {
-                object.payment_error = "";
-                if (options.bytes === $String)
-                    object.payment_preimage = "";
-                else {
-                    object.payment_preimage = [];
-                    if (options.bytes !== $Array)
-                        object.payment_preimage = $util.newBuffer(object.payment_preimage);
-                }
-                object.payment_route = null;
-                if (options.bytes === $String)
-                    object.payment_hash = "";
-                else {
-                    object.payment_hash = [];
-                    if (options.bytes !== $Array)
-                        object.payment_hash = $util.newBuffer(object.payment_hash);
-                }
-            }
-            if (message.payment_error != null && $Object.hasOwnProperty.call(message, "payment_error"))
-                object.payment_error = message.payment_error;
-            if (message.payment_preimage != null && $Object.hasOwnProperty.call(message, "payment_preimage"))
-                object.payment_preimage = options.bytes === $String ? $util.base64.encode(message.payment_preimage, 0, message.payment_preimage.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.payment_preimage) : message.payment_preimage;
-            if (message.payment_route != null && $Object.hasOwnProperty.call(message, "payment_route"))
-                object.payment_route = $root.lnrpc.Route.toObject(message.payment_route, options, _depth + 1);
-            if (message.payment_hash != null && $Object.hasOwnProperty.call(message, "payment_hash"))
-                object.payment_hash = options.bytes === $String ? $util.base64.encode(message.payment_hash, 0, message.payment_hash.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.payment_hash) : message.payment_hash;
-            return object;
-        };
-
-        /**
-         * Converts this SendResponse to JSON.
-         * @function toJSON
-         * @memberof lnrpc.SendResponse
-         * @instance
-         * @returns {Object.<string,*>} JSON object
-         */
-        SendResponse.prototype.toJSON = function() {
-            return SendResponse.toObject(this, $protobuf.util.toJSONOptions);
-        };
-
-        /**
-         * Gets the type url for SendResponse
-         * @function getTypeUrl
-         * @memberof lnrpc.SendResponse
-         * @static
-         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
-         * @returns {string} The type url
-         */
-        SendResponse.getTypeUrl = function(prefix) {
-            if (prefix === $undefined)
-                prefix = "type.googleapis.com";
-            return prefix + "/lnrpc.SendResponse";
-        };
-
-        return SendResponse;
-    })();
-
-    lnrpc.SendToRouteRequest = (function() {
-
-        /**
-         * Properties of a SendToRouteRequest.
-         * @typedef {Object} lnrpc.SendToRouteRequest.$Properties
-         * @property {Uint8Array|null} [payment_hash] SendToRouteRequest payment_hash
-         * @property {string|null} [payment_hash_string] SendToRouteRequest payment_hash_string
-         * @property {lnrpc.Route.$Properties|null} [route] SendToRouteRequest route
-         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
-         */
-
-        /**
-         * Properties of a SendToRouteRequest.
-         * @memberof lnrpc
-         * @interface ISendToRouteRequest
-         * @augments lnrpc.SendToRouteRequest.$Properties
-         * @deprecated Use lnrpc.SendToRouteRequest.$Properties instead.
-         */
-
-        /**
-         * Shape of a SendToRouteRequest.
-         * @typedef {lnrpc.SendToRouteRequest.$Properties} lnrpc.SendToRouteRequest.$Shape
-         */
-
-        /**
-         * Constructs a new SendToRouteRequest.
-         * @memberof lnrpc
-         * @classdesc Represents a SendToRouteRequest.
-         * @constructor
-         * @param {lnrpc.SendToRouteRequest.$Properties=} [properties] Properties to set
-         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
-         */
-        const SendToRouteRequest = function (properties) {
-            if (properties)
-                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
-                        this[keys[i]] = properties[keys[i]];
-        };
-
-        /**
-         * SendToRouteRequest payment_hash.
-         * @member {Uint8Array} payment_hash
-         * @memberof lnrpc.SendToRouteRequest
-         * @instance
-         */
-        SendToRouteRequest.prototype.payment_hash = $util.newBuffer([]);
-
-        /**
-         * SendToRouteRequest payment_hash_string.
-         * @member {string} payment_hash_string
-         * @memberof lnrpc.SendToRouteRequest
-         * @instance
-         */
-        SendToRouteRequest.prototype.payment_hash_string = "";
-
-        /**
-         * SendToRouteRequest route.
-         * @member {lnrpc.Route.$Properties|null|undefined} route
-         * @memberof lnrpc.SendToRouteRequest
-         * @instance
-         */
-        SendToRouteRequest.prototype.route = null;
-
-        /**
-         * Creates a new SendToRouteRequest instance using the specified properties.
-         * @function create
-         * @memberof lnrpc.SendToRouteRequest
-         * @static
-         * @param {lnrpc.SendToRouteRequest.$Properties=} [properties] Properties to set
-         * @returns {lnrpc.SendToRouteRequest} SendToRouteRequest instance
-         * @type {{
-         *   (properties: lnrpc.SendToRouteRequest.$Shape): lnrpc.SendToRouteRequest & lnrpc.SendToRouteRequest.$Shape;
-         *   (properties?: lnrpc.SendToRouteRequest.$Properties): lnrpc.SendToRouteRequest;
-         * }}
-         */
-        SendToRouteRequest.create = function(properties) {
-            return new SendToRouteRequest(properties);
-        };
-
-        /**
-         * Encodes the specified SendToRouteRequest message. Does not implicitly {@link lnrpc.SendToRouteRequest.verify|verify} messages.
-         * @function encode
-         * @memberof lnrpc.SendToRouteRequest
-         * @static
-         * @param {lnrpc.SendToRouteRequest.$Properties} message SendToRouteRequest message or plain object to encode
-         * @param {$protobuf.Writer} [writer] Writer to encode to
-         * @returns {$protobuf.Writer} Writer
-         */
-        SendToRouteRequest.encode = function (message, writer, _depth) {
-            if (!writer)
-                writer = $Writer.create();
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $util.recursionLimit)
-                throw $Error("max depth exceeded");
-            if (message.payment_hash != null && $Object.hasOwnProperty.call(message, "payment_hash") && message.payment_hash.length)
-                writer.uint32(/* id 1, wireType 2 =*/10).bytes(message.payment_hash);
-            if (message.payment_hash_string != null && $Object.hasOwnProperty.call(message, "payment_hash_string") && message.payment_hash_string !== "")
-                writer.uint32(/* id 2, wireType 2 =*/18).string(message.payment_hash_string);
-            if (message.route != null && $Object.hasOwnProperty.call(message, "route"))
-                $root.lnrpc.Route.encode(message.route, writer.uint32(/* id 4, wireType 2 =*/34).fork(), _depth + 1).ldelim();
-            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
-                for (let i = 0; i < message.$unknowns.length; ++i)
-                    writer.raw(message.$unknowns[i]);
-            return writer;
-        };
-
-        /**
-         * Encodes the specified SendToRouteRequest message, length delimited. Does not implicitly {@link lnrpc.SendToRouteRequest.verify|verify} messages.
-         * @function encodeDelimited
-         * @memberof lnrpc.SendToRouteRequest
-         * @static
-         * @param {lnrpc.SendToRouteRequest.$Properties} message SendToRouteRequest message or plain object to encode
-         * @param {$protobuf.Writer} [writer] Writer to encode to
-         * @returns {$protobuf.Writer} Writer
-         */
-        SendToRouteRequest.encodeDelimited = function(message, writer) {
-            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
-        };
-
-        /**
-         * Decodes a SendToRouteRequest message from the specified reader or buffer.
-         * @function decode
-         * @memberof lnrpc.SendToRouteRequest
-         * @static
-         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @param {number} [length] Message length if known beforehand
-         * @returns {lnrpc.SendToRouteRequest & lnrpc.SendToRouteRequest.$Shape} SendToRouteRequest
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        SendToRouteRequest.decode = function (reader, length, _end, _depth, _target) {
-            if (!(reader instanceof $Reader))
-                reader = $Reader.create(reader);
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $Reader.recursionLimit)
-                throw $Error("max depth exceeded");
-            let end, message, value;
-            if (length === $undefined)
-                end = reader.len;
-            else {
-                end = reader.pos + length;
-                if (end > reader.len)
-                    throw $RangeError("index out of range");
-                length = reader.len;
-                reader.len = end;
-            }
-            message = _target || new $root.lnrpc.SendToRouteRequest();
-            while (reader.pos < end) {
-                let start = reader.pos;
-                let tag = reader.tag();
-                if (tag === _end) {
-                    _end = $undefined;
-                    break;
-                }
-                let wireType = tag & 7;
-                switch (tag >>>= 3) {
-                case 1: {
-                        if (wireType !== 2)
-                            break;
-                        if ((value = reader.bytes()).length)
-                            message.payment_hash = value;
-                        else
-                            delete message.payment_hash;
-                        continue;
-                    }
-                case 2: {
-                        if (wireType !== 2)
-                            break;
-                        if ((value = reader.stringVerify()).length)
-                            message.payment_hash_string = value;
-                        else
-                            delete message.payment_hash_string;
-                        continue;
-                    }
-                case 4: {
-                        if (wireType !== 2)
-                            break;
-                        message.route = $root.lnrpc.Route.decode(reader, reader.uint32(), $undefined, _depth + 1, message.route);
-                        continue;
-                    }
-                }
-                reader.skipType(wireType, _depth, tag);
-                if (!reader.discardUnknown) {
-                    $util.makeProp(message, "$unknowns", false);
-                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
-                }
-            }
-            if (length !== $undefined) {
-                if (reader.pos !== end)
-                    throw $RangeError("index out of range");
-                reader.len = length;
-            }
-            if (_end !== $undefined)
-                throw $Error("missing end group");
-            return message;
-        };
-
-        /**
-         * Decodes a SendToRouteRequest message from the specified reader or buffer, length delimited.
-         * @function decodeDelimited
-         * @memberof lnrpc.SendToRouteRequest
-         * @static
-         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {lnrpc.SendToRouteRequest & lnrpc.SendToRouteRequest.$Shape} SendToRouteRequest
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        SendToRouteRequest.decodeDelimited = function(reader) {
-            if (!(reader instanceof $Reader))
-                reader = new $Reader(reader);
-            return this.decode(reader, reader.uint32());
-        };
-
-        /**
-         * Verifies a SendToRouteRequest message.
-         * @function verify
-         * @memberof lnrpc.SendToRouteRequest
-         * @static
-         * @param {Object.<string,*>} message Plain object to verify
-         * @returns {string|null} `null` if valid, otherwise the reason why it is not
-         */
-        SendToRouteRequest.verify = function (message, _depth) {
-            if (typeof message !== "object" || message === null)
-                return "object expected";
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $util.recursionLimit)
-                return "max depth exceeded";
-            if (message.payment_hash != null && $Object.hasOwnProperty.call(message, "payment_hash"))
-                if (!(message.payment_hash && typeof message.payment_hash.length === "number" || $util.isString(message.payment_hash)))
-                    return "payment_hash: buffer expected";
-            if (message.payment_hash_string != null && $Object.hasOwnProperty.call(message, "payment_hash_string"))
-                if (!$util.isString(message.payment_hash_string))
-                    return "payment_hash_string: string expected";
-            if (message.route != null && $Object.hasOwnProperty.call(message, "route")) {
-                let error = $root.lnrpc.Route.verify(message.route, _depth + 1);
-                if (error)
-                    return "route." + error;
-            }
-            return null;
-        };
-
-        /**
-         * Creates a SendToRouteRequest message from a plain object. Also converts values to their respective internal types.
-         * @function fromObject
-         * @memberof lnrpc.SendToRouteRequest
-         * @static
-         * @param {Object.<string,*>} object Plain object
-         * @returns {lnrpc.SendToRouteRequest} SendToRouteRequest
-         */
-        SendToRouteRequest.fromObject = function (object, _depth) {
-            if (object instanceof $root.lnrpc.SendToRouteRequest)
-                return object;
-            if (!$util.isObject(object))
-                throw $TypeError(".lnrpc.SendToRouteRequest: object expected");
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $util.recursionLimit)
-                throw $Error("max depth exceeded");
-            let message = new $root.lnrpc.SendToRouteRequest();
-            if (object.payment_hash != null)
-                if (object.payment_hash.length)
-                    if (typeof object.payment_hash === "string")
-                        $util.base64.decode(object.payment_hash, message.payment_hash = $util.newBuffer($util.base64.length(object.payment_hash)), 0);
-                    else if (object.payment_hash.length >= 0)
-                        message.payment_hash = object.payment_hash;
-            if (object.payment_hash_string != null)
-                if (typeof object.payment_hash_string !== "string" || object.payment_hash_string.length)
-                    message.payment_hash_string = $String(object.payment_hash_string);
-            if (object.route != null) {
-                if (!$util.isObject(object.route))
-                    throw $TypeError(".lnrpc.SendToRouteRequest.route: object expected");
-                message.route = $root.lnrpc.Route.fromObject(object.route, _depth + 1);
-            }
-            return message;
-        };
-
-        /**
-         * Creates a plain object from a SendToRouteRequest message. Also converts values to other types if specified.
-         * @function toObject
-         * @memberof lnrpc.SendToRouteRequest
-         * @static
-         * @param {lnrpc.SendToRouteRequest} message SendToRouteRequest
-         * @param {$protobuf.IConversionOptions} [options] Conversion options
-         * @returns {Object.<string,*>} Plain object
-         */
-        SendToRouteRequest.toObject = function (message, options, _depth) {
-            if (!options)
-                options = {};
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $util.recursionLimit)
-                throw $Error("max depth exceeded");
-            let object = {};
-            if (options.defaults) {
-                if (options.bytes === $String)
-                    object.payment_hash = "";
-                else {
-                    object.payment_hash = [];
-                    if (options.bytes !== $Array)
-                        object.payment_hash = $util.newBuffer(object.payment_hash);
-                }
-                object.payment_hash_string = "";
-                object.route = null;
-            }
-            if (message.payment_hash != null && $Object.hasOwnProperty.call(message, "payment_hash"))
-                object.payment_hash = options.bytes === $String ? $util.base64.encode(message.payment_hash, 0, message.payment_hash.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.payment_hash) : message.payment_hash;
-            if (message.payment_hash_string != null && $Object.hasOwnProperty.call(message, "payment_hash_string"))
-                object.payment_hash_string = message.payment_hash_string;
-            if (message.route != null && $Object.hasOwnProperty.call(message, "route"))
-                object.route = $root.lnrpc.Route.toObject(message.route, options, _depth + 1);
-            return object;
-        };
-
-        /**
-         * Converts this SendToRouteRequest to JSON.
-         * @function toJSON
-         * @memberof lnrpc.SendToRouteRequest
-         * @instance
-         * @returns {Object.<string,*>} JSON object
-         */
-        SendToRouteRequest.prototype.toJSON = function() {
-            return SendToRouteRequest.toObject(this, $protobuf.util.toJSONOptions);
-        };
-
-        /**
-         * Gets the type url for SendToRouteRequest
-         * @function getTypeUrl
-         * @memberof lnrpc.SendToRouteRequest
-         * @static
-         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
-         * @returns {string} The type url
-         */
-        SendToRouteRequest.getTypeUrl = function(prefix) {
-            if (prefix === $undefined)
-                prefix = "type.googleapis.com";
-            return prefix + "/lnrpc.SendToRouteRequest";
-        };
-
-        return SendToRouteRequest;
-    })();
-
     lnrpc.ChannelAcceptRequest = (function() {
 
         /**
@@ -10018,6 +9594,14 @@ export const lnrpc = $root.lnrpc = (() => {
                 case "SCRIPT_ENFORCED_LEASE":
                 case 4:
                     message.commitment_type = 4;
+                    break;
+                case "TAPROOT":
+                case 7:
+                    message.commitment_type = 7;
+                    break;
+                case "SIMPLE_TAPROOT_FINAL":
+                case 7:
+                    message.commitment_type = 7;
                     break;
                 case "SIMPLE_TAPROOT":
                 case 5:
@@ -12184,6 +11768,7 @@ export const lnrpc = $root.lnrpc = (() => {
          * @property {number|null} [min_confs] EstimateFeeRequest min_confs
          * @property {boolean|null} [spend_unconfirmed] EstimateFeeRequest spend_unconfirmed
          * @property {lnrpc.CoinSelectionStrategy|null} [coin_selection_strategy] EstimateFeeRequest coin_selection_strategy
+         * @property {Array.<lnrpc.OutPoint.$Properties>|null} [inputs] EstimateFeeRequest inputs
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -12210,6 +11795,7 @@ export const lnrpc = $root.lnrpc = (() => {
          */
         const EstimateFeeRequest = function (properties) {
             this.AddrToAmount = {};
+            this.inputs = [];
             if (properties)
                 for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null && keys[i] !== "__proto__")
@@ -12257,6 +11843,14 @@ export const lnrpc = $root.lnrpc = (() => {
         EstimateFeeRequest.prototype.coin_selection_strategy = 0;
 
         /**
+         * EstimateFeeRequest inputs.
+         * @member {Array.<lnrpc.OutPoint.$Properties>} inputs
+         * @memberof lnrpc.EstimateFeeRequest
+         * @instance
+         */
+        EstimateFeeRequest.prototype.inputs = $util.emptyArray;
+
+        /**
          * Creates a new EstimateFeeRequest instance using the specified properties.
          * @function create
          * @memberof lnrpc.EstimateFeeRequest
@@ -12299,6 +11893,9 @@ export const lnrpc = $root.lnrpc = (() => {
                 writer.uint32(/* id 4, wireType 0 =*/32).bool(message.spend_unconfirmed);
             if (message.coin_selection_strategy != null && $Object.hasOwnProperty.call(message, "coin_selection_strategy") && message.coin_selection_strategy !== 0)
                 writer.uint32(/* id 5, wireType 0 =*/40).int32(message.coin_selection_strategy);
+            if (message.inputs != null && message.inputs.length)
+                for (let i = 0; i < message.inputs.length; ++i)
+                    $root.lnrpc.OutPoint.encode(message.inputs[i], writer.uint32(/* id 6, wireType 2 =*/50).fork(), _depth + 1).ldelim();
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -12428,6 +12025,14 @@ export const lnrpc = $root.lnrpc = (() => {
                             delete message.coin_selection_strategy;
                         continue;
                     }
+                case 6: {
+                        if (wireType !== 2)
+                            break;
+                        if (!(message.inputs && message.inputs.length))
+                            message.inputs = [];
+                        message.inputs.push($root.lnrpc.OutPoint.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                        continue;
+                    }
                 }
                 reader.skipType(wireType, _depth, tag);
                 if (!reader.discardUnknown) {
@@ -12496,6 +12101,15 @@ export const lnrpc = $root.lnrpc = (() => {
             if (message.coin_selection_strategy != null && $Object.hasOwnProperty.call(message, "coin_selection_strategy"))
                 if (typeof message.coin_selection_strategy !== "number" || (message.coin_selection_strategy | 0) !== message.coin_selection_strategy)
                     return "coin_selection_strategy: enum value expected";
+            if (message.inputs != null && $Object.hasOwnProperty.call(message, "inputs")) {
+                if (!$Array.isArray(message.inputs))
+                    return "inputs: array expected";
+                for (let i = 0; i < message.inputs.length; ++i) {
+                    let error = $root.lnrpc.OutPoint.verify(message.inputs[i], _depth + 1);
+                    if (error)
+                        return "inputs." + error;
+                }
+            }
             return null;
         };
 
@@ -12561,6 +12175,16 @@ export const lnrpc = $root.lnrpc = (() => {
                     if (typeof object.coin_selection_strategy === "number" && (object.coin_selection_strategy | 0) === object.coin_selection_strategy)
                         message.coin_selection_strategy = object.coin_selection_strategy;
                 }
+            if (object.inputs) {
+                if (!$Array.isArray(object.inputs))
+                    throw $TypeError(".lnrpc.EstimateFeeRequest.inputs: array expected");
+                message.inputs = $Array(object.inputs.length);
+                for (let i = 0; i < object.inputs.length; ++i) {
+                    if (!$util.isObject(object.inputs[i]))
+                        throw $TypeError(".lnrpc.EstimateFeeRequest.inputs: object expected");
+                    message.inputs[i] = $root.lnrpc.OutPoint.fromObject(object.inputs[i], _depth + 1);
+                }
+            }
             return message;
         };
 
@@ -12581,6 +12205,8 @@ export const lnrpc = $root.lnrpc = (() => {
             if (_depth > $util.recursionLimit)
                 throw $Error("max depth exceeded");
             let object = {};
+            if (options.arrays || options.defaults)
+                object.inputs = [];
             if (options.objects || options.defaults)
                 object.AddrToAmount = {};
             if (options.defaults) {
@@ -12611,6 +12237,11 @@ export const lnrpc = $root.lnrpc = (() => {
                 object.spend_unconfirmed = message.spend_unconfirmed;
             if (message.coin_selection_strategy != null && $Object.hasOwnProperty.call(message, "coin_selection_strategy"))
                 object.coin_selection_strategy = options.enums === $String ? $root.lnrpc.CoinSelectionStrategy[message.coin_selection_strategy] === $undefined ? message.coin_selection_strategy : $root.lnrpc.CoinSelectionStrategy[message.coin_selection_strategy] : message.coin_selection_strategy;
+            if (message.inputs && message.inputs.length) {
+                object.inputs = $Array(message.inputs.length);
+                for (let j = 0; j < message.inputs.length; ++j)
+                    object.inputs[j] = $root.lnrpc.OutPoint.toObject(message.inputs[j], options, _depth + 1);
+            }
             return object;
         };
 
@@ -12650,6 +12281,7 @@ export const lnrpc = $root.lnrpc = (() => {
          * @property {Long|null} [fee_sat] EstimateFeeResponse fee_sat
          * @property {Long|null} [feerate_sat_per_byte] EstimateFeeResponse feerate_sat_per_byte
          * @property {Long|null} [sat_per_vbyte] EstimateFeeResponse sat_per_vbyte
+         * @property {Array.<lnrpc.OutPoint.$Properties>|null} [inputs] EstimateFeeResponse inputs
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -12675,6 +12307,7 @@ export const lnrpc = $root.lnrpc = (() => {
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
         const EstimateFeeResponse = function (properties) {
+            this.inputs = [];
             if (properties)
                 for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null && keys[i] !== "__proto__")
@@ -12704,6 +12337,14 @@ export const lnrpc = $root.lnrpc = (() => {
          * @instance
          */
         EstimateFeeResponse.prototype.sat_per_vbyte = $util.Long ? $util.Long.fromBits(0,0,true) : 0;
+
+        /**
+         * EstimateFeeResponse inputs.
+         * @member {Array.<lnrpc.OutPoint.$Properties>} inputs
+         * @memberof lnrpc.EstimateFeeResponse
+         * @instance
+         */
+        EstimateFeeResponse.prototype.inputs = $util.emptyArray;
 
         /**
          * Creates a new EstimateFeeResponse instance using the specified properties.
@@ -12743,6 +12384,9 @@ export const lnrpc = $root.lnrpc = (() => {
                 writer.uint32(/* id 2, wireType 0 =*/16).int64(message.feerate_sat_per_byte);
             if (message.sat_per_vbyte != null && $Object.hasOwnProperty.call(message, "sat_per_vbyte") && (typeof message.sat_per_vbyte === "object" ? message.sat_per_vbyte.low || message.sat_per_vbyte.high : message.sat_per_vbyte !== 0))
                 writer.uint32(/* id 3, wireType 0 =*/24).uint64(message.sat_per_vbyte);
+            if (message.inputs != null && message.inputs.length)
+                for (let i = 0; i < message.inputs.length; ++i)
+                    $root.lnrpc.OutPoint.encode(message.inputs[i], writer.uint32(/* id 4, wireType 2 =*/34).fork(), _depth + 1).ldelim();
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -12827,6 +12471,14 @@ export const lnrpc = $root.lnrpc = (() => {
                             delete message.sat_per_vbyte;
                         continue;
                     }
+                case 4: {
+                        if (wireType !== 2)
+                            break;
+                        if (!(message.inputs && message.inputs.length))
+                            message.inputs = [];
+                        message.inputs.push($root.lnrpc.OutPoint.decode(reader, reader.uint32(), $undefined, _depth + 1));
+                        continue;
+                    }
                 }
                 reader.skipType(wireType, _depth, tag);
                 if (!reader.discardUnknown) {
@@ -12884,6 +12536,15 @@ export const lnrpc = $root.lnrpc = (() => {
             if (message.sat_per_vbyte != null && $Object.hasOwnProperty.call(message, "sat_per_vbyte"))
                 if (!$util.isInteger(message.sat_per_vbyte) && !(message.sat_per_vbyte && $util.isInteger(message.sat_per_vbyte.low) && $util.isInteger(message.sat_per_vbyte.high)))
                     return "sat_per_vbyte: integer|Long expected";
+            if (message.inputs != null && $Object.hasOwnProperty.call(message, "inputs")) {
+                if (!$Array.isArray(message.inputs))
+                    return "inputs: array expected";
+                for (let i = 0; i < message.inputs.length; ++i) {
+                    let error = $root.lnrpc.OutPoint.verify(message.inputs[i], _depth + 1);
+                    if (error)
+                        return "inputs." + error;
+                }
+            }
             return null;
         };
 
@@ -12935,6 +12596,16 @@ export const lnrpc = $root.lnrpc = (() => {
                         message.sat_per_vbyte = object.sat_per_vbyte;
                     else if (typeof object.sat_per_vbyte === "object")
                         message.sat_per_vbyte = new $util.LongBits(object.sat_per_vbyte.low >>> 0, object.sat_per_vbyte.high >>> 0).toNumber(true);
+            if (object.inputs) {
+                if (!$Array.isArray(object.inputs))
+                    throw $TypeError(".lnrpc.EstimateFeeResponse.inputs: array expected");
+                message.inputs = $Array(object.inputs.length);
+                for (let i = 0; i < object.inputs.length; ++i) {
+                    if (!$util.isObject(object.inputs[i]))
+                        throw $TypeError(".lnrpc.EstimateFeeResponse.inputs: object expected");
+                    message.inputs[i] = $root.lnrpc.OutPoint.fromObject(object.inputs[i], _depth + 1);
+                }
+            }
             return message;
         };
 
@@ -12955,6 +12626,8 @@ export const lnrpc = $root.lnrpc = (() => {
             if (_depth > $util.recursionLimit)
                 throw $Error("max depth exceeded");
             let object = {};
+            if (options.arrays || options.defaults)
+                object.inputs = [];
             if (options.defaults) {
                 if ($util.Long) {
                     let long = new $util.Long(0, 0, false);
@@ -12993,6 +12666,11 @@ export const lnrpc = $root.lnrpc = (() => {
                     object.sat_per_vbyte = options.longs === $String ? $String(message.sat_per_vbyte) : message.sat_per_vbyte;
                 else
                     object.sat_per_vbyte = options.longs === $String ? $util.Long.prototype.toString.call(message.sat_per_vbyte) : options.longs === $Number ? new $util.LongBits(message.sat_per_vbyte.low >>> 0, message.sat_per_vbyte.high >>> 0).toNumber(true) : message.sat_per_vbyte;
+            if (message.inputs && message.inputs.length) {
+                object.inputs = $Array(message.inputs.length);
+                for (let j = 0; j < message.inputs.length; ++j)
+                    object.inputs[j] = $root.lnrpc.OutPoint.toObject(message.inputs[j], options, _depth + 1);
+            }
             return object;
         };
 
@@ -19008,6 +18686,8 @@ export const lnrpc = $root.lnrpc = (() => {
      * @property {number} STATIC_REMOTE_KEY=2 STATIC_REMOTE_KEY value
      * @property {number} ANCHORS=3 ANCHORS value
      * @property {number} SCRIPT_ENFORCED_LEASE=4 SCRIPT_ENFORCED_LEASE value
+     * @property {number} TAPROOT=7 TAPROOT value
+     * @property {number} SIMPLE_TAPROOT_FINAL=7 SIMPLE_TAPROOT_FINAL value
      * @property {number} SIMPLE_TAPROOT=5 SIMPLE_TAPROOT value
      * @property {number} SIMPLE_TAPROOT_OVERLAY=6 SIMPLE_TAPROOT_OVERLAY value
      */
@@ -19018,6 +18698,8 @@ export const lnrpc = $root.lnrpc = (() => {
         values[valuesById[2] = "STATIC_REMOTE_KEY"] = 2;
         values[valuesById[3] = "ANCHORS"] = 3;
         values[valuesById[4] = "SCRIPT_ENFORCED_LEASE"] = 4;
+        values[valuesById[7] = "TAPROOT"] = 7;
+        values["SIMPLE_TAPROOT_FINAL"] = 7;
         values[valuesById[5] = "SIMPLE_TAPROOT"] = 5;
         values[valuesById[6] = "SIMPLE_TAPROOT_OVERLAY"] = 6;
         return values;
@@ -20753,6 +20435,14 @@ export const lnrpc = $root.lnrpc = (() => {
                 case "SCRIPT_ENFORCED_LEASE":
                 case 4:
                     message.commitment_type = 4;
+                    break;
+                case "TAPROOT":
+                case 7:
+                    message.commitment_type = 7;
+                    break;
+                case "SIMPLE_TAPROOT_FINAL":
+                case 7:
+                    message.commitment_type = 7;
                     break;
                 case "SIMPLE_TAPROOT":
                 case 5:
@@ -27527,6 +27217,24 @@ export const lnrpc = $root.lnrpc = (() => {
         return GetInfoRequest;
     })();
 
+    /**
+     * GraphCacheStatus enum.
+     * @name lnrpc.GraphCacheStatus
+     * @enum {number}
+     * @property {number} GRAPH_CACHE_STATUS_DISABLED=0 GRAPH_CACHE_STATUS_DISABLED value
+     * @property {number} GRAPH_CACHE_STATUS_LOADING=1 GRAPH_CACHE_STATUS_LOADING value
+     * @property {number} GRAPH_CACHE_STATUS_LOADED=2 GRAPH_CACHE_STATUS_LOADED value
+     * @property {number} GRAPH_CACHE_STATUS_FAILED=3 GRAPH_CACHE_STATUS_FAILED value
+     */
+    lnrpc.GraphCacheStatus = (function() {
+        const valuesById = $Object.create(null), values = $Object.create(valuesById);
+        values[valuesById[0] = "GRAPH_CACHE_STATUS_DISABLED"] = 0;
+        values[valuesById[1] = "GRAPH_CACHE_STATUS_LOADING"] = 1;
+        values[valuesById[2] = "GRAPH_CACHE_STATUS_LOADED"] = 2;
+        values[valuesById[3] = "GRAPH_CACHE_STATUS_FAILED"] = 3;
+        return values;
+    })();
+
     lnrpc.GetInfoResponse = (function() {
 
         /**
@@ -27552,6 +27260,8 @@ export const lnrpc = $root.lnrpc = (() => {
          * @property {Object.<string,lnrpc.Feature.$Properties>|null} [features] GetInfoResponse features
          * @property {boolean|null} [require_htlc_interceptor] GetInfoResponse require_htlc_interceptor
          * @property {boolean|null} [store_final_htlc_resolutions] GetInfoResponse store_final_htlc_resolutions
+         * @property {boolean|null} [wallet_synced] GetInfoResponse wallet_synced
+         * @property {lnrpc.GraphCacheStatus|null} [graph_cache_status] GetInfoResponse graph_cache_status
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -27747,6 +27457,22 @@ export const lnrpc = $root.lnrpc = (() => {
         GetInfoResponse.prototype.store_final_htlc_resolutions = false;
 
         /**
+         * GetInfoResponse wallet_synced.
+         * @member {boolean} wallet_synced
+         * @memberof lnrpc.GetInfoResponse
+         * @instance
+         */
+        GetInfoResponse.prototype.wallet_synced = false;
+
+        /**
+         * GetInfoResponse graph_cache_status.
+         * @member {lnrpc.GraphCacheStatus} graph_cache_status
+         * @memberof lnrpc.GetInfoResponse
+         * @instance
+         */
+        GetInfoResponse.prototype.graph_cache_status = 0;
+
+        /**
          * Creates a new GetInfoResponse instance using the specified properties.
          * @function create
          * @memberof lnrpc.GetInfoResponse
@@ -27823,6 +27549,10 @@ export const lnrpc = $root.lnrpc = (() => {
                 writer.uint32(/* id 21, wireType 0 =*/168).bool(message.require_htlc_interceptor);
             if (message.store_final_htlc_resolutions != null && $Object.hasOwnProperty.call(message, "store_final_htlc_resolutions") && message.store_final_htlc_resolutions !== false)
                 writer.uint32(/* id 22, wireType 0 =*/176).bool(message.store_final_htlc_resolutions);
+            if (message.wallet_synced != null && $Object.hasOwnProperty.call(message, "wallet_synced") && message.wallet_synced !== false)
+                writer.uint32(/* id 23, wireType 0 =*/184).bool(message.wallet_synced);
+            if (message.graph_cache_status != null && $Object.hasOwnProperty.call(message, "graph_cache_status") && message.graph_cache_status !== 0)
+                writer.uint32(/* id 24, wireType 0 =*/192).int32(message.graph_cache_status);
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -28083,6 +27813,24 @@ export const lnrpc = $root.lnrpc = (() => {
                             delete message.store_final_htlc_resolutions;
                         continue;
                     }
+                case 23: {
+                        if (wireType !== 0)
+                            break;
+                        if (value = reader.bool())
+                            message.wallet_synced = value;
+                        else
+                            delete message.wallet_synced;
+                        continue;
+                    }
+                case 24: {
+                        if (wireType !== 0)
+                            break;
+                        if (value = reader.int32())
+                            message.graph_cache_status = value;
+                        else
+                            delete message.graph_cache_status;
+                        continue;
+                    }
                 }
                 reader.skipType(wireType, _depth, tag);
                 if (!reader.discardUnknown) {
@@ -28212,6 +27960,12 @@ export const lnrpc = $root.lnrpc = (() => {
             if (message.store_final_htlc_resolutions != null && $Object.hasOwnProperty.call(message, "store_final_htlc_resolutions"))
                 if (typeof message.store_final_htlc_resolutions !== "boolean")
                     return "store_final_htlc_resolutions: boolean expected";
+            if (message.wallet_synced != null && $Object.hasOwnProperty.call(message, "wallet_synced"))
+                if (typeof message.wallet_synced !== "boolean")
+                    return "wallet_synced: boolean expected";
+            if (message.graph_cache_status != null && $Object.hasOwnProperty.call(message, "graph_cache_status"))
+                if (typeof message.graph_cache_status !== "number" || (message.graph_cache_status | 0) !== message.graph_cache_status)
+                    return "graph_cache_status: enum value expected";
             return null;
         };
 
@@ -28320,6 +28074,31 @@ export const lnrpc = $root.lnrpc = (() => {
             if (object.store_final_htlc_resolutions != null)
                 if (object.store_final_htlc_resolutions)
                     message.store_final_htlc_resolutions = $Boolean(object.store_final_htlc_resolutions);
+            if (object.wallet_synced != null)
+                if (object.wallet_synced)
+                    message.wallet_synced = $Boolean(object.wallet_synced);
+            if (object.graph_cache_status !== 0 && (typeof object.graph_cache_status !== "string" || $root.lnrpc.GraphCacheStatus[object.graph_cache_status] !== 0))
+                switch (object.graph_cache_status) {
+                case "GRAPH_CACHE_STATUS_DISABLED":
+                case 0:
+                    message.graph_cache_status = 0;
+                    break;
+                case "GRAPH_CACHE_STATUS_LOADING":
+                case 1:
+                    message.graph_cache_status = 1;
+                    break;
+                case "GRAPH_CACHE_STATUS_LOADED":
+                case 2:
+                    message.graph_cache_status = 2;
+                    break;
+                case "GRAPH_CACHE_STATUS_FAILED":
+                case 3:
+                    message.graph_cache_status = 3;
+                    break;
+                default:
+                    if (typeof object.graph_cache_status === "number" && (object.graph_cache_status | 0) === object.graph_cache_status)
+                        message.graph_cache_status = object.graph_cache_status;
+                }
             return message;
         };
 
@@ -28368,6 +28147,8 @@ export const lnrpc = $root.lnrpc = (() => {
                 object.commit_hash = "";
                 object.require_htlc_interceptor = false;
                 object.store_final_htlc_resolutions = false;
+                object.wallet_synced = false;
+                object.graph_cache_status = options.enums === $String ? "GRAPH_CACHE_STATUS_DISABLED" : 0;
             }
             if (message.identity_pubkey != null && $Object.hasOwnProperty.call(message, "identity_pubkey"))
                 object.identity_pubkey = message.identity_pubkey;
@@ -28427,6 +28208,10 @@ export const lnrpc = $root.lnrpc = (() => {
                 object.require_htlc_interceptor = message.require_htlc_interceptor;
             if (message.store_final_htlc_resolutions != null && $Object.hasOwnProperty.call(message, "store_final_htlc_resolutions"))
                 object.store_final_htlc_resolutions = message.store_final_htlc_resolutions;
+            if (message.wallet_synced != null && $Object.hasOwnProperty.call(message, "wallet_synced"))
+                object.wallet_synced = message.wallet_synced;
+            if (message.graph_cache_status != null && $Object.hasOwnProperty.call(message, "graph_cache_status"))
+                object.graph_cache_status = options.enums === $String ? $root.lnrpc.GraphCacheStatus[message.graph_cache_status] === $undefined ? message.graph_cache_status : $root.lnrpc.GraphCacheStatus[message.graph_cache_status] : message.graph_cache_status;
             return object;
         };
 
@@ -28463,6 +28248,7 @@ export const lnrpc = $root.lnrpc = (() => {
         /**
          * Properties of a GetDebugInfoRequest.
          * @typedef {Object} lnrpc.GetDebugInfoRequest.$Properties
+         * @property {boolean|null} [include_log] GetDebugInfoRequest include_log
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -28493,6 +28279,14 @@ export const lnrpc = $root.lnrpc = (() => {
                     if (properties[keys[i]] != null && keys[i] !== "__proto__")
                         this[keys[i]] = properties[keys[i]];
         };
+
+        /**
+         * GetDebugInfoRequest include_log.
+         * @member {boolean} include_log
+         * @memberof lnrpc.GetDebugInfoRequest
+         * @instance
+         */
+        GetDebugInfoRequest.prototype.include_log = false;
 
         /**
          * Creates a new GetDebugInfoRequest instance using the specified properties.
@@ -28526,6 +28320,8 @@ export const lnrpc = $root.lnrpc = (() => {
                 _depth = 0;
             if (_depth > $util.recursionLimit)
                 throw $Error("max depth exceeded");
+            if (message.include_log != null && $Object.hasOwnProperty.call(message, "include_log") && message.include_log !== false)
+                writer.uint32(/* id 1, wireType 0 =*/8).bool(message.include_log);
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -28563,7 +28359,7 @@ export const lnrpc = $root.lnrpc = (() => {
                 _depth = 0;
             if (_depth > $Reader.recursionLimit)
                 throw $Error("max depth exceeded");
-            let end, message;
+            let end, message, value;
             if (length === $undefined)
                 end = reader.len;
             else {
@@ -28581,7 +28377,19 @@ export const lnrpc = $root.lnrpc = (() => {
                     _end = $undefined;
                     break;
                 }
-                reader.skipType(tag & 7, _depth, tag);
+                let wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 0)
+                            break;
+                        if (value = reader.bool())
+                            message.include_log = value;
+                        else
+                            delete message.include_log;
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
                 if (!reader.discardUnknown) {
                     $util.makeProp(message, "$unknowns", false);
                     (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
@@ -28628,6 +28436,9 @@ export const lnrpc = $root.lnrpc = (() => {
                 _depth = 0;
             if (_depth > $util.recursionLimit)
                 return "max depth exceeded";
+            if (message.include_log != null && $Object.hasOwnProperty.call(message, "include_log"))
+                if (typeof message.include_log !== "boolean")
+                    return "include_log: boolean expected";
             return null;
         };
 
@@ -28648,7 +28459,11 @@ export const lnrpc = $root.lnrpc = (() => {
                 _depth = 0;
             if (_depth > $util.recursionLimit)
                 throw $Error("max depth exceeded");
-            return new $root.lnrpc.GetDebugInfoRequest();
+            let message = new $root.lnrpc.GetDebugInfoRequest();
+            if (object.include_log != null)
+                if (object.include_log)
+                    message.include_log = $Boolean(object.include_log);
+            return message;
         };
 
         /**
@@ -28660,8 +28475,19 @@ export const lnrpc = $root.lnrpc = (() => {
          * @param {$protobuf.IConversionOptions} [options] Conversion options
          * @returns {Object.<string,*>} Plain object
          */
-        GetDebugInfoRequest.toObject = function () {
-            return {};
+        GetDebugInfoRequest.toObject = function (message, options, _depth) {
+            if (!options)
+                options = {};
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let object = {};
+            if (options.defaults)
+                object.include_log = false;
+            if (message.include_log != null && $Object.hasOwnProperty.call(message, "include_log"))
+                object.include_log = message.include_log;
+            return object;
         };
 
         /**
@@ -34193,6 +34019,14 @@ export const lnrpc = $root.lnrpc = (() => {
                 case 4:
                     message.commitment_type = 4;
                     break;
+                case "TAPROOT":
+                case 7:
+                    message.commitment_type = 7;
+                    break;
+                case "SIMPLE_TAPROOT_FINAL":
+                case 7:
+                    message.commitment_type = 7;
+                    break;
                 case "SIMPLE_TAPROOT":
                 case 5:
                     message.commitment_type = 5;
@@ -35739,6 +35573,14 @@ export const lnrpc = $root.lnrpc = (() => {
                 case "SCRIPT_ENFORCED_LEASE":
                 case 4:
                     message.commitment_type = 4;
+                    break;
+                case "TAPROOT":
+                case 7:
+                    message.commitment_type = 7;
+                    break;
+                case "SIMPLE_TAPROOT_FINAL":
+                case 7:
+                    message.commitment_type = 7;
                     break;
                 case "SIMPLE_TAPROOT":
                 case 5:
@@ -41718,6 +41560,14 @@ export const lnrpc = $root.lnrpc = (() => {
                     case 4:
                         message.commitment_type = 4;
                         break;
+                    case "TAPROOT":
+                    case 7:
+                        message.commitment_type = 7;
+                        break;
+                    case "SIMPLE_TAPROOT_FINAL":
+                    case 7:
+                        message.commitment_type = 7;
+                        break;
                     case "SIMPLE_TAPROOT":
                     case 5:
                         message.commitment_type = 5;
@@ -42419,6 +42269,8 @@ export const lnrpc = $root.lnrpc = (() => {
              * @property {lnrpc.PendingChannelsResponse.Commitments.$Properties|null} [commitments] WaitingCloseChannel commitments
              * @property {string|null} [closing_txid] WaitingCloseChannel closing_txid
              * @property {string|null} [closing_tx_hex] WaitingCloseChannel closing_tx_hex
+             * @property {number|null} [blocks_til_close_confirmed] WaitingCloseChannel blocks_til_close_confirmed
+             * @property {number|null} [close_height] WaitingCloseChannel close_height
              * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
              */
 
@@ -42491,6 +42343,22 @@ export const lnrpc = $root.lnrpc = (() => {
             WaitingCloseChannel.prototype.closing_tx_hex = "";
 
             /**
+             * WaitingCloseChannel blocks_til_close_confirmed.
+             * @member {number} blocks_til_close_confirmed
+             * @memberof lnrpc.PendingChannelsResponse.WaitingCloseChannel
+             * @instance
+             */
+            WaitingCloseChannel.prototype.blocks_til_close_confirmed = 0;
+
+            /**
+             * WaitingCloseChannel close_height.
+             * @member {number} close_height
+             * @memberof lnrpc.PendingChannelsResponse.WaitingCloseChannel
+             * @instance
+             */
+            WaitingCloseChannel.prototype.close_height = 0;
+
+            /**
              * Creates a new WaitingCloseChannel instance using the specified properties.
              * @function create
              * @memberof lnrpc.PendingChannelsResponse.WaitingCloseChannel
@@ -42532,6 +42400,10 @@ export const lnrpc = $root.lnrpc = (() => {
                     writer.uint32(/* id 4, wireType 2 =*/34).string(message.closing_txid);
                 if (message.closing_tx_hex != null && $Object.hasOwnProperty.call(message, "closing_tx_hex") && message.closing_tx_hex !== "")
                     writer.uint32(/* id 5, wireType 2 =*/42).string(message.closing_tx_hex);
+                if (message.blocks_til_close_confirmed != null && $Object.hasOwnProperty.call(message, "blocks_til_close_confirmed") && message.blocks_til_close_confirmed !== 0)
+                    writer.uint32(/* id 6, wireType 0 =*/48).uint32(message.blocks_til_close_confirmed);
+                if (message.close_height != null && $Object.hasOwnProperty.call(message, "close_height") && message.close_height !== 0)
+                    writer.uint32(/* id 7, wireType 0 =*/56).uint32(message.close_height);
                 if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                     for (let i = 0; i < message.$unknowns.length; ++i)
                         writer.raw(message.$unknowns[i]);
@@ -42628,6 +42500,24 @@ export const lnrpc = $root.lnrpc = (() => {
                                 delete message.closing_tx_hex;
                             continue;
                         }
+                    case 6: {
+                            if (wireType !== 0)
+                                break;
+                            if (value = reader.uint32())
+                                message.blocks_til_close_confirmed = value;
+                            else
+                                delete message.blocks_til_close_confirmed;
+                            continue;
+                        }
+                    case 7: {
+                            if (wireType !== 0)
+                                break;
+                            if (value = reader.uint32())
+                                message.close_height = value;
+                            else
+                                delete message.close_height;
+                            continue;
+                        }
                     }
                     reader.skipType(wireType, _depth, tag);
                     if (!reader.discardUnknown) {
@@ -42695,6 +42585,12 @@ export const lnrpc = $root.lnrpc = (() => {
                 if (message.closing_tx_hex != null && $Object.hasOwnProperty.call(message, "closing_tx_hex"))
                     if (!$util.isString(message.closing_tx_hex))
                         return "closing_tx_hex: string expected";
+                if (message.blocks_til_close_confirmed != null && $Object.hasOwnProperty.call(message, "blocks_til_close_confirmed"))
+                    if (!$util.isInteger(message.blocks_til_close_confirmed))
+                        return "blocks_til_close_confirmed: integer expected";
+                if (message.close_height != null && $Object.hasOwnProperty.call(message, "close_height"))
+                    if (!$util.isInteger(message.close_height))
+                        return "close_height: integer expected";
                 return null;
             };
 
@@ -42742,6 +42638,12 @@ export const lnrpc = $root.lnrpc = (() => {
                 if (object.closing_tx_hex != null)
                     if (typeof object.closing_tx_hex !== "string" || object.closing_tx_hex.length)
                         message.closing_tx_hex = $String(object.closing_tx_hex);
+                if (object.blocks_til_close_confirmed != null)
+                    if ($Number(object.blocks_til_close_confirmed) !== 0)
+                        message.blocks_til_close_confirmed = object.blocks_til_close_confirmed >>> 0;
+                if (object.close_height != null)
+                    if ($Number(object.close_height) !== 0)
+                        message.close_height = object.close_height >>> 0;
                 return message;
             };
 
@@ -42772,6 +42674,8 @@ export const lnrpc = $root.lnrpc = (() => {
                     object.commitments = null;
                     object.closing_txid = "";
                     object.closing_tx_hex = "";
+                    object.blocks_til_close_confirmed = 0;
+                    object.close_height = 0;
                 }
                 if (message.channel != null && $Object.hasOwnProperty.call(message, "channel"))
                     object.channel = $root.lnrpc.PendingChannelsResponse.PendingChannel.toObject(message.channel, options, _depth + 1);
@@ -42788,6 +42692,10 @@ export const lnrpc = $root.lnrpc = (() => {
                     object.closing_txid = message.closing_txid;
                 if (message.closing_tx_hex != null && $Object.hasOwnProperty.call(message, "closing_tx_hex"))
                     object.closing_tx_hex = message.closing_tx_hex;
+                if (message.blocks_til_close_confirmed != null && $Object.hasOwnProperty.call(message, "blocks_til_close_confirmed"))
+                    object.blocks_til_close_confirmed = message.blocks_til_close_confirmed;
+                if (message.close_height != null && $Object.hasOwnProperty.call(message, "close_height"))
+                    object.close_height = message.close_height;
                 return object;
             };
 
@@ -44392,6 +44300,282 @@ export const lnrpc = $root.lnrpc = (() => {
         return ChannelEventSubscription;
     })();
 
+    lnrpc.ChannelCommitUpdate = (function() {
+
+        /**
+         * Properties of a ChannelCommitUpdate.
+         * @typedef {Object} lnrpc.ChannelCommitUpdate.$Properties
+         * @property {lnrpc.Channel.$Properties|null} [channel] ChannelCommitUpdate channel
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+
+        /**
+         * Properties of a ChannelCommitUpdate.
+         * @memberof lnrpc
+         * @interface IChannelCommitUpdate
+         * @augments lnrpc.ChannelCommitUpdate.$Properties
+         * @deprecated Use lnrpc.ChannelCommitUpdate.$Properties instead.
+         */
+
+        /**
+         * Shape of a ChannelCommitUpdate.
+         * @typedef {lnrpc.ChannelCommitUpdate.$Properties} lnrpc.ChannelCommitUpdate.$Shape
+         */
+
+        /**
+         * Constructs a new ChannelCommitUpdate.
+         * @memberof lnrpc
+         * @classdesc Represents a ChannelCommitUpdate.
+         * @constructor
+         * @param {lnrpc.ChannelCommitUpdate.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+        const ChannelCommitUpdate = function (properties) {
+            if (properties)
+                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+        };
+
+        /**
+         * ChannelCommitUpdate channel.
+         * @member {lnrpc.Channel.$Properties|null|undefined} channel
+         * @memberof lnrpc.ChannelCommitUpdate
+         * @instance
+         */
+        ChannelCommitUpdate.prototype.channel = null;
+
+        /**
+         * Creates a new ChannelCommitUpdate instance using the specified properties.
+         * @function create
+         * @memberof lnrpc.ChannelCommitUpdate
+         * @static
+         * @param {lnrpc.ChannelCommitUpdate.$Properties=} [properties] Properties to set
+         * @returns {lnrpc.ChannelCommitUpdate} ChannelCommitUpdate instance
+         * @type {{
+         *   (properties: lnrpc.ChannelCommitUpdate.$Shape): lnrpc.ChannelCommitUpdate & lnrpc.ChannelCommitUpdate.$Shape;
+         *   (properties?: lnrpc.ChannelCommitUpdate.$Properties): lnrpc.ChannelCommitUpdate;
+         * }}
+         */
+        ChannelCommitUpdate.create = function(properties) {
+            return new ChannelCommitUpdate(properties);
+        };
+
+        /**
+         * Encodes the specified ChannelCommitUpdate message. Does not implicitly {@link lnrpc.ChannelCommitUpdate.verify|verify} messages.
+         * @function encode
+         * @memberof lnrpc.ChannelCommitUpdate
+         * @static
+         * @param {lnrpc.ChannelCommitUpdate.$Properties} message ChannelCommitUpdate message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        ChannelCommitUpdate.encode = function (message, writer, _depth) {
+            if (!writer)
+                writer = $Writer.create();
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            if (message.channel != null && $Object.hasOwnProperty.call(message, "channel"))
+                $root.lnrpc.Channel.encode(message.channel, writer.uint32(/* id 1, wireType 2 =*/10).fork(), _depth + 1).ldelim();
+            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified ChannelCommitUpdate message, length delimited. Does not implicitly {@link lnrpc.ChannelCommitUpdate.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof lnrpc.ChannelCommitUpdate
+         * @static
+         * @param {lnrpc.ChannelCommitUpdate.$Properties} message ChannelCommitUpdate message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        ChannelCommitUpdate.encodeDelimited = function(message, writer) {
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+        };
+
+        /**
+         * Decodes a ChannelCommitUpdate message from the specified reader or buffer.
+         * @function decode
+         * @memberof lnrpc.ChannelCommitUpdate
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {lnrpc.ChannelCommitUpdate & lnrpc.ChannelCommitUpdate.$Shape} ChannelCommitUpdate
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        ChannelCommitUpdate.decode = function (reader, length, _end, _depth, _target) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw $Error("max depth exceeded");
+            let end, message, value;
+            if (length === $undefined)
+                end = reader.len;
+            else {
+                end = reader.pos + length;
+                if (end > reader.len)
+                    throw $RangeError("index out of range");
+                length = reader.len;
+                reader.len = end;
+            }
+            message = _target || new $root.lnrpc.ChannelCommitUpdate();
+            while (reader.pos < end) {
+                let start = reader.pos;
+                let tag = reader.tag();
+                if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                }
+                let wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        message.channel = $root.lnrpc.Channel.decode(reader, reader.uint32(), $undefined, _depth + 1, message.channel);
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                }
+            }
+            if (length !== $undefined) {
+                if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                reader.len = length;
+            }
+            if (_end !== $undefined)
+                throw $Error("missing end group");
+            return message;
+        };
+
+        /**
+         * Decodes a ChannelCommitUpdate message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof lnrpc.ChannelCommitUpdate
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {lnrpc.ChannelCommitUpdate & lnrpc.ChannelCommitUpdate.$Shape} ChannelCommitUpdate
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        ChannelCommitUpdate.decodeDelimited = function(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a ChannelCommitUpdate message.
+         * @function verify
+         * @memberof lnrpc.ChannelCommitUpdate
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        ChannelCommitUpdate.verify = function (message, _depth) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
+            if (message.channel != null && $Object.hasOwnProperty.call(message, "channel")) {
+                let error = $root.lnrpc.Channel.verify(message.channel, _depth + 1);
+                if (error)
+                    return "channel." + error;
+            }
+            return null;
+        };
+
+        /**
+         * Creates a ChannelCommitUpdate message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof lnrpc.ChannelCommitUpdate
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {lnrpc.ChannelCommitUpdate} ChannelCommitUpdate
+         */
+        ChannelCommitUpdate.fromObject = function (object, _depth) {
+            if (object instanceof $root.lnrpc.ChannelCommitUpdate)
+                return object;
+            if (!$util.isObject(object))
+                throw $TypeError(".lnrpc.ChannelCommitUpdate: object expected");
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let message = new $root.lnrpc.ChannelCommitUpdate();
+            if (object.channel != null) {
+                if (!$util.isObject(object.channel))
+                    throw $TypeError(".lnrpc.ChannelCommitUpdate.channel: object expected");
+                message.channel = $root.lnrpc.Channel.fromObject(object.channel, _depth + 1);
+            }
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a ChannelCommitUpdate message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof lnrpc.ChannelCommitUpdate
+         * @static
+         * @param {lnrpc.ChannelCommitUpdate} message ChannelCommitUpdate
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        ChannelCommitUpdate.toObject = function (message, options, _depth) {
+            if (!options)
+                options = {};
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let object = {};
+            if (options.defaults)
+                object.channel = null;
+            if (message.channel != null && $Object.hasOwnProperty.call(message, "channel"))
+                object.channel = $root.lnrpc.Channel.toObject(message.channel, options, _depth + 1);
+            return object;
+        };
+
+        /**
+         * Converts this ChannelCommitUpdate to JSON.
+         * @function toJSON
+         * @memberof lnrpc.ChannelCommitUpdate
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        ChannelCommitUpdate.prototype.toJSON = function() {
+            return ChannelCommitUpdate.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the type url for ChannelCommitUpdate
+         * @function getTypeUrl
+         * @memberof lnrpc.ChannelCommitUpdate
+         * @static
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
+         */
+        ChannelCommitUpdate.getTypeUrl = function(prefix) {
+            if (prefix === $undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/lnrpc.ChannelCommitUpdate";
+        };
+
+        return ChannelCommitUpdate;
+    })();
+
     lnrpc.ChannelEventUpdate = (function() {
 
         /**
@@ -44404,8 +44588,9 @@ export const lnrpc = $root.lnrpc = (() => {
          * @property {lnrpc.PendingUpdate.$Properties|null} [pending_open_channel] ChannelEventUpdate pending_open_channel
          * @property {lnrpc.ChannelPoint.$Properties|null} [fully_resolved_channel] ChannelEventUpdate fully_resolved_channel
          * @property {lnrpc.ChannelPoint.$Properties|null} [channel_funding_timeout] ChannelEventUpdate channel_funding_timeout
+         * @property {lnrpc.ChannelCommitUpdate.$Properties|null} [updated_channel] ChannelEventUpdate updated_channel
          * @property {lnrpc.ChannelEventUpdate.UpdateType|null} [type] ChannelEventUpdate type
-         * @property {"open_channel"|"closed_channel"|"active_channel"|"inactive_channel"|"pending_open_channel"|"fully_resolved_channel"|"channel_funding_timeout"} [channel] ChannelEventUpdate channel
+         * @property {"open_channel"|"closed_channel"|"active_channel"|"inactive_channel"|"pending_open_channel"|"fully_resolved_channel"|"channel_funding_timeout"|"updated_channel"} [channel] ChannelEventUpdate channel
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -44427,10 +44612,11 @@ export const lnrpc = $root.lnrpc = (() => {
          *   pending_open_channel?: lnrpc.PendingUpdate.$Shape|null;
          *   fully_resolved_channel?: lnrpc.ChannelPoint.$Shape|null;
          *   channel_funding_timeout?: lnrpc.ChannelPoint.$Shape|null;
+         *   updated_channel?: lnrpc.ChannelCommitUpdate.$Shape|null;
          *   type?: lnrpc.ChannelEventUpdate.UpdateType|null;
          *   $unknowns?: Array.<Uint8Array>;
          * } & (
-         *   ({ channel?: undefined; open_channel?: null; closed_channel?: null; active_channel?: null; inactive_channel?: null; pending_open_channel?: null; fully_resolved_channel?: null; channel_funding_timeout?: null }|{ channel?: "open_channel"; open_channel: lnrpc.Channel.$Shape; closed_channel?: null; active_channel?: null; inactive_channel?: null; pending_open_channel?: null; fully_resolved_channel?: null; channel_funding_timeout?: null }|{ channel?: "closed_channel"; open_channel?: null; closed_channel: lnrpc.ChannelCloseSummary.$Shape; active_channel?: null; inactive_channel?: null; pending_open_channel?: null; fully_resolved_channel?: null; channel_funding_timeout?: null }|{ channel?: "active_channel"; open_channel?: null; closed_channel?: null; active_channel: lnrpc.ChannelPoint.$Shape; inactive_channel?: null; pending_open_channel?: null; fully_resolved_channel?: null; channel_funding_timeout?: null }|{ channel?: "inactive_channel"; open_channel?: null; closed_channel?: null; active_channel?: null; inactive_channel: lnrpc.ChannelPoint.$Shape; pending_open_channel?: null; fully_resolved_channel?: null; channel_funding_timeout?: null }|{ channel?: "pending_open_channel"; open_channel?: null; closed_channel?: null; active_channel?: null; inactive_channel?: null; pending_open_channel: lnrpc.PendingUpdate.$Shape; fully_resolved_channel?: null; channel_funding_timeout?: null }|{ channel?: "fully_resolved_channel"; open_channel?: null; closed_channel?: null; active_channel?: null; inactive_channel?: null; pending_open_channel?: null; fully_resolved_channel: lnrpc.ChannelPoint.$Shape; channel_funding_timeout?: null }|{ channel?: "channel_funding_timeout"; open_channel?: null; closed_channel?: null; active_channel?: null; inactive_channel?: null; pending_open_channel?: null; fully_resolved_channel?: null; channel_funding_timeout: lnrpc.ChannelPoint.$Shape })
+         *   ({ channel?: undefined; open_channel?: null; closed_channel?: null; active_channel?: null; inactive_channel?: null; pending_open_channel?: null; fully_resolved_channel?: null; channel_funding_timeout?: null; updated_channel?: null }|{ channel?: "open_channel"; open_channel: lnrpc.Channel.$Shape; closed_channel?: null; active_channel?: null; inactive_channel?: null; pending_open_channel?: null; fully_resolved_channel?: null; channel_funding_timeout?: null; updated_channel?: null }|{ channel?: "closed_channel"; open_channel?: null; closed_channel: lnrpc.ChannelCloseSummary.$Shape; active_channel?: null; inactive_channel?: null; pending_open_channel?: null; fully_resolved_channel?: null; channel_funding_timeout?: null; updated_channel?: null }|{ channel?: "active_channel"; open_channel?: null; closed_channel?: null; active_channel: lnrpc.ChannelPoint.$Shape; inactive_channel?: null; pending_open_channel?: null; fully_resolved_channel?: null; channel_funding_timeout?: null; updated_channel?: null }|{ channel?: "inactive_channel"; open_channel?: null; closed_channel?: null; active_channel?: null; inactive_channel: lnrpc.ChannelPoint.$Shape; pending_open_channel?: null; fully_resolved_channel?: null; channel_funding_timeout?: null; updated_channel?: null }|{ channel?: "pending_open_channel"; open_channel?: null; closed_channel?: null; active_channel?: null; inactive_channel?: null; pending_open_channel: lnrpc.PendingUpdate.$Shape; fully_resolved_channel?: null; channel_funding_timeout?: null; updated_channel?: null }|{ channel?: "fully_resolved_channel"; open_channel?: null; closed_channel?: null; active_channel?: null; inactive_channel?: null; pending_open_channel?: null; fully_resolved_channel: lnrpc.ChannelPoint.$Shape; channel_funding_timeout?: null; updated_channel?: null }|{ channel?: "channel_funding_timeout"; open_channel?: null; closed_channel?: null; active_channel?: null; inactive_channel?: null; pending_open_channel?: null; fully_resolved_channel?: null; channel_funding_timeout: lnrpc.ChannelPoint.$Shape; updated_channel?: null }|{ channel?: "updated_channel"; open_channel?: null; closed_channel?: null; active_channel?: null; inactive_channel?: null; pending_open_channel?: null; fully_resolved_channel?: null; channel_funding_timeout?: null; updated_channel: lnrpc.ChannelCommitUpdate.$Shape })
          * )} lnrpc.ChannelEventUpdate.$Shape
          */
 
@@ -44506,6 +44692,14 @@ export const lnrpc = $root.lnrpc = (() => {
         ChannelEventUpdate.prototype.channel_funding_timeout = null;
 
         /**
+         * ChannelEventUpdate updated_channel.
+         * @member {lnrpc.ChannelCommitUpdate.$Properties|null|undefined} updated_channel
+         * @memberof lnrpc.ChannelEventUpdate
+         * @instance
+         */
+        ChannelEventUpdate.prototype.updated_channel = null;
+
+        /**
          * ChannelEventUpdate type.
          * @member {lnrpc.ChannelEventUpdate.UpdateType} type
          * @memberof lnrpc.ChannelEventUpdate
@@ -44518,12 +44712,12 @@ export const lnrpc = $root.lnrpc = (() => {
 
         /**
          * ChannelEventUpdate channel.
-         * @member {"open_channel"|"closed_channel"|"active_channel"|"inactive_channel"|"pending_open_channel"|"fully_resolved_channel"|"channel_funding_timeout"|undefined} channel
+         * @member {"open_channel"|"closed_channel"|"active_channel"|"inactive_channel"|"pending_open_channel"|"fully_resolved_channel"|"channel_funding_timeout"|"updated_channel"|undefined} channel
          * @memberof lnrpc.ChannelEventUpdate
          * @instance
          */
         $Object.defineProperty(ChannelEventUpdate.prototype, "channel", {
-            get: $util.oneOfGetter($oneOfFields = ["open_channel", "closed_channel", "active_channel", "inactive_channel", "pending_open_channel", "fully_resolved_channel", "channel_funding_timeout"]),
+            get: $util.oneOfGetter($oneOfFields = ["open_channel", "closed_channel", "active_channel", "inactive_channel", "pending_open_channel", "fully_resolved_channel", "channel_funding_timeout", "updated_channel"]),
             set: $util.oneOfSetter($oneOfFields)
         });
 
@@ -44575,6 +44769,8 @@ export const lnrpc = $root.lnrpc = (() => {
                 $root.lnrpc.ChannelPoint.encode(message.fully_resolved_channel, writer.uint32(/* id 7, wireType 2 =*/58).fork(), _depth + 1).ldelim();
             if (message.channel_funding_timeout != null && $Object.hasOwnProperty.call(message, "channel_funding_timeout"))
                 $root.lnrpc.ChannelPoint.encode(message.channel_funding_timeout, writer.uint32(/* id 8, wireType 2 =*/66).fork(), _depth + 1).ldelim();
+            if (message.updated_channel != null && $Object.hasOwnProperty.call(message, "updated_channel"))
+                $root.lnrpc.ChannelCommitUpdate.encode(message.updated_channel, writer.uint32(/* id 9, wireType 2 =*/74).fork(), _depth + 1).ldelim();
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -44679,6 +44875,13 @@ export const lnrpc = $root.lnrpc = (() => {
                             break;
                         message.channel_funding_timeout = $root.lnrpc.ChannelPoint.decode(reader, reader.uint32(), $undefined, _depth + 1, message.channel_funding_timeout);
                         message.channel = "channel_funding_timeout";
+                        continue;
+                    }
+                case 9: {
+                        if (wireType !== 2)
+                            break;
+                        message.updated_channel = $root.lnrpc.ChannelCommitUpdate.decode(reader, reader.uint32(), $undefined, _depth + 1, message.updated_channel);
+                        message.channel = "updated_channel";
                         continue;
                     }
                 case 5: {
@@ -44807,6 +45010,16 @@ export const lnrpc = $root.lnrpc = (() => {
                         return "channel_funding_timeout." + error;
                 }
             }
+            if (message.updated_channel != null && $Object.hasOwnProperty.call(message, "updated_channel")) {
+                if (properties.channel === 1)
+                    return "channel: multiple values";
+                properties.channel = 1;
+                {
+                    let error = $root.lnrpc.ChannelCommitUpdate.verify(message.updated_channel, _depth + 1);
+                    if (error)
+                        return "updated_channel." + error;
+                }
+            }
             if (message.type != null && $Object.hasOwnProperty.call(message, "type"))
                 if (typeof message.type !== "number" || (message.type | 0) !== message.type)
                     return "type: enum value expected";
@@ -44866,6 +45079,11 @@ export const lnrpc = $root.lnrpc = (() => {
                     throw $TypeError(".lnrpc.ChannelEventUpdate.channel_funding_timeout: object expected");
                 message.channel_funding_timeout = $root.lnrpc.ChannelPoint.fromObject(object.channel_funding_timeout, _depth + 1);
             }
+            if (object.updated_channel != null) {
+                if (!$util.isObject(object.updated_channel))
+                    throw $TypeError(".lnrpc.ChannelEventUpdate.updated_channel: object expected");
+                message.updated_channel = $root.lnrpc.ChannelCommitUpdate.fromObject(object.updated_channel, _depth + 1);
+            }
             if (object.type !== 0 && (typeof object.type !== "string" || $root.lnrpc.ChannelEventUpdate.UpdateType[object.type] !== 0))
                 switch (object.type) {
                 case "OPEN_CHANNEL":
@@ -44895,6 +45113,10 @@ export const lnrpc = $root.lnrpc = (() => {
                 case "CHANNEL_FUNDING_TIMEOUT":
                 case 6:
                     message.type = 6;
+                    break;
+                case "CHANNEL_UPDATE":
+                case 7:
+                    message.type = 7;
                     break;
                 default:
                     if (typeof object.type === "number" && (object.type | 0) === object.type)
@@ -44959,6 +45181,11 @@ export const lnrpc = $root.lnrpc = (() => {
                 if (options.oneofs)
                     object.channel = "channel_funding_timeout";
             }
+            if (message.updated_channel != null && $Object.hasOwnProperty.call(message, "updated_channel")) {
+                object.updated_channel = $root.lnrpc.ChannelCommitUpdate.toObject(message.updated_channel, options, _depth + 1);
+                if (options.oneofs)
+                    object.channel = "updated_channel";
+            }
             return object;
         };
 
@@ -44998,6 +45225,7 @@ export const lnrpc = $root.lnrpc = (() => {
          * @property {number} PENDING_OPEN_CHANNEL=4 PENDING_OPEN_CHANNEL value
          * @property {number} FULLY_RESOLVED_CHANNEL=5 FULLY_RESOLVED_CHANNEL value
          * @property {number} CHANNEL_FUNDING_TIMEOUT=6 CHANNEL_FUNDING_TIMEOUT value
+         * @property {number} CHANNEL_UPDATE=7 CHANNEL_UPDATE value
          */
         ChannelEventUpdate.UpdateType = (function() {
             const valuesById = $Object.create(null), values = $Object.create(valuesById);
@@ -45008,6 +45236,7 @@ export const lnrpc = $root.lnrpc = (() => {
             values[valuesById[4] = "PENDING_OPEN_CHANNEL"] = 4;
             values[valuesById[5] = "FULLY_RESOLVED_CHANNEL"] = 5;
             values[valuesById[6] = "CHANNEL_FUNDING_TIMEOUT"] = 6;
+            values[valuesById[7] = "CHANNEL_UPDATE"] = 7;
             return values;
         })();
 
@@ -47355,7 +47584,6 @@ export const lnrpc = $root.lnrpc = (() => {
          * @property {Array.<lnrpc.NodePair.$Properties>|null} [ignored_pairs] QueryRoutesRequest ignored_pairs
          * @property {number|null} [cltv_limit] QueryRoutesRequest cltv_limit
          * @property {Object.<string,Uint8Array>|null} [dest_custom_records] QueryRoutesRequest dest_custom_records
-         * @property {Long|null} [outgoing_chan_id] QueryRoutesRequest outgoing_chan_id
          * @property {Uint8Array|null} [last_hop_pubkey] QueryRoutesRequest last_hop_pubkey
          * @property {Array.<lnrpc.RouteHint.$Properties>|null} [route_hints] QueryRoutesRequest route_hints
          * @property {Array.<lnrpc.BlindedPaymentPath.$Properties>|null} [blinded_payment_paths] QueryRoutesRequest blinded_payment_paths
@@ -47388,7 +47616,6 @@ export const lnrpc = $root.lnrpc = (() => {
          *   ignored_pairs?: Array.<lnrpc.NodePair.$Shape>|null;
          *   cltv_limit?: number|null;
          *   dest_custom_records?: Object.<string,Uint8Array>|null;
-         *   outgoing_chan_id?: Long|null;
          *   last_hop_pubkey?: Uint8Array|null;
          *   route_hints?: Array.<lnrpc.RouteHint.$Shape>|null;
          *   blinded_payment_paths?: Array.<lnrpc.BlindedPaymentPath.$Shape>|null;
@@ -47519,14 +47746,6 @@ export const lnrpc = $root.lnrpc = (() => {
         QueryRoutesRequest.prototype.dest_custom_records = $util.emptyObject;
 
         /**
-         * QueryRoutesRequest outgoing_chan_id.
-         * @member {Long} outgoing_chan_id
-         * @memberof lnrpc.QueryRoutesRequest
-         * @instance
-         */
-        QueryRoutesRequest.prototype.outgoing_chan_id = $util.Long ? $util.Long.fromBits(0,0,true) : 0;
-
-        /**
          * QueryRoutesRequest last_hop_pubkey.
          * @member {Uint8Array} last_hop_pubkey
          * @memberof lnrpc.QueryRoutesRequest
@@ -47634,8 +47853,6 @@ export const lnrpc = $root.lnrpc = (() => {
             if (message.dest_custom_records != null && $Object.hasOwnProperty.call(message, "dest_custom_records"))
                 for (let keys = $Object.keys(message.dest_custom_records), i = 0; i < keys.length; ++i)
                     writer.uint32(/* id 13, wireType 2 =*/106).fork().uint32(/* id 1, wireType 0 =*/8).uint64($util.longFromKey(keys[i], true)).uint32(/* id 2, wireType 2 =*/18).bytes(message.dest_custom_records[keys[i]]).ldelim();
-            if (message.outgoing_chan_id != null && $Object.hasOwnProperty.call(message, "outgoing_chan_id") && (typeof message.outgoing_chan_id === "object" ? message.outgoing_chan_id.low || message.outgoing_chan_id.high : message.outgoing_chan_id !== 0))
-                writer.uint32(/* id 14, wireType 0 =*/112).uint64(message.outgoing_chan_id);
             if (message.last_hop_pubkey != null && $Object.hasOwnProperty.call(message, "last_hop_pubkey") && message.last_hop_pubkey.length)
                 writer.uint32(/* id 15, wireType 2 =*/122).bytes(message.last_hop_pubkey);
             if (message.route_hints != null && message.route_hints.length)
@@ -47834,15 +48051,6 @@ export const lnrpc = $root.lnrpc = (() => {
                         message.dest_custom_records[typeof key === "object" ? $util.longToHash(key) : key] = value;
                         continue;
                     }
-                case 14: {
-                        if (wireType !== 0)
-                            break;
-                        if (typeof (value = reader.uint64()) === "object" ? value.low || value.high : value !== 0)
-                            message.outgoing_chan_id = value;
-                        else
-                            delete message.outgoing_chan_id;
-                        continue;
-                    }
                 case 15: {
                         if (wireType !== 2)
                             break;
@@ -48015,9 +48223,6 @@ export const lnrpc = $root.lnrpc = (() => {
                         return "dest_custom_records: buffer{k:uint64} expected";
                 }
             }
-            if (message.outgoing_chan_id != null && $Object.hasOwnProperty.call(message, "outgoing_chan_id"))
-                if (!$util.isInteger(message.outgoing_chan_id) && !(message.outgoing_chan_id && $util.isInteger(message.outgoing_chan_id.low) && $util.isInteger(message.outgoing_chan_id.high)))
-                    return "outgoing_chan_id: integer|Long expected";
             if (message.last_hop_pubkey != null && $Object.hasOwnProperty.call(message, "last_hop_pubkey"))
                 if (!(message.last_hop_pubkey && typeof message.last_hop_pubkey.length === "number" || $util.isString(message.last_hop_pubkey)))
                     return "last_hop_pubkey: buffer expected";
@@ -48160,16 +48365,6 @@ export const lnrpc = $root.lnrpc = (() => {
                         message.dest_custom_records[keys[i]] = object.dest_custom_records[keys[i]];
                 }
             }
-            if (object.outgoing_chan_id != null)
-                if (typeof object.outgoing_chan_id === "object" ? object.outgoing_chan_id.low || object.outgoing_chan_id.high : $Number(object.outgoing_chan_id) !== 0)
-                    if ($util.Long)
-                        message.outgoing_chan_id = $util.Long.fromValue(object.outgoing_chan_id, true);
-                    else if (typeof object.outgoing_chan_id === "string")
-                        message.outgoing_chan_id = $parseInt(object.outgoing_chan_id, 10);
-                    else if (typeof object.outgoing_chan_id === "number")
-                        message.outgoing_chan_id = object.outgoing_chan_id;
-                    else if (typeof object.outgoing_chan_id === "object")
-                        message.outgoing_chan_id = new $util.LongBits(object.outgoing_chan_id.low >>> 0, object.outgoing_chan_id.high >>> 0).toNumber(true);
             if (object.last_hop_pubkey != null)
                 if (object.last_hop_pubkey.length)
                     if (typeof object.last_hop_pubkey === "string")
@@ -48380,11 +48575,6 @@ export const lnrpc = $root.lnrpc = (() => {
                     object.amt_msat = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
                 } else
                     object.amt_msat = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
-                if ($util.Long) {
-                    let long = new $util.Long(0, 0, true);
-                    object.outgoing_chan_id = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
-                } else
-                    object.outgoing_chan_id = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
                 if (options.bytes === $String)
                     object.last_hop_pubkey = "";
                 else {
@@ -48445,13 +48635,6 @@ export const lnrpc = $root.lnrpc = (() => {
                     object.dest_custom_records[k2] = options.bytes === $String ? $util.base64.encode(message.dest_custom_records[keys2[j]], 0, message.dest_custom_records[keys2[j]].length) : options.bytes === $Array ? $Array.prototype.slice.call(message.dest_custom_records[keys2[j]]) : message.dest_custom_records[keys2[j]];
                 }
             }
-            if (message.outgoing_chan_id != null && $Object.hasOwnProperty.call(message, "outgoing_chan_id"))
-                if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
-                    object.outgoing_chan_id = typeof message.outgoing_chan_id === "number" ? $BigInt(message.outgoing_chan_id) : $util.Long.fromBits(message.outgoing_chan_id.low >>> 0, message.outgoing_chan_id.high >>> 0, true).toBigInt();
-                else if (typeof message.outgoing_chan_id === "number")
-                    object.outgoing_chan_id = options.longs === $String ? $String(message.outgoing_chan_id) : message.outgoing_chan_id;
-                else
-                    object.outgoing_chan_id = options.longs === $String ? $util.Long.prototype.toString.call(message.outgoing_chan_id) : options.longs === $Number ? new $util.LongBits(message.outgoing_chan_id.low >>> 0, message.outgoing_chan_id.high >>> 0).toNumber(true) : message.outgoing_chan_id;
             if (message.last_hop_pubkey != null && $Object.hasOwnProperty.call(message, "last_hop_pubkey"))
                 object.last_hop_pubkey = options.bytes === $String ? $util.base64.encode(message.last_hop_pubkey, 0, message.last_hop_pubkey.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.last_hop_pubkey) : message.last_hop_pubkey;
             if (message.route_hints && message.route_hints.length) {
@@ -70274,6 +70457,7 @@ export const lnrpc = $root.lnrpc = (() => {
          * @property {boolean|null} [count_total_payments] ListPaymentsRequest count_total_payments
          * @property {Long|null} [creation_date_start] ListPaymentsRequest creation_date_start
          * @property {Long|null} [creation_date_end] ListPaymentsRequest creation_date_end
+         * @property {boolean|null} [omit_hops] ListPaymentsRequest omit_hops
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -70362,6 +70546,14 @@ export const lnrpc = $root.lnrpc = (() => {
         ListPaymentsRequest.prototype.creation_date_end = $util.Long ? $util.Long.fromBits(0,0,true) : 0;
 
         /**
+         * ListPaymentsRequest omit_hops.
+         * @member {boolean} omit_hops
+         * @memberof lnrpc.ListPaymentsRequest
+         * @instance
+         */
+        ListPaymentsRequest.prototype.omit_hops = false;
+
+        /**
          * Creates a new ListPaymentsRequest instance using the specified properties.
          * @function create
          * @memberof lnrpc.ListPaymentsRequest
@@ -70407,6 +70599,8 @@ export const lnrpc = $root.lnrpc = (() => {
                 writer.uint32(/* id 6, wireType 0 =*/48).uint64(message.creation_date_start);
             if (message.creation_date_end != null && $Object.hasOwnProperty.call(message, "creation_date_end") && (typeof message.creation_date_end === "object" ? message.creation_date_end.low || message.creation_date_end.high : message.creation_date_end !== 0))
                 writer.uint32(/* id 7, wireType 0 =*/56).uint64(message.creation_date_end);
+            if (message.omit_hops != null && $Object.hasOwnProperty.call(message, "omit_hops") && message.omit_hops !== false)
+                writer.uint32(/* id 8, wireType 0 =*/64).bool(message.omit_hops);
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -70527,6 +70721,15 @@ export const lnrpc = $root.lnrpc = (() => {
                             delete message.creation_date_end;
                         continue;
                     }
+                case 8: {
+                        if (wireType !== 0)
+                            break;
+                        if (value = reader.bool())
+                            message.omit_hops = value;
+                        else
+                            delete message.omit_hops;
+                        continue;
+                    }
                 }
                 reader.skipType(wireType, _depth, tag);
                 if (!reader.discardUnknown) {
@@ -70596,6 +70799,9 @@ export const lnrpc = $root.lnrpc = (() => {
             if (message.creation_date_end != null && $Object.hasOwnProperty.call(message, "creation_date_end"))
                 if (!$util.isInteger(message.creation_date_end) && !(message.creation_date_end && $util.isInteger(message.creation_date_end.low) && $util.isInteger(message.creation_date_end.high)))
                     return "creation_date_end: integer|Long expected";
+            if (message.omit_hops != null && $Object.hasOwnProperty.call(message, "omit_hops"))
+                if (typeof message.omit_hops !== "boolean")
+                    return "omit_hops: boolean expected";
             return null;
         };
 
@@ -70666,6 +70872,9 @@ export const lnrpc = $root.lnrpc = (() => {
                         message.creation_date_end = object.creation_date_end;
                     else if (typeof object.creation_date_end === "object")
                         message.creation_date_end = new $util.LongBits(object.creation_date_end.low >>> 0, object.creation_date_end.high >>> 0).toNumber(true);
+            if (object.omit_hops != null)
+                if (object.omit_hops)
+                    message.omit_hops = $Boolean(object.omit_hops);
             return message;
         };
 
@@ -70710,6 +70919,7 @@ export const lnrpc = $root.lnrpc = (() => {
                     object.creation_date_end = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
                 } else
                     object.creation_date_end = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
+                object.omit_hops = false;
             }
             if (message.include_incomplete != null && $Object.hasOwnProperty.call(message, "include_incomplete"))
                 object.include_incomplete = message.include_incomplete;
@@ -70745,6 +70955,8 @@ export const lnrpc = $root.lnrpc = (() => {
                     object.creation_date_end = options.longs === $String ? $String(message.creation_date_end) : message.creation_date_end;
                 else
                     object.creation_date_end = options.longs === $String ? $util.Long.prototype.toString.call(message.creation_date_end) : options.longs === $Number ? new $util.LongBits(message.creation_date_end.low >>> 0, message.creation_date_end.high >>> 0).toNumber(true) : message.creation_date_end;
+            if (message.omit_hops != null && $Object.hasOwnProperty.call(message, "omit_hops"))
+                object.omit_hops = message.omit_hops;
             return object;
         };
 
@@ -112133,47 +112345,6 @@ export const routerrpc = $root.routerrpc = (() => {
         });
 
         /**
-         * Callback as used by {@link routerrpc.Router#sendToRoute}.
-         * @memberof routerrpc.Router
-         * @typedef SendToRouteCallback
-         * @type {function}
-         * @param {Error|null} error Error, if any
-         * @param {routerrpc.SendToRouteResponse} [response] SendToRouteResponse
-         */
-
-        /**
-         * Calls SendToRoute.
-         * @memberof routerrpc.Router
-         * @typedef SendToRoute
-         * @type {{
-         *   (request: routerrpc.ISendToRouteRequest, callback: routerrpc.Router.SendToRouteCallback): void;
-         *   (request: routerrpc.ISendToRouteRequest): Promise<routerrpc.SendToRouteResponse>;
-         *   readonly name: "SendToRoute";
-         *   readonly path: "/routerrpc.Router/SendToRoute";
-         *   readonly requestType: "SendToRouteRequest";
-         *   readonly responseType: "SendToRouteResponse";
-         *   readonly requestStream: undefined;
-         *   readonly responseStream: undefined;
-         * }}
-         */
-
-        /**
-         * Calls SendToRoute.
-         * @name routerrpc.Router#sendToRoute
-         * @type {routerrpc.Router.SendToRoute}
-         */
-        $Object.defineProperties(Router.prototype.sendToRoute = function(request, callback) {
-            return $protobuf.rpc.Service.prototype.rpcCall.call(this, Router.prototype.sendToRoute, $root.routerrpc.SendToRouteRequest, $root.routerrpc.SendToRouteResponse, request, callback);
-        }, {
-            name: { value: "SendToRoute" },
-            path: { value: "/routerrpc.Router/SendToRoute" },
-            requestType: { value: "SendToRouteRequest" },
-            responseType: { value: "SendToRouteResponse" },
-            requestStream: { value: $undefined },
-            responseStream: { value: $undefined }
-        });
-
-        /**
          * Callback as used by {@link routerrpc.Router#sendToRouteV2}.
          * @memberof routerrpc.Router
          * @typedef SendToRouteV2Callback
@@ -112543,88 +112714,6 @@ export const routerrpc = $root.routerrpc = (() => {
         });
 
         /**
-         * Callback as used by {@link routerrpc.Router#sendPayment}.
-         * @memberof routerrpc.Router
-         * @typedef SendPaymentCallback
-         * @type {function}
-         * @param {Error|null} error Error, if any
-         * @param {routerrpc.PaymentStatus} [response] PaymentStatus
-         */
-
-        /**
-         * Calls SendPayment.
-         * @memberof routerrpc.Router
-         * @typedef SendPayment
-         * @type {{
-         *   (request: routerrpc.ISendPaymentRequest, callback: routerrpc.Router.SendPaymentCallback): void;
-         *   (request: routerrpc.ISendPaymentRequest): Promise<routerrpc.PaymentStatus>;
-         *   readonly name: "SendPayment";
-         *   readonly path: "/routerrpc.Router/SendPayment";
-         *   readonly requestType: "SendPaymentRequest";
-         *   readonly responseType: "PaymentStatus";
-         *   readonly requestStream: undefined;
-         *   readonly responseStream: true;
-         * }}
-         */
-
-        /**
-         * Calls SendPayment.
-         * @name routerrpc.Router#sendPayment
-         * @type {routerrpc.Router.SendPayment}
-         */
-        $Object.defineProperties(Router.prototype.sendPayment = function(request, callback) {
-            return $protobuf.rpc.Service.prototype.rpcCall.call(this, Router.prototype.sendPayment, $root.routerrpc.SendPaymentRequest, $root.routerrpc.PaymentStatus, request, callback);
-        }, {
-            name: { value: "SendPayment" },
-            path: { value: "/routerrpc.Router/SendPayment" },
-            requestType: { value: "SendPaymentRequest" },
-            responseType: { value: "PaymentStatus" },
-            requestStream: { value: $undefined },
-            responseStream: { value: true }
-        });
-
-        /**
-         * Callback as used by {@link routerrpc.Router#trackPayment}.
-         * @memberof routerrpc.Router
-         * @typedef TrackPaymentCallback
-         * @type {function}
-         * @param {Error|null} error Error, if any
-         * @param {routerrpc.PaymentStatus} [response] PaymentStatus
-         */
-
-        /**
-         * Calls TrackPayment.
-         * @memberof routerrpc.Router
-         * @typedef TrackPayment
-         * @type {{
-         *   (request: routerrpc.ITrackPaymentRequest, callback: routerrpc.Router.TrackPaymentCallback): void;
-         *   (request: routerrpc.ITrackPaymentRequest): Promise<routerrpc.PaymentStatus>;
-         *   readonly name: "TrackPayment";
-         *   readonly path: "/routerrpc.Router/TrackPayment";
-         *   readonly requestType: "TrackPaymentRequest";
-         *   readonly responseType: "PaymentStatus";
-         *   readonly requestStream: undefined;
-         *   readonly responseStream: true;
-         * }}
-         */
-
-        /**
-         * Calls TrackPayment.
-         * @name routerrpc.Router#trackPayment
-         * @type {routerrpc.Router.TrackPayment}
-         */
-        $Object.defineProperties(Router.prototype.trackPayment = function(request, callback) {
-            return $protobuf.rpc.Service.prototype.rpcCall.call(this, Router.prototype.trackPayment, $root.routerrpc.TrackPaymentRequest, $root.routerrpc.PaymentStatus, request, callback);
-        }, {
-            name: { value: "TrackPayment" },
-            path: { value: "/routerrpc.Router/TrackPayment" },
-            requestType: { value: "TrackPaymentRequest" },
-            responseType: { value: "PaymentStatus" },
-            requestStream: { value: $undefined },
-            responseStream: { value: true }
-        });
-
-        /**
          * Callback as used by {@link routerrpc.Router#htlcInterceptor}.
          * @memberof routerrpc.Router
          * @typedef HtlcInterceptorCallback
@@ -112837,6 +112926,47 @@ export const routerrpc = $root.routerrpc = (() => {
             responseStream: { value: $undefined }
         });
 
+        /**
+         * Callback as used by {@link routerrpc.Router#deleteForwardingHistory}.
+         * @memberof routerrpc.Router
+         * @typedef DeleteForwardingHistoryCallback
+         * @type {function}
+         * @param {Error|null} error Error, if any
+         * @param {routerrpc.DeleteForwardingHistoryResponse} [response] DeleteForwardingHistoryResponse
+         */
+
+        /**
+         * Calls DeleteForwardingHistory.
+         * @memberof routerrpc.Router
+         * @typedef DeleteForwardingHistory
+         * @type {{
+         *   (request: routerrpc.IDeleteForwardingHistoryRequest, callback: routerrpc.Router.DeleteForwardingHistoryCallback): void;
+         *   (request: routerrpc.IDeleteForwardingHistoryRequest): Promise<routerrpc.DeleteForwardingHistoryResponse>;
+         *   readonly name: "DeleteForwardingHistory";
+         *   readonly path: "/routerrpc.Router/DeleteForwardingHistory";
+         *   readonly requestType: "DeleteForwardingHistoryRequest";
+         *   readonly responseType: "DeleteForwardingHistoryResponse";
+         *   readonly requestStream: undefined;
+         *   readonly responseStream: undefined;
+         * }}
+         */
+
+        /**
+         * Calls DeleteForwardingHistory.
+         * @name routerrpc.Router#deleteForwardingHistory
+         * @type {routerrpc.Router.DeleteForwardingHistory}
+         */
+        $Object.defineProperties(Router.prototype.deleteForwardingHistory = function(request, callback) {
+            return $protobuf.rpc.Service.prototype.rpcCall.call(this, Router.prototype.deleteForwardingHistory, $root.routerrpc.DeleteForwardingHistoryRequest, $root.routerrpc.DeleteForwardingHistoryResponse, request, callback);
+        }, {
+            name: { value: "DeleteForwardingHistory" },
+            path: { value: "/routerrpc.Router/DeleteForwardingHistory" },
+            requestType: { value: "DeleteForwardingHistoryRequest" },
+            responseType: { value: "DeleteForwardingHistoryResponse" },
+            requestStream: { value: $undefined },
+            responseStream: { value: $undefined }
+        });
+
         return Router;
     })();
 
@@ -112852,7 +112982,6 @@ export const routerrpc = $root.routerrpc = (() => {
          * @property {string|null} [payment_request] SendPaymentRequest payment_request
          * @property {number|null} [timeout_seconds] SendPaymentRequest timeout_seconds
          * @property {Long|null} [fee_limit_sat] SendPaymentRequest fee_limit_sat
-         * @property {Long|null} [outgoing_chan_id] SendPaymentRequest outgoing_chan_id
          * @property {number|null} [cltv_limit] SendPaymentRequest cltv_limit
          * @property {Array.<lnrpc.RouteHint.$Properties>|null} [route_hints] SendPaymentRequest route_hints
          * @property {Object.<string,Uint8Array>|null} [dest_custom_records] SendPaymentRequest dest_custom_records
@@ -112961,14 +113090,6 @@ export const routerrpc = $root.routerrpc = (() => {
          * @instance
          */
         SendPaymentRequest.prototype.fee_limit_sat = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
-
-        /**
-         * SendPaymentRequest outgoing_chan_id.
-         * @member {Long} outgoing_chan_id
-         * @memberof routerrpc.SendPaymentRequest
-         * @instance
-         */
-        SendPaymentRequest.prototype.outgoing_chan_id = $util.Long ? $util.Long.fromBits(0,0,true) : 0;
 
         /**
          * SendPaymentRequest cltv_limit.
@@ -113152,8 +113273,6 @@ export const routerrpc = $root.routerrpc = (() => {
                 writer.uint32(/* id 6, wireType 0 =*/48).int32(message.timeout_seconds);
             if (message.fee_limit_sat != null && $Object.hasOwnProperty.call(message, "fee_limit_sat") && (typeof message.fee_limit_sat === "object" ? message.fee_limit_sat.low || message.fee_limit_sat.high : message.fee_limit_sat !== 0))
                 writer.uint32(/* id 7, wireType 0 =*/56).int64(message.fee_limit_sat);
-            if (message.outgoing_chan_id != null && $Object.hasOwnProperty.call(message, "outgoing_chan_id") && (typeof message.outgoing_chan_id === "object" ? message.outgoing_chan_id.low || message.outgoing_chan_id.high : message.outgoing_chan_id !== 0))
-                writer.uint32(/* id 8, wireType 0 =*/64).uint64(message.outgoing_chan_id);
             if (message.cltv_limit != null && $Object.hasOwnProperty.call(message, "cltv_limit") && message.cltv_limit !== 0)
                 writer.uint32(/* id 9, wireType 0 =*/72).int32(message.cltv_limit);
             if (message.route_hints != null && message.route_hints.length)
@@ -113309,15 +113428,6 @@ export const routerrpc = $root.routerrpc = (() => {
                             message.fee_limit_sat = value;
                         else
                             delete message.fee_limit_sat;
-                        continue;
-                    }
-                case 8: {
-                        if (wireType !== 0)
-                            break;
-                        if (typeof (value = reader.uint64()) === "object" ? value.low || value.high : value !== 0)
-                            message.outgoing_chan_id = value;
-                        else
-                            delete message.outgoing_chan_id;
                         continue;
                     }
                 case 9: {
@@ -113601,9 +113711,6 @@ export const routerrpc = $root.routerrpc = (() => {
             if (message.fee_limit_sat != null && $Object.hasOwnProperty.call(message, "fee_limit_sat"))
                 if (!$util.isInteger(message.fee_limit_sat) && !(message.fee_limit_sat && $util.isInteger(message.fee_limit_sat.low) && $util.isInteger(message.fee_limit_sat.high)))
                     return "fee_limit_sat: integer|Long expected";
-            if (message.outgoing_chan_id != null && $Object.hasOwnProperty.call(message, "outgoing_chan_id"))
-                if (!$util.isInteger(message.outgoing_chan_id) && !(message.outgoing_chan_id && $util.isInteger(message.outgoing_chan_id.low) && $util.isInteger(message.outgoing_chan_id.high)))
-                    return "outgoing_chan_id: integer|Long expected";
             if (message.cltv_limit != null && $Object.hasOwnProperty.call(message, "cltv_limit"))
                 if (!$util.isInteger(message.cltv_limit))
                     return "cltv_limit: integer expected";
@@ -113747,16 +113854,6 @@ export const routerrpc = $root.routerrpc = (() => {
                         message.fee_limit_sat = object.fee_limit_sat;
                     else if (typeof object.fee_limit_sat === "object")
                         message.fee_limit_sat = new $util.LongBits(object.fee_limit_sat.low >>> 0, object.fee_limit_sat.high >>> 0).toNumber();
-            if (object.outgoing_chan_id != null)
-                if (typeof object.outgoing_chan_id === "object" ? object.outgoing_chan_id.low || object.outgoing_chan_id.high : $Number(object.outgoing_chan_id) !== 0)
-                    if ($util.Long)
-                        message.outgoing_chan_id = $util.Long.fromValue(object.outgoing_chan_id, true);
-                    else if (typeof object.outgoing_chan_id === "string")
-                        message.outgoing_chan_id = $parseInt(object.outgoing_chan_id, 10);
-                    else if (typeof object.outgoing_chan_id === "number")
-                        message.outgoing_chan_id = object.outgoing_chan_id;
-                    else if (typeof object.outgoing_chan_id === "object")
-                        message.outgoing_chan_id = new $util.LongBits(object.outgoing_chan_id.low >>> 0, object.outgoing_chan_id.high >>> 0).toNumber(true);
             if (object.cltv_limit != null)
                 if ($Number(object.cltv_limit) !== 0)
                     message.cltv_limit = object.cltv_limit | 0;
@@ -114046,11 +114143,6 @@ export const routerrpc = $root.routerrpc = (() => {
                     object.fee_limit_sat = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
                 } else
                     object.fee_limit_sat = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
-                if ($util.Long) {
-                    let long = new $util.Long(0, 0, true);
-                    object.outgoing_chan_id = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
-                } else
-                    object.outgoing_chan_id = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
                 object.cltv_limit = 0;
                 if ($util.Long) {
                     let long = new $util.Long(0, 0, false);
@@ -114112,13 +114204,6 @@ export const routerrpc = $root.routerrpc = (() => {
                     object.fee_limit_sat = options.longs === $String ? $String(message.fee_limit_sat) : message.fee_limit_sat;
                 else
                     object.fee_limit_sat = options.longs === $String ? $util.Long.prototype.toString.call(message.fee_limit_sat) : options.longs === $Number ? new $util.LongBits(message.fee_limit_sat.low >>> 0, message.fee_limit_sat.high >>> 0).toNumber() : message.fee_limit_sat;
-            if (message.outgoing_chan_id != null && $Object.hasOwnProperty.call(message, "outgoing_chan_id"))
-                if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
-                    object.outgoing_chan_id = typeof message.outgoing_chan_id === "number" ? $BigInt(message.outgoing_chan_id) : $util.Long.fromBits(message.outgoing_chan_id.low >>> 0, message.outgoing_chan_id.high >>> 0, true).toBigInt();
-                else if (typeof message.outgoing_chan_id === "number")
-                    object.outgoing_chan_id = options.longs === $String ? $String(message.outgoing_chan_id) : message.outgoing_chan_id;
-                else
-                    object.outgoing_chan_id = options.longs === $String ? $util.Long.prototype.toString.call(message.outgoing_chan_id) : options.longs === $Number ? new $util.LongBits(message.outgoing_chan_id.low >>> 0, message.outgoing_chan_id.high >>> 0).toNumber(true) : message.outgoing_chan_id;
             if (message.cltv_limit != null && $Object.hasOwnProperty.call(message, "cltv_limit"))
                 object.cltv_limit = message.cltv_limit;
             if (message.route_hints && message.route_hints.length) {
@@ -116027,321 +116112,6 @@ export const routerrpc = $root.routerrpc = (() => {
         };
 
         return SendToRouteRequest;
-    })();
-
-    routerrpc.SendToRouteResponse = (function() {
-
-        /**
-         * Properties of a SendToRouteResponse.
-         * @typedef {Object} routerrpc.SendToRouteResponse.$Properties
-         * @property {Uint8Array|null} [preimage] SendToRouteResponse preimage
-         * @property {lnrpc.Failure.$Properties|null} [failure] SendToRouteResponse failure
-         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
-         */
-
-        /**
-         * Properties of a SendToRouteResponse.
-         * @memberof routerrpc
-         * @interface ISendToRouteResponse
-         * @augments routerrpc.SendToRouteResponse.$Properties
-         * @deprecated Use routerrpc.SendToRouteResponse.$Properties instead.
-         */
-
-        /**
-         * Shape of a SendToRouteResponse.
-         * @typedef {routerrpc.SendToRouteResponse.$Properties} routerrpc.SendToRouteResponse.$Shape
-         */
-
-        /**
-         * Constructs a new SendToRouteResponse.
-         * @memberof routerrpc
-         * @classdesc Represents a SendToRouteResponse.
-         * @constructor
-         * @param {routerrpc.SendToRouteResponse.$Properties=} [properties] Properties to set
-         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
-         */
-        const SendToRouteResponse = function (properties) {
-            if (properties)
-                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
-                        this[keys[i]] = properties[keys[i]];
-        };
-
-        /**
-         * SendToRouteResponse preimage.
-         * @member {Uint8Array} preimage
-         * @memberof routerrpc.SendToRouteResponse
-         * @instance
-         */
-        SendToRouteResponse.prototype.preimage = $util.newBuffer([]);
-
-        /**
-         * SendToRouteResponse failure.
-         * @member {lnrpc.Failure.$Properties|null|undefined} failure
-         * @memberof routerrpc.SendToRouteResponse
-         * @instance
-         */
-        SendToRouteResponse.prototype.failure = null;
-
-        /**
-         * Creates a new SendToRouteResponse instance using the specified properties.
-         * @function create
-         * @memberof routerrpc.SendToRouteResponse
-         * @static
-         * @param {routerrpc.SendToRouteResponse.$Properties=} [properties] Properties to set
-         * @returns {routerrpc.SendToRouteResponse} SendToRouteResponse instance
-         * @type {{
-         *   (properties: routerrpc.SendToRouteResponse.$Shape): routerrpc.SendToRouteResponse & routerrpc.SendToRouteResponse.$Shape;
-         *   (properties?: routerrpc.SendToRouteResponse.$Properties): routerrpc.SendToRouteResponse;
-         * }}
-         */
-        SendToRouteResponse.create = function(properties) {
-            return new SendToRouteResponse(properties);
-        };
-
-        /**
-         * Encodes the specified SendToRouteResponse message. Does not implicitly {@link routerrpc.SendToRouteResponse.verify|verify} messages.
-         * @function encode
-         * @memberof routerrpc.SendToRouteResponse
-         * @static
-         * @param {routerrpc.SendToRouteResponse.$Properties} message SendToRouteResponse message or plain object to encode
-         * @param {$protobuf.Writer} [writer] Writer to encode to
-         * @returns {$protobuf.Writer} Writer
-         */
-        SendToRouteResponse.encode = function (message, writer, _depth) {
-            if (!writer)
-                writer = $Writer.create();
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $util.recursionLimit)
-                throw $Error("max depth exceeded");
-            if (message.preimage != null && $Object.hasOwnProperty.call(message, "preimage") && message.preimage.length)
-                writer.uint32(/* id 1, wireType 2 =*/10).bytes(message.preimage);
-            if (message.failure != null && $Object.hasOwnProperty.call(message, "failure"))
-                $root.lnrpc.Failure.encode(message.failure, writer.uint32(/* id 2, wireType 2 =*/18).fork(), _depth + 1).ldelim();
-            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
-                for (let i = 0; i < message.$unknowns.length; ++i)
-                    writer.raw(message.$unknowns[i]);
-            return writer;
-        };
-
-        /**
-         * Encodes the specified SendToRouteResponse message, length delimited. Does not implicitly {@link routerrpc.SendToRouteResponse.verify|verify} messages.
-         * @function encodeDelimited
-         * @memberof routerrpc.SendToRouteResponse
-         * @static
-         * @param {routerrpc.SendToRouteResponse.$Properties} message SendToRouteResponse message or plain object to encode
-         * @param {$protobuf.Writer} [writer] Writer to encode to
-         * @returns {$protobuf.Writer} Writer
-         */
-        SendToRouteResponse.encodeDelimited = function(message, writer) {
-            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
-        };
-
-        /**
-         * Decodes a SendToRouteResponse message from the specified reader or buffer.
-         * @function decode
-         * @memberof routerrpc.SendToRouteResponse
-         * @static
-         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @param {number} [length] Message length if known beforehand
-         * @returns {routerrpc.SendToRouteResponse & routerrpc.SendToRouteResponse.$Shape} SendToRouteResponse
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        SendToRouteResponse.decode = function (reader, length, _end, _depth, _target) {
-            if (!(reader instanceof $Reader))
-                reader = $Reader.create(reader);
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $Reader.recursionLimit)
-                throw $Error("max depth exceeded");
-            let end, message, value;
-            if (length === $undefined)
-                end = reader.len;
-            else {
-                end = reader.pos + length;
-                if (end > reader.len)
-                    throw $RangeError("index out of range");
-                length = reader.len;
-                reader.len = end;
-            }
-            message = _target || new $root.routerrpc.SendToRouteResponse();
-            while (reader.pos < end) {
-                let start = reader.pos;
-                let tag = reader.tag();
-                if (tag === _end) {
-                    _end = $undefined;
-                    break;
-                }
-                let wireType = tag & 7;
-                switch (tag >>>= 3) {
-                case 1: {
-                        if (wireType !== 2)
-                            break;
-                        if ((value = reader.bytes()).length)
-                            message.preimage = value;
-                        else
-                            delete message.preimage;
-                        continue;
-                    }
-                case 2: {
-                        if (wireType !== 2)
-                            break;
-                        message.failure = $root.lnrpc.Failure.decode(reader, reader.uint32(), $undefined, _depth + 1, message.failure);
-                        continue;
-                    }
-                }
-                reader.skipType(wireType, _depth, tag);
-                if (!reader.discardUnknown) {
-                    $util.makeProp(message, "$unknowns", false);
-                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
-                }
-            }
-            if (length !== $undefined) {
-                if (reader.pos !== end)
-                    throw $RangeError("index out of range");
-                reader.len = length;
-            }
-            if (_end !== $undefined)
-                throw $Error("missing end group");
-            return message;
-        };
-
-        /**
-         * Decodes a SendToRouteResponse message from the specified reader or buffer, length delimited.
-         * @function decodeDelimited
-         * @memberof routerrpc.SendToRouteResponse
-         * @static
-         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {routerrpc.SendToRouteResponse & routerrpc.SendToRouteResponse.$Shape} SendToRouteResponse
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        SendToRouteResponse.decodeDelimited = function(reader) {
-            if (!(reader instanceof $Reader))
-                reader = new $Reader(reader);
-            return this.decode(reader, reader.uint32());
-        };
-
-        /**
-         * Verifies a SendToRouteResponse message.
-         * @function verify
-         * @memberof routerrpc.SendToRouteResponse
-         * @static
-         * @param {Object.<string,*>} message Plain object to verify
-         * @returns {string|null} `null` if valid, otherwise the reason why it is not
-         */
-        SendToRouteResponse.verify = function (message, _depth) {
-            if (typeof message !== "object" || message === null)
-                return "object expected";
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $util.recursionLimit)
-                return "max depth exceeded";
-            if (message.preimage != null && $Object.hasOwnProperty.call(message, "preimage"))
-                if (!(message.preimage && typeof message.preimage.length === "number" || $util.isString(message.preimage)))
-                    return "preimage: buffer expected";
-            if (message.failure != null && $Object.hasOwnProperty.call(message, "failure")) {
-                let error = $root.lnrpc.Failure.verify(message.failure, _depth + 1);
-                if (error)
-                    return "failure." + error;
-            }
-            return null;
-        };
-
-        /**
-         * Creates a SendToRouteResponse message from a plain object. Also converts values to their respective internal types.
-         * @function fromObject
-         * @memberof routerrpc.SendToRouteResponse
-         * @static
-         * @param {Object.<string,*>} object Plain object
-         * @returns {routerrpc.SendToRouteResponse} SendToRouteResponse
-         */
-        SendToRouteResponse.fromObject = function (object, _depth) {
-            if (object instanceof $root.routerrpc.SendToRouteResponse)
-                return object;
-            if (!$util.isObject(object))
-                throw $TypeError(".routerrpc.SendToRouteResponse: object expected");
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $util.recursionLimit)
-                throw $Error("max depth exceeded");
-            let message = new $root.routerrpc.SendToRouteResponse();
-            if (object.preimage != null)
-                if (object.preimage.length)
-                    if (typeof object.preimage === "string")
-                        $util.base64.decode(object.preimage, message.preimage = $util.newBuffer($util.base64.length(object.preimage)), 0);
-                    else if (object.preimage.length >= 0)
-                        message.preimage = object.preimage;
-            if (object.failure != null) {
-                if (!$util.isObject(object.failure))
-                    throw $TypeError(".routerrpc.SendToRouteResponse.failure: object expected");
-                message.failure = $root.lnrpc.Failure.fromObject(object.failure, _depth + 1);
-            }
-            return message;
-        };
-
-        /**
-         * Creates a plain object from a SendToRouteResponse message. Also converts values to other types if specified.
-         * @function toObject
-         * @memberof routerrpc.SendToRouteResponse
-         * @static
-         * @param {routerrpc.SendToRouteResponse} message SendToRouteResponse
-         * @param {$protobuf.IConversionOptions} [options] Conversion options
-         * @returns {Object.<string,*>} Plain object
-         */
-        SendToRouteResponse.toObject = function (message, options, _depth) {
-            if (!options)
-                options = {};
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $util.recursionLimit)
-                throw $Error("max depth exceeded");
-            let object = {};
-            if (options.defaults) {
-                if (options.bytes === $String)
-                    object.preimage = "";
-                else {
-                    object.preimage = [];
-                    if (options.bytes !== $Array)
-                        object.preimage = $util.newBuffer(object.preimage);
-                }
-                object.failure = null;
-            }
-            if (message.preimage != null && $Object.hasOwnProperty.call(message, "preimage"))
-                object.preimage = options.bytes === $String ? $util.base64.encode(message.preimage, 0, message.preimage.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.preimage) : message.preimage;
-            if (message.failure != null && $Object.hasOwnProperty.call(message, "failure"))
-                object.failure = $root.lnrpc.Failure.toObject(message.failure, options, _depth + 1);
-            return object;
-        };
-
-        /**
-         * Converts this SendToRouteResponse to JSON.
-         * @function toJSON
-         * @memberof routerrpc.SendToRouteResponse
-         * @instance
-         * @returns {Object.<string,*>} JSON object
-         */
-        SendToRouteResponse.prototype.toJSON = function() {
-            return SendToRouteResponse.toObject(this, $protobuf.util.toJSONOptions);
-        };
-
-        /**
-         * Gets the type url for SendToRouteResponse
-         * @function getTypeUrl
-         * @memberof routerrpc.SendToRouteResponse
-         * @static
-         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
-         * @returns {string} The type url
-         */
-        SendToRouteResponse.getTypeUrl = function(prefix) {
-            if (prefix === $undefined)
-                prefix = "type.googleapis.com";
-            return prefix + "/routerrpc.SendToRouteResponse";
-        };
-
-        return SendToRouteResponse;
     })();
 
     routerrpc.ResetMissionControlRequest = (function() {
@@ -125861,6 +125631,30 @@ export const routerrpc = $root.routerrpc = (() => {
                 case 22:
                     message.failure_detail = 22;
                     break;
+                case "INVOICE_ALREADY_SETTLED":
+                case 23:
+                    message.failure_detail = 23;
+                    break;
+                case "HTLC_INVOICE_TYPE_MISMATCH":
+                case 24:
+                    message.failure_detail = 24;
+                    break;
+                case "AMP_ERROR":
+                case 25:
+                    message.failure_detail = 25;
+                    break;
+                case "AMP_RECONSTRUCTION":
+                case 26:
+                    message.failure_detail = 26;
+                    break;
+                case "EXTERNAL_VALIDATION_FAILED":
+                case 27:
+                    message.failure_detail = 27;
+                    break;
+                case "INVOICE_INTERCEPTOR_ERROR":
+                case 28:
+                    message.failure_detail = 28;
+                    break;
                 default:
                     if (typeof object.failure_detail === "number" && (object.failure_detail | 0) === object.failure_detail)
                         message.failure_detail = object.failure_detail;
@@ -125960,6 +125754,12 @@ export const routerrpc = $root.routerrpc = (() => {
      * @property {number} INVALID_KEYSEND=20 INVALID_KEYSEND value
      * @property {number} MPP_IN_PROGRESS=21 MPP_IN_PROGRESS value
      * @property {number} CIRCULAR_ROUTE=22 CIRCULAR_ROUTE value
+     * @property {number} INVOICE_ALREADY_SETTLED=23 INVOICE_ALREADY_SETTLED value
+     * @property {number} HTLC_INVOICE_TYPE_MISMATCH=24 HTLC_INVOICE_TYPE_MISMATCH value
+     * @property {number} AMP_ERROR=25 AMP_ERROR value
+     * @property {number} AMP_RECONSTRUCTION=26 AMP_RECONSTRUCTION value
+     * @property {number} EXTERNAL_VALIDATION_FAILED=27 EXTERNAL_VALIDATION_FAILED value
+     * @property {number} INVOICE_INTERCEPTOR_ERROR=28 INVOICE_INTERCEPTOR_ERROR value
      */
     routerrpc.FailureDetail = (function() {
         const valuesById = $Object.create(null), values = $Object.create(valuesById);
@@ -125986,423 +125786,13 @@ export const routerrpc = $root.routerrpc = (() => {
         values[valuesById[20] = "INVALID_KEYSEND"] = 20;
         values[valuesById[21] = "MPP_IN_PROGRESS"] = 21;
         values[valuesById[22] = "CIRCULAR_ROUTE"] = 22;
+        values[valuesById[23] = "INVOICE_ALREADY_SETTLED"] = 23;
+        values[valuesById[24] = "HTLC_INVOICE_TYPE_MISMATCH"] = 24;
+        values[valuesById[25] = "AMP_ERROR"] = 25;
+        values[valuesById[26] = "AMP_RECONSTRUCTION"] = 26;
+        values[valuesById[27] = "EXTERNAL_VALIDATION_FAILED"] = 27;
+        values[valuesById[28] = "INVOICE_INTERCEPTOR_ERROR"] = 28;
         return values;
-    })();
-
-    /**
-     * PaymentState enum.
-     * @name routerrpc.PaymentState
-     * @enum {number}
-     * @property {number} IN_FLIGHT=0 IN_FLIGHT value
-     * @property {number} SUCCEEDED=1 SUCCEEDED value
-     * @property {number} FAILED_TIMEOUT=2 FAILED_TIMEOUT value
-     * @property {number} FAILED_NO_ROUTE=3 FAILED_NO_ROUTE value
-     * @property {number} FAILED_ERROR=4 FAILED_ERROR value
-     * @property {number} FAILED_INCORRECT_PAYMENT_DETAILS=5 FAILED_INCORRECT_PAYMENT_DETAILS value
-     * @property {number} FAILED_INSUFFICIENT_BALANCE=6 FAILED_INSUFFICIENT_BALANCE value
-     */
-    routerrpc.PaymentState = (function() {
-        const valuesById = $Object.create(null), values = $Object.create(valuesById);
-        values[valuesById[0] = "IN_FLIGHT"] = 0;
-        values[valuesById[1] = "SUCCEEDED"] = 1;
-        values[valuesById[2] = "FAILED_TIMEOUT"] = 2;
-        values[valuesById[3] = "FAILED_NO_ROUTE"] = 3;
-        values[valuesById[4] = "FAILED_ERROR"] = 4;
-        values[valuesById[5] = "FAILED_INCORRECT_PAYMENT_DETAILS"] = 5;
-        values[valuesById[6] = "FAILED_INSUFFICIENT_BALANCE"] = 6;
-        return values;
-    })();
-
-    routerrpc.PaymentStatus = (function() {
-
-        /**
-         * Properties of a PaymentStatus.
-         * @typedef {Object} routerrpc.PaymentStatus.$Properties
-         * @property {routerrpc.PaymentState|null} [state] PaymentStatus state
-         * @property {Uint8Array|null} [preimage] PaymentStatus preimage
-         * @property {Array.<lnrpc.HTLCAttempt.$Properties>|null} [htlcs] PaymentStatus htlcs
-         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
-         */
-
-        /**
-         * Properties of a PaymentStatus.
-         * @memberof routerrpc
-         * @interface IPaymentStatus
-         * @augments routerrpc.PaymentStatus.$Properties
-         * @deprecated Use routerrpc.PaymentStatus.$Properties instead.
-         */
-
-        /**
-         * Shape of a PaymentStatus.
-         * @typedef {routerrpc.PaymentStatus.$Properties} routerrpc.PaymentStatus.$Shape
-         */
-
-        /**
-         * Constructs a new PaymentStatus.
-         * @memberof routerrpc
-         * @classdesc Represents a PaymentStatus.
-         * @constructor
-         * @param {routerrpc.PaymentStatus.$Properties=} [properties] Properties to set
-         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
-         */
-        const PaymentStatus = function (properties) {
-            this.htlcs = [];
-            if (properties)
-                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
-                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
-                        this[keys[i]] = properties[keys[i]];
-        };
-
-        /**
-         * PaymentStatus state.
-         * @member {routerrpc.PaymentState} state
-         * @memberof routerrpc.PaymentStatus
-         * @instance
-         */
-        PaymentStatus.prototype.state = 0;
-
-        /**
-         * PaymentStatus preimage.
-         * @member {Uint8Array} preimage
-         * @memberof routerrpc.PaymentStatus
-         * @instance
-         */
-        PaymentStatus.prototype.preimage = $util.newBuffer([]);
-
-        /**
-         * PaymentStatus htlcs.
-         * @member {Array.<lnrpc.HTLCAttempt.$Properties>} htlcs
-         * @memberof routerrpc.PaymentStatus
-         * @instance
-         */
-        PaymentStatus.prototype.htlcs = $util.emptyArray;
-
-        /**
-         * Creates a new PaymentStatus instance using the specified properties.
-         * @function create
-         * @memberof routerrpc.PaymentStatus
-         * @static
-         * @param {routerrpc.PaymentStatus.$Properties=} [properties] Properties to set
-         * @returns {routerrpc.PaymentStatus} PaymentStatus instance
-         * @type {{
-         *   (properties: routerrpc.PaymentStatus.$Shape): routerrpc.PaymentStatus & routerrpc.PaymentStatus.$Shape;
-         *   (properties?: routerrpc.PaymentStatus.$Properties): routerrpc.PaymentStatus;
-         * }}
-         */
-        PaymentStatus.create = function(properties) {
-            return new PaymentStatus(properties);
-        };
-
-        /**
-         * Encodes the specified PaymentStatus message. Does not implicitly {@link routerrpc.PaymentStatus.verify|verify} messages.
-         * @function encode
-         * @memberof routerrpc.PaymentStatus
-         * @static
-         * @param {routerrpc.PaymentStatus.$Properties} message PaymentStatus message or plain object to encode
-         * @param {$protobuf.Writer} [writer] Writer to encode to
-         * @returns {$protobuf.Writer} Writer
-         */
-        PaymentStatus.encode = function (message, writer, _depth) {
-            if (!writer)
-                writer = $Writer.create();
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $util.recursionLimit)
-                throw $Error("max depth exceeded");
-            if (message.state != null && $Object.hasOwnProperty.call(message, "state") && message.state !== 0)
-                writer.uint32(/* id 1, wireType 0 =*/8).int32(message.state);
-            if (message.preimage != null && $Object.hasOwnProperty.call(message, "preimage") && message.preimage.length)
-                writer.uint32(/* id 2, wireType 2 =*/18).bytes(message.preimage);
-            if (message.htlcs != null && message.htlcs.length)
-                for (let i = 0; i < message.htlcs.length; ++i)
-                    $root.lnrpc.HTLCAttempt.encode(message.htlcs[i], writer.uint32(/* id 4, wireType 2 =*/34).fork(), _depth + 1).ldelim();
-            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
-                for (let i = 0; i < message.$unknowns.length; ++i)
-                    writer.raw(message.$unknowns[i]);
-            return writer;
-        };
-
-        /**
-         * Encodes the specified PaymentStatus message, length delimited. Does not implicitly {@link routerrpc.PaymentStatus.verify|verify} messages.
-         * @function encodeDelimited
-         * @memberof routerrpc.PaymentStatus
-         * @static
-         * @param {routerrpc.PaymentStatus.$Properties} message PaymentStatus message or plain object to encode
-         * @param {$protobuf.Writer} [writer] Writer to encode to
-         * @returns {$protobuf.Writer} Writer
-         */
-        PaymentStatus.encodeDelimited = function(message, writer) {
-            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
-        };
-
-        /**
-         * Decodes a PaymentStatus message from the specified reader or buffer.
-         * @function decode
-         * @memberof routerrpc.PaymentStatus
-         * @static
-         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @param {number} [length] Message length if known beforehand
-         * @returns {routerrpc.PaymentStatus & routerrpc.PaymentStatus.$Shape} PaymentStatus
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        PaymentStatus.decode = function (reader, length, _end, _depth, _target) {
-            if (!(reader instanceof $Reader))
-                reader = $Reader.create(reader);
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $Reader.recursionLimit)
-                throw $Error("max depth exceeded");
-            let end, message, value;
-            if (length === $undefined)
-                end = reader.len;
-            else {
-                end = reader.pos + length;
-                if (end > reader.len)
-                    throw $RangeError("index out of range");
-                length = reader.len;
-                reader.len = end;
-            }
-            message = _target || new $root.routerrpc.PaymentStatus();
-            while (reader.pos < end) {
-                let start = reader.pos;
-                let tag = reader.tag();
-                if (tag === _end) {
-                    _end = $undefined;
-                    break;
-                }
-                let wireType = tag & 7;
-                switch (tag >>>= 3) {
-                case 1: {
-                        if (wireType !== 0)
-                            break;
-                        if (value = reader.int32())
-                            message.state = value;
-                        else
-                            delete message.state;
-                        continue;
-                    }
-                case 2: {
-                        if (wireType !== 2)
-                            break;
-                        if ((value = reader.bytes()).length)
-                            message.preimage = value;
-                        else
-                            delete message.preimage;
-                        continue;
-                    }
-                case 4: {
-                        if (wireType !== 2)
-                            break;
-                        if (!(message.htlcs && message.htlcs.length))
-                            message.htlcs = [];
-                        message.htlcs.push($root.lnrpc.HTLCAttempt.decode(reader, reader.uint32(), $undefined, _depth + 1));
-                        continue;
-                    }
-                }
-                reader.skipType(wireType, _depth, tag);
-                if (!reader.discardUnknown) {
-                    $util.makeProp(message, "$unknowns", false);
-                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
-                }
-            }
-            if (length !== $undefined) {
-                if (reader.pos !== end)
-                    throw $RangeError("index out of range");
-                reader.len = length;
-            }
-            if (_end !== $undefined)
-                throw $Error("missing end group");
-            return message;
-        };
-
-        /**
-         * Decodes a PaymentStatus message from the specified reader or buffer, length delimited.
-         * @function decodeDelimited
-         * @memberof routerrpc.PaymentStatus
-         * @static
-         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
-         * @returns {routerrpc.PaymentStatus & routerrpc.PaymentStatus.$Shape} PaymentStatus
-         * @throws {Error} If the payload is not a reader or valid buffer
-         * @throws {$protobuf.util.ProtocolError} If required fields are missing
-         */
-        PaymentStatus.decodeDelimited = function(reader) {
-            if (!(reader instanceof $Reader))
-                reader = new $Reader(reader);
-            return this.decode(reader, reader.uint32());
-        };
-
-        /**
-         * Verifies a PaymentStatus message.
-         * @function verify
-         * @memberof routerrpc.PaymentStatus
-         * @static
-         * @param {Object.<string,*>} message Plain object to verify
-         * @returns {string|null} `null` if valid, otherwise the reason why it is not
-         */
-        PaymentStatus.verify = function (message, _depth) {
-            if (typeof message !== "object" || message === null)
-                return "object expected";
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $util.recursionLimit)
-                return "max depth exceeded";
-            if (message.state != null && $Object.hasOwnProperty.call(message, "state"))
-                if (typeof message.state !== "number" || (message.state | 0) !== message.state)
-                    return "state: enum value expected";
-            if (message.preimage != null && $Object.hasOwnProperty.call(message, "preimage"))
-                if (!(message.preimage && typeof message.preimage.length === "number" || $util.isString(message.preimage)))
-                    return "preimage: buffer expected";
-            if (message.htlcs != null && $Object.hasOwnProperty.call(message, "htlcs")) {
-                if (!$Array.isArray(message.htlcs))
-                    return "htlcs: array expected";
-                for (let i = 0; i < message.htlcs.length; ++i) {
-                    let error = $root.lnrpc.HTLCAttempt.verify(message.htlcs[i], _depth + 1);
-                    if (error)
-                        return "htlcs." + error;
-                }
-            }
-            return null;
-        };
-
-        /**
-         * Creates a PaymentStatus message from a plain object. Also converts values to their respective internal types.
-         * @function fromObject
-         * @memberof routerrpc.PaymentStatus
-         * @static
-         * @param {Object.<string,*>} object Plain object
-         * @returns {routerrpc.PaymentStatus} PaymentStatus
-         */
-        PaymentStatus.fromObject = function (object, _depth) {
-            if (object instanceof $root.routerrpc.PaymentStatus)
-                return object;
-            if (!$util.isObject(object))
-                throw $TypeError(".routerrpc.PaymentStatus: object expected");
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $util.recursionLimit)
-                throw $Error("max depth exceeded");
-            let message = new $root.routerrpc.PaymentStatus();
-            if (object.state !== 0 && (typeof object.state !== "string" || $root.routerrpc.PaymentState[object.state] !== 0))
-                switch (object.state) {
-                case "IN_FLIGHT":
-                case 0:
-                    message.state = 0;
-                    break;
-                case "SUCCEEDED":
-                case 1:
-                    message.state = 1;
-                    break;
-                case "FAILED_TIMEOUT":
-                case 2:
-                    message.state = 2;
-                    break;
-                case "FAILED_NO_ROUTE":
-                case 3:
-                    message.state = 3;
-                    break;
-                case "FAILED_ERROR":
-                case 4:
-                    message.state = 4;
-                    break;
-                case "FAILED_INCORRECT_PAYMENT_DETAILS":
-                case 5:
-                    message.state = 5;
-                    break;
-                case "FAILED_INSUFFICIENT_BALANCE":
-                case 6:
-                    message.state = 6;
-                    break;
-                default:
-                    if (typeof object.state === "number" && (object.state | 0) === object.state)
-                        message.state = object.state;
-                }
-            if (object.preimage != null)
-                if (object.preimage.length)
-                    if (typeof object.preimage === "string")
-                        $util.base64.decode(object.preimage, message.preimage = $util.newBuffer($util.base64.length(object.preimage)), 0);
-                    else if (object.preimage.length >= 0)
-                        message.preimage = object.preimage;
-            if (object.htlcs) {
-                if (!$Array.isArray(object.htlcs))
-                    throw $TypeError(".routerrpc.PaymentStatus.htlcs: array expected");
-                message.htlcs = $Array(object.htlcs.length);
-                for (let i = 0; i < object.htlcs.length; ++i) {
-                    if (!$util.isObject(object.htlcs[i]))
-                        throw $TypeError(".routerrpc.PaymentStatus.htlcs: object expected");
-                    message.htlcs[i] = $root.lnrpc.HTLCAttempt.fromObject(object.htlcs[i], _depth + 1);
-                }
-            }
-            return message;
-        };
-
-        /**
-         * Creates a plain object from a PaymentStatus message. Also converts values to other types if specified.
-         * @function toObject
-         * @memberof routerrpc.PaymentStatus
-         * @static
-         * @param {routerrpc.PaymentStatus} message PaymentStatus
-         * @param {$protobuf.IConversionOptions} [options] Conversion options
-         * @returns {Object.<string,*>} Plain object
-         */
-        PaymentStatus.toObject = function (message, options, _depth) {
-            if (!options)
-                options = {};
-            if (_depth === $undefined)
-                _depth = 0;
-            if (_depth > $util.recursionLimit)
-                throw $Error("max depth exceeded");
-            let object = {};
-            if (options.arrays || options.defaults)
-                object.htlcs = [];
-            if (options.defaults) {
-                object.state = options.enums === $String ? "IN_FLIGHT" : 0;
-                if (options.bytes === $String)
-                    object.preimage = "";
-                else {
-                    object.preimage = [];
-                    if (options.bytes !== $Array)
-                        object.preimage = $util.newBuffer(object.preimage);
-                }
-            }
-            if (message.state != null && $Object.hasOwnProperty.call(message, "state"))
-                object.state = options.enums === $String ? $root.routerrpc.PaymentState[message.state] === $undefined ? message.state : $root.routerrpc.PaymentState[message.state] : message.state;
-            if (message.preimage != null && $Object.hasOwnProperty.call(message, "preimage"))
-                object.preimage = options.bytes === $String ? $util.base64.encode(message.preimage, 0, message.preimage.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.preimage) : message.preimage;
-            if (message.htlcs && message.htlcs.length) {
-                object.htlcs = $Array(message.htlcs.length);
-                for (let j = 0; j < message.htlcs.length; ++j)
-                    object.htlcs[j] = $root.lnrpc.HTLCAttempt.toObject(message.htlcs[j], options, _depth + 1);
-            }
-            return object;
-        };
-
-        /**
-         * Converts this PaymentStatus to JSON.
-         * @function toJSON
-         * @memberof routerrpc.PaymentStatus
-         * @instance
-         * @returns {Object.<string,*>} JSON object
-         */
-        PaymentStatus.prototype.toJSON = function() {
-            return PaymentStatus.toObject(this, $protobuf.util.toJSONOptions);
-        };
-
-        /**
-         * Gets the type url for PaymentStatus
-         * @function getTypeUrl
-         * @memberof routerrpc.PaymentStatus
-         * @static
-         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
-         * @returns {string} The type url
-         */
-        PaymentStatus.getTypeUrl = function(prefix) {
-            if (prefix === $undefined)
-                prefix = "type.googleapis.com";
-            return prefix + "/routerrpc.PaymentStatus";
-        };
-
-        return PaymentStatus;
     })();
 
     routerrpc.CircuitKey = (function() {
@@ -126758,6 +126148,7 @@ export const routerrpc = $root.routerrpc = (() => {
          * @property {Uint8Array|null} [onion_blob] ForwardHtlcInterceptRequest onion_blob
          * @property {number|null} [auto_fail_height] ForwardHtlcInterceptRequest auto_fail_height
          * @property {Object.<string,Uint8Array>|null} [in_wire_custom_records] ForwardHtlcInterceptRequest in_wire_custom_records
+         * @property {Uint8Array|null} [outgoing_requested_node_id] ForwardHtlcInterceptRequest outgoing_requested_node_id
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -126880,6 +126271,14 @@ export const routerrpc = $root.routerrpc = (() => {
         ForwardHtlcInterceptRequest.prototype.in_wire_custom_records = $util.emptyObject;
 
         /**
+         * ForwardHtlcInterceptRequest outgoing_requested_node_id.
+         * @member {Uint8Array} outgoing_requested_node_id
+         * @memberof routerrpc.ForwardHtlcInterceptRequest
+         * @instance
+         */
+        ForwardHtlcInterceptRequest.prototype.outgoing_requested_node_id = $util.newBuffer([]);
+
+        /**
          * Creates a new ForwardHtlcInterceptRequest instance using the specified properties.
          * @function create
          * @memberof routerrpc.ForwardHtlcInterceptRequest
@@ -126935,6 +126334,8 @@ export const routerrpc = $root.routerrpc = (() => {
             if (message.in_wire_custom_records != null && $Object.hasOwnProperty.call(message, "in_wire_custom_records"))
                 for (let keys = $Object.keys(message.in_wire_custom_records), i = 0; i < keys.length; ++i)
                     writer.uint32(/* id 11, wireType 2 =*/90).fork().uint32(/* id 1, wireType 0 =*/8).uint64($util.longFromKey(keys[i], true)).uint32(/* id 2, wireType 2 =*/18).bytes(message.in_wire_custom_records[keys[i]]).ldelim();
+            if (message.outgoing_requested_node_id != null && $Object.hasOwnProperty.call(message, "outgoing_requested_node_id") && message.outgoing_requested_node_id.length)
+                writer.uint32(/* id 12, wireType 2 =*/98).bytes(message.outgoing_requested_node_id);
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -127138,6 +126539,15 @@ export const routerrpc = $root.routerrpc = (() => {
                         message.in_wire_custom_records[typeof key === "object" ? $util.longToHash(key) : key] = value;
                         continue;
                     }
+                case 12: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.bytes()).length)
+                            message.outgoing_requested_node_id = value;
+                        else
+                            delete message.outgoing_requested_node_id;
+                        continue;
+                    }
                 }
                 reader.skipType(wireType, _depth, tag);
                 if (!reader.discardUnknown) {
@@ -127237,6 +126647,9 @@ export const routerrpc = $root.routerrpc = (() => {
                         return "in_wire_custom_records: buffer{k:uint64} expected";
                 }
             }
+            if (message.outgoing_requested_node_id != null && $Object.hasOwnProperty.call(message, "outgoing_requested_node_id"))
+                if (!(message.outgoing_requested_node_id && typeof message.outgoing_requested_node_id.length === "number" || $util.isString(message.outgoing_requested_node_id)))
+                    return "outgoing_requested_node_id: buffer expected";
             return null;
         };
 
@@ -127340,6 +126753,12 @@ export const routerrpc = $root.routerrpc = (() => {
                         message.in_wire_custom_records[keys[i]] = object.in_wire_custom_records[keys[i]];
                 }
             }
+            if (object.outgoing_requested_node_id != null)
+                if (object.outgoing_requested_node_id.length)
+                    if (typeof object.outgoing_requested_node_id === "string")
+                        $util.base64.decode(object.outgoing_requested_node_id, message.outgoing_requested_node_id = $util.newBuffer($util.base64.length(object.outgoing_requested_node_id)), 0);
+                    else if (object.outgoing_requested_node_id.length >= 0)
+                        message.outgoing_requested_node_id = object.outgoing_requested_node_id;
             return message;
         };
 
@@ -127398,6 +126817,13 @@ export const routerrpc = $root.routerrpc = (() => {
                         object.onion_blob = $util.newBuffer(object.onion_blob);
                 }
                 object.auto_fail_height = 0;
+                if (options.bytes === $String)
+                    object.outgoing_requested_node_id = "";
+                else {
+                    object.outgoing_requested_node_id = [];
+                    if (options.bytes !== $Array)
+                        object.outgoing_requested_node_id = $util.newBuffer(object.outgoing_requested_node_id);
+                }
             }
             if (message.incoming_circuit_key != null && $Object.hasOwnProperty.call(message, "incoming_circuit_key"))
                 object.incoming_circuit_key = $root.routerrpc.CircuitKey.toObject(message.incoming_circuit_key, options, _depth + 1);
@@ -127451,6 +126877,8 @@ export const routerrpc = $root.routerrpc = (() => {
                     object.in_wire_custom_records[k2] = options.bytes === $String ? $util.base64.encode(message.in_wire_custom_records[keys2[j]], 0, message.in_wire_custom_records[keys2[j]].length) : options.bytes === $Array ? $Array.prototype.slice.call(message.in_wire_custom_records[keys2[j]]) : message.in_wire_custom_records[keys2[j]];
                 }
             }
+            if (message.outgoing_requested_node_id != null && $Object.hasOwnProperty.call(message, "outgoing_requested_node_id"))
+                object.outgoing_requested_node_id = options.bytes === $String ? $util.base64.encode(message.outgoing_requested_node_id, 0, message.outgoing_requested_node_id.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.outgoing_requested_node_id) : message.outgoing_requested_node_id;
             return object;
         };
 
@@ -127522,6 +126950,14 @@ export const routerrpc = $root.routerrpc = (() => {
          * field modifications.
          * - `Reject`: Fail the htlc backwards.
          * - `Settle`: Settle this htlc with a given preimage.
+         * 
+         * Once the incoming channel has force-closed and the HTLC is being resolved
+         * on-chain (see auto_fail_height), only `Settle` has any effect. The HTLC can no
+         * longer be resumed or failed back off-chain, so `Resume`, `ResumeModified`, and
+         * `Fail` return a stream-terminating error. The HTLC stays held until it is
+         * settled with a preimage, the on-chain resolver completes, or it expires
+         * on-chain. Clients should reconnect to receive any held HTLCs that remain
+         * unresolved.
          * @constructor
          * @param {routerrpc.ForwardHtlcInterceptResponse.$Properties=} [properties] Properties to set
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
@@ -130555,6 +129991,713 @@ export const routerrpc = $root.routerrpc = (() => {
         return FindBaseAliasResponse;
     })();
 
+    routerrpc.DeleteForwardingHistoryRequest = (function() {
+
+        /**
+         * Properties of a DeleteForwardingHistoryRequest.
+         * @typedef {Object} routerrpc.DeleteForwardingHistoryRequest.$Properties
+         * @property {Long|null} [delete_before_time] DeleteForwardingHistoryRequest delete_before_time
+         * @property {string|null} [delete_before_duration] DeleteForwardingHistoryRequest delete_before_duration
+         * @property {"delete_before_time"|"delete_before_duration"} [time_spec] DeleteForwardingHistoryRequest time_spec
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+
+        /**
+         * Properties of a DeleteForwardingHistoryRequest.
+         * @memberof routerrpc
+         * @interface IDeleteForwardingHistoryRequest
+         * @augments routerrpc.DeleteForwardingHistoryRequest.$Properties
+         * @deprecated Use routerrpc.DeleteForwardingHistoryRequest.$Properties instead.
+         */
+
+        /**
+         * Narrowed shape of a DeleteForwardingHistoryRequest.
+         * @typedef {{
+         *   delete_before_time?: Long|null;
+         *   delete_before_duration?: string|null;
+         *   $unknowns?: Array.<Uint8Array>;
+         * } & (
+         *   ({ time_spec?: undefined; delete_before_time?: null; delete_before_duration?: null }|{ time_spec?: "delete_before_time"; delete_before_time: Long; delete_before_duration?: null }|{ time_spec?: "delete_before_duration"; delete_before_time?: null; delete_before_duration: string })
+         * )} routerrpc.DeleteForwardingHistoryRequest.$Shape
+         */
+
+        /**
+         * Constructs a new DeleteForwardingHistoryRequest.
+         * @memberof routerrpc
+         * @classdesc Represents a DeleteForwardingHistoryRequest.
+         * @constructor
+         * @param {routerrpc.DeleteForwardingHistoryRequest.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+        const DeleteForwardingHistoryRequest = function (properties) {
+            if (properties)
+                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+        };
+
+        /**
+         * DeleteForwardingHistoryRequest delete_before_time.
+         * @member {Long|null|undefined} delete_before_time
+         * @memberof routerrpc.DeleteForwardingHistoryRequest
+         * @instance
+         */
+        DeleteForwardingHistoryRequest.prototype.delete_before_time = null;
+
+        /**
+         * DeleteForwardingHistoryRequest delete_before_duration.
+         * @member {string|null|undefined} delete_before_duration
+         * @memberof routerrpc.DeleteForwardingHistoryRequest
+         * @instance
+         */
+        DeleteForwardingHistoryRequest.prototype.delete_before_duration = null;
+
+        // OneOf field names bound to virtual getters and setters
+        let $oneOfFields;
+
+        /**
+         * DeleteForwardingHistoryRequest time_spec.
+         * @member {"delete_before_time"|"delete_before_duration"|undefined} time_spec
+         * @memberof routerrpc.DeleteForwardingHistoryRequest
+         * @instance
+         */
+        $Object.defineProperty(DeleteForwardingHistoryRequest.prototype, "time_spec", {
+            get: $util.oneOfGetter($oneOfFields = ["delete_before_time", "delete_before_duration"]),
+            set: $util.oneOfSetter($oneOfFields)
+        });
+
+        /**
+         * Creates a new DeleteForwardingHistoryRequest instance using the specified properties.
+         * @function create
+         * @memberof routerrpc.DeleteForwardingHistoryRequest
+         * @static
+         * @param {routerrpc.DeleteForwardingHistoryRequest.$Properties=} [properties] Properties to set
+         * @returns {routerrpc.DeleteForwardingHistoryRequest} DeleteForwardingHistoryRequest instance
+         * @type {{
+         *   (properties: routerrpc.DeleteForwardingHistoryRequest.$Shape): routerrpc.DeleteForwardingHistoryRequest & routerrpc.DeleteForwardingHistoryRequest.$Shape;
+         *   (properties?: routerrpc.DeleteForwardingHistoryRequest.$Properties): routerrpc.DeleteForwardingHistoryRequest;
+         * }}
+         */
+        DeleteForwardingHistoryRequest.create = function(properties) {
+            return new DeleteForwardingHistoryRequest(properties);
+        };
+
+        /**
+         * Encodes the specified DeleteForwardingHistoryRequest message. Does not implicitly {@link routerrpc.DeleteForwardingHistoryRequest.verify|verify} messages.
+         * @function encode
+         * @memberof routerrpc.DeleteForwardingHistoryRequest
+         * @static
+         * @param {routerrpc.DeleteForwardingHistoryRequest.$Properties} message DeleteForwardingHistoryRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        DeleteForwardingHistoryRequest.encode = function (message, writer, _depth) {
+            if (!writer)
+                writer = $Writer.create();
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            if (message.delete_before_time != null && $Object.hasOwnProperty.call(message, "delete_before_time"))
+                writer.uint32(/* id 1, wireType 0 =*/8).uint64(message.delete_before_time);
+            if (message.delete_before_duration != null && $Object.hasOwnProperty.call(message, "delete_before_duration"))
+                writer.uint32(/* id 2, wireType 2 =*/18).string(message.delete_before_duration);
+            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified DeleteForwardingHistoryRequest message, length delimited. Does not implicitly {@link routerrpc.DeleteForwardingHistoryRequest.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof routerrpc.DeleteForwardingHistoryRequest
+         * @static
+         * @param {routerrpc.DeleteForwardingHistoryRequest.$Properties} message DeleteForwardingHistoryRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        DeleteForwardingHistoryRequest.encodeDelimited = function(message, writer) {
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+        };
+
+        /**
+         * Decodes a DeleteForwardingHistoryRequest message from the specified reader or buffer.
+         * @function decode
+         * @memberof routerrpc.DeleteForwardingHistoryRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {routerrpc.DeleteForwardingHistoryRequest & routerrpc.DeleteForwardingHistoryRequest.$Shape} DeleteForwardingHistoryRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        DeleteForwardingHistoryRequest.decode = function (reader, length, _end, _depth, _target) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw $Error("max depth exceeded");
+            let end, message;
+            if (length === $undefined)
+                end = reader.len;
+            else {
+                end = reader.pos + length;
+                if (end > reader.len)
+                    throw $RangeError("index out of range");
+                length = reader.len;
+                reader.len = end;
+            }
+            message = _target || new $root.routerrpc.DeleteForwardingHistoryRequest();
+            while (reader.pos < end) {
+                let start = reader.pos;
+                let tag = reader.tag();
+                if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                }
+                let wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 0)
+                            break;
+                        message.delete_before_time = reader.uint64();
+                        message.time_spec = "delete_before_time";
+                        continue;
+                    }
+                case 2: {
+                        if (wireType !== 2)
+                            break;
+                        message.delete_before_duration = reader.stringVerify();
+                        message.time_spec = "delete_before_duration";
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                }
+            }
+            if (length !== $undefined) {
+                if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                reader.len = length;
+            }
+            if (_end !== $undefined)
+                throw $Error("missing end group");
+            return message;
+        };
+
+        /**
+         * Decodes a DeleteForwardingHistoryRequest message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof routerrpc.DeleteForwardingHistoryRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {routerrpc.DeleteForwardingHistoryRequest & routerrpc.DeleteForwardingHistoryRequest.$Shape} DeleteForwardingHistoryRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        DeleteForwardingHistoryRequest.decodeDelimited = function(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a DeleteForwardingHistoryRequest message.
+         * @function verify
+         * @memberof routerrpc.DeleteForwardingHistoryRequest
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        DeleteForwardingHistoryRequest.verify = function (message, _depth) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
+            let properties = {};
+            if (message.delete_before_time != null && $Object.hasOwnProperty.call(message, "delete_before_time")) {
+                properties.time_spec = 1;
+                if (!$util.isInteger(message.delete_before_time) && !(message.delete_before_time && $util.isInteger(message.delete_before_time.low) && $util.isInteger(message.delete_before_time.high)))
+                    return "delete_before_time: integer|Long expected";
+            }
+            if (message.delete_before_duration != null && $Object.hasOwnProperty.call(message, "delete_before_duration")) {
+                if (properties.time_spec === 1)
+                    return "time_spec: multiple values";
+                properties.time_spec = 1;
+                if (!$util.isString(message.delete_before_duration))
+                    return "delete_before_duration: string expected";
+            }
+            return null;
+        };
+
+        /**
+         * Creates a DeleteForwardingHistoryRequest message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof routerrpc.DeleteForwardingHistoryRequest
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {routerrpc.DeleteForwardingHistoryRequest} DeleteForwardingHistoryRequest
+         */
+        DeleteForwardingHistoryRequest.fromObject = function (object, _depth) {
+            if (object instanceof $root.routerrpc.DeleteForwardingHistoryRequest)
+                return object;
+            if (!$util.isObject(object))
+                throw $TypeError(".routerrpc.DeleteForwardingHistoryRequest: object expected");
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let message = new $root.routerrpc.DeleteForwardingHistoryRequest();
+            if (object.delete_before_time != null)
+                if ($util.Long)
+                    message.delete_before_time = $util.Long.fromValue(object.delete_before_time, true);
+                else if (typeof object.delete_before_time === "string")
+                    message.delete_before_time = $parseInt(object.delete_before_time, 10);
+                else if (typeof object.delete_before_time === "number")
+                    message.delete_before_time = object.delete_before_time;
+                else if (typeof object.delete_before_time === "object")
+                    message.delete_before_time = new $util.LongBits(object.delete_before_time.low >>> 0, object.delete_before_time.high >>> 0).toNumber(true);
+            if (object.delete_before_duration != null)
+                message.delete_before_duration = $String(object.delete_before_duration);
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a DeleteForwardingHistoryRequest message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof routerrpc.DeleteForwardingHistoryRequest
+         * @static
+         * @param {routerrpc.DeleteForwardingHistoryRequest} message DeleteForwardingHistoryRequest
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        DeleteForwardingHistoryRequest.toObject = function (message, options, _depth) {
+            if (!options)
+                options = {};
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let object = {};
+            if (message.delete_before_time != null && $Object.hasOwnProperty.call(message, "delete_before_time")) {
+                if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
+                    object.delete_before_time = typeof message.delete_before_time === "number" ? $BigInt(message.delete_before_time) : $util.Long.fromBits(message.delete_before_time.low >>> 0, message.delete_before_time.high >>> 0, true).toBigInt();
+                else if (typeof message.delete_before_time === "number")
+                    object.delete_before_time = options.longs === $String ? $String(message.delete_before_time) : message.delete_before_time;
+                else
+                    object.delete_before_time = options.longs === $String ? $util.Long.prototype.toString.call(message.delete_before_time) : options.longs === $Number ? new $util.LongBits(message.delete_before_time.low >>> 0, message.delete_before_time.high >>> 0).toNumber(true) : message.delete_before_time;
+                if (options.oneofs)
+                    object.time_spec = "delete_before_time";
+            }
+            if (message.delete_before_duration != null && $Object.hasOwnProperty.call(message, "delete_before_duration")) {
+                object.delete_before_duration = message.delete_before_duration;
+                if (options.oneofs)
+                    object.time_spec = "delete_before_duration";
+            }
+            return object;
+        };
+
+        /**
+         * Converts this DeleteForwardingHistoryRequest to JSON.
+         * @function toJSON
+         * @memberof routerrpc.DeleteForwardingHistoryRequest
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        DeleteForwardingHistoryRequest.prototype.toJSON = function() {
+            return DeleteForwardingHistoryRequest.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the type url for DeleteForwardingHistoryRequest
+         * @function getTypeUrl
+         * @memberof routerrpc.DeleteForwardingHistoryRequest
+         * @static
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
+         */
+        DeleteForwardingHistoryRequest.getTypeUrl = function(prefix) {
+            if (prefix === $undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/routerrpc.DeleteForwardingHistoryRequest";
+        };
+
+        return DeleteForwardingHistoryRequest;
+    })();
+
+    routerrpc.DeleteForwardingHistoryResponse = (function() {
+
+        /**
+         * Properties of a DeleteForwardingHistoryResponse.
+         * @typedef {Object} routerrpc.DeleteForwardingHistoryResponse.$Properties
+         * @property {Long|null} [events_deleted] DeleteForwardingHistoryResponse events_deleted
+         * @property {Long|null} [total_fee_msat] DeleteForwardingHistoryResponse total_fee_msat
+         * @property {string|null} [status] DeleteForwardingHistoryResponse status
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+
+        /**
+         * Properties of a DeleteForwardingHistoryResponse.
+         * @memberof routerrpc
+         * @interface IDeleteForwardingHistoryResponse
+         * @augments routerrpc.DeleteForwardingHistoryResponse.$Properties
+         * @deprecated Use routerrpc.DeleteForwardingHistoryResponse.$Properties instead.
+         */
+
+        /**
+         * Shape of a DeleteForwardingHistoryResponse.
+         * @typedef {routerrpc.DeleteForwardingHistoryResponse.$Properties} routerrpc.DeleteForwardingHistoryResponse.$Shape
+         */
+
+        /**
+         * Constructs a new DeleteForwardingHistoryResponse.
+         * @memberof routerrpc
+         * @classdesc Represents a DeleteForwardingHistoryResponse.
+         * @constructor
+         * @param {routerrpc.DeleteForwardingHistoryResponse.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+        const DeleteForwardingHistoryResponse = function (properties) {
+            if (properties)
+                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+        };
+
+        /**
+         * DeleteForwardingHistoryResponse events_deleted.
+         * @member {Long} events_deleted
+         * @memberof routerrpc.DeleteForwardingHistoryResponse
+         * @instance
+         */
+        DeleteForwardingHistoryResponse.prototype.events_deleted = $util.Long ? $util.Long.fromBits(0,0,true) : 0;
+
+        /**
+         * DeleteForwardingHistoryResponse total_fee_msat.
+         * @member {Long} total_fee_msat
+         * @memberof routerrpc.DeleteForwardingHistoryResponse
+         * @instance
+         */
+        DeleteForwardingHistoryResponse.prototype.total_fee_msat = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+        /**
+         * DeleteForwardingHistoryResponse status.
+         * @member {string} status
+         * @memberof routerrpc.DeleteForwardingHistoryResponse
+         * @instance
+         */
+        DeleteForwardingHistoryResponse.prototype.status = "";
+
+        /**
+         * Creates a new DeleteForwardingHistoryResponse instance using the specified properties.
+         * @function create
+         * @memberof routerrpc.DeleteForwardingHistoryResponse
+         * @static
+         * @param {routerrpc.DeleteForwardingHistoryResponse.$Properties=} [properties] Properties to set
+         * @returns {routerrpc.DeleteForwardingHistoryResponse} DeleteForwardingHistoryResponse instance
+         * @type {{
+         *   (properties: routerrpc.DeleteForwardingHistoryResponse.$Shape): routerrpc.DeleteForwardingHistoryResponse & routerrpc.DeleteForwardingHistoryResponse.$Shape;
+         *   (properties?: routerrpc.DeleteForwardingHistoryResponse.$Properties): routerrpc.DeleteForwardingHistoryResponse;
+         * }}
+         */
+        DeleteForwardingHistoryResponse.create = function(properties) {
+            return new DeleteForwardingHistoryResponse(properties);
+        };
+
+        /**
+         * Encodes the specified DeleteForwardingHistoryResponse message. Does not implicitly {@link routerrpc.DeleteForwardingHistoryResponse.verify|verify} messages.
+         * @function encode
+         * @memberof routerrpc.DeleteForwardingHistoryResponse
+         * @static
+         * @param {routerrpc.DeleteForwardingHistoryResponse.$Properties} message DeleteForwardingHistoryResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        DeleteForwardingHistoryResponse.encode = function (message, writer, _depth) {
+            if (!writer)
+                writer = $Writer.create();
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            if (message.events_deleted != null && $Object.hasOwnProperty.call(message, "events_deleted") && (typeof message.events_deleted === "object" ? message.events_deleted.low || message.events_deleted.high : message.events_deleted !== 0))
+                writer.uint32(/* id 1, wireType 0 =*/8).uint64(message.events_deleted);
+            if (message.total_fee_msat != null && $Object.hasOwnProperty.call(message, "total_fee_msat") && (typeof message.total_fee_msat === "object" ? message.total_fee_msat.low || message.total_fee_msat.high : message.total_fee_msat !== 0))
+                writer.uint32(/* id 2, wireType 0 =*/16).int64(message.total_fee_msat);
+            if (message.status != null && $Object.hasOwnProperty.call(message, "status") && message.status !== "")
+                writer.uint32(/* id 3, wireType 2 =*/26).string(message.status);
+            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified DeleteForwardingHistoryResponse message, length delimited. Does not implicitly {@link routerrpc.DeleteForwardingHistoryResponse.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof routerrpc.DeleteForwardingHistoryResponse
+         * @static
+         * @param {routerrpc.DeleteForwardingHistoryResponse.$Properties} message DeleteForwardingHistoryResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        DeleteForwardingHistoryResponse.encodeDelimited = function(message, writer) {
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+        };
+
+        /**
+         * Decodes a DeleteForwardingHistoryResponse message from the specified reader or buffer.
+         * @function decode
+         * @memberof routerrpc.DeleteForwardingHistoryResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {routerrpc.DeleteForwardingHistoryResponse & routerrpc.DeleteForwardingHistoryResponse.$Shape} DeleteForwardingHistoryResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        DeleteForwardingHistoryResponse.decode = function (reader, length, _end, _depth, _target) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw $Error("max depth exceeded");
+            let end, message, value;
+            if (length === $undefined)
+                end = reader.len;
+            else {
+                end = reader.pos + length;
+                if (end > reader.len)
+                    throw $RangeError("index out of range");
+                length = reader.len;
+                reader.len = end;
+            }
+            message = _target || new $root.routerrpc.DeleteForwardingHistoryResponse();
+            while (reader.pos < end) {
+                let start = reader.pos;
+                let tag = reader.tag();
+                if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                }
+                let wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 0)
+                            break;
+                        if (typeof (value = reader.uint64()) === "object" ? value.low || value.high : value !== 0)
+                            message.events_deleted = value;
+                        else
+                            delete message.events_deleted;
+                        continue;
+                    }
+                case 2: {
+                        if (wireType !== 0)
+                            break;
+                        if (typeof (value = reader.int64()) === "object" ? value.low || value.high : value !== 0)
+                            message.total_fee_msat = value;
+                        else
+                            delete message.total_fee_msat;
+                        continue;
+                    }
+                case 3: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.stringVerify()).length)
+                            message.status = value;
+                        else
+                            delete message.status;
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                }
+            }
+            if (length !== $undefined) {
+                if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                reader.len = length;
+            }
+            if (_end !== $undefined)
+                throw $Error("missing end group");
+            return message;
+        };
+
+        /**
+         * Decodes a DeleteForwardingHistoryResponse message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof routerrpc.DeleteForwardingHistoryResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {routerrpc.DeleteForwardingHistoryResponse & routerrpc.DeleteForwardingHistoryResponse.$Shape} DeleteForwardingHistoryResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        DeleteForwardingHistoryResponse.decodeDelimited = function(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a DeleteForwardingHistoryResponse message.
+         * @function verify
+         * @memberof routerrpc.DeleteForwardingHistoryResponse
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        DeleteForwardingHistoryResponse.verify = function (message, _depth) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
+            if (message.events_deleted != null && $Object.hasOwnProperty.call(message, "events_deleted"))
+                if (!$util.isInteger(message.events_deleted) && !(message.events_deleted && $util.isInteger(message.events_deleted.low) && $util.isInteger(message.events_deleted.high)))
+                    return "events_deleted: integer|Long expected";
+            if (message.total_fee_msat != null && $Object.hasOwnProperty.call(message, "total_fee_msat"))
+                if (!$util.isInteger(message.total_fee_msat) && !(message.total_fee_msat && $util.isInteger(message.total_fee_msat.low) && $util.isInteger(message.total_fee_msat.high)))
+                    return "total_fee_msat: integer|Long expected";
+            if (message.status != null && $Object.hasOwnProperty.call(message, "status"))
+                if (!$util.isString(message.status))
+                    return "status: string expected";
+            return null;
+        };
+
+        /**
+         * Creates a DeleteForwardingHistoryResponse message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof routerrpc.DeleteForwardingHistoryResponse
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {routerrpc.DeleteForwardingHistoryResponse} DeleteForwardingHistoryResponse
+         */
+        DeleteForwardingHistoryResponse.fromObject = function (object, _depth) {
+            if (object instanceof $root.routerrpc.DeleteForwardingHistoryResponse)
+                return object;
+            if (!$util.isObject(object))
+                throw $TypeError(".routerrpc.DeleteForwardingHistoryResponse: object expected");
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let message = new $root.routerrpc.DeleteForwardingHistoryResponse();
+            if (object.events_deleted != null)
+                if (typeof object.events_deleted === "object" ? object.events_deleted.low || object.events_deleted.high : $Number(object.events_deleted) !== 0)
+                    if ($util.Long)
+                        message.events_deleted = $util.Long.fromValue(object.events_deleted, true);
+                    else if (typeof object.events_deleted === "string")
+                        message.events_deleted = $parseInt(object.events_deleted, 10);
+                    else if (typeof object.events_deleted === "number")
+                        message.events_deleted = object.events_deleted;
+                    else if (typeof object.events_deleted === "object")
+                        message.events_deleted = new $util.LongBits(object.events_deleted.low >>> 0, object.events_deleted.high >>> 0).toNumber(true);
+            if (object.total_fee_msat != null)
+                if (typeof object.total_fee_msat === "object" ? object.total_fee_msat.low || object.total_fee_msat.high : $Number(object.total_fee_msat) !== 0)
+                    if ($util.Long)
+                        message.total_fee_msat = $util.Long.fromValue(object.total_fee_msat, false);
+                    else if (typeof object.total_fee_msat === "string")
+                        message.total_fee_msat = $parseInt(object.total_fee_msat, 10);
+                    else if (typeof object.total_fee_msat === "number")
+                        message.total_fee_msat = object.total_fee_msat;
+                    else if (typeof object.total_fee_msat === "object")
+                        message.total_fee_msat = new $util.LongBits(object.total_fee_msat.low >>> 0, object.total_fee_msat.high >>> 0).toNumber();
+            if (object.status != null)
+                if (typeof object.status !== "string" || object.status.length)
+                    message.status = $String(object.status);
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a DeleteForwardingHistoryResponse message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof routerrpc.DeleteForwardingHistoryResponse
+         * @static
+         * @param {routerrpc.DeleteForwardingHistoryResponse} message DeleteForwardingHistoryResponse
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        DeleteForwardingHistoryResponse.toObject = function (message, options, _depth) {
+            if (!options)
+                options = {};
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let object = {};
+            if (options.defaults) {
+                if ($util.Long) {
+                    let long = new $util.Long(0, 0, true);
+                    object.events_deleted = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
+                } else
+                    object.events_deleted = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
+                if ($util.Long) {
+                    let long = new $util.Long(0, 0, false);
+                    object.total_fee_msat = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
+                } else
+                    object.total_fee_msat = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
+                object.status = "";
+            }
+            if (message.events_deleted != null && $Object.hasOwnProperty.call(message, "events_deleted"))
+                if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
+                    object.events_deleted = typeof message.events_deleted === "number" ? $BigInt(message.events_deleted) : $util.Long.fromBits(message.events_deleted.low >>> 0, message.events_deleted.high >>> 0, true).toBigInt();
+                else if (typeof message.events_deleted === "number")
+                    object.events_deleted = options.longs === $String ? $String(message.events_deleted) : message.events_deleted;
+                else
+                    object.events_deleted = options.longs === $String ? $util.Long.prototype.toString.call(message.events_deleted) : options.longs === $Number ? new $util.LongBits(message.events_deleted.low >>> 0, message.events_deleted.high >>> 0).toNumber(true) : message.events_deleted;
+            if (message.total_fee_msat != null && $Object.hasOwnProperty.call(message, "total_fee_msat"))
+                if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
+                    object.total_fee_msat = typeof message.total_fee_msat === "number" ? $BigInt(message.total_fee_msat) : $util.Long.fromBits(message.total_fee_msat.low >>> 0, message.total_fee_msat.high >>> 0, false).toBigInt();
+                else if (typeof message.total_fee_msat === "number")
+                    object.total_fee_msat = options.longs === $String ? $String(message.total_fee_msat) : message.total_fee_msat;
+                else
+                    object.total_fee_msat = options.longs === $String ? $util.Long.prototype.toString.call(message.total_fee_msat) : options.longs === $Number ? new $util.LongBits(message.total_fee_msat.low >>> 0, message.total_fee_msat.high >>> 0).toNumber() : message.total_fee_msat;
+            if (message.status != null && $Object.hasOwnProperty.call(message, "status"))
+                object.status = message.status;
+            return object;
+        };
+
+        /**
+         * Converts this DeleteForwardingHistoryResponse to JSON.
+         * @function toJSON
+         * @memberof routerrpc.DeleteForwardingHistoryResponse
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        DeleteForwardingHistoryResponse.prototype.toJSON = function() {
+            return DeleteForwardingHistoryResponse.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the type url for DeleteForwardingHistoryResponse
+         * @function getTypeUrl
+         * @memberof routerrpc.DeleteForwardingHistoryResponse
+         * @static
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
+         */
+        DeleteForwardingHistoryResponse.getTypeUrl = function(prefix) {
+            if (prefix === $undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/routerrpc.DeleteForwardingHistoryResponse";
+        };
+
+        return DeleteForwardingHistoryResponse;
+    })();
+
     return routerrpc;
 })();
 
@@ -130923,6 +131066,88 @@ export const signrpc = $root.signrpc = (() => {
             path: { value: "/signrpc.Signer/MuSig2RegisterNonces" },
             requestType: { value: "MuSig2RegisterNoncesRequest" },
             responseType: { value: "MuSig2RegisterNoncesResponse" },
+            requestStream: { value: $undefined },
+            responseStream: { value: $undefined }
+        });
+
+        /**
+         * Callback as used by {@link signrpc.Signer#muSig2RegisterCombinedNonce}.
+         * @memberof signrpc.Signer
+         * @typedef MuSig2RegisterCombinedNonceCallback
+         * @type {function}
+         * @param {Error|null} error Error, if any
+         * @param {signrpc.MuSig2RegisterCombinedNonceResponse} [response] MuSig2RegisterCombinedNonceResponse
+         */
+
+        /**
+         * Calls MuSig2RegisterCombinedNonce.
+         * @memberof signrpc.Signer
+         * @typedef MuSig2RegisterCombinedNonce
+         * @type {{
+         *   (request: signrpc.IMuSig2RegisterCombinedNonceRequest, callback: signrpc.Signer.MuSig2RegisterCombinedNonceCallback): void;
+         *   (request: signrpc.IMuSig2RegisterCombinedNonceRequest): Promise<signrpc.MuSig2RegisterCombinedNonceResponse>;
+         *   readonly name: "MuSig2RegisterCombinedNonce";
+         *   readonly path: "/signrpc.Signer/MuSig2RegisterCombinedNonce";
+         *   readonly requestType: "MuSig2RegisterCombinedNonceRequest";
+         *   readonly responseType: "MuSig2RegisterCombinedNonceResponse";
+         *   readonly requestStream: undefined;
+         *   readonly responseStream: undefined;
+         * }}
+         */
+
+        /**
+         * Calls MuSig2RegisterCombinedNonce.
+         * @name signrpc.Signer#muSig2RegisterCombinedNonce
+         * @type {signrpc.Signer.MuSig2RegisterCombinedNonce}
+         */
+        $Object.defineProperties(Signer.prototype.muSig2RegisterCombinedNonce = function(request, callback) {
+            return $protobuf.rpc.Service.prototype.rpcCall.call(this, Signer.prototype.muSig2RegisterCombinedNonce, $root.signrpc.MuSig2RegisterCombinedNonceRequest, $root.signrpc.MuSig2RegisterCombinedNonceResponse, request, callback);
+        }, {
+            name: { value: "MuSig2RegisterCombinedNonce" },
+            path: { value: "/signrpc.Signer/MuSig2RegisterCombinedNonce" },
+            requestType: { value: "MuSig2RegisterCombinedNonceRequest" },
+            responseType: { value: "MuSig2RegisterCombinedNonceResponse" },
+            requestStream: { value: $undefined },
+            responseStream: { value: $undefined }
+        });
+
+        /**
+         * Callback as used by {@link signrpc.Signer#muSig2GetCombinedNonce}.
+         * @memberof signrpc.Signer
+         * @typedef MuSig2GetCombinedNonceCallback
+         * @type {function}
+         * @param {Error|null} error Error, if any
+         * @param {signrpc.MuSig2GetCombinedNonceResponse} [response] MuSig2GetCombinedNonceResponse
+         */
+
+        /**
+         * Calls MuSig2GetCombinedNonce.
+         * @memberof signrpc.Signer
+         * @typedef MuSig2GetCombinedNonce
+         * @type {{
+         *   (request: signrpc.IMuSig2GetCombinedNonceRequest, callback: signrpc.Signer.MuSig2GetCombinedNonceCallback): void;
+         *   (request: signrpc.IMuSig2GetCombinedNonceRequest): Promise<signrpc.MuSig2GetCombinedNonceResponse>;
+         *   readonly name: "MuSig2GetCombinedNonce";
+         *   readonly path: "/signrpc.Signer/MuSig2GetCombinedNonce";
+         *   readonly requestType: "MuSig2GetCombinedNonceRequest";
+         *   readonly responseType: "MuSig2GetCombinedNonceResponse";
+         *   readonly requestStream: undefined;
+         *   readonly responseStream: undefined;
+         * }}
+         */
+
+        /**
+         * Calls MuSig2GetCombinedNonce.
+         * @name signrpc.Signer#muSig2GetCombinedNonce
+         * @type {signrpc.Signer.MuSig2GetCombinedNonce}
+         */
+        $Object.defineProperties(Signer.prototype.muSig2GetCombinedNonce = function(request, callback) {
+            return $protobuf.rpc.Service.prototype.rpcCall.call(this, Signer.prototype.muSig2GetCombinedNonce, $root.signrpc.MuSig2GetCombinedNonceRequest, $root.signrpc.MuSig2GetCombinedNonceResponse, request, callback);
+        }, {
+            name: { value: "MuSig2GetCombinedNonce" },
+            path: { value: "/signrpc.Signer/MuSig2GetCombinedNonce" },
+            requestType: { value: "MuSig2GetCombinedNonceRequest" },
+            responseType: { value: "MuSig2GetCombinedNonceResponse" },
             requestStream: { value: $undefined },
             responseStream: { value: $undefined }
         });
@@ -138994,6 +139219,1131 @@ export const signrpc = $root.signrpc = (() => {
         return MuSig2RegisterNoncesResponse;
     })();
 
+    signrpc.MuSig2RegisterCombinedNonceRequest = (function() {
+
+        /**
+         * Properties of a MuSig2RegisterCombinedNonceRequest.
+         * @typedef {Object} signrpc.MuSig2RegisterCombinedNonceRequest.$Properties
+         * @property {Uint8Array|null} [session_id] MuSig2RegisterCombinedNonceRequest session_id
+         * @property {Uint8Array|null} [combined_public_nonce] MuSig2RegisterCombinedNonceRequest combined_public_nonce
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+
+        /**
+         * Properties of a MuSig2RegisterCombinedNonceRequest.
+         * @memberof signrpc
+         * @interface IMuSig2RegisterCombinedNonceRequest
+         * @augments signrpc.MuSig2RegisterCombinedNonceRequest.$Properties
+         * @deprecated Use signrpc.MuSig2RegisterCombinedNonceRequest.$Properties instead.
+         */
+
+        /**
+         * Shape of a MuSig2RegisterCombinedNonceRequest.
+         * @typedef {signrpc.MuSig2RegisterCombinedNonceRequest.$Properties} signrpc.MuSig2RegisterCombinedNonceRequest.$Shape
+         */
+
+        /**
+         * Constructs a new MuSig2RegisterCombinedNonceRequest.
+         * @memberof signrpc
+         * @classdesc Represents a MuSig2RegisterCombinedNonceRequest.
+         * @constructor
+         * @param {signrpc.MuSig2RegisterCombinedNonceRequest.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+        const MuSig2RegisterCombinedNonceRequest = function (properties) {
+            if (properties)
+                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+        };
+
+        /**
+         * MuSig2RegisterCombinedNonceRequest session_id.
+         * @member {Uint8Array} session_id
+         * @memberof signrpc.MuSig2RegisterCombinedNonceRequest
+         * @instance
+         */
+        MuSig2RegisterCombinedNonceRequest.prototype.session_id = $util.newBuffer([]);
+
+        /**
+         * MuSig2RegisterCombinedNonceRequest combined_public_nonce.
+         * @member {Uint8Array} combined_public_nonce
+         * @memberof signrpc.MuSig2RegisterCombinedNonceRequest
+         * @instance
+         */
+        MuSig2RegisterCombinedNonceRequest.prototype.combined_public_nonce = $util.newBuffer([]);
+
+        /**
+         * Creates a new MuSig2RegisterCombinedNonceRequest instance using the specified properties.
+         * @function create
+         * @memberof signrpc.MuSig2RegisterCombinedNonceRequest
+         * @static
+         * @param {signrpc.MuSig2RegisterCombinedNonceRequest.$Properties=} [properties] Properties to set
+         * @returns {signrpc.MuSig2RegisterCombinedNonceRequest} MuSig2RegisterCombinedNonceRequest instance
+         * @type {{
+         *   (properties: signrpc.MuSig2RegisterCombinedNonceRequest.$Shape): signrpc.MuSig2RegisterCombinedNonceRequest & signrpc.MuSig2RegisterCombinedNonceRequest.$Shape;
+         *   (properties?: signrpc.MuSig2RegisterCombinedNonceRequest.$Properties): signrpc.MuSig2RegisterCombinedNonceRequest;
+         * }}
+         */
+        MuSig2RegisterCombinedNonceRequest.create = function(properties) {
+            return new MuSig2RegisterCombinedNonceRequest(properties);
+        };
+
+        /**
+         * Encodes the specified MuSig2RegisterCombinedNonceRequest message. Does not implicitly {@link signrpc.MuSig2RegisterCombinedNonceRequest.verify|verify} messages.
+         * @function encode
+         * @memberof signrpc.MuSig2RegisterCombinedNonceRequest
+         * @static
+         * @param {signrpc.MuSig2RegisterCombinedNonceRequest.$Properties} message MuSig2RegisterCombinedNonceRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        MuSig2RegisterCombinedNonceRequest.encode = function (message, writer, _depth) {
+            if (!writer)
+                writer = $Writer.create();
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            if (message.session_id != null && $Object.hasOwnProperty.call(message, "session_id") && message.session_id.length)
+                writer.uint32(/* id 1, wireType 2 =*/10).bytes(message.session_id);
+            if (message.combined_public_nonce != null && $Object.hasOwnProperty.call(message, "combined_public_nonce") && message.combined_public_nonce.length)
+                writer.uint32(/* id 2, wireType 2 =*/18).bytes(message.combined_public_nonce);
+            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified MuSig2RegisterCombinedNonceRequest message, length delimited. Does not implicitly {@link signrpc.MuSig2RegisterCombinedNonceRequest.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof signrpc.MuSig2RegisterCombinedNonceRequest
+         * @static
+         * @param {signrpc.MuSig2RegisterCombinedNonceRequest.$Properties} message MuSig2RegisterCombinedNonceRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        MuSig2RegisterCombinedNonceRequest.encodeDelimited = function(message, writer) {
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+        };
+
+        /**
+         * Decodes a MuSig2RegisterCombinedNonceRequest message from the specified reader or buffer.
+         * @function decode
+         * @memberof signrpc.MuSig2RegisterCombinedNonceRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {signrpc.MuSig2RegisterCombinedNonceRequest & signrpc.MuSig2RegisterCombinedNonceRequest.$Shape} MuSig2RegisterCombinedNonceRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        MuSig2RegisterCombinedNonceRequest.decode = function (reader, length, _end, _depth, _target) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw $Error("max depth exceeded");
+            let end, message, value;
+            if (length === $undefined)
+                end = reader.len;
+            else {
+                end = reader.pos + length;
+                if (end > reader.len)
+                    throw $RangeError("index out of range");
+                length = reader.len;
+                reader.len = end;
+            }
+            message = _target || new $root.signrpc.MuSig2RegisterCombinedNonceRequest();
+            while (reader.pos < end) {
+                let start = reader.pos;
+                let tag = reader.tag();
+                if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                }
+                let wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.bytes()).length)
+                            message.session_id = value;
+                        else
+                            delete message.session_id;
+                        continue;
+                    }
+                case 2: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.bytes()).length)
+                            message.combined_public_nonce = value;
+                        else
+                            delete message.combined_public_nonce;
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                }
+            }
+            if (length !== $undefined) {
+                if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                reader.len = length;
+            }
+            if (_end !== $undefined)
+                throw $Error("missing end group");
+            return message;
+        };
+
+        /**
+         * Decodes a MuSig2RegisterCombinedNonceRequest message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof signrpc.MuSig2RegisterCombinedNonceRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {signrpc.MuSig2RegisterCombinedNonceRequest & signrpc.MuSig2RegisterCombinedNonceRequest.$Shape} MuSig2RegisterCombinedNonceRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        MuSig2RegisterCombinedNonceRequest.decodeDelimited = function(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a MuSig2RegisterCombinedNonceRequest message.
+         * @function verify
+         * @memberof signrpc.MuSig2RegisterCombinedNonceRequest
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        MuSig2RegisterCombinedNonceRequest.verify = function (message, _depth) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
+            if (message.session_id != null && $Object.hasOwnProperty.call(message, "session_id"))
+                if (!(message.session_id && typeof message.session_id.length === "number" || $util.isString(message.session_id)))
+                    return "session_id: buffer expected";
+            if (message.combined_public_nonce != null && $Object.hasOwnProperty.call(message, "combined_public_nonce"))
+                if (!(message.combined_public_nonce && typeof message.combined_public_nonce.length === "number" || $util.isString(message.combined_public_nonce)))
+                    return "combined_public_nonce: buffer expected";
+            return null;
+        };
+
+        /**
+         * Creates a MuSig2RegisterCombinedNonceRequest message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof signrpc.MuSig2RegisterCombinedNonceRequest
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {signrpc.MuSig2RegisterCombinedNonceRequest} MuSig2RegisterCombinedNonceRequest
+         */
+        MuSig2RegisterCombinedNonceRequest.fromObject = function (object, _depth) {
+            if (object instanceof $root.signrpc.MuSig2RegisterCombinedNonceRequest)
+                return object;
+            if (!$util.isObject(object))
+                throw $TypeError(".signrpc.MuSig2RegisterCombinedNonceRequest: object expected");
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let message = new $root.signrpc.MuSig2RegisterCombinedNonceRequest();
+            if (object.session_id != null)
+                if (object.session_id.length)
+                    if (typeof object.session_id === "string")
+                        $util.base64.decode(object.session_id, message.session_id = $util.newBuffer($util.base64.length(object.session_id)), 0);
+                    else if (object.session_id.length >= 0)
+                        message.session_id = object.session_id;
+            if (object.combined_public_nonce != null)
+                if (object.combined_public_nonce.length)
+                    if (typeof object.combined_public_nonce === "string")
+                        $util.base64.decode(object.combined_public_nonce, message.combined_public_nonce = $util.newBuffer($util.base64.length(object.combined_public_nonce)), 0);
+                    else if (object.combined_public_nonce.length >= 0)
+                        message.combined_public_nonce = object.combined_public_nonce;
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a MuSig2RegisterCombinedNonceRequest message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof signrpc.MuSig2RegisterCombinedNonceRequest
+         * @static
+         * @param {signrpc.MuSig2RegisterCombinedNonceRequest} message MuSig2RegisterCombinedNonceRequest
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        MuSig2RegisterCombinedNonceRequest.toObject = function (message, options, _depth) {
+            if (!options)
+                options = {};
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let object = {};
+            if (options.defaults) {
+                if (options.bytes === $String)
+                    object.session_id = "";
+                else {
+                    object.session_id = [];
+                    if (options.bytes !== $Array)
+                        object.session_id = $util.newBuffer(object.session_id);
+                }
+                if (options.bytes === $String)
+                    object.combined_public_nonce = "";
+                else {
+                    object.combined_public_nonce = [];
+                    if (options.bytes !== $Array)
+                        object.combined_public_nonce = $util.newBuffer(object.combined_public_nonce);
+                }
+            }
+            if (message.session_id != null && $Object.hasOwnProperty.call(message, "session_id"))
+                object.session_id = options.bytes === $String ? $util.base64.encode(message.session_id, 0, message.session_id.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.session_id) : message.session_id;
+            if (message.combined_public_nonce != null && $Object.hasOwnProperty.call(message, "combined_public_nonce"))
+                object.combined_public_nonce = options.bytes === $String ? $util.base64.encode(message.combined_public_nonce, 0, message.combined_public_nonce.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.combined_public_nonce) : message.combined_public_nonce;
+            return object;
+        };
+
+        /**
+         * Converts this MuSig2RegisterCombinedNonceRequest to JSON.
+         * @function toJSON
+         * @memberof signrpc.MuSig2RegisterCombinedNonceRequest
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        MuSig2RegisterCombinedNonceRequest.prototype.toJSON = function() {
+            return MuSig2RegisterCombinedNonceRequest.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the type url for MuSig2RegisterCombinedNonceRequest
+         * @function getTypeUrl
+         * @memberof signrpc.MuSig2RegisterCombinedNonceRequest
+         * @static
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
+         */
+        MuSig2RegisterCombinedNonceRequest.getTypeUrl = function(prefix) {
+            if (prefix === $undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/signrpc.MuSig2RegisterCombinedNonceRequest";
+        };
+
+        return MuSig2RegisterCombinedNonceRequest;
+    })();
+
+    signrpc.MuSig2RegisterCombinedNonceResponse = (function() {
+
+        /**
+         * Properties of a MuSig2RegisterCombinedNonceResponse.
+         * @typedef {Object} signrpc.MuSig2RegisterCombinedNonceResponse.$Properties
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+
+        /**
+         * Properties of a MuSig2RegisterCombinedNonceResponse.
+         * @memberof signrpc
+         * @interface IMuSig2RegisterCombinedNonceResponse
+         * @augments signrpc.MuSig2RegisterCombinedNonceResponse.$Properties
+         * @deprecated Use signrpc.MuSig2RegisterCombinedNonceResponse.$Properties instead.
+         */
+
+        /**
+         * Shape of a MuSig2RegisterCombinedNonceResponse.
+         * @typedef {signrpc.MuSig2RegisterCombinedNonceResponse.$Properties} signrpc.MuSig2RegisterCombinedNonceResponse.$Shape
+         */
+
+        /**
+         * Constructs a new MuSig2RegisterCombinedNonceResponse.
+         * @memberof signrpc
+         * @classdesc Represents a MuSig2RegisterCombinedNonceResponse.
+         * @constructor
+         * @param {signrpc.MuSig2RegisterCombinedNonceResponse.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+        const MuSig2RegisterCombinedNonceResponse = function (properties) {
+            if (properties)
+                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+        };
+
+        /**
+         * Creates a new MuSig2RegisterCombinedNonceResponse instance using the specified properties.
+         * @function create
+         * @memberof signrpc.MuSig2RegisterCombinedNonceResponse
+         * @static
+         * @param {signrpc.MuSig2RegisterCombinedNonceResponse.$Properties=} [properties] Properties to set
+         * @returns {signrpc.MuSig2RegisterCombinedNonceResponse} MuSig2RegisterCombinedNonceResponse instance
+         * @type {{
+         *   (properties: signrpc.MuSig2RegisterCombinedNonceResponse.$Shape): signrpc.MuSig2RegisterCombinedNonceResponse & signrpc.MuSig2RegisterCombinedNonceResponse.$Shape;
+         *   (properties?: signrpc.MuSig2RegisterCombinedNonceResponse.$Properties): signrpc.MuSig2RegisterCombinedNonceResponse;
+         * }}
+         */
+        MuSig2RegisterCombinedNonceResponse.create = function(properties) {
+            return new MuSig2RegisterCombinedNonceResponse(properties);
+        };
+
+        /**
+         * Encodes the specified MuSig2RegisterCombinedNonceResponse message. Does not implicitly {@link signrpc.MuSig2RegisterCombinedNonceResponse.verify|verify} messages.
+         * @function encode
+         * @memberof signrpc.MuSig2RegisterCombinedNonceResponse
+         * @static
+         * @param {signrpc.MuSig2RegisterCombinedNonceResponse.$Properties} message MuSig2RegisterCombinedNonceResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        MuSig2RegisterCombinedNonceResponse.encode = function (message, writer, _depth) {
+            if (!writer)
+                writer = $Writer.create();
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified MuSig2RegisterCombinedNonceResponse message, length delimited. Does not implicitly {@link signrpc.MuSig2RegisterCombinedNonceResponse.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof signrpc.MuSig2RegisterCombinedNonceResponse
+         * @static
+         * @param {signrpc.MuSig2RegisterCombinedNonceResponse.$Properties} message MuSig2RegisterCombinedNonceResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        MuSig2RegisterCombinedNonceResponse.encodeDelimited = function(message, writer) {
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+        };
+
+        /**
+         * Decodes a MuSig2RegisterCombinedNonceResponse message from the specified reader or buffer.
+         * @function decode
+         * @memberof signrpc.MuSig2RegisterCombinedNonceResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {signrpc.MuSig2RegisterCombinedNonceResponse & signrpc.MuSig2RegisterCombinedNonceResponse.$Shape} MuSig2RegisterCombinedNonceResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        MuSig2RegisterCombinedNonceResponse.decode = function (reader, length, _end, _depth, _target) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw $Error("max depth exceeded");
+            let end, message;
+            if (length === $undefined)
+                end = reader.len;
+            else {
+                end = reader.pos + length;
+                if (end > reader.len)
+                    throw $RangeError("index out of range");
+                length = reader.len;
+                reader.len = end;
+            }
+            message = _target || new $root.signrpc.MuSig2RegisterCombinedNonceResponse();
+            while (reader.pos < end) {
+                let start = reader.pos;
+                let tag = reader.tag();
+                if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                }
+                reader.skipType(tag & 7, _depth, tag);
+                if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                }
+            }
+            if (length !== $undefined) {
+                if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                reader.len = length;
+            }
+            if (_end !== $undefined)
+                throw $Error("missing end group");
+            return message;
+        };
+
+        /**
+         * Decodes a MuSig2RegisterCombinedNonceResponse message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof signrpc.MuSig2RegisterCombinedNonceResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {signrpc.MuSig2RegisterCombinedNonceResponse & signrpc.MuSig2RegisterCombinedNonceResponse.$Shape} MuSig2RegisterCombinedNonceResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        MuSig2RegisterCombinedNonceResponse.decodeDelimited = function(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a MuSig2RegisterCombinedNonceResponse message.
+         * @function verify
+         * @memberof signrpc.MuSig2RegisterCombinedNonceResponse
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        MuSig2RegisterCombinedNonceResponse.verify = function (message, _depth) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
+            return null;
+        };
+
+        /**
+         * Creates a MuSig2RegisterCombinedNonceResponse message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof signrpc.MuSig2RegisterCombinedNonceResponse
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {signrpc.MuSig2RegisterCombinedNonceResponse} MuSig2RegisterCombinedNonceResponse
+         */
+        MuSig2RegisterCombinedNonceResponse.fromObject = function (object, _depth) {
+            if (object instanceof $root.signrpc.MuSig2RegisterCombinedNonceResponse)
+                return object;
+            if (!$util.isObject(object))
+                throw $TypeError(".signrpc.MuSig2RegisterCombinedNonceResponse: object expected");
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            return new $root.signrpc.MuSig2RegisterCombinedNonceResponse();
+        };
+
+        /**
+         * Creates a plain object from a MuSig2RegisterCombinedNonceResponse message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof signrpc.MuSig2RegisterCombinedNonceResponse
+         * @static
+         * @param {signrpc.MuSig2RegisterCombinedNonceResponse} message MuSig2RegisterCombinedNonceResponse
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        MuSig2RegisterCombinedNonceResponse.toObject = function () {
+            return {};
+        };
+
+        /**
+         * Converts this MuSig2RegisterCombinedNonceResponse to JSON.
+         * @function toJSON
+         * @memberof signrpc.MuSig2RegisterCombinedNonceResponse
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        MuSig2RegisterCombinedNonceResponse.prototype.toJSON = function() {
+            return MuSig2RegisterCombinedNonceResponse.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the type url for MuSig2RegisterCombinedNonceResponse
+         * @function getTypeUrl
+         * @memberof signrpc.MuSig2RegisterCombinedNonceResponse
+         * @static
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
+         */
+        MuSig2RegisterCombinedNonceResponse.getTypeUrl = function(prefix) {
+            if (prefix === $undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/signrpc.MuSig2RegisterCombinedNonceResponse";
+        };
+
+        return MuSig2RegisterCombinedNonceResponse;
+    })();
+
+    signrpc.MuSig2GetCombinedNonceRequest = (function() {
+
+        /**
+         * Properties of a MuSig2GetCombinedNonceRequest.
+         * @typedef {Object} signrpc.MuSig2GetCombinedNonceRequest.$Properties
+         * @property {Uint8Array|null} [session_id] MuSig2GetCombinedNonceRequest session_id
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+
+        /**
+         * Properties of a MuSig2GetCombinedNonceRequest.
+         * @memberof signrpc
+         * @interface IMuSig2GetCombinedNonceRequest
+         * @augments signrpc.MuSig2GetCombinedNonceRequest.$Properties
+         * @deprecated Use signrpc.MuSig2GetCombinedNonceRequest.$Properties instead.
+         */
+
+        /**
+         * Shape of a MuSig2GetCombinedNonceRequest.
+         * @typedef {signrpc.MuSig2GetCombinedNonceRequest.$Properties} signrpc.MuSig2GetCombinedNonceRequest.$Shape
+         */
+
+        /**
+         * Constructs a new MuSig2GetCombinedNonceRequest.
+         * @memberof signrpc
+         * @classdesc Represents a MuSig2GetCombinedNonceRequest.
+         * @constructor
+         * @param {signrpc.MuSig2GetCombinedNonceRequest.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+        const MuSig2GetCombinedNonceRequest = function (properties) {
+            if (properties)
+                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+        };
+
+        /**
+         * MuSig2GetCombinedNonceRequest session_id.
+         * @member {Uint8Array} session_id
+         * @memberof signrpc.MuSig2GetCombinedNonceRequest
+         * @instance
+         */
+        MuSig2GetCombinedNonceRequest.prototype.session_id = $util.newBuffer([]);
+
+        /**
+         * Creates a new MuSig2GetCombinedNonceRequest instance using the specified properties.
+         * @function create
+         * @memberof signrpc.MuSig2GetCombinedNonceRequest
+         * @static
+         * @param {signrpc.MuSig2GetCombinedNonceRequest.$Properties=} [properties] Properties to set
+         * @returns {signrpc.MuSig2GetCombinedNonceRequest} MuSig2GetCombinedNonceRequest instance
+         * @type {{
+         *   (properties: signrpc.MuSig2GetCombinedNonceRequest.$Shape): signrpc.MuSig2GetCombinedNonceRequest & signrpc.MuSig2GetCombinedNonceRequest.$Shape;
+         *   (properties?: signrpc.MuSig2GetCombinedNonceRequest.$Properties): signrpc.MuSig2GetCombinedNonceRequest;
+         * }}
+         */
+        MuSig2GetCombinedNonceRequest.create = function(properties) {
+            return new MuSig2GetCombinedNonceRequest(properties);
+        };
+
+        /**
+         * Encodes the specified MuSig2GetCombinedNonceRequest message. Does not implicitly {@link signrpc.MuSig2GetCombinedNonceRequest.verify|verify} messages.
+         * @function encode
+         * @memberof signrpc.MuSig2GetCombinedNonceRequest
+         * @static
+         * @param {signrpc.MuSig2GetCombinedNonceRequest.$Properties} message MuSig2GetCombinedNonceRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        MuSig2GetCombinedNonceRequest.encode = function (message, writer, _depth) {
+            if (!writer)
+                writer = $Writer.create();
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            if (message.session_id != null && $Object.hasOwnProperty.call(message, "session_id") && message.session_id.length)
+                writer.uint32(/* id 1, wireType 2 =*/10).bytes(message.session_id);
+            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified MuSig2GetCombinedNonceRequest message, length delimited. Does not implicitly {@link signrpc.MuSig2GetCombinedNonceRequest.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof signrpc.MuSig2GetCombinedNonceRequest
+         * @static
+         * @param {signrpc.MuSig2GetCombinedNonceRequest.$Properties} message MuSig2GetCombinedNonceRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        MuSig2GetCombinedNonceRequest.encodeDelimited = function(message, writer) {
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+        };
+
+        /**
+         * Decodes a MuSig2GetCombinedNonceRequest message from the specified reader or buffer.
+         * @function decode
+         * @memberof signrpc.MuSig2GetCombinedNonceRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {signrpc.MuSig2GetCombinedNonceRequest & signrpc.MuSig2GetCombinedNonceRequest.$Shape} MuSig2GetCombinedNonceRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        MuSig2GetCombinedNonceRequest.decode = function (reader, length, _end, _depth, _target) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw $Error("max depth exceeded");
+            let end, message, value;
+            if (length === $undefined)
+                end = reader.len;
+            else {
+                end = reader.pos + length;
+                if (end > reader.len)
+                    throw $RangeError("index out of range");
+                length = reader.len;
+                reader.len = end;
+            }
+            message = _target || new $root.signrpc.MuSig2GetCombinedNonceRequest();
+            while (reader.pos < end) {
+                let start = reader.pos;
+                let tag = reader.tag();
+                if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                }
+                let wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.bytes()).length)
+                            message.session_id = value;
+                        else
+                            delete message.session_id;
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                }
+            }
+            if (length !== $undefined) {
+                if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                reader.len = length;
+            }
+            if (_end !== $undefined)
+                throw $Error("missing end group");
+            return message;
+        };
+
+        /**
+         * Decodes a MuSig2GetCombinedNonceRequest message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof signrpc.MuSig2GetCombinedNonceRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {signrpc.MuSig2GetCombinedNonceRequest & signrpc.MuSig2GetCombinedNonceRequest.$Shape} MuSig2GetCombinedNonceRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        MuSig2GetCombinedNonceRequest.decodeDelimited = function(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a MuSig2GetCombinedNonceRequest message.
+         * @function verify
+         * @memberof signrpc.MuSig2GetCombinedNonceRequest
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        MuSig2GetCombinedNonceRequest.verify = function (message, _depth) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
+            if (message.session_id != null && $Object.hasOwnProperty.call(message, "session_id"))
+                if (!(message.session_id && typeof message.session_id.length === "number" || $util.isString(message.session_id)))
+                    return "session_id: buffer expected";
+            return null;
+        };
+
+        /**
+         * Creates a MuSig2GetCombinedNonceRequest message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof signrpc.MuSig2GetCombinedNonceRequest
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {signrpc.MuSig2GetCombinedNonceRequest} MuSig2GetCombinedNonceRequest
+         */
+        MuSig2GetCombinedNonceRequest.fromObject = function (object, _depth) {
+            if (object instanceof $root.signrpc.MuSig2GetCombinedNonceRequest)
+                return object;
+            if (!$util.isObject(object))
+                throw $TypeError(".signrpc.MuSig2GetCombinedNonceRequest: object expected");
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let message = new $root.signrpc.MuSig2GetCombinedNonceRequest();
+            if (object.session_id != null)
+                if (object.session_id.length)
+                    if (typeof object.session_id === "string")
+                        $util.base64.decode(object.session_id, message.session_id = $util.newBuffer($util.base64.length(object.session_id)), 0);
+                    else if (object.session_id.length >= 0)
+                        message.session_id = object.session_id;
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a MuSig2GetCombinedNonceRequest message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof signrpc.MuSig2GetCombinedNonceRequest
+         * @static
+         * @param {signrpc.MuSig2GetCombinedNonceRequest} message MuSig2GetCombinedNonceRequest
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        MuSig2GetCombinedNonceRequest.toObject = function (message, options, _depth) {
+            if (!options)
+                options = {};
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let object = {};
+            if (options.defaults)
+                if (options.bytes === $String)
+                    object.session_id = "";
+                else {
+                    object.session_id = [];
+                    if (options.bytes !== $Array)
+                        object.session_id = $util.newBuffer(object.session_id);
+                }
+            if (message.session_id != null && $Object.hasOwnProperty.call(message, "session_id"))
+                object.session_id = options.bytes === $String ? $util.base64.encode(message.session_id, 0, message.session_id.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.session_id) : message.session_id;
+            return object;
+        };
+
+        /**
+         * Converts this MuSig2GetCombinedNonceRequest to JSON.
+         * @function toJSON
+         * @memberof signrpc.MuSig2GetCombinedNonceRequest
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        MuSig2GetCombinedNonceRequest.prototype.toJSON = function() {
+            return MuSig2GetCombinedNonceRequest.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the type url for MuSig2GetCombinedNonceRequest
+         * @function getTypeUrl
+         * @memberof signrpc.MuSig2GetCombinedNonceRequest
+         * @static
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
+         */
+        MuSig2GetCombinedNonceRequest.getTypeUrl = function(prefix) {
+            if (prefix === $undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/signrpc.MuSig2GetCombinedNonceRequest";
+        };
+
+        return MuSig2GetCombinedNonceRequest;
+    })();
+
+    signrpc.MuSig2GetCombinedNonceResponse = (function() {
+
+        /**
+         * Properties of a MuSig2GetCombinedNonceResponse.
+         * @typedef {Object} signrpc.MuSig2GetCombinedNonceResponse.$Properties
+         * @property {Uint8Array|null} [combined_public_nonce] MuSig2GetCombinedNonceResponse combined_public_nonce
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+
+        /**
+         * Properties of a MuSig2GetCombinedNonceResponse.
+         * @memberof signrpc
+         * @interface IMuSig2GetCombinedNonceResponse
+         * @augments signrpc.MuSig2GetCombinedNonceResponse.$Properties
+         * @deprecated Use signrpc.MuSig2GetCombinedNonceResponse.$Properties instead.
+         */
+
+        /**
+         * Shape of a MuSig2GetCombinedNonceResponse.
+         * @typedef {signrpc.MuSig2GetCombinedNonceResponse.$Properties} signrpc.MuSig2GetCombinedNonceResponse.$Shape
+         */
+
+        /**
+         * Constructs a new MuSig2GetCombinedNonceResponse.
+         * @memberof signrpc
+         * @classdesc Represents a MuSig2GetCombinedNonceResponse.
+         * @constructor
+         * @param {signrpc.MuSig2GetCombinedNonceResponse.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+        const MuSig2GetCombinedNonceResponse = function (properties) {
+            if (properties)
+                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+        };
+
+        /**
+         * MuSig2GetCombinedNonceResponse combined_public_nonce.
+         * @member {Uint8Array} combined_public_nonce
+         * @memberof signrpc.MuSig2GetCombinedNonceResponse
+         * @instance
+         */
+        MuSig2GetCombinedNonceResponse.prototype.combined_public_nonce = $util.newBuffer([]);
+
+        /**
+         * Creates a new MuSig2GetCombinedNonceResponse instance using the specified properties.
+         * @function create
+         * @memberof signrpc.MuSig2GetCombinedNonceResponse
+         * @static
+         * @param {signrpc.MuSig2GetCombinedNonceResponse.$Properties=} [properties] Properties to set
+         * @returns {signrpc.MuSig2GetCombinedNonceResponse} MuSig2GetCombinedNonceResponse instance
+         * @type {{
+         *   (properties: signrpc.MuSig2GetCombinedNonceResponse.$Shape): signrpc.MuSig2GetCombinedNonceResponse & signrpc.MuSig2GetCombinedNonceResponse.$Shape;
+         *   (properties?: signrpc.MuSig2GetCombinedNonceResponse.$Properties): signrpc.MuSig2GetCombinedNonceResponse;
+         * }}
+         */
+        MuSig2GetCombinedNonceResponse.create = function(properties) {
+            return new MuSig2GetCombinedNonceResponse(properties);
+        };
+
+        /**
+         * Encodes the specified MuSig2GetCombinedNonceResponse message. Does not implicitly {@link signrpc.MuSig2GetCombinedNonceResponse.verify|verify} messages.
+         * @function encode
+         * @memberof signrpc.MuSig2GetCombinedNonceResponse
+         * @static
+         * @param {signrpc.MuSig2GetCombinedNonceResponse.$Properties} message MuSig2GetCombinedNonceResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        MuSig2GetCombinedNonceResponse.encode = function (message, writer, _depth) {
+            if (!writer)
+                writer = $Writer.create();
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            if (message.combined_public_nonce != null && $Object.hasOwnProperty.call(message, "combined_public_nonce") && message.combined_public_nonce.length)
+                writer.uint32(/* id 1, wireType 2 =*/10).bytes(message.combined_public_nonce);
+            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified MuSig2GetCombinedNonceResponse message, length delimited. Does not implicitly {@link signrpc.MuSig2GetCombinedNonceResponse.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof signrpc.MuSig2GetCombinedNonceResponse
+         * @static
+         * @param {signrpc.MuSig2GetCombinedNonceResponse.$Properties} message MuSig2GetCombinedNonceResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        MuSig2GetCombinedNonceResponse.encodeDelimited = function(message, writer) {
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+        };
+
+        /**
+         * Decodes a MuSig2GetCombinedNonceResponse message from the specified reader or buffer.
+         * @function decode
+         * @memberof signrpc.MuSig2GetCombinedNonceResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {signrpc.MuSig2GetCombinedNonceResponse & signrpc.MuSig2GetCombinedNonceResponse.$Shape} MuSig2GetCombinedNonceResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        MuSig2GetCombinedNonceResponse.decode = function (reader, length, _end, _depth, _target) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw $Error("max depth exceeded");
+            let end, message, value;
+            if (length === $undefined)
+                end = reader.len;
+            else {
+                end = reader.pos + length;
+                if (end > reader.len)
+                    throw $RangeError("index out of range");
+                length = reader.len;
+                reader.len = end;
+            }
+            message = _target || new $root.signrpc.MuSig2GetCombinedNonceResponse();
+            while (reader.pos < end) {
+                let start = reader.pos;
+                let tag = reader.tag();
+                if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                }
+                let wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.bytes()).length)
+                            message.combined_public_nonce = value;
+                        else
+                            delete message.combined_public_nonce;
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                }
+            }
+            if (length !== $undefined) {
+                if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                reader.len = length;
+            }
+            if (_end !== $undefined)
+                throw $Error("missing end group");
+            return message;
+        };
+
+        /**
+         * Decodes a MuSig2GetCombinedNonceResponse message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof signrpc.MuSig2GetCombinedNonceResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {signrpc.MuSig2GetCombinedNonceResponse & signrpc.MuSig2GetCombinedNonceResponse.$Shape} MuSig2GetCombinedNonceResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        MuSig2GetCombinedNonceResponse.decodeDelimited = function(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a MuSig2GetCombinedNonceResponse message.
+         * @function verify
+         * @memberof signrpc.MuSig2GetCombinedNonceResponse
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        MuSig2GetCombinedNonceResponse.verify = function (message, _depth) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
+            if (message.combined_public_nonce != null && $Object.hasOwnProperty.call(message, "combined_public_nonce"))
+                if (!(message.combined_public_nonce && typeof message.combined_public_nonce.length === "number" || $util.isString(message.combined_public_nonce)))
+                    return "combined_public_nonce: buffer expected";
+            return null;
+        };
+
+        /**
+         * Creates a MuSig2GetCombinedNonceResponse message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof signrpc.MuSig2GetCombinedNonceResponse
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {signrpc.MuSig2GetCombinedNonceResponse} MuSig2GetCombinedNonceResponse
+         */
+        MuSig2GetCombinedNonceResponse.fromObject = function (object, _depth) {
+            if (object instanceof $root.signrpc.MuSig2GetCombinedNonceResponse)
+                return object;
+            if (!$util.isObject(object))
+                throw $TypeError(".signrpc.MuSig2GetCombinedNonceResponse: object expected");
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let message = new $root.signrpc.MuSig2GetCombinedNonceResponse();
+            if (object.combined_public_nonce != null)
+                if (object.combined_public_nonce.length)
+                    if (typeof object.combined_public_nonce === "string")
+                        $util.base64.decode(object.combined_public_nonce, message.combined_public_nonce = $util.newBuffer($util.base64.length(object.combined_public_nonce)), 0);
+                    else if (object.combined_public_nonce.length >= 0)
+                        message.combined_public_nonce = object.combined_public_nonce;
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a MuSig2GetCombinedNonceResponse message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof signrpc.MuSig2GetCombinedNonceResponse
+         * @static
+         * @param {signrpc.MuSig2GetCombinedNonceResponse} message MuSig2GetCombinedNonceResponse
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        MuSig2GetCombinedNonceResponse.toObject = function (message, options, _depth) {
+            if (!options)
+                options = {};
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let object = {};
+            if (options.defaults)
+                if (options.bytes === $String)
+                    object.combined_public_nonce = "";
+                else {
+                    object.combined_public_nonce = [];
+                    if (options.bytes !== $Array)
+                        object.combined_public_nonce = $util.newBuffer(object.combined_public_nonce);
+                }
+            if (message.combined_public_nonce != null && $Object.hasOwnProperty.call(message, "combined_public_nonce"))
+                object.combined_public_nonce = options.bytes === $String ? $util.base64.encode(message.combined_public_nonce, 0, message.combined_public_nonce.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.combined_public_nonce) : message.combined_public_nonce;
+            return object;
+        };
+
+        /**
+         * Converts this MuSig2GetCombinedNonceResponse to JSON.
+         * @function toJSON
+         * @memberof signrpc.MuSig2GetCombinedNonceResponse
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        MuSig2GetCombinedNonceResponse.prototype.toJSON = function() {
+            return MuSig2GetCombinedNonceResponse.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the type url for MuSig2GetCombinedNonceResponse
+         * @function getTypeUrl
+         * @memberof signrpc.MuSig2GetCombinedNonceResponse
+         * @static
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
+         */
+        MuSig2GetCombinedNonceResponse.getTypeUrl = function(prefix) {
+            if (prefix === $undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/signrpc.MuSig2GetCombinedNonceResponse";
+        };
+
+        return MuSig2GetCombinedNonceResponse;
+    })();
+
     signrpc.MuSig2SignRequest = (function() {
 
         /**
@@ -141205,6 +142555,47 @@ export const walletrpc = $root.walletrpc = (() => {
         });
 
         /**
+         * Callback as used by {@link walletrpc.WalletKit#xCreateAccount}.
+         * @memberof walletrpc.WalletKit
+         * @typedef XCreateAccountCallback
+         * @type {function}
+         * @param {Error|null} error Error, if any
+         * @param {walletrpc.XCreateAccountResponse} [response] XCreateAccountResponse
+         */
+
+        /**
+         * Calls XCreateAccount.
+         * @memberof walletrpc.WalletKit
+         * @typedef XCreateAccount
+         * @type {{
+         *   (request: walletrpc.IXCreateAccountRequest, callback: walletrpc.WalletKit.XCreateAccountCallback): void;
+         *   (request: walletrpc.IXCreateAccountRequest): Promise<walletrpc.XCreateAccountResponse>;
+         *   readonly name: "XCreateAccount";
+         *   readonly path: "/walletrpc.WalletKit/XCreateAccount";
+         *   readonly requestType: "XCreateAccountRequest";
+         *   readonly responseType: "XCreateAccountResponse";
+         *   readonly requestStream: undefined;
+         *   readonly responseStream: undefined;
+         * }}
+         */
+
+        /**
+         * Calls XCreateAccount.
+         * @name walletrpc.WalletKit#xCreateAccount
+         * @type {walletrpc.WalletKit.XCreateAccount}
+         */
+        $Object.defineProperties(WalletKit.prototype.xCreateAccount = function(request, callback) {
+            return $protobuf.rpc.Service.prototype.rpcCall.call(this, WalletKit.prototype.xCreateAccount, $root.walletrpc.XCreateAccountRequest, $root.walletrpc.XCreateAccountResponse, request, callback);
+        }, {
+            name: { value: "XCreateAccount" },
+            path: { value: "/walletrpc.WalletKit/XCreateAccount" },
+            requestType: { value: "XCreateAccountRequest" },
+            responseType: { value: "XCreateAccountResponse" },
+            requestStream: { value: $undefined },
+            responseStream: { value: $undefined }
+        });
+
+        /**
          * Callback as used by {@link walletrpc.WalletKit#requiredReserve}.
          * @memberof walletrpc.WalletKit
          * @typedef RequiredReserveCallback
@@ -141528,6 +142919,47 @@ export const walletrpc = $root.walletrpc = (() => {
             path: { value: "/walletrpc.WalletKit/PublishTransaction" },
             requestType: { value: "Transaction" },
             responseType: { value: "PublishResponse" },
+            requestStream: { value: $undefined },
+            responseStream: { value: $undefined }
+        });
+
+        /**
+         * Callback as used by {@link walletrpc.WalletKit#submitPackage}.
+         * @memberof walletrpc.WalletKit
+         * @typedef SubmitPackageCallback
+         * @type {function}
+         * @param {Error|null} error Error, if any
+         * @param {walletrpc.SubmitPackageResponse} [response] SubmitPackageResponse
+         */
+
+        /**
+         * Calls SubmitPackage.
+         * @memberof walletrpc.WalletKit
+         * @typedef SubmitPackage
+         * @type {{
+         *   (request: walletrpc.ISubmitPackageRequest, callback: walletrpc.WalletKit.SubmitPackageCallback): void;
+         *   (request: walletrpc.ISubmitPackageRequest): Promise<walletrpc.SubmitPackageResponse>;
+         *   readonly name: "SubmitPackage";
+         *   readonly path: "/walletrpc.WalletKit/SubmitPackage";
+         *   readonly requestType: "SubmitPackageRequest";
+         *   readonly responseType: "SubmitPackageResponse";
+         *   readonly requestStream: undefined;
+         *   readonly responseStream: undefined;
+         * }}
+         */
+
+        /**
+         * Calls SubmitPackage.
+         * @name walletrpc.WalletKit#submitPackage
+         * @type {walletrpc.WalletKit.SubmitPackage}
+         */
+        $Object.defineProperties(WalletKit.prototype.submitPackage = function(request, callback) {
+            return $protobuf.rpc.Service.prototype.rpcCall.call(this, WalletKit.prototype.submitPackage, $root.walletrpc.SubmitPackageRequest, $root.walletrpc.SubmitPackageResponse, request, callback);
+        }, {
+            name: { value: "SubmitPackage" },
+            path: { value: "/walletrpc.WalletKit/SubmitPackage" },
+            requestType: { value: "SubmitPackageRequest" },
+            responseType: { value: "SubmitPackageResponse" },
             requestStream: { value: $undefined },
             responseStream: { value: $undefined }
         });
@@ -142690,6 +144122,7 @@ export const walletrpc = $root.walletrpc = (() => {
          * @property {Uint8Array|null} [id] LeaseOutputRequest id
          * @property {lnrpc.OutPoint.$Properties|null} [outpoint] LeaseOutputRequest outpoint
          * @property {Long|null} [expiration_seconds] LeaseOutputRequest expiration_seconds
+         * @property {number|null} [release_after_spend_confs] LeaseOutputRequest release_after_spend_confs
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -142746,6 +144179,14 @@ export const walletrpc = $root.walletrpc = (() => {
         LeaseOutputRequest.prototype.expiration_seconds = $util.Long ? $util.Long.fromBits(0,0,true) : 0;
 
         /**
+         * LeaseOutputRequest release_after_spend_confs.
+         * @member {number} release_after_spend_confs
+         * @memberof walletrpc.LeaseOutputRequest
+         * @instance
+         */
+        LeaseOutputRequest.prototype.release_after_spend_confs = 0;
+
+        /**
          * Creates a new LeaseOutputRequest instance using the specified properties.
          * @function create
          * @memberof walletrpc.LeaseOutputRequest
@@ -142783,6 +144224,8 @@ export const walletrpc = $root.walletrpc = (() => {
                 $root.lnrpc.OutPoint.encode(message.outpoint, writer.uint32(/* id 2, wireType 2 =*/18).fork(), _depth + 1).ldelim();
             if (message.expiration_seconds != null && $Object.hasOwnProperty.call(message, "expiration_seconds") && (typeof message.expiration_seconds === "object" ? message.expiration_seconds.low || message.expiration_seconds.high : message.expiration_seconds !== 0))
                 writer.uint32(/* id 3, wireType 0 =*/24).uint64(message.expiration_seconds);
+            if (message.release_after_spend_confs != null && $Object.hasOwnProperty.call(message, "release_after_spend_confs") && message.release_after_spend_confs !== 0)
+                writer.uint32(/* id 4, wireType 0 =*/32).uint32(message.release_after_spend_confs);
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -142864,6 +144307,15 @@ export const walletrpc = $root.walletrpc = (() => {
                             delete message.expiration_seconds;
                         continue;
                     }
+                case 4: {
+                        if (wireType !== 0)
+                            break;
+                        if (value = reader.uint32())
+                            message.release_after_spend_confs = value;
+                        else
+                            delete message.release_after_spend_confs;
+                        continue;
+                    }
                 }
                 reader.skipType(wireType, _depth, tag);
                 if (!reader.discardUnknown) {
@@ -142923,6 +144375,9 @@ export const walletrpc = $root.walletrpc = (() => {
             if (message.expiration_seconds != null && $Object.hasOwnProperty.call(message, "expiration_seconds"))
                 if (!$util.isInteger(message.expiration_seconds) && !(message.expiration_seconds && $util.isInteger(message.expiration_seconds.low) && $util.isInteger(message.expiration_seconds.high)))
                     return "expiration_seconds: integer|Long expected";
+            if (message.release_after_spend_confs != null && $Object.hasOwnProperty.call(message, "release_after_spend_confs"))
+                if (!$util.isInteger(message.release_after_spend_confs))
+                    return "release_after_spend_confs: integer expected";
             return null;
         };
 
@@ -142965,6 +144420,9 @@ export const walletrpc = $root.walletrpc = (() => {
                         message.expiration_seconds = object.expiration_seconds;
                     else if (typeof object.expiration_seconds === "object")
                         message.expiration_seconds = new $util.LongBits(object.expiration_seconds.low >>> 0, object.expiration_seconds.high >>> 0).toNumber(true);
+            if (object.release_after_spend_confs != null)
+                if ($Number(object.release_after_spend_confs) !== 0)
+                    message.release_after_spend_confs = object.release_after_spend_confs >>> 0;
             return message;
         };
 
@@ -142999,6 +144457,7 @@ export const walletrpc = $root.walletrpc = (() => {
                     object.expiration_seconds = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
                 } else
                     object.expiration_seconds = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
+                object.release_after_spend_confs = 0;
             }
             if (message.id != null && $Object.hasOwnProperty.call(message, "id"))
                 object.id = options.bytes === $String ? $util.base64.encode(message.id, 0, message.id.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.id) : message.id;
@@ -143011,6 +144470,8 @@ export const walletrpc = $root.walletrpc = (() => {
                     object.expiration_seconds = options.longs === $String ? $String(message.expiration_seconds) : message.expiration_seconds;
                 else
                     object.expiration_seconds = options.longs === $String ? $util.Long.prototype.toString.call(message.expiration_seconds) : options.longs === $Number ? new $util.LongBits(message.expiration_seconds.low >>> 0, message.expiration_seconds.high >>> 0).toNumber(true) : message.expiration_seconds;
+            if (message.release_after_spend_confs != null && $Object.hasOwnProperty.call(message, "release_after_spend_confs"))
+                object.release_after_spend_confs = message.release_after_spend_confs;
             return object;
         };
 
@@ -143048,6 +144509,7 @@ export const walletrpc = $root.walletrpc = (() => {
          * Properties of a LeaseOutputResponse.
          * @typedef {Object} walletrpc.LeaseOutputResponse.$Properties
          * @property {Long|null} [expiration] LeaseOutputResponse expiration
+         * @property {number|null} [release_after_spend_confs] LeaseOutputResponse release_after_spend_confs
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -143088,6 +144550,14 @@ export const walletrpc = $root.walletrpc = (() => {
         LeaseOutputResponse.prototype.expiration = $util.Long ? $util.Long.fromBits(0,0,true) : 0;
 
         /**
+         * LeaseOutputResponse release_after_spend_confs.
+         * @member {number} release_after_spend_confs
+         * @memberof walletrpc.LeaseOutputResponse
+         * @instance
+         */
+        LeaseOutputResponse.prototype.release_after_spend_confs = 0;
+
+        /**
          * Creates a new LeaseOutputResponse instance using the specified properties.
          * @function create
          * @memberof walletrpc.LeaseOutputResponse
@@ -143121,6 +144591,8 @@ export const walletrpc = $root.walletrpc = (() => {
                 throw $Error("max depth exceeded");
             if (message.expiration != null && $Object.hasOwnProperty.call(message, "expiration") && (typeof message.expiration === "object" ? message.expiration.low || message.expiration.high : message.expiration !== 0))
                 writer.uint32(/* id 1, wireType 0 =*/8).uint64(message.expiration);
+            if (message.release_after_spend_confs != null && $Object.hasOwnProperty.call(message, "release_after_spend_confs") && message.release_after_spend_confs !== 0)
+                writer.uint32(/* id 2, wireType 0 =*/16).uint32(message.release_after_spend_confs);
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -143187,6 +144659,15 @@ export const walletrpc = $root.walletrpc = (() => {
                             delete message.expiration;
                         continue;
                     }
+                case 2: {
+                        if (wireType !== 0)
+                            break;
+                        if (value = reader.uint32())
+                            message.release_after_spend_confs = value;
+                        else
+                            delete message.release_after_spend_confs;
+                        continue;
+                    }
                 }
                 reader.skipType(wireType, _depth, tag);
                 if (!reader.discardUnknown) {
@@ -143238,6 +144719,9 @@ export const walletrpc = $root.walletrpc = (() => {
             if (message.expiration != null && $Object.hasOwnProperty.call(message, "expiration"))
                 if (!$util.isInteger(message.expiration) && !(message.expiration && $util.isInteger(message.expiration.low) && $util.isInteger(message.expiration.high)))
                     return "expiration: integer|Long expected";
+            if (message.release_after_spend_confs != null && $Object.hasOwnProperty.call(message, "release_after_spend_confs"))
+                if (!$util.isInteger(message.release_after_spend_confs))
+                    return "release_after_spend_confs: integer expected";
             return null;
         };
 
@@ -143269,6 +144753,9 @@ export const walletrpc = $root.walletrpc = (() => {
                         message.expiration = object.expiration;
                     else if (typeof object.expiration === "object")
                         message.expiration = new $util.LongBits(object.expiration.low >>> 0, object.expiration.high >>> 0).toNumber(true);
+            if (object.release_after_spend_confs != null)
+                if ($Number(object.release_after_spend_confs) !== 0)
+                    message.release_after_spend_confs = object.release_after_spend_confs >>> 0;
             return message;
         };
 
@@ -143289,12 +144776,14 @@ export const walletrpc = $root.walletrpc = (() => {
             if (_depth > $util.recursionLimit)
                 throw $Error("max depth exceeded");
             let object = {};
-            if (options.defaults)
+            if (options.defaults) {
                 if ($util.Long) {
                     let long = new $util.Long(0, 0, true);
                     object.expiration = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
                 } else
                     object.expiration = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
+                object.release_after_spend_confs = 0;
+            }
             if (message.expiration != null && $Object.hasOwnProperty.call(message, "expiration"))
                 if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
                     object.expiration = typeof message.expiration === "number" ? $BigInt(message.expiration) : $util.Long.fromBits(message.expiration.low >>> 0, message.expiration.high >>> 0, true).toBigInt();
@@ -143302,6 +144791,8 @@ export const walletrpc = $root.walletrpc = (() => {
                     object.expiration = options.longs === $String ? $String(message.expiration) : message.expiration;
                 else
                     object.expiration = options.longs === $String ? $util.Long.prototype.toString.call(message.expiration) : options.longs === $Number ? new $util.LongBits(message.expiration.low >>> 0, message.expiration.high >>> 0).toNumber(true) : message.expiration;
+            if (message.release_after_spend_confs != null && $Object.hasOwnProperty.call(message, "release_after_spend_confs"))
+                object.release_after_spend_confs = message.release_after_spend_confs;
             return object;
         };
 
@@ -146830,6 +148321,639 @@ export const walletrpc = $root.walletrpc = (() => {
         };
 
         return ListAccountsResponse;
+    })();
+
+    walletrpc.XCreateAccountRequest = (function() {
+
+        /**
+         * Properties of a XCreateAccountRequest.
+         * @typedef {Object} walletrpc.XCreateAccountRequest.$Properties
+         * @property {string|null} [name] XCreateAccountRequest name
+         * @property {walletrpc.AddressType|null} [address_type] XCreateAccountRequest address_type
+         * @property {boolean|null} [i_know_what_i_am_doing] XCreateAccountRequest i_know_what_i_am_doing
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+
+        /**
+         * Properties of a XCreateAccountRequest.
+         * @memberof walletrpc
+         * @interface IXCreateAccountRequest
+         * @augments walletrpc.XCreateAccountRequest.$Properties
+         * @deprecated Use walletrpc.XCreateAccountRequest.$Properties instead.
+         */
+
+        /**
+         * Shape of a XCreateAccountRequest.
+         * @typedef {walletrpc.XCreateAccountRequest.$Properties} walletrpc.XCreateAccountRequest.$Shape
+         */
+
+        /**
+         * Constructs a new XCreateAccountRequest.
+         * @memberof walletrpc
+         * @classdesc Represents a XCreateAccountRequest.
+         * @constructor
+         * @param {walletrpc.XCreateAccountRequest.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+        const XCreateAccountRequest = function (properties) {
+            if (properties)
+                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+        };
+
+        /**
+         * XCreateAccountRequest name.
+         * @member {string} name
+         * @memberof walletrpc.XCreateAccountRequest
+         * @instance
+         */
+        XCreateAccountRequest.prototype.name = "";
+
+        /**
+         * XCreateAccountRequest address_type.
+         * @member {walletrpc.AddressType} address_type
+         * @memberof walletrpc.XCreateAccountRequest
+         * @instance
+         */
+        XCreateAccountRequest.prototype.address_type = 0;
+
+        /**
+         * XCreateAccountRequest i_know_what_i_am_doing.
+         * @member {boolean} i_know_what_i_am_doing
+         * @memberof walletrpc.XCreateAccountRequest
+         * @instance
+         */
+        XCreateAccountRequest.prototype.i_know_what_i_am_doing = false;
+
+        /**
+         * Creates a new XCreateAccountRequest instance using the specified properties.
+         * @function create
+         * @memberof walletrpc.XCreateAccountRequest
+         * @static
+         * @param {walletrpc.XCreateAccountRequest.$Properties=} [properties] Properties to set
+         * @returns {walletrpc.XCreateAccountRequest} XCreateAccountRequest instance
+         * @type {{
+         *   (properties: walletrpc.XCreateAccountRequest.$Shape): walletrpc.XCreateAccountRequest & walletrpc.XCreateAccountRequest.$Shape;
+         *   (properties?: walletrpc.XCreateAccountRequest.$Properties): walletrpc.XCreateAccountRequest;
+         * }}
+         */
+        XCreateAccountRequest.create = function(properties) {
+            return new XCreateAccountRequest(properties);
+        };
+
+        /**
+         * Encodes the specified XCreateAccountRequest message. Does not implicitly {@link walletrpc.XCreateAccountRequest.verify|verify} messages.
+         * @function encode
+         * @memberof walletrpc.XCreateAccountRequest
+         * @static
+         * @param {walletrpc.XCreateAccountRequest.$Properties} message XCreateAccountRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        XCreateAccountRequest.encode = function (message, writer, _depth) {
+            if (!writer)
+                writer = $Writer.create();
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            if (message.name != null && $Object.hasOwnProperty.call(message, "name") && message.name !== "")
+                writer.uint32(/* id 1, wireType 2 =*/10).string(message.name);
+            if (message.address_type != null && $Object.hasOwnProperty.call(message, "address_type") && message.address_type !== 0)
+                writer.uint32(/* id 2, wireType 0 =*/16).int32(message.address_type);
+            if (message.i_know_what_i_am_doing != null && $Object.hasOwnProperty.call(message, "i_know_what_i_am_doing") && message.i_know_what_i_am_doing !== false)
+                writer.uint32(/* id 3, wireType 0 =*/24).bool(message.i_know_what_i_am_doing);
+            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified XCreateAccountRequest message, length delimited. Does not implicitly {@link walletrpc.XCreateAccountRequest.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof walletrpc.XCreateAccountRequest
+         * @static
+         * @param {walletrpc.XCreateAccountRequest.$Properties} message XCreateAccountRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        XCreateAccountRequest.encodeDelimited = function(message, writer) {
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+        };
+
+        /**
+         * Decodes a XCreateAccountRequest message from the specified reader or buffer.
+         * @function decode
+         * @memberof walletrpc.XCreateAccountRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {walletrpc.XCreateAccountRequest & walletrpc.XCreateAccountRequest.$Shape} XCreateAccountRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        XCreateAccountRequest.decode = function (reader, length, _end, _depth, _target) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw $Error("max depth exceeded");
+            let end, message, value;
+            if (length === $undefined)
+                end = reader.len;
+            else {
+                end = reader.pos + length;
+                if (end > reader.len)
+                    throw $RangeError("index out of range");
+                length = reader.len;
+                reader.len = end;
+            }
+            message = _target || new $root.walletrpc.XCreateAccountRequest();
+            while (reader.pos < end) {
+                let start = reader.pos;
+                let tag = reader.tag();
+                if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                }
+                let wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.stringVerify()).length)
+                            message.name = value;
+                        else
+                            delete message.name;
+                        continue;
+                    }
+                case 2: {
+                        if (wireType !== 0)
+                            break;
+                        if (value = reader.int32())
+                            message.address_type = value;
+                        else
+                            delete message.address_type;
+                        continue;
+                    }
+                case 3: {
+                        if (wireType !== 0)
+                            break;
+                        if (value = reader.bool())
+                            message.i_know_what_i_am_doing = value;
+                        else
+                            delete message.i_know_what_i_am_doing;
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                }
+            }
+            if (length !== $undefined) {
+                if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                reader.len = length;
+            }
+            if (_end !== $undefined)
+                throw $Error("missing end group");
+            return message;
+        };
+
+        /**
+         * Decodes a XCreateAccountRequest message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof walletrpc.XCreateAccountRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {walletrpc.XCreateAccountRequest & walletrpc.XCreateAccountRequest.$Shape} XCreateAccountRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        XCreateAccountRequest.decodeDelimited = function(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a XCreateAccountRequest message.
+         * @function verify
+         * @memberof walletrpc.XCreateAccountRequest
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        XCreateAccountRequest.verify = function (message, _depth) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
+            if (message.name != null && $Object.hasOwnProperty.call(message, "name"))
+                if (!$util.isString(message.name))
+                    return "name: string expected";
+            if (message.address_type != null && $Object.hasOwnProperty.call(message, "address_type"))
+                if (typeof message.address_type !== "number" || (message.address_type | 0) !== message.address_type)
+                    return "address_type: enum value expected";
+            if (message.i_know_what_i_am_doing != null && $Object.hasOwnProperty.call(message, "i_know_what_i_am_doing"))
+                if (typeof message.i_know_what_i_am_doing !== "boolean")
+                    return "i_know_what_i_am_doing: boolean expected";
+            return null;
+        };
+
+        /**
+         * Creates a XCreateAccountRequest message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof walletrpc.XCreateAccountRequest
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {walletrpc.XCreateAccountRequest} XCreateAccountRequest
+         */
+        XCreateAccountRequest.fromObject = function (object, _depth) {
+            if (object instanceof $root.walletrpc.XCreateAccountRequest)
+                return object;
+            if (!$util.isObject(object))
+                throw $TypeError(".walletrpc.XCreateAccountRequest: object expected");
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let message = new $root.walletrpc.XCreateAccountRequest();
+            if (object.name != null)
+                if (typeof object.name !== "string" || object.name.length)
+                    message.name = $String(object.name);
+            if (object.address_type !== 0 && (typeof object.address_type !== "string" || $root.walletrpc.AddressType[object.address_type] !== 0))
+                switch (object.address_type) {
+                case "UNKNOWN":
+                case 0:
+                    message.address_type = 0;
+                    break;
+                case "WITNESS_PUBKEY_HASH":
+                case 1:
+                    message.address_type = 1;
+                    break;
+                case "NESTED_WITNESS_PUBKEY_HASH":
+                case 2:
+                    message.address_type = 2;
+                    break;
+                case "HYBRID_NESTED_WITNESS_PUBKEY_HASH":
+                case 3:
+                    message.address_type = 3;
+                    break;
+                case "TAPROOT_PUBKEY":
+                case 4:
+                    message.address_type = 4;
+                    break;
+                default:
+                    if (typeof object.address_type === "number" && (object.address_type | 0) === object.address_type)
+                        message.address_type = object.address_type;
+                }
+            if (object.i_know_what_i_am_doing != null)
+                if (object.i_know_what_i_am_doing)
+                    message.i_know_what_i_am_doing = $Boolean(object.i_know_what_i_am_doing);
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a XCreateAccountRequest message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof walletrpc.XCreateAccountRequest
+         * @static
+         * @param {walletrpc.XCreateAccountRequest} message XCreateAccountRequest
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        XCreateAccountRequest.toObject = function (message, options, _depth) {
+            if (!options)
+                options = {};
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let object = {};
+            if (options.defaults) {
+                object.name = "";
+                object.address_type = options.enums === $String ? "UNKNOWN" : 0;
+                object.i_know_what_i_am_doing = false;
+            }
+            if (message.name != null && $Object.hasOwnProperty.call(message, "name"))
+                object.name = message.name;
+            if (message.address_type != null && $Object.hasOwnProperty.call(message, "address_type"))
+                object.address_type = options.enums === $String ? $root.walletrpc.AddressType[message.address_type] === $undefined ? message.address_type : $root.walletrpc.AddressType[message.address_type] : message.address_type;
+            if (message.i_know_what_i_am_doing != null && $Object.hasOwnProperty.call(message, "i_know_what_i_am_doing"))
+                object.i_know_what_i_am_doing = message.i_know_what_i_am_doing;
+            return object;
+        };
+
+        /**
+         * Converts this XCreateAccountRequest to JSON.
+         * @function toJSON
+         * @memberof walletrpc.XCreateAccountRequest
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        XCreateAccountRequest.prototype.toJSON = function() {
+            return XCreateAccountRequest.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the type url for XCreateAccountRequest
+         * @function getTypeUrl
+         * @memberof walletrpc.XCreateAccountRequest
+         * @static
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
+         */
+        XCreateAccountRequest.getTypeUrl = function(prefix) {
+            if (prefix === $undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/walletrpc.XCreateAccountRequest";
+        };
+
+        return XCreateAccountRequest;
+    })();
+
+    walletrpc.XCreateAccountResponse = (function() {
+
+        /**
+         * Properties of a XCreateAccountResponse.
+         * @typedef {Object} walletrpc.XCreateAccountResponse.$Properties
+         * @property {walletrpc.Account.$Properties|null} [account] XCreateAccountResponse account
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+
+        /**
+         * Properties of a XCreateAccountResponse.
+         * @memberof walletrpc
+         * @interface IXCreateAccountResponse
+         * @augments walletrpc.XCreateAccountResponse.$Properties
+         * @deprecated Use walletrpc.XCreateAccountResponse.$Properties instead.
+         */
+
+        /**
+         * Shape of a XCreateAccountResponse.
+         * @typedef {walletrpc.XCreateAccountResponse.$Properties} walletrpc.XCreateAccountResponse.$Shape
+         */
+
+        /**
+         * Constructs a new XCreateAccountResponse.
+         * @memberof walletrpc
+         * @classdesc Represents a XCreateAccountResponse.
+         * @constructor
+         * @param {walletrpc.XCreateAccountResponse.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+        const XCreateAccountResponse = function (properties) {
+            if (properties)
+                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+        };
+
+        /**
+         * XCreateAccountResponse account.
+         * @member {walletrpc.Account.$Properties|null|undefined} account
+         * @memberof walletrpc.XCreateAccountResponse
+         * @instance
+         */
+        XCreateAccountResponse.prototype.account = null;
+
+        /**
+         * Creates a new XCreateAccountResponse instance using the specified properties.
+         * @function create
+         * @memberof walletrpc.XCreateAccountResponse
+         * @static
+         * @param {walletrpc.XCreateAccountResponse.$Properties=} [properties] Properties to set
+         * @returns {walletrpc.XCreateAccountResponse} XCreateAccountResponse instance
+         * @type {{
+         *   (properties: walletrpc.XCreateAccountResponse.$Shape): walletrpc.XCreateAccountResponse & walletrpc.XCreateAccountResponse.$Shape;
+         *   (properties?: walletrpc.XCreateAccountResponse.$Properties): walletrpc.XCreateAccountResponse;
+         * }}
+         */
+        XCreateAccountResponse.create = function(properties) {
+            return new XCreateAccountResponse(properties);
+        };
+
+        /**
+         * Encodes the specified XCreateAccountResponse message. Does not implicitly {@link walletrpc.XCreateAccountResponse.verify|verify} messages.
+         * @function encode
+         * @memberof walletrpc.XCreateAccountResponse
+         * @static
+         * @param {walletrpc.XCreateAccountResponse.$Properties} message XCreateAccountResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        XCreateAccountResponse.encode = function (message, writer, _depth) {
+            if (!writer)
+                writer = $Writer.create();
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            if (message.account != null && $Object.hasOwnProperty.call(message, "account"))
+                $root.walletrpc.Account.encode(message.account, writer.uint32(/* id 1, wireType 2 =*/10).fork(), _depth + 1).ldelim();
+            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified XCreateAccountResponse message, length delimited. Does not implicitly {@link walletrpc.XCreateAccountResponse.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof walletrpc.XCreateAccountResponse
+         * @static
+         * @param {walletrpc.XCreateAccountResponse.$Properties} message XCreateAccountResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        XCreateAccountResponse.encodeDelimited = function(message, writer) {
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+        };
+
+        /**
+         * Decodes a XCreateAccountResponse message from the specified reader or buffer.
+         * @function decode
+         * @memberof walletrpc.XCreateAccountResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {walletrpc.XCreateAccountResponse & walletrpc.XCreateAccountResponse.$Shape} XCreateAccountResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        XCreateAccountResponse.decode = function (reader, length, _end, _depth, _target) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw $Error("max depth exceeded");
+            let end, message, value;
+            if (length === $undefined)
+                end = reader.len;
+            else {
+                end = reader.pos + length;
+                if (end > reader.len)
+                    throw $RangeError("index out of range");
+                length = reader.len;
+                reader.len = end;
+            }
+            message = _target || new $root.walletrpc.XCreateAccountResponse();
+            while (reader.pos < end) {
+                let start = reader.pos;
+                let tag = reader.tag();
+                if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                }
+                let wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        message.account = $root.walletrpc.Account.decode(reader, reader.uint32(), $undefined, _depth + 1, message.account);
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                }
+            }
+            if (length !== $undefined) {
+                if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                reader.len = length;
+            }
+            if (_end !== $undefined)
+                throw $Error("missing end group");
+            return message;
+        };
+
+        /**
+         * Decodes a XCreateAccountResponse message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof walletrpc.XCreateAccountResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {walletrpc.XCreateAccountResponse & walletrpc.XCreateAccountResponse.$Shape} XCreateAccountResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        XCreateAccountResponse.decodeDelimited = function(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a XCreateAccountResponse message.
+         * @function verify
+         * @memberof walletrpc.XCreateAccountResponse
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        XCreateAccountResponse.verify = function (message, _depth) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
+            if (message.account != null && $Object.hasOwnProperty.call(message, "account")) {
+                let error = $root.walletrpc.Account.verify(message.account, _depth + 1);
+                if (error)
+                    return "account." + error;
+            }
+            return null;
+        };
+
+        /**
+         * Creates a XCreateAccountResponse message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof walletrpc.XCreateAccountResponse
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {walletrpc.XCreateAccountResponse} XCreateAccountResponse
+         */
+        XCreateAccountResponse.fromObject = function (object, _depth) {
+            if (object instanceof $root.walletrpc.XCreateAccountResponse)
+                return object;
+            if (!$util.isObject(object))
+                throw $TypeError(".walletrpc.XCreateAccountResponse: object expected");
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let message = new $root.walletrpc.XCreateAccountResponse();
+            if (object.account != null) {
+                if (!$util.isObject(object.account))
+                    throw $TypeError(".walletrpc.XCreateAccountResponse.account: object expected");
+                message.account = $root.walletrpc.Account.fromObject(object.account, _depth + 1);
+            }
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a XCreateAccountResponse message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof walletrpc.XCreateAccountResponse
+         * @static
+         * @param {walletrpc.XCreateAccountResponse} message XCreateAccountResponse
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        XCreateAccountResponse.toObject = function (message, options, _depth) {
+            if (!options)
+                options = {};
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let object = {};
+            if (options.defaults)
+                object.account = null;
+            if (message.account != null && $Object.hasOwnProperty.call(message, "account"))
+                object.account = $root.walletrpc.Account.toObject(message.account, options, _depth + 1);
+            return object;
+        };
+
+        /**
+         * Converts this XCreateAccountResponse to JSON.
+         * @function toJSON
+         * @memberof walletrpc.XCreateAccountResponse
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        XCreateAccountResponse.prototype.toJSON = function() {
+            return XCreateAccountResponse.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the type url for XCreateAccountResponse
+         * @function getTypeUrl
+         * @memberof walletrpc.XCreateAccountResponse
+         * @static
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
+         */
+        XCreateAccountResponse.getTypeUrl = function(prefix) {
+            if (prefix === $undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/walletrpc.XCreateAccountResponse";
+        };
+
+        return XCreateAccountResponse;
     })();
 
     walletrpc.RequiredReserveRequest = (function() {
@@ -153784,6 +155908,1080 @@ export const walletrpc = $root.walletrpc = (() => {
         return PublishResponse;
     })();
 
+    walletrpc.SubmitPackageRequest = (function() {
+
+        /**
+         * Properties of a SubmitPackageRequest.
+         * @typedef {Object} walletrpc.SubmitPackageRequest.$Properties
+         * @property {Array.<Uint8Array>|null} [raw_txs] SubmitPackageRequest raw_txs
+         * @property {Long|null} [sat_per_vbyte] SubmitPackageRequest sat_per_vbyte
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+
+        /**
+         * Properties of a SubmitPackageRequest.
+         * @memberof walletrpc
+         * @interface ISubmitPackageRequest
+         * @augments walletrpc.SubmitPackageRequest.$Properties
+         * @deprecated Use walletrpc.SubmitPackageRequest.$Properties instead.
+         */
+
+        /**
+         * Shape of a SubmitPackageRequest.
+         * @typedef {walletrpc.SubmitPackageRequest.$Properties} walletrpc.SubmitPackageRequest.$Shape
+         */
+
+        /**
+         * Constructs a new SubmitPackageRequest.
+         * @memberof walletrpc
+         * @classdesc Represents a SubmitPackageRequest.
+         * @constructor
+         * @param {walletrpc.SubmitPackageRequest.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+        const SubmitPackageRequest = function (properties) {
+            this.raw_txs = [];
+            if (properties)
+                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+        };
+
+        /**
+         * SubmitPackageRequest raw_txs.
+         * @member {Array.<Uint8Array>} raw_txs
+         * @memberof walletrpc.SubmitPackageRequest
+         * @instance
+         */
+        SubmitPackageRequest.prototype.raw_txs = $util.emptyArray;
+
+        /**
+         * SubmitPackageRequest sat_per_vbyte.
+         * @member {Long|null|undefined} sat_per_vbyte
+         * @memberof walletrpc.SubmitPackageRequest
+         * @instance
+         */
+        SubmitPackageRequest.prototype.sat_per_vbyte = null;
+
+        // OneOf field names bound to virtual getters and setters
+        let $oneOfFields;
+
+        // Virtual OneOf for proto3 optional field
+        $Object.defineProperty(SubmitPackageRequest.prototype, "_sat_per_vbyte", {
+            get: $util.oneOfGetter($oneOfFields = ["sat_per_vbyte"]),
+            set: $util.oneOfSetter($oneOfFields)
+        });
+
+        /**
+         * Creates a new SubmitPackageRequest instance using the specified properties.
+         * @function create
+         * @memberof walletrpc.SubmitPackageRequest
+         * @static
+         * @param {walletrpc.SubmitPackageRequest.$Properties=} [properties] Properties to set
+         * @returns {walletrpc.SubmitPackageRequest} SubmitPackageRequest instance
+         * @type {{
+         *   (properties: walletrpc.SubmitPackageRequest.$Shape): walletrpc.SubmitPackageRequest & walletrpc.SubmitPackageRequest.$Shape;
+         *   (properties?: walletrpc.SubmitPackageRequest.$Properties): walletrpc.SubmitPackageRequest;
+         * }}
+         */
+        SubmitPackageRequest.create = function(properties) {
+            return new SubmitPackageRequest(properties);
+        };
+
+        /**
+         * Encodes the specified SubmitPackageRequest message. Does not implicitly {@link walletrpc.SubmitPackageRequest.verify|verify} messages.
+         * @function encode
+         * @memberof walletrpc.SubmitPackageRequest
+         * @static
+         * @param {walletrpc.SubmitPackageRequest.$Properties} message SubmitPackageRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        SubmitPackageRequest.encode = function (message, writer, _depth) {
+            if (!writer)
+                writer = $Writer.create();
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            if (message.raw_txs != null && message.raw_txs.length)
+                for (let i = 0; i < message.raw_txs.length; ++i)
+                    writer.uint32(/* id 1, wireType 2 =*/10).bytes(message.raw_txs[i]);
+            if (message.sat_per_vbyte != null && $Object.hasOwnProperty.call(message, "sat_per_vbyte"))
+                writer.uint32(/* id 2, wireType 0 =*/16).uint64(message.sat_per_vbyte);
+            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified SubmitPackageRequest message, length delimited. Does not implicitly {@link walletrpc.SubmitPackageRequest.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof walletrpc.SubmitPackageRequest
+         * @static
+         * @param {walletrpc.SubmitPackageRequest.$Properties} message SubmitPackageRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        SubmitPackageRequest.encodeDelimited = function(message, writer) {
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+        };
+
+        /**
+         * Decodes a SubmitPackageRequest message from the specified reader or buffer.
+         * @function decode
+         * @memberof walletrpc.SubmitPackageRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {walletrpc.SubmitPackageRequest & walletrpc.SubmitPackageRequest.$Shape} SubmitPackageRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        SubmitPackageRequest.decode = function (reader, length, _end, _depth, _target) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw $Error("max depth exceeded");
+            let end, message;
+            if (length === $undefined)
+                end = reader.len;
+            else {
+                end = reader.pos + length;
+                if (end > reader.len)
+                    throw $RangeError("index out of range");
+                length = reader.len;
+                reader.len = end;
+            }
+            message = _target || new $root.walletrpc.SubmitPackageRequest();
+            while (reader.pos < end) {
+                let start = reader.pos;
+                let tag = reader.tag();
+                if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                }
+                let wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        if (!(message.raw_txs && message.raw_txs.length))
+                            message.raw_txs = [];
+                        message.raw_txs.push(reader.bytes());
+                        continue;
+                    }
+                case 2: {
+                        if (wireType !== 0)
+                            break;
+                        message.sat_per_vbyte = reader.uint64();
+                        message._sat_per_vbyte = "sat_per_vbyte";
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                }
+            }
+            if (length !== $undefined) {
+                if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                reader.len = length;
+            }
+            if (_end !== $undefined)
+                throw $Error("missing end group");
+            return message;
+        };
+
+        /**
+         * Decodes a SubmitPackageRequest message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof walletrpc.SubmitPackageRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {walletrpc.SubmitPackageRequest & walletrpc.SubmitPackageRequest.$Shape} SubmitPackageRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        SubmitPackageRequest.decodeDelimited = function(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a SubmitPackageRequest message.
+         * @function verify
+         * @memberof walletrpc.SubmitPackageRequest
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        SubmitPackageRequest.verify = function (message, _depth) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
+            let properties = {};
+            if (message.raw_txs != null && $Object.hasOwnProperty.call(message, "raw_txs")) {
+                if (!$Array.isArray(message.raw_txs))
+                    return "raw_txs: array expected";
+                for (let i = 0; i < message.raw_txs.length; ++i)
+                    if (!(message.raw_txs[i] && typeof message.raw_txs[i].length === "number" || $util.isString(message.raw_txs[i])))
+                        return "raw_txs: buffer[] expected";
+            }
+            if (message.sat_per_vbyte != null && $Object.hasOwnProperty.call(message, "sat_per_vbyte")) {
+                properties._sat_per_vbyte = 1;
+                if (!$util.isInteger(message.sat_per_vbyte) && !(message.sat_per_vbyte && $util.isInteger(message.sat_per_vbyte.low) && $util.isInteger(message.sat_per_vbyte.high)))
+                    return "sat_per_vbyte: integer|Long expected";
+            }
+            return null;
+        };
+
+        /**
+         * Creates a SubmitPackageRequest message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof walletrpc.SubmitPackageRequest
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {walletrpc.SubmitPackageRequest} SubmitPackageRequest
+         */
+        SubmitPackageRequest.fromObject = function (object, _depth) {
+            if (object instanceof $root.walletrpc.SubmitPackageRequest)
+                return object;
+            if (!$util.isObject(object))
+                throw $TypeError(".walletrpc.SubmitPackageRequest: object expected");
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let message = new $root.walletrpc.SubmitPackageRequest();
+            if (object.raw_txs) {
+                if (!$Array.isArray(object.raw_txs))
+                    throw $TypeError(".walletrpc.SubmitPackageRequest.raw_txs: array expected");
+                message.raw_txs = $Array(object.raw_txs.length);
+                for (let i = 0; i < object.raw_txs.length; ++i)
+                    if (typeof object.raw_txs[i] === "string")
+                        $util.base64.decode(object.raw_txs[i], message.raw_txs[i] = $util.newBuffer($util.base64.length(object.raw_txs[i])), 0);
+                    else if (object.raw_txs[i].length >= 0)
+                        message.raw_txs[i] = object.raw_txs[i];
+            }
+            if (object.sat_per_vbyte != null)
+                if ($util.Long)
+                    message.sat_per_vbyte = $util.Long.fromValue(object.sat_per_vbyte, true);
+                else if (typeof object.sat_per_vbyte === "string")
+                    message.sat_per_vbyte = $parseInt(object.sat_per_vbyte, 10);
+                else if (typeof object.sat_per_vbyte === "number")
+                    message.sat_per_vbyte = object.sat_per_vbyte;
+                else if (typeof object.sat_per_vbyte === "object")
+                    message.sat_per_vbyte = new $util.LongBits(object.sat_per_vbyte.low >>> 0, object.sat_per_vbyte.high >>> 0).toNumber(true);
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a SubmitPackageRequest message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof walletrpc.SubmitPackageRequest
+         * @static
+         * @param {walletrpc.SubmitPackageRequest} message SubmitPackageRequest
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        SubmitPackageRequest.toObject = function (message, options, _depth) {
+            if (!options)
+                options = {};
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let object = {};
+            if (options.arrays || options.defaults)
+                object.raw_txs = [];
+            if (message.raw_txs && message.raw_txs.length) {
+                object.raw_txs = $Array(message.raw_txs.length);
+                for (let j = 0; j < message.raw_txs.length; ++j)
+                    object.raw_txs[j] = options.bytes === $String ? $util.base64.encode(message.raw_txs[j], 0, message.raw_txs[j].length) : options.bytes === $Array ? $Array.prototype.slice.call(message.raw_txs[j]) : message.raw_txs[j];
+            }
+            if (message.sat_per_vbyte != null && $Object.hasOwnProperty.call(message, "sat_per_vbyte"))
+                if (typeof $BigInt !== "undefined" && options.longs === $BigInt)
+                    object.sat_per_vbyte = typeof message.sat_per_vbyte === "number" ? $BigInt(message.sat_per_vbyte) : $util.Long.fromBits(message.sat_per_vbyte.low >>> 0, message.sat_per_vbyte.high >>> 0, true).toBigInt();
+                else if (typeof message.sat_per_vbyte === "number")
+                    object.sat_per_vbyte = options.longs === $String ? $String(message.sat_per_vbyte) : message.sat_per_vbyte;
+                else
+                    object.sat_per_vbyte = options.longs === $String ? $util.Long.prototype.toString.call(message.sat_per_vbyte) : options.longs === $Number ? new $util.LongBits(message.sat_per_vbyte.low >>> 0, message.sat_per_vbyte.high >>> 0).toNumber(true) : message.sat_per_vbyte;
+            return object;
+        };
+
+        /**
+         * Converts this SubmitPackageRequest to JSON.
+         * @function toJSON
+         * @memberof walletrpc.SubmitPackageRequest
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        SubmitPackageRequest.prototype.toJSON = function() {
+            return SubmitPackageRequest.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the type url for SubmitPackageRequest
+         * @function getTypeUrl
+         * @memberof walletrpc.SubmitPackageRequest
+         * @static
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
+         */
+        SubmitPackageRequest.getTypeUrl = function(prefix) {
+            if (prefix === $undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/walletrpc.SubmitPackageRequest";
+        };
+
+        return SubmitPackageRequest;
+    })();
+
+    walletrpc.SubmitPackageTxResult = (function() {
+
+        /**
+         * Properties of a SubmitPackageTxResult.
+         * @typedef {Object} walletrpc.SubmitPackageTxResult.$Properties
+         * @property {string|null} [txid] SubmitPackageTxResult txid
+         * @property {string|null} [error] SubmitPackageTxResult error
+         * @property {string|null} [other_wtxid] SubmitPackageTxResult other_wtxid
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+
+        /**
+         * Properties of a SubmitPackageTxResult.
+         * @memberof walletrpc
+         * @interface ISubmitPackageTxResult
+         * @augments walletrpc.SubmitPackageTxResult.$Properties
+         * @deprecated Use walletrpc.SubmitPackageTxResult.$Properties instead.
+         */
+
+        /**
+         * Shape of a SubmitPackageTxResult.
+         * @typedef {walletrpc.SubmitPackageTxResult.$Properties} walletrpc.SubmitPackageTxResult.$Shape
+         */
+
+        /**
+         * Constructs a new SubmitPackageTxResult.
+         * @memberof walletrpc
+         * @classdesc Represents a SubmitPackageTxResult.
+         * @constructor
+         * @param {walletrpc.SubmitPackageTxResult.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+        const SubmitPackageTxResult = function (properties) {
+            if (properties)
+                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+        };
+
+        /**
+         * SubmitPackageTxResult txid.
+         * @member {string} txid
+         * @memberof walletrpc.SubmitPackageTxResult
+         * @instance
+         */
+        SubmitPackageTxResult.prototype.txid = "";
+
+        /**
+         * SubmitPackageTxResult error.
+         * @member {string} error
+         * @memberof walletrpc.SubmitPackageTxResult
+         * @instance
+         */
+        SubmitPackageTxResult.prototype.error = "";
+
+        /**
+         * SubmitPackageTxResult other_wtxid.
+         * @member {string} other_wtxid
+         * @memberof walletrpc.SubmitPackageTxResult
+         * @instance
+         */
+        SubmitPackageTxResult.prototype.other_wtxid = "";
+
+        /**
+         * Creates a new SubmitPackageTxResult instance using the specified properties.
+         * @function create
+         * @memberof walletrpc.SubmitPackageTxResult
+         * @static
+         * @param {walletrpc.SubmitPackageTxResult.$Properties=} [properties] Properties to set
+         * @returns {walletrpc.SubmitPackageTxResult} SubmitPackageTxResult instance
+         * @type {{
+         *   (properties: walletrpc.SubmitPackageTxResult.$Shape): walletrpc.SubmitPackageTxResult & walletrpc.SubmitPackageTxResult.$Shape;
+         *   (properties?: walletrpc.SubmitPackageTxResult.$Properties): walletrpc.SubmitPackageTxResult;
+         * }}
+         */
+        SubmitPackageTxResult.create = function(properties) {
+            return new SubmitPackageTxResult(properties);
+        };
+
+        /**
+         * Encodes the specified SubmitPackageTxResult message. Does not implicitly {@link walletrpc.SubmitPackageTxResult.verify|verify} messages.
+         * @function encode
+         * @memberof walletrpc.SubmitPackageTxResult
+         * @static
+         * @param {walletrpc.SubmitPackageTxResult.$Properties} message SubmitPackageTxResult message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        SubmitPackageTxResult.encode = function (message, writer, _depth) {
+            if (!writer)
+                writer = $Writer.create();
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            if (message.txid != null && $Object.hasOwnProperty.call(message, "txid") && message.txid !== "")
+                writer.uint32(/* id 1, wireType 2 =*/10).string(message.txid);
+            if (message.error != null && $Object.hasOwnProperty.call(message, "error") && message.error !== "")
+                writer.uint32(/* id 2, wireType 2 =*/18).string(message.error);
+            if (message.other_wtxid != null && $Object.hasOwnProperty.call(message, "other_wtxid") && message.other_wtxid !== "")
+                writer.uint32(/* id 3, wireType 2 =*/26).string(message.other_wtxid);
+            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified SubmitPackageTxResult message, length delimited. Does not implicitly {@link walletrpc.SubmitPackageTxResult.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof walletrpc.SubmitPackageTxResult
+         * @static
+         * @param {walletrpc.SubmitPackageTxResult.$Properties} message SubmitPackageTxResult message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        SubmitPackageTxResult.encodeDelimited = function(message, writer) {
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+        };
+
+        /**
+         * Decodes a SubmitPackageTxResult message from the specified reader or buffer.
+         * @function decode
+         * @memberof walletrpc.SubmitPackageTxResult
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {walletrpc.SubmitPackageTxResult & walletrpc.SubmitPackageTxResult.$Shape} SubmitPackageTxResult
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        SubmitPackageTxResult.decode = function (reader, length, _end, _depth, _target) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw $Error("max depth exceeded");
+            let end, message, value;
+            if (length === $undefined)
+                end = reader.len;
+            else {
+                end = reader.pos + length;
+                if (end > reader.len)
+                    throw $RangeError("index out of range");
+                length = reader.len;
+                reader.len = end;
+            }
+            message = _target || new $root.walletrpc.SubmitPackageTxResult();
+            while (reader.pos < end) {
+                let start = reader.pos;
+                let tag = reader.tag();
+                if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                }
+                let wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.stringVerify()).length)
+                            message.txid = value;
+                        else
+                            delete message.txid;
+                        continue;
+                    }
+                case 2: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.stringVerify()).length)
+                            message.error = value;
+                        else
+                            delete message.error;
+                        continue;
+                    }
+                case 3: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.stringVerify()).length)
+                            message.other_wtxid = value;
+                        else
+                            delete message.other_wtxid;
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                }
+            }
+            if (length !== $undefined) {
+                if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                reader.len = length;
+            }
+            if (_end !== $undefined)
+                throw $Error("missing end group");
+            return message;
+        };
+
+        /**
+         * Decodes a SubmitPackageTxResult message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof walletrpc.SubmitPackageTxResult
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {walletrpc.SubmitPackageTxResult & walletrpc.SubmitPackageTxResult.$Shape} SubmitPackageTxResult
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        SubmitPackageTxResult.decodeDelimited = function(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a SubmitPackageTxResult message.
+         * @function verify
+         * @memberof walletrpc.SubmitPackageTxResult
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        SubmitPackageTxResult.verify = function (message, _depth) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
+            if (message.txid != null && $Object.hasOwnProperty.call(message, "txid"))
+                if (!$util.isString(message.txid))
+                    return "txid: string expected";
+            if (message.error != null && $Object.hasOwnProperty.call(message, "error"))
+                if (!$util.isString(message.error))
+                    return "error: string expected";
+            if (message.other_wtxid != null && $Object.hasOwnProperty.call(message, "other_wtxid"))
+                if (!$util.isString(message.other_wtxid))
+                    return "other_wtxid: string expected";
+            return null;
+        };
+
+        /**
+         * Creates a SubmitPackageTxResult message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof walletrpc.SubmitPackageTxResult
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {walletrpc.SubmitPackageTxResult} SubmitPackageTxResult
+         */
+        SubmitPackageTxResult.fromObject = function (object, _depth) {
+            if (object instanceof $root.walletrpc.SubmitPackageTxResult)
+                return object;
+            if (!$util.isObject(object))
+                throw $TypeError(".walletrpc.SubmitPackageTxResult: object expected");
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let message = new $root.walletrpc.SubmitPackageTxResult();
+            if (object.txid != null)
+                if (typeof object.txid !== "string" || object.txid.length)
+                    message.txid = $String(object.txid);
+            if (object.error != null)
+                if (typeof object.error !== "string" || object.error.length)
+                    message.error = $String(object.error);
+            if (object.other_wtxid != null)
+                if (typeof object.other_wtxid !== "string" || object.other_wtxid.length)
+                    message.other_wtxid = $String(object.other_wtxid);
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a SubmitPackageTxResult message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof walletrpc.SubmitPackageTxResult
+         * @static
+         * @param {walletrpc.SubmitPackageTxResult} message SubmitPackageTxResult
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        SubmitPackageTxResult.toObject = function (message, options, _depth) {
+            if (!options)
+                options = {};
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let object = {};
+            if (options.defaults) {
+                object.txid = "";
+                object.error = "";
+                object.other_wtxid = "";
+            }
+            if (message.txid != null && $Object.hasOwnProperty.call(message, "txid"))
+                object.txid = message.txid;
+            if (message.error != null && $Object.hasOwnProperty.call(message, "error"))
+                object.error = message.error;
+            if (message.other_wtxid != null && $Object.hasOwnProperty.call(message, "other_wtxid"))
+                object.other_wtxid = message.other_wtxid;
+            return object;
+        };
+
+        /**
+         * Converts this SubmitPackageTxResult to JSON.
+         * @function toJSON
+         * @memberof walletrpc.SubmitPackageTxResult
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        SubmitPackageTxResult.prototype.toJSON = function() {
+            return SubmitPackageTxResult.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the type url for SubmitPackageTxResult
+         * @function getTypeUrl
+         * @memberof walletrpc.SubmitPackageTxResult
+         * @static
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
+         */
+        SubmitPackageTxResult.getTypeUrl = function(prefix) {
+            if (prefix === $undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/walletrpc.SubmitPackageTxResult";
+        };
+
+        return SubmitPackageTxResult;
+    })();
+
+    walletrpc.SubmitPackageResponse = (function() {
+
+        /**
+         * Properties of a SubmitPackageResponse.
+         * @typedef {Object} walletrpc.SubmitPackageResponse.$Properties
+         * @property {string|null} [package_msg] SubmitPackageResponse package_msg
+         * @property {Object.<string,walletrpc.SubmitPackageTxResult.$Properties>|null} [tx_results] SubmitPackageResponse tx_results
+         * @property {Array.<string>|null} [replaced_transactions] SubmitPackageResponse replaced_transactions
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+
+        /**
+         * Properties of a SubmitPackageResponse.
+         * @memberof walletrpc
+         * @interface ISubmitPackageResponse
+         * @augments walletrpc.SubmitPackageResponse.$Properties
+         * @deprecated Use walletrpc.SubmitPackageResponse.$Properties instead.
+         */
+
+        /**
+         * Shape of a SubmitPackageResponse.
+         * @typedef {walletrpc.SubmitPackageResponse.$Properties} walletrpc.SubmitPackageResponse.$Shape
+         */
+
+        /**
+         * Constructs a new SubmitPackageResponse.
+         * @memberof walletrpc
+         * @classdesc Represents a SubmitPackageResponse.
+         * @constructor
+         * @param {walletrpc.SubmitPackageResponse.$Properties=} [properties] Properties to set
+         * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
+         */
+        const SubmitPackageResponse = function (properties) {
+            this.tx_results = {};
+            this.replaced_transactions = [];
+            if (properties)
+                for (let keys = $Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null && keys[i] !== "__proto__")
+                        this[keys[i]] = properties[keys[i]];
+        };
+
+        /**
+         * SubmitPackageResponse package_msg.
+         * @member {string} package_msg
+         * @memberof walletrpc.SubmitPackageResponse
+         * @instance
+         */
+        SubmitPackageResponse.prototype.package_msg = "";
+
+        /**
+         * SubmitPackageResponse tx_results.
+         * @member {Object.<string,walletrpc.SubmitPackageTxResult.$Properties>} tx_results
+         * @memberof walletrpc.SubmitPackageResponse
+         * @instance
+         */
+        SubmitPackageResponse.prototype.tx_results = $util.emptyObject;
+
+        /**
+         * SubmitPackageResponse replaced_transactions.
+         * @member {Array.<string>} replaced_transactions
+         * @memberof walletrpc.SubmitPackageResponse
+         * @instance
+         */
+        SubmitPackageResponse.prototype.replaced_transactions = $util.emptyArray;
+
+        /**
+         * Creates a new SubmitPackageResponse instance using the specified properties.
+         * @function create
+         * @memberof walletrpc.SubmitPackageResponse
+         * @static
+         * @param {walletrpc.SubmitPackageResponse.$Properties=} [properties] Properties to set
+         * @returns {walletrpc.SubmitPackageResponse} SubmitPackageResponse instance
+         * @type {{
+         *   (properties: walletrpc.SubmitPackageResponse.$Shape): walletrpc.SubmitPackageResponse & walletrpc.SubmitPackageResponse.$Shape;
+         *   (properties?: walletrpc.SubmitPackageResponse.$Properties): walletrpc.SubmitPackageResponse;
+         * }}
+         */
+        SubmitPackageResponse.create = function(properties) {
+            return new SubmitPackageResponse(properties);
+        };
+
+        /**
+         * Encodes the specified SubmitPackageResponse message. Does not implicitly {@link walletrpc.SubmitPackageResponse.verify|verify} messages.
+         * @function encode
+         * @memberof walletrpc.SubmitPackageResponse
+         * @static
+         * @param {walletrpc.SubmitPackageResponse.$Properties} message SubmitPackageResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        SubmitPackageResponse.encode = function (message, writer, _depth) {
+            if (!writer)
+                writer = $Writer.create();
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            if (message.package_msg != null && $Object.hasOwnProperty.call(message, "package_msg") && message.package_msg !== "")
+                writer.uint32(/* id 1, wireType 2 =*/10).string(message.package_msg);
+            if (message.tx_results != null && $Object.hasOwnProperty.call(message, "tx_results"))
+                for (let keys = $Object.keys(message.tx_results), i = 0; i < keys.length; ++i) {
+                    writer.uint32(/* id 2, wireType 2 =*/18).fork().uint32(/* id 1, wireType 2 =*/10).string(keys[i]);
+                    $root.walletrpc.SubmitPackageTxResult.encode(message.tx_results[keys[i]], writer.uint32(/* id 2, wireType 2 =*/18).fork(), _depth + 1).ldelim().ldelim();
+                }
+            if (message.replaced_transactions != null && message.replaced_transactions.length)
+                for (let i = 0; i < message.replaced_transactions.length; ++i)
+                    writer.uint32(/* id 3, wireType 2 =*/26).string(message.replaced_transactions[i]);
+            if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
+                for (let i = 0; i < message.$unknowns.length; ++i)
+                    writer.raw(message.$unknowns[i]);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified SubmitPackageResponse message, length delimited. Does not implicitly {@link walletrpc.SubmitPackageResponse.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof walletrpc.SubmitPackageResponse
+         * @static
+         * @param {walletrpc.SubmitPackageResponse.$Properties} message SubmitPackageResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        SubmitPackageResponse.encodeDelimited = function(message, writer) {
+            return this.encode(message, (writer || $Writer.create()).fork()).ldelim();
+        };
+
+        /**
+         * Decodes a SubmitPackageResponse message from the specified reader or buffer.
+         * @function decode
+         * @memberof walletrpc.SubmitPackageResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {walletrpc.SubmitPackageResponse & walletrpc.SubmitPackageResponse.$Shape} SubmitPackageResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        SubmitPackageResponse.decode = function (reader, length, _end, _depth, _target) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $Reader.recursionLimit)
+                throw $Error("max depth exceeded");
+            let end, message, key, value;
+            if (length === $undefined)
+                end = reader.len;
+            else {
+                end = reader.pos + length;
+                if (end > reader.len)
+                    throw $RangeError("index out of range");
+                length = reader.len;
+                reader.len = end;
+            }
+            message = _target || new $root.walletrpc.SubmitPackageResponse();
+            while (reader.pos < end) {
+                let start = reader.pos;
+                let tag = reader.tag();
+                if (tag === _end) {
+                    _end = $undefined;
+                    break;
+                }
+                let wireType = tag & 7;
+                switch (tag >>>= 3) {
+                case 1: {
+                        if (wireType !== 2)
+                            break;
+                        if ((value = reader.stringVerify()).length)
+                            message.package_msg = value;
+                        else
+                            delete message.package_msg;
+                        continue;
+                    }
+                case 2: {
+                        if (wireType !== 2)
+                            break;
+                        if (message.tx_results === $util.emptyObject)
+                            message.tx_results = {};
+                        let end2 = reader.uint32() + reader.pos;
+                        if (end2 > reader.len)
+                            throw $RangeError("index out of range");
+                        reader.len = end2;
+                        key = "";
+                        value = null;
+                        while (reader.pos < end2) {
+                            let tag2 = reader.tag();
+                            wireType = tag2 & 7;
+                            switch (tag2 >>>= 3) {
+                            case 1:
+                                if (wireType !== 2)
+                                    break;
+                                key = reader.stringVerify();
+                                continue;
+                            case 2:
+                                if (wireType !== 2)
+                                    break;
+                                value = $root.walletrpc.SubmitPackageTxResult.decode(reader, reader.uint32(), $undefined, _depth + 1, value);
+                                continue;
+                            }
+                            reader.skipType(wireType, _depth, tag2);
+                        }
+                        if (reader.pos !== end2)
+                            throw $RangeError("index out of range");
+                        reader.len = end;
+                        if (key === "__proto__")
+                            $util.makeProp(message.tx_results, key);
+                        message.tx_results[key] = value || new $root.walletrpc.SubmitPackageTxResult();
+                        continue;
+                    }
+                case 3: {
+                        if (wireType !== 2)
+                            break;
+                        if (!(message.replaced_transactions && message.replaced_transactions.length))
+                            message.replaced_transactions = [];
+                        message.replaced_transactions.push(reader.stringVerify());
+                        continue;
+                    }
+                }
+                reader.skipType(wireType, _depth, tag);
+                if (!reader.discardUnknown) {
+                    $util.makeProp(message, "$unknowns", false);
+                    (message.$unknowns || (message.$unknowns = [])).push(reader.raw(start, reader.pos));
+                }
+            }
+            if (length !== $undefined) {
+                if (reader.pos !== end)
+                    throw $RangeError("index out of range");
+                reader.len = length;
+            }
+            if (_end !== $undefined)
+                throw $Error("missing end group");
+            return message;
+        };
+
+        /**
+         * Decodes a SubmitPackageResponse message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof walletrpc.SubmitPackageResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {walletrpc.SubmitPackageResponse & walletrpc.SubmitPackageResponse.$Shape} SubmitPackageResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        SubmitPackageResponse.decodeDelimited = function(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a SubmitPackageResponse message.
+         * @function verify
+         * @memberof walletrpc.SubmitPackageResponse
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        SubmitPackageResponse.verify = function (message, _depth) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                return "max depth exceeded";
+            if (message.package_msg != null && $Object.hasOwnProperty.call(message, "package_msg"))
+                if (!$util.isString(message.package_msg))
+                    return "package_msg: string expected";
+            if (message.tx_results != null && $Object.hasOwnProperty.call(message, "tx_results")) {
+                if (!$util.isObject(message.tx_results))
+                    return "tx_results: object expected";
+                let key = $Object.keys(message.tx_results);
+                for (let i = 0; i < key.length; ++i) {
+                    let error = $root.walletrpc.SubmitPackageTxResult.verify(message.tx_results[key[i]], _depth + 1);
+                    if (error)
+                        return "tx_results." + error;
+                }
+            }
+            if (message.replaced_transactions != null && $Object.hasOwnProperty.call(message, "replaced_transactions")) {
+                if (!$Array.isArray(message.replaced_transactions))
+                    return "replaced_transactions: array expected";
+                for (let i = 0; i < message.replaced_transactions.length; ++i)
+                    if (!$util.isString(message.replaced_transactions[i]))
+                        return "replaced_transactions: string[] expected";
+            }
+            return null;
+        };
+
+        /**
+         * Creates a SubmitPackageResponse message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof walletrpc.SubmitPackageResponse
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {walletrpc.SubmitPackageResponse} SubmitPackageResponse
+         */
+        SubmitPackageResponse.fromObject = function (object, _depth) {
+            if (object instanceof $root.walletrpc.SubmitPackageResponse)
+                return object;
+            if (!$util.isObject(object))
+                throw $TypeError(".walletrpc.SubmitPackageResponse: object expected");
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let message = new $root.walletrpc.SubmitPackageResponse();
+            if (object.package_msg != null)
+                if (typeof object.package_msg !== "string" || object.package_msg.length)
+                    message.package_msg = $String(object.package_msg);
+            if (object.tx_results) {
+                if (!$util.isObject(object.tx_results))
+                    throw $TypeError(".walletrpc.SubmitPackageResponse.tx_results: object expected");
+                message.tx_results = {};
+                for (let keys = $Object.keys(object.tx_results), i = 0; i < keys.length; ++i) {
+                    if (keys[i] === "__proto__")
+                        $util.makeProp(message.tx_results, keys[i]);
+                    if (!$util.isObject(object.tx_results[keys[i]]))
+                        throw $TypeError(".walletrpc.SubmitPackageResponse.tx_results: object expected");
+                    message.tx_results[keys[i]] = $root.walletrpc.SubmitPackageTxResult.fromObject(object.tx_results[keys[i]], _depth + 1);
+                }
+            }
+            if (object.replaced_transactions) {
+                if (!$Array.isArray(object.replaced_transactions))
+                    throw $TypeError(".walletrpc.SubmitPackageResponse.replaced_transactions: array expected");
+                message.replaced_transactions = $Array(object.replaced_transactions.length);
+                for (let i = 0; i < object.replaced_transactions.length; ++i)
+                    message.replaced_transactions[i] = $String(object.replaced_transactions[i]);
+            }
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a SubmitPackageResponse message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof walletrpc.SubmitPackageResponse
+         * @static
+         * @param {walletrpc.SubmitPackageResponse} message SubmitPackageResponse
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        SubmitPackageResponse.toObject = function (message, options, _depth) {
+            if (!options)
+                options = {};
+            if (_depth === $undefined)
+                _depth = 0;
+            if (_depth > $util.recursionLimit)
+                throw $Error("max depth exceeded");
+            let object = {};
+            if (options.arrays || options.defaults)
+                object.replaced_transactions = [];
+            if (options.objects || options.defaults)
+                object.tx_results = {};
+            if (options.defaults)
+                object.package_msg = "";
+            if (message.package_msg != null && $Object.hasOwnProperty.call(message, "package_msg"))
+                object.package_msg = message.package_msg;
+            let keys2;
+            if (message.tx_results && (keys2 = $Object.keys(message.tx_results)).length) {
+                object.tx_results = {};
+                for (let j = 0; j < keys2.length; ++j) {
+                    if (keys2[j] === "__proto__")
+                        $util.makeProp(object.tx_results, keys2[j]);
+                    object.tx_results[keys2[j]] = $root.walletrpc.SubmitPackageTxResult.toObject(message.tx_results[keys2[j]], options, _depth + 1);
+                }
+            }
+            if (message.replaced_transactions && message.replaced_transactions.length) {
+                object.replaced_transactions = $Array(message.replaced_transactions.length);
+                for (let j = 0; j < message.replaced_transactions.length; ++j)
+                    object.replaced_transactions[j] = message.replaced_transactions[j];
+            }
+            return object;
+        };
+
+        /**
+         * Converts this SubmitPackageResponse to JSON.
+         * @function toJSON
+         * @memberof walletrpc.SubmitPackageResponse
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        SubmitPackageResponse.prototype.toJSON = function() {
+            return SubmitPackageResponse.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the type url for SubmitPackageResponse
+         * @function getTypeUrl
+         * @memberof walletrpc.SubmitPackageResponse
+         * @static
+         * @param {string} [prefix] Custom type url prefix, defaults to `"type.googleapis.com"`
+         * @returns {string} The type url
+         */
+        SubmitPackageResponse.getTypeUrl = function(prefix) {
+            if (prefix === $undefined)
+                prefix = "type.googleapis.com";
+            return prefix + "/walletrpc.SubmitPackageResponse";
+        };
+
+        return SubmitPackageResponse;
+    })();
+
     walletrpc.RemoveTransactionResponse = (function() {
 
         /**
@@ -155465,6 +158663,13 @@ export const walletrpc = $root.walletrpc = (() => {
      * @property {number} TAPROOT_HTLC_ACCEPTED_REMOTE_SUCCESS=33 TAPROOT_HTLC_ACCEPTED_REMOTE_SUCCESS value
      * @property {number} TAPROOT_HTLC_ACCEPTED_LOCAL_SUCCESS=34 TAPROOT_HTLC_ACCEPTED_LOCAL_SUCCESS value
      * @property {number} TAPROOT_COMMITMENT_REVOKE=35 TAPROOT_COMMITMENT_REVOKE value
+     * @property {number} TAPROOT_LOCAL_COMMIT_SPEND_FINAL=36 TAPROOT_LOCAL_COMMIT_SPEND_FINAL value
+     * @property {number} TAPROOT_REMOTE_COMMIT_SPEND_FINAL=37 TAPROOT_REMOTE_COMMIT_SPEND_FINAL value
+     * @property {number} TAPROOT_HTLC_OFFERED_TIMEOUT_SECOND_LEVEL_FINAL=38 TAPROOT_HTLC_OFFERED_TIMEOUT_SECOND_LEVEL_FINAL value
+     * @property {number} TAPROOT_HTLC_ACCEPTED_SUCCESS_SECOND_LEVEL_FINAL=39 TAPROOT_HTLC_ACCEPTED_SUCCESS_SECOND_LEVEL_FINAL value
+     * @property {number} TAPROOT_HTLC_OFFERED_REMOTE_TIMEOUT_FINAL=40 TAPROOT_HTLC_OFFERED_REMOTE_TIMEOUT_FINAL value
+     * @property {number} TAPROOT_HTLC_ACCEPTED_REMOTE_SUCCESS_FINAL=41 TAPROOT_HTLC_ACCEPTED_REMOTE_SUCCESS_FINAL value
+     * @property {number} TAPROOT_COMMITMENT_REVOKE_FINAL=42 TAPROOT_COMMITMENT_REVOKE_FINAL value
      */
     walletrpc.WitnessType = (function() {
         const valuesById = $Object.create(null), values = $Object.create(valuesById);
@@ -155504,6 +158709,13 @@ export const walletrpc = $root.walletrpc = (() => {
         values[valuesById[33] = "TAPROOT_HTLC_ACCEPTED_REMOTE_SUCCESS"] = 33;
         values[valuesById[34] = "TAPROOT_HTLC_ACCEPTED_LOCAL_SUCCESS"] = 34;
         values[valuesById[35] = "TAPROOT_COMMITMENT_REVOKE"] = 35;
+        values[valuesById[36] = "TAPROOT_LOCAL_COMMIT_SPEND_FINAL"] = 36;
+        values[valuesById[37] = "TAPROOT_REMOTE_COMMIT_SPEND_FINAL"] = 37;
+        values[valuesById[38] = "TAPROOT_HTLC_OFFERED_TIMEOUT_SECOND_LEVEL_FINAL"] = 38;
+        values[valuesById[39] = "TAPROOT_HTLC_ACCEPTED_SUCCESS_SECOND_LEVEL_FINAL"] = 39;
+        values[valuesById[40] = "TAPROOT_HTLC_OFFERED_REMOTE_TIMEOUT_FINAL"] = 40;
+        values[valuesById[41] = "TAPROOT_HTLC_ACCEPTED_REMOTE_SUCCESS_FINAL"] = 41;
+        values[valuesById[42] = "TAPROOT_COMMITMENT_REVOKE_FINAL"] = 42;
         return values;
     })();
 
@@ -156195,6 +159407,34 @@ export const walletrpc = $root.walletrpc = (() => {
                 case "TAPROOT_COMMITMENT_REVOKE":
                 case 35:
                     message.witness_type = 35;
+                    break;
+                case "TAPROOT_LOCAL_COMMIT_SPEND_FINAL":
+                case 36:
+                    message.witness_type = 36;
+                    break;
+                case "TAPROOT_REMOTE_COMMIT_SPEND_FINAL":
+                case 37:
+                    message.witness_type = 37;
+                    break;
+                case "TAPROOT_HTLC_OFFERED_TIMEOUT_SECOND_LEVEL_FINAL":
+                case 38:
+                    message.witness_type = 38;
+                    break;
+                case "TAPROOT_HTLC_ACCEPTED_SUCCESS_SECOND_LEVEL_FINAL":
+                case 39:
+                    message.witness_type = 39;
+                    break;
+                case "TAPROOT_HTLC_OFFERED_REMOTE_TIMEOUT_FINAL":
+                case 40:
+                    message.witness_type = 40;
+                    break;
+                case "TAPROOT_HTLC_ACCEPTED_REMOTE_SUCCESS_FINAL":
+                case 41:
+                    message.witness_type = 41;
+                    break;
+                case "TAPROOT_COMMITMENT_REVOKE_FINAL":
+                case 42:
+                    message.witness_type = 42;
                     break;
                 default:
                     if (typeof object.witness_type === "number" && (object.witness_type | 0) === object.witness_type)
@@ -160019,6 +163259,7 @@ export const walletrpc = $root.walletrpc = (() => {
          * @property {number|null} [max_fee_ratio] FundPsbtRequest max_fee_ratio
          * @property {Uint8Array|null} [custom_lock_id] FundPsbtRequest custom_lock_id
          * @property {Long|null} [lock_expiration_seconds] FundPsbtRequest lock_expiration_seconds
+         * @property {number|null} [input_release_after_spend_confs] FundPsbtRequest input_release_after_spend_confs
          * @property {"psbt"|"raw"|"coin_select"} [template] FundPsbtRequest template
          * @property {"target_conf"|"sat_per_vbyte"|"sat_per_kw"} [fees] FundPsbtRequest fees
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
@@ -160049,6 +163290,7 @@ export const walletrpc = $root.walletrpc = (() => {
          *   max_fee_ratio?: number|null;
          *   custom_lock_id?: Uint8Array|null;
          *   lock_expiration_seconds?: Long|null;
+         *   input_release_after_spend_confs?: number|null;
          *   $unknowns?: Array.<Uint8Array>;
          * } & (
          *   ({ template?: undefined; psbt?: null; raw?: null; coin_select?: null }|{ template?: "psbt"; psbt: Uint8Array; raw?: null; coin_select?: null }|{ template?: "raw"; psbt?: null; raw: walletrpc.TxTemplate.$Shape; coin_select?: null }|{ template?: "coin_select"; psbt?: null; raw?: null; coin_select: walletrpc.PsbtCoinSelect.$Shape })
@@ -160184,6 +163426,14 @@ export const walletrpc = $root.walletrpc = (() => {
          */
         FundPsbtRequest.prototype.lock_expiration_seconds = $util.Long ? $util.Long.fromBits(0,0,true) : 0;
 
+        /**
+         * FundPsbtRequest input_release_after_spend_confs.
+         * @member {number} input_release_after_spend_confs
+         * @memberof walletrpc.FundPsbtRequest
+         * @instance
+         */
+        FundPsbtRequest.prototype.input_release_after_spend_confs = 0;
+
         // OneOf field names bound to virtual getters and setters
         let $oneOfFields;
 
@@ -160269,6 +163519,8 @@ export const walletrpc = $root.walletrpc = (() => {
                 writer.uint32(/* id 13, wireType 2 =*/106).bytes(message.custom_lock_id);
             if (message.lock_expiration_seconds != null && $Object.hasOwnProperty.call(message, "lock_expiration_seconds") && (typeof message.lock_expiration_seconds === "object" ? message.lock_expiration_seconds.low || message.lock_expiration_seconds.high : message.lock_expiration_seconds !== 0))
                 writer.uint32(/* id 14, wireType 0 =*/112).uint64(message.lock_expiration_seconds);
+            if (message.input_release_after_spend_confs != null && $Object.hasOwnProperty.call(message, "input_release_after_spend_confs") && message.input_release_after_spend_confs !== 0)
+                writer.uint32(/* id 15, wireType 0 =*/120).uint32(message.input_release_after_spend_confs);
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -160440,6 +163692,15 @@ export const walletrpc = $root.walletrpc = (() => {
                             delete message.lock_expiration_seconds;
                         continue;
                     }
+                case 15: {
+                        if (wireType !== 0)
+                            break;
+                        if (value = reader.uint32())
+                            message.input_release_after_spend_confs = value;
+                        else
+                            delete message.input_release_after_spend_confs;
+                        continue;
+                    }
                 }
                 reader.skipType(wireType, _depth, tag);
                 if (!reader.discardUnknown) {
@@ -160557,6 +163818,9 @@ export const walletrpc = $root.walletrpc = (() => {
             if (message.lock_expiration_seconds != null && $Object.hasOwnProperty.call(message, "lock_expiration_seconds"))
                 if (!$util.isInteger(message.lock_expiration_seconds) && !(message.lock_expiration_seconds && $util.isInteger(message.lock_expiration_seconds.low) && $util.isInteger(message.lock_expiration_seconds.high)))
                     return "lock_expiration_seconds: integer|Long expected";
+            if (message.input_release_after_spend_confs != null && $Object.hasOwnProperty.call(message, "input_release_after_spend_confs"))
+                if (!$util.isInteger(message.input_release_after_spend_confs))
+                    return "input_release_after_spend_confs: integer expected";
             return null;
         };
 
@@ -160673,6 +163937,9 @@ export const walletrpc = $root.walletrpc = (() => {
                         message.lock_expiration_seconds = object.lock_expiration_seconds;
                     else if (typeof object.lock_expiration_seconds === "object")
                         message.lock_expiration_seconds = new $util.LongBits(object.lock_expiration_seconds.low >>> 0, object.lock_expiration_seconds.high >>> 0).toNumber(true);
+            if (object.input_release_after_spend_confs != null)
+                if ($Number(object.input_release_after_spend_confs) !== 0)
+                    message.input_release_after_spend_confs = object.input_release_after_spend_confs >>> 0;
             return message;
         };
 
@@ -160712,6 +163979,7 @@ export const walletrpc = $root.walletrpc = (() => {
                     object.lock_expiration_seconds = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
                 } else
                     object.lock_expiration_seconds = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
+                object.input_release_after_spend_confs = 0;
             }
             if (message.psbt != null && $Object.hasOwnProperty.call(message, "psbt")) {
                 object.psbt = options.bytes === $String ? $util.base64.encode(message.psbt, 0, message.psbt.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.psbt) : message.psbt;
@@ -160774,6 +164042,8 @@ export const walletrpc = $root.walletrpc = (() => {
                     object.lock_expiration_seconds = options.longs === $String ? $String(message.lock_expiration_seconds) : message.lock_expiration_seconds;
                 else
                     object.lock_expiration_seconds = options.longs === $String ? $util.Long.prototype.toString.call(message.lock_expiration_seconds) : options.longs === $Number ? new $util.LongBits(message.lock_expiration_seconds.low >>> 0, message.lock_expiration_seconds.high >>> 0).toNumber(true) : message.lock_expiration_seconds;
+            if (message.input_release_after_spend_confs != null && $Object.hasOwnProperty.call(message, "input_release_after_spend_confs"))
+                object.input_release_after_spend_confs = message.input_release_after_spend_confs;
             return object;
         };
 
@@ -161927,6 +165197,8 @@ export const walletrpc = $root.walletrpc = (() => {
          * @property {Long|null} [expiration] UtxoLease expiration
          * @property {Uint8Array|null} [pk_script] UtxoLease pk_script
          * @property {Long|null} [value] UtxoLease value
+         * @property {number|null} [release_after_spend_confs] UtxoLease release_after_spend_confs
+         * @property {number|null} [confirmed_spend_height] UtxoLease confirmed_spend_height
          * @property {Array.<Uint8Array>} [$unknowns] Unknown fields preserved while decoding when enabled
          */
 
@@ -161999,6 +165271,22 @@ export const walletrpc = $root.walletrpc = (() => {
         UtxoLease.prototype.value = $util.Long ? $util.Long.fromBits(0,0,true) : 0;
 
         /**
+         * UtxoLease release_after_spend_confs.
+         * @member {number} release_after_spend_confs
+         * @memberof walletrpc.UtxoLease
+         * @instance
+         */
+        UtxoLease.prototype.release_after_spend_confs = 0;
+
+        /**
+         * UtxoLease confirmed_spend_height.
+         * @member {number} confirmed_spend_height
+         * @memberof walletrpc.UtxoLease
+         * @instance
+         */
+        UtxoLease.prototype.confirmed_spend_height = 0;
+
+        /**
          * Creates a new UtxoLease instance using the specified properties.
          * @function create
          * @memberof walletrpc.UtxoLease
@@ -162040,6 +165328,10 @@ export const walletrpc = $root.walletrpc = (() => {
                 writer.uint32(/* id 4, wireType 2 =*/34).bytes(message.pk_script);
             if (message.value != null && $Object.hasOwnProperty.call(message, "value") && (typeof message.value === "object" ? message.value.low || message.value.high : message.value !== 0))
                 writer.uint32(/* id 5, wireType 0 =*/40).uint64(message.value);
+            if (message.release_after_spend_confs != null && $Object.hasOwnProperty.call(message, "release_after_spend_confs") && message.release_after_spend_confs !== 0)
+                writer.uint32(/* id 6, wireType 0 =*/48).uint32(message.release_after_spend_confs);
+            if (message.confirmed_spend_height != null && $Object.hasOwnProperty.call(message, "confirmed_spend_height") && message.confirmed_spend_height !== 0)
+                writer.uint32(/* id 7, wireType 0 =*/56).int32(message.confirmed_spend_height);
             if (message.$unknowns != null && $Object.hasOwnProperty.call(message, "$unknowns"))
                 for (let i = 0; i < message.$unknowns.length; ++i)
                     writer.raw(message.$unknowns[i]);
@@ -162139,6 +165431,24 @@ export const walletrpc = $root.walletrpc = (() => {
                             delete message.value;
                         continue;
                     }
+                case 6: {
+                        if (wireType !== 0)
+                            break;
+                        if (value = reader.uint32())
+                            message.release_after_spend_confs = value;
+                        else
+                            delete message.release_after_spend_confs;
+                        continue;
+                    }
+                case 7: {
+                        if (wireType !== 0)
+                            break;
+                        if (value = reader.int32())
+                            message.confirmed_spend_height = value;
+                        else
+                            delete message.confirmed_spend_height;
+                        continue;
+                    }
                 }
                 reader.skipType(wireType, _depth, tag);
                 if (!reader.discardUnknown) {
@@ -162204,6 +165514,12 @@ export const walletrpc = $root.walletrpc = (() => {
             if (message.value != null && $Object.hasOwnProperty.call(message, "value"))
                 if (!$util.isInteger(message.value) && !(message.value && $util.isInteger(message.value.low) && $util.isInteger(message.value.high)))
                     return "value: integer|Long expected";
+            if (message.release_after_spend_confs != null && $Object.hasOwnProperty.call(message, "release_after_spend_confs"))
+                if (!$util.isInteger(message.release_after_spend_confs))
+                    return "release_after_spend_confs: integer expected";
+            if (message.confirmed_spend_height != null && $Object.hasOwnProperty.call(message, "confirmed_spend_height"))
+                if (!$util.isInteger(message.confirmed_spend_height))
+                    return "confirmed_spend_height: integer expected";
             return null;
         };
 
@@ -162262,6 +165578,12 @@ export const walletrpc = $root.walletrpc = (() => {
                         message.value = object.value;
                     else if (typeof object.value === "object")
                         message.value = new $util.LongBits(object.value.low >>> 0, object.value.high >>> 0).toNumber(true);
+            if (object.release_after_spend_confs != null)
+                if ($Number(object.release_after_spend_confs) !== 0)
+                    message.release_after_spend_confs = object.release_after_spend_confs >>> 0;
+            if (object.confirmed_spend_height != null)
+                if ($Number(object.confirmed_spend_height) !== 0)
+                    message.confirmed_spend_height = object.confirmed_spend_height | 0;
             return message;
         };
 
@@ -162308,6 +165630,8 @@ export const walletrpc = $root.walletrpc = (() => {
                     object.value = options.longs === $String ? long.toString() : options.longs === $Number ? long.toNumber() : typeof $BigInt !== "undefined" && options.longs === $BigInt ? long.toBigInt() : long;
                 } else
                     object.value = options.longs === $String ? "0" : typeof $BigInt !== "undefined" && options.longs === $BigInt ? $BigInt("0") : 0;
+                object.release_after_spend_confs = 0;
+                object.confirmed_spend_height = 0;
             }
             if (message.id != null && $Object.hasOwnProperty.call(message, "id"))
                 object.id = options.bytes === $String ? $util.base64.encode(message.id, 0, message.id.length) : options.bytes === $Array ? $Array.prototype.slice.call(message.id) : message.id;
@@ -162329,6 +165653,10 @@ export const walletrpc = $root.walletrpc = (() => {
                     object.value = options.longs === $String ? $String(message.value) : message.value;
                 else
                     object.value = options.longs === $String ? $util.Long.prototype.toString.call(message.value) : options.longs === $Number ? new $util.LongBits(message.value.low >>> 0, message.value.high >>> 0).toNumber(true) : message.value;
+            if (message.release_after_spend_confs != null && $Object.hasOwnProperty.call(message, "release_after_spend_confs"))
+                object.release_after_spend_confs = message.release_after_spend_confs;
+            if (message.confirmed_spend_height != null && $Object.hasOwnProperty.call(message, "confirmed_spend_height"))
+                object.confirmed_spend_height = message.confirmed_spend_height;
             return object;
         };
 

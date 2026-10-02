@@ -42,13 +42,20 @@ service WalletKit {
     lock's expiration is returned. The expiration of the lock can be extended by
     successive invocations of this RPC. Outputs can be unlocked before their
     expiration through `ReleaseOutput`.
+
+    A non-zero release_after_spend_confs selects a confirmation-controlled
+    lifetime. Such a lease ignores its wall-clock expiration and releases at
+    the requested spend depth or through ReleaseOutput. The RPC fails if the
+    wallet cannot apply this option. Renewing the same lease with the same ID
+    and a zero depth preserves an existing non-zero depth.
     */
     rpc LeaseOutput (LeaseOutputRequest) returns (LeaseOutputResponse);
 
     /* lncli: `wallet releaseoutput`
     ReleaseOutput unlocks an output, allowing it to be available for coin
     selection if it remains unspent. The ID should match the one used to
-    originally lock the output.
+    originally lock the output. A retained release-after-spend lease can also be
+    released after its spending transaction has been observed.
     */
     rpc ReleaseOutput (ReleaseOutputRequest) returns (ReleaseOutputResponse);
 
@@ -86,6 +93,63 @@ service WalletKit {
     wallet accounts and return only those matching.
     */
     rpc ListAccounts (ListAccountsRequest) returns (ListAccountsResponse);
+
+    /* lncli: `wallet accounts create`
+    XCreateAccount is an experimental API that creates a new named account
+    within the wallet, deriving the account's keys from the wallet's master
+    key.
+
+    In contrast to ImportAccount, which registers a watch-only account from an
+    externally supplied extended public key, the account created here is fully
+    owned by the wallet: it derives its own addresses and can sign for its own
+    outputs. That makes it usable as an isolated pocket of funds inside a single
+    wallet, because coin selection, change, balance and address derivation can
+    all be scoped to it by name.
+
+    NOTE: The X prefix marks this API as experimental: it may change or be
+    removed without the usual deprecation period. It additionally requires
+    i_know_what_i_am_doing on release builds, because a seed-only restore does
+    not rediscover the funds an account created here holds; see the recovery
+    note below. That second gate comes off once recovery handles these
+    accounts, at which point the X can be dropped too.
+
+    NOTE: The wallet must be unlocked, as deriving the account key requires
+    access to the master private key.
+
+    NOTE: The call is not idempotent, and the account is created before the
+    response is sent. A client that cancels or times out may still have had
+    the account created, in which case its retry fails with "already exists"
+    — indistinguishable from a genuine name clash. Check ListAccounts before
+    retrying.
+
+    NOTE: The account's address type is permanent and also fixes the type of
+    its change outputs. lnd resolves a custom account name within the key
+    scope implied by the requested address type, so every later call must ask
+    for the address type that maps to the same scope or the account will
+    appear not to exist. NextAddr and NewAddress take lnrpc.AddressType,
+    which has no HYBRID_NESTED_WITNESS_PUBKEY_HASH member: an account created
+    as HYBRID_NESTED_WITNESS_PUBKEY_HASH must be addressed with
+    NESTED_PUBKEY_HASH, which maps to the same BIP-0049Plus scope.
+    TAPROOT_PUBKEY and WITNESS_PUBKEY_HASH map across unchanged.
+
+    NOTE: Funds held in an account created here are not rediscovered by a
+    seed-only recovery, because lnd's recovery scan only rederives addresses
+    for the wallet's default account (btcwallet's RecoveryManager hardcodes
+    waddrmgr.DefaultAccountNum). They are still recoverable, but only by
+    reconstructing the account first, and the account name is not what has to
+    be reproduced: accounts are derived from an index that btcwallet assigns
+    sequentially per key scope, shared with accounts created by ImportAccount.
+
+    To keep an account recoverable, record its key scope, the account index
+    (the account's derivation_path in the response), and how many addresses
+    it has issued. To restore: re-create every account in that key scope in
+    their original order so the index counter lands on the same value,
+    re-derive at least as many addresses as were previously issued with
+    NextAddr — a rescan only searches for addresses already present in the
+    wallet database, and a freshly created account has none — and only then
+    rescan with --reset-wallet-transactions.
+    */
+    rpc XCreateAccount (XCreateAccountRequest) returns (XCreateAccountResponse);
 
     /* lncli: `wallet requiredreserve`
     RequiredReserve returns the minimum amount of satoshis that should be kept
@@ -208,6 +272,20 @@ service WalletKit {
     */
     rpc PublishTransaction (Transaction) returns (PublishResponse);
 
+    /* lncli: `wallet submitpackage`
+    SubmitPackage submits a package of related transactions (topologically
+    sorted, unconfirmed parents first and the child last) for atomic
+    validation and acceptance. Real package submission is only performed by
+    the bitcoind backend, via the node's submitpackage RPC, which lets a
+    zero-fee v3/TRUC parent be accepted via its fee-paying CPFP child. The
+    btcd backend does not support submitpackage and returns an error. A
+    neutrino light client has no mempool and cannot atomically accept a
+    package; as a best effort it broadcasts the transactions individually and
+    relies on a peer's 1p1c package relay, returning an unverified result
+    (not a package-accept verdict).
+    */
+    rpc SubmitPackage (SubmitPackageRequest) returns (SubmitPackageResponse);
+
     /* lncli: `wallet removetx`
     RemoveTransaction attempts to remove the provided transaction from the
     internal transaction store of the wallet.
@@ -321,6 +399,14 @@ service WalletKit {
     After either selecting or verifying the inputs, all input UTXOs are locked
     with an internal app ID.
 
+    A non-zero input_release_after_spend_confs applies a
+    confirmation-controlled lifetime to every input lease this RPC acquires.
+    Those leases ignore wall-clock expiration and release at the requested
+    spend depth or through ReleaseOutput. The RPC fails if the wallet cannot
+    apply this option. Wallet capability is checked even when coin selection
+    does not need to acquire an input lease. A custom_lock_id is required for a
+    confirmation-controlled lease.
+
     NOTE: If this method returns without an error, it is the caller's
     responsibility to either spend the locked UTXOs (by finalizing and then
     publishing the transaction) or to unlock/release the locked UTXOs in case of
@@ -328,7 +414,7 @@ service WalletKit {
     */
     rpc FundPsbt (FundPsbtRequest) returns (FundPsbtResponse);
 
-    /*
+    /* lncli: `wallet psbt sign`
     SignPsbt expects a partial transaction with all inputs and outputs fully
     declared and tries to sign all unsigned inputs that have all required fields
     (UTXO information, BIP32 derivation information, witness or sig scripts)
@@ -395,16 +481,32 @@ message LeaseOutputRequest {
     // The identifying outpoint of the output being leased.
     lnrpc.OutPoint outpoint = 2;
 
-    // The time in seconds before the lock expires. If set to zero, the default
-    // lock duration is used.
+    // The time in seconds before a time-controlled lock expires. If set to
+    // zero, the default lock duration is used. A non-zero
+    // release_after_spend_confs makes this deadline informational only.
     uint64 expiration_seconds = 3;
+
+    // Keep the lease until the transaction spending the output reaches this
+    // confirmation count or the owner explicitly releases it. A reorganization
+    // that disconnects the spending block resets maturity progress. A non-zero
+    // value ignores expiration_seconds; zero preserves the time-controlled
+    // lease behavior.
+    uint32 release_after_spend_confs = 4;
 }
 
 message LeaseOutputResponse {
     /*
-    The absolute expiration of the output lease represented as a unix timestamp.
+    The absolute expiration of a time-controlled output lease represented as a
+    unix timestamp. Confirmation-controlled leases return the stored value for
+    compatibility but do not apply it.
     */
     uint64 expiration = 1;
+
+    // The effective persisted spend maturity depth. A zero-depth renewal
+    // returns the retained non-zero depth of an existing
+    // confirmation-controlled lease. If that informational lookup fails after
+    // the lease succeeds, this field is zero and ListLeases can refresh it.
+    uint32 release_after_spend_confs = 2;
 }
 
 message ReleaseOutputRequest {
@@ -573,6 +675,40 @@ message ListAccountsRequest {
 
 message ListAccountsResponse {
     repeated Account accounts = 1;
+}
+
+message XCreateAccountRequest {
+    // The name to identify the new account with. The name must not be empty and
+    // must not already be in use by another account, in any key scope. The
+    // names of the wallet's built-in accounts ("default" and "imported") are
+    // reserved and cannot be used.
+    string name = 1;
+
+    // The type of addresses the account should hold, which selects the BIP-0043
+    // key scope the account is created under. A custom account only ever exists
+    // within a single key scope, so this permanently fixes both the account's
+    // address type and the address type of its change outputs. If unset, an
+    // account holding taproot addresses is created.
+    //
+    // NESTED_WITNESS_PUBKEY_HASH is not accepted: a wallet-derived account
+    // carries no address schema of its own, so it would silently behave as
+    // HYBRID_NESTED_WITNESS_PUBKEY_HASH. Ask for that type explicitly if it
+    // is what you want.
+    AddressType address_type = 2;
+
+    /*
+    Override the requirement for being in dev mode by setting this to true and
+    confirming the user knows what they are doing: funds held in an account
+    created here are not rediscovered by a seed-only restore, so recovering
+    them requires having recorded the account's key scope and index and the
+    number of addresses it issued.
+    */
+    bool i_know_what_i_am_doing = 3;
+}
+
+message XCreateAccountResponse {
+    // The newly created account.
+    Account account = 1;
 }
 
 message RequiredReserveRequest {
@@ -814,6 +950,48 @@ message PublishResponse {
     TODO(roasbeef): map to a proper enum type
     */
     string publish_error = 1;
+}
+
+message SubmitPackageRequest {
+    /*
+    The raw serialized transactions forming the package, topologically sorted
+    with unconfirmed parents first and the child last.
+    */
+    repeated bytes raw_txs = 1;
+
+    /*
+    Optional per-transaction fee-rate ceiling in sat/vByte (mapped onto the
+    submitpackage maxfeerate). When unset the node's default is used; an
+    explicit 0 means no limit, which is required for a CPFP child whose
+    standalone feerate is high.
+    */
+    optional uint64 sat_per_vbyte = 2;
+}
+
+message SubmitPackageTxResult {
+    // The transaction id (txid) in hex.
+    string txid = 1;
+
+    // If non-empty, the reason this transaction was rejected.
+    string error = 2;
+
+    /*
+    If non-empty, the wtxid (in hex) of a transaction with the same txid but a
+    different witness that was already in the mempool; the submitted
+    transaction was ignored as a duplicate (witness replacement).
+    */
+    string other_wtxid = 3;
+}
+
+message SubmitPackageResponse {
+    // A summary message; "success" when the whole package was accepted.
+    string package_msg = 1;
+
+    // Per-transaction results keyed by wtxid (hex).
+    map<string, SubmitPackageTxResult> tx_results = 2;
+
+    // The txids of transactions evicted via package RBF.
+    repeated string replaced_transactions = 3;
 }
 
 message RemoveTransactionResponse {
@@ -1113,6 +1291,56 @@ enum WitnessType {
     counterparty's who broadcasts a revoked taproot commitment transaction.
     */
     TAPROOT_COMMITMENT_REVOKE = 35;
+
+    /*
+    A witness type that allows us to spend our settled local commitment after a
+    CSV delay when we force close a production taproot channel.
+    */
+    TAPROOT_LOCAL_COMMIT_SPEND_FINAL = 36;
+
+    /*
+    A witness type that allows us to spend our settled local commitment after
+    a CSV delay when the remote party has force closed a production taproot
+    channel.
+    */
+    TAPROOT_REMOTE_COMMIT_SPEND_FINAL = 37;
+
+    /*
+    A witness that allows us to timeout an HTLC we offered to the remote party
+    on our production taproot commitment transaction. We use this when we need
+    to go on chain to time out an HTLC.
+    */
+    TAPROOT_HTLC_OFFERED_TIMEOUT_SECOND_LEVEL_FINAL = 38;
+
+    /*
+    A witness type that allows us to sweep an HTLC we accepted on our
+    production taproot commitment transaction after we go to the second level
+    on chain.
+    */
+    TAPROOT_HTLC_ACCEPTED_SUCCESS_SECOND_LEVEL_FINAL = 39;
+
+    /*
+    A witness that allows us to sweep an HTLC we offered to the remote party
+    that lies on the production taproot commitment transaction for the remote
+    party. We can spend this output after the absolute CLTV timeout of the
+    HTLC as passed.
+    */
+    TAPROOT_HTLC_OFFERED_REMOTE_TIMEOUT_FINAL = 40;
+
+    /*
+    A witness that allows us to sweep an HTLC that was offered to us by the
+    remote party for a production taproot channel. We use this witness in the
+    case that the remote party goes to chain, and we know the pre-image to the
+    HTLC. We can sweep this without any additional timeout.
+    */
+    TAPROOT_HTLC_ACCEPTED_REMOTE_SUCCESS_FINAL = 41;
+
+    /*
+    A witness type that allows us to sweep the settled output of a malicious
+    counterparty's who broadcasts a revoked production taproot commitment
+    transaction.
+    */
+    TAPROOT_COMMITMENT_REVOKE_FINAL = 42;
 }
 
 message PendingSweep {
@@ -1460,13 +1688,23 @@ message FundPsbtRequest {
 
     // The custom lock ID to use for the inputs in the funded PSBT. The value
     // if set must be exactly 32 bytes long. If empty, the default lock ID will
-    // be used.
+    // be used. This field is required when input_release_after_spend_confs is
+    // non-zero. In that mode it must not be all zero or LND's reserved
+    // internal lock ID. The caller must persist this ID before funding and use
+    // ReleaseOutput to unlock an abandoned PSBT whose spend never confirms.
     bytes custom_lock_id = 13;
 
-    // If set, then the inputs in the funded PSBT will be locked for the
-    // specified duration. The lock duration is specified in seconds. If not
-    // set, the default lock duration will be used.
+    // If set, then time-controlled input leases in the funded PSBT will be
+    // locked for the specified duration in seconds. If not set, the default
+    // lock duration is used. A non-zero input_release_after_spend_confs makes
+    // this deadline informational only.
     uint64 lock_expiration_seconds = 14;
+
+    // Keep each acquired input lease until its spending transaction reaches
+    // this confirmation count or the owner explicitly releases it. A
+    // reorganization resets maturity progress. A non-zero value ignores
+    // lock_expiration_seconds; zero preserves time-controlled lease behavior.
+    uint32 input_release_after_spend_confs = 15;
 }
 message FundPsbtResponse {
     /*
@@ -1547,7 +1785,9 @@ message UtxoLease {
     lnrpc.OutPoint outpoint = 2;
 
     /*
-    The absolute expiration of the output lease represented as a unix timestamp.
+    The absolute expiration of a time-controlled output lease represented as a
+    unix timestamp. Confirmation-controlled leases retain this value for
+    compatibility but do not apply it.
     */
     uint64 expiration = 3;
 
@@ -1560,6 +1800,17 @@ message UtxoLease {
     The value of the leased output in satoshis.
     */
     uint64 value = 5;
+
+    // The spend maturity depth recorded for this lease. FundPsbt returns it
+    // only after the wallet successfully applies the requested option.
+    uint32 release_after_spend_confs = 6;
+
+    // The block height where the spending transaction first confirmed. Zero
+    // means no confirmed spend was observed. A negative value means a
+    // previously observed spend was disconnected and is awaiting
+    // reconfirmation. The only negative value emitted is -1; its magnitude
+    // carries no additional information.
+    int32 confirmed_spend_height = 7;
 }
 
 message SignPsbtRequest {
