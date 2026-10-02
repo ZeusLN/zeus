@@ -335,25 +335,30 @@ const newOnchainAddress = async (): Promise<string> => {
 
 const sendToOnchainAddress = async ({
     address,
-    amountSats
+    amountSats,
+    satPerVbyte
 }: {
     address: string;
     amountSats: number;
+    satPerVbyte?: number;
 }): Promise<string> => {
     const result: any = await LdkNodeModule.sendToOnchainAddress(
         address,
-        amountSats
+        amountSats,
+        satPerVbyte ?? -1
     );
     return result.txid;
 };
 
 const sendAllToOnchainAddress = async (
     address: string,
-    retainReserve: boolean = false
+    retainReserve: boolean = false,
+    satPerVbyte?: number
 ): Promise<string> => {
     const result: any = await LdkNodeModule.sendAllToOnchainAddress(
         address,
-        retainReserve
+        retainReserve,
+        satPerVbyte ?? -1
     );
     return result.txid;
 };
@@ -374,16 +379,19 @@ const listUtxos = async (): Promise<WalletUtxo[]> => {
 const sendToOnchainAddressWithUtxos = async ({
     address,
     amountSats,
-    utxos
+    utxos,
+    satPerVbyte
 }: {
     address: string;
     amountSats: number;
     utxos: Array<{ txid: string; vout: number }>;
+    satPerVbyte?: number;
 }): Promise<string> => {
     const result: any = await LdkNodeModule.sendToOnchainAddressWithUtxos(
         address,
         amountSats,
-        utxos
+        utxos,
+        satPerVbyte ?? -1
     );
     return result.txid;
 };
@@ -391,16 +399,19 @@ const sendToOnchainAddressWithUtxos = async ({
 const sendAllToOnchainAddressWithUtxos = async ({
     address,
     retainReserve = false,
-    utxos
+    utxos,
+    satPerVbyte
 }: {
     address: string;
     retainReserve?: boolean;
     utxos: Array<{ txid: string; vout: number }>;
+    satPerVbyte?: number;
 }): Promise<string> => {
     const result: any = await LdkNodeModule.sendAllToOnchainAddressWithUtxos(
         address,
         retainReserve,
-        utxos
+        utxos,
+        satPerVbyte ?? -1
     );
     return result.txid;
 };
@@ -1116,21 +1127,25 @@ export interface ILdkNodeInjections {
         sendToOnchainAddress: (params: {
             address: string;
             amountSats: number;
+            satPerVbyte?: number;
         }) => Promise<string>;
         sendAllToOnchainAddress: (
             address: string,
-            retainReserve?: boolean
+            retainReserve?: boolean,
+            satPerVbyte?: number
         ) => Promise<string>;
         listUtxos: () => Promise<WalletUtxo[]>;
         sendToOnchainAddressWithUtxos: (params: {
             address: string;
             amountSats: number;
             utxos: Array<{ txid: string; vout: number }>;
+            satPerVbyte?: number;
         }) => Promise<string>;
         sendAllToOnchainAddressWithUtxos: (params: {
             address: string;
             retainReserve?: boolean;
             utxos: Array<{ txid: string; vout: number }>;
+            satPerVbyte?: number;
         }) => Promise<string>;
     };
     bolt11: {
