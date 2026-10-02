@@ -155,51 +155,26 @@ export default class GraphSyncPromptModal extends React.Component<
                             />
                         </View>
 
-                        <View style={styles.rowButtons}>
-                            <View style={styles.halfButton}>
-                                <Button
-                                    title={
-                                        localeString('general.ignore') +
-                                        '\n' +
-                                        localeString('general.once')
-                                    }
-                                    onPress={this.handleIgnoreOnce}
-                                    disabled={this.state.loading}
-                                    buttonStyle={{
-                                        backgroundColor:
-                                            themeColor('highlight'),
-                                        borderColor: themeColor('highlight')
-                                    }}
-                                    titleStyle={{
-                                        color: themeColor('background'),
-                                        textAlign: 'center',
-                                        flexShrink: 1,
-                                        includeFontPadding: false
-                                    }}
-                                />
-                            </View>
-                            <View style={styles.halfButton}>
-                                <Button
-                                    title={
-                                        localeString('general.neverAsk') +
-                                        '\n' +
-                                        localeString('general.again')
-                                    }
-                                    onPress={this.handleNeverAskAgain}
-                                    disabled={this.state.loading}
-                                    buttonStyle={{
-                                        backgroundColor:
-                                            themeColor('highlight'),
-                                        borderColor: themeColor('highlight')
-                                    }}
-                                    titleStyle={{
-                                        color: themeColor('background'),
-                                        textAlign: 'center',
-                                        flexShrink: 1,
-                                        includeFontPadding: false
-                                    }}
-                                />
-                            </View>
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString(
+                                    'views.GraphSyncPrompt.ignoreOnce'
+                                )}
+                                onPress={this.handleIgnoreOnce}
+                                disabled={this.state.loading}
+                                tertiary
+                            />
+                        </View>
+
+                        <View style={styles.button}>
+                            <Button
+                                title={localeString(
+                                    'views.GraphSyncPrompt.neverAskAgain'
+                                )}
+                                onPress={this.handleNeverAskAgain}
+                                disabled={this.state.loading}
+                                tertiary
+                            />
                         </View>
                     </View>
                 </View>
@@ -226,16 +201,5 @@ const styles = StyleSheet.create({
         width: '100%',
         alignItems: 'center',
         marginVertical: 10
-    },
-    rowButtons: {
-        flexDirection: 'row',
-        width: '100%',
-        justifyContent: 'space-between',
-        marginVertical: 10
-    },
-    halfButton: {
-        flex: 1,
-        marginHorizontal: 5,
-        minWidth: 140
     }
 });
