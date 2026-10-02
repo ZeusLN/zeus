@@ -27,6 +27,7 @@ import handleAnything from '../utils/handleAnything';
 import { scanNfcTag } from '../utils/NFCUtils';
 import NodeUriUtils from '../utils/NodeUriUtils';
 import BackendUtils from '../utils/BackendUtils';
+import OpenChannelUtils from '../utils/OpenChannelUtils';
 import ValidationUtils from '../utils/ValidationUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -320,13 +321,30 @@ export default class OpenChannel extends React.Component<
         const isInvalidFeeRate =
             supportsChannelOpenFeeRate &&
             (sat_per_vbyte === '0' || !sat_per_vbyte);
+        const isInvalidAmount = OpenChannelUtils.isInvalidMainChannelAmount({
+            satAmount,
+            fundMax,
+            connectPeerOnly
+        });
+        const isInvalidAdditionalChannel =
+            OpenChannelUtils.hasInvalidAdditionalChannels(
+                additionalChannels,
+                connectPeerOnly
+            );
+        const isSubmitDisabled =
+            loading ||
+            (!connectPeerOnly && isInvalidFeeRate) ||
+            isInvalidAmount ||
+            isInvalidAdditionalChannel ||
+            isInvalidPeer;
 
         const peerAlias =
             ChannelsStore.aliasesByPubkey[node_pubkey_string] ||
             ChannelsStore.nodes[node_pubkey_string]?.alias;
 
-        // When fundMax is on, AmountInput is locked so onAmountChange never fires and
-        // satAmount stays ''. Use the same value the locked AmountInput displays instead.
+        // When fundMax is on, AmountInput only reports satAmount once when it is
+        // turned on, not for later balance or UTXO changes. Use the same value the
+        // locked AmountInput displays instead.
         const displaySatAmount = fundMax
             ? utxoBalance > 0
                 ? utxoBalance
@@ -843,7 +861,10 @@ export default class OpenChannel extends React.Component<
                                                                 implementation ===
                                                                     'cln-rest'
                                                                     ? 'all'
-                                                                    : ''
+                                                                    : '',
+                                                            // AmountInput does not report the cleared
+                                                            // amount when fund max is turned off
+                                                            satAmount: ''
                                                         });
                                                     }}
                                                 />
@@ -869,6 +890,17 @@ export default class OpenChannel extends React.Component<
                                                         )}
                                                     </Text>
                                                     <TextInput
+                                                        textColor={
+                                                            OpenChannelUtils.isValidAdditionalChannelPubkey(
+                                                                channel
+                                                            )
+                                                                ? themeColor(
+                                                                      'text'
+                                                                  )
+                                                                : themeColor(
+                                                                      'error'
+                                                                  )
+                                                        }
                                                         placeholder={'0A...'}
                                                         value={
                                                             channel?.node_pubkey_string
@@ -903,6 +935,17 @@ export default class OpenChannel extends React.Component<
                                                         )}
                                                     </Text>
                                                     <TextInput
+                                                        textColor={
+                                                            OpenChannelUtils.isValidAdditionalChannelHost(
+                                                                channel
+                                                            )
+                                                                ? themeColor(
+                                                                      'text'
+                                                                  )
+                                                                : themeColor(
+                                                                      'error'
+                                                                  )
+                                                        }
                                                         value={channel?.host}
                                                         placeholder={localeString(
                                                             'views.OpenChannel.hostPort'
@@ -1287,10 +1330,9 @@ export default class OpenChannel extends React.Component<
                                     icon={{
                                         name: 'swap-horiz',
                                         size: 25,
-                                        color:
-                                            isInvalidFeeRate || isInvalidPeer
-                                                ? themeColor('secondaryText')
-                                                : themeColor('background')
+                                        color: isSubmitDisabled
+                                            ? themeColor('secondaryText')
+                                            : themeColor('background')
                                     }}
                                     onPress={() => {
                                         this.scrollViewRef.current?.scrollTo({
@@ -1311,12 +1353,7 @@ export default class OpenChannel extends React.Component<
                                             connectPeerOnly
                                         ).catch(() => {});
                                     }}
-                                    disabled={
-                                        loading ||
-                                        (!connectPeerOnly &&
-                                            isInvalidFeeRate) ||
-                                        isInvalidPeer
-                                    }
+                                    disabled={isSubmitDisabled}
                                 />
                             </View>
 
