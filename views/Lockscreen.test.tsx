@@ -26,6 +26,8 @@ jest.mock('../stores/SettingsStore', () => ({
         Standalone: 'standalone'
     }
 }));
+// ShareIntentProcessor imports the store graph, which loads native modules
+jest.mock('../stores/Stores', () => ({ settingsStore: {} }));
 jest.mock('../utils/BiometricUtils', () => ({
     verifyBiometry: jest.fn()
 }));
