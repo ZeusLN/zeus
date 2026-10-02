@@ -1,5 +1,19 @@
 jest.mock('../stores/Stores', () => ({}));
-jest.mock('react-native-blob-util', () => ({}));
+const mockBlobFetch = jest.fn((..._args: any[]) =>
+    Promise.resolve({
+        json: () => ({ status: 'OK' }),
+        text: () => ''
+    })
+);
+jest.mock('react-native-blob-util', () => ({
+    __esModule: true,
+    default: {
+        fetch: (...args: any[]) => mockBlobFetch(...args)
+    }
+}));
+jest.mock('react-native', () => ({
+    Alert: { alert: jest.fn() }
+}));
 jest.mock('../ldknode/LdkNodeInjection', () => ({}));
 jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
@@ -7,7 +21,9 @@ jest.mock('../utils/BackendUtils', () => ({
         decodePaymentRequest: jest.fn(),
         getNewAddress: jest.fn(),
         getNewChangeAddress: jest.fn(),
-        isLNDBased: jest.fn(() => false)
+        isLNDBased: jest.fn(() => false),
+        createInvoice: jest.fn(),
+        supportsFlowLSP: jest.fn(() => false)
     }
 }));
 jest.mock('../utils/LocaleUtils', () => ({
@@ -155,5 +171,65 @@ describe('InvoicesStore.getNewChangeAddress', () => {
             account: 'SeedSigner',
             type: 'TAPROOT_PUBKEY'
         });
+    });
+});
+
+// The withdraw callback is a URL the LNURL service chooses, and the wallet
+// fetches it from the phone's network position. Without the allowlist a
+// scanned lnurlw pointing at loopback or a LAN address turned the wallet into
+// an SSRF probe; the same guard already covered the pay flow's callback.
+describe('InvoicesStore lnurl-withdraw callback', () => {
+    const createStore = () =>
+        new InvoicesStore(
+            {} as any,
+            { resetFee: jest.fn() } as any,
+            {} as any,
+            {} as any
+        );
+
+    const withdrawTo = async (callback: string) => {
+        const store = createStore();
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            rHash: 'r1',
+            paymentRequest: 'lnbc1invoice'
+        });
+
+        await store.createInvoice({
+            value: '1000',
+            memo: 'x',
+            lnurl: { callback, k1: 'K1', domain: 'service.example' },
+            unified: true,
+            noLsp: true
+        } as any);
+
+        // the callback fetch is not awaited by createInvoice
+        await new Promise((res) => setTimeout(res, 20));
+        return store;
+    };
+
+    beforeEach(() => {
+        mockBlobFetch.mockClear();
+    });
+
+    it.each([
+        'http://127.0.0.1:8080/cb',
+        'https://192.168.1.1/cb',
+        'https://169.254.169.254/cb',
+        'http://cleartext.example/cb'
+    ])('does not fetch a callback at %s', async (callback) => {
+        await withdrawTo(callback);
+
+        expect(mockBlobFetch).not.toHaveBeenCalled();
+    });
+
+    it('still fetches a public https callback', async () => {
+        await withdrawTo('https://service.example/cb');
+
+        expect(mockBlobFetch).toHaveBeenCalled();
+        const [method, url] = mockBlobFetch.mock.calls[0] as any;
+        expect(method).toBe('get');
+        expect(String(url)).toContain('https://service.example/cb');
+        expect(String(url)).toContain('k1=K1');
+        expect(String(url)).toContain('pr=lnbc1invoice');
     });
 });
