@@ -7,7 +7,8 @@ import {
     Modal,
     TouchableOpacity,
     Platform,
-    Image
+    Image,
+    KeyboardAvoidingView
 } from 'react-native';
 import Feather from '@react-native-vector-icons/feather';
 import { inject, observer } from 'mobx-react';
@@ -446,7 +447,10 @@ export default class NodeConfigExportImport extends React.Component<
                 animationType="slide"
                 onRequestClose={this.resetExportState}
             >
-                <View style={styles.modalOverlay}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'android' ? 'padding' : undefined}
+                    style={styles.modalOverlay}
+                >
                     <View
                         style={[
                             styles.modalContent,
@@ -519,7 +523,7 @@ export default class NodeConfigExportImport extends React.Component<
                             />
                         </View>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         );
     };
@@ -660,7 +664,10 @@ export default class NodeConfigExportImport extends React.Component<
                 transparent={true}
                 animationType="slide"
             >
-                <View style={styles.modalOverlay}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'android' ? 'padding' : undefined}
+                    style={styles.modalOverlay}
+                >
                     <View
                         style={[
                             styles.modalContent,
@@ -715,7 +722,7 @@ export default class NodeConfigExportImport extends React.Component<
                             />
                         </View>
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         );
     };

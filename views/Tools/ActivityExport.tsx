@@ -6,7 +6,8 @@ import {
     Alert,
     ScrollView,
     Modal,
-    Platform
+    Platform,
+    KeyboardAvoidingView
 } from 'react-native';
 import Feather from '@react-native-vector-icons/feather';
 import { inject, observer } from 'mobx-react';
@@ -243,7 +244,10 @@ export default class ActivityExport extends React.Component<
                 animationType="slide"
                 onRequestClose={this.closeAndClearInput}
             >
-                <View style={styles.modalOverlay}>
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'android' ? 'padding' : undefined}
+                    style={styles.modalOverlay}
+                >
                     <View
                         style={{
                             width: '80%',
@@ -513,7 +517,7 @@ export default class ActivityExport extends React.Component<
                             </>
                         )}
                     </View>
-                </View>
+                </KeyboardAvoidingView>
             </Modal>
         );
     };

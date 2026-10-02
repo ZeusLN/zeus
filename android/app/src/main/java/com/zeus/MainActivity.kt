@@ -3,7 +3,10 @@ package app.zeusln.zeus
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.view.View
 import android.widget.Toast
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -34,6 +37,21 @@ class MainActivity : ReactActivity() {
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             setRecentsScreenshotEnabled(false) // Avoid data leak via recents
+        }
+
+        // With edge-to-edge on, adjustResize no longer shrinks the window for
+        // the keyboard on API 30+, so pad the content by the IME height to
+        // restore it. Below API 30 the window is still resized, and padding
+        // would lift the content a second time.
+        // Insets are passed on unconsumed for safe-area handling below.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            ViewCompat.setOnApplyWindowInsetsListener(
+                findViewById<View>(android.R.id.content)
+            ) { view, insets ->
+                val imeBottom = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom
+                view.setPadding(0, 0, 0, imeBottom)
+                insets
+            }
         }
 
         currentActivity = WeakReference(this@MainActivity)
