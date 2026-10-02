@@ -113,6 +113,7 @@ import {
     walletrpc,
     wtclientrpc
 } from '../proto/lightning';
+import { LndInvoiceListParams, LndPaymentListParams } from '../utils/LndUtils';
 // watchtowers
 import {
     WatchtowerClientAddTower,
@@ -209,7 +210,9 @@ export interface ILndMobileInjections {
         getNodeInfo: (pubKey: string) => Promise<lnrpc.NodeInfo>;
         lookupInvoice: (rHash: string) => Promise<lnrpc.Invoice>;
         listPeers: () => Promise<lnrpc.ListPeersResponse>;
-        listInvoices: () => Promise<lnrpc.ListInvoiceResponse>;
+        listInvoices: (
+            params?: LndInvoiceListParams
+        ) => Promise<lnrpc.ListInvoiceResponse>;
         readLndLog: () => Promise<IReadLndLogResponse>;
         sendPaymentV2Sync: ({
             payment_request,
@@ -251,10 +254,9 @@ export interface ILndMobileInjections {
             amount?: Long,
             routeHints?: lnrpc.IRouteHint[]
         ) => Promise<lnrpc.QueryRoutesResponse>;
-        listPayments: (params?: {
-            maxPayments?: number;
-            reversed?: boolean;
-        }) => Promise<lnrpc.ListPaymentsResponse>;
+        listPayments: (
+            params?: LndPaymentListParams
+        ) => Promise<lnrpc.ListPaymentsResponse>;
         subscribeChannelGraph: () => Promise<string>;
         sendKeysendPaymentV2: ({
             amt,

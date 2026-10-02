@@ -8,7 +8,7 @@ jest.mock('react-native-blob-util', () => ({
 }));
 jest.mock('../stores/Stores', () => ({
     settingsStore: { settings: {} },
-    nodeInfoStore: { nodeInfo: {} }
+    nodeInfoStore: { nodeInfo: { version: '' } }
 }));
 jest.mock('../utils/TorUtils', () => ({
     doTorRequest: jest.fn(),
@@ -17,6 +17,7 @@ jest.mock('../utils/TorUtils', () => ({
 }));
 
 import LND from './LND';
+import { nodeInfoStore } from '../stores/Stores';
 
 describe('LND.getURL', () => {
     const lnd = new LND();
@@ -112,5 +113,93 @@ describe('LND.getURL', () => {
                 lnd.getURL('https://node.example.com/', '', '/v1/route', true)
             ).toBe('wss://node.example.com/v1/route');
         });
+    });
+});
+
+describe('LND activity date filtering', () => {
+    let lnd: LND;
+    let getRequest: jest.SpyInstance;
+
+    beforeEach(() => {
+        lnd = new LND();
+        getRequest = jest
+            .spyOn(lnd, 'getRequest')
+            .mockResolvedValue({ invoices: [], payments: [] });
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('passes invoice date bounds to LND 0.16 and keeps the default limit', async () => {
+        nodeInfoStore.nodeInfo.version = '0.16.0-beta';
+
+        await lnd.getInvoices({
+            creationDateStart: 1_700_000_000,
+            creationDateEnd: 1_700_086_399
+        });
+
+        expect(getRequest).toHaveBeenCalledWith(
+            '/v1/invoices?reversed=true&num_max_invoices=500' +
+                '&creation_date_start=1700000000' +
+                '&creation_date_end=1700086399'
+        );
+    });
+
+    it('preserves an explicit zero invoice limit in the request', async () => {
+        nodeInfoStore.nodeInfo.version = '0.20.0-beta';
+
+        await lnd.getInvoices({ limit: 0 });
+
+        expect(getRequest).toHaveBeenCalledWith(
+            '/v1/invoices?reversed=true&num_max_invoices=0'
+        );
+    });
+
+    it('passes payment date bounds to supported LND nodes', async () => {
+        nodeInfoStore.nodeInfo.version = '0.20.0-beta';
+
+        await lnd.getPayments({
+            creationDateStart: 1_700_000_000,
+            creationDateEnd: 1_700_086_399
+        });
+
+        expect(getRequest).toHaveBeenCalledWith(
+            '/v1/payments?include_incomplete=true&max_payments=500' +
+                '&reversed=true&creation_date_start=1700000000' +
+                '&creation_date_end=1700086399'
+        );
+    });
+
+    it('falls back to the existing requests on pre-0.16 nodes', async () => {
+        nodeInfoStore.nodeInfo.version = '0.15.5-beta';
+
+        await lnd.getInvoices({ creationDateStart: 1_700_000_000 });
+        await lnd.getPayments({ creationDateEnd: 1_700_086_399 });
+
+        expect(getRequest).toHaveBeenNthCalledWith(
+            1,
+            '/v1/invoices?reversed=true&num_max_invoices=500'
+        );
+        expect(getRequest).toHaveBeenNthCalledWith(
+            2,
+            '/v1/payments?include_incomplete=true&max_payments=500' +
+                '&reversed=true'
+        );
+    });
+
+    it('safely falls back when the node version is unavailable', async () => {
+        nodeInfoStore.nodeInfo = {};
+
+        await lnd.getInvoices({ creationDateEnd: 1_700_086_399 });
+        await lnd.getPayments({ creationDateStart: 1_700_000_000 });
+
+        expect(getRequest).toHaveBeenNthCalledWith(
+            1,
+            '/v1/invoices?reversed=true&num_max_invoices=500'
+        );
+        expect(getRequest).toHaveBeenNthCalledWith(
+            2,
+            '/v1/payments?include_incomplete=true&max_payments=500' +
+                '&reversed=true'
+        );
     });
 });
