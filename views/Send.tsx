@@ -414,9 +414,8 @@ export default class Send extends React.Component<SendProps, SendState> {
 
     payBolt12 = async () => {
         const { satAmount, bolt12, timeoutSeconds } = this.state;
-        // Bail if another payment is already in flight: this path resets
-        // TransactionsStore, which would clear that payment's guard and
-        // overwrite the outcome SendingLightning is waiting on.
+        // Bail if another payment is already in flight: starting a new one
+        // would overwrite the outcome SendingLightning is waiting on.
         if (this.props.TransactionsStore.paymentInFlight) return;
         if (!bolt12) {
             this.setState({
@@ -450,6 +449,21 @@ export default class Send extends React.Component<SendProps, SendState> {
                 });
                 return;
             }
+            if (this.props.SettingsStore.implementation === 'ldk-node') {
+                // LDK Node pays the offer inside fetchInvoiceFromOffer, so
+                // there is no invoice to confirm. Run it through
+                // TransactionsStore and show SendingLightning straight away
+                // so the payment animation plays while it routes, as it
+                // does for BOLT 11.
+                this.setState({ error_msg: '' });
+                this.props.TransactionsStore.sendOfferPayment({
+                    offer,
+                    amount: satAmount.toString(),
+                    timeout_seconds: timeoutSeconds
+                });
+                this.props.navigation.navigate('SendingLightning');
+                return;
+            }
             this.setState({
                 loading: true,
                 error_msg: ''
@@ -459,20 +473,6 @@ export default class Send extends React.Component<SendProps, SendState> {
                 satAmount,
                 timeoutSeconds
             );
-            if (res.payment_hash) {
-                // LDK Node: payment already completed directly. Feed the
-                // result through TransactionsStore so SendingLightning
-                // renders THIS payment's outcome; without it the screen
-                // shows whatever the previous payment left in the store
-                // (stale error, or the prior payment's preimage/fee/note).
-                // reset() first because handlePayment doesn't clear
-                // error/error_msg/payment_error on success.
-                this.props.TransactionsStore.reset();
-                this.props.TransactionsStore.handlePayment(res);
-                this.setState({ loading: false, error_msg: '' });
-                this.props.navigation.navigate('SendingLightning');
-                return;
-            }
             if (!res.invoice) {
                 this.setState({
                     loading: false,
@@ -1634,14 +1634,13 @@ export default class Send extends React.Component<SendProps, SendState> {
                             <Button
                                 title={localeString('general.proceed')}
                                 onPress={async () => await this.payBolt12()}
-                                // loading: the offer payment executes
-                                // synchronously in payBolt12, so a second
-                                // tap mid-flight would fetch a fresh
-                                // invoice (new payment hash) and pay twice.
-                                // paymentInFlight: match every other send
-                                // button; payBolt12 resets the store, which
-                                // would drop another payment's in-flight
-                                // state on the floor
+                                // loading: CLN fetches the offer's invoice
+                                // in payBolt12, so a second tap mid-fetch
+                                // would request a second invoice.
+                                // paymentInFlight: LDK Node pays the offer
+                                // through TransactionsStore, and a second
+                                // tap would fetch a fresh invoice (new
+                                // payment hash) and pay twice
                                 disabled={
                                     !NodeInfoStore.supportsOffers ||
                                     loading ||
