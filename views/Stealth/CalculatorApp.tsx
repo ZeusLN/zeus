@@ -7,6 +7,7 @@ import {
     StatusBar,
     Dimensions
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStealthTapDetector } from './StealthTapDetector';
 
 const { width } = Dimensions.get('window');
@@ -29,6 +30,7 @@ const CalculatorApp: React.FC<CalculatorAppProps> = ({
     );
     const [operation, setOperation] = React.useState<Operation>(null);
     const [waitingForOperand, setWaitingForOperand] = React.useState(false);
+    const insets = useSafeAreaInsets();
 
     // Secret unlock: tap "=" requiredTaps times within 4 seconds
     const { handleTap: handleSecretTap } = useStealthTapDetector({
@@ -165,7 +167,12 @@ const CalculatorApp: React.FC<CalculatorAppProps> = ({
             </View>
 
             {/* Buttons */}
-            <View style={styles.buttonsContainer}>
+            <View
+                style={[
+                    styles.buttonsContainer,
+                    { paddingBottom: 20 + insets.bottom }
+                ]}
+            >
                 {/* Row 1 */}
                 <View style={styles.row}>
                     {renderButton(
@@ -279,8 +286,7 @@ const styles = StyleSheet.create({
         fontWeight: '300'
     },
     buttonsContainer: {
-        paddingHorizontal: 10,
-        paddingBottom: 20
+        paddingHorizontal: 10
     },
     row: {
         flexDirection: 'row',
