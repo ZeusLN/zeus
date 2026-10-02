@@ -437,6 +437,7 @@ export default class CurrencyConverterContent extends React.Component<
                     style={{
                         alignSelf: 'center',
                         marginLeft: 8,
+                        // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                         marginTop: -4
                     }}
                 />
@@ -451,6 +452,7 @@ export default class CurrencyConverterContent extends React.Component<
                         height={30}
                         style={{
                             alignSelf: 'center',
+                            // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                             marginTop: -4,
                             marginRight: 4
                         }}
@@ -460,6 +462,7 @@ export default class CurrencyConverterContent extends React.Component<
                         fill={themeColor('text')}
                         style={{
                             alignSelf: 'center',
+                            // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                             marginTop: -4,
                             marginRight: 4
                         }}

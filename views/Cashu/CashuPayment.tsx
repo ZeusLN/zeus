@@ -325,8 +325,10 @@ export default class CashuPayment extends React.Component<
                                 containerStyle={{
                                     borderBottomWidth: 0,
                                     backgroundColor: 'transparent',
+                                    /* eslint-disable zeus/no-negative-layout-offset -- TODO #2794 */
                                     marginLeft: -16,
                                     marginRight: -16
+                                    /* eslint-enable zeus/no-negative-layout-offset */
                                 }}
                                 onPress={() =>
                                     navigation.navigate('PaymentPaths', {

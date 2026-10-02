@@ -1293,6 +1293,7 @@ const styles = StyleSheet.create({
     },
     progressText: {
         fontFamily: 'PPNeueMontreal-Medium',
+        // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
         marginTop: -8,
         marginLeft: 14,
         height: 40

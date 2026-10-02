@@ -1502,6 +1502,7 @@ export default class NodeConfigExportImport extends React.Component<
                         }}
                         rightComponent={
                             <TouchableOpacity
+                                // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                                 style={{ marginRight: 4, marginTop: -4 }}
                                 onPress={() =>
                                     this.setState({ activeModal: 'info' })

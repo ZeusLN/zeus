@@ -412,6 +412,7 @@ export default class Contacts extends React.Component<
                                                 }
                                                 leftIconContainerStyle={{
                                                     marginLeft: 18,
+                                                    // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                                                     marginRight: -8,
                                                     marginBottom: 6
                                                 }}

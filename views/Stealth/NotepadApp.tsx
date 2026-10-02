@@ -271,6 +271,7 @@ const styles = StyleSheet.create({
         color: '#fff',
         fontSize: 28,
         fontWeight: '300',
+        // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
         marginTop: -2
     },
     notesList: {

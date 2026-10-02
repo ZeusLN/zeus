@@ -50,6 +50,7 @@ export default class SortButton extends React.Component<SortButtonProps, {}> {
                                 onValueChange(itemValue)
                             }
                             style={{
+                                // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                                 marginTop: -2,
                                 width: 48,
                                 color: themeColor('text'),

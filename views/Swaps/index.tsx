@@ -830,6 +830,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
         const SwapsPaneBtn = () => (
             <TouchableOpacity
+                // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                 style={{ marginTop: -10 }}
                 onPress={() => {
                     // Reset paramsProcessed when navigating to clear previous prefill
@@ -849,6 +850,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
         const SettingsBtn = () => (
             <TouchableOpacity
+                // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                 style={{ marginTop: -10, marginRight: 6 }}
                 onPress={() => {
                     this.props.navigation.navigate('SwapSettings');
@@ -860,6 +862,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
         const RescueKeyPhrase = () => {
             return (
+                // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                 <TouchableOpacity style={{ marginTop: -10, marginRight: 6 }}>
                     <KeyIcon
                         onPress={() => {
@@ -1030,6 +1033,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                     );
                                                                 }}
                                                                 style={{
+                                                                    // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                                                                     marginLeft:
                                                                         -10
                                                                 }}
@@ -1214,6 +1218,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                     <Row
                                                         style={{
                                                             zIndex: 1,
+                                                            // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                                                             top: -20,
                                                             marginRight: 5
                                                         }}
@@ -1241,6 +1246,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                         );
                                                                     }}
                                                                     style={{
+                                                                        // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                                                                         marginLeft:
                                                                             -10
                                                                     }}
@@ -1580,6 +1586,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                     }}
                                                     style={{
                                                         marginLeft: 10,
+                                                        // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                                                         top: -10
                                                     }}
                                                 >
