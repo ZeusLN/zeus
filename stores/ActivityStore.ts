@@ -30,6 +30,12 @@ import { LSPS_ORDERS_KEY } from './LSPStore';
 export const LEGACY_ACTIVITY_FILTERS_KEY = 'zeus-activity-filters';
 export const ACTIVITY_FILTERS_KEY = 'zeus-activity-filters-v2';
 
+// items shown by activity previews such as the home view
+export const RECENT_ACTIVITY_COUNT = 4;
+// newest items fetched per source for a preview; the headroom covers
+// items the default filters hide, such as failed payments
+export const RECENT_ACTIVITY_FETCH_LIMIT = 20;
+
 export const SERVICES_CONFIG = {
     swaps: 'swapFilter',
     lsps1: 'lsps1State',
@@ -125,6 +131,10 @@ export default class ActivityStore {
     @observable public activity: Array<ActivityItem> = [];
     @observable public filteredActivity: Array<ActivityItem> = [];
     @observable public filters: Filter = DEFAULT_FILTERS;
+    @observable public recentActivity: Array<ActivityItem> = [];
+    @observable public recentActivityLoading = false;
+    @observable public recentActivityError = false;
+    private recentActivityRequest = 0;
     settingsStore: SettingsStore;
     paymentsStore: PaymentsStore;
     invoicesStore: InvoicesStore;
@@ -296,11 +306,23 @@ export default class ActivityStore {
         }
     }
 
-    getSortedActivity = async () => {
+    getSortedActivity = async () =>
+        await this.sortActivity({
+            payments: this.paymentsStore.payments,
+            invoices: this.invoicesStore.invoices,
+            transactions: this.transactionsStore.transactions
+        });
+
+    private sortActivity = async ({
+        payments,
+        invoices,
+        transactions
+    }: {
+        payments: any[];
+        invoices: any[];
+        transactions: any[];
+    }) => {
         const activity: any[] = [];
-        const payments = this.paymentsStore.payments;
-        const transactions = this.transactionsStore.transactions;
-        const invoices = this.invoicesStore.invoices;
         const swaps = this.swapStore.swaps;
         const lspOrders = await this.getLSPOrders();
 
@@ -372,6 +394,80 @@ export default class ActivityStore {
             this.activity = sortedActivity;
             this.filteredActivity = this.activity;
         });
+    };
+
+    // Newest activity across all sources, for previews such as the home
+    // view. Fetches a short page per source instead of the full lists and
+    // leaves the Activity view's lists and filters untouched.
+    public getRecentActivity = async (
+        locale?: string,
+        count: number = RECENT_ACTIVITY_COUNT
+    ) => {
+        const request = ++this.recentActivityRequest;
+        runInAction(() => {
+            this.recentActivityLoading = true;
+        });
+
+        let failed = false;
+        const fetchList = async (
+            fetch: () => Promise<any>,
+            key: string
+        ): Promise<any[]> => {
+            try {
+                const data = await fetch();
+                return data?.[key] || [];
+            } catch (e) {
+                failed = true;
+                return [];
+            }
+        };
+
+        const limit = RECENT_ACTIVITY_FETCH_LIMIT;
+        const [payments, invoices, transactions] = await Promise.all([
+            fetchList(
+                () => BackendUtils.getPayments({ maxPayments: limit }),
+                'payments'
+            ),
+            fetchList(() => BackendUtils.getInvoices({ limit }), 'invoices'),
+            BackendUtils.supportsOnchainSends()
+                ? fetchList(
+                      () =>
+                          BackendUtils.getTransactions({
+                              max_transactions: limit
+                          }),
+                      'transactions'
+                  )
+                : Promise.resolve([]),
+            this.swapStore.fetchAndUpdateSwaps()
+        ]);
+
+        const sorted = await this.sortActivity({
+            payments: payments.map(
+                (payment: any) =>
+                    new Payment(payment, this.paymentsStore.channelsStore.nodes)
+            ),
+            invoices: invoices.map((invoice: any) => new Invoice(invoice)),
+            transactions: transactions.map((tx: any) => new Transaction(tx))
+        });
+        const recent = ActivityFilterUtils.filterActivities(
+            sorted,
+            DEFAULT_FILTERS
+        ).slice(0, count);
+        recent.forEach((item) => {
+            if (item instanceof Invoice) {
+                item.determineFormattedRemainingTimeUntilExpiry(locale);
+            }
+        });
+
+        // a newer call has started; its result wins
+        if (request !== this.recentActivityRequest) return recent;
+
+        runInAction(() => {
+            this.recentActivity = recent;
+            this.recentActivityError = failed;
+            this.recentActivityLoading = false;
+        });
+        return recent;
     };
 
     public updateInvoices = async (locale: string | undefined) => {
