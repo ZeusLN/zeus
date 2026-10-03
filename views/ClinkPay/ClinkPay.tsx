@@ -316,6 +316,7 @@ export default class ClinkPay extends React.Component<
                             <AmountInput
                                 amount={amount}
                                 forceUnit={fiatError ? 'sats' : undefined}
+                                hideUnitChangeButton={!!fiatError}
                                 fiatError={fiatError}
                                 onAmountChange={(
                                     newAmount: string,

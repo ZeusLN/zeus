@@ -68,6 +68,12 @@ interface LnurlPayState {
     loading: boolean;
 }
 
+// A request whose min and max are equal is paid exactly as asked, so its
+// input is locked and is always shown and read back in sats, whatever unit
+// the wallet is on.
+const isFixedAmount = (lnurl: any) =>
+    !!lnurl && lnurl.minSendable === lnurl.maxSendable;
+
 @inject(
     'CashuStore',
     'ContactStore',
@@ -112,10 +118,11 @@ export default class LnurlPay extends React.Component<
     // navigates back (e.g. from AmountKeypad after switching units).
     recalculateDisplayAmount = () => {
         const { satAmount, fiatError } = this.state;
+        const fixed = isFixedAmount(this.props.route.params?.lnurlParams);
         if (satAmount && satAmount != 0) {
             const { amount: displayAmount, error } = getRawAmountFromSats(
                 satAmount,
-                fiatError ? 'sats' : undefined
+                fiatError || fixed ? 'sats' : undefined
             );
             // a sats fallback can equal the amount already shown (e.g. the
             // unit was switched to fiat in the keypad without confirming),
@@ -166,7 +173,17 @@ export default class LnurlPay extends React.Component<
         let finalSatAmount: string | number;
         let fiatError: string | undefined;
 
-        if (satAmount && satAmount != 0) {
+        if (isFixedAmount(lnurl)) {
+            // Fixed amount: the request is paid exactly as asked, so prefill
+            // the locked input with the required amount and ignore any
+            // amount or satAmount handed in by the caller (Send forwards its
+            // own), which the server would reject. Asking for sats explicitly
+            // keeps the prefill correct whether or not resetUnits() above has
+            // run, so the value and the unit the input renders in are decided
+            // here and not by the global unit.
+            finalAmount = getRawAmountFromSats(minSendableSats, 'sats').amount;
+            finalSatAmount = minSendableSats;
+        } else if (satAmount && satAmount != 0) {
             // If satAmount is provided, always derive display amount from it
             // (ignore any `amount` param as it may be in a different unit)
             const { amount: displayAmount, error } =
@@ -178,13 +195,6 @@ export default class LnurlPay extends React.Component<
             // If only amount is provided, use it and derive satAmount
             finalAmount = amount;
             finalSatAmount = getSatAmount(amount);
-        } else if (lnurl.minSendable === lnurl.maxSendable) {
-            // Fixed amount: prefill the locked input with the required amount
-            const { amount: displayAmount, error } =
-                getRawAmountFromSats(minSendableSats);
-            finalAmount = displayAmount;
-            finalSatAmount = minSendableSats;
-            fiatError = error;
         } else {
             // Variable amount: start empty so the user doesn't have to
             // delete a prefilled value
@@ -481,6 +491,7 @@ export default class LnurlPay extends React.Component<
         } = this.state;
 
         const lnurl = route.params?.lnurlParams;
+        const fixed = isFixedAmount(lnurl);
 
         // Extract image from LNURL metadata
         let metadataImage: string | null = null;
@@ -634,16 +645,12 @@ export default class LnurlPay extends React.Component<
                         <View style={{ marginTop: 0 }}>
                             <AmountInput
                                 amount={amount}
-                                forceUnit={fiatError ? 'sats' : undefined}
+                                forceUnit={
+                                    fiatError || fixed ? 'sats' : undefined
+                                }
                                 hideUnitChangeButton={!!fiatError}
                                 fiatError={fiatError}
-                                locked={
-                                    loading ||
-                                    (lnurl &&
-                                    lnurl.minSendable === lnurl.maxSendable
-                                        ? true
-                                        : false)
-                                }
+                                locked={loading || fixed}
                                 onAmountChange={(
                                     amount: string,
                                     satAmount: string | number
