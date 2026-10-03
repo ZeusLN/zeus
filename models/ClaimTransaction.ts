@@ -1,34 +1,20 @@
 import BaseModel from './BaseModel';
 import Swap from './Swap';
-
-function privateKeyFromKeys(
-    keys: { __D?: number[] | { data?: number[] } } | null | undefined
-): string | null {
-    const raw = keys?.__D;
-    if (!raw) {
-        console.error('ClaimTransaction: keys.__D is missing');
-        return null;
-    }
-
-    const bytes: number[] | null = Array.isArray(raw)
-        ? raw
-        : Array.isArray(raw?.data)
-        ? raw.data
-        : null;
-
-    if (!bytes) {
-        console.error('ClaimTransaction: unexpected key format', typeof raw);
-        return null;
-    }
-
-    return Buffer.from(bytes).toString('hex');
-}
+import { privateKeyFromSwapKeys } from '../utils/SwapUtils';
 
 function preimageHexFrom(
-    preimage: string | Buffer | { data?: number[] } | null | undefined
+    preimage:
+        | string
+        | Buffer
+        | Uint8Array
+        | { data?: number[] | Uint8Array }
+        | null
+        | undefined
 ): string {
     if (typeof preimage === 'string') return preimage;
     if (Buffer.isBuffer(preimage)) return preimage.toString('hex');
+    if (preimage instanceof Uint8Array)
+        return Buffer.from(preimage).toString('hex');
     if (preimage?.data) return Buffer.from(preimage.data).toString('hex');
     return '';
 }
@@ -55,7 +41,7 @@ export class SubmarineClaimTransaction extends ClaimTransaction {
         endpoint: string;
         claimTxDetails: { transactionHash: string; pubNonce: string };
     }): SubmarineClaimTransaction | null {
-        const privateKey = privateKeyFromKeys(swap.keys);
+        const privateKey = privateKeyFromSwapKeys(swap.keys);
         const claimLeaf = swap.swapTreeDetails?.claimLeaf?.output;
         const refundLeaf = swap.swapTreeDetails?.refundLeaf?.output;
         const { servicePubKey } = swap;
@@ -104,7 +90,7 @@ export class ReverseClaimTransaction extends ClaimTransaction {
         minerFee: number;
         isTestnet: boolean;
     }): ReverseClaimTransaction | null {
-        const privateKey = privateKeyFromKeys(swap.keys);
+        const privateKey = privateKeyFromSwapKeys(swap.keys);
         const claimLeaf = swap.swapTreeDetails?.claimLeaf?.output;
         const refundLeaf = swap.swapTreeDetails?.refundLeaf?.output;
         const servicePubKey = swap.refundPubKey;
