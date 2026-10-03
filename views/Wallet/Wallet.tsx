@@ -77,6 +77,7 @@ import {
     clearPendingPaymentData
 } from '../../utils/GraphSyncUtils';
 import { CHANNEL_MIGRATION_ACTIVE } from '../../utils/ChannelMigrationUtils';
+import { repairMissingChannelEdges } from '../../utils/ChannelEdgeRepairUtils';
 
 import { processSharedQRImageFast } from '../../utils/ShareIntentProcessor';
 
@@ -1114,6 +1115,18 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 await UTXOsStore.listAccounts();
                 await BalanceStore.getCombinedBalance(false);
                 ChannelsStore.getChannelsWithPolling().then(() => {
+                    // Resetting or rebuilding the SQLite graph database
+                    // drops our own channel edges, so recreate any that
+                    // are missing
+                    if (isSqlite) {
+                        repairMissingChannelEdges(lndDir || 'lnd').catch(
+                            (error) =>
+                                console.error(
+                                    'Channel edge repair failed',
+                                    error
+                                )
+                        );
+                    }
                     // Check for sweep to self-custody threshold after channels are online
                     if (settings?.ecash?.enableCashu) {
                         CashuStore.checkAndSweepMints();
