@@ -2366,8 +2366,6 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNSecureRandom (1.0.1):
-    - React
   - RNShare (12.3.1):
     - hermes-engine
     - RCTRequired
@@ -2632,7 +2630,6 @@ DEPENDENCIES:
   - RNReactNativeHapticFeedback (from `../node_modules/react-native-haptic-feedback`)
   - RNReanimated (from `../node_modules/react-native-reanimated`)
   - RNScreens (from `../node_modules/react-native-screens`)
-  - RNSecureRandom (from `../node_modules/react-native-securerandom`)
   - RNShare (from `../node_modules/react-native-share`)
   - RNSVG (from `../node_modules/react-native-svg`)
   - RNWorklets (from `../node_modules/react-native-worklets`)
@@ -2886,8 +2883,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-reanimated"
   RNScreens:
     :path: "../node_modules/react-native-screens"
-  RNSecureRandom:
-    :path: "../node_modules/react-native-securerandom"
   RNShare:
     :path: "../node_modules/react-native-share"
   RNSVG:
@@ -3024,7 +3019,6 @@ SPEC CHECKSUMS:
   RNReactNativeHapticFeedback: 4e9fb92a6c5d9f6e5ca5b84d56c5de07bc6cc261
   RNReanimated: 08e15384162a179af55494638707283747b85164
   RNScreens: 639aff03a0b6ae42564e94fe2393f438bd51f39e
-  RNSecureRandom: b64d263529492a6897e236a22a2c4249aa1b53dc
   RNShare: cca9107c0dcfdd92fa228116226d1189663265b4
   RNSVG: aacbdedbac719eef30569be569c9d87e08aaefce
   RNWorklets: 5e812a63fdf4863c1d73e3ad625f8c365d7aacf5
