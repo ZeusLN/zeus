@@ -29,7 +29,10 @@ export default class BalanceStore {
     public externalUnconfirmedTransactions: ExternalUnconfirmedTransaction[] = [];
     @observable public loadingBlockchainBalance = false;
     @observable public loadingLightningBalance = false;
-    @observable public error = false;
+    // a failed fetch keeps its flag until the same fetch succeeds again,
+    // so a successful fetch of one balance can't hide a failure of the other
+    @observable private lightningError = false;
+    @observable private blockchainError = false;
     @observable public pendingOpenBalance: number | string | any;
     // Sats locked up in pending close, force close, and waiting close
     // channels — i.e. funds in close-side limbo. Mirrors pendingOpenBalance
@@ -49,8 +52,13 @@ export default class BalanceStore {
     public reset = () => {
         this.resetLightningBalance();
         this.resetBlockchainBalance();
-        this.error = false;
+        this.lightningError = false;
+        this.blockchainError = false;
     };
+
+    @computed public get error(): boolean {
+        return this.lightningError || this.blockchainError;
+    }
 
     @action
     public resetBlockchainBalance = () => {
@@ -118,8 +126,9 @@ export default class BalanceStore {
     }
 
     @action
-    private balanceError = () => {
-        this.error = true;
+    private balanceError = (type: 'lightning' | 'blockchain') => {
+        if (type === 'lightning') this.lightningError = true;
+        else this.blockchainError = true;
         this.loadingBlockchainBalance = false;
         this.loadingLightningBalance = false;
     };
@@ -202,6 +211,7 @@ export default class BalanceStore {
                     this.totalBlockchainBalanceAccounts =
                         totalBlockchainBalanceAccounts;
                 }
+                this.blockchainError = false;
                 this.loadingBlockchainBalance = false;
             });
             return {
@@ -214,7 +224,7 @@ export default class BalanceStore {
                 accounts
             };
         } catch {
-            this.balanceError();
+            this.balanceError('blockchain');
         }
     };
 
@@ -233,6 +243,7 @@ export default class BalanceStore {
                     this.lightningBalance = lightningBalance;
                 }
 
+                this.lightningError = false;
                 this.loadingLightningBalance = false;
             });
 
@@ -241,7 +252,7 @@ export default class BalanceStore {
                 lightningBalance
             };
         } catch {
-            this.balanceError();
+            this.balanceError('lightning');
         }
     };
 

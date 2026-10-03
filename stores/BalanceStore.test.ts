@@ -90,6 +90,50 @@ describe('BalanceStore balance fetch', () => {
         expect(store.lightningBalance).toEqual(0);
         expect(store.totalBlockchainBalance).toEqual(100000);
     });
+
+    it('clears error when the next refresh succeeds', async () => {
+        (BackendUtils.getLightningBalance as jest.Mock).mockRejectedValue(
+            new Error('Request timeout')
+        );
+        const store = new BalanceStore();
+
+        await store.getCombinedBalance();
+        expect(store.error).toBe(true);
+
+        mockBalances();
+        await store.getCombinedBalance();
+
+        expect(store.error).toBe(false);
+    });
+
+    it('keeps error until the failed request succeeds', async () => {
+        mockBalances();
+        (BackendUtils.getBlockchainBalance as jest.Mock).mockRejectedValue(
+            new Error('Request timeout')
+        );
+        const store = new BalanceStore();
+
+        await store.getBlockchainBalance(true, false);
+        await store.getLightningBalance(true);
+        expect(store.error).toBe(true);
+
+        mockBalances();
+        await store.getBlockchainBalance(true, false);
+
+        expect(store.error).toBe(false);
+    });
+
+    it('clears error on reset', async () => {
+        (BackendUtils.getLightningBalance as jest.Mock).mockRejectedValue(
+            new Error('Request timeout')
+        );
+        const store = new BalanceStore();
+
+        await store.getLightningBalance(true);
+        store.reset();
+
+        expect(store.error).toBe(false);
+    });
 });
 
 describe('BalanceStore cooperative close overlap', () => {
