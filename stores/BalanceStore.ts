@@ -261,27 +261,36 @@ export default class BalanceStore {
         if (reset) this.reset();
         let lightning, onChain: any;
         lightning = await this.getLightningBalance(false);
-        if (BackendUtils.supportsOnchainBalance()) {
+        const supportsOnchainBalance = BackendUtils.supportsOnchainBalance();
+        if (supportsOnchainBalance) {
             onChain = await this.getBlockchainBalance(false, false);
         }
 
+        // a failed fetch keeps the last known values instead of writing 0:
+        // views other than the wallet view don't check `error` and would
+        // treat the wallet as empty until the next successful refresh
         runInAction(() => {
             // LN
-            this.pendingOpenBalance = lightning?.pendingOpenBalance || 0;
-            this.lightningBalance = lightning?.lightningBalance || 0;
+            if (lightning) {
+                this.pendingOpenBalance = lightning.pendingOpenBalance || 0;
+                this.lightningBalance = lightning.lightningBalance || 0;
+            }
             // on-chain
-            this.otherAccounts = onChain?.accounts || [];
-            this.unconfirmedBlockchainBalance =
-                onChain?.unconfirmedBlockchainBalance || 0;
-            this.externalUnconfirmedBalance =
-                onChain?.externalUnconfirmedBalance || 0;
-            this.externalUnconfirmedTxids =
-                onChain?.externalUnconfirmedTxids || [];
-            this.externalUnconfirmedTransactions =
-                onChain?.externalUnconfirmedTransactions || [];
-            this.confirmedBlockchainBalance =
-                onChain?.confirmedBlockchainBalance || 0;
-            this.totalBlockchainBalance = onChain?.totalBlockchainBalance || 0;
+            if (onChain || !supportsOnchainBalance) {
+                this.otherAccounts = onChain?.accounts || [];
+                this.unconfirmedBlockchainBalance =
+                    onChain?.unconfirmedBlockchainBalance || 0;
+                this.externalUnconfirmedBalance =
+                    onChain?.externalUnconfirmedBalance || 0;
+                this.externalUnconfirmedTxids =
+                    onChain?.externalUnconfirmedTxids || [];
+                this.externalUnconfirmedTransactions =
+                    onChain?.externalUnconfirmedTransactions || [];
+                this.confirmedBlockchainBalance =
+                    onChain?.confirmedBlockchainBalance || 0;
+                this.totalBlockchainBalance =
+                    onChain?.totalBlockchainBalance || 0;
+            }
         });
 
         return {

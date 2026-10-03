@@ -87,8 +87,52 @@ describe('BalanceStore balance fetch', () => {
         await store.getCombinedBalance();
 
         expect(store.error).toBe(true);
-        expect(store.lightningBalance).toEqual(0);
         expect(store.totalBlockchainBalance).toEqual(100000);
+    });
+
+    it('keeps the last Lightning balance when its request fails', async () => {
+        mockBalances();
+        const store = new BalanceStore();
+        await store.getCombinedBalance();
+
+        (BackendUtils.getLightningBalance as jest.Mock).mockRejectedValue(
+            new Error('Request timeout')
+        );
+        await store.getCombinedBalance();
+
+        expect(store.error).toBe(true);
+        expect(store.lightningBalance).toEqual(50000);
+        expect(store.pendingOpenBalance).toEqual(1000);
+    });
+
+    it('keeps the last on-chain balance when its request fails', async () => {
+        mockBalances();
+        const store = new BalanceStore();
+        await store.getCombinedBalance();
+
+        (BackendUtils.getBlockchainBalance as jest.Mock).mockRejectedValue(
+            new Error('Request timeout')
+        );
+        await store.getCombinedBalance();
+
+        expect(store.error).toBe(true);
+        expect(store.confirmedBlockchainBalance).toEqual(100000);
+        expect(store.totalBlockchainBalance).toEqual(100000);
+    });
+
+    it('clears the on-chain balance without on-chain support', async () => {
+        mockBalances();
+        const store = new BalanceStore();
+        await store.getCombinedBalance();
+
+        (BackendUtils.supportsOnchainBalance as jest.Mock).mockReturnValueOnce(
+            false
+        );
+        await store.getCombinedBalance();
+
+        expect(store.error).toBe(false);
+        expect(store.totalBlockchainBalance).toEqual(0);
+        expect(store.lightningBalance).toEqual(50000);
     });
 
     it('clears error when the next refresh succeeds', async () => {
