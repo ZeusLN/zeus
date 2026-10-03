@@ -1335,6 +1335,7 @@
     "views.Settings.Security.Biometrics.prompt": "Unlock",
     "views.Settings.Security.biometricsWillBeDisabled": "Deleting your PIN or Password will also disable biometric authentication.",
     "views.Lockscreen.Biometrics.prompt": "Unlock Zeus",
+    "views.Lockscreen.biometricsChanged": "The biometrics on this device changed, so biometric unlock was turned off. Use your PIN or password, then turn it back on in Security settings.",
     "views.Settings.SetPin.noMatch": "PINs do not match. Please resubmit.",
     "views.Settings.SetPin.invalid": "PIN and Duress PIN cannot be equal.",
     "views.Settings.SetPin.createPin": "Create your PIN",

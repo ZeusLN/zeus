@@ -27,7 +27,7 @@ jest.mock('../stores/SettingsStore', () => ({
     }
 }));
 jest.mock('../utils/BiometricUtils', () => ({
-    verifyBiometry: jest.fn()
+    deleteBiometryKey: jest.fn()
 }));
 jest.mock('../utils/DataClearUtils', () => ({
     blockNavigationDuringWipe: jest.fn(),
@@ -43,7 +43,7 @@ jest.mock('../utils/ThemeUtils', () => ({
     themeColor: jest.fn(() => '#000')
 }));
 
-import { verifyBiometry } from '../utils/BiometricUtils';
+import { deleteBiometryKey } from '../utils/BiometricUtils';
 import Lockscreen from './Lockscreen';
 
 const PIN = '1234';
@@ -60,13 +60,18 @@ const deferred = () => {
 
 const renderLockscreen = async (
     updateSettings: jest.Mock,
-    { biometry = false }: { biometry?: boolean } = {}
+    {
+        biometry = false,
+        biometryResult = 'success'
+    }: { biometry?: boolean; biometryResult?: string } = {}
 ) => {
     const SettingsStore = {
         settings: { pin: PIN },
         posStatus: 'inactive',
         triggerSettingsRefresh: false,
         isBiometryConfigured: jest.fn(() => biometry),
+        authenticateWithBiometry: jest.fn(async () => biometryResult),
+        bindLegacyBiometryKey: jest.fn(),
         loginRequired: jest.fn(() => true),
         setLoginStatus: jest.fn(),
         setPosStatus: jest.fn(),
@@ -177,7 +182,6 @@ describe('Lockscreen login', () => {
     });
 
     it('still unlocks through biometrics when the attempt reset fails', async () => {
-        (verifyBiometry as jest.Mock).mockResolvedValue(true);
         const error = new Error('keychain unavailable');
         const updateSettings = jest.fn(() => Promise.reject(error));
 
@@ -191,6 +195,92 @@ describe('Lockscreen login', () => {
         expect(errorSpy).toHaveBeenCalledWith(
             'Failed to reset authentication attempts',
             error
+        );
+    });
+});
+
+describe('Lockscreen biometrics', () => {
+    it('stays locked and explains why when enrollment changed', async () => {
+        const updateSettings = jest.fn(() => Promise.resolve());
+        const { SettingsStore, navigation, instance } = await renderLockscreen(
+            updateSettings,
+            { biometry: true, biometryResult: 'invalidated' }
+        );
+
+        expect(SettingsStore.authenticateWithBiometry).toHaveBeenCalled();
+        expect(SettingsStore.setLoginStatus).not.toHaveBeenCalled();
+        expect(navigation.pop).not.toHaveBeenCalled();
+        expect(instance.state.biometryInvalidated).toBe(true);
+    });
+
+    it.each(['cancelled', 'failed'])(
+        'falls back to the PIN without a message when the prompt is %s',
+        async (biometryResult) => {
+            const updateSettings = jest.fn(() => Promise.resolve());
+            const { SettingsStore, navigation, instance } =
+                await renderLockscreen(updateSettings, {
+                    biometry: true,
+                    biometryResult
+                });
+
+            expect(SettingsStore.setLoginStatus).not.toHaveBeenCalled();
+            expect(navigation.pop).not.toHaveBeenCalled();
+            expect(instance.state.biometryInvalidated).toBe(false);
+        }
+    );
+
+    it('does not prompt when biometrics are not configured', async () => {
+        const updateSettings = jest.fn(() => Promise.resolve());
+        const { SettingsStore } = await renderLockscreen(updateSettings);
+
+        expect(SettingsStore.authenticateWithBiometry).not.toHaveBeenCalled();
+    });
+
+    it('binds a legacy biometric key after a PIN login', async () => {
+        const updateSettings = jest.fn(() => Promise.resolve());
+        const { SettingsStore, instance } = await renderLockscreen(
+            updateSettings
+        );
+        await enterCorrectPin(instance);
+
+        await act(async () => {
+            await instance.onAttemptLogIn();
+        });
+
+        expect(SettingsStore.bindLegacyBiometryKey).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not bind a biometric key after a wrong PIN', async () => {
+        const updateSettings = jest.fn(() => Promise.resolve());
+        const { SettingsStore, instance } = await renderLockscreen(
+            updateSettings
+        );
+        await act(async () => {
+            instance.setState({ pinAttempt: '0000' });
+        });
+        SettingsStore.getSettings.mockResolvedValue({});
+
+        await act(async () => {
+            await instance.onAttemptLogIn();
+        });
+
+        expect(SettingsStore.bindLegacyBiometryKey).not.toHaveBeenCalled();
+    });
+
+    it('deletes the biometric key when the PIN is deleted', async () => {
+        const updateSettings = jest.fn(() => Promise.resolve());
+        const { instance } = await renderLockscreen(updateSettings);
+
+        await act(async () => {
+            instance.deletePin();
+        });
+
+        expect(deleteBiometryKey).toHaveBeenCalled();
+        expect(updateSettings).toHaveBeenCalledWith(
+            expect.objectContaining({
+                isBiometryEnabled: false,
+                biometryKeyBound: false
+            })
         );
     });
 });
