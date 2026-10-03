@@ -9,7 +9,10 @@ import {
     Dimensions
 } from 'react-native';
 
-import { themeColor } from '../utils/ThemeUtils';
+import { LiquidGlassView } from '@callstack/liquid-glass';
+
+import { isGlassEffectEnabled } from '../utils/LiquidGlassUtils';
+import { isLightTheme, themeColor } from '../utils/ThemeUtils';
 
 interface ToggleOption {
     key: string;
@@ -44,19 +47,31 @@ export default class ToggleButton extends React.Component<ToggleButtonProps> {
     render() {
         const { options, value, onToggle } = this.props;
         const screenWidth = Dimensions.get('window').width;
-        const horizontalPadding = 32;
+        const glass = isGlassEffectEnabled();
+        // glass toggles match the native tab bar platter's 21pt margins
+        const horizontalPadding = glass ? 42 : 32;
         const toggleWidth = screenWidth - horizontalPadding;
         const thumbWidth = toggleWidth / options.length;
-        const styles = getStyles(toggleWidth, thumbWidth);
+        const styles = getStyles(toggleWidth, thumbWidth, glass);
 
         const translateX = this.animation.interpolate({
             inputRange: options.map((_, i) => i),
             outputRange: options.map((_, i) => i * thumbWidth + 2)
         });
 
+        const Track: React.ElementType = glass ? LiquidGlassView : View;
+        const trackProps = glass
+            ? {
+                  effect: 'regular' as const,
+                  colorScheme: (isLightTheme() ? 'light' : 'dark') as
+                      | 'light'
+                      | 'dark'
+              }
+            : {};
+
         return (
             <View style={styles.container}>
-                <View style={styles.toggleButton}>
+                <Track style={styles.toggleButton} {...trackProps}>
                     <Animated.View
                         style={[
                             styles.thumb,
@@ -82,13 +97,13 @@ export default class ToggleButton extends React.Component<ToggleButtonProps> {
                             </TouchableOpacity>
                         ))}
                     </View>
-                </View>
+                </Track>
             </View>
         );
     }
 }
 
-const getStyles = (toggleWidth: number, thumbWidth: number) =>
+const getStyles = (toggleWidth: number, thumbWidth: number, glass: boolean) =>
     StyleSheet.create({
         container: {
             alignItems: 'center',
@@ -98,8 +113,8 @@ const getStyles = (toggleWidth: number, thumbWidth: number) =>
         toggleButton: {
             width: toggleWidth,
             height: 40,
-            borderRadius: 8,
-            backgroundColor: themeColor('secondary'),
+            borderRadius: glass ? 20 : 8,
+            backgroundColor: glass ? 'transparent' : themeColor('secondary'),
             position: 'relative',
             justifyContent: 'center',
             overflow: 'hidden'
@@ -107,8 +122,10 @@ const getStyles = (toggleWidth: number, thumbWidth: number) =>
         thumb: {
             position: 'absolute',
             height: 36,
-            borderRadius: 8,
-            backgroundColor: themeColor('text'),
+            borderRadius: glass ? 18 : 8,
+            backgroundColor: glass
+                ? themeColor('secondary')
+                : themeColor('text'),
             top: 2,
             left: 0,
             elevation: 2,
@@ -133,7 +150,7 @@ const getStyles = (toggleWidth: number, thumbWidth: number) =>
             textAlign: 'center'
         },
         activeText: {
-            color: themeColor('background'),
+            color: glass ? themeColor('text') : themeColor('background'),
             fontFamily: 'PPNeueMontreal-Medium'
         }
     });

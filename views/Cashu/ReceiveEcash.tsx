@@ -8,7 +8,8 @@ import {
     View
 } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
-import { ButtonGroup, Icon } from '@rneui/themed';
+import { Icon } from '@rneui/themed';
+import ButtonGroup from '../../components/GlassButtonGroup';
 import { inject, observer } from 'mobx-react';
 import NfcManager from 'react-native-nfc-manager';
 import { Route } from '@react-navigation/native';
