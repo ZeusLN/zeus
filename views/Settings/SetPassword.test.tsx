@@ -80,6 +80,67 @@ describe('SetPassword deletePassword', () => {
             ).toBe(true);
         }
     });
+
+    const renderSetPassword = async (updateSettings: jest.Mock) => {
+        const ref = React.createRef<any>();
+        const SettingsStore = {
+            getSettings: jest.fn(async () => ({ isBiometryEnabled: false })),
+            disableBiometry: jest.fn(() => Promise.resolve()),
+            updateSettings
+        };
+        const navigation = { popTo: jest.fn() };
+        await render(
+            <SetPassword
+                ref={ref}
+                SettingsStore={SettingsStore as any}
+                ModalStore={{} as any}
+                navigation={navigation as any}
+                route={{ params: {} }}
+            />
+        );
+        return { ref, SettingsStore, navigation };
+    };
+
+    it('disables biometrics before clearing the passwords', async () => {
+        const updateSettings = jest.fn(() => Promise.resolve());
+        const { ref, SettingsStore, navigation } = await renderSetPassword(
+            updateSettings
+        );
+
+        await act(async () => {
+            await ref.current.deletePassword();
+        });
+
+        expect(SettingsStore.disableBiometry).toHaveBeenCalledTimes(1);
+        expect(updateSettings).toHaveBeenCalledWith({
+            duressPassphraseVerifier: undefined,
+            passphraseVerifier: undefined
+        });
+        expect(
+            SettingsStore.disableBiometry.mock.invocationCallOrder[0]
+        ).toBeLessThan(updateSettings.mock.invocationCallOrder[0]);
+        expect(navigation.popTo).toHaveBeenCalledWith('Security');
+        expect(ref.current.state.deleteFailedError).toBe(false);
+    });
+
+    it('shows a message and stays when the settings write fails', async () => {
+        const errorSpy = jest
+            .spyOn(console, 'error')
+            .mockImplementation(() => {});
+        const updateSettings = jest.fn(() =>
+            Promise.reject(new Error('write failed'))
+        );
+        const { ref, navigation } = await renderSetPassword(updateSettings);
+
+        await act(async () => {
+            await expect(ref.current.deletePassword()).resolves.toBe(undefined);
+        });
+
+        expect(navigation.popTo).not.toHaveBeenCalled();
+        expect(ref.current.state.deleteFailedError).toBe(true);
+        expect(errorSpy).toHaveBeenCalled();
+        errorSpy.mockRestore();
+    });
 });
 
 describe('SetPassword saveSettings', () => {
