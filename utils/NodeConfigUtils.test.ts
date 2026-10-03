@@ -197,6 +197,25 @@ describe('NodeConfigUtils', () => {
             expect(typeof envelope.data).toBe('string');
         });
 
+        it('names the export after the local time it was made', async () => {
+            const nowSpy = jest
+                .spyOn(Date, 'now')
+                .mockReturnValue(new Date(2026, 8, 4, 7, 3, 9).getTime());
+            try {
+                await exportNodeConfigs(testNodes, testPassword);
+            } finally {
+                nowSpy.mockRestore();
+            }
+
+            const saveArg = mockSaveDocuments.mock.calls[0][0];
+            expect(saveArg.fileName).toBe(
+                '20260904-070309.zeus-wallet-config-backup'
+            );
+            expect(saveArg.sourceUris[0]).toBe(
+                'file:///cache/20260904-070309.zeus-wallet-config-backup'
+            );
+        });
+
         it('never writes the export to shared Downloads', async () => {
             await exportNodeConfigs(testNodes, testPassword);
             const wroteToDownloads = Object.keys(mockFiles).some((p) =>
