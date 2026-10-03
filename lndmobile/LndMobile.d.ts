@@ -10,7 +10,6 @@ export interface ILndMobile {
     startLnd(
         args: string,
         lndDir: string,
-        isTorEnabled?: boolean,
         isTestnet?: boolean
     ): Promise<{ data: string }>;
     stopLnd(): Promise<{ data: string }>;
