@@ -13,6 +13,10 @@ import CashuUtils, {
     cashuTokenPrefixes,
     CashuSeedOrigin,
     classifyCashuSeedOrigin,
+    isMeltPaid,
+    isMeltSettledUnpaid,
+    meltOutcome,
+    normalizeMeltState,
     resolveLockTarget
 } from './CashuUtils';
 
@@ -499,5 +503,77 @@ describe('resolveLockTarget', () => {
         expect(
             resolveLockTarget({}, { pubkey: '', contactName: 'Alice' })
         ).toEqual({ pubkey: '', contactName: '' });
+    });
+});
+
+describe('melt state', () => {
+    describe('normalizeMeltState', () => {
+        it('uppercases the state it was given', () => {
+            expect(normalizeMeltState('Paid')).toBe('PAID');
+            expect(normalizeMeltState('Pending')).toBe('PENDING');
+        });
+
+        it('falls back to the next candidate when one is missing', () => {
+            expect(normalizeMeltState(undefined, 'Unpaid')).toBe('UNPAID');
+            expect(normalizeMeltState('', 'Pending')).toBe('PENDING');
+        });
+
+        it('prefers the first non-empty candidate', () => {
+            expect(normalizeMeltState('Pending', 'Paid')).toBe('PENDING');
+        });
+
+        it('leaves a missing state unknown', () => {
+            expect(normalizeMeltState()).toBe('');
+            expect(normalizeMeltState(undefined, null, '')).toBe('');
+        });
+    });
+
+    describe('isMeltPaid', () => {
+        it('accepts a Paid melt', () => {
+            expect(isMeltPaid('Paid')).toBe(true);
+        });
+
+        // The mint has not settled the invoice in any of these states, so a
+        // melt resolving with one must never be reported as a paid invoice
+        it.each(['Pending', 'Unpaid', 'Issued', 'Failed'])(
+            'rejects a %s melt',
+            (state) => {
+                expect(isMeltPaid(state)).toBe(false);
+            }
+        );
+
+        it('rejects a melt with no state at all', () => {
+            expect(isMeltPaid(undefined)).toBe(false);
+        });
+    });
+
+    describe('meltOutcome', () => {
+        it('reads a paid melt as paid', () => {
+            expect(meltOutcome('Paid')).toBe('paid');
+        });
+
+        // The mint is finished with these and did not pay: the ecash is the
+        // wallet's again and nothing can change later
+        it.each(['Unpaid', 'Failed', 'Expired'])(
+            'reads a %s melt as settled unpaid',
+            (state) => {
+                expect(isMeltSettledUnpaid(state)).toBe(true);
+                expect(meltOutcome(state)).toBe('unpaid');
+            }
+        );
+
+        it('reads a pending melt as in flight', () => {
+            expect(isMeltSettledUnpaid('Pending')).toBe(false);
+            expect(meltOutcome('Pending')).toBe('inFlight');
+        });
+
+        // Dropping an unknown state would lose a payment that may still
+        // settle, the same mistake as reporting it paid, in the other
+        // direction
+        it('reads an unknown or absent state as in flight', () => {
+            expect(meltOutcome('Issued')).toBe('inFlight');
+            expect(meltOutcome(undefined)).toBe('inFlight');
+            expect(meltOutcome('')).toBe('inFlight');
+        });
     });
 });
