@@ -16,7 +16,14 @@ jest.mock('../components/Screen', () => {
     const { View } = require('react-native');
     return ({ children }: any) => <View>{children}</View>;
 });
-jest.mock('../components/Button', () => () => null);
+jest.mock('../components/Button', () => {
+    const { Pressable, Text } = require('react-native');
+    return ({ title, onPress }: any) => (
+        <Pressable role="button" onPress={onPress}>
+            <Text>{title}</Text>
+        </Pressable>
+    );
+});
 // Each header shows which Back it wires up
 jest.mock('../components/Header', () => {
     const { Text } = require('react-native');
@@ -25,13 +32,14 @@ jest.mock('../components/Header', () => {
     );
 });
 jest.mock('../components/LoadingIndicator', () => () => null);
-// Stands in for the keypad: one press submits the stored PIN, the other a
-// wrong one
+// Stands in for the keypad: one press submits mockPinEntry (the stored PIN
+// unless a test changes it), the other a wrong one
+let mockPinEntry = '1234';
 jest.mock('../components/Pin', () => {
     const { Pressable, Text } = require('react-native');
     return ({ onSubmit }: any) => (
         <>
-            <Pressable role="button" onPress={() => onSubmit('1234')}>
+            <Pressable role="button" onPress={() => onSubmit(mockPinEntry)}>
                 <Text>Submit PIN</Text>
             </Pressable>
             <Pressable role="button" onPress={() => onSubmit('0000')}>
@@ -41,7 +49,10 @@ jest.mock('../components/Pin', () => {
     );
 });
 jest.mock('../components/ShowHideToggle', () => () => null);
-jest.mock('../components/TextInput', () => () => null);
+jest.mock('../components/TextInput', () => {
+    const { TextInput } = require('react-native');
+    return (props: any) => <TextInput {...props} />;
+});
 jest.mock('../components/SuccessErrorMessage', () => {
     const { Text } = require('react-native');
     return {
@@ -57,9 +68,6 @@ jest.mock('../stores/SettingsStore', () => ({
 }));
 // ShareIntentProcessor imports the store graph, which loads native modules
 jest.mock('../stores/Stores');
-jest.mock('../utils/BiometricUtils', () => ({
-    verifyBiometry: jest.fn()
-}));
 jest.mock('../utils/DataClearUtils', () => ({
     blockNavigationDuringWipe: jest.fn(),
     clearAllData: jest.fn(),
@@ -81,7 +89,6 @@ jest.mock('react-native-randombytes', () => ({
     randomBytes: (length: number) => require('crypto').randomBytes(length)
 }));
 
-import { verifyBiometry } from '../utils/BiometricUtils';
 import {
     clearAllData,
     isWipePending,
@@ -94,10 +101,13 @@ import { deriveVerifier, VerifierRecord } from '../utils/LockVerifierUtils';
 import Lockscreen from './Lockscreen';
 
 const PIN = '1234';
+const PASSWORD = 'correct horse';
 let pinVerifier: VerifierRecord;
+let passphraseVerifier: VerifierRecord;
 
 beforeAll(async () => {
     pinVerifier = await deriveVerifier(PIN);
+    passphraseVerifier = await deriveVerifier(PASSWORD);
 });
 
 const deferred = () => {
@@ -131,11 +141,13 @@ const renderLockscreen = async (
     {
         biometry = false,
         posStatus = 'inactive',
+        biometryResult = 'success',
         params = {},
         settings = { pinVerifier }
     }: {
         biometry?: boolean;
         posStatus?: string;
+        biometryResult?: string;
         params?: any;
         settings?: any;
     } = {}
@@ -145,6 +157,9 @@ const renderLockscreen = async (
         posStatus,
         triggerSettingsRefresh: false,
         isBiometryConfigured: jest.fn(() => biometry),
+        authenticateWithBiometry: jest.fn(async () => biometryResult),
+        bindLegacyBiometryKey: jest.fn(),
+        disableBiometry: jest.fn(() => Promise.resolve()),
         isPosEnabled: jest.fn(() => false),
         loginRequired: jest.fn(() => true),
         setLoginStatus: jest.fn(),
@@ -190,10 +205,19 @@ const submitWrongPin = () =>
 const untilCalled = (mock: jest.Mock) =>
     waitFor(() => expect(mock).toHaveBeenCalled(), { timeout: 5000 });
 
+const submitPassword = async (buttonTitle: string) => {
+    await fireEvent.changeText(
+        screen.getByPlaceholderText('****************'),
+        PASSWORD
+    );
+    await fireEvent.press(screen.getByRole('button', { name: buttonTitle }));
+};
+
 let errorSpy: jest.SpyInstance;
 
 beforeEach(() => {
     jest.clearAllMocks();
+    mockPinEntry = PIN;
     (isWipePending as jest.Mock).mockResolvedValue(false);
     (markWipePending as jest.Mock).mockResolvedValue(undefined);
     errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -274,7 +298,6 @@ describe('Lockscreen login', () => {
     });
 
     it('still unlocks through biometrics when the attempt reset fails', async () => {
-        (verifyBiometry as jest.Mock).mockResolvedValue(true);
         const error = new Error('keychain unavailable');
         const updateSettings = jest.fn(() => Promise.reject(error));
 
@@ -767,6 +790,236 @@ const useTestVerifiers = () => {
     afterEach(() => verify.mockRestore());
 };
 
+describe('Lockscreen biometrics', () => {
+    it('stays locked and explains why when enrollment changed', async () => {
+        const updateSettings = jest.fn(() => Promise.resolve());
+        const { SettingsStore, navigation } = await renderLockscreen(
+            updateSettings,
+            { biometry: true, biometryResult: 'invalidated' }
+        );
+
+        expect(SettingsStore.authenticateWithBiometry).toHaveBeenCalled();
+        expect(SettingsStore.setLoginStatus).not.toHaveBeenCalled();
+        expect(navigation.pop).not.toHaveBeenCalled();
+        expect(
+            screen.getByText('views.Lockscreen.biometricsChanged')
+        ).toBeOnTheScreen();
+    });
+
+    it.each(['cancelled', 'failed'])(
+        'falls back to the PIN without a message when the prompt is %s',
+        async (biometryResult) => {
+            const updateSettings = jest.fn(() => Promise.resolve());
+            const { SettingsStore, navigation } = await renderLockscreen(
+                updateSettings,
+                { biometry: true, biometryResult }
+            );
+
+            expect(SettingsStore.setLoginStatus).not.toHaveBeenCalled();
+            expect(navigation.pop).not.toHaveBeenCalled();
+            expect(
+                screen.queryByText('views.Lockscreen.biometricsChanged')
+            ).not.toBeOnTheScreen();
+            expect(
+                screen.getByRole('button', { name: 'Submit PIN' })
+            ).toBeOnTheScreen();
+        }
+    );
+
+    it('does not prompt when biometrics are not configured', async () => {
+        const updateSettings = jest.fn(() => Promise.resolve());
+        const { SettingsStore } = await renderLockscreen(updateSettings);
+
+        expect(SettingsStore.authenticateWithBiometry).not.toHaveBeenCalled();
+    });
+
+    it('binds a legacy biometric key after a PIN login', async () => {
+        const updateSettings = makeUpdateSettings({ pinVerifier });
+        const { SettingsStore, navigation } = await renderLockscreen(
+            updateSettings
+        );
+        await submitPin();
+        await untilCalled(navigation.pop);
+
+        expect(SettingsStore.bindLegacyBiometryKey).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not bind a biometric key after a wrong PIN', async () => {
+        const updateSettings = makeUpdateSettings({ pinVerifier });
+        const { SettingsStore, navigation } = await renderLockscreen(
+            updateSettings
+        );
+        mockPinEntry = '0000';
+        await submitPin();
+        await untilCalled(updateSettings);
+        await waitFor(() =>
+            expect(
+                screen.getByRole('button', { name: 'Submit PIN' })
+            ).toBeOnTheScreen()
+        );
+
+        expect(SettingsStore.bindLegacyBiometryKey).not.toHaveBeenCalled();
+        expect(navigation.pop).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        [
+            'PIN',
+            () => ({ pinVerifier }),
+            { deletePin: true },
+            () => submitPin(),
+            ['pinVerifier', 'duressPinVerifier']
+        ],
+        [
+            'password',
+            () => ({ passphraseVerifier }),
+            { deletePassword: true },
+            () => submitPassword('views.Settings.SetPassword.deletePassword'),
+            ['passphraseVerifier', 'duressPassphraseVerifier']
+        ]
+    ] as const)(
+        'disables biometrics before deleting the %s',
+        async (_label, makeSettings, params, submit, cleared) => {
+            const settings = makeSettings();
+            const updateSettings = makeUpdateSettings({ ...settings });
+            const { SettingsStore, navigation } = await renderLockscreen(
+                updateSettings,
+                { settings, params }
+            );
+            await submit();
+            await untilCalled(navigation.popTo);
+
+            expect(SettingsStore.disableBiometry).toHaveBeenCalledTimes(1);
+            const clearIndex = updateSettings.mock.calls.findIndex(
+                ([update]: any) =>
+                    cleared.every(
+                        (key) => key in update && update[key] === undefined
+                    )
+            );
+            expect(clearIndex).toBeGreaterThan(-1);
+            expect(
+                SettingsStore.disableBiometry.mock.invocationCallOrder[0]
+            ).toBeLessThan(updateSettings.mock.invocationCallOrder[clearIndex]);
+            expect(navigation.popTo).toHaveBeenCalledWith('Security');
+        }
+    );
+
+    it('does not clear the PIN when disabling biometrics fails', async () => {
+        const updateSettings = makeUpdateSettings({ pinVerifier });
+        const { SettingsStore, navigation } = await renderLockscreen(
+            updateSettings,
+            { params: { deletePin: true } }
+        );
+        SettingsStore.disableBiometry.mockRejectedValueOnce(
+            new Error('write failed')
+        );
+        await submitPin();
+
+        await waitFor(
+            () =>
+                expect(
+                    screen.getByText('views.Settings.Security.deleteFailed')
+                ).toBeOnTheScreen(),
+            { timeout: 5000 }
+        );
+        expect(
+            updateSettings.mock.calls.some(
+                ([update]: any) =>
+                    typeof update === 'object' && 'pinVerifier' in update
+            )
+        ).toBe(false);
+        expect(navigation.popTo).not.toHaveBeenCalled();
+    });
+});
+
+// The attempt count is saved before the entry is checked, so only the write
+// that clears a credential fails here
+const isCredentialWrite = (patch: any) =>
+    Object.keys(patch).some((key) => key !== 'authenticationAttempts');
+
+// A failed settings write while deleting a credential must not escape
+// onAttemptLogIn as an unhandled rejection. The credential stays in place,
+// the user stays on the Lockscreen and is told to try again.
+describe('Lockscreen credential deletion failure', () => {
+    it.each([
+        ['deletePin', () => ({ pinVerifier }), () => submitPin()],
+        ['deleteDuressPin', () => ({ pinVerifier }), () => submitPin()],
+        [
+            'deletePassword',
+            () => ({ passphraseVerifier }),
+            () => submitPassword('views.Settings.SetPassword.deletePassword')
+        ],
+        [
+            'deleteDuressPassword',
+            () => ({ passphraseVerifier }),
+            () =>
+                submitPassword(
+                    'views.Settings.SetDuressPassword.deletePassword'
+                )
+        ]
+    ] as const)(
+        'shows a message and stays when %s fails',
+        async (flag, makeSettings, submit) => {
+            const settings = makeSettings();
+            const updateSettings = makeUpdateSettings(
+                { ...settings },
+                async (patch) => {
+                    if (isCredentialWrite(patch)) {
+                        throw new Error('write failed');
+                    }
+                }
+            );
+            const { navigation } = await renderLockscreen(updateSettings, {
+                settings,
+                params: { [flag]: true }
+            });
+            await submit();
+
+            await waitFor(
+                () =>
+                    expect(
+                        screen.getByText('views.Settings.Security.deleteFailed')
+                    ).toBeOnTheScreen(),
+                { timeout: 5000 }
+            );
+            expect(navigation.popTo).not.toHaveBeenCalled();
+            expect(errorSpy).toHaveBeenCalled();
+        }
+    );
+
+    it('clears the message on the next attempt', async () => {
+        let failWrite = true;
+        const updateSettings = makeUpdateSettings(
+            { pinVerifier },
+            async (patch) => {
+                if (isCredentialWrite(patch) && failWrite) {
+                    failWrite = false;
+                    throw new Error('write failed');
+                }
+            }
+        );
+        const { navigation } = await renderLockscreen(updateSettings, {
+            params: { deletePin: true }
+        });
+        await submitPin();
+        await waitFor(
+            () =>
+                expect(
+                    screen.getByText('views.Settings.Security.deleteFailed')
+                ).toBeOnTheScreen(),
+            { timeout: 5000 }
+        );
+
+        await submitPin();
+        await untilCalled(navigation.popTo);
+
+        expect(
+            screen.queryByText('views.Settings.Security.deleteFailed')
+        ).not.toBeOnTheScreen();
+        expect(navigation.popTo).toHaveBeenCalledWith('Security');
+    });
+});
+
 // Each entry is counted in storage before it is checked, so the wipe after
 // five wrong entries cannot be avoided by a failed write or by closing the
 // app before the count is saved.
@@ -1003,14 +1256,13 @@ describe('Lockscreen with a saved count at the limit', () => {
             pinVerifier: testVerifier(PIN),
             authenticationAttempts: 5
         };
-        (verifyBiometry as jest.Mock).mockResolvedValue(true);
         const { SettingsStore } = await renderLockscreen(
             makeUpdateSettings(saved),
             { biometry: true, settings: saved }
         );
 
         expect(clearAllData).not.toHaveBeenCalled();
-        expect(verifyBiometry).toHaveBeenCalledTimes(1);
+        expect(SettingsStore.authenticateWithBiometry).toHaveBeenCalledTimes(1);
         expect(SettingsStore.setLoginStatus).toHaveBeenCalledWith(true);
         expect(saved.authenticationAttempts).toBe(0);
     });
@@ -1050,7 +1302,7 @@ describe('Lockscreen with a wipe that did not finish', () => {
 
         expect(clearAllData).toHaveBeenCalledTimes(1);
         expect(restartApp).toHaveBeenCalledTimes(1);
-        expect(verifyBiometry).not.toHaveBeenCalled();
+        expect(SettingsStore.authenticateWithBiometry).not.toHaveBeenCalled();
         expect(screen.queryByRole('button', { name: 'Submit PIN' })).toBeNull();
         expect(SettingsStore.setLoginStatus).not.toHaveBeenCalled();
     });
