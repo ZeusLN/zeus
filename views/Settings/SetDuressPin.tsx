@@ -4,7 +4,9 @@ import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Header from '../../components/Header';
+import LoadingIndicator from '../../components/LoadingIndicator';
 import Pin from '../../components/Pin';
+import PreventRemove from '../../components/PreventRemove';
 import Screen from '../../components/Screen';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 
@@ -23,6 +25,9 @@ interface SetDuressPinState {
     duressPinConfirm: string;
     duressPinMismatchError: boolean;
     duressPinInvalidError: boolean;
+    duressPinSaveError: boolean;
+    saving: boolean;
+    saved: boolean;
 }
 
 @inject('SettingsStore')
@@ -35,7 +40,10 @@ export default class SetDuressPin extends React.Component<
         duressPin: '',
         duressPinConfirm: '',
         duressPinMismatchError: false,
-        duressPinInvalidError: false
+        duressPinInvalidError: false,
+        duressPinSaveError: false,
+        saving: false,
+        saved: false
     };
 
     renderSeparator = () => (
@@ -52,7 +60,8 @@ export default class SetDuressPin extends React.Component<
             this.setState({
                 duressPin: value,
                 duressPinMismatchError: false,
-                duressPinInvalidError: false
+                duressPinInvalidError: false,
+                duressPinSaveError: false
             });
         } else {
             this.setState({ duressPinConfirm: value }, () => {
@@ -64,14 +73,15 @@ export default class SetDuressPin extends React.Component<
     onPinChange = () => {
         this.setState({
             duressPinMismatchError: false,
-            duressPinInvalidError: false
+            duressPinInvalidError: false,
+            duressPinSaveError: false
         });
     };
 
     saveSettings = async () => {
         const { SettingsStore, navigation } = this.props;
         const { duressPin, duressPinConfirm } = this.state;
-        const { getSettings, updateSettings } = SettingsStore;
+        const { settings, updateSettings } = SettingsStore;
 
         if (duressPin !== duressPinConfirm) {
             this.setState({
@@ -83,8 +93,11 @@ export default class SetDuressPin extends React.Component<
             return;
         }
 
-        const settings = await getSettings();
-
+        // In-memory settings are current here: every write of pin/duressPin
+        // goes through updateSettings, which updates this.settings once the
+        // write has landed, and those flows only navigate afterwards.
+        // Re-reading the keychain would only add latency and a full
+        // re-render.
         if (duressPin === settings.pin) {
             this.setState({
                 duressPinInvalidError: true,
@@ -95,21 +108,46 @@ export default class SetDuressPin extends React.Component<
             return;
         }
 
-        await updateSettings({ duressPin }).then(() => {
-            getSettings();
-            navigation.popTo('Security');
-        });
+        this.setState({ saving: true });
+        try {
+            await updateSettings({ duressPin });
+        } catch (error) {
+            console.error('Could not save duress PIN', error);
+            this.setState({ saving: false, duressPinSaveError: true });
+            return;
+        }
+
+        // PreventRemove would also block this popTo; navigate only once
+        // `saved` has been committed and lifted the block
+        this.setState({ saved: true }, () => navigation.popTo('Security'));
     };
 
     render() {
         const { navigation, SettingsStore } = this.props;
         const { settings } = SettingsStore;
-        const { duressPin, duressPinMismatchError, duressPinInvalidError } =
-            this.state;
+        const {
+            duressPin,
+            duressPinMismatchError,
+            duressPinInvalidError,
+            duressPinSaveError,
+            saving,
+            saved
+        } = this.state;
 
         return (
             <Screen>
-                <Header leftComponent="Back" navigation={navigation} />
+                {/* Leaving mid-save would let Security read the old settings */}
+                <PreventRemove
+                    enabled={saving && !saved}
+                    onAttempt={() => void 0}
+                />
+                <Header
+                    leftComponent={saving ? undefined : 'Back'}
+                    rightComponent={
+                        saving ? <LoadingIndicator size={30} /> : undefined
+                    }
+                    navigation={navigation}
+                />
                 <View
                     style={{
                         paddingTop: 10,
@@ -128,6 +166,13 @@ export default class SetDuressPin extends React.Component<
                             <ErrorMessage
                                 message={localeString(
                                     'views.Settings.SetPin.invalid'
+                                )}
+                            />
+                        )}
+                        {duressPinSaveError && (
+                            <ErrorMessage
+                                message={localeString(
+                                    'views.Settings.SetPin.saveError'
                                 )}
                             />
                         )}
@@ -213,6 +258,7 @@ export default class SetDuressPin extends React.Component<
                                     pinConfirm={true}
                                     pinLength={duressPin.length}
                                     shuffle={settings.scramblePin}
+                                    disabled={saving}
                                 />
                             </View>
                         </>
