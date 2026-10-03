@@ -6,7 +6,13 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 import isEqual from 'lodash/isEqual';
 
 import BackendUtils from '../utils/BackendUtils';
-import { getSupportedBiometryType } from '../utils/BiometricUtils';
+import {
+    BiometryResult,
+    createBiometryKey,
+    deleteBiometryKey,
+    getSupportedBiometryType,
+    verifyBiometry
+} from '../utils/BiometricUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { SETTINGS_VERSION } from '../utils/SettingsVersion';
@@ -219,6 +225,9 @@ export interface Settings {
     invoices: InvoicesSettings;
     channels: ChannelsSettings;
     isBiometryEnabled: boolean;
+    // A biometric key bound to the enrolled biometrics exists. False for
+    // biometrics enabled before unlocks required a key.
+    biometryKeyBound?: boolean;
     supportedBiometryType?: BiometryType;
     lndHubLnAuthMode?: string;
     // Embedded node
@@ -1585,6 +1594,7 @@ export const DEFAULT_SETTINGS: Settings = {
     },
     supportedBiometryType: undefined,
     isBiometryEnabled: false,
+    biometryKeyBound: false,
     scramblePin: true,
     loginBackground: false,
     fiatEnabled: true,
@@ -2402,7 +2412,58 @@ export default class SettingsStore {
     public isBiometryConfigured = () =>
         this.settings != null &&
         this.settings.isBiometryEnabled &&
+        !!this.settings.biometryKeyBound &&
         this.settings.supportedBiometryType !== undefined;
+
+    public enableBiometry = async (promptMessage: string) => {
+        if (!(await createBiometryKey())) return false;
+
+        if ((await verifyBiometry(promptMessage)) !== 'success') {
+            await deleteBiometryKey();
+            return false;
+        }
+
+        await this.updateSettings({
+            isBiometryEnabled: true,
+            biometryKeyBound: true
+        });
+        return true;
+    };
+
+    public disableBiometry = async () => {
+        await deleteBiometryKey();
+        await this.updateSettings({
+            isBiometryEnabled: false,
+            biometryKeyBound: false
+        });
+    };
+
+    // Unlock with biometrics. If the enrolled biometrics changed since they
+    // were enabled, the key no longer works, so biometrics are turned off
+    // and the user has to use their PIN or password.
+    public authenticateWithBiometry = async (
+        promptMessage: string
+    ): Promise<BiometryResult> => {
+        const result = await verifyBiometry(promptMessage);
+        if (result === 'invalidated') await this.disableBiometry();
+        return result;
+    };
+
+    // Biometrics enabled before unlocks required a key are skipped on the
+    // Lockscreen until this creates one after a PIN or password login, so
+    // the key is only created once the user has proven they know it
+    public bindLegacyBiometryKey = async () => {
+        if (!this.settings?.isBiometryEnabled || this.settings.biometryKeyBound)
+            return;
+
+        try {
+            if (await createBiometryKey()) {
+                await this.updateSettings({ biometryKeyBound: true });
+            }
+        } catch (error) {
+            console.error('Failed to bind biometric key', error);
+        }
+    };
 
     public setLoginStatus = (status = false) => (this.loggedIn = status);
 

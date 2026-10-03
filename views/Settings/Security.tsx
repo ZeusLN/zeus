@@ -203,15 +203,23 @@ export default class Security extends React.Component<
             return;
         }
 
-        const isVerified = await verifyBiometry(
-            localeString('views.Settings.Security.Biometrics.prompt')
+        const promptMessage = localeString(
+            'views.Settings.Security.Biometrics.prompt'
         );
 
-        if (isVerified) {
-            this.setState({ isBiometryEnabled: value });
-            SettingsStore.updateSettings({
-                isBiometryEnabled: value
-            });
+        if (value) {
+            if (await SettingsStore.enableBiometry(promptMessage)) {
+                this.setState({ isBiometryEnabled: true });
+            }
+            return;
+        }
+
+        // a key invalidated by an enrollment change can no longer verify,
+        // and must not keep biometrics stuck on
+        const result = await verifyBiometry(promptMessage);
+        if (result === 'success' || result === 'invalidated') {
+            await SettingsStore.disableBiometry();
+            this.setState({ isBiometryEnabled: false });
         }
     }
 

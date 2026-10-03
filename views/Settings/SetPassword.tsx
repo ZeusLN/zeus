@@ -10,6 +10,7 @@ import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
 
 import { confirmAction } from '../../utils/ActionUtils';
+import { deleteBiometryKey } from '../../utils/BiometricUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import SettingsStore from '../../stores/SettingsStore';
@@ -119,10 +120,12 @@ export default class SetPassphrase extends React.Component<
         const { SettingsStore, navigation } = this.props;
         const { updateSettings } = SettingsStore;
 
+        await deleteBiometryKey();
         await updateSettings({
             duressPassphrase: '',
             passphrase: '',
-            isBiometryEnabled: false
+            isBiometryEnabled: false,
+            biometryKeyBound: false
         });
         navigation.popTo('Security');
     };
