@@ -507,7 +507,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             enableAtomicMultiPathPayment,
             feeLimitSat,
             maxFeePercent,
-            feeOption
+            feeOption,
+            timeoutSeconds
         } = this.state;
 
         // Guard against double-submission: bail if a payment is already in
@@ -522,6 +523,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                 max_parts: maxParts,
                 max_shard_amt: maxShardAmt,
                 fee_limit_sat: feeLimitSat,
+                timeout_seconds: timeoutSeconds,
                 amp: true
             });
         } else {
@@ -533,6 +535,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                 // cap, so only send the percent when that mode is selected
                 max_fee_percent:
                     feeOption === 'percent' ? maxFeePercent : undefined,
+                timeout_seconds: timeoutSeconds,
                 message
             });
         }
