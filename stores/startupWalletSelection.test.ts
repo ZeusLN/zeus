@@ -113,9 +113,10 @@ const { settingsStore } = require('./Stores');
 const BackendUtils = require('../utils/BackendUtils').default;
 
 it('settings writes during startup wallet selection reach no node', async () => {
+    // Settings loaded while the startup wallet list is open
     await settingsStore.getSettings();
     expect(settingsStore.macaroonHex).toEqual('aaaa');
-    BackendUtils.__calls.length = 0;
+    expect(BackendUtils.__calls).toEqual([]);
 
     // What Wallets.tsx does when the user picks the second wallet
     settingsStore.setInitialStart(false);
