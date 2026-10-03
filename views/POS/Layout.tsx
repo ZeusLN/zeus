@@ -73,6 +73,7 @@ export default class Layout extends React.PureComponent<LayoutProps> {
                         color: '#fff',
                         fontSize: 12,
                         marginTop: 20,
+                        // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                         marginBottom: -40
                     }}
                 >

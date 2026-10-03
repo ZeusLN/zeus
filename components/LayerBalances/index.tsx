@@ -146,6 +146,7 @@ const MintIcons = ({ mints }: { mints?: MintInfo[] }) => {
                     key={mint.url}
                     style={[
                         styles.mintIconWrapper,
+                        // eslint-disable-next-line zeus/no-negative-layout-offset -- intentional: overlapping mint avatars
                         { marginLeft: index > 0 ? -8 : 0, zIndex: 3 - index }
                     ]}
                 >

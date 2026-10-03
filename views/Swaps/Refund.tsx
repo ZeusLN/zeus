@@ -177,6 +177,7 @@ export default class RefundSwap extends React.Component<
                     }}
                     rightComponent={
                         loading ? (
+                            // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                             <View style={{ marginTop: -6 }}>
                                 <LoadingIndicator size={32} />
                             </View>

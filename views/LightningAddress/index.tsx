@@ -1180,9 +1180,11 @@ export default class LightningAddress extends React.Component<
 const styles = StyleSheet.create({
     loadingPatternWrapper: {
         position: 'absolute',
+        /* eslint-disable zeus/no-negative-layout-offset -- TODO #2794 */
         top: -50,
         left: -5,
         right: -5,
+        /* eslint-enable zeus/no-negative-layout-offset */
         bottom: 0
     },
     text: {
