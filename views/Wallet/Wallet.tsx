@@ -473,11 +473,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 navigation.navigate('Lockscreen', { shareIntentData });
             } else if (posEnabled && posStatus === 'unselected') {
                 setPosStatus('active');
-                // POS takes over from startup here. End startup before
-                // fetchData, whose settings writes would otherwise raise the
-                // latch again; fetchData drops the latch raised while the
-                // settings loaded, and this path never reaches
-                // setConnectingStatus(true)
+                // POS takes over from startup here, so end startup now. If
+                // the first connection below fails, it never reaches the end
+                // of fetchData, where startup otherwise ends, and the next
+                // refresh would replace the POS view with the startup
+                // wallet list
                 SettingsStore.setInitialStart(false);
                 if (!this.state.unlocked) {
                     this.startListeners();
@@ -555,14 +555,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
     async fetchData(transientRetryCount = 0) {
         const { SettingsStore } = this.props;
-
-        // Reaching fetchData means a wallet is being activated: it never runs
-        // while the startup wallet list is open. Not every activation goes
-        // through setConnectingStatus(true), so drop the latch here as well.
-        // This sits above the lock on purpose: a call that finds one already
-        // running returns at the seq === null line below, and dropping it in
-        // fetchDataCore would be skipped for that call.
-        SettingsStore.setWalletSelectionPending(false);
 
         // ensure we don't run this twice in parallel
         const seq = SettingsStore.acquireFetchLock();
@@ -1379,10 +1371,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             );
             setConnectingStatus(false);
             SettingsStore.setInitialStart(false);
-            // A settings write while this first connection was running (for
-            // example turning Select wallet on startup on) raised the latch
-            // again, because startup was still on
-            SettingsStore.setWalletSelectionPending(false);
 
             if (this.startupTimeoutId) {
                 clearTimeout(this.startupTimeoutId);

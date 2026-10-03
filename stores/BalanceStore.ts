@@ -1,7 +1,6 @@
-import { action, computed, reaction, observable, runInAction } from 'mobx';
+import { action, computed, observable, runInAction } from 'mobx';
 import BigNumber from 'bignumber.js';
 
-import SettingsStore from './SettingsStore';
 import BackendUtils from './../utils/BackendUtils';
 import {
     CooperativeClose,
@@ -45,25 +44,6 @@ export default class BalanceStore {
     @observable public forceCloses: ForceClose[] = [];
     @observable public lightningBalance: number | string;
     @observable public otherAccounts: any = {};
-    settingsStore: SettingsStore;
-
-    constructor(settingsStore: SettingsStore) {
-        this.settingsStore = settingsStore;
-
-        reaction(
-            () => this.settingsStore.settings,
-            () => {
-                // While the user is still choosing a wallet on startup no
-                // wallet is active yet, but the credentials loaded from
-                // settings still point at the previously used one.
-                if (this.settingsStore.walletSelectionPending) return;
-                if (this.settingsStore.hasCredentials()) {
-                    this.getBlockchainBalance(false, false);
-                    this.getLightningBalance(false);
-                }
-            }
-        );
-    }
 
     @action
     public reset = () => {
