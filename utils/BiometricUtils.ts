@@ -1,5 +1,9 @@
 import ReactNativeBiometrics, { BiometryType } from 'react-native-biometrics';
 
+// Must stay false: with device credentials allowed, iOS createKeys uses
+// kSecAccessControlUserPresence instead of the BiometryCurrentSet flag from
+// patches/patch-biometrics-enrollment.mjs, so newly enrolled biometrics (or
+// the device passcode) could unlock the wallet again
 const rnBiometrics = new ReactNativeBiometrics({
     allowDeviceCredentials: false
 });
