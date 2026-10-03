@@ -1138,6 +1138,22 @@ export default class ChannelView extends React.Component<
                                 }
                             />
                         )}
+                        {!!csv_delay && (
+                            <KeyValue
+                                keyValue={localeString(
+                                    'views.Channel.csvDelay'
+                                )}
+                                value={`${csv_delay} ${localeString(
+                                    'general.blocks'
+                                )}`}
+                                infoModalText={[
+                                    localeString(
+                                        'views.Channel.csvDelay.info1'
+                                    ),
+                                    localeString('views.Channel.csvDelay.info2')
+                                ]}
+                            />
+                        )}
 
                         <Divider
                             orientation="horizontal"
@@ -1158,7 +1174,6 @@ export default class ChannelView extends React.Component<
                                 total_satoshis_sent={total_satoshis_sent}
                                 commit_fee={commit_fee}
                                 commit_weight={commit_weight}
-                                csv_delay={csv_delay}
                             />
                         )}
                         {BackendUtils.supportsForwardingHistory() &&
