@@ -30,7 +30,6 @@ const mockDeep = (): any =>
     'react-native-notifications',
     'react-native-share',
     'react-native-fs',
-    'react-native-securerandom',
     'react-native-device-info',
     'react-native-blob-util'
 ].forEach((name) => jest.mock(name, () => mockDeep()));
