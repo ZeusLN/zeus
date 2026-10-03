@@ -69,7 +69,7 @@ import { isBatterySaverEnabled } from '../../utils/BatteryUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
-import { restartApp, restartNeeded } from '../../utils/RestartUtils';
+import { restartNeeded, stopNodeAndRestart } from '../../utils/RestartUtils';
 
 import {
     loadPendingPaymentData,
@@ -1629,7 +1629,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 }}
                                 onPress={() => {
                                     if (Platform.OS === 'android') {
-                                        restartApp();
+                                        stopNodeAndRestart();
                                     } else {
                                         setConnectingStatus(true);
                                         this.getSettingsAndNavigate();
