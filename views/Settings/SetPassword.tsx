@@ -29,6 +29,7 @@ interface SetPassphraseState {
     passphraseMismatchError: boolean;
     passphraseInvalidError: boolean;
     passphraseEmptyError: boolean;
+    deleteFailedError: boolean;
     isBiometryEnabled: boolean;
 }
 
@@ -45,6 +46,7 @@ export default class SetPassphrase extends React.Component<
         passphraseMismatchError: false,
         passphraseInvalidError: false,
         passphraseEmptyError: false,
+        deleteFailedError: false,
         isBiometryEnabled: false
     };
 
@@ -117,13 +119,22 @@ export default class SetPassphrase extends React.Component<
         // deletes passphrase and duress passphrase because duress
         // passphrase should not exist if passphrase does not exist
         const { SettingsStore, navigation } = this.props;
-        const { updateSettings } = SettingsStore;
+        const { disableBiometry, updateSettings } = SettingsStore;
 
-        await updateSettings({
-            duressPassphrase: '',
-            passphrase: '',
-            isBiometryEnabled: false
-        });
+        this.setState({ deleteFailedError: false });
+        // A failed settings write leaves the password in place, so stay
+        // here and tell the user to try again
+        try {
+            await disableBiometry();
+            await updateSettings({
+                duressPassphrase: '',
+                passphrase: ''
+            });
+        } catch (error) {
+            console.error('Failed to delete password', error);
+            this.setState({ deleteFailedError: true });
+            return;
+        }
         navigation.popTo('Security');
     };
 
@@ -135,7 +146,8 @@ export default class SetPassphrase extends React.Component<
             savedPassphrase,
             passphraseMismatchError,
             passphraseInvalidError,
-            passphraseEmptyError
+            passphraseEmptyError,
+            deleteFailedError
         } = this.state;
 
         return (
@@ -180,6 +192,13 @@ export default class SetPassphrase extends React.Component<
                         <ErrorMessage
                             message={localeString(
                                 'views.Settings.SetPassword.empty'
+                            )}
+                        />
+                    )}
+                    {deleteFailedError && (
+                        <ErrorMessage
+                            message={localeString(
+                                'views.Settings.Security.deleteFailed'
                             )}
                         />
                     )}
