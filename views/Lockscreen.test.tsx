@@ -28,9 +28,6 @@ jest.mock('../stores/SettingsStore', () => ({
 }));
 // ShareIntentProcessor imports the store graph, which loads native modules
 jest.mock('../stores/Stores', () => ({ settingsStore: {} }));
-jest.mock('../utils/BiometricUtils', () => ({
-    verifyBiometry: jest.fn()
-}));
 jest.mock('../utils/DataClearUtils', () => ({
     blockNavigationDuringWipe: jest.fn(),
     clearAllData: jest.fn()
@@ -45,7 +42,6 @@ jest.mock('../utils/ThemeUtils', () => ({
     themeColor: jest.fn(() => '#000')
 }));
 
-import { verifyBiometry } from '../utils/BiometricUtils';
 import Lockscreen from './Lockscreen';
 
 const PIN = '1234';
@@ -62,7 +58,10 @@ const deferred = () => {
 
 const renderLockscreen = async (
     updateSettings: jest.Mock,
-    { biometry = false }: { biometry?: boolean } = {}
+    {
+        biometry = false,
+        biometryResult = 'success'
+    }: { biometry?: boolean; biometryResult?: string } = {}
 ) => {
     const SettingsStore = {
         settings: { pin: PIN },
@@ -70,6 +69,9 @@ const renderLockscreen = async (
         triggerSettingsRefresh: false,
         isBiometryConfigured: jest.fn(() => biometry),
         isPosEnabled: jest.fn(() => false),
+        authenticateWithBiometry: jest.fn(async () => biometryResult),
+        bindLegacyBiometryKey: jest.fn(),
+        disableBiometry: jest.fn(() => Promise.resolve()),
         loginRequired: jest.fn(() => true),
         setLoginStatus: jest.fn(),
         setPosStatus: jest.fn(),
@@ -180,7 +182,6 @@ describe('Lockscreen login', () => {
     });
 
     it('still unlocks through biometrics when the attempt reset fails', async () => {
-        (verifyBiometry as jest.Mock).mockResolvedValue(true);
         const error = new Error('keychain unavailable');
         const updateSettings = jest.fn(() => Promise.reject(error));
 
@@ -195,5 +196,171 @@ describe('Lockscreen login', () => {
             'Failed to reset authentication attempts',
             error
         );
+    });
+});
+
+describe('Lockscreen biometrics', () => {
+    it('stays locked and explains why when enrollment changed', async () => {
+        const updateSettings = jest.fn(() => Promise.resolve());
+        const { SettingsStore, navigation, instance } = await renderLockscreen(
+            updateSettings,
+            { biometry: true, biometryResult: 'invalidated' }
+        );
+
+        expect(SettingsStore.authenticateWithBiometry).toHaveBeenCalled();
+        expect(SettingsStore.setLoginStatus).not.toHaveBeenCalled();
+        expect(navigation.pop).not.toHaveBeenCalled();
+        expect(instance.state.biometryInvalidated).toBe(true);
+    });
+
+    it.each(['cancelled', 'failed'])(
+        'falls back to the PIN without a message when the prompt is %s',
+        async (biometryResult) => {
+            const updateSettings = jest.fn(() => Promise.resolve());
+            const { SettingsStore, navigation, instance } =
+                await renderLockscreen(updateSettings, {
+                    biometry: true,
+                    biometryResult
+                });
+
+            expect(SettingsStore.setLoginStatus).not.toHaveBeenCalled();
+            expect(navigation.pop).not.toHaveBeenCalled();
+            expect(instance.state.biometryInvalidated).toBe(false);
+        }
+    );
+
+    it('does not prompt when biometrics are not configured', async () => {
+        const updateSettings = jest.fn(() => Promise.resolve());
+        const { SettingsStore } = await renderLockscreen(updateSettings);
+
+        expect(SettingsStore.authenticateWithBiometry).not.toHaveBeenCalled();
+    });
+
+    it('binds a legacy biometric key after a PIN login', async () => {
+        const updateSettings = jest.fn(() => Promise.resolve());
+        const { SettingsStore, instance } = await renderLockscreen(
+            updateSettings
+        );
+        await enterCorrectPin(instance);
+
+        await act(async () => {
+            await instance.onAttemptLogIn();
+        });
+
+        expect(SettingsStore.bindLegacyBiometryKey).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not bind a biometric key after a wrong PIN', async () => {
+        const updateSettings = jest.fn(() => Promise.resolve());
+        const { SettingsStore, instance } = await renderLockscreen(
+            updateSettings
+        );
+        await act(async () => {
+            instance.setState({ pinAttempt: '0000' });
+        });
+        SettingsStore.getSettings.mockResolvedValue({});
+
+        await act(async () => {
+            await instance.onAttemptLogIn();
+        });
+
+        expect(SettingsStore.bindLegacyBiometryKey).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        ['PIN', 'deletePin', { pin: '', duressPin: '' }],
+        ['password', 'deletePassword', { passphrase: '', duressPassphrase: '' }]
+    ] as const)(
+        'disables biometrics before deleting the %s',
+        async (_label, method, cleared) => {
+            const updateSettings = jest.fn(() => Promise.resolve());
+            const { SettingsStore, navigation, instance } =
+                await renderLockscreen(updateSettings);
+
+            await act(async () => {
+                await instance[method]();
+            });
+
+            expect(SettingsStore.disableBiometry).toHaveBeenCalledTimes(1);
+            expect(updateSettings).toHaveBeenCalledWith(
+                expect.objectContaining(cleared)
+            );
+            expect(
+                SettingsStore.disableBiometry.mock.invocationCallOrder[0]
+            ).toBeLessThan(updateSettings.mock.invocationCallOrder[0]);
+            expect(navigation.popTo).toHaveBeenCalledWith('Security');
+        }
+    );
+
+    it('does not clear the PIN when disabling biometrics fails', async () => {
+        const updateSettings = jest.fn(() => Promise.resolve());
+        const { SettingsStore, navigation, instance } = await renderLockscreen(
+            updateSettings
+        );
+        SettingsStore.disableBiometry.mockRejectedValueOnce(
+            new Error('write failed')
+        );
+
+        await act(async () => {
+            await instance.deletePin();
+        });
+
+        expect(updateSettings).not.toHaveBeenCalled();
+        expect(navigation.popTo).not.toHaveBeenCalled();
+        expect(instance.state.deleteFailed).toBe(true);
+    });
+});
+
+// A failed settings write while deleting a credential must not escape
+// onAttemptLogIn as an unhandled rejection. The credential stays in place,
+// the user stays on the Lockscreen and is told to try again.
+describe('Lockscreen credential deletion failure', () => {
+    it.each([
+        'deletePin',
+        'deletePassword',
+        'deleteDuressPin',
+        'deleteDuressPassword'
+    ] as const)('shows a message and stays when %s fails', async (flag) => {
+        const updateSettings = jest.fn(() =>
+            Promise.reject(new Error('write failed'))
+        );
+        const { navigation, instance } = await renderLockscreen(updateSettings);
+        await act(async () => {
+            instance.setState({ [flag]: true } as any);
+        });
+        await enterCorrectPin(instance);
+
+        await act(async () => {
+            await expect(instance.onAttemptLogIn()).resolves.toBe(undefined);
+        });
+
+        expect(navigation.popTo).not.toHaveBeenCalled();
+        expect(instance.state.deleteFailed).toBe(true);
+        expect(errorSpy).toHaveBeenCalled();
+    });
+
+    it('clears the message on the next attempt', async () => {
+        const updateSettings = jest
+            .fn()
+            .mockRejectedValueOnce(new Error('write failed'))
+            .mockResolvedValue(undefined);
+        const { navigation, instance } = await renderLockscreen(updateSettings);
+        await act(async () => {
+            instance.setState({ deletePin: true });
+        });
+        await enterCorrectPin(instance);
+
+        await act(async () => {
+            await instance.onAttemptLogIn();
+        });
+        expect(instance.state.deleteFailed).toBe(true);
+
+        await enterCorrectPin(instance);
+        await act(async () => {
+            await instance.onAttemptLogIn();
+        });
+
+        expect(instance.state.deleteFailed).toBe(false);
+        expect(navigation.popTo).toHaveBeenCalledWith('Security');
     });
 });

@@ -145,6 +145,9 @@ jest.mock('../stores/NostrWalletConnectStore', () => ({
     NWC_LUD16_ENABLED: 'zeus-nwc-lud16-enabled',
     NWC_PERSISTENT_SERVICE_ENABLED: 'persistentNWCServicesEnabled'
 }));
+jest.mock('./BiometricUtils', () => ({
+    deleteBiometryKey: jest.fn(() => Promise.resolve())
+}));
 jest.mock('../utils/RatingUtils', () => ({
     PAYMENT_COUNT_KEY: 'successfulPaymentCount',
     RATING_DISMISSED_KEY: 'ratingDismissedPermanently'
@@ -160,6 +163,7 @@ import path from 'path';
 import CashuDevKit from '../cashu-cdk';
 import Storage from '../storage';
 import { deriveEmbeddedNodeId } from './AezeedUtils';
+import { deleteBiometryKey } from './BiometricUtils';
 import {
     blockNavigationDuringWipe,
     clearAllData,
@@ -432,6 +436,19 @@ describe('clearAllData orphaned key material (KEY-006 regression)', () => {
         const baseKey = `lnc-rn:${lncHash(pairingPhrase)}`;
         expect(removedKeys()).toContain(baseKey);
         expect(removedKeys()).toContain(`${baseKey}:host`);
+    });
+});
+
+describe('clearAllData biometric key', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+    });
+
+    it('deletes the biometric unlock key', async () => {
+        await clearAllData();
+
+        expect(deleteBiometryKey).toHaveBeenCalledTimes(1);
     });
 });
 

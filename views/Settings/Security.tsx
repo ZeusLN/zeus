@@ -203,17 +203,39 @@ export default class Security extends React.Component<
             return;
         }
 
-        const isVerified = await verifyBiometry(
-            localeString('views.Settings.Security.Biometrics.prompt')
+        const promptMessage = localeString(
+            'views.Settings.Security.Biometrics.prompt'
         );
 
-        if (isVerified) {
-            this.setState({ isBiometryEnabled: value });
-            SettingsStore.updateSettings({
-                isBiometryEnabled: value
-            });
+        if (value) {
+            const result = await SettingsStore.enableBiometry(promptMessage);
+            if (result === 'success') {
+                this.setState({ isBiometryEnabled: true });
+            } else if (result !== 'cancelled') {
+                this.showBiometryError(
+                    'views.Settings.Security.Biometrics.enableFailed'
+                );
+            }
+            return;
+        }
+
+        // a key invalidated by an enrollment change can no longer verify,
+        // and must not keep biometrics stuck on
+        const result = await verifyBiometry(promptMessage);
+        if (result === 'success' || result === 'invalidated') {
+            await SettingsStore.disableBiometry();
+            this.setState({ isBiometryEnabled: false });
+        } else if (result === 'failed') {
+            this.showBiometryError(
+                'views.Settings.Security.Biometrics.disableFailed'
+            );
         }
     }
+
+    showBiometryError = (localeKey: string) =>
+        this.props.ModalStore.toggleInfoModal({
+            text: localeString(localeKey)
+        });
 
     renderSeparator = () => (
         <View

@@ -67,6 +67,7 @@ import {
 } from '../stores/NostrWalletConnectStore';
 import { PAYMENT_COUNT_KEY, RATING_DISMISSED_KEY } from '../utils/RatingUtils';
 import { deriveEmbeddedNodeId } from './AezeedUtils';
+import { deleteBiometryKey } from './BiometricUtils';
 import { deleteLndWallet } from './LndMobileUtils';
 import { deleteLdkNodeWallet, stopLdkNode } from './LdkNodeUtils';
 import { sleep } from './SleepUtils';
@@ -733,6 +734,12 @@ export async function clearAllData(): Promise<void> {
     // nothing else in this flow touches either.
     await purgeLegacyRescueKeyFiles();
     await unlinkRescueKeyStagingFile();
+
+    // 2e. Delete the biometric unlock key. It lives in the iOS keychain or
+    // the Android Keystore, which the storage clears below do not reach, and
+    // on iOS it survives an uninstall. Left behind, it shows that biometrics
+    // were set up, which a duress wipe must not reveal.
+    await deleteBiometryKey();
 
     // 3. Clear all known storage keys
     console.log('[ClearData] Clearing known storage keys...');
