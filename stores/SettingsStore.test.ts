@@ -49,6 +49,11 @@ jest.mock('../utils/TorUtils', () => ({
     doTorRequest: jest.fn(),
     RequestMethod: {}
 }));
+// utils/ThemeUtils reads the selected theme from the settingsStore
+// singleton; a stand-in keeps the real Stores graph out of this suite
+jest.mock('./Stores', () => ({
+    settingsStore: { settings: {} }
+}));
 jest.mock('../utils/LdkNodeUtils', () => ({
     DEFAULT_SCORER_URL: '',
     DEFAULT_VSS_SERVER: '',
@@ -95,8 +100,10 @@ import SettingsStore, {
     DEFAULT_LSPS1_REST_MUTINYNET,
     DEFAULT_LSPS1_REST_TESTNET,
     STORAGE_KEY,
+    THEME_KEYS,
     getLspConfigForNetwork
 } from './SettingsStore';
+import { themeColor } from '../utils/ThemeUtils';
 
 const StorageMock: any = jest.requireMock('../storage');
 
@@ -525,4 +532,27 @@ describe('getLspConfigForNetwork', () => {
             expect(config.defaultPubkey).toEqual(pubkey);
         }
     );
+});
+
+// Every theme the Display picker offers needs a palette in
+// utils/ThemeUtils.ts. themeColor() falls through to the Dark palette for
+// any other value, so a picker entry without a palette silently renders
+// as Dark (d3f15bc9f removed five palettes but left their entries here).
+describe('THEME_KEYS', () => {
+    const { settingsStore } = jest.requireMock('./Stores');
+    const backgroundFor = (theme: string) => {
+        settingsStore.settings = { display: { theme } };
+        return themeColor('background');
+    };
+
+    it.each(
+        THEME_KEYS.filter(({ value }) => value !== 'dark').map(
+            ({ key, value }) => [key, value]
+        )
+    )('has a palette for %s', (_key, value) => {
+        // 'dark' is the fallback palette itself, hence skipped above
+        expect(backgroundFor(value)).not.toEqual(
+            backgroundFor('no-such-theme')
+        );
+    });
 });

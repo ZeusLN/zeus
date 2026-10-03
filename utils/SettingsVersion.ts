@@ -5,4 +5,4 @@
 // module so tests that must mock stores/SettingsStore (for its React
 // Native imports) still exercise the real constant instead of a
 // hardcoded copy that would keep old gating tests green after a bump.
-export const SETTINGS_VERSION = 2;
+export const SETTINGS_VERSION = 3;

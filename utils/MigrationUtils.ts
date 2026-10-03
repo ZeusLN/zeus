@@ -29,6 +29,8 @@ import {
     LEGACY_ZEUS_SWAP_HOST_TESTNET,
     RETIRED_SWAP_HOSTS_MAINNET,
     RETIRED_SWAP_HOSTS_MAINNET_V2,
+    RETIRED_THEMES,
+    DEFAULT_THEME,
     DEFAULT_NOSTR_RELAYS_2023,
     PosEnabled,
     DEFAULT_SLIDE_TO_PAY_THRESHOLD,
@@ -643,6 +645,12 @@ class MigrationsUtils {
                 ) || changed;
         }
 
+        if (priorVersion < 3) {
+            // v2 -> v3: move users off the removed themes. No flag read:
+            // the stamp alone keeps this exactly-once.
+            changed = this.applyRetiredThemes(settings) || changed;
+        }
+
         settings.settingsVersion = SETTINGS_VERSION;
         return changed;
     }
@@ -790,6 +798,21 @@ class MigrationsUtils {
             changed = true;
         }
         return changed;
+    }
+
+    // Move users whose selected theme was removed back to the default
+    // theme. Without this themeColor() falls through to the Dark palette
+    // for them, and their persisted value matches no entry in THEME_KEYS,
+    // so the theme picker cannot show it as selected.
+    public applyRetiredThemes(settings: any): boolean {
+        if (
+            settings?.display?.theme &&
+            RETIRED_THEMES.includes(settings.display.theme)
+        ) {
+            settings.display.theme = DEFAULT_THEME;
+            return true;
+        }
+        return false;
     }
 
     // Repair invoice expiry display fields when out of sync with
