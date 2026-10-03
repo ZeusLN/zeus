@@ -1022,7 +1022,123 @@ export default class SwapStore {
                     const existingSwaps = storedSwaps
                         ? JSON.parse(storedSwaps)
                         : [];
-                    const existingSwapIds = existingSwaps.map((s: any) => s.id);
+                    const storedReverseSwaps = await Storage.getItem(
+                        REVERSE_SWAPS_KEY
+                    );
+                    const existingReverseSwaps = storedReverseSwaps
+                        ? JSON.parse(storedReverseSwaps)
+                        : [];
+
+                    // Rescued swaps are written to SWAPS_KEY whatever their
+                    // type and only moved to REVERSE_SWAPS_KEY by the next
+                    // fetchAndUpdateSwaps, so an already rescued reverse
+                    // swap can sit under either key. Checking SWAPS_KEY alone
+                    // re-imported it as a duplicate on a second rescue.
+                    const existingSwapIds = [
+                        ...existingSwaps,
+                        ...existingReverseSwaps
+                    ].map((s: any) => s.id);
+
+                    const hasPreimage = (swap: any) => {
+                        const preimage = swap?.preimage;
+                        if (!preimage) return false;
+                        // a preimage read back from storage is in JSON
+                        // Buffer shape: { type: 'Buffer', data: [...] }
+                        if (
+                            typeof preimage === 'object' &&
+                            Array.isArray(preimage.data)
+                        ) {
+                            return preimage.data.length > 0;
+                        }
+                        return true;
+                    };
+
+                    // Repair pass: a reverse swap rescued before its
+                    // preimage was re-derived (see #4460) has none stored,
+                    // so its claim can never be built and a second rescue is
+                    // the obvious remedy. Write the re-derived preimage onto
+                    // the stored entry, in whichever key holds it, instead
+                    // of appending a second copy, and collapse duplicate
+                    // entries for the same ID down to the one kept.
+                    let repairedSwaps = [...existingSwaps];
+                    let repairedReverseSwaps = [...existingReverseSwaps];
+                    let reverseSwapsChanged = false;
+
+                    for (const imported of importedSwaps) {
+                        if (imported.type !== 'reverse') continue;
+                        if (!existingSwapIds.includes(imported.id)) continue;
+
+                        const inReverse = repairedReverseSwaps.filter(
+                            (s: any) => s?.id === imported.id
+                        );
+                        const inSwaps = repairedSwaps.filter(
+                            (s: any) => s?.id === imported.id
+                        );
+                        const candidates = [...inReverse, ...inSwaps];
+                        if (candidates.length === 0) continue;
+
+                        const kept =
+                            candidates.find(hasPreimage) || candidates[0];
+
+                        // a single stored copy that already has its
+                        // preimage needs nothing
+                        if (candidates.length === 1 && hasPreimage(kept)) {
+                            continue;
+                        }
+
+                        let repaired = kept;
+                        if (!hasPreimage(kept)) {
+                            const { keyIndex } = imported.claimDetails || {};
+                            if (keyIndex === undefined) continue;
+
+                            const hdKey = this.mnemonicToHDKey(mnemonic);
+                            const childKey = hdKey.derive(
+                                this.getPath(keyIndex)
+                            );
+
+                            if (!childKey.privateKey) continue;
+
+                            repaired = {
+                                ...kept,
+                                preimage: deriveSwapPreimage(
+                                    childKey.privateKey
+                                )
+                            };
+                        }
+
+                        const keptFromReverse = inReverse.includes(kept);
+                        const withoutReverse = repairedReverseSwaps.filter(
+                            (s: any) => s?.id !== imported.id
+                        );
+                        const withoutSwaps = repairedSwaps.filter(
+                            (s: any) => s?.id !== imported.id
+                        );
+
+                        if (keptFromReverse) {
+                            const index = repairedReverseSwaps.findIndex(
+                                (s: any) => s?.id === imported.id
+                            );
+                            withoutReverse.splice(
+                                Math.min(index, withoutReverse.length),
+                                0,
+                                repaired
+                            );
+                            repairedReverseSwaps = withoutReverse;
+                            repairedSwaps = withoutSwaps;
+                        } else {
+                            const index = repairedSwaps.findIndex(
+                                (s: any) => s?.id === imported.id
+                            );
+                            withoutSwaps.splice(
+                                Math.min(index, withoutSwaps.length),
+                                0,
+                                repaired
+                            );
+                            repairedSwaps = withoutSwaps;
+                            repairedReverseSwaps = withoutReverse;
+                        }
+                        reverseSwapsChanged = true;
+                    }
 
                     const rescuedSwaps = await Promise.all(
                         importedSwaps
@@ -1107,12 +1223,18 @@ export default class SwapStore {
                             })
                     );
 
-                    const updatedSwaps = [...existingSwaps, ...rescuedSwaps];
+                    const updatedSwaps = [...repairedSwaps, ...rescuedSwaps];
 
                     await Storage.setItem(
                         SWAPS_KEY,
                         JSON.stringify(updatedSwaps)
                     );
+                    if (reverseSwapsChanged) {
+                        await Storage.setItem(
+                            REVERSE_SWAPS_KEY,
+                            JSON.stringify(repairedReverseSwaps)
+                        );
+                    }
                     console.log('Rescued swaps saved to storage');
                     return { success: true };
                 } else {

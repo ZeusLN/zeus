@@ -166,6 +166,182 @@ describe('SwapStore.getRescuableSwaps', () => {
         expect(rescued.preimage).toBeUndefined();
     });
 
+    it('does not append a rescued reverse swap already filed under the reverse list again', async () => {
+        // getRescuableSwaps writes rescued swaps to SWAPS_KEY, but the next
+        // fetchAndUpdateSwaps re-files reverse ones under REVERSE_SWAPS_KEY,
+        // so a second rescue has to check both lists or it duplicates it
+        setStored(REVERSE_SWAPS_KEY, [
+            {
+                id: 'rescued-reverse',
+                type: 'Reverse',
+                status: 'transaction.mempool',
+                preimage: { type: 'Buffer', data: [1, 2, 3] }
+            }
+        ]);
+        restoreResponse([
+            {
+                id: 'rescued-reverse',
+                type: 'reverse',
+                claimDetails: { keyIndex: 0, serverPublicKey: 'ab' }
+            }
+        ]);
+
+        const result = await newStore().getRescuableSwaps({
+            seedArray: RESCUE_MNEMONIC.split(' '),
+            host: 'https://swaps.example.com'
+        });
+
+        expect(result?.success).toBe(true);
+        expect(getStored(REVERSE_SWAPS_KEY)).toHaveLength(1);
+        expect(
+            (getStored(SWAPS_KEY) || []).filter(
+                (s: any) => s.id === 'rescued-reverse'
+            )
+        ).toHaveLength(0);
+    });
+
+    it('repairs a stored reverse swap without a preimage under the reverse list', async () => {
+        // swaps rescued before the preimage was re-derived have none
+        // stored; a second rescue must pin it onto the stored entry, in
+        // place, instead of appending a second copy that has one
+        setStored(REVERSE_SWAPS_KEY, [
+            {
+                id: 'rescued-reverse',
+                type: 'Reverse',
+                status: 'transaction.mempool',
+                destinationAddress: 'bc1qkeep'
+            }
+        ]);
+        restoreResponse([
+            {
+                id: 'rescued-reverse',
+                type: 'reverse',
+                claimDetails: { keyIndex: 0, serverPublicKey: 'ab' }
+            }
+        ]);
+
+        await newStore().getRescuableSwaps({
+            seedArray: RESCUE_MNEMONIC.split(' '),
+            host: 'https://swaps.example.com'
+        });
+
+        const stored = getStored(REVERSE_SWAPS_KEY);
+        expect(stored).toHaveLength(1);
+        expect(Buffer.from(stored[0].preimage.data).toString('hex')).toBe(
+            '03c0b3323daab895d806870bd1f050bdca624a24882d3e317b151d537fa75bb7'
+        );
+        expect(stored[0].status).toBe('transaction.mempool');
+        expect(stored[0].destinationAddress).toBe('bc1qkeep');
+        expect(
+            (getStored(SWAPS_KEY) || []).filter(
+                (s: any) => s.id === 'rescued-reverse'
+            )
+        ).toHaveLength(0);
+    });
+
+    it('repairs a stored reverse swap without a preimage under the submarine list', async () => {
+        setStored(SWAPS_KEY, [
+            {
+                id: 'rescued-reverse',
+                type: 'Reverse',
+                status: 'transaction.mempool',
+                destinationAddress: 'bc1qkeep'
+            }
+        ]);
+        restoreResponse([
+            {
+                id: 'rescued-reverse',
+                type: 'reverse',
+                claimDetails: { keyIndex: 0, serverPublicKey: 'ab' }
+            }
+        ]);
+
+        await newStore().getRescuableSwaps({
+            seedArray: RESCUE_MNEMONIC.split(' '),
+            host: 'https://swaps.example.com'
+        });
+
+        const stored = getStored(SWAPS_KEY);
+        expect(stored).toHaveLength(1);
+        expect(Buffer.from(stored[0].preimage.data).toString('hex')).toBe(
+            '03c0b3323daab895d806870bd1f050bdca624a24882d3e317b151d537fa75bb7'
+        );
+        expect(stored[0].status).toBe('transaction.mempool');
+        expect(stored[0].destinationAddress).toBe('bc1qkeep');
+    });
+
+    it('leaves a stored reverse swap that already has a preimage unchanged', async () => {
+        const existing = {
+            id: 'rescued-reverse',
+            type: 'Reverse',
+            status: 'transaction.mempool',
+            preimage: { type: 'Buffer', data: [9, 9, 9] }
+        };
+        setStored(REVERSE_SWAPS_KEY, [existing]);
+        restoreResponse([
+            {
+                id: 'rescued-reverse',
+                type: 'reverse',
+                claimDetails: { keyIndex: 0, serverPublicKey: 'ab' }
+            }
+        ]);
+
+        await newStore().getRescuableSwaps({
+            seedArray: RESCUE_MNEMONIC.split(' '),
+            host: 'https://swaps.example.com'
+        });
+
+        expect(getStored(REVERSE_SWAPS_KEY)).toEqual([existing]);
+    });
+
+    it('still skips a stored submarine swap and adds no preimage to it', async () => {
+        const existing = { id: 'stored-submarine', type: 'Submarine' };
+        setStored(SWAPS_KEY, [existing]);
+        restoreResponse([
+            {
+                id: 'stored-submarine',
+                type: 'submarine',
+                refundDetails: { keyIndex: 3 }
+            }
+        ]);
+
+        await newStore().getRescuableSwaps({
+            seedArray: RESCUE_MNEMONIC.split(' '),
+            host: 'https://swaps.example.com'
+        });
+
+        expect(getStored(SWAPS_KEY)).toEqual([existing]);
+    });
+
+    it('collapses duplicate stored entries for a rescued reverse swap to the one with a preimage', async () => {
+        setStored(REVERSE_SWAPS_KEY, [
+            { id: 'rescued-reverse', type: 'Reverse', status: 'swap.created' },
+            {
+                id: 'rescued-reverse',
+                type: 'Reverse',
+                status: 'transaction.mempool',
+                preimage: { type: 'Buffer', data: [7, 7, 7] }
+            }
+        ]);
+        restoreResponse([
+            {
+                id: 'rescued-reverse',
+                type: 'reverse',
+                claimDetails: { keyIndex: 0, serverPublicKey: 'ab' }
+            }
+        ]);
+
+        await newStore().getRescuableSwaps({
+            seedArray: RESCUE_MNEMONIC.split(' '),
+            host: 'https://swaps.example.com'
+        });
+
+        const stored = getStored(REVERSE_SWAPS_KEY);
+        expect(stored).toHaveLength(1);
+        expect(stored[0].preimage).toEqual({ type: 'Buffer', data: [7, 7, 7] });
+        expect(stored[0].status).toBe('transaction.mempool');
+    });
+
     it('rejects an invalid rescue key without calling the host', async () => {
         const result = await newStore().getRescuableSwaps({
             seedArray: 'not a valid bip39 mnemonic at all whatsoever'.split(
