@@ -128,7 +128,7 @@ describe('handleAnything Branta verification', () => {
         (invoicesStore.getPayReq as jest.Mock).mockReset();
         mockSupportsOnchainSends = true;
         mockSupportsCashuWallet = false;
-        settingsStore.settings = {
+        (settingsStore as any).settings = {
             locale: 'en',
             branta: { enabled: true }
         };
@@ -174,7 +174,7 @@ describe('handleAnything Branta verification', () => {
         });
 
         it('calls verifyPayment when branta.enabled is omitted (existing-user default)', async () => {
-            settingsStore.settings = { locale: 'en', branta: {} };
+            (settingsStore as any).settings = { locale: 'en', branta: {} };
 
             await handleAnything(INVOICE);
 
@@ -183,7 +183,7 @@ describe('handleAnything Branta verification', () => {
 
         it('still verifies on-chain Branta URIs when Cashu is enabled', async () => {
             mockSupportsCashuWallet = true;
-            settingsStore.settings.ecash = { enableCashu: true };
+            (settingsStore as any).settings.ecash = { enableCashu: true };
 
             await handleAnything(ONCHAIN_BRANTA);
 
@@ -272,16 +272,31 @@ describe('handleAnything Branta verification', () => {
             expect(mockVerifyPayment).not.toHaveBeenCalled();
         });
 
-        it('does not call for bolt11 in ecash mode', async () => {
+        it('does not call for bolt11 with amount in ecash mode', async () => {
             mockSupportsCashuWallet = true;
-            settingsStore.settings.ecash = { enableCashu: true };
+            (settingsStore as any).settings.ecash = { enableCashu: true };
+            const invoiceWithAmount =
+                'lnbc17760n1p4r4flypp5k56kq3v2935rl3glkqu9vngfueud2zj87hjcff3t0kn0yrge0pfqdzjgfexzmn5vysz6gzyv4mx2mr0wpjhygzvd9nksarwd9hxwgz6v4ex7gztdehhwmr9v3nk2gz90psk6urvv5cqzzsxq97zvuqsp5hut3t0l0s5mvp9yr06v4253kqtf452z6c65s6g9sga445hc03v6s9qxpqysgqqm430zkk9uymjgvllr3aha88hc6q59etxasfqswn8r8pfm3dstlpp46azv906xtcj3wzprxup5fxn65a5wymt7zzq9sw9qdzx8rgdhcpk80nrg';
+
+            const result = await handleAnything(invoiceWithAmount);
+
+            expect(mockVerifyPayment).not.toHaveBeenCalled();
+            expect(result).toEqual([
+                'ChoosePaymentMethod',
+                { lightning: invoiceWithAmount, locked: true }
+            ]);
+        });
+
+        it('does not call for amountless bolt11 in ecash mode (Lightning only)', async () => {
+            mockSupportsCashuWallet = true;
+            (settingsStore as any).settings.ecash = { enableCashu: true };
 
             const result = await handleAnything(INVOICE);
 
             expect(mockVerifyPayment).not.toHaveBeenCalled();
             expect(result).toEqual([
-                'ChoosePaymentMethod',
-                { lightning: INVOICE, locked: true }
+                'PaymentRequest',
+                { brantaVerification: null }
             ]);
         });
 
