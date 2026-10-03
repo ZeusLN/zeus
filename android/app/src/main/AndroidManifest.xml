@@ -208,6 +208,16 @@
           android:value="Run Lightning Network node to receive incoming payments"
         />
       </service>
+      <service
+        android:name="app.zeusln.zeus.TorService"
+        android:exported="false"
+        android:foregroundServiceType="specialUse"
+      >
+        <property
+          android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+          android:value="Keep the in-app Tor connection to the user's Lightning node alive while the app is in the background"
+        />
+      </service>
     </application>
 
     <!-- <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
