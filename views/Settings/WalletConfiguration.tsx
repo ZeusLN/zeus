@@ -23,6 +23,7 @@ import { hash, LNC_STORAGE_KEY } from '../../backends/LNC/credentialStore';
 
 import AddressUtils, { CUSTODIAL_LNDHUBS } from '../../utils/AddressUtils';
 import ConnectionFormatUtils from '../../utils/ConnectionFormatUtils';
+import { preserveUnspecifiedNodeFormFields } from '../../utils/WalletConfigForm';
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -475,14 +476,16 @@ export default class WalletConfiguration extends React.Component<
 
             this.setState({
                 node,
-                nickname,
+                ...preserveUnspecifiedNodeFormFields(
+                    { certVerification, nickname },
+                    this.state
+                ),
                 dismissCustodialWarning,
                 host,
                 port,
                 macaroonHex,
                 rune,
                 implementation: implementation || 'lnd',
-                certVerification,
                 index,
                 active,
                 saved,
