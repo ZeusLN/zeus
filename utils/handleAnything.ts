@@ -3,7 +3,12 @@ import { getParams as getlnurlParams } from 'js-lnurl';
 import { findlnurl, decodelnurl } from 'js-lnurl/lib/helpers';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
-import { nodeInfoStore, invoicesStore, settingsStore } from '../stores/Stores';
+import {
+    nodeInfoStore,
+    invoicesStore,
+    settingsStore,
+    brantaStore
+} from '../stores/Stores';
 
 import AddressUtils from './AddressUtils';
 import BackendUtils from './BackendUtils';
@@ -367,8 +372,15 @@ const handleAnything = async (
 ): Promise<any> => {
     data = data.trim();
     const network = getNetworkString();
-    let { value, satAmount, lightning, offer, clinkNoffer }: any =
-        AddressUtils.processBIP21Uri(data);
+    let {
+        value,
+        satAmount,
+        lightning,
+        offer,
+        clinkNoffer,
+        brantaId,
+        brantaSecret
+    }: any = AddressUtils.processBIP21Uri(data);
     const hasAt: boolean = value.includes('@');
     const hasMultiple: boolean =
         (value && lightning) ||
@@ -440,13 +452,24 @@ const handleAnything = async (
         ];
     } else if (!hasAt && AddressUtils.isValidBitcoinAddressForNode(value)) {
         if (isClipboardValue) return true;
+
+        let brantaVerification = null;
+        if (
+            brantaId &&
+            brantaSecret &&
+            settingsStore?.settings?.branta?.enabled !== false
+        ) {
+            brantaVerification = await brantaStore.verifyPayment(data);
+        }
+
         return [
             'Send',
             {
                 destination: value,
                 satAmount,
                 transactionType: 'On-chain',
-                isValid: true
+                isValid: true,
+                brantaVerification
             }
         ];
     } else if (!hasAt && AddressUtils.isValidLightningPubKey(value)) {
@@ -464,6 +487,12 @@ const handleAnything = async (
         AddressUtils.isValidLightningPaymentRequest(value || lightning)
     ) {
         if (isClipboardValue) return true;
+
+        let brantaVerification = null;
+        if (!ecash && settingsStore?.settings?.branta?.enabled !== false) {
+            brantaVerification = await brantaStore.verifyPayment(data);
+        }
+
         if (ecash && !isAmountlessInvoice(value || lightning)) {
             return [
                 'ChoosePaymentMethod',
@@ -474,7 +503,7 @@ const handleAnything = async (
             ];
         } else {
             await invoicesStore.getPayReq(value || lightning);
-            return ['PaymentRequest', {}];
+            return ['PaymentRequest', { brantaVerification }];
         }
     } else if (
         !hasAt &&

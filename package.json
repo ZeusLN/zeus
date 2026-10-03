@@ -8,13 +8,15 @@
   "jest": {
     "preset": "@react-native/jest-preset",
     "moduleNameMapper": {
-      "^@react-native/assets-registry/registry$": "react-native/src/asset-registry"
+      "^@react-native/assets-registry/registry$": "react-native/src/asset-registry",
+      "^@branta-ops/branta$": "<rootDir>/node_modules/@branta-ops/branta/dist/index.js",
+      "^@branta-ops/branta/v2$": "<rootDir>/node_modules/@branta-ops/branta/dist/v2/index.js"
     },
     "watchPathIgnorePatterns": [
       "<rootDir>/node_modules"
     ],
     "transformIgnorePatterns": [
-      "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes|react-native-nfc-manager|dateformat|nostr-tools|@noble|@scure|uuid|uint8array-tools)/)"
+      "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes|react-native-nfc-manager|dateformat|nostr-tools|@branta-ops|@nostr|@noble|@scure|uuid|uint8array-tools)/)"
     ],
     "testPathIgnorePatterns": [
       "check-styles.test.ts",
@@ -49,10 +51,12 @@
   },
   "dependencies": {
     "@bitcoinerlab/secp256k1": "1.2.0",
+    "@branta-ops/branta": "3.2.2",
     "@getalby/sdk": "8.0.3",
     "@keystonehq/bc-ur-registry": "0.8.0",
     "@lightninglabs/lnc-core": "file:zeus_modules/@lightninglabs/lnc-core",
     "@ngraveio/bc-ur": "1.1.13",
+    "@noble/ciphers": "0.5.3",
     "@noble/curves": "2.4.0",
     "@noble/hashes": "1.7.2",
     "@noble/secp256k1": "1.6.3",
