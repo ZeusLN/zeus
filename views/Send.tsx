@@ -413,7 +413,7 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     payBolt12 = async () => {
-        const { satAmount, bolt12, timeoutSeconds } = this.state;
+        const { satAmount, bolt12, timeoutSeconds, feeLimitSat } = this.state;
         // Bail if another payment is already in flight: this path resets
         // TransactionsStore, which would clear that payment's guard and
         // overwrite the outcome SendingLightning is waiting on.
@@ -457,7 +457,8 @@ export default class Send extends React.Component<SendProps, SendState> {
             const res = await BackendUtils.fetchInvoiceFromOffer(
                 offer,
                 satAmount,
-                timeoutSeconds
+                timeoutSeconds,
+                feeLimitSat
             );
             if (res.payment_hash) {
                 // LDK Node: payment already completed directly. Feed the
@@ -1365,6 +1366,31 @@ export default class Send extends React.Component<SendProps, SendState> {
                                     hideUnitChangeButton={!!fiatError}
                                     fiatError={fiatError}
                                 />
+                                {/* Only shown where the fee limit applies to
+                                    this screen's offer call (ldk-node pays
+                                    inside it). On CLN only the invoice is
+                                    fetched here - fetchInvoiceFromOffer
+                                    discards the value - and the fee limit is
+                                    set on PaymentRequest, where the payment
+                                    actually happens */}
+                                {BackendUtils.supportsOffersDirectPay() && (
+                                    <FeeLimit
+                                        satAmount={satAmount}
+                                        onFeeLimitSatChange={(value: string) =>
+                                            this.setState({
+                                                feeLimitSat: value
+                                            })
+                                        }
+                                        onMaxFeePercentChange={(
+                                            value: string
+                                        ) =>
+                                            this.setState({
+                                                maxFeePercent: value
+                                            })
+                                        }
+                                        SettingsStore={SettingsStore}
+                                    />
+                                )}
                                 <Text
                                     style={{
                                         ...styles.label,
