@@ -163,7 +163,7 @@ export default class LnurlPay extends React.Component<
 
         // if requested amount is fixed,
         // convert units to sats so conversion rate doesn't make things unpayable
-        if (lnurl.minSendable === lnurl.maxSendable) {
+        if (isFixedAmount(lnurl)) {
             resetUnits();
         }
 
@@ -591,55 +591,65 @@ export default class LnurlPay extends React.Component<
                                         'views.LnurlPay.LnurlPay.amount'
                                     )}
                                 </Text>
-                                {lnurl &&
-                                    lnurl.minSendable !== lnurl.maxSendable && (
-                                        <>
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {' ('}
-                                            </Text>
-                                            <Amount
-                                                color="secondaryText"
-                                                sats={Math.ceil(
-                                                    lnurl.minSendable / 1000
-                                                )}
-                                                defaultTextSize={true}
-                                            />
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {' - '}
-                                            </Text>
-                                            <Amount
-                                                color="secondaryText"
-                                                sats={Math.floor(
-                                                    lnurl.maxSendable / 1000
-                                                )}
-                                                defaultTextSize={true}
-                                            />
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {')'}
-                                            </Text>
-                                        </>
-                                    )}
+                                {fixed ? (
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {` (${localeString(
+                                            'views.ClinkPay.fixedAmount'
+                                        )})`}
+                                    </Text>
+                                ) : (
+                                    <>
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {' ('}
+                                        </Text>
+                                        <Amount
+                                            color="secondaryText"
+                                            sats={Math.ceil(
+                                                lnurl.minSendable / 1000
+                                            )}
+                                            defaultTextSize={true}
+                                        />
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {' - '}
+                                        </Text>
+                                        <Amount
+                                            color="secondaryText"
+                                            sats={Math.floor(
+                                                lnurl.maxSendable / 1000
+                                            )}
+                                            defaultTextSize={true}
+                                        />
+                                        <Text
+                                            style={{
+                                                ...styles.text,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }}
+                                        >
+                                            {')'}
+                                        </Text>
+                                    </>
+                                )}
                             </Row>
                         </View>
                         <View style={{ marginTop: 0 }}>
