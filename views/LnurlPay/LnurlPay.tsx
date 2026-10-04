@@ -160,10 +160,11 @@ export default class LnurlPay extends React.Component<
             satAmount,
             lightningAddress
         } = route.params ?? {};
+        const fixed = isFixedAmount(lnurl);
 
         // if requested amount is fixed,
         // convert units to sats so conversion rate doesn't make things unpayable
-        if (isFixedAmount(lnurl)) {
+        if (fixed) {
             resetUnits();
         }
 
@@ -173,7 +174,7 @@ export default class LnurlPay extends React.Component<
         let finalSatAmount: string | number;
         let fiatError: string | undefined;
 
-        if (isFixedAmount(lnurl)) {
+        if (fixed) {
             // Fixed amount: the request is paid exactly as asked, so prefill
             // the locked input with the required amount and ignore any
             // amount or satAmount handed in by the caller (Send forwards its
