@@ -71,6 +71,7 @@ import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
 import { restartNeeded } from '../../utils/RestartUtils';
+import WalletRefreshRunner from '../../utils/WalletRefreshRunner';
 
 import {
     loadPendingPaymentData,
@@ -191,7 +192,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     private backPressSubscription: NativeEventSubscription;
     private linkingSubscription: EmitterSubscription | undefined;
     private startupTimeoutId?: ReturnType<typeof setTimeout>;
-    private _navigating = false;
+    private refreshRunner: WalletRefreshRunner;
     // Set once this instance replaces itself with the startup wallet
     // selection screen; late focus/AppState triggers must not connect to
     // the previously selected wallet or consume the initial deep link
@@ -206,6 +207,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             pendingShareIntent: undefined,
             isChannelMigrating: false
         };
+        this.refreshRunner = new WalletRefreshRunner(
+            props.SettingsStore,
+            () => this.props.navigation.isFocused(),
+            () => this.getSettingsAndNavigate()
+        );
         this.pan = new Animated.ValueXY();
         this.panResponder = PanResponder.create({
             onMoveShouldSetPanResponder: () => true,
@@ -276,11 +282,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             // Guard against concurrent getSettingsAndNavigate calls — the
             // focus event can fire multiple times before the first async
             // call completes, causing duplicate node builds.
-            if (this._navigating) {
-                // Leave the flags armed: a settings change that arrived
+            if (this.refreshRunner.running) {
+                // Leave the flag armed: a settings change that arrived
                 // while this refresh was already in flight is not covered
-                // by it, and clearing here would drop it silently. The next
-                // focus event picks it up instead.
+                // by it, and clearing here would drop it silently. The
+                // runner picks it up once the refresh settles.
                 console.log(
                     '[Wallet] handleFocus: skipping — getSettingsAndNavigate already in flight'
                 );
@@ -292,11 +298,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 console.log(
                     `[Wallet] handleFocus: triggering getSettingsAndNavigate (initialLoad=${this.state.initialLoad}, triggerSettingsRefresh=${SettingsStore.triggerSettingsRefresh}, connecting=${SettingsStore.connecting})`
                 );
-                SettingsStore.triggerSettingsRefresh = false;
-                this._navigating = true;
-                this.getSettingsAndNavigate(shareIntentData).finally(() => {
-                    this._navigating = false;
-                });
+                this.refreshRunner.run(() =>
+                    this.getSettingsAndNavigate(shareIntentData)
+                );
             }
         }
 
@@ -372,7 +376,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 if (BackendUtils.supportsNostrWalletConnectService()) {
                     NostrWalletConnectStore.initializeService();
                 }
-                if (this._navigating) {
+                if (this.refreshRunner.running) {
                     console.log(
                         '[Wallet] handleAppStateChange(active): skipping — getSettingsAndNavigate already in flight'
                     );
@@ -380,10 +384,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     console.log(
                         `[Wallet] handleAppStateChange(active): triggering getSettingsAndNavigate (connecting=${SettingsStore.connecting})`
                     );
-                    this._navigating = true;
-                    this.getSettingsAndNavigate().finally(() => {
-                        this._navigating = false;
-                    });
+                    this.refreshRunner.run(() => this.getSettingsAndNavigate());
                 }
             }
         }
