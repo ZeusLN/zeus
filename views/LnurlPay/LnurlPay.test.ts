@@ -49,7 +49,9 @@ jest.mock('./Metadata', () => 'LnurlPayMetadata');
 jest.mock('../../models/Contact', () => class Contact {});
 
 import * as React from 'react';
+import { Alert } from 'react-native';
 import LnurlPay from './LnurlPay';
+import Amount from '../../components/Amount';
 import AmountInput from '../../components/AmountInput';
 import { unitsStore } from '../../stores/Stores';
 
@@ -133,10 +135,26 @@ describe('LnurlPay fixed-amount prefill', () => {
 
     it('ignores a satAmount param on a fixed request', () => {
         unitsStore.units = 'fiat';
-        // Send forwards its own amount as a string (Send.tsx:386)
+        // Send forwards its own amount as a string (validateAddress in Send.tsx)
         const view = makeView({
             lnurlParams: lnurlParams(FIXED_SATS, FIXED_SATS),
             satAmount: '5000'
+        });
+
+        expect(view.state.amount).toBe('12618');
+        expect(view.state.satAmount).toBe(FIXED_SATS);
+        expect(amountInputProps(view)).toMatchObject({
+            amount: '12618',
+            forceUnit: 'sats',
+            locked: true
+        });
+    });
+
+    it('ignores an amount param on a fixed request', () => {
+        unitsStore.units = 'fiat';
+        const view = makeView({
+            lnurlParams: lnurlParams(FIXED_SATS, FIXED_SATS),
+            amount: '2.50'
         });
 
         expect(view.state.amount).toBe('12618');
@@ -190,5 +208,66 @@ describe('LnurlPay fixed-amount prefill', () => {
         expect(view.state.amount).toBe('2.50');
         expect(view.state.satAmount).toBe('5000');
         expect(amountInputProps(view).forceUnit).toBeUndefined();
+    });
+
+    it('prefills a variable request from an amount param', () => {
+        unitsStore.units = 'fiat';
+        const view = makeView({
+            lnurlParams: lnurlParams(1, 100000),
+            amount: '2.50'
+        });
+
+        expect(view.state.amount).toBe('2.50');
+        expect(view.state.satAmount).toBe(5000);
+        expect(amountInputProps(view)).toMatchObject({
+            amount: '2.50',
+            forceUnit: undefined,
+            locked: false
+        });
+    });
+});
+
+describe('LnurlPay fixed and variable requests', () => {
+    it('resets units only for a fixed request', () => {
+        const fixedView = makeView({
+            lnurlParams: lnurlParams(FIXED_SATS, FIXED_SATS)
+        });
+        const variableView = makeView({ lnurlParams: lnurlParams(1, 100000) });
+
+        expect(fixedView.props.UnitsStore.resetUnits).toHaveBeenCalledTimes(1);
+        expect(variableView.props.UnitsStore.resetUnits).not.toHaveBeenCalled();
+    });
+
+    it('shows the min-max range only for a variable request', () => {
+        const fixedView = makeView({
+            lnurlParams: lnurlParams(FIXED_SATS, FIXED_SATS)
+        });
+        const variableView = makeView({ lnurlParams: lnurlParams(1, 100000) });
+
+        expect(findByType(fixedView.render(), Amount)).toBeUndefined();
+        expect(findByType(variableView.render(), Amount).props.sats).toBe(1);
+    });
+});
+
+describe('LnurlPay without lnurlParams', () => {
+    it('shows the invalid params alert and keeps the units', () => {
+        const alertSpy = jest
+            .spyOn(Alert, 'alert')
+            .mockImplementation(() => undefined);
+        const view = makeView({});
+
+        expect(alertSpy).toHaveBeenCalledWith(
+            'views.LnurlPay.LnurlPay.invalidParams',
+            expect.any(String),
+            expect.any(Array),
+            { cancelable: false }
+        );
+        expect(view.state).toMatchObject({
+            amount: '',
+            satAmount: '',
+            domain: ''
+        });
+        expect(view.props.UnitsStore.resetUnits).not.toHaveBeenCalled();
+        alertSpy.mockRestore();
     });
 });
