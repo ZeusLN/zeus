@@ -125,7 +125,8 @@ const makeView = ({
             channelsView: 'channels',
             aliasesByPubkey: {},
             nodes: {},
-            resetOpenChannel: jest.fn()
+            resetOpenChannel: jest.fn(),
+            connectPeer: jest.fn(() => Promise.resolve())
         },
         ModalStore: {},
         NodeInfoStore: { nodeInfo: {} },
@@ -417,5 +418,42 @@ describe('OpenChannel min confs default from settings', () => {
         toggleFundMax(view);
 
         expect(amountInputProps(view).amount).toBe('100000');
+    });
+});
+
+describe('OpenChannel min confs field', () => {
+    it('treats a cleared field as unset and opens with the default of 1', () => {
+        const view = makeView();
+        findMinConfsInput(view).props.onChangeText('0');
+        findMinConfsInput(view).props.onChangeText('');
+
+        expect(view.state.min_confs).toBeUndefined();
+        expect(view.state.spend_unconfirmed).toBe(false);
+        expect(findMinConfsInput(view).props.value).toBe('');
+
+        findByType(
+            view.render(),
+            'Button',
+            'views.OpenChannel.openChannel'
+        ).props.onPress();
+        const request = (view.props.ChannelsStore.connectPeer as jest.Mock).mock
+            .calls[0][0];
+        expect(request.min_confs).toBe(1);
+        expect(request.spend_unconfirmed).toBe(false);
+    });
+
+    it('sends a typed 0 with spend unconfirmed', () => {
+        const view = makeView();
+        findMinConfsInput(view).props.onChangeText('0');
+
+        findByType(
+            view.render(),
+            'Button',
+            'views.OpenChannel.openChannel'
+        ).props.onPress();
+        const request = (view.props.ChannelsStore.connectPeer as jest.Mock).mock
+            .calls[0][0];
+        expect(request.min_confs).toBe(0);
+        expect(request.spend_unconfirmed).toBe(true);
     });
 });

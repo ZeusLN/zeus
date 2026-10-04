@@ -58,6 +58,9 @@ const makeView = (supportsMinConfs: boolean, settings: any = {}) => {
     return view;
 };
 
+const updateSettingsOf = (view: ChannelsSettings) =>
+    view.props.SettingsStore.updateSettings as jest.Mock;
+
 const findMinConfsInput = (view: ChannelsSettings) =>
     findElement(
         view.render(),
@@ -85,5 +88,28 @@ describe('ChannelsSettings min confs default', () => {
         await view.componentDidMount();
 
         expect(findMinConfsInput(view).props.value).toBe(shown);
+    });
+});
+
+describe('ChannelsSettings min confs input', () => {
+    it('saves a typed 0', async () => {
+        const view = makeView(true, { channels: { min_confs: 1 } });
+        await findMinConfsInput(view).props.onChangeText('0');
+
+        expect(view.state.min_confs).toBe(0);
+        expect(updateSettingsOf(view)).toHaveBeenCalledWith({
+            channels: { min_confs: 0 }
+        });
+    });
+
+    it('saves a cleared field as unset, not 0', async () => {
+        const view = makeView(true, { channels: { min_confs: 3 } });
+        await findMinConfsInput(view).props.onChangeText('');
+
+        expect(view.state.min_confs).toBeUndefined();
+        expect(findMinConfsInput(view).props.value).toBe('');
+        expect(updateSettingsOf(view)).toHaveBeenCalledWith({
+            channels: { min_confs: undefined }
+        });
     });
 });

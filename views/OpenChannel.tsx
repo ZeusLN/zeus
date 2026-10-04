@@ -71,7 +71,7 @@ interface OpenChannelState {
     local_funding_amount: string;
     fundMax: boolean;
     satAmount: string | number;
-    min_confs: number;
+    min_confs?: number;
     spend_unconfirmed: boolean;
     sat_per_vbyte: string;
     privateChannel: boolean;
@@ -1230,12 +1230,17 @@ export default class OpenChannel extends React.Component<
                                                 <TextInput
                                                     keyboardType="numeric"
                                                     placeholder={'1'}
-                                                    value={min_confs.toString()}
+                                                    value={
+                                                        min_confs?.toString() ??
+                                                        ''
+                                                    }
                                                     onChangeText={(
                                                         text: string
                                                     ) => {
                                                         const newMinConfs =
-                                                            Number(text);
+                                                            OpenChannelUtils.parseMinConfs(
+                                                                text
+                                                            );
                                                         this.setState({
                                                             min_confs:
                                                                 newMinConfs,
@@ -1407,6 +1412,7 @@ export default class OpenChannel extends React.Component<
                                         connectPeer(
                                             {
                                                 ...this.state,
+                                                min_confs: min_confs ?? 1,
                                                 local_funding_amount:
                                                     satAmount.toString()
                                             },

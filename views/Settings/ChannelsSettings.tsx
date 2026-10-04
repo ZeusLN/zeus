@@ -12,6 +12,7 @@ import TextInput from '../../components/TextInput';
 import SettingsStore from '../../stores/SettingsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
+import OpenChannelUtils from '../../utils/OpenChannelUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -21,7 +22,7 @@ interface ChannelsSettingsProps {
 }
 
 interface ChannelsSettingsState {
-    min_confs: number;
+    min_confs?: number;
     privateChannel: boolean;
     scidAlias: boolean;
     simpleTaprootChannel: boolean;
@@ -110,9 +111,10 @@ export default class ChannelsSettings extends React.Component<
                             <TextInput
                                 keyboardType="numeric"
                                 placeholder={'1'}
-                                value={min_confs.toString()}
+                                value={min_confs?.toString() ?? ''}
                                 onChangeText={async (text: string) => {
-                                    const newMinConfs = Number(text);
+                                    const newMinConfs =
+                                        OpenChannelUtils.parseMinConfs(text);
                                     this.setState({
                                         min_confs: newMinConfs
                                     });
