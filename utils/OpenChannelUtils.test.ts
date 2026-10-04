@@ -167,6 +167,15 @@ describe('hasInvalidAdditionalChannels', () => {
         ).toBe(true);
     });
 
+    it('is invalid when an additional channel has only an invalid host', () => {
+        expect(
+            OpenChannelUtils.hasInvalidAdditionalChannels(
+                [additionalChannel({ host: 'host:0' })],
+                false
+            )
+        ).toBe(true);
+    });
+
     it('ignores additional channels in connect-peer-only mode', () => {
         expect(
             OpenChannelUtils.hasInvalidAdditionalChannels(
