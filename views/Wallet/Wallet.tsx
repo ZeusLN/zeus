@@ -272,11 +272,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             );
         }
 
-        if (
-            this.state.initialLoad ||
-            SettingsStore.posWasEnabled ||
-            SettingsStore.triggerSettingsRefresh
-        ) {
+        if (this.state.initialLoad || SettingsStore.triggerSettingsRefresh) {
             // Guard against concurrent getSettingsAndNavigate calls — the
             // focus event can fire multiple times before the first async
             // call completes, causing duplicate node builds.
@@ -289,14 +285,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     '[Wallet] handleFocus: skipping — getSettingsAndNavigate already in flight'
                 );
             } else {
-                // Trigger getSettingsAndNavigate() in three scenarios:
+                // Trigger getSettingsAndNavigate() in two scenarios:
                 // 1. On initial wallet load to ensure proper initialization
-                // 2. When exiting POS to handle potential lockscreen navigation
-                // 3. When any settings are updated to refresh the UI state
+                // 2. When any settings are updated to refresh the UI state
+                //    (including enabling POS, which navigates into POS mode)
                 console.log(
-                    `[Wallet] handleFocus: triggering getSettingsAndNavigate (initialLoad=${this.state.initialLoad}, posWasEnabled=${SettingsStore.posWasEnabled}, triggerSettingsRefresh=${SettingsStore.triggerSettingsRefresh}, connecting=${SettingsStore.connecting})`
+                    `[Wallet] handleFocus: triggering getSettingsAndNavigate (initialLoad=${this.state.initialLoad}, triggerSettingsRefresh=${SettingsStore.triggerSettingsRefresh}, connecting=${SettingsStore.connecting})`
                 );
-                SettingsStore.posWasEnabled = false;
                 SettingsStore.triggerSettingsRefresh = false;
                 this._navigating = true;
                 this.getSettingsAndNavigate(shareIntentData).finally(() => {

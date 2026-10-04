@@ -393,6 +393,34 @@ describe('SettingsStore.updateSettings refresh flag', () => {
         expect(store.triggerSettingsRefresh).toEqual(true);
     });
 
+    // Turning POS on relies on this flag alone: the refetch on the next
+    // Wallet focus is what navigates into POS mode.
+    it('is armed when POS gets enabled', async () => {
+        seedSettings({ pos: { posEnabled: 'disabled', merchantName: '' } });
+        const store = new SettingsStore();
+
+        await store.updateSettings({
+            pos: { posEnabled: 'standalone', merchantName: '' }
+        });
+
+        expect(store.triggerSettingsRefresh).toEqual(true);
+    });
+
+    it('stays unarmed when a POS write changes nothing while POS is enabled', async () => {
+        // POS settings writes spread the whole pos group, posEnabled
+        // included, so saving an unchanged field re-persists it.
+        seedSettings({
+            pos: { posEnabled: 'standalone', merchantName: 'Shop' }
+        });
+        const store = new SettingsStore();
+
+        await store.updateSettings({
+            pos: { posEnabled: 'standalone', merchantName: 'Shop' }
+        });
+
+        expect(store.triggerSettingsRefresh).toEqual(false);
+    });
+
     it('stays unarmed and clears the key when biometrics are removed', async () => {
         // Biometrics removed in the OS settings: writing undefined is how
         // the stored sensor type gets cleared.

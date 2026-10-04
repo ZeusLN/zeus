@@ -1690,7 +1690,6 @@ export default class SettingsStore {
         JSON.stringify(DEFAULT_SETTINGS)
     );
     @observable public posStatus: string = 'unselected';
-    @observable public posWasEnabled: boolean = false;
     @observable public loading = false;
     @observable public isMigrating = false;
     @observable public settingsUpdateInProgress: boolean = false;
@@ -2162,13 +2161,6 @@ export default class SettingsStore {
                 ...existingSettings,
                 ...resolvedSetting
             };
-
-            if (
-                resolvedSetting.pos?.posEnabled &&
-                resolvedSetting.pos.posEnabled !== PosEnabled.Disabled
-            ) {
-                this.posWasEnabled = true;
-            }
 
             const persisted = await this.setSettings(newSettings);
             if (!persisted) {
