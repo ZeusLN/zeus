@@ -71,7 +71,8 @@ const makeView = (params: { [key: string]: any }) =>
         navigation: {
             addListener: jest.fn(),
             removeListener: jest.fn(),
-            navigate: jest.fn()
+            navigate: jest.fn(),
+            goBack: jest.fn()
         },
         route: { params },
         // resetUnits() is a no-op here, so the screen has to get the unit
@@ -280,7 +281,7 @@ describe('LnurlPay fixed and variable requests', () => {
     });
 });
 
-describe('LnurlPay without lnurlParams', () => {
+describe('LnurlPay with invalid lnurlParams', () => {
     let alertSpy: jest.SpyInstance;
 
     beforeEach(() => {
@@ -294,20 +295,69 @@ describe('LnurlPay without lnurlParams', () => {
         alertSpy.mockRestore();
     });
 
-    it('shows the invalid params alert and keeps the units', () => {
-        const view = makeView({});
-
+    // The alert carries our message, not a TypeError, and the amount input
+    // is never rendered
+    const expectRejected = (view: LnurlPay) => {
         expect(alertSpy).toHaveBeenCalledWith(
             'views.LnurlPay.LnurlPay.invalidParams',
-            expect.any(String),
+            'views.LnurlPay.LnurlPay.errorInvalidRequest',
             expect.any(Array),
             { cancelable: false }
         );
+        expect(findByType(view.render(), AmountInput)).toBeUndefined();
+    };
+
+    it('rejects missing lnurlParams and keeps the units', () => {
+        const view = makeView({});
+
+        expectRejected(view);
         expect(view.state).toMatchObject({
             amount: '',
             satAmount: '',
             domain: ''
         });
         expect(view.props.UnitsStore.resetUnits).not.toHaveBeenCalled();
+    });
+
+    it('rejects a request with only a callback', () => {
+        expectRejected(
+            makeView({
+                lnurlParams: {
+                    callback: 'https://example.com/callback',
+                    tag: 'payRequest'
+                }
+            })
+        );
+    });
+
+    it('rejects a request whose minSendable is above maxSendable', () => {
+        expectRejected(makeView({ lnurlParams: lnurlParams(2000, 1000) }));
+    });
+
+    it.each([
+        ['a request without a callback', { callback: undefined }],
+        ['a string minSendable', { minSendable: '1000' }],
+        ['a NaN maxSendable', { maxSendable: NaN }],
+        ['an Infinity maxSendable', { maxSendable: Infinity }]
+    ])('rejects %s', (_name, change) => {
+        expectRejected(
+            makeView({ lnurlParams: { ...lnurlParams(1, 100000), ...change } })
+        );
+    });
+
+    it('renders only the header, with a way back', () => {
+        const tree = makeView({}).render();
+
+        expect(findByType(tree, 'Header').props.leftComponent).toBe('Back');
+        expect(findByType(tree, AmountInput)).toBeUndefined();
+    });
+
+    it('goes back when the alert is dismissed', () => {
+        const view = makeView({});
+        const [, , buttons] = alertSpy.mock.calls[0];
+
+        buttons[0].onPress();
+
+        expect(view.props.navigation.goBack).toHaveBeenCalledTimes(1);
     });
 });
