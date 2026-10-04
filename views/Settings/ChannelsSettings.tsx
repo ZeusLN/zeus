@@ -97,31 +97,35 @@ export default class ChannelsSettings extends React.Component<
                         marginTop: 5
                     }}
                 >
-                    <Text
-                        style={{
-                            ...styles.text,
-                            color: themeColor('secondaryText')
-                        }}
-                    >
-                        {localeString('views.OpenChannel.numConf')}
-                    </Text>
-                    <TextInput
-                        keyboardType="numeric"
-                        placeholder={'1'}
-                        value={min_confs.toString()}
-                        onChangeText={async (text: string) => {
-                            const newMinConfs = Number(text);
-                            this.setState({
-                                min_confs: newMinConfs
-                            });
-                            await updateSettings({
-                                channels: {
-                                    ...settings.channels,
-                                    min_confs: newMinConfs
-                                }
-                            });
-                        }}
-                    />
+                    {BackendUtils.supportsChannelOpenMinConfs() && (
+                        <>
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString('views.OpenChannel.numConf')}
+                            </Text>
+                            <TextInput
+                                keyboardType="numeric"
+                                placeholder={'1'}
+                                value={min_confs.toString()}
+                                onChangeText={async (text: string) => {
+                                    const newMinConfs = Number(text);
+                                    this.setState({
+                                        min_confs: newMinConfs
+                                    });
+                                    await updateSettings({
+                                        channels: {
+                                            ...settings.channels,
+                                            min_confs: newMinConfs
+                                        }
+                                    });
+                                }}
+                            />
+                        </>
+                    )}
 
                     <View style={{ flexDirection: 'row', marginTop: 20 }}>
                         <View style={{ flex: 1 }}>

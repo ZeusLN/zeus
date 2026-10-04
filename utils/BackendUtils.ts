@@ -247,6 +247,8 @@ class BackendUtils {
     supportsBumpFee = () => this.call('supportsBumpFee');
     supportsOnchainSendFeeRate = () => this.call('supportsOnchainSendFeeRate');
     supportsChannelOpenFeeRate = () => this.call('supportsChannelOpenFeeRate');
+    supportsChannelOpenMinConfs = () =>
+        this.call('supportsChannelOpenMinConfs');
     supportsNetworkInfo = () => this.call('supportsNetworkInfo');
     supportsSimpleTaprootChannels = () =>
         this.call('supportsSimpleTaprootChannels');

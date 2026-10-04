@@ -1040,6 +1040,7 @@ export default class LND {
     supportsBumpFee = () => true;
     supportsOnchainSendFeeRate = () => true;
     supportsChannelOpenFeeRate = () => true;
+    supportsChannelOpenMinConfs = () => true;
     supportsFlowLSP = () => true;
     supportsNetworkInfo = () => true;
     supportsSimpleTaprootChannels = () => this.supports('v0.17.0');

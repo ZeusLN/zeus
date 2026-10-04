@@ -2195,6 +2195,9 @@ export default class LdkNode {
     supportsOnchainSendFeeRate = () => false;
     // TODO: flip to true when the user's fee rate is applied to channel opens (#4657)
     supportsChannelOpenFeeRate = () => false;
+    // ldk-node's channel open calls take no min confs, and fund max
+    // only counts trusted funds
+    supportsChannelOpenMinConfs = () => false;
     supportsFlowLSP = () => true;
     supportsNetworkInfo = () => true;
     supportsSimpleTaprootChannels = () => false;

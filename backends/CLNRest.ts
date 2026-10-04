@@ -844,6 +844,7 @@ export default class CLNRest {
     supportsBumpFee = () => false;
     supportsOnchainSendFeeRate = () => true;
     supportsChannelOpenFeeRate = () => true;
+    supportsChannelOpenMinConfs = () => true;
     supportsFlowLSP = () => false;
     supportsNetworkInfo = () => false;
     supportsSimpleTaprootChannels = () => false;

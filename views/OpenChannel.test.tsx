@@ -18,6 +18,7 @@ jest.mock('../stores/SettingsStore', () => ({
 }));
 jest.mock('../utils/BackendUtils', () => ({
     supportsChannelOpenFeeRate: () => false,
+    supportsChannelOpenMinConfs: jest.fn(() => true),
     supportsChannelFundMax: () => true,
     supportsChannelBatching: () => false,
     supportsChannelCoinControl: () => false,
@@ -108,6 +109,9 @@ const makeView = ({
     (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(
         implementation === 'lnd'
     );
+    (BackendUtils.supportsChannelOpenMinConfs as jest.Mock).mockReturnValue(
+        implementation !== 'ldk-node'
+    );
     const view = new OpenChannel({
         navigation: { navigate: jest.fn() },
         route: { params: routeParams },
@@ -183,37 +187,50 @@ describe('OpenChannel fund max toggle', () => {
     });
 });
 
+const findMinConfsInput = (view: OpenChannel) =>
+    findElement(
+        view.render(),
+        (element) =>
+            element.type === 'TextInput' && element.props.placeholder === '1'
+    );
+
 describe('OpenChannel fund max with unconfirmed funds and min confs 0', () => {
     const UNCONFIRMED = 100000;
 
-    const setMinConfsZero = (view: OpenChannel) =>
-        findElement(
-            view.render(),
-            (element) =>
-                element.type === 'TextInput' &&
-                element.props.placeholder === '1'
-        ).props.onChangeText('0');
-
-    it.each([
-        ['lnd', String(UNCONFIRMED), false],
-        ['cln-rest', String(UNCONFIRMED), false],
-        // LDK Node does not pass min confs to the node
-        ['ldk-node', '0', true]
-    ])(
-        'on %s shows %s and sets the open button disabled to %s',
-        (implementation, shownAmount, disabled) => {
+    it.each(['lnd', 'cln-rest'])(
+        'on %s counts unconfirmed funds',
+        (implementation) => {
             const view = makeView({
                 implementation,
                 confirmedBlockchainBalance: 0,
                 unconfirmedBlockchainBalance: UNCONFIRMED
             });
-            setMinConfsZero(view);
+            findMinConfsInput(view).props.onChangeText('0');
             toggleFundMax(view);
 
-            expect(amountInputProps(view).amount).toBe(shownAmount);
-            expect(isOpenDisabled(view)).toBe(disabled);
+            expect(amountInputProps(view).amount).toBe(String(UNCONFIRMED));
+            expect(isOpenDisabled(view)).toBe(false);
         }
     );
+
+    it('on ldk-node hides the min confs field', () => {
+        const view = makeView({ implementation: 'ldk-node' });
+
+        expect(findMinConfsInput(view)).toBeUndefined();
+    });
+
+    it('on ldk-node ignores a min confs of 0 from settings', () => {
+        const view = makeView({
+            implementation: 'ldk-node',
+            confirmedBlockchainBalance: 0,
+            unconfirmedBlockchainBalance: UNCONFIRMED
+        });
+        view.setState({ min_confs: 0, spend_unconfirmed: true });
+        toggleFundMax(view);
+
+        expect(amountInputProps(view).amount).toBe('0');
+        expect(isOpenDisabled(view)).toBe(true);
+    });
 });
 
 describe('OpenChannel LSP channel partner', () => {
