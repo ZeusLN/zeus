@@ -45,15 +45,15 @@ There is **no single owner**. Lifecycle state is smeared across four layers:
 
 | Layer | File | Owns |
 |---|---|---|
-| Orchestration | `views/Wallet/Wallet.tsx` | `handleFocus` / `handleAppStateChange` / `handleOpenURL` → `getSettingsAndNavigate()` → `fetchData()`; the `_navigating` instance flag; a 60s slow-startup alert timer |
-| Flags | `stores/SettingsStore.ts` | `connecting` (init **true**), `fetchLock`, `embeddedLndStarted`, `walletJustCreated`, `triggerSettingsRefresh`, `posWasEnabled`, `ldkNodeSyncing`; `setConnectingStatus()`; `updateNodeProperties()` (swaps `implementation`, dirs, creds on every settings write) |
+| Orchestration | `views/Wallet/Wallet.tsx` | `handleFocus` / `handleAppStateChange` / `handleOpenURL` → `getSettingsAndNavigate()` → `fetchData()`; the `refreshRunner` instance (`utils/WalletRefreshRunner.ts`); a 60s slow-startup alert timer |
+| Flags | `stores/SettingsStore.ts` | `connecting` (init **true**), `fetchLock`, `embeddedLndStarted`, `walletJustCreated`, `triggerSettingsRefresh`, `ldkNodeSyncing`; `setConnectingStatus()`; `updateNodeProperties()` (swaps `implementation`, dirs, creds on every settings write) |
 | JS node control | `utils/LndMobileUtils.ts` (`initializeLnd`, `startLnd`, `stopLnd`, `waitForRpcReady`, `createLndWallet`, `deleteLndWallet`) and `utils/LdkNodeUtils.ts` (`startLdkNodeWallet`, `stopLdkNode`, `waitForLdkNodeReady`, `createLdkNodeWallet`, `deleteLdkNodeWallet`) | retry loops, sleeps, error classification (`utils/LndMobileErrors.ts`) |
 | Native | Android `android/app/src/main/java/com/zeus/LndMobileService.java` (+ `LndMobile.java`, `LndMobileScheduledSyncWorker.java`), `android/app/src/main/java/app/zeusln/zeus/LdkNodeModule.kt`; iOS `ios/LndMobile/`, `ios/LdkNodeMobile/LdkNodeModule.swift` | the actual daemon/Node object, `lndStarted` boolean, `nodeLock`/`takeNode()` |
 | Mutation entry points | `views/Settings/Wallets.tsx` (switch), `views/Settings/WalletConfiguration.tsx` (create/edit/delete), `utils/WalletCreationUtils.ts` (Quick Start), `views/Settings/SeedRecovery.tsx` | write `settings.nodes`/`selectedNode` via `updateSettings`, then `setConnectingStatus(true)` + `popTo('Wallet')` |
 
 ### The guards, in evaluation order
 
-1. **`_navigating`** (Wallet.tsx instance field) — guards `getSettingsAndNavigate` re-entry from the focus event and AppState `active`. Added in `c71a04ce9` (2026-04-07) because the focus event fires twice on startup and both raced into `fetchData` → duplicate `buildNode`, second build times out holding VSS resources. **Bypassed by three call sites** that invoke `getSettingsAndNavigate()` directly: pull-to-refresh (`LayerBalances onRefresh`), the error-screen Restart button (iOS branch), and `handleOpenURL` for `zeusln://share`.
+1. **`refreshRunner.running`** (`WalletRefreshRunner`, Wallet.tsx instance) — guards `getSettingsAndNavigate` re-entry from the focus event and AppState `active`. Added as the `_navigating` instance field in `c71a04ce9` (2026-04-07) because the focus event fires twice on startup and both raced into `fetchData` → duplicate `buildNode`, second build times out holding VSS resources; moved into `utils/WalletRefreshRunner.ts` for #4751, which also clears `triggerSettingsRefresh` when a guarded refresh starts and runs at most one follow-up refresh if the flag is re-armed while it runs (only while the Wallet is focused). A `getSettingsAndNavigate` promise that never settles leaves `running` stuck `true`. **Bypassed by three call sites** that invoke `getSettingsAndNavigate()` directly: pull-to-refresh (`LayerBalances onRefresh`), the error-screen Restart button (iOS branch), and `handleOpenURL` for `zeusln://share`.
 2. **`fetchLock`** (SettingsStore observable) — checked/set at `fetchData` entry (`if (fetchLock) return; SettingsStore.fetchLock = true;`). Cleared in exactly two places: the happy-path end of `fetchData`, and `setConnectingStatus(true)`. **Every early-return error path leaves `fetchLock === true`** — by design: the app then shows the error screen, and recovery requires `setConnectingStatus(true)` (Restart button, wallet switch, transient-retry loop), which clears the lock. Consequence: any code path that errors out and then expects a plain focus event to reconnect will hang silently.
 3. **`connecting`** — initialized `true`, so the first `fetchData` after cold start runs the full connect branch (stop→init→start + reset of ~12 stores). Set `false` at the end of a successful connect or on fatal errors; set `true` by every wallet-switch/create/restart path. When `false`, `fetchData` becomes a light data refresh (embedded-lnd still calls `waitForRpcReady()` + full data fetch on every focus).
 4. **`walletJustCreated`** — set by `createLndWallet` / LDK create paths; makes `fetchData` skip the stop→init→start cycle because the node is already running from wallet creation. Consumed (set `false`) on first use.
@@ -88,7 +88,7 @@ Each window is verified by code read at `c5fd094fb`. Runtime confirmation status
 
 | # | Window | Status |
 |---|---|---|
-| W1 | Double focus → duplicate `getSettingsAndNavigate` | FIXED by `_navigating` (`c71a04ce9`); residual: the three bypass call sites rely only on `fetchLock`, which does NOT stop a second `getSettingsAndNavigate` from re-running the pre-`fetchData` navigation logic concurrently |
+| W1 | Double focus → duplicate `getSettingsAndNavigate` | FIXED by `_navigating` (`c71a04ce9`, now `WalletRefreshRunner`); residual: the three bypass call sites rely only on `fetchLock`, which does NOT stop a second `getSettingsAndNavigate` from re-running the pre-`fetchData` navigation logic concurrently |
 | W2 | JS call into LDK during `buildNode` rebuild → `"Node not initialized"` rejection | Tolerated in `waitForLdkNodeReady` (`b54e8f138`) and the pre-existing `start` retries; **unguarded** for every other store that calls the backend during the window (e.g. polling stores) |
 | W3 | Cross-implementation switch leaves the previous node running: `fetchData`'s `ldk-node` branch calls only `stopLdkNode()`, the `embedded-lnd` branch only `stopLnd()`. Switching embedded-lnd → ldk-node (or reverse) stops NEITHER the old node; `views/Settings/Wallets.tsx onWalletPress` only calls `setPersistentMode(false)` (dismisses the Android notification, does not stop the node) and `BackendUtils.disconnect()` for LNC | Confirmed by code read; runtime impact (two chain-syncing nodes, memory/battery, port/db contention) needs Phase 3 measurement |
 | W4 | Delete-active-wallet flow: `WalletConfiguration.deleteNodeConfig` stops node → `updateSettings({ justDeletedWallet: active })` → deletes files → navigates to Wallets; selecting the next wallet runs `handleJustDeletedWallet` which does `setConnectingStatus(true)` then **`sleep(2000)`** — a bare time-based wait standing in for "old node fully gone" | Open; the sleep is a fenced symptom-patch pattern (below) |
@@ -96,7 +96,7 @@ Each window is verified by code read at `c5fd094fb`. Runtime confirmation status
 | W6 | `LndMobileTools.killLnd()` scans running processes for `packageName + ":zeusLndMobile"`, but no such process is ever created (no `android:process` in the manifest) — so `killLnd` can never find/kill anything and resolves `false`. Recovery therefore rests entirely on the Go `stopDaemon` call. Also `killLndProcess()` uses `getCurrentActivity()` which is null when no Activity is attached (background) → NPE risk | Code-read finding; runtime confirmation = log `killLnd` result in Phase 4. Blixt heritage: Blixt runs the service in a separate process, Zeus does not |
 | W7 | `LndMobileScheduledSyncWorker.java` (background sync) binds the same `LndMobileService` and — per its own FIXME at ~line 310 — calls `thread.run()` instead of `thread.start()`, executing the "thread" body synchronously on the worker's calling thread with handlers on the **main looper**. A scheduled sync racing a foreground app start can send `MSG_START_LND` against an already-started daemon (the worker's own comment: "Make sure we don't attempt to start lnd twice... better fix would be MSG_CHECKSTATUS") | Open, acknowledged debt (`TODO(hsjoberg)`) |
 | W8 | `LndMobileService.onUnbind`: when the last client unbinds it calls `stopLnd(null, -1)` + `stopSelf()` — but the RN module (`LndMobile.java`) binds once in `initialize()` and its `unbindLndMobileService` is flagged in `lndmobile/LndMobile.d.ts` as "function looks broken" and is never called from TS (verified: zero TS call sites). So service lifetime ≈ process lifetime; unbind-triggered stop is effectively dead code in the app (only the sync worker unbinds) | Confirmed by code read |
-| W9 | Background/foreground storm: AppState `active` triggers `getSettingsAndNavigate` (guarded by `_navigating`), `inactive` resets `NostrWalletConnectStore`; iOS fires `inactive` on mere app-switcher/notification-shade interactions | Guarded but untested under storm; Phase 0 E4 |
+| W9 | Background/foreground storm: AppState `active` triggers `getSettingsAndNavigate` (guarded by `WalletRefreshRunner`), `inactive` resets `NostrWalletConnectStore`; iOS fires `inactive` on mere app-switcher/notification-shade interactions | Guarded but untested under storm; Phase 0 E4 |
 | W10 | LDK delete-then-create same dir: `stop()` resolves before the 2s native Arc-hold expires; `deleteLdkNodeWallet` then `RNFS.unlink`s the storage dir while background Tokio cleanup may still touch it | HYPOTHESIS — the 2s hold was added for the ref-drop panic, not for file-handle safety; needs Phase 5 experiment |
 
 ---
@@ -157,7 +157,7 @@ All verified present in source:
 Kill the app (swipe from recents), relaunch, wait for balance screen.
 
 - **Expect**: one `triggering` line, typically followed by one `skipping` line (the startup focus event fires twice — see `c71a04ce9`), the backend's start milestones once each, exactly one `connect time:` line.
-- **If you see two `triggering` lines with no `skipping`** → the `_navigating` guard regressed or a bypass path fired → branch to Phase 2.
+- **If you see two `triggering` lines with no `skipping`** → the `WalletRefreshRunner` guard regressed or a bypass path fired → branch to Phase 2. (A `settings changed during refresh, refreshing again` line is the runner's intended follow-up, not a duplicate.)
 - **If `connect time:` never appears and the spinner persists** → note which milestone was last; `fetchLock` is likely stranded (Phase 2's flag table tells you which return path).
 
 ### E2 — Rapid wallet switch, embedded-lnd ↔ ldk-node (20 cycles)
@@ -168,7 +168,7 @@ Settings → Wallets → tap the other wallet; as soon as the Wallet screen show
 - **Expect per switch**: `triggering` → store resets → old-backend stop milestone **only if switching within the same implementation** → new-backend start milestones → `connect time:`.
 - **If crash with `Fatal signal 6 (SIGABRT)` mentioning tokio/runtime** → LDK ref released on a Tokio thread; capture the full tombstone; this is the `d416052cd` class — branch to Phase 5.
 - **If `Node not initialized` surfaces in the UI (error screen)** rather than being retried → an unguarded call site hit W2 — branch to Phase 2 call-site census.
-- **If a switch hangs with no `triggering` line at all** → focus fired while `_navigating` was stuck true (a `getSettingsAndNavigate` that never resolved) — capture the last milestone.
+- **If a switch hangs with no `triggering` line at all** → focus fired while `refreshRunner.running` was stuck true (a `getSettingsAndNavigate` that never resolved) — capture the last milestone.
 
 ### E3 — Delete active wallet mid-operation (5 trials each backend)
 
@@ -218,7 +218,7 @@ Re-run E1–E5 with instrumentation. **Decision gate**: produce a timeline for e
 Enumerate every path into `getSettingsAndNavigate`/`fetchData` and every exit's flag outcome. Starting set (verified at `c5fd094fb` — re-derive, don't trust):
 
 ```bash
-grep -n "getSettingsAndNavigate\|_navigating" views/Wallet/Wallet.tsx
+grep -n "getSettingsAndNavigate\|refreshRunner" views/Wallet/Wallet.tsx
 grep -rn "setConnectingStatus(true)" --include="*.ts" --include="*.tsx" . | grep -v node_modules
 ```
 
@@ -265,7 +265,7 @@ Also test: switch embedded→ldk, wait 5 min, switch back — does the returning
 Ranking reflects maintainer culture: minimal diffs first, big designs only with prior sign-off. Every option below is **funds-adjacent** (a node torn down mid-payment can strand an HTLC or force-close exposure), so all inherit: no drive-by refactors in payment paths, manual 2-platform testing by the author, revert-first if release testing regresses (zeus-change-control).
 
 ### 1. `fetchData` lock-hygiene + serialization audit (smallest, do first)
-Make lock acquire/release provably paired: single exit point (try/finally) for `fetchLock`; extend the `_navigating` guard (or fold it into one SettingsStore-owned in-flight promise) to cover the three bypass call sites.
+Make lock acquire/release provably paired: single exit point (try/finally) for `fetchLock`; extend the `WalletRefreshRunner` guard (or fold it into one SettingsStore-owned in-flight promise) to cover the three bypass call sites — but decide per call site, not blanket: pull-to-refresh can safely be dropped while a refresh runs; `zeusln://share` would lose the shared image if the running refresh is already past `processSharedQRImageFast()`; the error-screen Restart is the escape hatch and must never be blocked by a refresh whose promise never settles.
 - **Theory obligations**: the Phase 2 table with every entry path × every exit → flags outcome; prove the error-screen Restart and transient-retry recovery still work (they depend on `setConnectingStatus(true)` clearing the lock — don't break that contract silently).
 - **Blast radius**: Wallet.tsx + SettingsStore only. No storage change, no migration.
 - **Gates**: standard PR gates + E1/E2/E4 re-run showing hang rate → 0.
@@ -284,7 +284,7 @@ Give delete a real completion signal (native-side delete after Arc-hold, or a `s
 
 ### 4. Single lifecycle state machine (the end state — design sign-off REQUIRED first)
 One owner (e.g. a `NodeLifecycleStore` / manager) with explicit states — `STOPPED, STARTING, RUNNING, STOPPING, DELETING, SWITCHING` — through which ALL start/stop/delete/switch flows pass; `Wallet.tsx` becomes a consumer, not an owner.
-- **Theory obligations (non-negotiable before code)**: (i) full state/transition enumeration with the illegal transitions listed; (ii) proof of no orphaned native handle — every `start` has exactly one matching `stop` on every path including error paths and app-kill (invariant: at most one native node per implementation, and after the W3 fix, at most one total); (iii) mapping of ALL existing flags (`connecting`, `fetchLock`, `embeddedLndStarted`, `walletJustCreated`, `_navigating`) onto machine states, with a staged migration so each PR stays reviewable; (iv) re-entrancy story: transitions are serialized on one async queue, concurrent requests coalesce or queue, never interleave.
+- **Theory obligations (non-negotiable before code)**: (i) full state/transition enumeration with the illegal transitions listed; (ii) proof of no orphaned native handle — every `start` has exactly one matching `stop` on every path including error paths and app-kill (invariant: at most one native node per implementation, and after the W3 fix, at most one total); (iii) mapping of ALL existing flags (`connecting`, `fetchLock`, `embeddedLndStarted`, `walletJustCreated`, `refreshRunner.running`) onto machine states, with a staged migration so each PR stays reviewable; (iv) re-entrancy story: transitions are serialized on one async queue, concurrent requests coalesce or queue, never interleave.
 - **Blast radius**: Wallet.tsx, SettingsStore, Wallets/WalletConfiguration/SeedRecovery/WalletCreationUtils, both utils files. This is exactly the shape of refactor that produced `fdad118ed` — land it as a series of minimal PRs, each independently revertible.
 - **Gates**: maintainer design ACK before implementation; full Phase 0 suite as regression harness; both platforms per PR.
 
@@ -326,7 +326,7 @@ One-line re-verification commands (run from repo root):
 
 ```bash
 git log -1 --format="%h %s"                                          # still c5fd094fb?
-grep -n "_navigating" views/Wallet/Wallet.tsx                        # re-entry guard still present
+grep -n "refreshRunner" views/Wallet/Wallet.tsx                      # re-entry guard still present
 grep -n "if (fetchLock) return" views/Wallet/Wallet.tsx              # lock acquire site
 grep -n "remove fetchLock on reconnect" stores/SettingsStore.ts      # lock cleared in setConnectingStatus(true)
 grep -n "connecting = true" stores/SettingsStore.ts                  # connecting initialized true

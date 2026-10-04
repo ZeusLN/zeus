@@ -99,7 +99,7 @@ await updateSettings({
 
 This is the single most likely way to silently destroy user data in this codebase. In review, treat any `updateSettings({ group: { ... } })` call without a spread of the existing group as a bug until proven otherwise. Top-level scalar keys (`fiat`, `locale`, `nodes`, …) are safe to pass alone.
 
-Also note: `updateSettings` internally calls `getSettings()` first (which can trigger migrations) and sets `settingsUpdateInProgress` / `triggerSettingsRefresh` flags — do not call it in tight loops or during boot races.
+Also note: `updateSettings` internally calls `getSettings()` first (which can trigger migrations) and sets `settingsUpdateInProgress` / `triggerSettingsRefresh` flags (the latter only when the persisted settings actually change outside `REFRESH_EXEMPT_SETTINGS`) — do not call it in tight loops or during boot races.
 
 ## 4. Migrations: load paths and the MOD_KEY recipe
 

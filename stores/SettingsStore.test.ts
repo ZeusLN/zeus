@@ -294,13 +294,13 @@ describe('SettingsStore.updateSettings', () => {
 
 // triggerSettingsRefresh makes the Wallet screen run a full node refetch on
 // its next focus, which costs the user a noticeable loading time.
-// Bookkeeping writes that re-persist what is already stored must not arm it.
+// Writes that re-persist what is already stored must not arm it.
 describe('SettingsStore.updateSettings refresh flag', () => {
     it('stays unarmed when a write re-persists an identical value', async () => {
-        seedSettings({ authenticationAttempts: 0 });
+        seedSettings({ fiat: 'USD' });
         const store = new SettingsStore();
 
-        await store.updateSettings({ authenticationAttempts: 0 });
+        await store.updateSettings({ fiat: 'USD' });
 
         expect(store.triggerSettingsRefresh).toEqual(false);
     });
@@ -333,27 +333,103 @@ describe('SettingsStore.updateSettings refresh flag', () => {
     });
 
     it('stays unarmed when an undefined value is written for an absent key', async () => {
-        // Devices without biometrics: getSupportedBiometryType() returns
-        // undefined and Wallet writes it on every start. JSON.stringify
-        // drops the key, so nothing changes on disk.
+        // JSON.stringify drops the key, so nothing changes on disk.
         seedSettings({});
         const store = new SettingsStore();
 
-        await store.updateSettings({ supportedBiometryType: undefined });
+        await store.updateSettings({ fiat: undefined });
 
         expect(store.triggerSettingsRefresh).toEqual(false);
-        expect(persistedSettings()).not.toHaveProperty('supportedBiometryType');
+        expect(persistedSettings()).not.toHaveProperty('fiat');
     });
 
     it('is armed and clears the key when undefined overwrites a stored value', async () => {
+        seedSettings({ fiat: 'USD' });
+        const store = new SettingsStore();
+
+        await store.updateSettings({ fiat: undefined });
+
+        expect(store.triggerSettingsRefresh).toEqual(true);
+        expect(store.settings.fiat).toBeUndefined();
+        expect(persistedSettings()).not.toHaveProperty('fiat');
+    });
+
+    // Bookkeeping keys and the one-shot flags the refresh itself resets
+    // only take effect on the next node start, so a change to them alone
+    // must not cost another refetch (#4751).
+    it.each([
+        ['authenticationAttempts', 0, 1],
+        ['supportedBiometryType', 'Biometrics', 'FaceID'],
+        ['initialLoad', true, false],
+        ['resetExpressGraphSyncOnStartup', true, false],
+        ['rescan', true, false],
+        ['recovery', true, false]
+    ])(
+        'stays unarmed when only %s changes',
+        async (key, storedValue, newValue) => {
+            seedSettings({ [key]: storedValue });
+            const store = new SettingsStore();
+
+            await store.updateSettings({ [key]: newValue });
+
+            expect(store.triggerSettingsRefresh).toEqual(false);
+            expect(persistedSettings()[key]).toEqual(newValue);
+        }
+    );
+
+    it('is armed when an exempt key changes together with another key', async () => {
+        // Restoring a wallet writes the new node along with recovery and
+        // initialLoad; the node change still needs the refetch.
+        seedSettings({ nodes: [], recovery: false, initialLoad: true });
+        const store = new SettingsStore();
+
+        await store.updateSettings({
+            nodes: [{ implementation: 'embedded-lnd', lndDir: 'lnd' }],
+            selectedNode: 0,
+            recovery: true,
+            initialLoad: false
+        });
+
+        expect(store.triggerSettingsRefresh).toEqual(true);
+    });
+
+    // Turning POS on relies on this flag alone: the refetch on the next
+    // Wallet focus is what navigates into POS mode.
+    it('is armed when POS gets enabled', async () => {
+        seedSettings({ pos: { posEnabled: 'disabled', merchantName: '' } });
+        const store = new SettingsStore();
+
+        await store.updateSettings({
+            pos: { posEnabled: 'standalone', merchantName: '' }
+        });
+
+        expect(store.triggerSettingsRefresh).toEqual(true);
+    });
+
+    it('stays unarmed when a POS write changes nothing while POS is enabled', async () => {
+        // POS settings writes spread the whole pos group, posEnabled
+        // included, so saving an unchanged field re-persists it.
+        seedSettings({
+            pos: { posEnabled: 'standalone', merchantName: 'Shop' }
+        });
+        const store = new SettingsStore();
+
+        await store.updateSettings({
+            pos: { posEnabled: 'standalone', merchantName: 'Shop' }
+        });
+
+        expect(store.triggerSettingsRefresh).toEqual(false);
+    });
+
+    it('stays unarmed and clears the key when biometrics are removed', async () => {
         // Biometrics removed in the OS settings: writing undefined is how
-        // the stored sensor type gets cleared, so it is a real change.
+        // the stored sensor type gets cleared.
         seedSettings({ supportedBiometryType: 'Biometrics' });
         const store = new SettingsStore();
 
         await store.updateSettings({ supportedBiometryType: undefined });
 
-        expect(store.triggerSettingsRefresh).toEqual(true);
+        expect(store.triggerSettingsRefresh).toEqual(false);
         expect(store.settings.supportedBiometryType).toBeUndefined();
         expect(persistedSettings()).not.toHaveProperty('supportedBiometryType');
     });

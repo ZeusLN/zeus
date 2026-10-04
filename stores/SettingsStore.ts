@@ -4,6 +4,7 @@ import { BiometryType } from 'react-native-biometrics';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import isEqual from 'lodash/isEqual';
+import omit from 'lodash/omit';
 
 import BackendUtils from '../utils/BackendUtils';
 import { getSupportedBiometryType } from '../utils/BiometricUtils';
@@ -1665,6 +1666,20 @@ export const DEFAULT_SETTINGS: Settings = {
     selectNodeOnStartup: false
 };
 
+// Settings whose changes never need a Wallet refetch: bookkeeping values
+// and the one-shot flags the refresh resets itself, which only take effect
+// on the next node start. Exclusion rather than an allowlist on purpose: a
+// setting missing here costs an extra refetch, one missing from an
+// allowlist would silently skip a needed one.
+const REFRESH_EXEMPT_SETTINGS: Array<keyof Settings> = [
+    'authenticationAttempts',
+    'supportedBiometryType',
+    'initialLoad',
+    'resetExpressGraphSyncOnStartup',
+    'rescan',
+    'recovery'
+];
+
 export default class SettingsStore {
     // Deep clone: DEFAULT_SETTINGS is a module-level object. Referencing
     // its nested groups directly would let an in-place mutation of one
@@ -1675,7 +1690,6 @@ export default class SettingsStore {
         JSON.stringify(DEFAULT_SETTINGS)
     );
     @observable public posStatus: string = 'unselected';
-    @observable public posWasEnabled: boolean = false;
     @observable public loading = false;
     @observable public isMigrating = false;
     @observable public settingsUpdateInProgress: boolean = false;
@@ -2148,13 +2162,6 @@ export default class SettingsStore {
                 ...resolvedSetting
             };
 
-            if (
-                resolvedSetting.pos?.posEnabled &&
-                resolvedSetting.pos.posEnabled !== PosEnabled.Disabled
-            ) {
-                this.posWasEnabled = true;
-            }
-
             const persisted = await this.setSettings(newSettings);
             if (!persisted) {
                 // Write latch engaged (data wipe in progress): nothing was
@@ -2164,17 +2171,22 @@ export default class SettingsStore {
             }
 
             // Only ask the Wallet screen for a full node refetch when the write
-            // actually changed something. Bookkeeping writes that re-persist an
-            // identical value (authenticationAttempts: 0 after a successful
-            // login, supportedBiometryType on every app start) would otherwise
-            // arm the flag and cost the user a noticeable loading time on the
-            // next focus event. Compare what gets persisted: JSON drops
-            // undefined-valued keys, so writing undefined for an absent key is
-            // no change.
+            // actually changed a setting that needs one. Writes that
+            // re-persist an identical value or only touch exempt settings
+            // would otherwise arm the flag and cost the user a noticeable
+            // loading time on the next focus event. Compare what gets
+            // persisted: JSON drops undefined-valued keys, so writing
+            // undefined for an absent key is no change.
             if (
                 !isEqual(
-                    JSON.parse(JSON.stringify(existingSettings)),
-                    JSON.parse(JSON.stringify(newSettings))
+                    omit(
+                        JSON.parse(JSON.stringify(existingSettings)),
+                        REFRESH_EXEMPT_SETTINGS
+                    ),
+                    omit(
+                        JSON.parse(JSON.stringify(newSettings)),
+                        REFRESH_EXEMPT_SETTINGS
+                    )
                 )
             ) {
                 this.triggerSettingsRefresh = true;
