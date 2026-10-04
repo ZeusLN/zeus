@@ -100,6 +100,8 @@ export default class OpenChannel extends React.Component<
     OpenChannelState
 > {
     listener: any;
+    private previousAmount: string = '';
+    private previousSatAmount: string | number = '';
     constructor(props: any) {
         super(props);
         this.state = {
@@ -862,18 +864,39 @@ export default class OpenChannel extends React.Component<
                                                     onValueChange={() => {
                                                         const newValue: boolean =
                                                             !fundMax;
-                                                        this.setState({
-                                                            fundMax: newValue,
-                                                            local_funding_amount:
-                                                                newValue &&
-                                                                implementation ===
+                                                        if (newValue) {
+                                                            // keep the entered amount, also an
+                                                            // empty one, to put it back when
+                                                            // fund max is turned off
+                                                            this.previousAmount =
+                                                                local_funding_amount;
+                                                            this.previousSatAmount =
+                                                                satAmount;
+                                                            this.setState({
+                                                                fundMax:
+                                                                    newValue,
+                                                                local_funding_amount:
+                                                                    implementation ===
                                                                     'cln-rest'
-                                                                    ? 'all'
-                                                                    : '',
-                                                            // AmountInput does not report the cleared
-                                                            // amount when fund max is turned off
-                                                            satAmount: ''
-                                                        });
+                                                                        ? 'all'
+                                                                        : '',
+                                                                satAmount: ''
+                                                            });
+                                                        } else {
+                                                            this.setState({
+                                                                fundMax:
+                                                                    newValue,
+                                                                local_funding_amount:
+                                                                    this
+                                                                        .previousAmount,
+                                                                // AmountInput does not report the
+                                                                // restored amount when fund max
+                                                                // is turned off
+                                                                satAmount:
+                                                                    this
+                                                                        .previousSatAmount
+                                                            });
+                                                        }
                                                     }}
                                                 />
                                             </>
