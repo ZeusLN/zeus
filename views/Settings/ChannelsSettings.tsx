@@ -46,7 +46,7 @@ export default class ChannelsSettings extends React.Component<
         const settings = await getSettings();
 
         this.setState({
-            min_confs: settings?.channels?.min_confs || 1,
+            min_confs: settings?.channels?.min_confs ?? 1,
             privateChannel:
                 settings?.channels?.privateChannel !== null
                     ? settings.channels.privateChannel

@@ -152,8 +152,12 @@ export default class OpenChannel extends React.Component<
             }
         }
 
+        // a saved default of 0 is valid and lets the open spend unconfirmed
+        // funds
+        const min_confs = settings?.channels?.min_confs ?? 1;
         this.setState({
-            min_confs: settings?.channels?.min_confs || 1,
+            min_confs,
+            spend_unconfirmed: min_confs === 0,
             privateChannel:
                 settings?.channels?.privateChannel !== null
                     ? settings.channels.privateChannel

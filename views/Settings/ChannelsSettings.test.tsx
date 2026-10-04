@@ -38,14 +38,24 @@ const findElement = (node: any, match: (element: any) => boolean): any => {
     return undefined;
 };
 
-const makeView = (supportsMinConfs: boolean) => {
+const makeView = (supportsMinConfs: boolean, settings: any = {}) => {
     (BackendUtils.supportsChannelOpenMinConfs as jest.Mock).mockReturnValue(
         supportsMinConfs
     );
-    return new ChannelsSettings({
+    const view = new ChannelsSettings({
         navigation: {},
-        SettingsStore: { settings: {}, updateSettings: jest.fn() }
+        SettingsStore: {
+            settings,
+            getSettings: jest.fn(async () => settings),
+            updateSettings: jest.fn()
+        }
     } as unknown as React.ComponentProps<typeof ChannelsSettings>);
+    // setState on a class that was never mounted does nothing, so apply it
+    // directly
+    jest.spyOn(view, 'setState').mockImplementation((update: any) => {
+        view.state = { ...view.state, ...update };
+    });
+    return view;
 };
 
 const findMinConfsInput = (view: ChannelsSettings) =>
@@ -62,5 +72,18 @@ describe('ChannelsSettings min confs field', () => {
 
     it('is hidden when the backend ignores min confs', () => {
         expect(findMinConfsInput(makeView(false))).toBeUndefined();
+    });
+});
+
+describe('ChannelsSettings min confs default', () => {
+    it.each([
+        [0, '0'],
+        [3, '3'],
+        [undefined, '1']
+    ])('a saved min confs of %s shows %s', async (saved, shown) => {
+        const view = makeView(true, { channels: { min_confs: saved } });
+        await view.componentDidMount();
+
+        expect(findMinConfsInput(view).props.value).toBe(shown);
     });
 });

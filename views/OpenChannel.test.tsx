@@ -99,12 +99,14 @@ const makeView = ({
     implementation = 'lnd',
     confirmedBlockchainBalance = BALANCE,
     unconfirmedBlockchainBalance = 0,
-    routeParams = {}
+    routeParams = {},
+    settings = {}
 }: {
     implementation?: string;
     confirmedBlockchainBalance?: number;
     unconfirmedBlockchainBalance?: number;
     routeParams?: { node_pubkey_string?: string; host?: string };
+    settings?: any;
 } = {}) => {
     (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(
         implementation === 'lnd'
@@ -122,11 +124,12 @@ const makeView = ({
         ChannelsStore: {
             channelsView: 'channels',
             aliasesByPubkey: {},
-            nodes: {}
+            nodes: {},
+            resetOpenChannel: jest.fn()
         },
         ModalStore: {},
         NodeInfoStore: { nodeInfo: {} },
-        SettingsStore: { implementation, settings: {} },
+        SettingsStore: { implementation, settings },
         UTXOsStore: {}
     } as unknown as React.ComponentProps<typeof OpenChannel>);
     // setState on a class that was never mounted does nothing, so apply it
@@ -383,5 +386,36 @@ describe('OpenChannel LSP channel partner', () => {
 
         expect(view.state.node_pubkey_string).toBe(OTHER.lsps1Pubkey);
         expect(view.state.host).toBe(OTHER.lsps1Host);
+    });
+});
+
+describe('OpenChannel min confs default from settings', () => {
+    it.each([
+        [0, 0, true],
+        [3, 3, false],
+        [undefined, 1, false]
+    ])(
+        'a saved min confs of %s loads as %s with spend unconfirmed %s',
+        async (saved, minConfs, spendUnconfirmed) => {
+            const view = makeView({
+                settings: { channels: { min_confs: saved } }
+            });
+            await view.componentDidMount();
+
+            expect(view.state.min_confs).toBe(minConfs);
+            expect(view.state.spend_unconfirmed).toBe(spendUnconfirmed);
+        }
+    );
+
+    it('counts unconfirmed funds for fund max with a saved default of 0', async () => {
+        const view = makeView({
+            confirmedBlockchainBalance: 0,
+            unconfirmedBlockchainBalance: 100000,
+            settings: { channels: { min_confs: 0 } }
+        });
+        await view.componentDidMount();
+        toggleFundMax(view);
+
+        expect(amountInputProps(view).amount).toBe('100000');
     });
 });
