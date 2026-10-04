@@ -1055,15 +1055,15 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     }
 
     @ReactMethod
-    fun openChannel(nodeId: String, address: String, channelAmountSats: Double, pushToCounterpartyMsat: Double?, announceChannel: Boolean, promise: Promise) {
+    fun openChannel(nodeId: String, address: String, channelAmountSats: Double, pushToCounterpartyMsat: Double?, announceChannel: Boolean, satPerVbyte: Double, promise: Promise) {
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 val pushMsat = pushToCounterpartyMsat?.let { if (it > 0) it.toLong().toULong() else null }
                 val userChannelId = if (announceChannel) {
-                    node.openAnnouncedChannel(nodeId, address, channelAmountSats.toLong().toULong(), pushMsat, null)
+                    node.openAnnouncedChannel(nodeId, address, channelAmountSats.toLong().toULong(), pushMsat, null, parseFeeRate(satPerVbyte))
                 } else {
-                    node.openChannel(nodeId, address, channelAmountSats.toLong().toULong(), pushMsat, null)
+                    node.openChannel(nodeId, address, channelAmountSats.toLong().toULong(), pushMsat, null, parseFeeRate(satPerVbyte))
                 }
                 val result = Arguments.createMap().apply {
                     putString("userChannelId", userChannelId)
@@ -1131,12 +1131,12 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     }
 
     @ReactMethod
-    fun sendToOnchainAddress(address: String, amountSats: Double, promise: Promise) {
+    fun sendToOnchainAddress(address: String, amountSats: Double, satPerVbyte: Double, promise: Promise) {
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 val onchain = node.onchainPayment()
-                val txid = onchain.sendToAddress(address, amountSats.toLong().toULong(), null)
+                val txid = onchain.sendToAddress(address, amountSats.toLong().toULong(), parseFeeRate(satPerVbyte))
                 val result = Arguments.createMap().apply {
                     putString("txid", txid)
                 }
@@ -1152,12 +1152,12 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     }
 
     @ReactMethod
-    fun sendAllToOnchainAddress(address: String, retainReserve: Boolean, promise: Promise) {
+    fun sendAllToOnchainAddress(address: String, retainReserve: Boolean, satPerVbyte: Double, promise: Promise) {
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 val onchain = node.onchainPayment()
-                val txid = onchain.sendAllToAddress(address, retainReserve, null)
+                val txid = onchain.sendAllToAddress(address, retainReserve, parseFeeRate(satPerVbyte))
                 val result = Arguments.createMap().apply {
                     putString("txid", txid)
                 }
@@ -1217,14 +1217,24 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         return outpoints
     }
 
+    /**
+     * Builds the optional FeeRate for an on-chain send. The JS layer passes -1
+     * when the user set no usable rate, in which case we hand ldk-node null so
+     * it applies its own fee estimation.
+     */
+    private fun parseFeeRate(satPerVbyte: Double): FeeRate? {
+        if (satPerVbyte < 1) return null
+        return FeeRate.fromSatPerVbUnchecked(satPerVbyte.toLong().toULong())
+    }
+
     @ReactMethod
-    fun sendToOnchainAddressWithUtxos(address: String, amountSats: Double, utxos: ReadableArray, promise: Promise) {
+    fun sendToOnchainAddressWithUtxos(address: String, amountSats: Double, utxos: ReadableArray, satPerVbyte: Double, promise: Promise) {
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 val onchain = node.onchainPayment()
                 val outpoints = parseOutPoints(utxos)
-                val txid = onchain.sendToAddressWithUtxos(address, amountSats.toLong().toULong(), outpoints, null)
+                val txid = onchain.sendToAddressWithUtxos(address, amountSats.toLong().toULong(), outpoints, parseFeeRate(satPerVbyte))
                 val result = Arguments.createMap().apply {
                     putString("txid", txid)
                 }
@@ -1240,13 +1250,13 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     }
 
     @ReactMethod
-    fun sendAllToOnchainAddressWithUtxos(address: String, retainReserve: Boolean, utxos: ReadableArray, promise: Promise) {
+    fun sendAllToOnchainAddressWithUtxos(address: String, retainReserve: Boolean, utxos: ReadableArray, satPerVbyte: Double, promise: Promise) {
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 val onchain = node.onchainPayment()
                 val outpoints = parseOutPoints(utxos)
-                val txid = onchain.sendAllToAddressWithUtxos(address, retainReserve, outpoints, null)
+                val txid = onchain.sendAllToAddressWithUtxos(address, retainReserve, outpoints, parseFeeRate(satPerVbyte))
                 val result = Arguments.createMap().apply {
                     putString("txid", txid)
                 }
@@ -1262,16 +1272,16 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     }
 
     @ReactMethod
-    fun openChannelFundMax(nodeId: String, address: String, pushToCounterpartyMsat: Double?, announceChannel: Boolean, utxos: ReadableArray?, promise: Promise) {
+    fun openChannelFundMax(nodeId: String, address: String, pushToCounterpartyMsat: Double?, announceChannel: Boolean, utxos: ReadableArray?, satPerVbyte: Double, promise: Promise) {
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 val pushMsat = pushToCounterpartyMsat?.let { if (it > 0) it.toLong().toULong() else null }
                 val outpoints = utxos?.let { parseOutPoints(it) }
                 val userChannelId = if (announceChannel) {
-                    node.openAnnouncedChannelFundMax(nodeId, address, pushMsat, null, outpoints)
+                    node.openAnnouncedChannelFundMax(nodeId, address, pushMsat, null, outpoints, parseFeeRate(satPerVbyte))
                 } else {
-                    node.openChannelFundMax(nodeId, address, pushMsat, null, outpoints)
+                    node.openChannelFundMax(nodeId, address, pushMsat, null, outpoints, parseFeeRate(satPerVbyte))
                 }
                 val result = Arguments.createMap().apply {
                     putString("userChannelId", userChannelId)
@@ -1288,16 +1298,16 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     }
 
     @ReactMethod
-    fun openChannelWithUtxos(nodeId: String, address: String, channelAmountSats: Double, pushToCounterpartyMsat: Double?, announceChannel: Boolean, utxos: ReadableArray, promise: Promise) {
+    fun openChannelWithUtxos(nodeId: String, address: String, channelAmountSats: Double, pushToCounterpartyMsat: Double?, announceChannel: Boolean, utxos: ReadableArray, satPerVbyte: Double, promise: Promise) {
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 val pushMsat = pushToCounterpartyMsat?.let { if (it > 0) it.toLong().toULong() else null }
                 val outpoints = parseOutPoints(utxos)
                 val userChannelId = if (announceChannel) {
-                    node.openAnnouncedChannelWithUtxos(nodeId, address, channelAmountSats.toLong().toULong(), pushMsat, null, outpoints)
+                    node.openAnnouncedChannelWithUtxos(nodeId, address, channelAmountSats.toLong().toULong(), pushMsat, null, outpoints, parseFeeRate(satPerVbyte))
                 } else {
-                    node.openChannelWithUtxos(nodeId, address, channelAmountSats.toLong().toULong(), pushMsat, null, outpoints)
+                    node.openChannelWithUtxos(nodeId, address, channelAmountSats.toLong().toULong(), pushMsat, null, outpoints, parseFeeRate(satPerVbyte))
                 }
                 val result = Arguments.createMap().apply {
                     putString("userChannelId", userChannelId)
