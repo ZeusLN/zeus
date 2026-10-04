@@ -169,6 +169,54 @@ describe('BalanceStore balance fetch', () => {
         expect(store.error).toBe(false);
     });
 
+    it('keeps the on-chain loading flag while that request is pending', async () => {
+        let resolveBlockchain = (_value: unknown) => {};
+        (BackendUtils.getBlockchainBalance as jest.Mock).mockReturnValue(
+            new Promise((resolve) => {
+                resolveBlockchain = resolve;
+            })
+        );
+        (BackendUtils.getLightningBalance as jest.Mock).mockRejectedValue(
+            new Error('Request timeout')
+        );
+        const store = new BalanceStore();
+
+        const onChain = store.getBlockchainBalance(true, false);
+        await store.getLightningBalance(true);
+
+        expect(store.loadingLightningBalance).toBe(false);
+        expect(store.loadingBlockchainBalance).toBe(true);
+
+        resolveBlockchain(blockchainBalance);
+        await onChain;
+
+        expect(store.loadingBlockchainBalance).toBe(false);
+    });
+
+    it('keeps the Lightning loading flag while that request is pending', async () => {
+        let resolveLightning = (_value: unknown) => {};
+        (BackendUtils.getLightningBalance as jest.Mock).mockReturnValue(
+            new Promise((resolve) => {
+                resolveLightning = resolve;
+            })
+        );
+        (BackendUtils.getBlockchainBalance as jest.Mock).mockRejectedValue(
+            new Error('Request timeout')
+        );
+        const store = new BalanceStore();
+
+        const lightning = store.getLightningBalance(true);
+        await store.getBlockchainBalance(true, false);
+
+        expect(store.loadingBlockchainBalance).toBe(false);
+        expect(store.loadingLightningBalance).toBe(true);
+
+        resolveLightning({ balance: '50000' });
+        await lightning;
+
+        expect(store.loadingLightningBalance).toBe(false);
+    });
+
     it('clears error on reset', async () => {
         (BackendUtils.getLightningBalance as jest.Mock).mockRejectedValue(
             new Error('Request timeout')
