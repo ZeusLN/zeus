@@ -83,10 +83,12 @@ describe('BalanceStore balance fetch', () => {
             new Error('Request timeout')
         );
         const store = new BalanceStore();
+        store.reset();
 
         await store.getCombinedBalance();
 
         expect(store.error).toBe(true);
+        expect(store.lightningBalance).toEqual(0);
         expect(store.totalBlockchainBalance).toEqual(100000);
     });
 
