@@ -591,7 +591,18 @@ export default class LnurlPay extends React.Component<
                                         'views.LnurlPay.LnurlPay.amount'
                                     )}
                                 </Text>
-                                {!fixed && (
+                                {fixed ? (
+                                    <Text
+                                        style={{
+                                            ...styles.text,
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {` (${localeString(
+                                            'views.ClinkPay.fixedAmount'
+                                        )})`}
+                                    </Text>
+                                ) : (
                                     <>
                                         <Text
                                             style={{
