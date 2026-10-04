@@ -144,6 +144,7 @@ export default class EcashMintPicker extends React.Component<
                             style={[
                                 styles.mintIconWrapper,
                                 {
+                                    // eslint-disable-next-line zeus/no-negative-layout-offset -- intentional: overlapping mint avatars
                                     marginLeft: index > 0 ? -8 : 0,
                                     zIndex: 3 - index
                                 }

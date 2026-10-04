@@ -413,6 +413,7 @@ const styles = StyleSheet.create({
     },
     field: {
         paddingTop: 10,
+        // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
         marginLeft: Platform.OS === 'ios' ? 0 : -8
     },
     button: {

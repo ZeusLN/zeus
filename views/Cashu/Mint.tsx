@@ -714,6 +714,7 @@ export default class Mint extends React.Component<MintProps, MintState> {
                                     style={{
                                         fontFamily: 'PPNeueMontreal-Medium',
                                         color: themeColor('background'),
+                                        // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
                                         marginTop: -8,
                                         marginLeft: 14,
                                         height: 40
