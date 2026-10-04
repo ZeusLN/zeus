@@ -281,10 +281,20 @@ describe('LnurlPay fixed and variable requests', () => {
 });
 
 describe('LnurlPay without lnurlParams', () => {
-    it('shows the invalid params alert and keeps the units', () => {
-        const alertSpy = jest
+    let alertSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+        alertSpy = jest
             .spyOn(Alert, 'alert')
             .mockImplementation(() => undefined);
+    });
+
+    // Restored here, not in the test, so a failing assertion can't leak it
+    afterEach(() => {
+        alertSpy.mockRestore();
+    });
+
+    it('shows the invalid params alert and keeps the units', () => {
         const view = makeView({});
 
         expect(alertSpy).toHaveBeenCalledWith(
@@ -299,6 +309,5 @@ describe('LnurlPay without lnurlParams', () => {
             domain: ''
         });
         expect(view.props.UnitsStore.resetUnits).not.toHaveBeenCalled();
-        alertSpy.mockRestore();
     });
 });
