@@ -6,17 +6,41 @@ import { AdditionalChannel } from '../models/OpenChannelRequest';
 const isValidChannelAmount = (satAmount: string | number): boolean =>
     Number(satAmount) > 0;
 
+// the amount fund max opens the channel with: the selected UTXOs, otherwise
+// the on-chain balance, including unconfirmed funds when the open may spend
+// them (min confs 0)
+const getFundMaxAmount = ({
+    utxoBalance,
+    confirmedBlockchainBalance,
+    unconfirmedBlockchainBalance,
+    spendUnconfirmed
+}: {
+    utxoBalance: number;
+    confirmedBlockchainBalance: number | string;
+    unconfirmedBlockchainBalance: number | string;
+    spendUnconfirmed: boolean;
+}): number =>
+    utxoBalance > 0
+        ? utxoBalance
+        : Number(confirmedBlockchainBalance) +
+          (spendUnconfirmed ? Number(unconfirmedBlockchainBalance) : 0);
+
 // with fund max on, the backend funds the channel from the available balance,
-// and connect-peer-only mode opens no channel
+// so that balance is checked instead of the entered amount.
+// Connect-peer-only mode opens no channel
 const isInvalidMainChannelAmount = ({
     satAmount,
     fundMax,
+    fundMaxAmount,
     connectPeerOnly
 }: {
     satAmount: string | number;
     fundMax: boolean;
+    fundMaxAmount: number;
     connectPeerOnly: boolean;
-}): boolean => !connectPeerOnly && !fundMax && !isValidChannelAmount(satAmount);
+}): boolean =>
+    !connectPeerOnly &&
+    !isValidChannelAmount(fundMax ? fundMaxAmount : satAmount);
 
 const isValidAdditionalChannelPubkey = (channel: AdditionalChannel): boolean =>
     ValidationUtils.validateNodePubkey(channel.node_pubkey_string);
@@ -40,6 +64,7 @@ const hasInvalidAdditionalChannels = (
 
 const OpenChannelUtils = {
     isValidChannelAmount,
+    getFundMaxAmount,
     isInvalidMainChannelAmount,
     isValidAdditionalChannelPubkey,
     isValidAdditionalChannelHost,

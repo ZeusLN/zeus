@@ -285,6 +285,7 @@ export default class OpenChannel extends React.Component<
             fundMax,
             satAmount,
             min_confs,
+            spend_unconfirmed,
             host,
             sat_per_vbyte,
             close_address,
@@ -311,7 +312,8 @@ export default class OpenChannel extends React.Component<
             channelSuccess,
             funded_psbt
         } = ChannelsStore;
-        const { confirmedBlockchainBalance } = BalanceStore;
+        const { confirmedBlockchainBalance, unconfirmedBlockchainBalance } =
+            BalanceStore;
 
         const loading = connectingToPeer || openingChannel;
 
@@ -321,9 +323,20 @@ export default class OpenChannel extends React.Component<
         const isInvalidFeeRate =
             supportsChannelOpenFeeRate &&
             (sat_per_vbyte === '0' || !sat_per_vbyte);
+        const fundMaxAmount = OpenChannelUtils.getFundMaxAmount({
+            utxoBalance,
+            confirmedBlockchainBalance,
+            unconfirmedBlockchainBalance,
+            // LDK Node does not pass min confs to the node, so it won't
+            // spend unconfirmed funds
+            spendUnconfirmed:
+                spend_unconfirmed &&
+                (BackendUtils.isLNDBased() || implementation === 'cln-rest')
+        });
         const isInvalidAmount = OpenChannelUtils.isInvalidMainChannelAmount({
             satAmount,
             fundMax,
+            fundMaxAmount,
             connectPeerOnly
         });
         const isInvalidAdditionalChannel =
@@ -345,11 +358,7 @@ export default class OpenChannel extends React.Component<
         // When fundMax is on, AmountInput only reports satAmount once when it is
         // turned on, not for later balance or UTXO changes. Use the same value the
         // locked AmountInput displays instead.
-        const displaySatAmount = fundMax
-            ? utxoBalance > 0
-                ? utxoBalance
-                : Number(confirmedBlockchainBalance)
-            : satAmount;
+        const displaySatAmount = fundMax ? fundMaxAmount : satAmount;
 
         const allChannels = [
             { node_pubkey_string, satAmount: displaySatAmount },
@@ -809,9 +818,7 @@ export default class OpenChannel extends React.Component<
                                     <AmountInput
                                         amount={
                                             fundMax
-                                                ? utxoBalance > 0
-                                                    ? utxoBalance.toString()
-                                                    : confirmedBlockchainBalance.toString()
+                                                ? fundMaxAmount.toString()
                                                 : local_funding_amount
                                         }
                                         title={localeString(
