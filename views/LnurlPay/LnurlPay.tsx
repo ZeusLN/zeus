@@ -66,13 +66,29 @@ interface LnurlPayState {
     matchedContact: Contact | null;
     comment: string;
     loading: boolean;
+    // The route params are not a usable pay request. The constructor has
+    // shown the invalidParams alert, and render() shows only the header.
+    invalidParams?: boolean;
 }
+
+// The fields this screen reads. The Lightning address paths only check for
+// a callback before they open this screen, so a server can still send a
+// missing or broken amount range.
+const isValidPayRequest = (lnurl: any) =>
+    !!lnurl &&
+    typeof lnurl === 'object' &&
+    typeof lnurl.callback === 'string' &&
+    Number.isFinite(lnurl.minSendable) &&
+    Number.isFinite(lnurl.maxSendable) &&
+    lnurl.minSendable <= lnurl.maxSendable;
 
 // A request whose min and max are equal is paid exactly as asked, so its
 // input is locked and is always shown and read back in sats, whatever unit
 // the wallet is on.
 const isFixedAmount = (lnurl: any) =>
-    !!lnurl && lnurl.minSendable === lnurl.maxSendable;
+    !!lnurl &&
+    Number.isFinite(lnurl.minSendable) &&
+    lnurl.minSendable === lnurl.maxSendable;
 
 @inject(
     'CashuStore',
@@ -102,13 +118,19 @@ export default class LnurlPay extends React.Component<
                 lightningAddress: '',
                 matchedContact: null,
                 comment: '',
-                loading: false
+                loading: false,
+                invalidParams: true
             };
 
             Alert.alert(
                 localeString('views.LnurlPay.LnurlPay.invalidParams'),
                 err.message,
-                [{ text: localeString('general.ok'), onPress: () => void 0 }],
+                [
+                    {
+                        text: localeString('general.ok'),
+                        onPress: () => this.props.navigation.goBack()
+                    }
+                ],
                 { cancelable: false }
             );
         }
@@ -161,9 +183,19 @@ export default class LnurlPay extends React.Component<
             lightningAddress
         } = route.params ?? {};
 
+        // Check before anything reads lnurl, so the alert shows this message
+        // instead of a TypeError
+        if (!isValidPayRequest(lnurl)) {
+            throw new Error(
+                localeString('views.LnurlPay.LnurlPay.errorInvalidRequest')
+            );
+        }
+
+        const fixed = isFixedAmount(lnurl);
+
         // if requested amount is fixed,
         // convert units to sats so conversion rate doesn't make things unpayable
-        if (isFixedAmount(lnurl)) {
+        if (fixed) {
             resetUnits();
         }
 
@@ -173,7 +205,7 @@ export default class LnurlPay extends React.Component<
         let finalSatAmount: string | number;
         let fiatError: string | undefined;
 
-        if (isFixedAmount(lnurl)) {
+        if (fixed) {
             // Fixed amount: the request is paid exactly as asked, so prefill
             // the locked input with the required amount and ignore any
             // amount or satAmount handed in by the caller (Send forwards its
@@ -487,10 +519,33 @@ export default class LnurlPay extends React.Component<
             matchedContact,
             comment,
             loading,
-            fiatError
+            fiatError,
+            invalidParams
         } = this.state;
 
         const lnurl = route.params?.lnurlParams;
+
+        // The params failed the check in stateFromProps: the constructor has
+        // shown the invalidParams alert, and everything below reads lnurl.
+        // Show only the header.
+        if (invalidParams) {
+            return (
+                <Screen>
+                    <Header
+                        leftComponent="Back"
+                        centerComponent={{
+                            text: localeString('general.send'),
+                            style: {
+                                color: themeColor('text'),
+                                fontFamily: 'PPNeueMontreal-Book'
+                            }
+                        }}
+                        navigation={navigation}
+                    />
+                </Screen>
+            );
+        }
+
         const fixed = isFixedAmount(lnurl);
 
         // Extract image from LNURL metadata
