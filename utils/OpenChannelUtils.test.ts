@@ -30,6 +30,7 @@ describe('isInvalidMainChannelAmount', () => {
             OpenChannelUtils.isInvalidMainChannelAmount({
                 satAmount: '0',
                 fundMax: false,
+                fundMaxAmount: 500000,
                 connectPeerOnly: false
             })
         ).toBe(true);
@@ -40,19 +41,32 @@ describe('isInvalidMainChannelAmount', () => {
             OpenChannelUtils.isInvalidMainChannelAmount({
                 satAmount: 100000,
                 fundMax: false,
+                fundMaxAmount: 0,
                 connectPeerOnly: false
             })
         ).toBe(false);
     });
 
-    it('is valid without an amount when fund max is on', () => {
+    it('is valid without an amount when fund max is on and there is a balance', () => {
         expect(
             OpenChannelUtils.isInvalidMainChannelAmount({
                 satAmount: '',
                 fundMax: true,
+                fundMaxAmount: 500000,
                 connectPeerOnly: false
             })
         ).toBe(false);
+    });
+
+    it('is invalid when fund max is on and the balance is zero', () => {
+        expect(
+            OpenChannelUtils.isInvalidMainChannelAmount({
+                satAmount: 100000,
+                fundMax: true,
+                fundMaxAmount: 0,
+                connectPeerOnly: false
+            })
+        ).toBe(true);
     });
 
     it('is valid without an amount in connect-peer-only mode', () => {
@@ -60,9 +74,67 @@ describe('isInvalidMainChannelAmount', () => {
             OpenChannelUtils.isInvalidMainChannelAmount({
                 satAmount: '',
                 fundMax: false,
+                fundMaxAmount: 0,
                 connectPeerOnly: true
             })
         ).toBe(false);
+    });
+
+    it('is valid without a balance in connect-peer-only mode with fund max on', () => {
+        expect(
+            OpenChannelUtils.isInvalidMainChannelAmount({
+                satAmount: '',
+                fundMax: true,
+                fundMaxAmount: 0,
+                connectPeerOnly: true
+            })
+        ).toBe(false);
+    });
+});
+
+describe('getFundMaxAmount', () => {
+    it('uses the selected UTXOs', () => {
+        expect(
+            OpenChannelUtils.getFundMaxAmount({
+                utxoBalance: 30000,
+                confirmedBlockchainBalance: 500000,
+                unconfirmedBlockchainBalance: 20000,
+                spendUnconfirmed: true
+            })
+        ).toBe(30000);
+    });
+
+    it('uses the confirmed balance without selected UTXOs', () => {
+        expect(
+            OpenChannelUtils.getFundMaxAmount({
+                utxoBalance: 0,
+                confirmedBlockchainBalance: 500000,
+                unconfirmedBlockchainBalance: 20000,
+                spendUnconfirmed: false
+            })
+        ).toBe(500000);
+    });
+
+    it('adds the unconfirmed balance when unconfirmed funds may be spent', () => {
+        expect(
+            OpenChannelUtils.getFundMaxAmount({
+                utxoBalance: 0,
+                confirmedBlockchainBalance: '500000',
+                unconfirmedBlockchainBalance: '20000',
+                spendUnconfirmed: true
+            })
+        ).toBe(520000);
+    });
+
+    it('uses only unconfirmed funds when they may be spent', () => {
+        expect(
+            OpenChannelUtils.getFundMaxAmount({
+                utxoBalance: 0,
+                confirmedBlockchainBalance: 0,
+                unconfirmedBlockchainBalance: 20000,
+                spendUnconfirmed: true
+            })
+        ).toBe(20000);
     });
 });
 
@@ -162,6 +234,15 @@ describe('hasInvalidAdditionalChannels', () => {
                     additionalChannel(),
                     additionalChannel({ node_pubkey_string: '' })
                 ],
+                false
+            )
+        ).toBe(true);
+    });
+
+    it('is invalid when an additional channel has only an invalid host', () => {
+        expect(
+            OpenChannelUtils.hasInvalidAdditionalChannels(
+                [additionalChannel({ host: 'host:0' })],
                 false
             )
         ).toBe(true);

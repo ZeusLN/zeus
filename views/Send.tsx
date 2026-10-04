@@ -1053,18 +1053,13 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                     const newValue: boolean =
                                                         !fundMax;
                                                     if (newValue) {
-                                                        // Save current values if they exist
-                                                        if (amount) {
-                                                            this.previousAmount =
-                                                                amount;
-                                                        }
-                                                        if (
-                                                            satAmount &&
-                                                            satAmount !== '0'
-                                                        ) {
-                                                            this.previousSatAmount =
-                                                                satAmount;
-                                                        }
+                                                        // keep the entered amount, also an
+                                                        // empty one, to put it back when
+                                                        // send max is turned off
+                                                        this.previousAmount =
+                                                            amount;
+                                                        this.previousSatAmount =
+                                                            satAmount;
                                                         this.setState({
                                                             fundMax: newValue,
                                                             amount:
