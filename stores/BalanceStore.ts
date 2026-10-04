@@ -127,10 +127,15 @@ export default class BalanceStore {
 
     @action
     private balanceError = (type: 'lightning' | 'blockchain') => {
-        if (type === 'lightning') this.lightningError = true;
-        else this.blockchainError = true;
-        this.loadingBlockchainBalance = false;
-        this.loadingLightningBalance = false;
+        // only the failed fetch is done: the other one may still be loading
+        // (e.g. both fetched in parallel in Accounts)
+        if (type === 'lightning') {
+            this.lightningError = true;
+            this.loadingLightningBalance = false;
+        } else {
+            this.blockchainError = true;
+            this.loadingBlockchainBalance = false;
+        }
     };
 
     @action
