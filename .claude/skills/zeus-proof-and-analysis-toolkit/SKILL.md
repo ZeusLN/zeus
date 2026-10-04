@@ -50,7 +50,7 @@ This skill owns the **methods**; siblings own the facts those methods operate on
 **Steps**
 
 1. **Enumerate the trigger events.** In Zeus the recurring set is:
-   - *Wallet screen focus* — `handleFocus` in `views/Wallet/Wallet.tsx` runs `getSettingsAndNavigate()` → `fetchData()` on Wallet-screen focus when `initialLoad`, `posWasEnabled`, or `triggerSettingsRefresh` is set (guarded by an in-flight `_navigating` flag).
+   - *Wallet screen focus* — `handleFocus` in `views/Wallet/Wallet.tsx` runs `getSettingsAndNavigate()` → `fetchData()` on Wallet-screen focus when `initialLoad` or `triggerSettingsRefresh` is set (guarded by the in-flight `WalletRefreshRunner`, which runs at most one follow-up refresh if `triggerSettingsRefresh` is re-armed while a refresh runs).
    - *App foreground* — `handleAppStateChange('active')` in the same file, again calling `getSettingsAndNavigate()`.
    - *Wallet creation* — `createOnboardingWallet` in `utils/WalletCreationUtils.ts` (may build the node itself, then sets `settingsStore.walletJustCreated = true` so Wallet.tsx skips re-init).
    - *Wallet deletion / switch* — `views/Settings/WalletConfiguration.tsx` (stop node, delete on-disk dirs, update `settings.nodes`).
