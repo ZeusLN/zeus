@@ -13,7 +13,8 @@ jest.mock('../stores/ChannelsStore', () => ({
     ChannelsView: { Channels: 'channels', Peers: 'peers' }
 }));
 jest.mock('../stores/SettingsStore', () => ({
-    getLspConfigForNetwork: jest.fn(() => ({}))
+    getLspConfigForNetwork: jest.fn(() => ({})),
+    isOlympusPeer: jest.fn(() => true)
 }));
 jest.mock('../utils/BackendUtils', () => ({
     supportsChannelOpenFeeRate: () => false,
