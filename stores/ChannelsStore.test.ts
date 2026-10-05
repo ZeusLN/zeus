@@ -303,6 +303,75 @@ describe('ChannelsStore.connectPeer', () => {
         expect(store.connectingToPeer).toBe(false);
     });
 
+    it('leaves the peer error state untouched for an empty host when silent', async () => {
+        store.errorMsgPeer = 'previous error';
+        store.errorPeerConnect = true;
+
+        await store.connectPeer(
+            {
+                node_pubkey_string: 'abc',
+                host: '',
+                local_funding_amount: '100000',
+                account: 'default'
+            } as any,
+            false,
+            false,
+            true
+        );
+
+        expect(BackendUtils.connectPeer).not.toHaveBeenCalled();
+        expect(BackendUtils.openChannelSync).not.toHaveBeenCalled();
+        expect(store.channelRequest).toBeFalsy();
+        expect(store.errorMsgPeer).toBe('previous error');
+        expect(store.errorPeerConnect).toBe(true);
+        expect(store.connectingToPeer).toBe(false);
+    });
+
+    it('queues the channel request for a peer that is already connected', async () => {
+        jest.mocked(BackendUtils.connectPeer).mockRejectedValue(
+            new Error('already connected to peer')
+        );
+        // keep the open pending so the queued request stays observable
+        jest.mocked(BackendUtils.openChannelSync).mockReturnValue(
+            new Promise(() => {})
+        );
+        const request = {
+            node_pubkey_string: 'abc',
+            host: 'peer.example.com:9735',
+            local_funding_amount: '100000',
+            account: 'default'
+        };
+
+        await expect(store.connectPeer(request as any)).resolves.toBe(true);
+
+        expect(store.channelRequest).toEqual(request);
+        expect(store.errorPeerConnect).toBe(false);
+        expect(store.errorMsgPeer).toBeNull();
+    });
+
+    it('reports an already connected peer when only connecting a peer', async () => {
+        jest.mocked(BackendUtils.connectPeer).mockRejectedValue(
+            new Error('already connected to peer')
+        );
+
+        await expect(
+            store.connectPeer(
+                {
+                    node_pubkey_string: 'abc',
+                    host: 'peer.example.com:9735',
+                    local_funding_amount: ''
+                } as any,
+                false,
+                true
+            )
+        ).resolves.toBe(true);
+
+        expect(store.channelRequest).toBeFalsy();
+        expect(store.errorPeerConnect).toBe(true);
+        expect(store.errorMsgPeer).toBe('Error: already connected to peer');
+        expect(BackendUtils.openChannelSync).not.toHaveBeenCalled();
+    });
+
     it('does not queue a channel request when only connecting a peer with a host', async () => {
         jest.mocked(BackendUtils.connectPeer).mockResolvedValue({} as any);
 
