@@ -19,6 +19,7 @@ jest.mock('../storage', () => ({
 }));
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import { Notifications } from 'react-native-notifications';
 import Storage from '../storage';
 import LightningAddressStore, {
     HASHES_STORAGE_STRING
@@ -420,6 +421,31 @@ describe('LightningAddressStore', () => {
             expect(store.error_msg).toBe(
                 `stores.LightningAddressStore.Cashu.quotePaymentErr: ${transportError.message}`
             );
+        });
+
+        it('does not report a redeem failure when the notification throws after /redeem succeeds', async () => {
+            (
+                Notifications.postLocalNotification as jest.Mock
+            ).mockImplementationOnce(() => {
+                throw new TypeError('post failed');
+            });
+            const store = setup({
+                checkInvoicePaid: jest.fn().mockResolvedValue({ isPaid: true })
+            });
+            mockRedeemResponse(200, { success: true });
+
+            await expect(
+                store.redeemCashu(QUOTE, MINT, 21000, false, true)
+            ).resolves.toBe(true);
+
+            expect(store.error).toBe(false);
+            expect(store.error_msg).toBe('');
+            expect(store.redeeming).toBe(false);
+            expect(console.log).toHaveBeenCalledWith(
+                'Error posting payment notification',
+                expect.any(TypeError)
+            );
+            expect(store.status).toHaveBeenCalledWith(true);
         });
 
         it('clears the error state on success', async () => {
