@@ -120,7 +120,8 @@ describe('LND.lookupPayment', () => {
     // contains both base64url-swapped characters (_ and -) when encoded
     const HASH_HEX =
         '9f1459d8a2ac9353e6e229e4d85b11d1830b6a25f7f3f1786a107ecfd86f5d34';
-    const HASH_B64URL = 'nxRZ2KKsk1Pm4ink2FsR0YMLaiX38_F4ahB-z9hvXTQ';
+    // padded: lnd's REST gateway rejects an unpadded 32-byte hash
+    const HASH_B64URL = 'nxRZ2KKsk1Pm4ink2FsR0YMLaiX38_F4ahB-z9hvXTQ=';
 
     const makeLnd = () => {
         const lnd: any = new LND();
@@ -254,9 +255,9 @@ describe('LND.lookupPayment', () => {
                 })
             ).resolves.toBeNull();
             expect(getRequest.mock.calls.map(([route]) => route)).toEqual([
-                `/v2/router/track/${Base64Utils.base64ToBase64Url(
-                    Base64Utils.hexToBase64(HASH)
-                )}`,
+                `/v2/router/track/${Base64Utils.hexToBase64(HASH)
+                    .replace(/\+/g, '-')
+                    .replace(/\//g, '_')}`,
                 '/v1/payments?include_incomplete=true&max_payments=50&reversed=false&creation_date_start=1700000000',
                 '/v1/payments?include_incomplete=true&max_payments=50&reversed=true'
             ]);

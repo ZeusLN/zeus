@@ -627,9 +627,11 @@ export default class LND {
         creation_date_start?: number;
     }) =>
         this.getRequest(
-            `/v2/router/track/${Base64Utils.base64ToBase64Url(
-                Base64Utils.hexToBase64(data.payment_hash)
-            )}`,
+            // base64url with its padding kept: lnd's REST gateway rejects
+            // an unpadded 32-byte hash with "illegal base64 data"
+            `/v2/router/track/${Base64Utils.hexToBase64(data.payment_hash)
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')}`,
             { no_inflight_updates: true },
             TRACK_PAYMENT_TIMEOUT_MS
         ).then(
