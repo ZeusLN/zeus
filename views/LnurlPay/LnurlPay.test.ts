@@ -338,11 +338,27 @@ describe('LnurlPay with invalid lnurlParams', () => {
         ['a request without a callback', { callback: undefined }],
         ['a string minSendable', { minSendable: '1000' }],
         ['a NaN maxSendable', { maxSendable: NaN }],
-        ['an Infinity maxSendable', { maxSendable: Infinity }]
+        ['an Infinity maxSendable', { maxSendable: Infinity }],
+        ['a fixed request for 0 msat', { minSendable: 0, maxSendable: 0 }],
+        ['a variable request with minSendable 0', { minSendable: 0 }],
+        ['a negative minSendable', { minSendable: -1000 }],
+        ['a minSendable of 0.5 msat', { minSendable: 0.5 }]
     ])('rejects %s', (_name, change) => {
         expectRejected(
             makeView({ lnurlParams: { ...lnurlParams(1, 100000), ...change } })
         );
+    });
+
+    it.each([
+        ['a fixed request for 1 msat', { minSendable: 1, maxSendable: 1 }],
+        ['a variable request with minSendable 1', { minSendable: 1 }]
+    ])('accepts %s', (_name, change) => {
+        const view = makeView({
+            lnurlParams: { ...lnurlParams(1, 100000), ...change }
+        });
+
+        expect(alertSpy).not.toHaveBeenCalled();
+        expect(findByType(view.render(), AmountInput)).toBeDefined();
     });
 
     it('renders only the header, with a way back', () => {
