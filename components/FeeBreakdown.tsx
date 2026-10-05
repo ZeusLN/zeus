@@ -30,7 +30,6 @@ interface FeeBreakdownProps {
     total_satoshis_sent?: string;
     commit_weight?: number | string;
     commit_fee?: number | string;
-    csv_delay?: number;
     label?: string;
 }
 
@@ -54,7 +53,6 @@ export default class FeeBreakdown extends React.Component<
             total_satoshis_sent,
             commit_weight,
             commit_fee,
-            csv_delay,
             label
         } = this.props;
         const { loading, chanInfo } = ChannelsStore!;
@@ -426,23 +424,6 @@ export default class FeeBreakdown extends React.Component<
                                     'views.Channel.commitWeight'
                                 )}
                                 value={commit_weight}
-                            />
-                        )}
-
-                        {csv_delay && (
-                            <KeyValue
-                                keyValue={localeString(
-                                    'views.Channel.csvDelay'
-                                )}
-                                value={`${csv_delay} ${localeString(
-                                    'general.blocks'
-                                )}`}
-                                infoModalText={[
-                                    localeString(
-                                        'views.Channel.csvDelay.info1'
-                                    ),
-                                    localeString('views.Channel.csvDelay.info2')
-                                ]}
                             />
                         )}
 
