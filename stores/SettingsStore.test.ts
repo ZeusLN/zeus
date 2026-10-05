@@ -24,7 +24,12 @@ jest.mock('react-native-encrypted-storage', () => ({
 
 jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
-    default: { clearCachedCalls: jest.fn() }
+    default: {
+        clearCachedCalls: jest.fn(),
+        initLNC: jest.fn(),
+        connect: jest.fn(),
+        isConnected: jest.fn()
+    }
 }));
 jest.mock('../utils/BiometricUtils', () => ({
     getSupportedBiometryType: jest.fn().mockResolvedValue(undefined)
@@ -178,6 +183,104 @@ describe('SettingsStore DEFAULT_SETTINGS', () => {
 
         const otherStore = new SettingsStore();
         expect(otherStore.settings.privacy.lurkerMode).toBe(false);
+    });
+});
+
+// The native LNC dial retries on its own until it connects and cannot be
+// cancelled, so connect() must not init or dial a second time when its
+// budget runs out: a second client on the same mailbox session evicts the
+// first, and neither connects until the app restarts.
+describe('SettingsStore.connect (LNC)', () => {
+    const BackendUtilsMock: any = jest.requireMock(
+        '../utils/BackendUtils'
+    ).default;
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        BackendUtilsMock.initLNC.mockReset().mockResolvedValue(undefined);
+        BackendUtilsMock.connect.mockReset().mockResolvedValue(undefined);
+        BackendUtilsMock.isConnected.mockReset().mockResolvedValue(false);
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    const settle = async (ms: number) => {
+        await jest.advanceTimersByTimeAsync(ms);
+    };
+
+    it('resolves once the session is up', async () => {
+        const store = new SettingsStore();
+        BackendUtilsMock.isConnected
+            .mockResolvedValueOnce(false)
+            .mockResolvedValueOnce(true);
+
+        const result = store.connect();
+        await settle(1000);
+
+        expect(await result).toBeUndefined();
+        expect(store.error).toBe(false);
+        expect(store.loading).toBe(false);
+    });
+
+    it('reports a timeout without dialing again', async () => {
+        const store = new SettingsStore();
+
+        const result = store.connect();
+        await settle(61000);
+
+        expect(await result).toBe('stores.SettingsStore.lncConnectError');
+        expect(store.error).toBe(true);
+        expect(store.loading).toBe(false);
+        expect(BackendUtilsMock.initLNC).toHaveBeenCalledTimes(1);
+        expect(BackendUtilsMock.connect).toHaveBeenCalledTimes(1);
+    });
+
+    it('waits the full minute before giving up', async () => {
+        const store = new SettingsStore();
+        let done = false;
+        store.connect().then(() => (done = true));
+
+        await settle(59000);
+        expect(done).toBe(false);
+        await settle(2000);
+        expect(done).toBe(true);
+    });
+
+    it('returns a dial rejection without waiting', async () => {
+        const store = new SettingsStore();
+        BackendUtilsMock.connect.mockResolvedValue('invalid mailbox');
+
+        expect(await store.connect()).toBe('invalid mailbox');
+        expect(store.errorMsg).toBe('invalid mailbox');
+        expect(BackendUtilsMock.isConnected).not.toHaveBeenCalled();
+    });
+
+    it('surfaces an initLNC failure as the error', async () => {
+        const store = new SettingsStore();
+        BackendUtilsMock.initLNC.mockRejectedValue(
+            new Error('keychain read failed')
+        );
+
+        expect(await store.connect()).toBe('keychain read failed');
+        expect(store.error).toBe(true);
+        expect(BackendUtilsMock.connect).not.toHaveBeenCalled();
+    });
+
+    it('clears a timeout error once the session comes up later', async () => {
+        const store = new SettingsStore();
+
+        const result = store.connect();
+        await settle(61000);
+        await result;
+        expect(store.error).toBe(true);
+
+        store.clearConnectError();
+
+        expect(store.error).toBe(false);
+        expect(store.errorMsg).toBe('');
+        expect(BackendUtilsMock.connect).toHaveBeenCalledTimes(1);
     });
 });
 

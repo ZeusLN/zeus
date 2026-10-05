@@ -16,11 +16,14 @@ function _toPrimitive(t, r) { if ("object" != typeof t || !t) return t; var e = 
 /** The default values for the LncConfig options */
 const DEFAULT_CONFIG = {
   namespace: 'default',
-  serverHost: 'mailbox.terminal.lightning.today:443'
+  serverHost: 'mailbox.terminal.lightning.today:443',
+  requestTimeoutMs: 60000
 };
 
 // Native event names emitted by LncModule for the persistent register callbacks.
 // Kept in sync with ios/LncMobile/LncModule.mm and android/.../LncModule.kt.
+// The names are shared by every namespace (iOS requires a static list), so the
+// payload carries the namespace that produced it.
 const EVENT_LOCAL_PRIV_CREATE = 'lnc.localPrivCreate';
 const EVENT_REMOTE_KEY_RECEIVE = 'lnc.remoteKeyReceive';
 const EVENT_AUTH_DATA = 'lnc.authData';
@@ -31,6 +34,21 @@ class LNC {
     _defineProperty(this, "lnd", void 0);
     _defineProperty(this, "_emitter", void 0);
     _defineProperty(this, "_subscriptions", []);
+    _defineProperty(this, "_requestTimeoutMs", void 0);
+    // InitLNC is fired from the constructor, which cannot await. Its outcome
+    // is parked here and rethrown from connect(), so a failed init surfaces
+    // as a connection error instead of a stream of 'unknown namespace'
+    // failures from every subsequent call.
+    _defineProperty(this, "_initPromise", void 0);
+    _defineProperty(this, "_initError", null);
+    // Set once ConnectServer has accepted a dial on this namespace. The Go
+    // side dials with grpc.WithBlock and a background context, so that
+    // goroutine keeps retrying until it connects and cannot be cancelled:
+    // Disconnect only closes an established connection, and InitLNC swaps
+    // the namespace's client without stopping it. Dialing again, or
+    // re-initializing, would put a second client on the same mailbox
+    // session and the two evict each other.
+    _defineProperty(this, "_dialing", false);
     _defineProperty(this, "onLocalPrivCreate", keyHex => {
       _log.log.debug('local private key created: ' + keyHex);
       this.credentials.localKey = keyHex;
@@ -42,9 +60,17 @@ class LNC {
     _defineProperty(this, "onAuthData", keyHex => {
       _log.log.debug('auth data received: ' + keyHex);
     });
+    _defineProperty(this, "_forNamespace", handler => ({
+      result,
+      namespace
+    }) => {
+      if (namespace !== this._namespace) return;
+      handler(result);
+    });
     // merge the passed in config with the defaults
     const config = Object.assign({}, DEFAULT_CONFIG, lncConfig);
     this._namespace = config.namespace;
+    this._requestTimeoutMs = config.requestTimeoutMs;
     if (config.credentialStore) {
       this.credentials = config.credentialStore;
     } else {
@@ -55,10 +81,26 @@ class LNC {
     }
     this.lnd = new _lncCore.LndApi(_createRpc.createRpc, this);
     this._emitter = new _reactNative.NativeEventEmitter(_reactNative.NativeModules.LncModule);
-    _reactNative.NativeModules.LncModule.initLNC(this._namespace);
+    this._initPromise = Promise.resolve(_reactNative.NativeModules.LncModule.initLNC(this._namespace)).then(() => undefined).catch(e => {
+      this._initError = e instanceof Error ? e : new Error(String((e === null || e === void 0 ? void 0 : e.message) ?? e));
+    });
   }
   async isConnected() {
     return await _reactNative.NativeModules.LncModule.isConnected(this._namespace);
+  }
+
+  /**
+   * Whether a dial started by connect() is still in progress. The native
+   * client keeps retrying on its own until it connects, so callers should
+   * wait on it rather than dial or re-initialize.
+   */
+  async isDialing() {
+    if (!this._dialing) return false;
+    if (await this.isConnected()) {
+      this._dialing = false;
+      return false;
+    }
+    return true;
   }
   async status() {
     return await _reactNative.NativeModules.LncModule.status(this._namespace);
@@ -79,22 +121,24 @@ class LNC {
    * @returns a promise that resolves when the connection is established
    */
   async connect() {
+    await this._initPromise;
+    if (this._initError) throw this._initError;
+
     // do not attempt to connect multiple times
     const connected = await this.isConnected();
-    if (connected) return;
+    if (connected) {
+      this._dialing = false;
+      return;
+    }
+    // the native client is still retrying the previous dial
+    if (this._dialing) return;
 
     // Under React Native's new architecture, RCTResponseSenderBlock /
     // com.facebook.react.bridge.Callback may only be invoked once. The Go
     // LNC bridge fires these callbacks repeatedly over the session
     // lifetime, so we route them through RCTEventEmitter instead.
     this._removeSubscriptions();
-    this._subscriptions = [this._emitter.addListener(EVENT_LOCAL_PRIV_CREATE, ({
-      result
-    }) => this.onLocalPrivCreate(result)), this._emitter.addListener(EVENT_REMOTE_KEY_RECEIVE, ({
-      result
-    }) => this.onRemoteKeyReceive(result)), this._emitter.addListener(EVENT_AUTH_DATA, ({
-      result
-    }) => this.onAuthData(result))];
+    this._subscriptions = [this._emitter.addListener(EVENT_LOCAL_PRIV_CREATE, this._forNamespace(this.onLocalPrivCreate)), this._emitter.addListener(EVENT_REMOTE_KEY_RECEIVE, this._forNamespace(this.onRemoteKeyReceive)), this._emitter.addListener(EVENT_AUTH_DATA, this._forNamespace(this.onAuthData))];
     _reactNative.NativeModules.LncModule.registerLocalPrivCreateCallback(this._namespace, EVENT_LOCAL_PRIV_CREATE);
     _reactNative.NativeModules.LncModule.registerRemoteKeyReceiveCallback(this._namespace, EVENT_REMOTE_KEY_RECEIVE);
     _reactNative.NativeModules.LncModule.registerAuthDataCallback(this._namespace, EVENT_AUTH_DATA);
@@ -107,15 +151,38 @@ class LNC {
 
     // connect to the server
     const error = await _reactNative.NativeModules.LncModule.connectServer(this._namespace, serverHost, false, pairingPhrase, localKey, remoteKey);
+    if (!error) this._dialing = true;
     return error;
   }
 
   /**
-   * Disconnects from the proxy server
+   * Disconnects from the proxy server.
+   *
+   * Awaitable: callers that immediately re-init the same namespace must
+   * know the previous connection is closed first, because InitLNC replaces
+   * the namespace's mobile client outright without closing what was there.
+   *
+   * A dial that is still in progress cannot be stopped, so it is left
+   * running with its key listeners attached: when it completes, the remote
+   * key it reports still has to reach this namespace's credential store
+   * (a pairing phrase is single use). Calling the native Disconnect here
+   * would do nothing until the dial lands, and would close it if it landed
+   * in between, leaving _dialing set with no dial behind it.
    */
-  disconnect() {
+  async disconnect() {
+    if (await this.isDialing()) return;
     this._removeSubscriptions();
-    _reactNative.NativeModules.LncModule.disconnect(this._namespace);
+    await _reactNative.NativeModules.LncModule.disconnect(this._namespace);
+  }
+
+  /**
+   * Stops listening for key events without touching the native client.
+   * Used when this instance is replaced by a fresh InitLNC on the same
+   * namespace, which then owns that namespace's events.
+   */
+  dispose() {
+    this._removeSubscriptions();
+    this._dialing = false;
   }
   _removeSubscriptions() {
     for (const sub of this._subscriptions) {
@@ -133,13 +200,29 @@ class LNC {
     return new Promise((resolve, reject) => {
       _log.log.debug(`${method} request`, request);
       const reqJSON = JSON.stringify(request || {});
+
+      // Backstop: the bridge callback is fire-once and has no error
+      // channel of its own, so a dropped invocation would leave this
+      // promise pending forever and wedge whatever awaits it. Every
+      // unary LND route is fast; a minute is generous.
+      let settled = false;
+      const timer = this._requestTimeoutMs > 0 ? setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        reject(new Error(`${method} timed out after ${this._requestTimeoutMs}ms`));
+      }, this._requestTimeoutMs) : undefined;
       _reactNative.NativeModules.LncModule.invokeRPC(this._namespace, method, reqJSON, response => {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
         try {
           const rawRes = JSON.parse(response);
           const res = (0, _lncCore.snakeKeysToCamel)(rawRes);
           _log.log.debug(`${method} response`, res);
           resolve(res);
         } catch {
+          // Not JSON: the native module has no separate error
+          // channel, so a raw Go error string arrives here.
           _log.log.debug(`${method} raw response`, response);
           reject(new Error(response));
           return;
