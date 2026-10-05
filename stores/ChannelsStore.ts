@@ -791,25 +791,16 @@ export default class ChannelsStore {
         if (!silent) this.connectingToPeer = true;
 
         if (!request.host) {
-            if (connectPeerOnly) {
-                // there is no address to dial, so surface an error
-                // instead of sending the backend a malformed request
-                if (!silent) {
-                    this.connectingToPeer = false;
-                    this.errorMsgPeer = localeString(
-                        'views.OpenChannel.hostRequired'
-                    );
-                    this.errorPeerConnect = true;
-                }
-                return;
+            // there is no address to dial, so surface an error
+            // instead of sending the backend a malformed request
+            if (!silent) {
+                this.connectingToPeer = false;
+                this.errorMsgPeer = localeString(
+                    'views.OpenChannel.hostRequired'
+                );
+                this.errorPeerConnect = true;
             }
-            // otherwise (channel-open flow), no host means the peer is
-            // assumed to be connected already; skip straight to the
-            // channel request
-            return await new Promise((resolve) => {
-                this.channelRequest = request;
-                resolve(true);
-            });
+            return;
         }
 
         // connect to additional channel peers

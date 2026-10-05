@@ -287,9 +287,7 @@ describe('ChannelsStore.connectPeer', () => {
         expect(store.connectingToPeer).toBe(false);
     });
 
-    it('still falls through to the channel open for an empty host in the channel flow', async () => {
-        jest.mocked(BackendUtils.openChannelSync).mockResolvedValue({} as any);
-
+    it('surfaces an error for an empty host instead of opening a channel in the channel flow', async () => {
         await store.connectPeer({
             node_pubkey_string: 'abc',
             host: '',
@@ -298,7 +296,11 @@ describe('ChannelsStore.connectPeer', () => {
         } as any);
 
         expect(BackendUtils.connectPeer).not.toHaveBeenCalled();
-        expect(BackendUtils.openChannelSync).toHaveBeenCalled();
+        expect(BackendUtils.openChannelSync).not.toHaveBeenCalled();
+        expect(store.channelRequest).toBeFalsy();
+        expect(store.errorPeerConnect).toBe(true);
+        expect(store.errorMsgPeer).toBe('views.OpenChannel.hostRequired');
+        expect(store.connectingToPeer).toBe(false);
     });
 
     it('does not queue a channel request when only connecting a peer with a host', async () => {
