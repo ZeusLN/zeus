@@ -63,8 +63,10 @@ interface OpenChannelProps {
     route: Route<'OpenChannel', { node_pubkey_string: string; host: string }>;
 }
 
+type ChannelDestination = 'LSP' | 'Custom';
+
 interface OpenChannelState {
-    channelDestination: string;
+    channelDestination: ChannelDestination;
     node_pubkey_string: string;
     local_funding_amount: string;
     fundMax: boolean;
@@ -752,7 +754,7 @@ export default class OpenChannel extends React.Component<
                                         value: 'Custom'
                                     }
                                 ]}
-                                onValueChange={(value: string) => {
+                                onValueChange={(value: ChannelDestination) => {
                                     if (value === 'LSP') {
                                         this.setState({
                                             channelDestination: 'LSP',
