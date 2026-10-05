@@ -20,6 +20,7 @@ import {
     useCameraDevice,
     useCodeScanner
 } from 'react-native-vision-camera';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStealthTapDetector } from './StealthTapDetector';
 
 interface QRScannerAppProps {
@@ -44,6 +45,7 @@ const QRScannerApp: React.FC<QRScannerAppProps> = ({
     const [cameraAuthorized, setCameraAuthorized] = React.useState(false);
     const [cameraActive, setCameraActive] = React.useState(true);
     const lastScannedRef = React.useRef<string | null>(null);
+    const insets = useSafeAreaInsets();
 
     const scanLineAnim = React.useRef(new Animated.Value(0)).current;
     const device = useCameraDevice('back');
@@ -292,7 +294,12 @@ const QRScannerApp: React.FC<QRScannerAppProps> = ({
             </View>
 
             {/* Bottom Bar */}
-            <View style={styles.bottomBar}>
+            <View
+                style={[
+                    styles.bottomBar,
+                    { paddingBottom: 30 + insets.bottom }
+                ]}
+            >
                 <TouchableOpacity
                     onPress={handleSecretTap}
                     activeOpacity={1}
@@ -319,7 +326,12 @@ const QRScannerApp: React.FC<QRScannerAppProps> = ({
             {/* History Modal */}
             <Modal visible={showHistory} animationType="slide" transparent>
                 <View style={styles.modalContainer}>
-                    <View style={styles.modalContent}>
+                    <View
+                        style={[
+                            styles.modalContent,
+                            { paddingBottom: insets.bottom }
+                        ]}
+                    >
                         <View style={styles.modalHeader}>
                             <TouchableOpacity
                                 onPress={handleSecretTap}
@@ -450,7 +462,7 @@ const styles = StyleSheet.create({
         justifyContent: 'space-between',
         alignItems: 'center',
         paddingHorizontal: 20,
-        paddingVertical: 30,
+        paddingTop: 30,
         backgroundColor: '#1a1a1a'
     },
     titleContainer: {

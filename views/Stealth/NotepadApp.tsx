@@ -10,6 +10,7 @@ import {
     StatusBar,
     Alert
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useStealthTapDetector } from './StealthTapDetector';
 
@@ -31,6 +32,7 @@ const NotepadApp: React.FC<NotepadAppProps> = ({
     onUnlock,
     requiredTaps = 5
 }) => {
+    const insets = useSafeAreaInsets();
     const [notes, setNotes] = React.useState<Note[]>([]);
     const [showEditor, setShowEditor] = React.useState(false);
     const [editingNote, setEditingNote] = React.useState<Note | null>(null);
@@ -196,14 +198,22 @@ const NotepadApp: React.FC<NotepadAppProps> = ({
                     data={notes}
                     renderItem={renderNote}
                     keyExtractor={(item) => item.id}
-                    contentContainerStyle={styles.notesList}
+                    contentContainerStyle={[
+                        styles.notesList,
+                        { paddingBottom: 10 + insets.bottom }
+                    ]}
                     numColumns={2}
                 />
             )}
 
             {/* Editor Modal */}
             <Modal visible={showEditor} animationType="slide">
-                <View style={styles.editorContainer}>
+                <View
+                    style={[
+                        styles.editorContainer,
+                        { paddingBottom: insets.bottom }
+                    ]}
+                >
                     <View style={styles.editorHeader}>
                         <TouchableOpacity onPress={() => setShowEditor(false)}>
                             <Text style={styles.cancelButton}>Cancel</Text>
