@@ -314,7 +314,7 @@
     "views.LnurlPay.LnurlPay.comment": "Komentář",
     "views.LnurlPay.LnurlPay.confirm": "Potvrdit",
     "views.LnurlPay.LnurlPay.invalidParams": "Neplatné parametry lnurl!",
-    "views.LnurlPay.LnurlPay.errorInvalidRequest": "This Lightning service sent an invalid payment request.",
+    "views.LnurlPay.LnurlPay.errorInvalidRequest": "Tato Lightningová služba vám odeslala neplatný platební požadavek.",
     "views.LnurlPay.LnurlPay.invalidInvoice": "Máme neplatnou fakturu!",
     "views.LnurlPay.LnurlPay.invoiceBindingFailed": "Na této faktuře se neshoduje částka nebo příjemce, které jste schválili. Platba byla zrušena.",
     "views.LnurlPay.LnurlPay.unsafeCallback": "Tato Lightningová služba zažádala peněženku, aby kontaktovala nebezpečnou adresu. Platba byla zrušena, aby bylo ochráněno vaše soukromí.",
