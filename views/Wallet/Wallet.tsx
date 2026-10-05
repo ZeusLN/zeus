@@ -1226,7 +1226,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 ChannelsStore
             });
             if (!fetched) {
-                setConnectingStatus(false);
+                if (connecting) setConnectingStatus(false);
                 return;
             }
         } else if (implementation === 'nostr-wallet-connect') {
@@ -1242,7 +1242,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 await BalanceStore.getLightningBalance(true);
             } catch (connectionError) {
                 console.log('NWC connection failed:', connectionError);
-                setConnectingStatus(false);
+                if (connecting) setConnectingStatus(false);
                 return;
             }
         } else if (implementation === 'ldk-node') {
