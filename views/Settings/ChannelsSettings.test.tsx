@@ -91,6 +91,47 @@ describe('ChannelsSettings min confs default', () => {
     });
 });
 
+describe('ChannelsSettings first render', () => {
+    it.each([
+        [0, '0'],
+        [3, '3'],
+        [undefined, '1']
+    ])(
+        'a saved min confs of %s shows %s before settings reload',
+        (saved, shown) => {
+            const view = makeView(true, { channels: { min_confs: saved } });
+
+            expect(findMinConfsInput(view).props.value).toBe(shown);
+        }
+    );
+
+    it('shows the saved toggles before settings reload', () => {
+        const view = makeView(true, {
+            channels: {
+                privateChannel: false,
+                scidAlias: false,
+                simpleTaprootChannel: true
+            }
+        });
+
+        expect(view.state).toEqual({
+            min_confs: 1,
+            privateChannel: false,
+            scidAlias: false,
+            simpleTaprootChannel: true
+        });
+    });
+
+    it('uses the defaults when no channel settings are saved', () => {
+        expect(makeView(true).state).toEqual({
+            min_confs: 1,
+            privateChannel: true,
+            scidAlias: true,
+            simpleTaprootChannel: false
+        });
+    });
+});
+
 describe('ChannelsSettings min confs input', () => {
     it('saves a typed 0', async () => {
         const view = makeView(true, { channels: { min_confs: 1 } });

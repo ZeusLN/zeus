@@ -28,39 +28,47 @@ interface ChannelsSettingsState {
     simpleTaprootChannel: boolean;
 }
 
+const stateFromSettings = (settings: any): ChannelsSettingsState => {
+    const channels = settings?.channels;
+    if (!channels) {
+        return {
+            min_confs: 1,
+            privateChannel: true,
+            scidAlias: true,
+            simpleTaprootChannel: false
+        };
+    }
+    return {
+        min_confs: channels.min_confs ?? 1,
+        privateChannel:
+            channels.privateChannel !== null ? channels.privateChannel : true,
+        scidAlias: channels.scidAlias !== null ? channels.scidAlias : true,
+        simpleTaprootChannel:
+            channels.simpleTaprootChannel !== null
+                ? channels.simpleTaprootChannel
+                : false
+    };
+};
+
 @inject('SettingsStore')
 @observer
 export default class ChannelsSettings extends React.Component<
     ChannelsSettingsProps,
     ChannelsSettingsState
 > {
-    state = {
-        min_confs: 1,
-        privateChannel: true,
-        scidAlias: true,
-        simpleTaprootChannel: false
-    };
+    constructor(props: ChannelsSettingsProps) {
+        super(props);
+        // settings are loaded before this view opens, so the first render
+        // already shows the saved values (a saved 0 does not flash 1)
+        this.state = stateFromSettings(props.SettingsStore.settings);
+    }
 
     async componentDidMount() {
         const { SettingsStore } = this.props;
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
 
-        this.setState({
-            min_confs: settings?.channels?.min_confs ?? 1,
-            privateChannel:
-                settings?.channels?.privateChannel !== null
-                    ? settings.channels.privateChannel
-                    : true,
-            scidAlias:
-                settings?.channels?.scidAlias !== null
-                    ? settings.channels.scidAlias
-                    : true,
-            simpleTaprootChannel:
-                settings?.channels?.simpleTaprootChannel !== null
-                    ? settings.channels.simpleTaprootChannel
-                    : false
-        });
+        this.setState(stateFromSettings(settings));
     }
 
     renderSeparator = () => (
