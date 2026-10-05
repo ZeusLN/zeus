@@ -895,7 +895,7 @@ export default class LND {
 
                 const acceptData = {
                     accept: !resp.wants_zero_conf || isZeroConfAllowed,
-                    zero_conf: isZeroConfAllowed,
+                    zero_conf: isZeroConfAllowed && resp.wants_zero_conf,
                     pending_chan_id
                 };
                 ws.send(JSON.stringify(acceptData)); // send a message
