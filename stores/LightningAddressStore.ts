@@ -659,6 +659,7 @@ export default class LightningAddressStore {
         // call the payment is still claimable at the mint, so a connectivity
         // failure there is retryable rather than terminal.
         let step: 'claim' | 'redeem' | 'receive' = 'claim';
+        let notify = false;
 
         try {
             const response = await this.cashuStore.checkInvoicePaid(
@@ -713,22 +714,7 @@ export default class LightningAddressStore {
                     );
                 }
 
-                this.redeeming = false;
-
-                if (localNotification && response.isPaid) {
-                    fireLocalNotification();
-                }
-
-                if (!skipStatus) {
-                    this.status(true).catch((e) =>
-                        console.log(
-                            'Error fetching Lightning address status',
-                            e
-                        )
-                    );
-                }
-
-                return true;
+                notify = !!(localNotification && response.isPaid);
             } else {
                 runInAction(() => {
                     this.redeeming = false;
@@ -762,6 +748,28 @@ export default class LightningAddressStore {
             });
             return true;
         }
+
+        // The payment is redeemed at this point; nothing below may report it
+        // as a redeem failure
+        runInAction(() => {
+            this.redeeming = false;
+        });
+
+        if (notify) {
+            try {
+                fireLocalNotification();
+            } catch (e) {
+                console.log('Error posting payment notification', e);
+            }
+        }
+
+        if (!skipStatus) {
+            this.status(true).catch((e) =>
+                console.log('Error fetching Lightning address status', e)
+            );
+        }
+
+        return true;
     };
 
     @action
