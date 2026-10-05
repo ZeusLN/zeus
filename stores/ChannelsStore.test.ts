@@ -393,4 +393,55 @@ describe('ChannelsStore.connectPeer', () => {
         expect(store.channelRequest).toBeFalsy();
         expect(BackendUtils.openChannelSync).not.toHaveBeenCalled();
     });
+
+    it('surfaces an error for an additional channel without a host in the channel flow', async () => {
+        await store.connectPeer({
+            node_pubkey_string: 'abc',
+            host: 'peer.example.com:9735',
+            local_funding_amount: '100000',
+            account: 'default',
+            additionalChannels: [
+                {
+                    node_pubkey_string: 'def',
+                    host: '',
+                    satAmount: 50000
+                }
+            ]
+        } as any);
+
+        expect(BackendUtils.connectPeer).not.toHaveBeenCalled();
+        expect(BackendUtils.openChannelSync).not.toHaveBeenCalled();
+        expect(store.channelRequest).toBeFalsy();
+        expect(store.errorPeerConnect).toBe(true);
+        expect(store.errorMsgPeer).toBe('views.OpenChannel.hostRequired');
+        expect(store.connectingToPeer).toBe(false);
+    });
+
+    it('ignores additional channels without a host when only connecting a peer', async () => {
+        jest.mocked(BackendUtils.connectPeer).mockResolvedValue({} as any);
+
+        await store.connectPeer(
+            {
+                node_pubkey_string: 'abc',
+                host: 'peer.example.com:9735',
+                local_funding_amount: '',
+                additionalChannels: [
+                    {
+                        node_pubkey_string: 'def',
+                        host: '',
+                        satAmount: 50000
+                    }
+                ]
+            } as any,
+            false,
+            true
+        );
+
+        expect(BackendUtils.connectPeer).toHaveBeenCalledWith({
+            addr: { pubkey: 'abc', host: 'peer.example.com:9735' },
+            perm: false
+        });
+        expect(store.peerSuccess).toBe(true);
+        expect(store.errorPeerConnect).toBe(false);
+    });
 });

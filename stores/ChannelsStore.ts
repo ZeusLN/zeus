@@ -790,7 +790,14 @@ export default class ChannelsStore {
         this.channelRequest = undefined;
         if (!silent) this.connectingToPeer = true;
 
-        if (!request.host) {
+        // additional channels only matter when opening, the connect-peer-only
+        // mode hides them from the form
+        const missingHost =
+            !request.host ||
+            (!connectPeerOnly &&
+                request.additionalChannels?.some((channel) => !channel.host));
+
+        if (missingHost) {
             // there is no address to dial, so surface an error
             // instead of sending the backend a malformed request
             if (!silent) {

@@ -45,10 +45,8 @@ const isInvalidMainChannelAmount = ({
 const isValidAdditionalChannelPubkey = (channel: AdditionalChannel): boolean =>
     ValidationUtils.validateNodePubkey(channel.node_pubkey_string);
 
-// an empty host is allowed: the store's connect attempt for it fails
-// and the error is ignored, so the open relies on an existing connection
 const isValidAdditionalChannelHost = (channel: AdditionalChannel): boolean =>
-    !channel.host || ValidationUtils.validateNodeHost(channel.host);
+    ValidationUtils.validateNodeHost(channel.host);
 
 const hasInvalidAdditionalChannels = (
     additionalChannels: Array<AdditionalChannel>,
