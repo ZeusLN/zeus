@@ -169,9 +169,4 @@ export default class ConnectivityStore {
         // offline state would outlive e.g. a switch to another wallet
         this.isOffline = false;
     };
-
-    @action
-    public reset = () => {
-        this.stop();
-    };
 }
