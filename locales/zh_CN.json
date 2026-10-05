@@ -314,7 +314,7 @@
     "views.LnurlPay.LnurlPay.comment": "评论",
     "views.LnurlPay.LnurlPay.confirm": "确认",
     "views.LnurlPay.LnurlPay.invalidParams": "不合法的LNURL参数",
-    "views.LnurlPay.LnurlPay.errorInvalidRequest": "This Lightning service sent an invalid payment request.",
+    "views.LnurlPay.LnurlPay.errorInvalidRequest": "该闪电网络服务发送了一个无效的支付请求。",
     "views.LnurlPay.LnurlPay.invalidInvoice": "收到一张无效的发票！",
     "views.LnurlPay.LnurlPay.invoiceBindingFailed": "该发票的金额或收款人与您授权的信息不符。支付已取消。",
     "views.LnurlPay.LnurlPay.unsafeCallback": "该闪电网络服务要求钱包联系一个不安全的地址。为保护您的隐私，支付已被取消。",
