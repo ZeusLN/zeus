@@ -34,6 +34,7 @@ import { localeString } from '../../utils/LocaleUtils';
 import { getPhoto } from '../../utils/PhotoUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { sleep } from '../../utils/SleepUtils';
+import { walletSelectedShareIntent } from '../../utils/ShareIntentProcessor';
 
 import Add from '../../assets/images/SVG/Add.svg';
 import DragDots from '../../assets/images/SVG/DragDots.svg';
@@ -114,7 +115,11 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
 
     navigateAfterWalletSelection = () => {
         const { navigation, route } = this.props;
-        const shareIntentData = route?.params?.shareIntentData;
+        // the selection gate is satisfied now; leaving the flag set would
+        // bounce the payload back here from the processing screen
+        const shareIntentData = walletSelectedShareIntent(
+            route?.params?.shareIntentData
+        );
 
         // Always navigate to Wallet screen after wallet selection
         // Pass shareIntentData if present so Wallet screen can handle it

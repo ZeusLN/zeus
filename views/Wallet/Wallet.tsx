@@ -80,7 +80,10 @@ import {
 } from '../../utils/GraphSyncUtils';
 import { CHANNEL_MIGRATION_ACTIVE } from '../../utils/ChannelMigrationUtils';
 
-import { processSharedQRImageFast } from '../../utils/ShareIntentProcessor';
+import {
+    processSharedQRImageFast,
+    ShareIntentPayload
+} from '../../utils/ShareIntentProcessor';
 
 import Storage from '../../storage';
 import { autoPurgeLegacyKeychain } from '../../utils/KeychainPurgeUtils';
@@ -156,7 +159,7 @@ interface WalletState {
     unlocked: boolean;
     initialLoad: boolean;
     loading: boolean;
-    pendingShareIntent?: { qrData?: string; base64Image?: string };
+    pendingShareIntent?: ShareIntentPayload;
     isChannelMigrating: boolean;
 }
 
@@ -400,7 +403,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     }
 
     async getSettingsAndNavigate(
-        explicitShareIntentData?: any,
+        explicitShareIntentData?: ShareIntentPayload,
         transientRetryCount = 0
     ) {
         if (this._replacedForWalletSelection) return;
@@ -444,9 +447,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 SettingsStore.setChannelMigrating(false);
             }
 
-            const shareIntentResult = await processSharedQRImageFast();
-            const shareIntentData =
-                explicitShareIntentData || shareIntentResult?.params;
+            // reading the intent consumes it, so leave a newer one alone
+            // while a payload is already being carried
+            const shareIntentData: ShareIntentPayload | undefined =
+                explicitShareIntentData ||
+                (await processSharedQRImageFast())?.params;
             if (Platform.OS === 'android') {
                 const locale = settings.locale || 'en';
                 bridgeJavaStrings(locale);

@@ -26,6 +26,8 @@ jest.mock('../stores/SettingsStore', () => ({
         Standalone: 'standalone'
     }
 }));
+// ShareIntentProcessor imports the store graph, which loads native modules
+jest.mock('../stores/Stores', () => ({ settingsStore: {} }));
 jest.mock('../utils/BiometricUtils', () => ({
     verifyBiometry: jest.fn()
 }));
@@ -67,6 +69,7 @@ const renderLockscreen = async (
         posStatus: 'inactive',
         triggerSettingsRefresh: false,
         isBiometryConfigured: jest.fn(() => biometry),
+        isPosEnabled: jest.fn(() => false),
         loginRequired: jest.fn(() => true),
         setLoginStatus: jest.fn(),
         setPosStatus: jest.fn(),

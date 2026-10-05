@@ -338,14 +338,24 @@ export default class App extends React.PureComponent {
             return true;
         }
 
+        const navigationState = navigation.getState();
+        const currentRoute =
+            navigationState.routes[navigationState.routes.length - 1];
+
+        // a POS terminal handed a share intent: the Lockscreen's own
+        // handler drops the payload and returns to POS
+        if (
+            currentRoute?.name === 'Lockscreen' &&
+            currentRoute.params?.shareIntentData &&
+            settingsStore.posStatus === 'active'
+        ) {
+            return false;
+        }
+
         if (settingsStore.loginRequired()) {
             BackHandler.exitApp();
             return true;
         }
-
-        const navigationState = navigation.getState();
-        const currentRoute =
-            navigationState.routes[navigationState.routes.length - 1];
 
         if (App.SCREENS_WITH_CUSTOM_BACK_HANDLER.includes(currentRoute?.name)) {
             return false;
