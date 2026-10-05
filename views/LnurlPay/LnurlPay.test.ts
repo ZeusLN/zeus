@@ -338,7 +338,9 @@ describe('LnurlPay with invalid lnurlParams', () => {
         ['a request without a callback', { callback: undefined }],
         ['a string minSendable', { minSendable: '1000' }],
         ['a NaN maxSendable', { maxSendable: NaN }],
-        ['an Infinity maxSendable', { maxSendable: Infinity }]
+        ['an Infinity maxSendable', { maxSendable: Infinity }],
+        ['a fixed request for 0 msat', { minSendable: 0, maxSendable: 0 }],
+        ['a variable request with minSendable 0', { minSendable: 0 }]
     ])('rejects %s', (_name, change) => {
         expectRejected(
             makeView({ lnurlParams: { ...lnurlParams(1, 100000), ...change } })

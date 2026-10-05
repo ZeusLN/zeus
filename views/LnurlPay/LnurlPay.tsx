@@ -80,6 +80,8 @@ const isValidPayRequest = (lnurl: any) =>
     typeof lnurl.callback === 'string' &&
     Number.isFinite(lnurl.minSendable) &&
     Number.isFinite(lnurl.maxSendable) &&
+    // LUD-06: minSendable can not be less than 1 or more than maxSendable
+    lnurl.minSendable >= 1 &&
     lnurl.minSendable <= lnurl.maxSendable;
 
 // A request whose min and max are equal is paid exactly as asked, so its
