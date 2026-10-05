@@ -770,15 +770,12 @@ describe('LightningAddressStore flows', () => {
             expect(callsTo('/api/lnurl/nuts/redeem')).toHaveLength(0);
             expect(store.error).toBe(true);
             expect(store.error_msg).toBe(
-                'stores.LightningAddressStore.Cashu.quotePaymentErr'
+                'stores.LightningAddressStore.Cashu.quotePaymentErr: mint unreachable'
             );
             expect(store.redeeming).toBe(false);
         });
 
-        // Current behavior: the server's reason is set, then overwritten by
-        // the outer catch with the generic quote check message. #4842
-        // changes this to a redeem-specific message plus the reason.
-        it('replaces a ZEUS Pay redeem error with the generic quote check message', async () => {
+        it('reports a ZEUS Pay redeem error with the server reason', async () => {
             const { store, status } = redeemStore();
             cashuStore.checkInvoicePaid.mockResolvedValue({ isPaid: true });
             reply('/api/lnurl/nuts/redeem', {
@@ -792,7 +789,7 @@ describe('LightningAddressStore flows', () => {
 
             expect(store.error).toBe(true);
             expect(store.error_msg).toBe(
-                'stores.LightningAddressStore.Cashu.quotePaymentErr'
+                'stores.LightningAddressStore.Cashu.redeemErr: already redeemed'
             );
             expect(store.redeeming).toBe(false);
             expect(cashuStore.receiveTokenCDK).not.toHaveBeenCalled();
@@ -800,7 +797,7 @@ describe('LightningAddressStore flows', () => {
             expect(status).not.toHaveBeenCalled();
         });
 
-        it('reports a failed token receipt with the generic quote check message', async () => {
+        it('reports a failed token receipt with its cause', async () => {
             const { store, status } = redeemStore();
             cashuStore.checkInvoicePaid.mockResolvedValue({ isPaid: true });
             cashuStore.receiveTokenCDK.mockRejectedValue(
@@ -812,7 +809,7 @@ describe('LightningAddressStore flows', () => {
 
             expect(store.error).toBe(true);
             expect(store.error_msg).toBe(
-                'stores.LightningAddressStore.Cashu.quotePaymentErr'
+                'stores.LightningAddressStore.Cashu.quotePaymentErr: token spent'
             );
             expect(postLocalNotification).not.toHaveBeenCalled();
             expect(status).not.toHaveBeenCalled();
