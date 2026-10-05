@@ -16,8 +16,24 @@ jest.mock('@react-native-community/netinfo', () => ({
 const emit = (state: any) =>
     mockListeners.forEach((listener) => listener(state));
 
+// Connected without internet: the store falls back to its own reachability
+// probes (global fetch)
+const UNREACHABLE = { isConnected: true, isInternetReachable: false };
+
 const flushPromises = () =>
     new Promise<void>((resolve) => setImmediate(resolve));
+
+// Makes every probe wait until settle() is called
+const mockPendingProbes = () => {
+    let settle!: (reachable: boolean) => void;
+    const response = new Promise((resolve, reject) => {
+        settle = (reachable) =>
+            reachable ? resolve({}) : reject(new Error('offline'));
+    });
+    const fetchMock = jest.fn(() => response);
+    global.fetch = fetchMock as any;
+    return { fetchMock, settle };
+};
 
 describe('ConnectivityStore', () => {
     const originalFetch = global.fetch;
@@ -44,28 +60,28 @@ describe('ConnectivityStore', () => {
         expect(store.isOffline).toBe(false);
     });
 
-    it('ignores network events after monitoring stops', () => {
+    it('does not fire onReconnect for a probe that succeeds after monitoring stops', async () => {
+        const { settle } = mockPendingProbes();
+        const onReconnect = jest.fn();
+        store.onReconnect(onReconnect);
         store.start();
-        store.stop();
-
         emit({ isConnected: false });
+        emit(UNREACHABLE);
 
-        expect(store.isOffline).toBe(false);
+        store.stop();
+        settle(true);
+        await flushPromises();
+
+        expect(onReconnect).not.toHaveBeenCalled();
     });
 
     it('ignores a probe result that arrives after monitoring stops', async () => {
-        let failProbes!: () => void;
-        const pendingProbes = new Promise((_resolve, reject) => {
-            failProbes = () => reject(new Error('offline'));
-        });
-        global.fetch = jest.fn(() => pendingProbes) as any;
-
+        const { settle } = mockPendingProbes();
         store.start();
-        // Connected without internet: the store falls back to its own
-        // reachability probes, which wait on the pending fetch above
-        emit({ isConnected: true, isInternetReachable: false });
+        emit(UNREACHABLE);
+
         store.stop();
-        failProbes();
+        settle(false);
         await flushPromises();
 
         expect(store.isOffline).toBe(false);
@@ -87,5 +103,32 @@ describe('ConnectivityStore', () => {
         await flushPromises();
 
         expect(store.isOffline).toBe(false);
+    });
+
+    it('ignores a probe result from before a restart', async () => {
+        const { settle } = mockPendingProbes();
+        store.start();
+        emit(UNREACHABLE);
+
+        store.stop();
+        store.start();
+        emit({ isConnected: true, isInternetReachable: true });
+        settle(false);
+        await flushPromises();
+
+        expect(store.isOffline).toBe(false);
+    });
+
+    it('probes again after a restart while the old probe is pending', () => {
+        const { fetchMock } = mockPendingProbes();
+        store.start();
+        emit(UNREACHABLE);
+        const probesBefore = fetchMock.mock.calls.length;
+
+        store.stop();
+        store.start();
+        emit(UNREACHABLE);
+
+        expect(fetchMock.mock.calls.length).toBeGreaterThan(probesBefore);
     });
 });

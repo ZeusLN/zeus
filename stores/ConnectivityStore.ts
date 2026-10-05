@@ -25,6 +25,9 @@ export default class ConnectivityStore {
     private netInfoUnsubscribe: NetInfoSubscription | null = null;
     private pollInterval: ReturnType<typeof setInterval> | null = null;
     private verifyInFlight: boolean = false;
+    // Incremented by every stop(). A check remembers the value it started
+    // with and drops its result if the value has changed since.
+    private generation: number = 0;
     private reconnectCallbacks: Array<() => void> = [];
     private settingsStore: SettingsStore;
 
@@ -83,11 +86,12 @@ export default class ConnectivityStore {
     private check = () => {
         if (this.verifyInFlight) return;
         this.verifyInFlight = true;
+        const generation = this.generation;
         this.verifyConnectivity().then((online) => {
-            this.verifyInFlight = false;
             // The probes can outlast stop(), e.g. a wallet switch while
-            // offline; their result must not revive the offline state
-            if (!this.netInfoUnsubscribe) return;
+            // offline; their result must not reach a later session
+            if (generation !== this.generation) return;
+            this.verifyInFlight = false;
             const wasOffline = this.isOffline;
             runInAction(() => {
                 this.isOffline = !online;
@@ -99,8 +103,6 @@ export default class ConnectivityStore {
     };
 
     private updateState = (state: NetInfoState) => {
-        // A poll's NetInfo.fetch() can resolve after stop() as well
-        if (!this.netInfoUnsubscribe) return;
         // isConnected === false is a reliable native signal — mark immediately
         if (state.isConnected === false) {
             runInAction(() => {
@@ -137,9 +139,15 @@ export default class ConnectivityStore {
             useNativeReachability: false
         });
 
-        this.netInfoUnsubscribe = NetInfo.addEventListener(this.updateState);
+        // NetInfo can deliver a state after stop() (a poll's fetch, the
+        // initial state of a new listener), so tie its states to this session
+        const generation = this.generation;
+        const onState = (state: NetInfoState) => {
+            if (generation === this.generation) this.updateState(state);
+        };
+        this.netInfoUnsubscribe = NetInfo.addEventListener(onState);
         this.pollInterval = setInterval(() => {
-            NetInfo.fetch().then(this.updateState);
+            NetInfo.fetch().then(onState);
         }, POLL_INTERVAL);
     };
 
@@ -153,6 +161,10 @@ export default class ConnectivityStore {
             clearInterval(this.pollInterval);
             this.pollInterval = null;
         }
+        this.generation++;
+        // A probe still in flight must not hold back the next session's
+        // first check
+        this.verifyInFlight = false;
         // Nothing updates the flag once monitoring stops, so a stale
         // offline state would outlive e.g. a switch to another wallet
         this.isOffline = false;
