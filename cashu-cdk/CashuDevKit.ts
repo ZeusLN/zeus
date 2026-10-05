@@ -36,7 +36,7 @@ const { CashuDevKitModule } = NativeModules as unknown as {
 /**
  * Map native error messages to CDK error types
  */
-function mapCDKError(error: any): CDKError {
+export function mapCDKError(error: any): CDKError {
     const message = parseCashuDevKitError(error);
     const normalizedMessage = message.toLowerCase();
 
@@ -65,7 +65,17 @@ function mapCDKError(error: any): CDKError {
     ) {
         return { type: CDKErrorType.InvalidToken, message };
     }
-    if (message.includes('network') || message.includes('connection')) {
+    // CDK reports a request that got no usable HTTP response as
+    // "Http transport error None: error sending request for url (...)",
+    // which contains neither word below and would fall through to the
+    // 'url' check. The native modules already tag those NETWORK_ERROR via
+    // the rejection code; the text match covers errors that lost the code.
+    if (
+        error?.code === 'NETWORK_ERROR' ||
+        normalizedMessage.includes('http transport error none') ||
+        normalizedMessage.includes('network') ||
+        normalizedMessage.includes('connection')
+    ) {
         return { type: CDKErrorType.Network, message };
     }
     if (message.includes('database') || message.includes('sqlite')) {
