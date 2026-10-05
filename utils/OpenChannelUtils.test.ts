@@ -5,7 +5,7 @@ const PUBKEY =
 
 const additionalChannel = (overrides = {}) => ({
     node_pubkey_string: PUBKEY,
-    host: '',
+    host: '172.18.0.7:9735',
     local_funding_amount: '100000',
     satAmount: 100000,
     ...overrides
@@ -169,12 +169,12 @@ describe('isValidAdditionalChannelPubkey', () => {
 });
 
 describe('isValidAdditionalChannelHost', () => {
-    it('accepts an empty host', () => {
+    it('rejects an empty host', () => {
         expect(
             OpenChannelUtils.isValidAdditionalChannelHost(
                 additionalChannel({ host: '' })
             )
-        ).toBe(true);
+        ).toBe(false);
     });
 
     it('accepts a valid host', () => {
@@ -211,7 +211,7 @@ describe('hasInvalidAdditionalChannels', () => {
             OpenChannelUtils.hasInvalidAdditionalChannels(
                 [
                     additionalChannel(),
-                    additionalChannel({ host: '172.18.0.7:9735' })
+                    additionalChannel({ host: 'peer.example.com:9735' })
                 ],
                 false
             )
@@ -234,6 +234,15 @@ describe('hasInvalidAdditionalChannels', () => {
                     additionalChannel(),
                     additionalChannel({ node_pubkey_string: '' })
                 ],
+                false
+            )
+        ).toBe(true);
+    });
+
+    it('is invalid when an additional channel has no host', () => {
+        expect(
+            OpenChannelUtils.hasInvalidAdditionalChannels(
+                [additionalChannel(), additionalChannel({ host: '' })],
                 false
             )
         ).toBe(true);
