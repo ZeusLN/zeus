@@ -7,7 +7,8 @@ import {
     getFormattedAmount,
     getFeePercentage,
     getSatAmount,
-    feeLimitSatsToMaxRoutingFeeMsat
+    feeLimitSatsToMaxRoutingFeeMsat,
+    getFeeLimitSatsFromPercent
 } from './AmountUtils';
 import { settingsStore, fiatStore, unitsStore } from '../stores/Stores';
 import { SATS_PER_BTC } from './UnitsUtils';
@@ -1230,6 +1231,51 @@ describe('AmountUtils', () => {
         it('floors fractional sats to a whole millisat value', () => {
             expect(feeLimitSatsToMaxRoutingFeeMsat('1.5')).toBe(1500);
             expect(feeLimitSatsToMaxRoutingFeeMsat('1.0005')).toBe(1000);
+        });
+    });
+
+    describe('getFeeLimitSatsFromPercent', () => {
+        it('computes the percent of the amount in whole sats', () => {
+            expect(getFeeLimitSatsFromPercent('5.0', '1000')).toBe('50');
+            expect(getFeeLimitSatsFromPercent('5', 1000)).toBe('50');
+            expect(getFeeLimitSatsFromPercent('0.5', '100000')).toBe('500');
+        });
+
+        it('rounds up so a small amount does not get a 0 sat limit', () => {
+            // 5% of 9 sats is 0.45 sats, which used to round to 0
+            expect(getFeeLimitSatsFromPercent('5.0', '9')).toBe('1');
+            expect(getFeeLimitSatsFromPercent('5.0', '1')).toBe('1');
+            // 5% of 30 sats is 1.5 sats
+            expect(getFeeLimitSatsFromPercent('5.0', '30')).toBe('2');
+            // 5% of 21 sats is 1.05 sats
+            expect(getFeeLimitSatsFromPercent('5.0', '21')).toBe('2');
+        });
+
+        it('accepts a comma as the decimal separator', () => {
+            expect(getFeeLimitSatsFromPercent('5,0', '1000')).toBe('50');
+            expect(getFeeLimitSatsFromPercent('0,5', '1000')).toBe('5');
+        });
+
+        it('returns 0 for a 0 percent limit', () => {
+            expect(getFeeLimitSatsFromPercent('0', '1000')).toBe('0');
+        });
+
+        it('returns 0 when there is no amount', () => {
+            expect(getFeeLimitSatsFromPercent('5.0', undefined)).toBe('0');
+            expect(getFeeLimitSatsFromPercent('5.0', '')).toBe('0');
+            expect(getFeeLimitSatsFromPercent('5.0', 0)).toBe('0');
+        });
+
+        it('returns 0 when an input is not a number', () => {
+            expect(getFeeLimitSatsFromPercent('', '1000')).toBe('0');
+            expect(getFeeLimitSatsFromPercent('abc', '1000')).toBe('0');
+            expect(getFeeLimitSatsFromPercent('5.0', 'abc')).toBe('0');
+        });
+
+        it('does not use exponent notation for large amounts', () => {
+            expect(
+                getFeeLimitSatsFromPercent('5.0', '2100000000000000000000000')
+            ).toBe('105000000000000000000000');
         });
     });
 });
