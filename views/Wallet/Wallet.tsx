@@ -1225,19 +1225,25 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 BalanceStore,
                 ChannelsStore
             });
-            if (!fetched) return;
+            if (!fetched) {
+                setConnectingStatus(false);
+                return;
+            }
         } else if (implementation === 'nostr-wallet-connect') {
             let error;
             if (connecting) {
                 error = await connectNWC();
             }
-            if (!error) {
-                try {
-                    await BalanceStore.getLightningBalance(true);
-                } catch (connectionError) {
-                    console.log('NWC connection failed:', connectionError);
-                    return;
-                }
+            if (error) {
+                setConnectingStatus(false);
+                return;
+            }
+            try {
+                await BalanceStore.getLightningBalance(true);
+            } catch (connectionError) {
+                console.log('NWC connection failed:', connectionError);
+                setConnectingStatus(false);
+                return;
             }
         } else if (implementation === 'ldk-node') {
             try {
@@ -1289,6 +1295,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         if (
             lightningAddress.enabled &&
             !NodeInfoStore.testnet &&
+            // all ZEUS Pay calls authenticate with the node pubkey; without
+            // it (connection failure) they can only fail server-side
+            NodeInfoStore.nodeInfo?.identity_pubkey &&
             BackendUtils.supportsLightningAddress()
         ) {
             if (connecting) {
