@@ -85,6 +85,9 @@ export default class ConnectivityStore {
         this.verifyInFlight = true;
         this.verifyConnectivity().then((online) => {
             this.verifyInFlight = false;
+            // The probes can outlast stop(), e.g. a wallet switch while
+            // offline; their result must not revive the offline state
+            if (!this.netInfoUnsubscribe) return;
             const wasOffline = this.isOffline;
             runInAction(() => {
                 this.isOffline = !online;
@@ -96,6 +99,8 @@ export default class ConnectivityStore {
     };
 
     private updateState = (state: NetInfoState) => {
+        // A poll's NetInfo.fetch() can resolve after stop() as well
+        if (!this.netInfoUnsubscribe) return;
         // isConnected === false is a reliable native signal — mark immediately
         if (state.isConnected === false) {
             runInAction(() => {
@@ -148,11 +153,13 @@ export default class ConnectivityStore {
             clearInterval(this.pollInterval);
             this.pollInterval = null;
         }
+        // Nothing updates the flag once monitoring stops, so a stale
+        // offline state would outlive e.g. a switch to another wallet
+        this.isOffline = false;
     };
 
     @action
     public reset = () => {
         this.stop();
-        this.isOffline = false;
     };
 }
