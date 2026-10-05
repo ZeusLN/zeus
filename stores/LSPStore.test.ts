@@ -353,6 +353,7 @@ describe('LSPStore.initFlowLSP', () => {
 describe('LSPStore remote LND sockets', () => {
     class FakeSocket {
         listeners: { [event: string]: Array<() => void> } = {};
+        close = jest.fn(() => this.emit('close'));
         addEventListener(event: string, fn: () => void) {
             (this.listeners[event] ||= []).push(fn);
         }
@@ -436,5 +437,50 @@ describe('LSPStore remote LND sockets', () => {
         sockets[0].emit('error');
         await store.subscribeCustomMessages();
         expect(BackendUtils.subscribeCustomMessages).toHaveBeenCalledTimes(2);
+    });
+
+    it('closes both sockets on reset and opens new ones on the next connect', async () => {
+        const store = makeStore('lnd');
+        await store.initChannelAcceptor();
+        await store.subscribeCustomMessages();
+        const [acceptor, subscriber] = sockets;
+
+        store.reset();
+
+        expect(acceptor.close).toHaveBeenCalledTimes(1);
+        expect(subscriber.close).toHaveBeenCalledTimes(1);
+        expect(store.channelAcceptor).toBeUndefined();
+        expect(store.customMessagesSubscriber).toBeUndefined();
+
+        await store.initChannelAcceptor();
+        await store.subscribeCustomMessages();
+        expect(store.channelAcceptor).toBe(sockets[2]);
+        expect(store.customMessagesSubscriber).toBe(sockets[3]);
+    });
+
+    it('keeps the sockets open on an errors-only reset', async () => {
+        const store = makeStore('lnd');
+        await store.initChannelAcceptor();
+        await store.subscribeCustomMessages();
+
+        store.reset(true);
+
+        expect(sockets[0].close).not.toHaveBeenCalled();
+        expect(sockets[1].close).not.toHaveBeenCalled();
+        expect(store.channelAcceptor).toBe(sockets[0]);
+        expect(store.customMessagesSubscriber).toBe(sockets[1]);
+    });
+});
+
+describe('LSPStore embedded LND listeners', () => {
+    it('removes the custom message listener on reset', async () => {
+        const store = makeStore('embedded-lnd');
+        await store.subscribeCustomMessages();
+        const listener = store.customMessagesSubscriber;
+
+        store.reset();
+
+        expect(listener.remove).toHaveBeenCalledTimes(1);
+        expect(store.customMessagesSubscriber).toBeUndefined();
     });
 });

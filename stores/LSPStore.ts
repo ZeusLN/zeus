@@ -123,14 +123,33 @@ export default class LSPStore {
         if (!errorsOnly) {
             this.info = {};
             this.resetFee();
+            // close before dropping the references: a remote LND socket
+            // left open keeps answering for the node it was opened on, and
+            // an embedded listener left attached doubles every event once
+            // the next connect adds its own
+            const { channelAcceptor, customMessagesSubscriber } = this;
             this.channelAcceptor = undefined;
             this.customMessagesSubscriber = undefined;
+            this.closeSubscription(channelAcceptor);
+            this.closeSubscription(customMessagesSubscriber);
         }
         this.error = false;
         this.error_msg = '';
         this.flow_error = false;
         this.flow_error_msg = '';
         this.showLspSettings = false;
+    };
+
+    private closeSubscription = (subscription: any) => {
+        try {
+            if (typeof subscription?.close === 'function') {
+                subscription.close();
+            } else if (typeof subscription?.remove === 'function') {
+                subscription.remove();
+            }
+        } catch (error: any) {
+            console.log('LSPStore: could not close subscription', error);
+        }
     };
 
     @action

@@ -141,13 +141,13 @@ describe('LND.initChanAcceptor', () => {
         }
     }
 
-    const request = (ws: FakeWebSocket, pubkey: string) =>
+    const request = (ws: FakeWebSocket, pubkey: string, wantsZeroConf = true) =>
         ws.emit('message', {
             data: JSON.stringify({
                 result: {
                     node_pubkey: Buffer.from(pubkey, 'hex').toString('base64'),
                     pending_chan_id: 'chan',
-                    wants_zero_conf: true
+                    wants_zero_conf: wantsZeroConf
                 }
             })
         });
@@ -219,5 +219,57 @@ describe('LND.initChanAcceptor', () => {
             accept: true,
             zero_conf: true
         });
+    });
+
+    it('does not mark a normal open from the LSP as zero-conf', () => {
+        new LND().initChanAcceptor({
+            getZeroConfPeers: () => [PEER],
+            getLspPubkey: () => LSP
+        });
+        const ws = sockets[0];
+
+        request(ws, LSP, false);
+        const fromLsp = ws.sent.pop();
+        expect(fromLsp.accept).toBe(true);
+        expect(fromLsp.zero_conf).toBeFalsy();
+
+        request(ws, PEER, false);
+        const fromPeer = ws.sent.pop();
+        expect(fromPeer.accept).toBe(true);
+        expect(fromPeer.zero_conf).toBeFalsy();
+    });
+});
+
+describe('LND.subscribeCustomMessages', () => {
+    const realWebSocket = global.WebSocket;
+    let sockets: any[];
+
+    class FakeWebSocket {
+        constructor() {
+            sockets.push(this);
+        }
+        addEventListener() {}
+    }
+
+    beforeEach(() => {
+        sockets = [];
+        (global as any).WebSocket = FakeWebSocket;
+        Object.assign(settingsStore as any, {
+            host: 'https://node.example.com',
+            port: 8080,
+            macaroonHex: 'mac'
+        });
+    });
+
+    afterEach(() => {
+        (global as any).WebSocket = realWebSocket;
+    });
+
+    // LSPStore keeps this socket to avoid opening one per fetch and to
+    // close it on reset
+    it('returns the socket it opened', () => {
+        const ws = new LND().subscribeCustomMessages(jest.fn(), jest.fn());
+        expect(sockets).toHaveLength(1);
+        expect(ws).toBe(sockets[0]);
     });
 });
