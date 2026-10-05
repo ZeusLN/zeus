@@ -2404,6 +2404,10 @@ export default class SettingsStore {
         !!this.loginMethodConfigured() &&
         (!this.loggedIn || this.posStatus === 'active');
 
+    public isPosEnabled = () =>
+        (this.settings?.pos?.posEnabled || PosEnabled.Disabled) !==
+        PosEnabled.Disabled;
+
     public loginMethodConfigured = () =>
         this.settings &&
         (this.settings.passphrase ||

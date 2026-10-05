@@ -82,6 +82,7 @@ jest.mock('../storage', () => {
 
 import SettingsStore, {
     DEFAULT_SETTINGS,
+    PosEnabled,
     DEFAULT_LSP_MAINNET,
     DEFAULT_LSP_MUTINYNET,
     DEFAULT_LSP_TESTNET,
@@ -560,5 +561,36 @@ describe('SettingsStore.externalInputAuthRequired', () => {
         store.settings = {} as any;
         store.setPosStatus('active');
         expect(store.externalInputAuthRequired()).toBe(false);
+    });
+});
+
+describe('SettingsStore.isPosEnabled', () => {
+    const withPos = (pos: any) => {
+        const store = new SettingsStore();
+        store.settings = { pos } as any;
+        return store;
+    };
+
+    it('is false when there are no POS settings', () => {
+        expect(withPos(undefined).isPosEnabled()).toBe(false);
+    });
+
+    it('is false when posEnabled is unset', () => {
+        expect(withPos({}).isPosEnabled()).toBe(false);
+    });
+
+    it('is false when POS is disabled', () => {
+        expect(
+            withPos({ posEnabled: PosEnabled.Disabled }).isPosEnabled()
+        ).toBe(false);
+    });
+
+    it('is true for Standalone and Square', () => {
+        expect(
+            withPos({ posEnabled: PosEnabled.Standalone }).isPosEnabled()
+        ).toBe(true);
+        expect(withPos({ posEnabled: PosEnabled.Square }).isPosEnabled()).toBe(
+            true
+        );
     });
 });

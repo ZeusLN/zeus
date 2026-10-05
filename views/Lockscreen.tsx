@@ -22,7 +22,7 @@ import { ErrorMessage } from '../components/SuccessErrorMessage';
 import TextInput from '../components/TextInput';
 import ShowHideToggle from '../components/ShowHideToggle';
 
-import SettingsStore, { PosEnabled } from '../stores/SettingsStore';
+import SettingsStore from '../stores/SettingsStore';
 
 import { verifyBiometry } from '../utils/BiometricUtils';
 import {
@@ -190,12 +190,8 @@ export default class Lockscreen extends React.Component<
             shareIntentData
         } = route.params ?? {};
 
-        const posEnabled: PosEnabled =
-            (settings && settings.pos && settings.pos.posEnabled) ||
-            PosEnabled.Disabled;
-
         if (
-            posEnabled !== PosEnabled.Disabled &&
+            SettingsStore.isPosEnabled() &&
             SettingsStore.posStatus === 'active' &&
             !pendingNavigation &&
             !shareIntentData &&
@@ -375,10 +371,7 @@ export default class Lockscreen extends React.Component<
                     // must be handled before selectNodeOnStartup, which would
                     // otherwise drop the re-auth target and land on the wallet
                     // picker
-                    if (
-                        (SettingsStore.settings?.pos?.posEnabled ||
-                            PosEnabled.Disabled) !== PosEnabled.Disabled
-                    ) {
+                    if (SettingsStore.isPosEnabled()) {
                         setPosStatus('inactive');
                     }
                     await this.resetAuthenticationAttempts();
@@ -393,10 +386,7 @@ export default class Lockscreen extends React.Component<
                     // A share intent reaches this branch with POS active (the
                     // POS waiver does not apply to it), so leave POS here as
                     // the other login branches do
-                    if (
-                        (SettingsStore.settings?.pos?.posEnabled ||
-                            PosEnabled.Disabled) !== PosEnabled.Disabled
-                    ) {
+                    if (SettingsStore.isPosEnabled()) {
                         setPosStatus('inactive');
                     }
                     await this.resetAuthenticationAttempts();
@@ -416,10 +406,7 @@ export default class Lockscreen extends React.Component<
                     return;
                 }
                 if (!SettingsStore.settings.selectNodeOnStartup) {
-                    if (
-                        (SettingsStore.settings?.pos?.posEnabled ||
-                            PosEnabled.Disabled) !== PosEnabled.Disabled
-                    ) {
+                    if (SettingsStore.isPosEnabled()) {
                         setPosStatus('inactive');
                     }
                     await this.resetAuthenticationAttempts();

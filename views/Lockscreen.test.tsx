@@ -69,6 +69,7 @@ const renderLockscreen = async (
         posStatus: 'inactive',
         triggerSettingsRefresh: false,
         isBiometryConfigured: jest.fn(() => biometry),
+        isPosEnabled: jest.fn(() => false),
         loginRequired: jest.fn(() => true),
         setLoginStatus: jest.fn(),
         setPosStatus: jest.fn(),
