@@ -298,6 +298,27 @@ describe('LightningAddressStore', () => {
             );
         });
 
+        it('does not report a redeem failure when the notification throws after /redeem succeeds', async () => {
+            // the Notifications mock has no postLocalNotification, so posting throws
+            const store = setup({
+                checkInvoicePaid: jest.fn().mockResolvedValue({ isPaid: true })
+            });
+            mockRedeemResponse(200, { success: true });
+
+            await expect(
+                store.redeemCashu(QUOTE, MINT, 21000, false, true)
+            ).resolves.toBe(true);
+
+            expect(store.error).toBe(false);
+            expect(store.error_msg).toBe('');
+            expect(store.redeeming).toBe(false);
+            expect(console.log).toHaveBeenCalledWith(
+                'Error posting payment notification',
+                expect.any(TypeError)
+            );
+            expect(store.status).toHaveBeenCalledWith(true);
+        });
+
         it('clears the error state on success', async () => {
             const store = setup({
                 checkInvoicePaid: jest.fn().mockResolvedValue({ isPaid: true })
