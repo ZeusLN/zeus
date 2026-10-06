@@ -13,7 +13,8 @@ jest.mock('../stores/ChannelsStore', () => ({
     ChannelsView: { Channels: 'channels', Peers: 'peers' }
 }));
 jest.mock('../stores/SettingsStore', () => ({
-    getLspConfigForNetwork: jest.fn(() => ({}))
+    getLspConfigForNetwork: jest.fn(() => ({})),
+    isOlympusPeer: jest.fn(() => true)
 }));
 jest.mock('../utils/BackendUtils', () => ({
     supportsChannelOpenFeeRate: () => false,
@@ -57,6 +58,7 @@ jest.mock('../assets/images/SVG/NFC-alt.svg', () => 'NfcIcon');
 import * as React from 'react';
 import OpenChannel from './OpenChannel';
 import BackendUtils from '../utils/BackendUtils';
+import { getLspConfigForNetwork, isOlympusPeer } from '../stores/SettingsStore';
 
 const BALANCE = 500000;
 
@@ -95,14 +97,20 @@ const findSwitchNextTo = (tree: any, text: string) => {
 const makeView = ({
     implementation = 'lnd',
     confirmedBlockchainBalance = BALANCE,
-    unconfirmedBlockchainBalance = 0
+    unconfirmedBlockchainBalance = 0,
+    routeParams = {}
+}: {
+    implementation?: string;
+    confirmedBlockchainBalance?: number;
+    unconfirmedBlockchainBalance?: number;
+    routeParams?: { node_pubkey_string?: string; host?: string };
 } = {}) => {
     (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(
         implementation === 'lnd'
     );
     const view = new OpenChannel({
         navigation: { navigate: jest.fn() },
-        route: { params: {} },
+        route: { params: routeParams },
         BalanceStore: {
             confirmedBlockchainBalance,
             unconfirmedBlockchainBalance
@@ -206,4 +214,157 @@ describe('OpenChannel fund max with unconfirmed funds and min confs 0', () => {
             expect(isOpenDisabled(view)).toBe(disabled);
         }
     );
+});
+
+describe('OpenChannel LSP channel partner', () => {
+    const OLYMPUS = {
+        lsps1Pubkey: `03${'a'.repeat(64)}`,
+        lsps1Host: '45.79.192.236:9735'
+    };
+    const OTHER = {
+        lsps1Pubkey: `02${'b'.repeat(64)}`,
+        lsps1Host: 'lsp.example.com:9735'
+    };
+
+    const getLspConfig = getLspConfigForNetwork as jest.Mock;
+    const isOlympus = isOlympusPeer as jest.Mock;
+
+    beforeEach(() => {
+        getLspConfig.mockReturnValue(OLYMPUS);
+    });
+
+    afterEach(() => {
+        getLspConfig.mockReturnValue({});
+        isOlympus.mockReturnValue(true);
+    });
+
+    const partnerDropdown = (view: OpenChannel) =>
+        findByType(view.render(), 'DropdownSetting', 'general.channelPartner')
+            .props;
+
+    const peerInput = (view: OpenChannel, placeholder: string) =>
+        findElement(
+            view.render(),
+            (element) =>
+                element.type === 'TextInput' &&
+                element.props.placeholder === placeholder
+        ).props;
+    const pubkeyInput = (view: OpenChannel) => peerInput(view, '0A...');
+    const hostInput = (view: OpenChannel) =>
+        peerInput(view, 'views.OpenChannel.hostPort');
+
+    const peerState = (view: OpenChannel) => ({
+        node_pubkey_string: view.state.node_pubkey_string,
+        host: view.state.host,
+        isNodePubkeyValid: view.state.isNodePubkeyValid,
+        isNodeHostValid: view.state.isNodeHostValid
+    });
+
+    const lspView = () => {
+        const view = makeView();
+        view.initFromProps(view.props);
+        return view;
+    };
+
+    it.each([
+        [true, 'Olympus by ZEUS'],
+        [false, 'general.lsp']
+    ])(
+        'labels the LSP option by isOlympusPeer (%s → %s) and keeps its value',
+        (olympus, label) => {
+            isOlympus.mockReturnValue(olympus);
+            const [lspOption] = partnerDropdown(lspView()).values;
+
+            expect(lspOption.key).toBe(label);
+            expect(lspOption.value).toBe('LSP');
+        }
+    );
+
+    it('moves the cached peer to a changed LSPS1 config while LSP is selected', () => {
+        const view = lspView();
+        expect(view.state.channelDestination).toBe('LSP');
+
+        getLspConfig.mockReturnValue({ ...OTHER, lsps1Host: '' });
+        view.componentDidUpdate(view.props);
+
+        expect(peerState(view)).toEqual({
+            node_pubkey_string: OTHER.lsps1Pubkey,
+            host: '',
+            isNodePubkeyValid: true,
+            isNodeHostValid: false
+        });
+
+        getLspConfig.mockReturnValue(OTHER);
+        view.componentDidUpdate(view.props);
+
+        expect(peerState(view)).toEqual({
+            node_pubkey_string: OTHER.lsps1Pubkey,
+            host: OTHER.lsps1Host,
+            isNodePubkeyValid: true,
+            isNodeHostValid: true
+        });
+    });
+
+    it('does not set state when the cached peer already matches the config', () => {
+        const view = lspView();
+        (view.setState as jest.Mock).mockClear();
+
+        view.componentDidUpdate(view.props);
+
+        expect(view.setState).not.toHaveBeenCalled();
+    });
+
+    it('leaves a typed pubkey alone while Custom is selected', () => {
+        const view = lspView();
+        partnerDropdown(view).onValueChange('Custom');
+        pubkeyInput(view).onChangeText(OTHER.lsps1Pubkey);
+
+        getLspConfig.mockReturnValue({
+            lsps1Pubkey: `03${'c'.repeat(64)}`,
+            lsps1Host: '10.0.0.1:9735'
+        });
+        view.componentDidUpdate(view.props);
+
+        expect(view.state.channelDestination).toBe('Custom');
+        expect(view.state.node_pubkey_string).toBe(OTHER.lsps1Pubkey);
+    });
+
+    it('locks the peer fields under LSP and restores the configured peer', () => {
+        const view = lspView();
+        expect(pubkeyInput(view).locked).toBe(true);
+        expect(hostInput(view).locked).toBe(true);
+
+        partnerDropdown(view).onValueChange('Custom');
+        expect(pubkeyInput(view).locked).toBe(false);
+        expect(hostInput(view).locked).toBe(false);
+
+        pubkeyInput(view).onChangeText(OTHER.lsps1Pubkey);
+        hostInput(view).onChangeText(OTHER.lsps1Host);
+
+        partnerDropdown(view).onValueChange('LSP');
+        expect(pubkeyInput(view).locked).toBe(true);
+        expect(hostInput(view).locked).toBe(true);
+        expect(peerState(view)).toEqual({
+            node_pubkey_string: OLYMPUS.lsps1Pubkey,
+            host: OLYMPUS.lsps1Host,
+            isNodePubkeyValid: true,
+            isNodeHostValid: true
+        });
+    });
+
+    it('selects Custom for a routed peer and does not sync over it', () => {
+        const view = makeView({
+            routeParams: {
+                node_pubkey_string: OTHER.lsps1Pubkey,
+                host: OTHER.lsps1Host
+            }
+        });
+        view.initFromProps(view.props);
+        expect(view.state.channelDestination).toBe('Custom');
+
+        view.componentDidUpdate(view.props);
+
+        expect(view.state.node_pubkey_string).toBe(OTHER.lsps1Pubkey);
+        expect(view.state.host).toBe(OTHER.lsps1Host);
+    });
 });
