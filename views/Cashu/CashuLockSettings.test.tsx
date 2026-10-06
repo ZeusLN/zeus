@@ -87,6 +87,39 @@ describe('CashuLockSettings clipboard', () => {
             expect(view.state.pubkey).toBe(PUBKEY);
             expect(view.state.isPubkeyValid).toBe(true);
         });
+
+        it('says the clipboard is empty when paste is pressed with nothing copied', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue('');
+            const view = makeView(false);
+
+            await view.handlePaste();
+
+            expect(view.state.error).toBe('general.clipboardEmpty');
+            expect(view.state.pubkey).toBe('');
+            // the field was not touched, so it is not marked invalid
+            expect(view.state.isPubkeyValid).toBe(true);
+        });
+
+        it('treats whitespace-only clipboard text as empty', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue('  \n ');
+            const view = makeView(false);
+
+            await view.handlePaste();
+
+            expect(view.state.error).toBe('general.clipboardEmpty');
+            expect(view.state.pubkey).toBe('');
+        });
+
+        it('shows the pubkey error when the clipboard holds something else', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue('not a key');
+            const view = makeView(false);
+
+            await view.handlePaste();
+
+            expect(view.state.error).toBe('cashu.invalidCashuPubkey');
+            expect(view.state.pubkey).toBe('');
+            expect(view.state.isPubkeyValid).toBe(false);
+        });
     });
 
     describe('with clipboard reading on', () => {

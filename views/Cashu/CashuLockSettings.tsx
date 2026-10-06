@@ -333,6 +333,16 @@ export default class CashuLockSettings extends React.Component<
         try {
             const text = await Clipboard.getString();
             const cleanedText = text.trim();
+            // with clipboard reading disabled the paste button shows without
+            // probing the clipboard, so it can be pressed with nothing copied.
+            // The field is unchanged, so leave its validity alone.
+            if (!cleanedText) {
+                this.setState({
+                    error: localeString('general.clipboardEmpty')
+                });
+                return;
+            }
+
             const validationError = this.validatePubkey(cleanedText);
 
             if (!validationError) {
@@ -343,19 +353,10 @@ export default class CashuLockSettings extends React.Component<
                     isPubkeyValid: true
                 });
             } else {
-                if (cleanedText && !this.validatePubkey(cleanedText)) {
-                    this.setState({
-                        pubkey: cleanedText,
-                        error: '',
-                        hasClipboardContent: false,
-                        isPubkeyValid: true
-                    });
-                } else {
-                    this.setState({
-                        error: validationError,
-                        isPubkeyValid: false
-                    });
-                }
+                this.setState({
+                    error: validationError,
+                    isPubkeyValid: false
+                });
             }
         } catch (error) {
             this.setState({
