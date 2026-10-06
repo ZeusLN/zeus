@@ -1,11 +1,19 @@
 import {
     LndErrorCode,
+    MAX_TRANSIENT_RPC_RETRIES,
     isStopLndExpectedError,
     isTransientRpcError,
     matchRawErrorToCode,
     matchesLndErrorCode,
-    normalizeForMatch
+    normalizeForMatch,
+    retryOnTransientError
 } from './LndMobileErrors';
+
+jest.mock('./SleepUtils', () => ({
+    sleep: jest.fn()
+}));
+
+const SleepMock: { sleep: jest.Mock } = jest.requireMock('./SleepUtils');
 
 describe('normalizeForMatch', () => {
     it('lowercases input', () => {
@@ -137,5 +145,106 @@ describe('LndMobileErrors classification', () => {
         expect(
             matchRawErrorToCode('some totally unrelated native failure')
         ).toBeNull();
+    });
+});
+
+// While retryOnTransientError waits, a connecting=false would show the error
+// screen, whose Retry starts a second connect next to the queued one.
+describe('retryOnTransientError', () => {
+    const error = new Error('server is still starting up');
+
+    beforeEach(() => {
+        SleepMock.sleep.mockReset().mockResolvedValue(undefined);
+    });
+
+    it('stays in connecting mode while waiting', async () => {
+        let releaseSleep: () => void = () => {};
+        SleepMock.sleep.mockReturnValue(
+            new Promise<void>((resolve) => (releaseSleep = resolve))
+        );
+        const setConnecting = jest.fn();
+        const onRetry = jest.fn();
+
+        const result = retryOnTransientError(
+            error,
+            error.message,
+            'RPC error',
+            0,
+            setConnecting,
+            onRetry
+        );
+        await Promise.resolve();
+
+        expect(SleepMock.sleep).toHaveBeenCalledTimes(1);
+        expect(setConnecting).not.toHaveBeenCalled();
+        expect(onRetry).not.toHaveBeenCalled();
+
+        releaseSleep();
+        await result;
+
+        expect(setConnecting.mock.calls).toEqual([[true]]);
+        expect(onRetry).toHaveBeenCalledTimes(1);
+    });
+
+    it('re-enters connecting mode before retrying', async () => {
+        const order: string[] = [];
+        const setConnecting = jest.fn((v: boolean) =>
+            order.push(`setConnecting(${v})`)
+        );
+        const onRetry = jest.fn(() => {
+            order.push('onRetry');
+        });
+
+        await retryOnTransientError(
+            error,
+            error.message,
+            'RPC error',
+            0,
+            setConnecting,
+            onRetry
+        );
+
+        expect(order).toEqual(['setConnecting(true)', 'onRetry']);
+    });
+
+    it('doubles the wait with each retry', async () => {
+        await retryOnTransientError(
+            error,
+            error.message,
+            'RPC error',
+            0,
+            jest.fn(),
+            jest.fn()
+        );
+        await retryOnTransientError(
+            error,
+            error.message,
+            'RPC error',
+            2,
+            jest.fn(),
+            jest.fn()
+        );
+
+        expect(SleepMock.sleep.mock.calls).toEqual([[2000], [8000]]);
+    });
+
+    it('leaves connecting mode and rethrows after the last retry', async () => {
+        const setConnecting = jest.fn();
+        const onRetry = jest.fn();
+
+        await expect(
+            retryOnTransientError(
+                error,
+                error.message,
+                'RPC error',
+                MAX_TRANSIENT_RPC_RETRIES,
+                setConnecting,
+                onRetry
+            )
+        ).rejects.toBe(error);
+
+        expect(setConnecting.mock.calls).toEqual([[false]]);
+        expect(SleepMock.sleep).not.toHaveBeenCalled();
+        expect(onRetry).not.toHaveBeenCalled();
     });
 });

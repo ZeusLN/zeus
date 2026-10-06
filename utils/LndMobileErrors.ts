@@ -220,7 +220,10 @@ export async function retryOnTransientError(
         }/${MAX_TRANSIENT_RPC_RETRIES} in ${delayMs}ms:`,
         errorMessage
     );
-    setConnecting(false);
+    // Stay in connecting mode while waiting: leaving it would show the error
+    // screen, whose Retry starts a second connect alongside the one queued
+    // here. setConnecting(true) still has to run afterwards, since it frees
+    // the fetch lock that the failed attempt is still holding.
     await sleep(delayMs);
     setConnecting(true);
     await onRetry();
