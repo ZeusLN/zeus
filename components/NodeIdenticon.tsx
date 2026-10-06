@@ -4,9 +4,8 @@ import Identicon from 'identicon.js';
 import { SvgXml } from 'react-native-svg';
 
 import Base64Utils from './../utils/Base64Utils';
+import { sha1ForIdenticon } from './../utils/HashingUtils';
 import PrivacyUtils from './../utils/PrivacyUtils';
-
-const hash = require('object-hash');
 
 export const NodeTitle = (selectedNode: any, overrideSensitivity = false) => {
     const displayName =
@@ -63,7 +62,7 @@ export default function NodeIdenticon({
     })();
 
     const data = new Identicon(
-        hash.sha1(stableIdentity),
+        sha1ForIdenticon(stableIdentity),
         // @ts-ignore:next-line
         {
             background: [255, 255, 255, 255],
