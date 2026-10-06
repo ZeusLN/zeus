@@ -3683,12 +3683,10 @@ body-parser@^2.2.2:
     raw-body "^3.0.2"
     type-is "^2.1.0"
 
-bolt07@1.9.5:
-  version "1.9.5"
-  resolved "https://registry.yarnpkg.com/bolt07/-/bolt07-1.9.5.tgz#8252576779fdc3f505320dbf4031a9d1e5ea8153"
-  integrity sha512-nV5q5bAv+dLQAAUYgbVh4ilxmG9XQBLpzB0yBNt9AhkHVf3+dNz5kEqMViK6AuTntY87k2ahBwkJng2ocbFUSA==
-  dependencies:
-    bn.js "5.2.3"
+bolt07@2.0.0:
+  version "2.0.0"
+  resolved "https://registry.yarnpkg.com/bolt07/-/bolt07-2.0.0.tgz#4c540bd4178df0669377d575ce2cf44f9bc7cb1d"
+  integrity sha512-z4muz79gfwnhk/HQO8jmf9nsmG/8HZW7KznE1g9DH/48rcF76i+j/p730AUt3IUK7hoHb9WliEIOty7GvGxJEQ==
 
 boolbase@^1.0.0:
   version "1.0.0"
