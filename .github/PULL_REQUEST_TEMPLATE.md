@@ -22,7 +22,7 @@ This pull request is categorized as a:
 
 ## Testing
 
-If you modified or added a utility file, did you add new unit tests?
+If you modified or added testable logic, did you add new unit tests? For bug fixes, please include a test that would have caught the bug.
 
 - [ ] No, I’m a fool
 - [ ] Yes
@@ -46,18 +46,18 @@ Remote
 - [ ] Nostr Wallet Connect
 - [ ] LndHub
 
-### Locales
+## Locales
 - [ ] I’ve added new locale text that requires translations
-- [ ] I’m aware that new translations should be made on the ZEUS [Transfix page](https://app.transifex.com/ZeusLN/zeus/) and not directly to this repo
+- [ ] I’m aware that new translations should be made on the ZEUS [Transifex page](https://app.transifex.com/ZeusLN/zeus/) and not directly to this repo
 
-### Third Party Dependencies and Packages
+## Third Party Dependencies and Packages
 
 - [ ] Contributors will need to run `yarn` after this PR is merged in
 - [ ] 3rd party dependencies have been modified:
     * verify that `package.json` and `yarn.lock` have been properly updated
     * verify that dependencies are installed for both iOS and Android platforms
 
-### Other:
+## Other
 
 - [ ] Changes were made that require an update to the README
 - [ ] Changes were made that require an update to onboarding
