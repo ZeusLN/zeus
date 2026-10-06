@@ -1284,6 +1284,11 @@
   dependencies:
     "@noble/curves" "^1.7.0"
 
+"@callstack/liquid-glass@0.8.2":
+  version "0.8.2"
+  resolved "https://registry.yarnpkg.com/@callstack/liquid-glass/-/liquid-glass-0.8.2.tgz#f7a4fb48b3785b94f188e474e38bd2ce8f759029"
+  integrity sha512-Z3bhZLkQLBquA7LIx6Ktv/fFd8nuOsAo1vb/S6Y3tqaQVnHu9RNFreidfZ+SUYnrQu5TqVzEOqq+9CR4jrwd9A==
+
 "@codesandbox/nodebox@0.1.8":
   version "0.1.8"
   resolved "https://registry.yarnpkg.com/@codesandbox/nodebox/-/nodebox-0.1.8.tgz#2dc701005cedefac386f17a69a4c9a4f38c2325d"

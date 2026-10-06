@@ -6,14 +6,16 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import {
     SafeAreaProvider,
     SafeAreaView,
-    initialWindowMetrics
+    initialWindowMetrics,
+    useSafeAreaInsets
 } from 'react-native-safe-area-context';
 import {
     AppState,
     BackHandler,
     NativeEventSubscription,
     Platform,
-    StatusBar
+    StatusBar,
+    View
 } from 'react-native';
 
 import {
@@ -312,12 +314,47 @@ import ShareIntentProcessing from './views/ShareIntentProcessing';
 import WIFSweeper from './views/Tools/WIFSweeper';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
+import { isLiquidGlassEnabled } from './utils/LiquidGlassUtils';
 import LinkingUtils from './utils/LinkingUtils';
 import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
 import WithdrawalRequestInfo from './views/WithdrawalRequestInfo';
 import RedeemWithdrawalRequest from './views/RedeemWithdrawalRequest';
 
 const Stack = createNativeStackNavigator();
+
+// On iOS the root SafeAreaView skips the bottom edge so the native tab bar
+// on Wallet can reach the screen bottom; every other screen, and Wallet with
+// the JS tab bar (Liquid Glass off), gets the bottom inset here. The insets
+// come from the provider so they follow changes after launch (iPad
+// multitasking, Stage Manager).
+const ScreenBottomInset = ({
+    applyInset,
+    children
+}: {
+    applyInset: boolean;
+    children: React.ReactNode;
+}) => {
+    const { bottom } = useSafeAreaInsets();
+    return (
+        <View style={{ flex: 1, paddingBottom: applyInset ? bottom : 0 }}>
+            {children}
+        </View>
+    );
+};
+
+const renderIosScreenLayout = ({
+    route,
+    children
+}: {
+    route: { name: string };
+    children: React.ReactElement;
+}) => (
+    <ScreenBottomInset
+        applyInset={route.name !== 'Wallet' || !isLiquidGlassEnabled()}
+    >
+        {children}
+    </ScreenBottomInset>
+);
 
 export default class App extends React.PureComponent {
     private backPressListenerSubscription: NativeEventSubscription;
@@ -464,7 +501,15 @@ export default class App extends React.PureComponent {
                                 <StealthModeWrapper>
                                     <SafeAreaView
                                         style={{ flex: 1 }}
-                                        edges={['left', 'right', 'bottom']}
+                                        // on iOS the bottom inset is applied
+                                        // per screen via contentStyle below,
+                                        // so the native tab bar on Wallet can
+                                        // reach the true screen bottom
+                                        edges={
+                                            Platform.OS === 'ios'
+                                                ? ['left', 'right']
+                                                : ['left', 'right', 'bottom']
+                                        }
                                     >
                                         <Observer>
                                             {() => (
@@ -516,6 +561,12 @@ export default class App extends React.PureComponent {
                                                         }}
                                                     >
                                                         <Stack.Navigator
+                                                            screenLayout={
+                                                                Platform.OS ===
+                                                                'ios'
+                                                                    ? renderIosScreenLayout
+                                                                    : undefined
+                                                            }
                                                             screenOptions={({
                                                                 route
                                                             }) => ({

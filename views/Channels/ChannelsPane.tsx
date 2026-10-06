@@ -36,9 +36,12 @@ import ChannelsStore, {
 import LSPStore from '../../stores/LSPStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 
+import { LiquidGlassView } from '@callstack/liquid-glass';
+
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import { themeColor } from '../../utils/ThemeUtils';
+import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
+import { isGlassEffectEnabled } from '../../utils/LiquidGlassUtils';
 
 import Channel from '../../models/Channel';
 import { Status, ExpirationStatus } from '../../models/Status';
@@ -405,6 +408,8 @@ export default class ChannelsPane extends React.PureComponent<
             initialRoute = CLOSED_TAB_ROUTE;
         }
 
+        const glass = isGlassEffectEnabled();
+
         const getTabScreenOptions = ({ route }: { route: any }) => {
             let label: string;
             if (route.name === PENDING_TAB_ROUTE) {
@@ -419,18 +424,53 @@ export default class ChannelsPane extends React.PureComponent<
                 tabBarActiveTintColor: themeColor('text'),
                 tabBarInactiveTintColor: 'gray',
                 tabBarShowLabel: true,
-                tabBarStyle: {
-                    backgroundColor: 'transparent',
-                    elevation: 0,
-                    borderTopWidth: 0.2,
-                    borderTopColor: themeColor('secondaryText'),
-                    paddingTop: 10,
-                    paddingBottom: 10,
-                    height: 70
-                },
-                tabBarItemStyle: {
-                    justifyContent: 'center' as const
-                },
+                ...(glass
+                    ? {
+                          tabBarBackground: () => (
+                              <LiquidGlassView
+                                  style={{ flex: 1, borderRadius: 25 }}
+                                  effect="regular"
+                                  colorScheme={
+                                      isLightTheme() ? 'light' : 'dark'
+                                  }
+                              />
+                          ),
+                          tabBarStyle: {
+                              backgroundColor: 'transparent',
+                              borderTopWidth: 0,
+                              // match the native tab bar platter's margins
+                              marginHorizontal: 21,
+                              marginBottom: 0,
+                              height: 50,
+                              borderRadius: 25,
+                              // override the safe-area padding the tab bar
+                              // bakes in; this bar isn't at the screen edge
+                              paddingTop: 0,
+                              paddingBottom: 0
+                          },
+                          tabBarActiveBackgroundColor: themeColor('secondary'),
+                          // the active background fills the item as a
+                          // square; margin + radius + clip make a capsule
+                          tabBarItemStyle: {
+                              margin: 5,
+                              borderRadius: 20,
+                              overflow: 'hidden' as const
+                          }
+                      }
+                    : {
+                          tabBarStyle: {
+                              backgroundColor: 'transparent',
+                              elevation: 0,
+                              borderTopWidth: 0.2,
+                              borderTopColor: themeColor('secondaryText'),
+                              paddingTop: 10,
+                              paddingBottom: 10,
+                              height: 70
+                          },
+                          tabBarItemStyle: {
+                              justifyContent: 'center' as const
+                          }
+                      }),
                 tabBarIconStyle: {
                     display: 'none' as const
                 },
@@ -440,19 +480,30 @@ export default class ChannelsPane extends React.PureComponent<
                 }: {
                     focused: boolean;
                     color: string;
-                }) => (
-                    <Text
-                        style={{
-                            fontSize: 16,
-                            fontFamily: focused
-                                ? 'PPNeueMontreal-Medium'
-                                : 'PPNeueMontreal-Book',
-                            color
-                        }}
-                    >
-                        {label}
-                    </Text>
-                ),
+                }) => {
+                    const labelText = (
+                        <Text
+                            style={{
+                                fontSize: 16,
+                                fontFamily: focused
+                                    ? 'PPNeueMontreal-Medium'
+                                    : 'PPNeueMontreal-Book',
+                                color
+                            }}
+                        >
+                            {label}
+                        </Text>
+                    );
+                    // the item's pressable is top-aligned internally;
+                    // stretch and center the label within it
+                    return glass ? (
+                        <View style={{ flex: 1, justifyContent: 'center' }}>
+                            {labelText}
+                        </View>
+                    ) : (
+                        labelText
+                    );
+                },
                 animation: 'shift' as const
             };
         };

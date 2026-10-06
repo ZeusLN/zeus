@@ -100,6 +100,8 @@ interface DisplaySettings {
     showAllDecimalPlaces?: boolean;
     removeDecimalSpaces?: boolean;
     showMillisatoshiAmounts?: boolean;
+    // iOS only; undefined counts as on
+    liquidGlass?: boolean;
 }
 
 export enum PosEnabled {
@@ -1559,7 +1561,8 @@ export const DEFAULT_SETTINGS: Settings = {
         bigKeypadButtons: false,
         showAllDecimalPlaces: false,
         removeDecimalSpaces: false,
-        showMillisatoshiAmounts: false
+        showMillisatoshiAmounts: false,
+        liquidGlass: true
     },
     pos: {
         posEnabled: PosEnabled.Disabled,
