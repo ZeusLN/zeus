@@ -573,6 +573,73 @@ describe('SettingsStore.getSettings', () => {
     });
 });
 
+// Clipboard readers gate on settingsLoaded, because until a load completes
+// settings holds the in-memory defaults (privacy.clipboard: true)
+describe('SettingsStore.settingsLoaded', () => {
+    const EncryptedStorageMock: any = jest.requireMock(
+        'react-native-encrypted-storage'
+    );
+    const MigrationUtilsMock: any = jest.requireMock('../utils/MigrationUtils');
+
+    it('is false before getSettings runs', () => {
+        expect(new SettingsStore().settingsLoaded).toBe(false);
+    });
+
+    it('is set after loading stored settings', async () => {
+        seedSettings({ privacy: { clipboard: false } });
+        const store = new SettingsStore();
+
+        await store.getSettings();
+
+        expect(store.settingsLoaded).toBe(true);
+        expect(store.settings.privacy?.clipboard).toBe(false);
+    });
+
+    it('is set after migrating legacy settings', async () => {
+        EncryptedStorageMock.getItem.mockResolvedValueOnce(
+            JSON.stringify({ privacy: { clipboard: false } })
+        );
+        const store = new SettingsStore();
+
+        await store.getSettings();
+
+        expect(MigrationUtilsMock.legacySettingsMigrations).toHaveBeenCalled();
+        expect(store.settingsLoaded).toBe(true);
+    });
+
+    it('is set on a fresh install with nothing stored', async () => {
+        // onboarding relies on the defaults, clipboard reading included
+        const store = new SettingsStore();
+
+        await store.getSettings();
+
+        expect(store.settingsLoaded).toBe(true);
+        expect(store.settings.privacy?.clipboard).toBe(true);
+    });
+
+    it('stays false when loading throws', async () => {
+        seedSettings({ privacy: { clipboard: false } });
+        MigrationUtilsMock.keychainDesyncMigration.mockRejectedValueOnce(
+            new Error('keychain unavailable')
+        );
+        const store = new SettingsStore();
+
+        await store.getSettings();
+
+        expect(errorSpy).toHaveBeenCalledWith(
+            'Could not load settings',
+            expect.any(Error)
+        );
+        // the suite-wide afterEach fails on this expected error; clear it
+        // before the assertions below so a failure there stays local
+        errorSpy.mockClear();
+        expect(store.settingsLoaded).toBe(false);
+        // the defaults are still in place, so the flag is the only thing
+        // keeping clipboard readers from ignoring the stored opt-out
+        expect(store.settings.privacy?.clipboard).toBe(true);
+    });
+});
+
 // The LSP settings screens decide whether to show Reset by comparing the
 // field against these defaults, so they must never follow the saved value.
 describe('getLspConfigForNetwork', () => {

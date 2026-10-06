@@ -1730,6 +1730,10 @@ export default class SettingsStore {
     @observable public loggedIn = false;
     @observable public triggerSettingsRefresh: boolean = false;
     @observable public connecting = true;
+    // false until getSettings completes a load (a fresh install with nothing
+    // stored counts). Until then settings holds the in-memory defaults, so
+    // readers of privacy settings such as clipboard must not trust it.
+    @observable public settingsLoaded = false;
     @observable public fetchLock = false;
     // Monotonic token identifying the fetchData invocation that currently
     // owns fetchLock; releaseFetchLock is a no-op for stale owners
@@ -2117,6 +2121,7 @@ export default class SettingsStore {
             }
 
             this.updateNodeProperties(this.settings);
+            this.settingsLoaded = true;
         } catch (error) {
             console.error('Could not load settings', error);
         } finally {
