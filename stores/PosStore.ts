@@ -549,7 +549,7 @@ export default class PosStore {
         const apiHost = squareDevMode
             ? 'https://connect.squareupsandbox.com'
             : 'https://connect.squareup.com';
-        ReactNativeBlobUtil.fetch(
+        return ReactNativeBlobUtil.fetch(
             'POST',
             `${apiHost}/v2/orders/search`,
             {
@@ -651,10 +651,8 @@ export default class PosStore {
                                 exportString += `${orderId}, ${orderTotal}, ${orderTip}, ${exchangeRate}, ${rate}, ${type}, ${tx}\n`;
                             }
 
-                            // tally totals
-                            total +=
-                                Number(order.getTotalMoney) +
-                                Number(order.getTaxMoney);
+                            // tally totals (total_money already includes tax)
+                            total += Number(order.getTotalMoney);
                             tax += Number(order.getTaxMoney);
                             tips += tip
                                 ? Number(tip)
