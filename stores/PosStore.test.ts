@@ -197,27 +197,122 @@ describe('PosStore.saveStandaloneOrder', () => {
 });
 
 describe('PosStore.getOrdersHistorical', () => {
-    it('does not add tax on top of the Square total', async () => {
+    // a $10 order with 8% tax, as the Square Orders API returns it
+    const squareOrder = (overrides: any = {}) => ({
+        id: 'square-order',
+        line_items: [],
+        tenders: [{ note: 'Paid with ZEUS' }],
+        total_money: { amount: 1080, currency: 'USD' },
+        total_tax_money: { amount: 80, currency: 'USD' },
+        ...overrides
+    });
+
+    const squareItem = (name: string, amount: number) => ({
+        name,
+        quantity: 1,
+        base_price_money: { amount }
+    });
+
+    const mockSearch = (orders: any[], status = 200) =>
         (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValueOnce({
-            info: () => ({ status: 200 }),
-            json: () => ({
-                orders: [
-                    {
-                        id: 'square-order',
-                        line_items: [],
-                        tenders: [{ note: 'Paid with ZEUS' }],
-                        total_money: { amount: 1080, currency: 'USD' },
-                        total_tax_money: { amount: 80, currency: 'USD' }
-                    }
-                ]
-            })
+            info: () => ({ status }),
+            json: () => ({ orders })
         });
 
+    const recon = async (orders: any[]) => {
+        mockSearch(orders);
         const store = makeStore('0');
         await store.getOrdersHistorical();
-        await new Promise((resolve) => setImmediate(resolve));
+        return store;
+    };
 
+    afterEach(() =>
+        (Storage.getItem as jest.Mock).mockImplementation(async () => null)
+    );
+
+    it('does not add tax on top of the Square total', async () => {
+        const store = await recon([squareOrder()]);
         expect(store.reconTotal).toBe('10.80');
         expect(store.reconTax).toBe('0.80');
+    });
+
+    it('converts a stored Lightning tip to fiat and exports the payment', async () => {
+        const payment = {
+            orderId: 'square-order',
+            orderTotal: '10800',
+            orderTip: '1000',
+            exchangeRate: fiatStoreStub.getRate(),
+            rate: RATE,
+            type: 'ln',
+            tx: 'lnbc1'
+        };
+        (Storage.getItem as jest.Mock).mockImplementation(async (key: string) =>
+            key === 'pos-square-order' ? JSON.stringify(payment) : null
+        );
+
+        const store = await recon([squareOrder()]);
+
+        expect(store.reconTips).toBe('1.00');
+        expect(store.reconExport).toBe(
+            'orderId, totalSats, tipSats, rateFull, rateNumerical, type, tx\n' +
+                'square-order, 10800, 1000, $100,000.00, 100000, ln, lnbc1\n'
+        );
+    });
+
+    it('falls back to an auto-gratuity line item for tips', async () => {
+        const store = await recon([
+            squareOrder({
+                line_items: [
+                    squareItem('Coffee', 1000),
+                    squareItem('Gratuity', 150)
+                ],
+                total_money: { amount: 1230, currency: 'USD' }
+            })
+        ]);
+        expect(store.reconTips).toBe('1.50');
+    });
+
+    it('leaves out orders not paid through ZEUS', async () => {
+        const store = await recon([
+            squareOrder(),
+            squareOrder({
+                id: 'cash-order',
+                tenders: [{ note: 'Cash' }],
+                line_items: [squareItem('Gratuity', 500)],
+                total_money: { amount: 2660, currency: 'USD' },
+                total_tax_money: { amount: 160, currency: 'USD' }
+            }),
+            squareOrder({ id: 'card-order', tenders: [{}] })
+        ]);
+
+        expect(store.completedOrders.map((o) => o.id)).toEqual([
+            'square-order'
+        ]);
+        expect(store.reconTotal).toBe('10.80');
+        expect(store.reconTax).toBe('0.80');
+        expect(store.reconTips).toBe('0.00');
+    });
+
+    it('counts a missing tax as zero', async () => {
+        const store = await recon([
+            squareOrder({
+                total_money: { amount: 1000, currency: 'USD' },
+                total_tax_money: undefined
+            })
+        ]);
+        expect(store.reconTotal).toBe('10.00');
+        expect(store.reconTax).toBe('0.00');
+    });
+
+    it('flags an error and clears the orders on a non-200 response', async () => {
+        mockSearch([], 401);
+        const store = makeStore('0');
+        store.completedOrders = [new Order(squareOrder())];
+
+        await store.getOrdersHistorical();
+
+        expect(store.error).toBe(true);
+        expect(store.completedOrders).toEqual([]);
+        expect(store.loading).toBe(false);
     });
 });
