@@ -22,6 +22,7 @@ jest.mock('../utils/BackendUtils', () => ({
 }));
 jest.mock('../utils/LocaleUtils', () => ({ localeString: (k: string) => k }));
 
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import Storage from '../storage';
 import PosStore, { POS_STANDALONE_KEY } from './PosStore';
 import Order, { LineItem } from '../models/Order';
@@ -192,5 +193,31 @@ describe('PosStore.saveStandaloneOrder', () => {
                 total_tax_money: expect.objectContaining({ amount: 80 + 200 })
             })
         ]);
+    });
+});
+
+describe('PosStore.getOrdersHistorical', () => {
+    it('does not add tax on top of the Square total', async () => {
+        (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValueOnce({
+            info: () => ({ status: 200 }),
+            json: () => ({
+                orders: [
+                    {
+                        id: 'square-order',
+                        line_items: [],
+                        tenders: [{ note: 'Paid with ZEUS' }],
+                        total_money: { amount: 1080, currency: 'USD' },
+                        total_tax_money: { amount: 80, currency: 'USD' }
+                    }
+                ]
+            })
+        });
+
+        const store = makeStore('0');
+        await store.getOrdersHistorical();
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(store.reconTotal).toBe('10.80');
+        expect(store.reconTax).toBe('0.80');
     });
 });
