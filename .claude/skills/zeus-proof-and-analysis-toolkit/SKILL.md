@@ -54,10 +54,10 @@ This skill owns the **methods**; siblings own the facts those methods operate on
    - *App foreground* — `handleAppStateChange('active')` in the same file, again calling `getSettingsAndNavigate()`.
    - *Wallet creation* — `createOnboardingWallet` in `utils/WalletCreationUtils.ts` (may build the node itself, then sets `settingsStore.walletJustCreated = true` so Wallet.tsx skips re-init).
    - *Wallet deletion / switch* — `views/Settings/WalletConfiguration.tsx` (stop node, delete on-disk dirs, update `settings.nodes`).
-   - *Reconnect* — `SettingsStore` clears `fetchLock` when connection settings change (see `fetchLock = false` near the bottom of `stores/SettingsStore.ts`).
+   - *Reconnect* — `SettingsStore.setConnectingStatus(true)` (wallet switch, error-screen Retry, transient retry) clears `fetchLock` even while an older `fetchData` still runs; the sequence-numbered `acquireFetchLock`/`releaseFetchLock` keeps the older run from freeing the newer one's lock (see `stores/SettingsStore.ts`).
 2. **Enumerate the shared mutable state** each event touches: the native node reference (Kotlin/Swift module field), `SettingsStore.connecting` (initialized `true`), `SettingsStore.fetchLock`, `SettingsStore.walletJustCreated`, on-disk node directories, and the ~12 stores `fetchData` resets. Grep the guards:
    ```bash
-   grep -n "fetchLock\|walletJustCreated\|connecting" views/Wallet/Wallet.tsx | head -30
+   grep -n "FetchLock\|walletJustCreated\|connecting" views/Wallet/Wallet.tsx | head -30
    ```
 3. **Build the interleaving table.** Rows = ordered steps of operation A (e.g. delete: `stop node → release ref → delete dirs → clear settings`); columns = every other event that can fire between two rows (focus, foreground, create, second delete). For each cell ask: *what state does the interloper observe, and is that state valid?*
 4. **Classify each unsafe cell**: needs serialization (lock/flag/blocking await), or can be **tolerated** (retry on a known transient error), or is unreachable (prove why — e.g. `fetchLock` early-return at the top of `fetchData`).
@@ -276,7 +276,7 @@ All facts verified **2026-07-06** against `master` @ `c5fd094fb` (v13.1.3-alpha)
 | Keychain deletion still disabled (policy) | `grep -n "Skipping delete" utils/MigrationUtils.ts` |
 | Expiry-repair flag (v2 only; the v1 MOD_KEY9 block was removed by `e8e5b8811`) | `grep -n "invoices-expiry-display-fix-v2" utils/MigrationUtils.ts` |
 | Race-tolerance retry still in place | `grep -n "LDK_NODE_NOT_INITIALIZED\|LDK_NODE_NOT_RUNNING_YET" utils/LdkNodeUtils.ts` |
-| `fetchData` re-entrancy guard | `grep -n "fetchLock" views/Wallet/Wallet.tsx stores/SettingsStore.ts` |
+| `fetchData` re-entrancy guard | `grep -n -i "fetchLock" views/Wallet/Wallet.tsx stores/SettingsStore.ts` |
 | Builder image digest / SOURCE_DATE_EPOCH | `grep -n "BUILDER_IMAGE\|SOURCE_DATE_EPOCH" build.sh` |
 | Gradle determinism settings | `grep -n "org.gradle.parallel" android/gradle.properties && grep -n "reproducibleFileOrder\|versionCodeOverride\|versionCode " android/app/build.gradle` |
 | build workflow still dispatch-only | `grep -n "workflow_dispatch" .github/workflows/build-android.yml` |

@@ -54,7 +54,7 @@ There is **no single owner**. Lifecycle state is smeared across four layers:
 ### The guards, in evaluation order
 
 1. **`refreshRunner.running`** (`WalletRefreshRunner`, Wallet.tsx instance) — guards `getSettingsAndNavigate` re-entry from the focus event and AppState `active`. Added as the `_navigating` instance field in `c71a04ce9` (2026-04-07) because the focus event fires twice on startup and both raced into `fetchData` → duplicate `buildNode`, second build times out holding VSS resources; moved into `utils/WalletRefreshRunner.ts` for #4751, which also clears `triggerSettingsRefresh` when a guarded refresh starts and runs at most one follow-up refresh if the flag is re-armed while it runs (only while the Wallet is focused). A `getSettingsAndNavigate` promise that never settles leaves `running` stuck `true`. **Bypassed by three call sites** that invoke `getSettingsAndNavigate()` directly: pull-to-refresh (`LayerBalances onRefresh`), the error-screen Retry button, and `handleOpenURL` for `zeusln://share`.
-2. **`fetchLock`** (SettingsStore observable) — checked/set at `fetchData` entry (`if (fetchLock) return; SettingsStore.fetchLock = true;`). Cleared in exactly two places: the happy-path end of `fetchData`, and `setConnectingStatus(true)`. **Every early-return error path leaves `fetchLock === true`** — by design: the app then shows the error screen, and recovery requires `setConnectingStatus(true)` (error-screen Retry button, wallet switch, transient-retry loop), which clears the lock. Consequence: any code path that errors out and then expects a plain focus event to reconnect will hang silently.
+2. **`fetchLock`** (SettingsStore observable, owned by SettingsStore actions since `e5abe14`) — `fetchData` takes it with `const seq = SettingsStore.acquireFetchLock(); if (seq === null) return;` and releases it with `releaseFetchLock(seq)` in a `finally`, so every exit of `fetchDataCore` (success, early return, throw) frees it. `setConnectingStatus(true)` (wallet switch, error-screen Retry, transient-retry loop) also clears it mid-flight so a reconnect can start while an older run is still running; the older run's later `releaseFetchLock(seq)` is then a no-op because a newer acquire bumped the sequence. Consequence: after a failed connect, a plain focus/resume refresh does run `fetchData` again, but without `connecting` it skips the connect-only steps — recovering from a failed connect still needs `setConnectingStatus(true)`.
 3. **`connecting`** — initialized `true`, so the first `fetchData` after cold start runs the full connect branch (stop→init→start + reset of ~12 stores). Set `false` at the end of a successful connect or on fatal errors; set `true` by every wallet-switch/create/restart path. When `false`, `fetchData` becomes a light data refresh (embedded-lnd still calls `waitForRpcReady()` + full data fetch on every focus).
 4. **`walletJustCreated`** — set by `createLndWallet` / LDK create paths; makes `fetchData` skip the stop→init→start cycle because the node is already running from wallet creation. Consumed (set `false`) on first use.
 5. **`embeddedLndStarted`** — whether `stopLnd()` is called before re-init (`if (!recovery && SettingsStore.embeddedLndStarted) await stopLnd();`). Set `true` in `startLnd` (only when a wallet password is present), `false` in `stopLnd` and several views.
@@ -67,7 +67,7 @@ Resets `error`/`errorMsg`/`lndFolderMissing`, calls `BackendUtils.clearCachedCal
 ### Per-backend connect branch inside `fetchData` (only when `connecting`)
 
 - **ldk-node**: `stopLdkNode()` (unless `walletJustCreated`) → `startLdkNodeWallet` (`initializeNode` FFI + `node.start()` retried up to 5×500ms on "Node not initialized" + `syncWallets`) → later branch `waitForLdkNodeReady()` (polls `status()` every 500ms up to 60s, tolerating "Node not initialized" and not-running — added by `b54e8f138`, 2026-05-17; the companion `buildNode`-race fix `8fc9698a0`, same day, added the `walletJustCreated` skip).
-- **embedded-lnd**: `stopLnd()` (if started) → `initializeLnd` (writes lnd.conf, binds service) → optional express graph sync → `startLnd` (retry ladder incl. force-stop on `LND_ALREADY_RUNNING`, wallet unlock on `WALLET_LOCKED`) → `waitForRpcReady()` (polls `getInfo` 500ms up to 30s). Transient RPC errors route through `retryOnTransientError` (max 5 retries, 2s base exponential backoff; it toggles `connecting` false→true, which is also what re-clears `fetchLock`).
+- **embedded-lnd**: `stopLnd()` (if started) → `initializeLnd` (writes lnd.conf, binds service) → optional express graph sync → `startLnd` (retry ladder incl. force-stop on `LND_ALREADY_RUNNING`, wallet unlock on `WALLET_LOCKED`) → `waitForRpcReady()` (polls `getInfo` 500ms up to 30s). Transient RPC errors route through `retryOnTransientError` (max 5 retries, 2s base exponential backoff; `connecting` stays `true` during the wait so the error screen and its Retry stay hidden, then `setConnecting(true)` re-clears `fetchLock` for the queued attempt; only giving up after the last retry sets `connecting` false).
 - Remote backends (lndhub login, LNC `connect()`, NWC `connectNWC()`, REST default) have no native lifecycle but share the same flags.
 
 ### Native stop/delete rules (the Tokio contract)
@@ -205,8 +205,8 @@ Instrumentation points (grep anchors, all verified):
 | Where | Anchor | Log |
 |---|---|---|
 | `stores/SettingsStore.ts` `setConnectingStatus` | `public setConnectingStatus = (status = false)` | old→new value + `new Error().stack` (caller attribution — MobX gives you none) |
-| `views/Wallet/Wallet.tsx` `fetchData` entry | `if (fetchLock) return;` | log BOTH the rejected entries (currently silent) and the acquisitions, with `implementation`, `connecting`, `walletJustCreated` |
-| `views/Wallet/Wallet.tsx` `fetchData` exit | `SettingsStore.fetchLock = false;` | matched release log; any acquisition without a release = a stranded lock |
+| `views/Wallet/Wallet.tsx` `fetchData` entry | `SettingsStore.acquireFetchLock()` | log BOTH the rejected entries (`seq === null`, currently silent) and the acquisitions, with `seq`, `implementation`, `connecting`, `walletJustCreated` |
+| `views/Wallet/Wallet.tsx` `fetchData` exit | `SettingsStore.releaseFetchLock(seq)` | matched release log with `seq`; a release whose `seq` is stale (lock cleared by `setConnectingStatus(true)` and re-acquired) is a no-op |
 | `utils/LndMobileUtils.ts` `stopLnd`/`startLnd` | function heads | entry/exit + `embeddedLndStarted` value |
 | `utils/LdkNodeUtils.ts` `stopLdkNode`/`startLdkNodeWallet` | function heads | entry/exit timestamps (measures overlap with builds) |
 | `views/Settings/Wallets.tsx` `onWalletPress` | `const onWalletPress` | old/new `selectedNode`, old/new implementation |
@@ -222,9 +222,9 @@ grep -n "getSettingsAndNavigate\|refreshRunner" views/Wallet/Wallet.tsx
 grep -rn "setConnectingStatus(true)" --include="*.ts" --include="*.tsx" . | grep -v node_modules
 ```
 
-Entry paths: focus (guarded), AppState active (guarded), componentDidMount→handleFocus, pull-to-refresh (UNguarded), error-screen Restart (UNguarded, iOS), `zeusln://share` URL (UNguarded), transient-retry recursion (`retryOnTransientError` → `getSettingsAndNavigate(undefined, count+1)`).
+Entry paths: focus (guarded), AppState active (guarded), componentDidMount→handleFocus, pull-to-refresh (UNguarded), error-screen Retry (UNguarded), `zeusln://share` URL (UNguarded), transient-retry recursion (`retryOnTransientError` → `getSettingsAndNavigate(undefined, count+1)`).
 
-For each `return`/`throw` inside `fetchData`, record: `fetchLock` left true? `connecting` left true? Is there a UI affordance that will call `setConnectingStatus(true)` to recover? Build the full table (there are ~12 early returns).
+For each `return`/`throw` inside `fetchData`, record: `connecting` left true? (`fetchLock` is released on every exit since `e5abe14`.) Is there a UI affordance that will call `setConnectingStatus(true)` to recover? Build the full table (there are ~12 early returns).
 
 **Decision gate**: 
 - If every observed Phase 0 hang maps to a "lock stranded + no recovery affordance" row → solution (b) below fixes the hangs; scope it to those rows.
@@ -265,8 +265,8 @@ Also test: switch embedded→ldk, wait 5 min, switch back — does the returning
 Ranking reflects maintainer culture: minimal diffs first, big designs only with prior sign-off. Every option below is **funds-adjacent** (a node torn down mid-payment can strand an HTLC or force-close exposure), so all inherit: no drive-by refactors in payment paths, manual 2-platform testing by the author, revert-first if release testing regresses (zeus-change-control).
 
 ### 1. `fetchData` lock-hygiene + serialization audit (smallest, do first)
-Make lock acquire/release provably paired: single exit point (try/finally) for `fetchLock`; extend the `WalletRefreshRunner` guard (or fold it into one SettingsStore-owned in-flight promise) to cover the three bypass call sites — but decide per call site, not blanket: pull-to-refresh can safely be dropped while a refresh runs; `zeusln://share` would lose the shared image if the running refresh is already past `processSharedQRImageFast()`; the error-screen Restart is the escape hatch and must never be blocked by a refresh whose promise never settles.
-- **Theory obligations**: the Phase 2 table with every entry path × every exit → flags outcome; prove the error-screen Restart and transient-retry recovery still work (they depend on `setConnectingStatus(true)` clearing the lock — don't break that contract silently).
+Make lock acquire/release provably paired: single exit point (try/finally) for `fetchLock` (done in `e5abe14`); extend the `WalletRefreshRunner` guard (or fold it into one SettingsStore-owned in-flight promise) to cover the three bypass call sites — but decide per call site, not blanket: pull-to-refresh can safely be dropped while a refresh runs; `zeusln://share` would lose the shared image if the running refresh is already past `processSharedQRImageFast()`; the error-screen Retry is the escape hatch and must never be blocked by a refresh whose promise never settles.
+- **Theory obligations**: the Phase 2 table with every entry path × every exit → flags outcome; prove the error-screen Retry and transient-retry recovery still work (they depend on `setConnectingStatus(true)` clearing the lock — don't break that contract silently).
 - **Blast radius**: Wallet.tsx + SettingsStore only. No storage change, no migration.
 - **Gates**: standard PR gates + E1/E2/E4 re-run showing hang rate → 0.
 
@@ -327,7 +327,7 @@ One-line re-verification commands (run from repo root):
 ```bash
 git log -1 --format="%h %s"                                          # still c5fd094fb?
 grep -n "refreshRunner" views/Wallet/Wallet.tsx                      # re-entry guard still present
-grep -n "if (fetchLock) return" views/Wallet/Wallet.tsx              # lock acquire site
+grep -n "acquireFetchLock\|releaseFetchLock" views/Wallet/Wallet.tsx # lock acquire/release sites
 grep -n "remove fetchLock on reconnect" stores/SettingsStore.ts      # lock cleared in setConnectingStatus(true)
 grep -n "connecting = true" stores/SettingsStore.ts                  # connecting initialized true
 grep -n "walletJustCreated" views/Wallet/Wallet.tsx | head -3        # skip-start flag still consumed

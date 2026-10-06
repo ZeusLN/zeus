@@ -95,14 +95,19 @@ Known dead dispatch as of 2026-07-06: `payLightningInvoiceStreaming` is declared
 
 ### Row 4: stuck connecting
 
-`views/Wallet/Wallet.tsx` `fetchData()` opens with:
+`views/Wallet/Wallet.tsx` `fetchData()` reads:
 
 ```ts
-if (fetchLock) return;
-SettingsStore.fetchLock = true;
+const seq = SettingsStore.acquireFetchLock();
+if (seq === null) return;
+try {
+    await this.fetchDataCore(transientRetryCount);
+} finally {
+    SettingsStore.releaseFetchLock(seq);
+}
 ```
 
-and `SettingsStore.connecting` initializes `true`. `getSettingsAndNavigate()` runs on Wallet-screen focus only for initial load or an explicit settings refresh (`this.state.initialLoad || SettingsStore.triggerSettingsRefresh`), and is skipped while a refresh is in flight (`refreshRunner.running`, `utils/WalletRefreshRunner.ts`). If any code path between lock-set and lock-release throws unhandled or early-returns, the app hangs on the loading state forever — and because focus events won't re-trigger the call outside those two conditions, nothing retries it. `SettingsStore.setConnectingStatus(true)` clears `fetchLock` and the request cache — that's why "go to settings and back" sometimes unsticks it (a diagnostic signal, not a fix). Trap story: the UNSAFE-lifecycle refactor `fdad118ed` caused exactly this; `93227029e` fixed it three weeks later. Deep narrative: zeus-failure-archaeology.
+and `SettingsStore.connecting` initializes `true`. `getSettingsAndNavigate()` runs on Wallet-screen focus only for initial load or an explicit settings refresh (`this.state.initialLoad || SettingsStore.triggerSettingsRefresh`), and is skipped while a refresh is in flight (`refreshRunner.running`, `utils/WalletRefreshRunner.ts`). Since `e5abe14` an early return or throw can no longer strand the lock; a stuck spinner now means an awaited call inside `fetchDataCore` never settles (the lock stays held while it waits) or `connecting` was left `true` on an exit path. `SettingsStore.setConnectingStatus(true)` clears `fetchLock` and the request cache — that's why "go to settings and back" sometimes unsticks it (a diagnostic signal, not a fix). Trap story: the UNSAFE-lifecycle refactor `fdad118ed` caused a stranded lock; `93227029e` fixed it three weeks later. Deep narrative: zeus-failure-archaeology.
 
 ### Rows 5–7: CI failures that lie about their cause
 
@@ -172,7 +177,7 @@ Re-verification one-liners for volatile facts:
 | `call()` returns `false` for missing method | `grep -n 'return false' utils/BackendUtils.ts` |
 | `payLightningInvoiceStreaming` still unimplemented | `grep -rn payLightningInvoiceStreaming backends/` (expect no hits) |
 | `updateSettings` still shallow merge | `grep -n -A6 'public updateSettings' stores/SettingsStore.ts` |
-| `fetchLock` guard in Wallet.tsx | `grep -n 'fetchLock' views/Wallet/Wallet.tsx` |
+| `fetchLock` guard in Wallet.tsx | `grep -n 'FetchLock' views/Wallet/Wallet.tsx` |
 | `yarn lint` includes check-styles | `grep -n '"lint"' package.json` |
 | Prettier pin 2.4.1 | `grep -n '"prettier"' package.json` |
 | Jest transform whitelist members | `grep -n -A2 transformIgnorePatterns package.json` |

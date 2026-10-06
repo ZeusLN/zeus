@@ -67,7 +67,7 @@ The chain:
 4. `getSettingsAndNavigate()` — awaits `SettingsStore.getSettings()` (which also waits on Tor bootstrap), checks channel-migration lock, lockscreen/POS state, then either navigates (Lockscreen / Wallets / IntroSplash) or calls `fetchData()`.
 5. `fetchData()` — the real connect. Guarded by two SettingsStore observables:
    - `connecting` — `@observable public connecting = true` (initialized true so first boot takes the full-connect path).
-   - `fetchLock` — `@observable public fetchLock = false`; first line of substance is `if (fetchLock) return; SettingsStore.fetchLock = true;`.
+   - `fetchLock` — `@observable public fetchLock = false`, owned by SettingsStore actions: `fetchData` takes it with `const seq = SettingsStore.acquireFetchLock(); if (seq === null) return;` and runs `fetchDataCore` inside `try { … } finally { SettingsStore.releaseFetchLock(seq); }`.
 
 What `fetchData` does when `connecting` is true — resets 11 stores before touching the network:
 `AlertStore, NodeInfoStore, BalanceStore, ChannelsStore, TransactionsStore, SyncStore, LightningAddressStore, LSPStore, ChannelBackupStore, UTXOsStore, CashuStore` all `.reset()`, plus `ContactStore.loadContacts()` and `NotesStore.loadNoteKeys()`. `LnurlPayStore.reset()` runs unconditionally (even when not `connecting`).
@@ -85,8 +85,9 @@ Then it branches per implementation:
 
 Post-connect (all backends): lightning-address status + auto-accept, Cashu
 auto-address creation, swap fees, Flow LSP init (`LSPStore.getLSPInfo()`,
-`subscribeCustomMessages()`, `initChannelAcceptor()`), NWC service init, then
-`SettingsStore.fetchLock = false` and `setConnectingStatus(false)`.
+`subscribeCustomMessages()`, `initChannelAcceptor()`), NWC service init;
+`setConnectingStatus(false)` runs once the connect itself succeeded, and
+`fetchData`'s `finally` releases `fetchLock`.
 
 Why: connection must re-run on focus (app resume, wallet switch) but never
 twice in parallel — parallel runs double-start embedded nodes and corrupt
@@ -98,13 +99,13 @@ weeks later by `93227029e` (the fix commit cites the offending hash in its
 subject). This flow is the #1 maintainer-flagged live problem area
 (node-lifecycle races) — see zeus-node-lifecycle-campaign before touching it.
 
-Known sharp edge (verified in source): many early-`return` error paths inside
-`fetchData` exit WITHOUT clearing `fetchLock`. `fetchLock` is released only at
-the natural end of `fetchData`, or as a side effect of
-`SettingsStore.setConnectingStatus(true)` (which also calls
-`BackendUtils.clearCachedCalls()` and resets error state). So a failed connect
-can leave the lock held until the next explicit reconnect. Do not "fix" this
-casually — it is entangled with the lifecycle-races campaign.
+Known sharp edge: `SettingsStore.setConnectingStatus(true)` (which also calls
+`BackendUtils.clearCachedCalls()` and resets error state) clears `fetchLock`
+even while an older `fetchData` is still running, so a reconnect can start
+next to it. The lock's sequence number keeps the older run's late release
+from freeing the newer run's lock (`e5abe14`), but nothing stops the older
+run from continuing to write to stores. Early-return error paths no longer
+strand the lock: the `finally` in `fetchData` releases it on every exit.
 
 ## 2. Stores — composition root, singletons, DI order
 
@@ -294,7 +295,7 @@ campaigns). Cite them; don't silently "clean them up".
 | LNC permissions hard-coded to `true` | `backends/LightningNodeConnect.ts checkPerms`: "ZEUS-3642: we are temporarily returning all perms as true until resolved" (github issue #3642) | Open — perm-derived `supports*` on LNC is untrustworthy; read-only pairings show send UI |
 | WebSocket streams bypass Tor | `backends/LND.ts wsReq` constructs `new WebSocket(url, ...)` directly — no `doTorRequest`/SOCKS path, unlike `restReq` which routes through Tor when enabled | Open privacy gap |
 | LNURL params unfetchable from `.onion` in some flows | `// TODO handle fetching of params with internal Tor` at 3 call sites: `utils/handleAnything.ts`, `components/LayerBalances/LightningSwipeableRow.tsx`, `components/LayerBalances/EcashSwipeableRow.tsx` | Open |
-| `fetchLock` not released on early-return error paths in `fetchData` | `views/Wallet/Wallet.tsx` (§1); only cleared at fetchData end or by `setConnectingStatus(true)` | Open, part of node-lifecycle races — see zeus-node-lifecycle-campaign |
+| `fetchLock` not released on early-return error paths in `fetchData` | `views/Wallet/Wallet.tsx` (§1) | Fixed in `e5abe14` (release in `finally`, sequence-numbered lock); a run superseded by `setConnectingStatus(true)` still keeps writing to stores — see zeus-node-lifecycle-campaign |
 
 ## Invariants quick card
 
@@ -329,7 +330,7 @@ One-line re-verification commands (all read-only):
 | EmbeddedLND/LndHub still extend LND | `grep -n 'extends' backends/*.ts` |
 | LndHub `supportsChannelFundMax` gap | `grep -n supportsChannelFundMax backends/LndHub.ts backends/LND.ts` (no LndHub hit ⇒ gap persists) |
 | EmbeddedLND subscriptions still disabled | `grep -n -A3 'TODO rewrite subscription logic' backends/EmbeddedLND.ts` |
-| `fetchLock` / `connecting` guards | `grep -n 'fetchLock\|@observable public connecting' stores/SettingsStore.ts views/Wallet/Wallet.tsx` |
+| `fetchLock` / `connecting` guards | `grep -n -i 'fetchLock\|@observable public connecting' stores/SettingsStore.ts views/Wallet/Wallet.tsx` |
 | fetchData reset list | `sed -n '/if (connecting) {/,/CashuStore.reset/p' views/Wallet/Wallet.tsx \| head -25` |
 | NavigationService API | `cat NavigationService.ts` |
 | popTo usage level | `grep -rn 'popTo(' views \| wc -l` |
