@@ -1514,7 +1514,7 @@ PODS:
     - Yoga
   - react-native-netinfo (11.4.1):
     - React-Core
-  - react-native-nfc-manager (3.17.2):
+  - react-native-nfc-manager (3.17.5):
     - React-Core
   - react-native-notifications (5.2.2):
     - React-Core
@@ -1545,7 +1545,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context (5.10.0):
+  - react-native-safe-area-context (5.10.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1557,8 +1557,8 @@ PODS:
     - React-graphics
     - React-ImageManager
     - React-jsi
-    - react-native-safe-area-context/common (= 5.10.0)
-    - react-native-safe-area-context/fabric (= 5.10.0)
+    - react-native-safe-area-context/common (= 5.10.1)
+    - react-native-safe-area-context/fabric (= 5.10.1)
     - React-NativeModulesApple
     - React-RCTFabric
     - React-renderercss
@@ -1568,7 +1568,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context/common (5.10.0):
+  - react-native-safe-area-context/common (5.10.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1589,7 +1589,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - react-native-safe-area-context/fabric (5.10.0):
+  - react-native-safe-area-context/fabric (5.10.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -1659,7 +1659,7 @@ PODS:
     - React-Core
   - react-native-vector-icons-feather (12.4.0)
   - react-native-vector-icons-fontawesome (12.4.0)
-  - react-native-vector-icons-material-design-icons (12.4.0)
+  - react-native-vector-icons-material-design-icons (12.5.0)
   - react-native-vector-icons-material-icons (12.4.0)
   - react-native-view-shot (5.1.1):
     - hermes-engine
@@ -2226,7 +2226,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNReanimated (4.7.0):
+  - RNReanimated (4.7.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2247,35 +2247,12 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
-    - RNReanimated/apple (= 4.7.0)
-    - RNReanimated/common (= 4.7.0)
-    - RNReanimated/view (= 4.7.0)
+    - RNReanimated/apple (= 4.7.1)
+    - RNReanimated/common (= 4.7.1)
+    - RNReanimated/view (= 4.7.1)
     - RNWorklets
     - Yoga
-  - RNReanimated/apple (4.7.0):
-    - hermes-engine
-    - RCTRequired
-    - RCTTypeSafety
-    - React-bridging
-    - React-Core
-    - React-debug
-    - React-Fabric
-    - React-featureflags
-    - React-graphics
-    - React-hermes
-    - React-ImageManager
-    - React-jsi
-    - React-NativeModulesApple
-    - React-RCTFabric
-    - React-renderercss
-    - React-rendererdebug
-    - React-utils
-    - ReactCodegen
-    - ReactCommon/turbomodule/core
-    - ReactNativeDependencies
-    - RNWorklets
-    - Yoga
-  - RNReanimated/common (4.7.0):
+  - RNReanimated/apple (4.7.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2298,7 +2275,30 @@ PODS:
     - ReactNativeDependencies
     - RNWorklets
     - Yoga
-  - RNReanimated/view (4.7.0):
+  - RNReanimated/common (4.7.1):
+    - hermes-engine
+    - RCTRequired
+    - RCTTypeSafety
+    - React-bridging
+    - React-Core
+    - React-debug
+    - React-Fabric
+    - React-featureflags
+    - React-graphics
+    - React-hermes
+    - React-ImageManager
+    - React-jsi
+    - React-NativeModulesApple
+    - React-RCTFabric
+    - React-renderercss
+    - React-rendererdebug
+    - React-utils
+    - ReactCodegen
+    - ReactCommon/turbomodule/core
+    - ReactNativeDependencies
+    - RNWorklets
+    - Yoga
+  - RNReanimated/view (4.7.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2957,18 +2957,18 @@ SPEC CHECKSUMS:
   react-native-hce: ad5462e792d84e87924308dda1ee516757f1c0eb
   react-native-image-picker: 136c1f121106be3ef2a0d638fae933257df826b8
   react-native-netinfo: cec9c4e86083cb5b6aba0e0711f563e2fbbff187
-  react-native-nfc-manager: c8891e460b4943b695d63f7f4effc6345bbefc83
+  react-native-nfc-manager: 2949055c7321cd7776455b3c5860cf7cc3cd8c28
   react-native-notifications: e2d3c022d6077de7e420ba5c01b4bd9464f3941d
   react-native-print: 692e8782bc89872ea01738c6759631388e77358c
   react-native-qr-kit: a40acb98a771a6e614602b5dd53546a5c51e8af4
   react-native-randombytes: 4eeddad82d1fd57adda1cd5beffe67d041c9d6de
   react-native-restart: 9b4e1d24e03c8d7354e76c1f85013e17fe543885
-  react-native-safe-area-context: f124ba47d08525ce61c9549274c2a5b7ba2ad097
+  react-native-safe-area-context: ee314c3f5766b3555d6b679cd6d0c0b3ce17120d
   react-native-slider: 8ed38813dee46289070f2009680e537161b7df91
   react-native-udp: 806f16ab890dd838bc073afcebd6a221d4965572
   react-native-vector-icons-feather: b0c81b5240bc89ba1546220b694fc5f7b660258d
   react-native-vector-icons-fontawesome: 9b1827fc73ef619ce268bd6f0871f5a82233121f
-  react-native-vector-icons-material-design-icons: 76cd460b3540b80527b4a80fb7f867f7deedb498
+  react-native-vector-icons-material-design-icons: 95914f2f6b18e26e5c9563afe33184e110afe674
   react-native-vector-icons-material-icons: d67e485a05560416ff6b5977d5fa7e0eb6af6870
   react-native-view-shot: fc00b07e224f76b8b273a1b5e3867e9cefbfd21c
   React-NativeModulesApple: fa4d44768bac0eaa2abd459eff27aeefaa1143cf
@@ -3017,7 +3017,7 @@ SPEC CHECKSUMS:
   RNGestureHandler: 4228f0a91ebe7c53cc508481da8273f86e96f1a9
   RNKeychain: bf4c20ea9a035f99aed8623a56cbfa1c9093634b
   RNReactNativeHapticFeedback: 4e9fb92a6c5d9f6e5ca5b84d56c5de07bc6cc261
-  RNReanimated: 08e15384162a179af55494638707283747b85164
+  RNReanimated: 91b4ebc6fb5378b8561916fabb2352539fbba08b
   RNScreens: 639aff03a0b6ae42564e94fe2393f438bd51f39e
   RNShare: cca9107c0dcfdd92fa228116226d1189663265b4
   RNSVG: aacbdedbac719eef30569be569c9d87e08aaefce
