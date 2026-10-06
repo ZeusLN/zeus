@@ -19,6 +19,7 @@ jest.mock('./CLNRest', () => ({
 jest.mock('../utils/AddressUtils', () => ({ __esModule: true, default: {} }));
 
 import {
+    getOffchainBalance,
     getUTXOs,
     listClosedChannels,
     listPeerChannels,
@@ -36,6 +37,43 @@ const respond = (funds: any, info?: any) =>
                 : Promise.reject(new Error('getinfo failed'));
         return Promise.reject(new Error(`unexpected route ${route}`));
     });
+
+describe('CoreLightningRequestHandler.getOffchainBalance', () => {
+    const channel = (state: string, ourMsat: number, connected = true) => ({
+        state,
+        connected,
+        our_amount_msat: ourMsat,
+        amount_msat: 1_000_000_000
+    });
+
+    it('reports channels awaiting lockin under pending_open_balance', () => {
+        const result: any = getOffchainBalance({
+            channels: [
+                channel('CHANNELD_NORMAL', 400_000_000),
+                channel('CHANNELD_AWAITING_LOCKIN', 250_000_000),
+                channel('DUALOPEND_AWAITING_LOCKIN', 100_000_000)
+            ]
+        });
+
+        // BalanceStore reads pending_open_balance, the key the other
+        // backends return
+        expect(result.pending_open_balance).toBe(350_000);
+        expect(result.pending_balance).toBeUndefined();
+        expect(result.balance).toBe(400_000);
+    });
+
+    it('reports 0 pending when no channel is awaiting lockin', () => {
+        const result: any = getOffchainBalance({
+            channels: [
+                channel('CHANNELD_NORMAL', 400_000_000),
+                channel('CHANNELD_NORMAL', 50_000_000, false)
+            ]
+        });
+
+        expect(result.pending_open_balance).toBe(0);
+        expect(result.inactive_balance).toBe(50_000);
+    });
+});
 
 describe('CoreLightningRequestHandler.getUTXOs', () => {
     beforeEach(() => mockPostRequest.mockReset());

@@ -111,7 +111,7 @@ export const getOffchainBalance = (data: any) => {
     const chanArray = data.channels;
     let localBalance = 0;
     let remoteBalance = 0;
-    let pendingBalance = 0;
+    let pendingOpenBalance = 0;
     let inactiveBalance = 0;
 
     for (let i = 0; i < chanArray.length; i++) {
@@ -134,20 +134,21 @@ export const getOffchainBalance = (data: any) => {
             chanArray[i].state === 'CHANNELD_AWAITING_LOCKIN' ||
             chanArray[i].state === 'DUALOPEND_AWAITING_LOCKIN'
         ) {
-            pendingBalance = pendingBalance + chanArray[i].our_amount_msat;
+            pendingOpenBalance =
+                pendingOpenBalance + chanArray[i].our_amount_msat;
         }
     }
 
     localBalance = localBalance / 1000;
     remoteBalance = remoteBalance / 1000;
     inactiveBalance = inactiveBalance / 1000;
-    pendingBalance = pendingBalance / 1000;
+    pendingOpenBalance = pendingOpenBalance / 1000;
 
     return {
         balance: localBalance,
         remote_balance: remoteBalance,
         inactive_balance: inactiveBalance,
-        pending_balance: pendingBalance
+        pending_open_balance: pendingOpenBalance
     };
 };
 

@@ -22,7 +22,8 @@ jest.mock('../utils/BackendUtils', () => ({
 }));
 jest.mock('../utils/LocaleUtils', () => ({ localeString: (k: string) => k }));
 
-import PosStore from './PosStore';
+import Storage from '../storage';
+import PosStore, { POS_STANDALONE_KEY } from './PosStore';
 import Order, { LineItem } from '../models/Order';
 
 // $100,000/BTC keeps every expectation below an exact integer
@@ -173,5 +174,23 @@ describe('PosStore.processCheckout', () => {
         store.recalculateCurrentOrder();
         await store.processCheckout({ navigate: jest.fn() } as any, true);
         expect(store.currentOrder).toBeNull();
+    });
+});
+
+describe('PosStore.saveStandaloneOrder', () => {
+    it('keeps the tax current when re-saving an open order', async () => {
+        const store = makeStore('0');
+        store.openOrders = [recalculate('0', [fiatItem(10, '8')])];
+
+        await store.saveStandaloneOrder(
+            recalculate('0', [fiatItem(10, '8'), fiatItem(10, '20')])
+        );
+
+        expect(Storage.setItem).toHaveBeenLastCalledWith(POS_STANDALONE_KEY, [
+            expect.objectContaining({
+                total_money: expect.objectContaining({ amount: 2000 }),
+                total_tax_money: expect.objectContaining({ amount: 80 + 200 })
+            })
+        ]);
     });
 });

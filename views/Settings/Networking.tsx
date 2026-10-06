@@ -94,7 +94,7 @@ export default class Networking extends React.Component<
                                         disableOfflineCheck: undefined
                                     });
                                     if (newValue) {
-                                        ConnectivityStore.reset();
+                                        ConnectivityStore.stop();
                                     } else {
                                         ConnectivityStore.start();
                                     }
