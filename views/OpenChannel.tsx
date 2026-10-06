@@ -158,18 +158,10 @@ export default class OpenChannel extends React.Component<
         this.setState({
             min_confs,
             spend_unconfirmed: min_confs === 0,
-            privateChannel:
-                settings?.channels?.privateChannel !== null
-                    ? settings.channels.privateChannel
-                    : true,
-            scidAlias:
-                settings?.channels?.scidAlias !== null
-                    ? settings.channels.scidAlias
-                    : true,
+            privateChannel: settings?.channels?.privateChannel ?? true,
+            scidAlias: settings?.channels?.scidAlias ?? true,
             simpleTaprootChannel:
-                settings?.channels?.simpleTaprootChannel !== null
-                    ? settings.channels.simpleTaprootChannel
-                    : false
+                settings?.channels?.simpleTaprootChannel ?? false
         });
 
         this.initFromProps(this.props);

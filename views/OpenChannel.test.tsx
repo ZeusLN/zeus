@@ -408,6 +408,15 @@ describe('OpenChannel min confs default from settings', () => {
         }
     );
 
+    it('uses the default for each toggle missing from saved settings', async () => {
+        const view = makeView({ settings: { channels: { min_confs: 3 } } });
+        await view.componentDidMount();
+
+        expect(view.state.privateChannel).toBe(true);
+        expect(view.state.scidAlias).toBe(true);
+        expect(view.state.simpleTaprootChannel).toBe(false);
+    });
+
     it('counts unconfirmed funds for fund max with a saved default of 0', async () => {
         const view = makeView({
             confirmedBlockchainBalance: 0,

@@ -30,23 +30,11 @@ interface ChannelsSettingsState {
 
 const stateFromSettings = (settings: any): ChannelsSettingsState => {
     const channels = settings?.channels;
-    if (!channels) {
-        return {
-            min_confs: 1,
-            privateChannel: true,
-            scidAlias: true,
-            simpleTaprootChannel: false
-        };
-    }
     return {
-        min_confs: channels.min_confs ?? 1,
-        privateChannel:
-            channels.privateChannel !== null ? channels.privateChannel : true,
-        scidAlias: channels.scidAlias !== null ? channels.scidAlias : true,
-        simpleTaprootChannel:
-            channels.simpleTaprootChannel !== null
-                ? channels.simpleTaprootChannel
-                : false
+        min_confs: channels?.min_confs ?? 1,
+        privateChannel: channels?.privateChannel ?? true,
+        scidAlias: channels?.scidAlias ?? true,
+        simpleTaprootChannel: channels?.simpleTaprootChannel ?? false
     };
 };
 

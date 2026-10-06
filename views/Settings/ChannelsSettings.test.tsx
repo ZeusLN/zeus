@@ -91,6 +91,20 @@ describe('ChannelsSettings min confs default', () => {
     });
 });
 
+describe('ChannelsSettings toggle defaults', () => {
+    it('uses the default for each toggle missing from saved settings', async () => {
+        const view = makeView(true, { channels: { min_confs: 3 } });
+        await view.componentDidMount();
+
+        expect(view.state).toEqual({
+            min_confs: 3,
+            privateChannel: true,
+            scidAlias: true,
+            simpleTaprootChannel: false
+        });
+    });
+});
+
 describe('ChannelsSettings first render', () => {
     it.each([
         [0, '0'],
@@ -119,6 +133,15 @@ describe('ChannelsSettings first render', () => {
             privateChannel: false,
             scidAlias: false,
             simpleTaprootChannel: true
+        });
+    });
+
+    it('uses the default for each toggle missing from saved settings', () => {
+        expect(makeView(true, { channels: { min_confs: 3 } }).state).toEqual({
+            min_confs: 3,
+            privateChannel: true,
+            scidAlias: true,
+            simpleTaprootChannel: false
         });
     });
 
