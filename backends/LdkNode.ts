@@ -1374,7 +1374,7 @@ export default class LdkNode {
             });
         }
 
-        const { hash, preimage } = await this.awaitPaymentCompletion(
+        const { hash, preimage, feeMsat } = await this.awaitPaymentCompletion(
             paymentId,
             paymentTimeoutSecs
         );
@@ -1382,6 +1382,7 @@ export default class LdkNode {
         return {
             payment_hash: hash,
             payment_preimage: preimage,
+            fee_msat: feeMsat,
             payment_route: {},
             status: 'SUCCEEDED'
         };
@@ -1412,7 +1413,7 @@ export default class LdkNode {
                 paymentTimeoutSecs
             });
 
-        const { hash, preimage } = await this.awaitPaymentCompletion(
+        const { hash, preimage, feeMsat } = await this.awaitPaymentCompletion(
             paymentId,
             paymentTimeoutSecs
         );
@@ -1420,6 +1421,7 @@ export default class LdkNode {
         return {
             payment_hash: hash,
             payment_preimage: preimage,
+            fee_msat: feeMsat,
             payment_route: {},
             status: 'SUCCEEDED'
         };
@@ -1808,7 +1810,7 @@ export default class LdkNode {
             paymentTimeoutSecs
         });
 
-        const { hash, preimage } = await this.awaitPaymentCompletion(
+        const { hash, preimage, feeMsat } = await this.awaitPaymentCompletion(
             paymentId,
             paymentTimeoutSecs
         );
@@ -1816,6 +1818,7 @@ export default class LdkNode {
         return {
             payment_hash: hash,
             payment_preimage: preimage,
+            fee_msat: feeMsat,
             status: 'SUCCEEDED'
         };
     };
@@ -1894,12 +1897,13 @@ export default class LdkNode {
     /**
      * Poll listPayments until the given payment succeeds or fails.
      * Captures failure reason from events for better error messages.
-     * Returns the completed payment or throws on failure/timeout.
+     * Returns the payment's hash, preimage, and fee paid, or throws on
+     * failure/timeout.
      */
     private awaitPaymentCompletion = async (
         paymentId: string,
         paymentTimeoutSecs?: number
-    ): Promise<{ hash: string; preimage: string }> => {
+    ): Promise<{ hash: string; preimage: string; feeMsat: string }> => {
         const delayMs = 1000;
         // Size polling to LDK's timeout plus a small grace period so the
         // terminal PaymentFailed/PaymentSuccessful event can land before we
@@ -1941,7 +1945,10 @@ export default class LdkNode {
 
             return {
                 hash: payment?.kind.hash || paymentId,
-                preimage: payment?.kind.preimage || ''
+                preimage: payment?.kind.preimage || '',
+                // Without this the success screen and NWC fee accounting
+                // read the fee as 0 for every LDK payment.
+                feeMsat: (payment?.feePaidMsat || 0).toString()
             };
         } finally {
             unsubscribe();
