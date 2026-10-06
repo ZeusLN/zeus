@@ -522,6 +522,54 @@ describe('AddressUtils', () => {
         });
     });
 
+    describe('bitcoinNetworkForNode', () => {
+        it('uses mainnet params before node info loads and on mainnet', () => {
+            [
+                {},
+                null,
+                {
+                    isTestNet: false,
+                    isRegTest: false,
+                    isSigNet: false,
+                    isMutinynet: false
+                }
+            ].forEach((nodeInfo) =>
+                expect(
+                    AddressUtils.bitcoinNetworkForNode(nodeInfo).bech32
+                ).toBe('bc')
+            );
+        });
+
+        it('uses regtest params on regtest', () => {
+            expect(
+                AddressUtils.bitcoinNetworkForNode({ isRegTest: true }).bech32
+            ).toBe('bcrt');
+        });
+
+        it('uses testnet params on testnet, signet and Mutinynet', () => {
+            [
+                { isTestNet: true },
+                { isSigNet: true },
+                { isSigNet: true, isMutinynet: true },
+                { isMutinynet: true }
+            ].forEach((nodeInfo) =>
+                expect(
+                    AddressUtils.bitcoinNetworkForNode(nodeInfo).bech32
+                ).toBe('tb')
+            );
+        });
+
+        it("reads the connected node's info when called without an argument", () => {
+            const originalNodeInfo = nodeInfoStore.nodeInfo;
+            try {
+                (nodeInfoStore as any).nodeInfo = { isSigNet: true };
+                expect(AddressUtils.bitcoinNetworkForNode().bech32).toBe('tb');
+            } finally {
+                (nodeInfoStore as any).nodeInfo = originalNodeInfo;
+            }
+        });
+    });
+
     describe('isValidBitcoinAddressForNode', () => {
         const mainnet = [
             'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
@@ -1634,6 +1682,58 @@ describe('AddressUtils', () => {
                 expectedAddress
             );
         });
+
+        // Output scripts from the BIP173 (P2WPKH, P2WSH) and BIP350 (P2TR)
+        // test vectors
+        const scripts = [
+            '0014751e76e8199196d454941c45d1b3a323f1433bd6',
+            '00201863143c14c5166804bd19203356da136c985678cd4d27a1b8c6329604903262',
+            '512079be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798'
+        ];
+        const testnetAddresses = [
+            'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
+            'tb1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3q0sl5k7',
+            'tb1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vq47zagq'
+        ];
+
+        test.each([
+            [
+                'mainnet',
+                {},
+                [
+                    'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
+                    'bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3',
+                    'bc1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqzk5jj0'
+                ]
+            ],
+            ['testnet', { isTestNet: true }, testnetAddresses],
+            // CLN reports signet as network: 'signet'
+            ['signet', { isSigNet: true }, testnetAddresses],
+            [
+                'regtest',
+                { isRegTest: true },
+                [
+                    'bcrt1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080',
+                    'bcrt1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qzf4jry',
+                    'bcrt1p0xlxvlhemja6c4dqv22uapctqupfhlxm9h8z3k2e72q4k9hcz7vqc8gma6'
+                ]
+            ]
+        ])(
+            'encodes P2WPKH, P2WSH and P2TR outputs on %s',
+            (_name, nodeInfo, addresses) => {
+                const originalNodeInfo = nodeInfoStore.nodeInfo;
+                try {
+                    (nodeInfoStore as any).nodeInfo = nodeInfo;
+                    expect(
+                        scripts.map((script) =>
+                            AddressUtils.scriptPubKeyToAddress(script)
+                        )
+                    ).toEqual(addresses);
+                } finally {
+                    (nodeInfoStore as any).nodeInfo = originalNodeInfo;
+                }
+            }
+        );
 
         test('should throw an error for an invalid scriptPubKey (non-hex input)', () => {
             const invalidScriptPubKey = 'invalid_script';

@@ -242,6 +242,18 @@ class AddressUtils {
             nodeInfo?.isMutinynet
         );
 
+    // The bitcoinjs params for the connected node's network. Signet
+    // (including Mutinynet) shares testnet's address prefixes and bech32
+    // HRP, so bitcoinjs has no separate signet params; regtest has its own
+    bitcoinNetworkForNode = (
+        nodeInfo: any = nodeInfoStore?.nodeInfo
+    ): bitcoin.Network =>
+        nodeInfo?.isRegTest
+            ? bitcoin.networks.regtest
+            : this.isNodeOnTestNetwork(nodeInfo)
+            ? bitcoin.networks.testnet
+            : bitcoin.networks.bitcoin;
+
     // For destinations the connected node will pay to
     isValidBitcoinAddressForNode = (input: string) =>
         this.isValidBitcoinAddress(input, this.isNodeOnTestNetwork());
@@ -397,12 +409,7 @@ class AddressUtils {
     };
 
     scriptPubKeyToAddress = (scriptPubKeyHex: string) => {
-        const nodeInfo = nodeInfoStore?.nodeInfo;
-        const { isTestNet, isRegTest } = nodeInfo;
-
-        let network = bitcoin.networks.bitcoin;
-        if (isTestNet) network = bitcoin.networks.testnet;
-        if (isRegTest) network = bitcoin.networks.regtest;
+        const network = this.bitcoinNetworkForNode();
 
         const scriptBuffer = Buffer.from(scriptPubKeyHex, 'hex');
 
