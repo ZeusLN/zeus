@@ -123,10 +123,10 @@ export function deriveNodeIdFromEntropy(
     nonMainnet: boolean
 ): string {
     const coinType = nonMainnet ? 1 : 0;
-    return bip32
+    const { publicKey } = bip32
         .fromSeed(entropy)
-        .derivePath(`m/1017'/${coinType}'/6'/0/0`)
-        .publicKey.toString('hex');
+        .derivePath(`m/1017'/${coinType}'/6'/0/0`);
+    return Buffer.from(publicKey).toString('hex');
 }
 
 /**
