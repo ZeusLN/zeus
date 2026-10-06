@@ -11,6 +11,7 @@ import { Hash as sha256Hash } from 'fast-sha256';
 import libraryVersions from '../fetch-libraries-versions.json';
 import LdkNodeInjection from '../ldknode/LdkNodeInjection';
 import Base64Utils from '../utils/Base64Utils';
+import { feeLimitSatsToMaxRoutingFeeMsat } from '../utils/AmountUtils';
 import { localeString } from '../utils/LocaleUtils';
 import type {
     Network,
@@ -1344,9 +1345,9 @@ export default class LdkNode {
      * Pay a BOLT11 invoice
      */
     payLightningInvoice = async (data: any): Promise<any> => {
-        const maxTotalRoutingFeeMsat = data.fee_limit_sat
-            ? Number(data.fee_limit_sat) * 1000
-            : undefined;
+        const maxTotalRoutingFeeMsat = feeLimitSatsToMaxRoutingFeeMsat(
+            data.fee_limit_sat
+        );
         const maxPathCount = data.max_parts
             ? Number(data.max_parts)
             : undefined;
@@ -1373,7 +1374,7 @@ export default class LdkNode {
             });
         }
 
-        const { hash, preimage } = await this.awaitPaymentCompletion(
+        const { hash, preimage, feeMsat } = await this.awaitPaymentCompletion(
             paymentId,
             paymentTimeoutSecs
         );
@@ -1381,6 +1382,7 @@ export default class LdkNode {
         return {
             payment_hash: hash,
             payment_preimage: preimage,
+            fee_msat: feeMsat,
             payment_route: {},
             status: 'SUCCEEDED'
         };
@@ -1392,9 +1394,9 @@ export default class LdkNode {
     sendKeysend = async (data: any): Promise<any> => {
         const pubkey = data.pubkey;
         const amt = Number(data.amt);
-        const maxTotalRoutingFeeMsat = data.fee_limit_sat
-            ? Number(data.fee_limit_sat) * 1000
-            : undefined;
+        const maxTotalRoutingFeeMsat = feeLimitSatsToMaxRoutingFeeMsat(
+            data.fee_limit_sat
+        );
         const maxPathCount = data.max_parts
             ? Number(data.max_parts)
             : undefined;
@@ -1411,7 +1413,7 @@ export default class LdkNode {
                 paymentTimeoutSecs
             });
 
-        const { hash, preimage } = await this.awaitPaymentCompletion(
+        const { hash, preimage, feeMsat } = await this.awaitPaymentCompletion(
             paymentId,
             paymentTimeoutSecs
         );
@@ -1419,6 +1421,7 @@ export default class LdkNode {
         return {
             payment_hash: hash,
             payment_preimage: preimage,
+            fee_msat: feeMsat,
             payment_route: {},
             status: 'SUCCEEDED'
         };
@@ -1787,19 +1790,27 @@ export default class LdkNode {
     fetchInvoiceFromOffer = async (
         bolt12: string,
         amountSatoshis: string,
-        timeoutSeconds?: number | string
+        timeoutSeconds?: number | string,
+        feeLimitSat?: number | string
     ): Promise<any> => {
         const paymentTimeoutSecs = timeoutSeconds
             ? Number(timeoutSeconds)
             : undefined;
 
+        // Unlike the BOLT 11 and keysend paths, this method pays inside the
+        // fetch, so the user's routing fee limit has to be applied here -
+        // there is no later confirmation screen to apply it for us.
+        const maxTotalRoutingFeeMsat =
+            feeLimitSatsToMaxRoutingFeeMsat(feeLimitSat);
+
         const paymentId = await LdkNodeInjection.bolt12.bolt12SendUsingAmount({
             offer: bolt12,
             amountMsat: Number(amountSatoshis) * 1000,
+            maxTotalRoutingFeeMsat,
             paymentTimeoutSecs
         });
 
-        const { hash, preimage } = await this.awaitPaymentCompletion(
+        const { hash, preimage, feeMsat } = await this.awaitPaymentCompletion(
             paymentId,
             paymentTimeoutSecs
         );
@@ -1807,6 +1818,7 @@ export default class LdkNode {
         return {
             payment_hash: hash,
             payment_preimage: preimage,
+            fee_msat: feeMsat,
             status: 'SUCCEEDED'
         };
     };
@@ -1885,12 +1897,13 @@ export default class LdkNode {
     /**
      * Poll listPayments until the given payment succeeds or fails.
      * Captures failure reason from events for better error messages.
-     * Returns the completed payment or throws on failure/timeout.
+     * Returns the payment's hash, preimage, and fee paid, or throws on
+     * failure/timeout.
      */
     private awaitPaymentCompletion = async (
         paymentId: string,
         paymentTimeoutSecs?: number
-    ): Promise<{ hash: string; preimage: string }> => {
+    ): Promise<{ hash: string; preimage: string; feeMsat: string }> => {
         const delayMs = 1000;
         // Size polling to LDK's timeout plus a small grace period so the
         // terminal PaymentFailed/PaymentSuccessful event can land before we
@@ -1932,7 +1945,10 @@ export default class LdkNode {
 
             return {
                 hash: payment?.kind.hash || paymentId,
-                preimage: payment?.kind.preimage || ''
+                preimage: payment?.kind.preimage || '',
+                // Without this the success screen and NWC fee accounting
+                // read the fee as 0 for every LDK payment.
+                feeMsat: (payment?.feePaidMsat || 0).toString()
             };
         } finally {
             unsubscribe();
@@ -2193,6 +2209,7 @@ export default class LdkNode {
     supportsLSPS1native = () => false; // Disabled - Olympus doesn't support native LSPS1 over custom messages
     supportsLSPS7native = () => true;
     supportsOffers = () => true;
+    supportsOffersDirectPay = () => true;
     supportsListingOffers = () => false;
     supportsBolt12Address = () => false;
     supportsBolt11BlindedRoutes = () => false;
