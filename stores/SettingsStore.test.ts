@@ -286,6 +286,91 @@ describe('SettingsStore.connect (LNC)', () => {
     });
 });
 
+// The error screen's retry calls setConnectingStatus(true) while an earlier
+// fetchData may still be running, so a reconnect must clear the error and
+// free the lock, and the earlier run must not free the retry's lock.
+describe('SettingsStore reconnect and fetch lock', () => {
+    const BackendUtilsMock: any = jest.requireMock(
+        '../utils/BackendUtils'
+    ).default;
+
+    beforeEach(() => {
+        BackendUtilsMock.clearCachedCalls.mockReset();
+    });
+
+    it('does not hand out the lock twice', () => {
+        const store = new SettingsStore();
+
+        expect(store.acquireFetchLock()).not.toBeNull();
+        expect(store.acquireFetchLock()).toBeNull();
+    });
+
+    it('frees the lock for the owner', () => {
+        const store = new SettingsStore();
+        const seq = store.acquireFetchLock()!;
+
+        store.releaseFetchLock(seq);
+
+        expect(store.fetchLock).toBe(false);
+        expect(store.acquireFetchLock()).not.toBeNull();
+    });
+
+    it('clears the connect error and cached calls on reconnect', () => {
+        const store = new SettingsStore();
+        store.error = true;
+        store.errorMsg = 'connection refused';
+        store.lndFolderMissing = true;
+
+        store.setConnectingStatus(true);
+
+        expect(store.connecting).toBe(true);
+        expect(store.error).toBe(false);
+        expect(store.errorMsg).toBe('');
+        expect(store.lndFolderMissing).toBe(false);
+        expect(BackendUtilsMock.clearCachedCalls).toHaveBeenCalledTimes(1);
+    });
+
+    it('frees a held lock on reconnect', () => {
+        const store = new SettingsStore();
+        store.acquireFetchLock();
+
+        store.setConnectingStatus(true);
+
+        expect(store.fetchLock).toBe(false);
+        expect(store.acquireFetchLock()).not.toBeNull();
+    });
+
+    it('keeps the lock of the run started by the reconnect', () => {
+        const store = new SettingsStore();
+        const staleSeq = store.acquireFetchLock()!;
+
+        store.setConnectingStatus(true);
+        const currentSeq = store.acquireFetchLock()!;
+        store.releaseFetchLock(staleSeq);
+
+        expect(store.fetchLock).toBe(true);
+        expect(store.acquireFetchLock()).toBeNull();
+
+        store.releaseFetchLock(currentSeq);
+        expect(store.fetchLock).toBe(false);
+    });
+
+    it('leaves the error and the lock alone when connecting ends', () => {
+        const store = new SettingsStore();
+        store.acquireFetchLock();
+        store.error = true;
+        store.errorMsg = 'connection refused';
+
+        store.setConnectingStatus(false);
+
+        expect(store.connecting).toBe(false);
+        expect(store.error).toBe(true);
+        expect(store.errorMsg).toBe('connection refused');
+        expect(store.fetchLock).toBe(true);
+        expect(BackendUtilsMock.clearCachedCalls).not.toHaveBeenCalled();
+    });
+});
+
 describe('SettingsStore.updateSettings', () => {
     it('serializes concurrent updates so neither is lost', async () => {
         seedSettings({ fiat: 'USD', locale: 'en' });
