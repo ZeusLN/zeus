@@ -75,7 +75,7 @@ Classify every change before starting. When a change spans classes, the strictes
 | **Funds-touching** | Sending/receiving payments, invoice creation/decoding, channel open/close, fee logic, seed/key handling: `views/Send.tsx`, `views/PaymentRequest.tsx`, `stores/TransactionsStore.ts`, `backends/*`, `utils/BackendUtils.ts`, swap/Cashu/NWC payment flows | Open an issue / discuss approach first (CONTRIBUTING "Share Early, Share Often") | Minimal diff (Rule 3); manual test on iOS + Android (Rule 4); test on every backend the code path can reach, recorded in the PR template matrix; regression test if it's a bug fix |
 | **Storage-touching** | `zeus-settings-v2` blob shape, any keychain key, `storage/index.ts`, migrations, changed defaults for existing users | **Maintainer sign-off + migration plan, always** (Rule 1) | Migration follows the gated pattern in zeus-storage-and-migrations; manual test on both platforms including upgrade-from-previous-version |
 | **UI-only** | Screens/components with no store-shape or payment-logic change | None beyond checking for an existing issue/PR | Manual test on **both** platforms (CONTRIBUTING is explicit: rendering differs); screenshots/video in the PR; theme check (styling violations fail the Lint CI job — see zeus-validation-and-qa); new user-facing strings go in `locales/en.json` only (Section 7) |
-| **Docs-only** | `README.md`, `CONTRIBUTING.md`, `CODE_REVIEW.md`, `docs/*` | None | `docs:` commit prefix; no drive-by doc edits inside code PRs — known stale text (e.g. the PR template "Transfix" typo) is fixed via dedicated docs commits, not opportunistically |
+| **Docs-only** | `README.md`, `CONTRIBUTING.md`, `CODE_REVIEW.md`, `docs/*` | None | `docs:` commit prefix; no drive-by doc edits inside code PRs — known stale text is fixed via dedicated docs commits, not opportunistically |
 | **Dependency** | Any `package.json` addition/major bump | **Discuss with maintainers first** (Section 6) | PR template third-party-deps section filled; verify `yarn.lock` updated and both platforms still build |
 | **Locales** | Translation strings | — | Only `locales/en.json` (Section 7) |
 
@@ -88,10 +88,10 @@ Classify every change before starting. When a change spans classes, the strictes
 1. **Description** — issue reference (`ZEUS-0000` placeholder), description + screenshots.
 2. **Category checkboxes** — new feature / bug fix / code refactor / configuration change / locales update / quality assurance / other.
 3. **Checklist** — you ran `yarn run tsc`, `yarn run lint`, `yarn run prettier`, `yarn run test` (i.e. everything `yarn verify` runs).
-4. **Testing** — did you add unit tests for modified utility files (options: "No, I'm a fool" / Yes / N/A).
+4. **Testing** — did you add unit tests for modified or added testable logic; bug fixes should include a test that would have caught the bug (options: "No, I'm a fool" / Yes / N/A).
 5. **Platform matrix** — Android and iOS checkboxes, with OS version and phone model/VM. This is where Rule 4 is attested.
 6. **Backend testing matrix** — which of the 7 node types you tested against, with node/API versions: On-device: LDK Node, Embedded LND; Remote: LND (REST), LND (Lightning Node Connect), Core Lightning (CLNRest), Nostr Wallet Connect, LndHub.
-7. **Locales** — new translatable text flagged; acknowledgment that translations happen on Transifex, not in-repo. (The template's "Transfix" spelling is a known typo — leave it.)
+7. **Locales** — new translatable text flagged; acknowledgment that translations happen on Transifex, not in-repo.
 8. **Third-party dependencies** — whether contributors must re-run `yarn`, whether `package.json`/`yarn.lock` changed, both-platform install verified.
 9. **Other** — README or onboarding updates needed?
 
