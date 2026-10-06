@@ -54,6 +54,13 @@ describe('LnurlUtils', () => {
             ).toBe(true);
         });
 
+        it('allows exactly 32 malformed escapes and rejects 33', () => {
+            const url = (n: number) =>
+                'https://example.com/?a=' + '%FF'.repeat(n);
+            expect(hasUndecodableEscapes(url(32))).toBe(false);
+            expect(hasUndecodableEscapes(url(33))).toBe(true);
+        });
+
         it('rejects malformed escapes spread across many parameters', () => {
             const query = Array.from(
                 { length: 100 },
@@ -107,6 +114,19 @@ describe('LnurlUtils', () => {
             await expect(getLnurlParams(lnurl)).rejects.toThrow();
             expect(mockGetParams).not.toHaveBeenCalled();
         });
+
+        it.each([
+            ['lnurlp://', 'lnurlp://example.com/?a='],
+            ['bare https', 'https://example.com/?a=']
+        ])(
+            'rejects a DoS payload in a %s LNURL before parsing it',
+            async (_, prefix) => {
+                await expect(
+                    getLnurlParams(prefix + '%FF'.repeat(2000))
+                ).rejects.toThrow('utils.handleAnything.invalidLnurlParams');
+                expect(mockGetParams).not.toHaveBeenCalled();
+            }
+        );
 
         // ~4000 escapes is the most that fits in the 20000 character bech32
         // string decodelnurl() accepts, so this is the worst case an attacker
