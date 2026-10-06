@@ -114,7 +114,12 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
     const Wallet = sourceMethods(
         'views/Wallet/Wallet.tsx',
         'Wallet',
-        ['getSettingsAndNavigate', 'fetchData', 'fetchDataCore'],
+        [
+            'getSettingsAndNavigate',
+            'fetchData',
+            'fetchDataCore',
+            'retryConnection'
+        ],
         {
             BackendUtils,
             ...ldk,
@@ -481,4 +486,47 @@ describe('session start', () => {
             { shareIntentData: undefined }
         );
     });
+});
+
+it('Retry during a transient embedded LND retry connects only once', async () => {
+    jest.useFakeTimers();
+    jest.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+        const { settings, view, runner, refresh, lnd } = setup(2);
+        const { NodeInfoStore } = view.props;
+        NodeInfoStore.getNodeInfo
+            .mockRejectedValueOnce(
+                new Error('RPC server is in the process of starting up')
+            )
+            .mockResolvedValue(undefined);
+        const initial = runner.run(refresh);
+        await jest.advanceTimersByTimeAsync(0);
+        expect(NodeInfoStore.getNodeInfo).toHaveBeenCalledTimes(1);
+        // the retry left connecting mode, so the error screen and its
+        // Retry show while it sleeps before redialing
+        expect(settings.connecting).toBe(false);
+
+        await view.retryConnection();
+
+        // Retry connected right away, without waiting out the backoff
+        expect(lnd.startLnd).toHaveBeenCalledTimes(2);
+        expect(NodeInfoStore.getNodeInfo).toHaveBeenCalledTimes(2);
+        expect(settings.connecting).toBe(false);
+
+        await jest.advanceTimersByTimeAsync(2000);
+        await initial;
+
+        // the queued retry stopped instead of restarting LND again
+        expect(lnd.startLnd).toHaveBeenCalledTimes(2);
+        expect(NodeInfoStore.getNodeInfo).toHaveBeenCalledTimes(2);
+        expect(settings.setConnectingStatus.mock.calls).toEqual([
+            [false],
+            [true],
+            [false]
+        ]);
+        expect(view.props.AlertStore.reset).toHaveBeenCalledTimes(2);
+        expect(settings.connecting).toBe(false);
+    } finally {
+        jest.useRealTimers();
+    }
 });

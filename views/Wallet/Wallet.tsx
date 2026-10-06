@@ -24,7 +24,6 @@ import {
     NavigationIndependentTree
 } from '@react-navigation/native';
 import { inject, observer } from 'mobx-react';
-import RNRestart from 'react-native-restart';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import SystemNavigationBar from 'react-native-system-navigation-bar';
 
@@ -1554,6 +1553,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
     };
 
+    // The error screen's Retry. It bypasses refreshRunner so that a refresh
+    // whose promise never settles cannot block the only in-app way out.
+    retryConnection = () => {
+        this.props.SettingsStore.setConnectingStatus(true);
+        return this.getSettingsAndNavigate();
+    };
+
     render() {
         const { loading, isChannelMigrating } = this.state;
         const {
@@ -1575,7 +1581,6 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             loggedIn,
             connecting,
             posStatus,
-            setConnectingStatus,
             isMigrating
         } = SettingsStore;
         const loginRequired = !settings || SettingsStore.loginRequired();
@@ -1664,19 +1669,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 }}
                             />
                             <Button
-                                title={localeString('views.Wallet.restart')}
+                                title={localeString('general.retry')}
                                 icon={{
                                     name: 'sync',
                                     size: 25
                                 }}
-                                onPress={() => {
-                                    if (Platform.OS === 'android') {
-                                        RNRestart.Restart();
-                                    } else {
-                                        setConnectingStatus(true);
-                                        this.getSettingsAndNavigate();
-                                    }
-                                }}
+                                onPress={this.retryConnection}
                             />
                         </View>
                     )}
