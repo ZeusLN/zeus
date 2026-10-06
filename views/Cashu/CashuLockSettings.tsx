@@ -15,6 +15,7 @@ import { Row } from '../../components/layout/Row';
 import { Spacer } from '../../components/layout/Spacer';
 import DropdownSetting from '../../components/DropdownSetting';
 import ContactStore from '../../stores/ContactStore';
+import SettingsStore from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import AddressUtils from '../../utils/AddressUtils';
@@ -38,6 +39,7 @@ export interface CashuLockSettingsParams extends SendEcashParams {
 interface CashuLockSettingsProps {
     navigation: NativeStackNavigationProp<any, any>;
     ContactStore: ContactStore;
+    SettingsStore: SettingsStore;
     route: Route<'CashuLockSettings', CashuLockSettingsParams>;
 }
 interface CashuLockSettingsState {
@@ -73,7 +75,7 @@ const DURATION_OPTIONS: string[] = [
     localeString('general.custom')
 ];
 
-@inject('ContactStore')
+@inject('ContactStore', 'SettingsStore')
 @observer
 export default class CashuLockSettings extends React.Component<
     CashuLockSettingsProps,
@@ -314,6 +316,12 @@ export default class CashuLockSettings extends React.Component<
     };
 
     checkClipboardContent = async () => {
+        // with clipboard reading disabled, show the paste button without
+        // probing the clipboard; pressing it reads the clipboard
+        if (!this.props.SettingsStore.settings.privacy?.clipboard) {
+            this.setState({ hasClipboardContent: true });
+            return;
+        }
         try {
             const text = await Clipboard.getString();
             this.setState({ hasClipboardContent: !!text });
