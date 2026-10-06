@@ -18,32 +18,35 @@ import { localeString } from './LocaleUtils';
 // and the query-string 9 that depends on it are both ESM-only, and js-lnurl
 // 0.6.0 still pins query-string ^6.12.1.
 //
-// Genuine LNURLs are well-formed, so the slow decoder only ever runs on
-// malformed input. Sloppy-but-real URLs carry at most a stray escape or two,
-// so keep the lenient behaviour for a small budget and reject beyond it. The
-// cost is superlinear, so capping the total number of escapes in an
-// undecodable URL caps the total work at a few milliseconds.
-const MAX_ESCAPES_IN_MALFORMED_URL = 32;
+// The fallback splits each key and value into runs of consecutive `%XX`
+// escapes. Runs that decode are handled natively; only a run that fails to
+// decode goes through the slow path, which costs superlinear in the number of
+// escapes in that run (valid ones included). Genuine LNURLs are well-formed,
+// and sloppy-but-real ones carry at most a stray escape or two, so keep the
+// lenient behaviour for a small budget and reject beyond it. The cost is
+// superlinear per run, so capping the total number of escapes across failing
+// runs caps the total work at a few milliseconds.
+const MAX_ESCAPES_IN_UNDECODABLE_RUNS = 32;
 
-const ESCAPE_SEQUENCE = /%[0-9a-fA-F]{2}/g;
+// Same run boundaries as decode-uri-component. A run never spans `&`, `=` or
+// `?`, so runs found in the whole URL are the runs query-string's pieces hold.
+const ESCAPE_RUN = /(?:%[0-9a-fA-F]{2})+/g;
 
 /**
- * True when `url` is not valid percent-encoding and carries more escape
+ * True when the escape runs in `url` that cannot be decoded hold more escape
  * sequences than decode-uri-component can expand cheaply.
  */
 export const hasUndecodableEscapes = (url: string): boolean => {
-    try {
-        decodeURIComponent(url);
-        return false;
-    } catch {
-        // A `%XX` run can never span a `&` or `=`, so if the whole URL fails
-        // to decode then at least one of the pieces query-string splits out
-        // fails too, and the fallback decoder will run on it.
-        return (
-            (url.match(ESCAPE_SEQUENCE) || []).length >
-            MAX_ESCAPES_IN_MALFORMED_URL
-        );
+    let undecodableEscapes = 0;
+    for (const run of url.match(ESCAPE_RUN) || []) {
+        try {
+            decodeURIComponent(run);
+        } catch {
+            // every escape in a run is three characters
+            undecodableEscapes += run.length / 3;
+        }
     }
+    return undecodableEscapes > MAX_ESCAPES_IN_UNDECODABLE_RUNS;
 };
 
 /**

@@ -46,6 +46,34 @@ describe('LnurlUtils', () => {
             ).toBe(false);
         });
 
+        it('ignores valid escapes outside the failing runs', () => {
+            expect(
+                hasUndecodableEscapes(
+                    'https://example.com/?memo=50%off&meta=' +
+                        '%E2%82%AC'.repeat(100)
+                )
+            ).toBe(false);
+            expect(
+                hasUndecodableEscapes(
+                    'https://example.com/?memo=50%25off%FFx' +
+                        '%E2%82%AC'.repeat(100)
+                )
+            ).toBe(false);
+        });
+
+        it('counts the valid escapes inside a failing run', () => {
+            expect(
+                hasUndecodableEscapes(
+                    'https://example.com/?a=' + '%41'.repeat(31) + '%FF'
+                )
+            ).toBe(false);
+            expect(
+                hasUndecodableEscapes(
+                    'https://example.com/?a=' + '%41'.repeat(32) + '%FF'
+                )
+            ).toBe(true);
+        });
+
         it('rejects a URL packed with malformed escapes', () => {
             expect(
                 hasUndecodableEscapes(
