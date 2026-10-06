@@ -372,15 +372,16 @@ export default class WalletHeader extends React.Component<
 
     readClipboard = async () => {
         const { SettingsStore, connecting } = this.props;
-        const { settings } = SettingsStore!;
+        const { settings, settingsLoaded } = SettingsStore!;
         let clipboard = '';
 
-        // The connecting header mounts on cold start before the stored
-        // settings load, while settings still holds the in-memory defaults
-        // (clipboard: true). Reading then would ignore a user's opt-out. The
-        // badge is hidden while connecting, and the header that replaces
-        // this one reads again once settings are loaded.
-        if (!connecting && settings.privacy?.clipboard) {
+        // Until the stored settings load, settings holds the in-memory
+        // defaults (clipboard: true), and reading then would ignore a user's
+        // opt-out. If loading fails the wallet still opens with the
+        // defaults, so this checks settingsLoaded rather than connecting.
+        // The badge is hidden while connecting, so skip the read there too;
+        // the header that replaces this one reads on mount.
+        if (!connecting && settingsLoaded && settings.privacy?.clipboard) {
             const value = await Clipboard.getString();
             if (value && (await isClipboardValue(value))) {
                 clipboard = value;

@@ -41,15 +41,20 @@ const INVOICE = 'lnbcrt1pexample';
 
 const makeHeader = ({
     clipboard,
-    connecting
+    connecting,
+    settingsLoaded = true
 }: {
     clipboard: boolean;
     connecting?: boolean;
+    settingsLoaded?: boolean;
 }) => {
     const header = new WalletHeader({
         navigation: { addListener: jest.fn() },
         connecting,
-        SettingsStore: { settings: { privacy: { clipboard } } }
+        SettingsStore: {
+            settings: { privacy: { clipboard } },
+            settingsLoaded
+        }
     } as any);
     // setState on a class that was never mounted does nothing, so apply it
     // directly
@@ -70,6 +75,17 @@ describe('WalletHeader.readClipboard', () => {
         // on cold start the connecting header mounts while settings still
         // hold the in-memory defaults (clipboard: true)
         const header = makeHeader({ clipboard: true, connecting: true });
+
+        await header.readClipboard();
+
+        expect(Clipboard.getString).not.toHaveBeenCalled();
+        expect(header.state.clipboard).toBe('');
+    });
+
+    it('does not read the clipboard before settings load', async () => {
+        // getSettings failed: the wallet opens (connecting false) with the
+        // in-memory defaults, which say clipboard: true
+        const header = makeHeader({ clipboard: true, settingsLoaded: false });
 
         await header.readClipboard();
 
