@@ -3,7 +3,11 @@ jest.mock('mobx-react', () => ({
     observer: (component: any) => component
 }));
 jest.mock('js-lnurl', () => ({ getParams: jest.fn() }));
-jest.mock('react-native-blob-util', () => ({}));
+// the request fetchLnurlParams sends for each hop
+const mockFetch = jest.fn();
+jest.mock('react-native-blob-util', () => ({
+    config: () => ({ fetch: (...args: any[]) => mockFetch(...args) })
+}));
 // clearnet lookups go through the redirect-checking fetch
 const mockFetchLnurlUrl = jest.fn();
 jest.mock('../../utils/LnurlFetchUtils', () => ({
@@ -45,12 +49,14 @@ const mockSettingsStore = settingsStore as {
 const ONION = 'zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion';
 
 // A locked row pays its destination when tapped
-const tapRow = async (lightningAddress: string) => {
+const tapRow = (lightningAddress: string) => tapRowWith({ lightningAddress });
+
+const tapRowWith = async (destination: any) => {
     const navigation = { navigate: jest.fn() };
     await render(
         <LightningSwipeableRow
             {...({
-                lightningAddress,
+                ...destination,
                 locked: true,
                 navigation,
                 SyncStore: { isSyncing: false }
@@ -230,5 +236,63 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
             );
             expect(navigation.navigate).not.toHaveBeenCalled();
         });
+    });
+});
+
+describe('LightningSwipeableRow LNURL errors', () => {
+    let alertSpy: jest.SpyInstance;
+    beforeEach(() => {
+        mockFetch.mockReset();
+        mockSettingsStore.enableTor = false;
+        alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    });
+    afterEach(() => alertSpy.mockRestore());
+
+    const alertedMessage = () => alertSpy.mock.calls[0]?.[1];
+
+    // #5060: this error used to end up as an unhandled rejection
+    it('alerts on an .onion LNURL error response', async () => {
+        const navigation = await tapRowWith({
+            lnurlParams: {
+                status: 'ERROR',
+                domain: ONION,
+                reason: 'unreachable'
+            }
+        });
+
+        expect(alertedMessage()).toBe(`${ONION} says: unreachable`);
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('keeps the host policy message for a refused LNURL', async () => {
+        const navigation = await tapRowWith({
+            lightning: 'lnurlp://192.168.1.1/pay'
+        });
+
+        expect(alertedMessage()).toBe('utils.lnurl.unsafeEndpoint');
+        expect(mockFetch).not.toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('opens LnurlPay for a valid LNURL', async () => {
+        mockFetch.mockResolvedValue({
+            info: () => ({ status: 200 }),
+            json: () => ({
+                tag: 'payRequest',
+                callback: 'https://example.com/callback',
+                metadata: '[]'
+            })
+        });
+        const lightning = 'lnurlp://example.com/pay';
+
+        const navigation = await tapRowWith({ lightning });
+
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'LnurlPay',
+            expect.objectContaining({
+                lnurlParams: expect.objectContaining({ lnurlText: lightning })
+            })
+        );
+        expect(alertSpy).not.toHaveBeenCalled();
     });
 });
