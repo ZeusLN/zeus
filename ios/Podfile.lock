@@ -1661,7 +1661,7 @@ PODS:
   - react-native-vector-icons-fontawesome (12.4.0)
   - react-native-vector-icons-material-design-icons (12.5.0)
   - react-native-vector-icons-material-icons (12.4.0)
-  - react-native-view-shot (5.1.1):
+  - react-native-view-shot (6.1.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2970,7 +2970,7 @@ SPEC CHECKSUMS:
   react-native-vector-icons-fontawesome: 9b1827fc73ef619ce268bd6f0871f5a82233121f
   react-native-vector-icons-material-design-icons: 95914f2f6b18e26e5c9563afe33184e110afe674
   react-native-vector-icons-material-icons: d67e485a05560416ff6b5977d5fa7e0eb6af6870
-  react-native-view-shot: fc00b07e224f76b8b273a1b5e3867e9cefbfd21c
+  react-native-view-shot: df0f9fea2df2bebe84f48655d9cdf89676a68f83
   React-NativeModulesApple: fa4d44768bac0eaa2abd459eff27aeefaa1143cf
   React-networking: a7c8ea125700a7256af57914a25fe7a27194a223
   React-oscompat: 66e0be3d66b36c88442cb8c0f1cef5cb9ac00701
