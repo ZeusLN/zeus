@@ -2,7 +2,10 @@ jest.mock('mobx-react', () => ({
     inject: () => (component: any) => component,
     observer: (component: any) => component
 }));
-jest.mock('js-lnurl', () => ({ getParams: jest.fn() }));
+const mockGetParams = jest.fn();
+jest.mock('js-lnurl', () => ({
+    getParams: (...args: any[]) => mockGetParams(...args)
+}));
 const mockBlobUtilFetch = jest.fn();
 jest.mock('react-native-blob-util', () => ({
     fetch: (...args: any[]) => mockBlobUtilFetch(...args)
@@ -28,6 +31,8 @@ jest.mock('../../stores/Stores', () => ({
 jest.mock('../../stores/SyncStore', () => ({}));
 jest.mock('./SwipeableRowAction', () => 'SwipeableRowAction');
 jest.mock('./SwipeableRowContainer', () => 'SwipeableRowContainer');
+
+import { Alert } from 'react-native';
 
 import { settingsStore } from '../../stores/Stores';
 import LightningSwipeableRow from './LightningSwipeableRow';
@@ -129,5 +134,95 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
             row.handleLightningAddress('satoshi@domain.com', navigation, {})
         ).rejects.toThrow('utils.handleAnything.lightningAddressError');
         expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+});
+
+describe('LightningSwipeableRow payment errors', () => {
+    let navigation: { navigate: jest.Mock };
+    let alertSpy: jest.SpyInstance;
+
+    const press = (props: any) =>
+        (
+            new LightningSwipeableRow({ navigation, ...props }) as any
+        ).fetchLnInvoice();
+
+    beforeEach(() => {
+        mockGetParams.mockReset();
+        mockBlobUtilFetch.mockReset();
+        mockSettingsStore.enableTor = false;
+        navigation = { navigate: jest.fn() };
+        alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    });
+
+    afterEach(() => alertSpy.mockRestore());
+
+    it('alerts instead of rejecting when the LNURL guard trips', async () => {
+        await expect(
+            press({
+                lightning: 'lnurlp://example.com/pay?a=' + '%FF'.repeat(600)
+            })
+        ).resolves.toBeUndefined();
+
+        expect(mockGetParams).not.toHaveBeenCalled();
+        expect(alertSpy).toHaveBeenCalledWith(
+            'general.error',
+            'utils.handleAnything.invalidLnurlParams',
+            expect.anything(),
+            expect.anything()
+        );
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('alerts on an .onion LNURL error response', async () => {
+        await press({
+            lnurlParams: {
+                status: 'ERROR',
+                domain: `${ONION}`,
+                reason: 'unreachable'
+            }
+        });
+
+        expect(alertSpy).toHaveBeenCalledWith(
+            'general.error',
+            `${ONION} says: unreachable`,
+            expect.anything(),
+            expect.anything()
+        );
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('alerts when the Lightning Address lookup fails', async () => {
+        mockBlobUtilFetch.mockResolvedValue({
+            info: () => ({ status: 404 }),
+            json: () => ({})
+        });
+
+        await expect(
+            press({ lightningAddress: 'satoshi@domain.com' })
+        ).resolves.toBeUndefined();
+
+        expect(alertSpy).toHaveBeenCalledWith(
+            'general.error',
+            'utils.handleAnything.lightningAddressError',
+            expect.anything(),
+            expect.anything()
+        );
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('still opens LnurlPay for a valid LNURL', async () => {
+        mockGetParams.mockResolvedValue({ tag: 'payRequest' });
+        const lightning = 'lnurlp://example.com/pay';
+
+        await press({ lightning });
+
+        expect(mockGetParams).toHaveBeenCalledWith(lightning);
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'LnurlPay',
+            expect.objectContaining({
+                lnurlParams: expect.objectContaining({ lnurlText: lightning })
+            })
+        );
+        expect(alertSpy).not.toHaveBeenCalled();
     });
 });

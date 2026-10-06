@@ -148,10 +148,32 @@ export default class EcashSwipeableRow extends Component<
         }
     };
 
-    private fetchLnInvoice = () => {
+    private showError = (error: any) => {
+        Alert.alert(
+            localeString('general.error'),
+            error?.message || String(error),
+            [
+                {
+                    text: localeString('general.ok'),
+                    onPress: () => void 0
+                }
+            ],
+            { cancelable: false }
+        );
+    };
+
+    private fetchLnInvoice = async () => {
         const { lightning, lnurlParams, navigation } = this.props;
         if (lightning?.toLowerCase().startsWith('lnurl') || lnurlParams) {
-            this.handleLnurlRequest(lightning, lnurlParams, navigation);
+            try {
+                await this.handleLnurlRequest(
+                    lightning,
+                    lnurlParams,
+                    navigation
+                );
+            } catch (error) {
+                this.showError(error);
+            }
             return;
         } else {
             cashuStore.getPayReq(lightning ?? '');

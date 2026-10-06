@@ -229,6 +229,20 @@ export default class LightningSwipeableRow extends Component<
         }
     };
 
+    private showError = (error: any) => {
+        Alert.alert(
+            localeString('general.error'),
+            error?.message || String(error),
+            [
+                {
+                    text: localeString('general.ok'),
+                    onPress: () => void 0
+                }
+            ],
+            { cancelable: false }
+        );
+    };
+
     private fetchLnInvoice = async () => {
         const {
             lightning,
@@ -251,17 +265,29 @@ export default class LightningSwipeableRow extends Component<
                 isValid: true
             });
         } else if (lightningAddress) {
-            this.handleLightningAddress(lightningAddress, navigation, settings);
+            try {
+                await this.handleLightningAddress(
+                    lightningAddress,
+                    navigation,
+                    settings
+                );
+            } catch (error) {
+                this.showError(error);
+            }
         } else if (
             lightning?.toLowerCase().startsWith('lnurl') ||
             lnurlParams
         ) {
-            this.handleLnurlRequest(
-                lightning,
-                lnurlParams,
-                navigation,
-                settings
-            );
+            try {
+                await this.handleLnurlRequest(
+                    lightning,
+                    lnurlParams,
+                    navigation,
+                    settings
+                );
+            } catch (error) {
+                this.showError(error);
+            }
         } else {
             invoicesStore.getPayReq(lightning ?? '');
             navigation.navigate('PaymentRequest', {});
