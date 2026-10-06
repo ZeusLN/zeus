@@ -428,6 +428,7 @@ export default class PosStore {
             order.line_items = updateOrder.line_items;
             order.updated_at = new Date(Date.now()).toISOString();
             order.total_money = updateOrder.total_money;
+            order.total_tax_money = updateOrder.total_tax_money;
         } else {
             this.openOrders.push(updateOrder);
         }
