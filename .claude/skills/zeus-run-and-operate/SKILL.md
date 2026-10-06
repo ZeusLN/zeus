@@ -141,7 +141,7 @@ Per `docs/ReproducibleBuilds.md`:
 
 ### PGP signing
 
-Commits and releases are signed with the key published in `PGP.txt` (repo root): RSA-4096, fingerprint `96C225207F2137E278C31CF7AAC48DE8AB8DEE84` (short key ID `AAC48DE8AB8DEE84`), UIDs "Zeus LN <zeusln@tutanota.com>" and "ZEUS Support <support@zeusln.com>", currently expiring 2027-10-21. Verify a commit: `git log --show-signature -1 <hash>`. Note: git tags are **lightweight** (they point straight at commits — `git tag -v` fails with "cannot verify a non-tag object"), with one historical annotated exception (`v0.10.2-rc2`); signature verification therefore happens on the tagged commit, not the tag object.
+Commits and releases are signed with the key published in `PGP.txt` (repo root): RSA-4096, fingerprint `96C225207F2137E278C31CF7AAC48DE8AB8DEE84` (short key ID `AAC48DE8AB8DEE84`), UIDs "Zeus LN <zeusln@tutanota.com>", "ZEUS Support <support@zeusln.com>", and "ZEUS Security <security@zeusln.com>", currently expiring 2027-10-21. Verify a commit: `git log --show-signature -1 <hash>`. Note: git tags are **lightweight** (they point straight at commits — `git tag -v` fails with "cannot verify a non-tag object"), with one historical annotated exception (`v0.10.2-rc2`); signature verification therefore happens on the tagged commit, not the tag object.
 
 ### What is OUT of this repo (do not look for it here)
 

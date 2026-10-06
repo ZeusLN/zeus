@@ -6,7 +6,7 @@ ZEUS is a self-custodial Bitcoin/Lightning wallet and remote node manager. Vulne
 
 **Please do not report security vulnerabilities through public GitHub issues, discussions, or social media.**
 
-Instead, email us at **zeusln@tutanota.com**.
+Instead, email us at **security@zeusln.com**.
 
 If your report contains sensitive details, please encrypt it with our PGP key:
 
