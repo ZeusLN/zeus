@@ -120,8 +120,8 @@ describe('ConnectivityStore', () => {
         expect(store.isOffline).toBe(false);
     });
 
-    it('probes again after a restart while the old probe is pending', () => {
-        const { fetchMock } = mockPendingProbes();
+    it('probes again after a restart while the old probe is pending', async () => {
+        const { fetchMock, settle } = mockPendingProbes();
         store.start();
         emit(UNREACHABLE);
         const probesBefore = fetchMock.mock.calls.length;
@@ -131,6 +131,10 @@ describe('ConnectivityStore', () => {
         emit(UNREACHABLE);
 
         expect(fetchMock.mock.calls.length).toBeGreaterThan(probesBefore);
+
+        // Settle both probes so their abort timers are cleared
+        settle(false);
+        await flushPromises();
     });
 
     it('fires onReconnect when NetInfo reports the internet reachable again', () => {
