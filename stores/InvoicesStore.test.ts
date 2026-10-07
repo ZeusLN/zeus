@@ -21,7 +21,8 @@ jest.mock('../utils/BackendUtils', () => ({
         supportsFlowLSP: jest.fn(() => false),
         supportsOnchainReceiving: jest.fn(() => false),
         createInvoice: jest.fn(),
-        lookupInvoice: jest.fn()
+        lookupInvoice: jest.fn(),
+        supportsRouteHintUserChannelIds: jest.fn(() => false)
     }
 }));
 jest.mock('../utils/LocaleUtils');
@@ -2415,5 +2416,76 @@ describe('InvoicesStore lnurl-withdraw callback', () => {
         await withdrawTo('https://service.example/cb');
 
         expect(blobFetch).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('InvoicesStore.createInvoice route hints', () => {
+    const newHintStore = () =>
+        new InvoicesStore(
+            { settings: {} } as any,
+            { resetFee: jest.fn(), flow_error: null } as any,
+            { chanInfo: {} } as any,
+            { nodeInfo: { nodeId: 'me' } } as any
+        );
+
+    beforeEach(() => {
+        (BackendUtils.createInvoice as jest.Mock).mockReset();
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            error: 'stop'
+        });
+        (BackendUtils.supportsRouteHintUserChannelIds as jest.Mock)
+            .mockReset()
+            .mockReturnValue(true);
+    });
+
+    const hintChannel = (id: string) => ({
+        user_channel_id: id,
+        canBeRouteHint: true
+    });
+
+    const create = (routeHintChannels?: any[]) =>
+        newHintStore().createInvoice({
+            memo: '',
+            value: '1000',
+            expirySeconds: '3600',
+            routeHints: true,
+            routeHintChannels
+        } as any);
+
+    it('sends user channel ids for backends that use them', async () => {
+        await create([hintChannel('a'), hintChannel('b')]);
+        const req = (BackendUtils.createInvoice as jest.Mock).mock.calls[0][0];
+        expect(req.route_hint_user_channel_ids).toEqual(['a', 'b']);
+        expect(req.route_hints).toBeUndefined();
+    });
+
+    it('requests automatic hints when no channels are selected', async () => {
+        await create([]);
+        const req = (BackendUtils.createInvoice as jest.Mock).mock.calls[0][0];
+        expect(req.private).toBe(true);
+    });
+
+    it('errors instead of silently dropping channels that are not ready or lack a user channel id', async () => {
+        const store = newHintStore();
+        await store.createInvoice({
+            memo: '',
+            value: '1000',
+            routeHints: true,
+            routeHintChannels: [hintChannel('a'), { canBeRouteHint: false }]
+        } as any);
+        expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
+        expect(store.creatingInvoiceError).toBe(true);
+    });
+
+    it('errors when more than the LDK hint limit is selected', async () => {
+        const store = newHintStore();
+        await store.createInvoice({
+            memo: '',
+            value: '1000',
+            routeHints: true,
+            routeHintChannels: ['a', 'b', 'c', 'd'].map(hintChannel)
+        } as any);
+        expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
+        expect(store.creatingInvoiceError).toBe(true);
     });
 });
