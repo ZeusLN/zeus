@@ -176,6 +176,7 @@
     "general.unknownError": "Άγνωστο σφάλμα",
     "general.amount": "Ποσό",
     "general.clipboardError": "Σφάλμα κατά την ανάγνωση του προχείρου",
+    "general.clipboardEmpty": "Clipboard is empty",
     "general.retry": "Ξαναπροσπαθήστε ",
     "general.response": "Ανταπόκριση",
     "general.approximately": "Περίπου",

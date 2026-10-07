@@ -176,6 +176,7 @@
     "general.unknownError": "Unknown error",
     "general.amount": "Montant",
     "general.clipboardError": "Error reading clipboard",
+    "general.clipboardEmpty": "Clipboard is empty",
     "general.retry": "Réessayer",
     "general.response": "Réponse",
     "general.approximately": "Environ",

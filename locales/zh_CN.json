@@ -176,6 +176,7 @@
     "general.unknownError": "未知错误",
     "general.amount": "金额",
     "general.clipboardError": "读取剪贴板时出错",
+    "general.clipboardEmpty": "Clipboard is empty",
     "general.retry": "重试",
     "general.response": "回应",
     "general.approximately": "大约",

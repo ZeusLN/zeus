@@ -176,6 +176,7 @@
     "general.unknownError": "Unknown error",
     "general.amount": "Quantia",
     "general.clipboardError": "Error reading clipboard",
+    "general.clipboardEmpty": "Clipboard is empty",
     "general.retry": "Tentar novamente",
     "general.response": "Resposta",
     "general.approximately": "Aproximadamente",

@@ -176,6 +176,7 @@
     "general.unknownError": "Unknown error",
     "general.amount": "Jumlah",
     "general.clipboardError": "Error reading clipboard",
+    "general.clipboardEmpty": "Clipboard is empty",
     "general.retry": "Coba ulang",
     "general.response": "Respon",
     "general.approximately": "Kira-kira",

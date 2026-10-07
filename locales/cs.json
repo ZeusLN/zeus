@@ -176,6 +176,7 @@
     "general.unknownError": "Neznámá chyba",
     "general.amount": "Částka",
     "general.clipboardError": "Během čtení schránky došlo k chybě",
+    "general.clipboardEmpty": "Clipboard is empty",
     "general.retry": "Zopakovat",
     "general.response": "Odpověď",
     "general.approximately": "Přibližně",

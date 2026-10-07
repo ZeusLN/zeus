@@ -176,6 +176,7 @@
     "general.unknownError": "Unknown error",
     "general.amount": "Số lượng",
     "general.clipboardError": "Error reading clipboard",
+    "general.clipboardEmpty": "Clipboard is empty",
     "general.retry": "Thử lại",
     "general.response": "Phản hồi",
     "general.approximately": "Khoảng",
