@@ -42,12 +42,25 @@ const makeView = (supportsMinConfs: boolean, settings: any = {}) => {
     (BackendUtils.supportsChannelOpenMinConfs as jest.Mock).mockReturnValue(
         supportsMinConfs
     );
+    const updateSettings = jest.fn();
     const view = new ChannelsSettings({
         navigation: {},
         SettingsStore: {
             settings,
             getSettings: jest.fn(async () => settings),
-            updateSettings: jest.fn()
+            updateSettings,
+            // same merge as SettingsStore.updateSettingsGroup, recorded
+            // as the functional update it hands to updateSettings
+            updateSettingsGroup: jest.fn((group: string, patch: any) =>
+                updateSettings((current: any) => ({
+                    [group]: {
+                        ...current?.[group],
+                        ...(typeof patch === 'function'
+                            ? patch(current?.[group])
+                            : patch)
+                    }
+                }))
+            )
         }
     } as unknown as React.ComponentProps<typeof ChannelsSettings>);
     // setState on a class that was never mounted does nothing, so apply it
@@ -209,7 +222,8 @@ describe('ChannelsSettings writes merge into current settings', () => {
         const view = makeView(true, {
             channels: { min_confs: 1, scidAlias: true }
         });
-        await findAnnounceSwitch(view).props.onValueChange();
+        // announce on, so the channel is not private
+        await findAnnounceSwitch(view).props.onValueChange(true);
 
         expect(
             lastUpdateAgainst(view, {

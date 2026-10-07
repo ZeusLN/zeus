@@ -34,7 +34,7 @@ export default class Networking extends React.Component<
 
     render() {
         const { navigation, ConnectivityStore, SettingsStore } = this.props;
-        const { settings, updateSettings } = SettingsStore;
+        const { settings, updateSettingsGroup } = SettingsStore;
         const disableOfflineCheck =
             this.state.disableOfflineCheck ??
             settings?.networking?.disableOfflineCheck ??
@@ -79,16 +79,12 @@ export default class Networking extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={disableOfflineCheck}
-                                onValueChange={async () => {
-                                    const newValue = !disableOfflineCheck;
+                                onValueChange={async (newValue: boolean) => {
                                     this.setState({
                                         disableOfflineCheck: newValue
                                     });
-                                    await updateSettings({
-                                        networking: {
-                                            ...settings.networking,
-                                            disableOfflineCheck: newValue
-                                        }
+                                    await updateSettingsGroup('networking', {
+                                        disableOfflineCheck: newValue
                                     });
                                     this.setState({
                                         disableOfflineCheck: undefined

@@ -62,6 +62,11 @@ export default class SwapSettings extends React.Component<
         };
     }
 
+    componentWillUnmount() {
+        // Persist a custom host typed just before leaving
+        this.props.SettingsStore.flushPendingSettings();
+    }
+
     getInvoiceExpiryDisplay = () => {
         const { settings } = this.props.SettingsStore;
         const expirySeconds = settings?.invoices?.expirySeconds || '3600';
@@ -72,7 +77,8 @@ export default class SwapSettings extends React.Component<
     render() {
         const { navigation, SettingsStore, NodeInfoStore } = this.props;
         const { customHost, host, proEnabled } = this.state;
-        const { updateSettings, settings } = SettingsStore;
+        const { updateSettingsGroup, updateSettingsGroupDebounced } =
+            SettingsStore;
         const isTestnet = NodeInfoStore?.nodeInfo?.isTestNet;
         const selectedHostKeys = isTestnet
             ? SWAP_HOST_KEYS_TESTNET
@@ -111,15 +117,13 @@ export default class SwapSettings extends React.Component<
                                     : false
                             });
 
-                            await updateSettings({
-                                swaps: {
-                                    ...settings.swaps,
-                                    [isTestnet ? 'hostTestnet' : 'hostMainnet']:
-                                        value,
-                                    proEnabled: newSelectedHost?.pro
-                                        ? proEnabled
-                                        : false
-                                }
+                            await updateSettingsGroup('swaps', {
+                                ...(isTestnet
+                                    ? { hostTestnet: value }
+                                    : { hostMainnet: value }),
+                                proEnabled: newSelectedHost?.pro
+                                    ? proEnabled
+                                    : false
                             });
                         }}
                         values={
@@ -146,14 +150,11 @@ export default class SwapSettings extends React.Component<
                                         ? DEFAULT_SWAP_HOST_TESTNET
                                         : DEFAULT_SWAP_HOST_MAINNET
                                 }
-                                onChangeText={async (text: string) => {
+                                onChangeText={(text: string) => {
                                     this.setState({ customHost: text });
 
-                                    await updateSettings({
-                                        swaps: {
-                                            ...settings.swaps,
-                                            customHost: text
-                                        }
+                                    updateSettingsGroupDebounced('swaps', {
+                                        customHost: text
                                     });
                                 }}
                                 autoCapitalize="none"
@@ -189,16 +190,14 @@ export default class SwapSettings extends React.Component<
                             >
                                 <Switch
                                     value={proEnabled}
-                                    onValueChange={async () => {
-                                        const newProEnabled = !proEnabled;
+                                    onValueChange={async (
+                                        newProEnabled: boolean
+                                    ) => {
                                         this.setState({
                                             proEnabled: newProEnabled
                                         });
-                                        await updateSettings({
-                                            swaps: {
-                                                ...settings.swaps,
-                                                proEnabled: newProEnabled
-                                            }
+                                        await updateSettingsGroup('swaps', {
+                                            proEnabled: newProEnabled
                                         });
                                     }}
                                 />

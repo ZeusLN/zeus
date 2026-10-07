@@ -80,6 +80,12 @@ export default class PaymentsSettings extends React.Component<
         });
     }
 
+    componentWillUnmount() {
+        // Persist a fee limit, threshold or timeout typed just before
+        // leaving
+        this.props.SettingsStore.flushPendingSettings();
+    }
+
     renderSeparator = () => (
         <View
             style={{
@@ -105,7 +111,11 @@ export default class PaymentsSettings extends React.Component<
         const { nodeInfo } = NodeInfoStore;
         const { isMainNet } = nodeInfo;
 
-        const { updateSettings, settings, implementation } = SettingsStore;
+        const {
+            updateSettingsGroup,
+            updateSettingsGroupDebounced,
+            implementation
+        } = SettingsStore;
 
         return (
             <Screen>
@@ -153,17 +163,17 @@ export default class PaymentsSettings extends React.Component<
                                     keyboardType="numeric"
                                     value={feeLimit}
                                     suffix={localeString('general.sats')}
-                                    onChangeText={async (text: string) => {
+                                    onChangeText={(text: string) => {
                                         this.setState({
                                             feeLimit: text
                                         });
-                                        await updateSettings({
-                                            payments: {
-                                                ...settings.payments,
+                                        updateSettingsGroupDebounced(
+                                            'payments',
+                                            {
                                                 defaultFeeMethod: 'fixed',
                                                 defaultFeeFixed: text
                                             }
-                                        });
+                                        );
                                     }}
                                     onPressIn={() =>
                                         this.setState({
@@ -178,17 +188,17 @@ export default class PaymentsSettings extends React.Component<
                                     keyboardType="numeric"
                                     value={feePercentage}
                                     suffix="%"
-                                    onChangeText={async (text: string) => {
+                                    onChangeText={(text: string) => {
                                         this.setState({
                                             feePercentage: text
                                         });
-                                        await updateSettings({
-                                            payments: {
-                                                ...settings.payments,
+                                        updateSettingsGroupDebounced(
+                                            'payments',
+                                            {
                                                 defaultFeeMethod: 'percent',
                                                 defaultFeePercentage: text
                                             }
-                                        });
+                                        );
                                     }}
                                     onPressIn={() =>
                                         this.setState({
@@ -214,7 +224,7 @@ export default class PaymentsSettings extends React.Component<
                                 'views.Settings.Payments.slideToPayThreshold'
                             )
                         }
-                        onAmountChange={async (amount, _) => {
+                        onAmountChange={(amount, _) => {
                             this.setState({
                                 slideToPayThreshold: amount
                             });
@@ -226,11 +236,8 @@ export default class PaymentsSettings extends React.Component<
                                 this.state.mounted &&
                                 !Number.isNaN(amountNumber)
                             ) {
-                                await updateSettings({
-                                    payments: {
-                                        ...settings.payments,
-                                        slideToPayThreshold: Number(amount)
-                                    }
+                                updateSettingsGroupDebounced('payments', {
+                                    slideToPayThreshold: Number(amount)
                                 });
                             }
                         }}
@@ -259,15 +266,12 @@ export default class PaymentsSettings extends React.Component<
                             <TextInput
                                 keyboardType="numeric"
                                 value={timeoutSeconds}
-                                onChangeText={async (text: string) => {
+                                onChangeText={(text: string) => {
                                     this.setState({
                                         timeoutSeconds: text
                                     });
-                                    await updateSettings({
-                                        payments: {
-                                            ...settings.payments,
-                                            timeoutSeconds: text
-                                        }
+                                    updateSettingsGroupDebounced('payments', {
+                                        timeoutSeconds: text
                                     });
                                 }}
                             />
@@ -293,16 +297,12 @@ export default class PaymentsSettings extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={enableMempoolRates}
-                                onValueChange={async () => {
+                                onValueChange={async (value: boolean) => {
                                     this.setState({
-                                        enableMempoolRates: !enableMempoolRates
+                                        enableMempoolRates: value
                                     });
-                                    await updateSettings({
-                                        privacy: {
-                                            ...settings.privacy,
-                                            enableMempoolRates:
-                                                !enableMempoolRates
-                                        }
+                                    await updateSettingsGroup('privacy', {
+                                        enableMempoolRates: value
                                     });
                                 }}
                             />
@@ -318,11 +318,8 @@ export default class PaymentsSettings extends React.Component<
                                 this.setState({
                                     preferredMempoolRate: value
                                 });
-                                await updateSettings({
-                                    payments: {
-                                        ...settings.payments,
-                                        preferredMempoolRate: value
-                                    }
+                                await updateSettingsGroup('payments', {
+                                    preferredMempoolRate: value
                                 });
                             }}
                             values={MEMPOOL_RATES_KEYS}
@@ -355,16 +352,12 @@ export default class PaymentsSettings extends React.Component<
                             <View>
                                 <Switch
                                     value={enableDonations}
-                                    onValueChange={async () => {
+                                    onValueChange={async (value: boolean) => {
                                         this.setState({
-                                            enableDonations: !enableDonations
+                                            enableDonations: value
                                         });
-                                        await updateSettings({
-                                            payments: {
-                                                ...settings.payments,
-                                                enableDonations:
-                                                    !enableDonations
-                                            }
+                                        await updateSettingsGroup('payments', {
+                                            enableDonations: value
                                         });
                                     }}
                                 />
@@ -415,11 +408,8 @@ export default class PaymentsSettings extends React.Component<
                                     onSlidingComplete={async (
                                         value: number
                                     ) => {
-                                        await updateSettings({
-                                            payments: {
-                                                ...settings.payments,
-                                                defaultDonationPercentage: value
-                                            }
+                                        await updateSettingsGroup('payments', {
+                                            defaultDonationPercentage: value
                                         });
                                     }}
                                     minimumTrackTintColor={themeColor(

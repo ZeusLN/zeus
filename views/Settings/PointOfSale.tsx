@@ -94,6 +94,11 @@ export default class PointOfSale extends React.Component<
         });
     }
 
+    componentWillUnmount() {
+        // Persist a token, name or tax rate typed just before leaving
+        this.props.SettingsStore.flushPendingSettings();
+    }
+
     renderSeparator = () => (
         <View
             style={{
@@ -118,7 +123,8 @@ export default class PointOfSale extends React.Component<
             enablePrinter,
             defaultView
         } = this.state;
-        const { updateSettings, settings }: any = SettingsStore;
+        const { settings, updateSettingsGroup, updateSettingsGroupDebounced } =
+            SettingsStore;
         const { passphrase, pin, fiatEnabled } = settings;
 
         const LIST_ITEMS = [
@@ -191,15 +197,11 @@ export default class PointOfSale extends React.Component<
                                 if (value === PosEnabled.Disabled) {
                                     setPosStatus('unselected');
                                 }
-                                await updateSettings({
-                                    pos: {
-                                        ...settings.pos,
-                                        posEnabled: value
-                                    }
+                                await updateSettingsGroup('pos', {
+                                    posEnabled: value
                                 });
                             }}
                             values={POS_ENABLED_KEYS}
-                            disabled={SettingsStore.settingsUpdateInProgress}
                         />
 
                         {posEnabled === PosEnabled.Square && (
@@ -215,16 +217,13 @@ export default class PointOfSale extends React.Component<
                                 </Text>
                                 <TextInput
                                     value={squareAccessToken}
-                                    onChangeText={async (text: string) => {
+                                    onChangeText={(text: string) => {
                                         this.setState({
                                             squareAccessToken: text
                                         });
 
-                                        await updateSettings({
-                                            pos: {
-                                                ...settings.pos,
-                                                squareAccessToken: text
-                                            }
+                                        updateSettingsGroupDebounced('pos', {
+                                            squareAccessToken: text
                                         });
                                     }}
                                 />
@@ -240,16 +239,13 @@ export default class PointOfSale extends React.Component<
                                 </Text>
                                 <TextInput
                                     value={squareLocationId}
-                                    onChangeText={async (text: string) => {
+                                    onChangeText={(text: string) => {
                                         this.setState({
                                             squareLocationId: text
                                         });
 
-                                        await updateSettings({
-                                            pos: {
-                                                ...settings.pos,
-                                                squareLocationId: text
-                                            }
+                                        updateSettingsGroupDebounced('pos', {
+                                            squareLocationId: text
                                         });
                                     }}
                                 />
@@ -267,19 +263,14 @@ export default class PointOfSale extends React.Component<
                                     </Text>
                                     <Switch
                                         value={squareDevMode}
-                                        disabled={
-                                            SettingsStore.settingsUpdateInProgress
-                                        }
-                                        onValueChange={async () => {
+                                        onValueChange={async (
+                                            value: boolean
+                                        ) => {
                                             this.setState({
-                                                squareDevMode: !squareDevMode
+                                                squareDevMode: value
                                             });
-                                            await updateSettings({
-                                                pos: {
-                                                    ...settings.pos,
-                                                    squareDevMode:
-                                                        !squareDevMode
-                                                }
+                                            await updateSettingsGroup('pos', {
+                                                squareDevMode: value
                                             });
                                         }}
                                     />
@@ -300,16 +291,13 @@ export default class PointOfSale extends React.Component<
                                 </Text>
                                 <TextInput
                                     value={merchantName}
-                                    onChangeText={async (text: string) => {
+                                    onChangeText={(text: string) => {
                                         this.setState({
                                             merchantName: text
                                         });
 
-                                        await updateSettings({
-                                            pos: {
-                                                ...settings.pos,
-                                                merchantName: text
-                                            }
+                                        updateSettingsGroupDebounced('pos', {
+                                            merchantName: text
                                         });
                                     }}
                                 />
@@ -322,17 +310,11 @@ export default class PointOfSale extends React.Component<
                                         this.setState({
                                             confirmationPreference: value
                                         });
-                                        await updateSettings({
-                                            pos: {
-                                                ...settings.pos,
-                                                confirmationPreference: value
-                                            }
+                                        await updateSettingsGroup('pos', {
+                                            confirmationPreference: value
                                         });
                                     }}
                                     values={POS_CONF_PREF_KEYS}
-                                    disabled={
-                                        SettingsStore.settingsUpdateInProgress
-                                    }
                                 />
                                 {posEnabled === PosEnabled.Standalone && (
                                     <DropdownSetting
@@ -346,17 +328,11 @@ export default class PointOfSale extends React.Component<
                                             this.setState({
                                                 defaultView: value
                                             });
-                                            await updateSettings({
-                                                pos: {
-                                                    ...settings.pos,
-                                                    defaultView: value
-                                                }
+                                            await updateSettingsGroup('pos', {
+                                                defaultView: value
                                             });
                                         }}
                                         values={DEFAULT_VIEW_KEYS_POS}
-                                        disabled={
-                                            SettingsStore.settingsUpdateInProgress
-                                        }
                                     />
                                 )}
 
@@ -373,18 +349,14 @@ export default class PointOfSale extends React.Component<
                                     </Text>
                                     <Switch
                                         value={disableTips}
-                                        disabled={
-                                            SettingsStore.settingsUpdateInProgress
-                                        }
-                                        onValueChange={async () => {
+                                        onValueChange={async (
+                                            value: boolean
+                                        ) => {
                                             this.setState({
-                                                disableTips: !disableTips
+                                                disableTips: value
                                             });
-                                            await updateSettings({
-                                                pos: {
-                                                    ...settings.pos,
-                                                    disableTips: !disableTips
-                                                }
+                                            await updateSettingsGroup('pos', {
+                                                disableTips: value
                                             });
                                         }}
                                     />
@@ -406,21 +378,18 @@ export default class PointOfSale extends React.Component<
                                         </Text>
                                         <Switch
                                             value={enablePrinter}
-                                            disabled={
-                                                SettingsStore.settingsUpdateInProgress
-                                            }
-                                            onValueChange={async () => {
+                                            onValueChange={async (
+                                                value: boolean
+                                            ) => {
                                                 this.setState({
-                                                    enablePrinter:
-                                                        !enablePrinter
+                                                    enablePrinter: value
                                                 });
-                                                await updateSettings({
-                                                    pos: {
-                                                        ...settings.pos,
-                                                        enablePrinter:
-                                                            !enablePrinter
+                                                await updateSettingsGroup(
+                                                    'pos',
+                                                    {
+                                                        enablePrinter: value
                                                     }
-                                                });
+                                                );
                                             }}
                                         />
                                     </View>
@@ -443,18 +412,14 @@ export default class PointOfSale extends React.Component<
                                     </Text>
                                     <Switch
                                         value={showKeypad}
-                                        disabled={
-                                            SettingsStore.settingsUpdateInProgress
-                                        }
-                                        onValueChange={async () => {
+                                        onValueChange={async (
+                                            value: boolean
+                                        ) => {
                                             this.setState({
-                                                showKeypad: !showKeypad
+                                                showKeypad: value
                                             });
-                                            await updateSettings({
-                                                pos: {
-                                                    ...settings.pos,
-                                                    showKeypad: !showKeypad
-                                                }
+                                            await updateSettingsGroup('pos', {
+                                                showKeypad: value
                                             });
                                         }}
                                     />
@@ -475,16 +440,13 @@ export default class PointOfSale extends React.Component<
                                     placeholder={'0'}
                                     value={taxPercentage}
                                     keyboardType="numeric"
-                                    onChangeText={async (text: string) => {
+                                    onChangeText={(text: string) => {
                                         this.setState({
                                             taxPercentage: text
                                         });
 
-                                        await updateSettings({
-                                            pos: {
-                                                ...settings.pos,
-                                                taxPercentage: text
-                                            }
+                                        updateSettingsGroupDebounced('pos', {
+                                            taxPercentage: text
                                         });
                                     }}
                                     suffix="%"

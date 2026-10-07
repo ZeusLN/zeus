@@ -94,9 +94,22 @@ export default class Privacy extends React.Component<
         // 'Custom' with no saved URL makes every consumer fall back to the
         // default preset, so leaving it selected would misrepresent the
         // instance actually in use. Revert the dropdown on the way out.
+        // The custom URL inputs are debounced and every write is queued,
+        // so decide against the group as it is inside the queue. State
+        // holds the latest dropdown choice, so it rules out the write
+        // when neither dropdown is on 'Custom'.
         const { SettingsStore } = this.props;
-        const { settings, updateSettings }: any = SettingsStore;
-        const privacy = settings.privacy || {};
+        const { defaultBlockExplorer, mempoolInstance } = this.state;
+        SettingsStore.flushPendingSettings();
+        if (defaultBlockExplorer !== 'Custom' && mempoolInstance !== 'Custom') {
+            return;
+        }
+        SettingsStore.updateSettingsGroup('privacy', (privacy) =>
+            Privacy.customFallbacks(privacy)
+        );
+    }
+
+    static customFallbacks(privacy: any = {}): any {
         const updates: any = {};
 
         if (
@@ -112,9 +125,7 @@ export default class Privacy extends React.Component<
             updates.mempoolInstance = DEFAULT_MEMPOOL_INSTANCE;
         }
 
-        if (Object.keys(updates).length > 0) {
-            updateSettings({ privacy: { ...privacy, ...updates } });
-        }
+        return updates;
     }
 
     // Both fields require a full http(s) URL, matching the other custom
@@ -146,7 +157,8 @@ export default class Privacy extends React.Component<
             mempoolInstance,
             customMempoolInstance
         } = this.state;
-        const { settings, updateSettings }: any = SettingsStore;
+        const { updateSettingsGroup, updateSettingsGroupDebounced } =
+            SettingsStore;
 
         const customBlockExplorerError =
             !this.isValidCustomUrl(customBlockExplorer);
@@ -180,15 +192,11 @@ export default class Privacy extends React.Component<
                             this.setState({
                                 defaultBlockExplorer: value
                             });
-                            await updateSettings({
-                                privacy: {
-                                    ...settings.privacy,
-                                    defaultBlockExplorer: value
-                                }
+                            await updateSettingsGroup('privacy', {
+                                defaultBlockExplorer: value
                             });
                         }}
                         values={BLOCK_EXPLORER_KEYS}
-                        disabled={SettingsStore.settingsUpdateInProgress}
                     />
 
                     {defaultBlockExplorer === 'Custom' && (
@@ -210,18 +218,15 @@ export default class Privacy extends React.Component<
                                 autoCapitalize="none"
                                 autoCorrect={false}
                                 keyboardType="url"
-                                onChangeText={async (text: string) => {
+                                onChangeText={(text: string) => {
                                     this.setState({
                                         customBlockExplorer: text
                                     });
 
                                     if (!this.isValidCustomUrl(text)) return;
 
-                                    await updateSettings({
-                                        privacy: {
-                                            ...settings.privacy,
-                                            customBlockExplorer: text
-                                        }
+                                    updateSettingsGroupDebounced('privacy', {
+                                        customBlockExplorer: text
                                     });
                                 }}
                             />
@@ -267,18 +272,10 @@ export default class Privacy extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={clipboard}
-                                disabled={
-                                    SettingsStore.settingsUpdateInProgress
-                                }
-                                onValueChange={async () => {
-                                    this.setState({
-                                        clipboard: !clipboard
-                                    });
-                                    await updateSettings({
-                                        privacy: {
-                                            ...settings.privacy,
-                                            clipboard: !clipboard
-                                        }
+                                onValueChange={async (value: boolean) => {
+                                    this.setState({ clipboard: value });
+                                    await updateSettingsGroup('privacy', {
+                                        clipboard: value
                                     });
                                 }}
                             />
@@ -317,18 +314,10 @@ export default class Privacy extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={lurkerMode}
-                                disabled={
-                                    SettingsStore.settingsUpdateInProgress
-                                }
-                                onValueChange={async () => {
-                                    this.setState({
-                                        lurkerMode: !lurkerMode
-                                    });
-                                    await updateSettings({
-                                        privacy: {
-                                            ...settings.privacy,
-                                            lurkerMode: !lurkerMode
-                                        }
+                                onValueChange={async (value: boolean) => {
+                                    this.setState({ lurkerMode: value });
+                                    await updateSettingsGroup('privacy', {
+                                        lurkerMode: value
                                     });
                                 }}
                             />
@@ -356,19 +345,12 @@ export default class Privacy extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={enableMempoolRates}
-                                disabled={
-                                    SettingsStore.settingsUpdateInProgress
-                                }
-                                onValueChange={async () => {
+                                onValueChange={async (value: boolean) => {
                                     this.setState({
-                                        enableMempoolRates: !enableMempoolRates
+                                        enableMempoolRates: value
                                     });
-                                    await updateSettings({
-                                        privacy: {
-                                            ...settings.privacy,
-                                            enableMempoolRates:
-                                                !enableMempoolRates
-                                        }
+                                    await updateSettingsGroup('privacy', {
+                                        enableMempoolRates: value
                                     });
                                 }}
                             />
@@ -393,15 +375,11 @@ export default class Privacy extends React.Component<
                                 this.setState({
                                     mempoolInstance: value
                                 });
-                                await updateSettings({
-                                    privacy: {
-                                        ...settings.privacy,
-                                        mempoolInstance: value
-                                    }
+                                await updateSettingsGroup('privacy', {
+                                    mempoolInstance: value
                                 });
                             }}
                             values={MEMPOOL_INSTANCE_KEYS}
-                            disabled={SettingsStore.settingsUpdateInProgress}
                         />
 
                         {mempoolInstance === 'Custom' && (
@@ -421,7 +399,7 @@ export default class Privacy extends React.Component<
                                     autoCapitalize="none"
                                     autoCorrect={false}
                                     keyboardType="url"
-                                    onChangeText={async (text: string) => {
+                                    onChangeText={(text: string) => {
                                         this.setState({
                                             customMempoolInstance: text
                                         });
@@ -429,12 +407,10 @@ export default class Privacy extends React.Component<
                                         if (!this.isValidCustomUrl(text))
                                             return;
 
-                                        await updateSettings({
-                                            privacy: {
-                                                ...settings.privacy,
-                                                customMempoolInstance: text
-                                            }
-                                        });
+                                        updateSettingsGroupDebounced(
+                                            'privacy',
+                                            { customMempoolInstance: text }
+                                        );
                                     }}
                                 />
                                 {customMempoolInstanceError && (

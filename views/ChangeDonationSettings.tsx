@@ -59,7 +59,7 @@ export default class ChangeDonationSettings extends React.Component<
         const { nodeInfo } = NodeInfoStore;
         const { isMainNet } = nodeInfo;
 
-        const { updateSettings, settings } = SettingsStore;
+        const { updateSettingsGroup } = SettingsStore;
 
         return (
             <Screen>
@@ -106,16 +106,12 @@ export default class ChangeDonationSettings extends React.Component<
                             <View>
                                 <Switch
                                     value={enableDonations}
-                                    onValueChange={async () => {
+                                    onValueChange={async (value: boolean) => {
                                         this.setState({
-                                            enableDonations: !enableDonations
+                                            enableDonations: value
                                         });
-                                        await updateSettings({
-                                            payments: {
-                                                ...settings.payments,
-                                                enableDonations:
-                                                    !enableDonations
-                                            }
+                                        await updateSettingsGroup('payments', {
+                                            enableDonations: value
                                         });
                                     }}
                                 />
@@ -166,11 +162,8 @@ export default class ChangeDonationSettings extends React.Component<
                                     onSlidingComplete={async (
                                         value: number
                                     ) => {
-                                        await updateSettings({
-                                            payments: {
-                                                ...settings.payments,
-                                                defaultDonationPercentage: value
-                                            }
+                                        await updateSettingsGroup('payments', {
+                                            defaultDonationPercentage: value
                                         });
                                     }}
                                     minimumTrackTintColor={themeColor(
