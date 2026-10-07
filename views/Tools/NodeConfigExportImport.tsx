@@ -40,6 +40,7 @@ import {
     exportNodeConfigs,
     decryptExportData,
     decryptExportDataV2,
+    getImportableNodes,
     isValidExportPassword,
     EXPORT_FORMAT_VERSION,
     MIN_EXPORT_PASSWORD_LENGTH
@@ -629,9 +630,12 @@ export default class NodeConfigExportImport extends React.Component<
                 });
             } else {
                 // Show node selection modal for unencrypted imports
-                const nodes = (importData.data as { nodes: Node[] })?.nodes;
+                const rawNodes = (importData.data as { nodes: Node[] })?.nodes;
+                const nodes = Array.isArray(rawNodes)
+                    ? getImportableNodes(rawNodes)
+                    : [];
 
-                if (!Array.isArray(nodes)) {
+                if (nodes.length === 0) {
                     this.handleError(
                         undefined,
                         'views.Tools.nodeConfigExportImport.importError'
@@ -897,13 +901,23 @@ export default class NodeConfigExportImport extends React.Component<
 
             // v2 = native AES-256-GCM blob; v1 = legacy CryptoJS passphrase
             // blob (kept importable permanently).
-            const nodes =
+            const decryptedNodes =
                 importData!.version >= 2
                     ? await decryptExportDataV2(
                           importData!.data as string,
                           password
                       )
                     : decryptExportData(importData!.data as string, password);
+            const nodes = getImportableNodes(decryptedNodes);
+
+            if (nodes.length === 0) {
+                this.handleError(
+                    undefined,
+                    'views.Tools.nodeConfigExportImport.importError'
+                );
+                this.resetImportState();
+                return;
+            }
 
             // Show node selection modal for encrypted imports
             this.setState({
