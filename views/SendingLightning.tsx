@@ -350,6 +350,7 @@ export default class SendingLightning extends React.Component<
             payment_preimage,
             payment_fee,
             payment_error,
+            paymentRejectedByRecipient,
             noteKey,
             paymentDuration
         } = TransactionsStore;
@@ -462,6 +463,9 @@ export default class SendingLightning extends React.Component<
                             {(!!error || !!payment_error) && (
                                 <PaymentErrorView
                                     errorMessage={payment_error || error_msg}
+                                    rejectedByRecipient={
+                                        paymentRejectedByRecipient
+                                    }
                                 />
                             )}
                             {!!success &&
@@ -574,25 +578,32 @@ export default class SendingLightning extends React.Component<
                                 )}
                                 {(!!payment_error || !!error) && (
                                     <>
-                                        <Button
-                                            title={localeString(
-                                                'views.SendingLightning.tryAgain'
-                                            )}
-                                            icon={{
-                                                name: 'rotate-ccw',
-                                                type: 'feather',
-                                                size: 25
-                                            }}
-                                            onPress={() => navigation.goBack()}
-                                            buttonStyle={{
-                                                backgroundColor: 'white',
-                                                height: 40
-                                            }}
-                                            containerStyle={{
-                                                width: '100%',
-                                                margin: 3
-                                            }}
-                                        />
+                                        {/* retrying an invoice the recipient
+                                            rejected or canceled fails the
+                                            same way */}
+                                        {!paymentRejectedByRecipient && (
+                                            <Button
+                                                title={localeString(
+                                                    'views.SendingLightning.tryAgain'
+                                                )}
+                                                icon={{
+                                                    name: 'rotate-ccw',
+                                                    type: 'feather',
+                                                    size: 25
+                                                }}
+                                                onPress={() =>
+                                                    navigation.goBack()
+                                                }
+                                                buttonStyle={{
+                                                    backgroundColor: 'white',
+                                                    height: 40
+                                                }}
+                                                containerStyle={{
+                                                    width: '100%',
+                                                    margin: 3
+                                                }}
+                                            />
+                                        )}
                                         {BackendUtils.isLocalWallet() && (
                                             <Button
                                                 title={localeString(
