@@ -176,6 +176,7 @@
     "general.unknownError": "Unknown error",
     "general.amount": "수량",
     "general.clipboardError": "Error reading clipboard",
+    "general.clipboardEmpty": "Clipboard is empty",
     "general.retry": "재시도",
     "general.response": "응답",
     "general.approximately": "대략",
