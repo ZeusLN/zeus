@@ -2178,9 +2178,13 @@ export default class SettingsStore {
         return this.enqueueSettingsUpdate(newSetting);
     };
 
+    // Counts updates ever enqueued; see flushPendingSettings
+    private settingsUpdatesEnqueued = 0;
+
     private enqueueSettingsUpdate = (
         newSetting: any | ((currentSettings: Settings) => any)
     ): Promise<Settings> => {
+        this.settingsUpdatesEnqueued++;
         const task = this.updateSettingsQueue.then(() =>
             this.applySettingsUpdate(newSetting)
         );
@@ -2270,11 +2274,25 @@ export default class SettingsStore {
             }
             return update;
         });
-        // Callers that only flush (unmount, backgrounding) do not await;
-        // report a failed write instead of leaving it unhandled.
-        task.catch((error) =>
-            console.error('Could not persist pending settings', error)
-        );
+        const enqueued = this.settingsUpdatesEnqueued;
+        // Callers that only flush (unmount, backgrounding) do not await,
+        // so a failed write is logged here rather than left unhandled.
+        // The patches go back under any newer pending ones and ride the
+        // next flush (debounced edit, unmount, backgrounding, or any
+        // other update); there is no timer retry, so a write that keeps
+        // failing cannot loop. They are dropped if another update was
+        // queued behind this flush: it may set the same fields, and
+        // restoring would overwrite its newer values.
+        task.catch((error) => {
+            console.error('Could not persist pending settings', error);
+            if (this.settingsUpdatesEnqueued !== enqueued) return;
+            for (const group of Object.keys(patches)) {
+                this.pendingGroupPatches[group] = {
+                    ...patches[group],
+                    ...this.pendingGroupPatches[group]
+                };
+            }
+        });
         return task;
     };
 

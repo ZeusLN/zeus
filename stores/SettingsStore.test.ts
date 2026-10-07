@@ -616,6 +616,95 @@ describe('SettingsStore.updateSettingsGroupDebounced', () => {
         });
     });
 
+    const failNextWrite = () =>
+        StorageMock.setItem.mockImplementationOnce(async () => {
+            throw new Error('keychain unavailable');
+        });
+
+    it('keeps a patch whose write failed for the next flush', async () => {
+        seedSettings({ invoices: { memo: '', receiverName: '' } });
+        const store = new SettingsStore();
+
+        store.updateSettingsGroupDebounced('invoices', {
+            memo: 'coffee',
+            receiverName: 'Satoshi'
+        });
+        failNextWrite();
+        await expect(store.flushPendingSettings()).rejects.toThrow(
+            'keychain unavailable'
+        );
+        expect(persistedSettings().invoices).toEqual({
+            memo: '',
+            receiverName: ''
+        });
+
+        await store.flushPendingSettings();
+
+        expect(persistedSettings().invoices).toEqual({
+            memo: 'coffee',
+            receiverName: 'Satoshi'
+        });
+        expect(errorSpy).toHaveBeenCalledWith(
+            'Could not persist pending settings',
+            expect.any(Error)
+        );
+    });
+
+    it('lets a newer pending value win over a restored one', async () => {
+        seedSettings({ invoices: { memo: '', receiverName: '' } });
+        const store = new SettingsStore();
+
+        store.updateSettingsGroupDebounced('invoices', {
+            memo: 'cof',
+            receiverName: 'Satoshi'
+        });
+        failNextWrite();
+        const failed = store.flushPendingSettings();
+        // typed while the failing write was in the queue
+        store.updateSettingsGroupDebounced('invoices', { memo: 'coffee' });
+        await expect(failed).rejects.toThrow('keychain unavailable');
+
+        await jest.advanceTimersByTimeAsync(SETTINGS_WRITE_DEBOUNCE_MS);
+
+        expect(persistedSettings().invoices).toEqual({
+            memo: 'coffee',
+            receiverName: 'Satoshi'
+        });
+    });
+
+    it('drops a failed patch when a later update was queued behind it', async () => {
+        seedSettings({
+            invoices: {
+                expiry: '1',
+                timePeriod: 'Hours',
+                expirySeconds: '3600'
+            }
+        });
+        const store = new SettingsStore();
+
+        store.updateSettingsGroupDebounced('invoices', {
+            expiry: '5',
+            expirySeconds: '18000'
+        });
+        failNextWrite();
+        const failed = store.flushPendingSettings();
+        const later = store.updateSettingsGroup('invoices', {
+            timePeriod: 'Days',
+            expirySeconds: '86400'
+        });
+        await expect(failed).rejects.toThrow('keychain unavailable');
+        await later;
+
+        await store.flushPendingSettings();
+        await jest.advanceTimersByTimeAsync(SETTINGS_WRITE_DEBOUNCE_MS);
+
+        expect(persistedSettings().invoices).toEqual({
+            expiry: '1',
+            timePeriod: 'Days',
+            expirySeconds: '86400'
+        });
+    });
+
     it('flushes when the app leaves the foreground', async () => {
         seedSettings({ invoices: { memo: '' } });
         const store = new SettingsStore();
