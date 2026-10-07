@@ -942,6 +942,7 @@
     "views.Send.payBolt12.offersNotSupported": "Backend does not support BOLT 12",
     "views.Bolt12OfferReview.title": "Review Offer",
     "views.Bolt12OfferReview.issuer": "Issuer",
+    "views.Bolt12OfferReview.issuerId": "Issuer ID",
     "views.Bolt12OfferReview.offerAmount": "Offer minimum",
     "views.Bolt12OfferReview.payOffer": "Pay offer",
     "views.Bolt12OfferReview.expired": "This offer has expired",

@@ -21,6 +21,7 @@ import TransactionsStore from '../stores/TransactionsStore';
 
 import type { DecodedOffer } from '../ldknode/LdkNodeInjection';
 
+import { getOfferPayBlockers } from '../utils/Bolt12OfferUtils';
 import DateTimeUtils from '../utils/DateTimeUtils';
 import FeeUtils from '../utils/FeeUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -86,7 +87,12 @@ export default class Bolt12OfferReview extends React.Component<
 
     payOffer = () => {
         const { TransactionsStore, navigation, route } = this.props;
-        const { offer, satAmount, timeoutSeconds } = route.params;
+        const { offer, decodedOffer, satAmount, timeoutSeconds } = route.params;
+
+        // The pay controls are disabled when the offer can't be paid, but
+        // re-check here in case the handler fires through another path or the
+        // offer expired after the last render
+        if (getOfferPayBlockers(decodedOffer, satAmount).cannotPay) return;
 
         // Guard against double-submission: bail if a payment is already in
         // flight so a rapid double-tap or re-fired swipe can't dispatch twice
@@ -131,29 +137,14 @@ export default class Bolt12OfferReview extends React.Component<
             settings?.payments?.slideToPayThreshold ??
             DEFAULT_SLIDE_TO_PAY_THRESHOLD;
 
-        const isExpired = decodedOffer.isExpired;
-        const offerAmountMsats =
-            decodedOffer.amountType === 'bitcoin'
-                ? decodedOffer.amountMsats
-                : undefined;
-        const offerAmountSats = offerAmountMsats
-            ? Math.ceil(offerAmountMsats / 1000)
-            : undefined;
-
-        // ldk-node rejects each of these locally, before any invoice_request
-        // leaves the device, so fail closed rather than let the user swipe
-        // into a guaranteed error:
-        //   currency-denominated offer  -> Error::UnsupportedCurrency
-        //   offer expecting a quantity  -> Bolt12SemanticError::MissingQuantity
-        //     (payOffer never sends one)
-        //   amount below the offer's    -> Error::InvalidAmount
-        const isFiatDenominated = decodedOffer.amountType === 'currency';
-        const expectsQuantity = decodedOffer.expectsQuantity;
-        const isUnderpaying =
-            offerAmountMsats != null &&
-            Number(satAmount) * 1000 < offerAmountMsats;
-        const cannotPay =
-            isExpired || isFiatDenominated || expectsQuantity || isUnderpaying;
+        const {
+            isExpired,
+            isFiatDenominated,
+            expectsQuantity,
+            isUnderpaying,
+            offerAmountSats,
+            cannotPay
+        } = getOfferPayBlockers(decodedOffer, satAmount);
 
         return (
             <Screen>
@@ -232,7 +223,9 @@ export default class Bolt12OfferReview extends React.Component<
                         )}
                         {decodedOffer.issuerSigningPubkey && (
                             <KeyValue
-                                keyValue={localeString('general.destination')}
+                                keyValue={localeString(
+                                    'views.Bolt12OfferReview.issuerId'
+                                )}
                                 value={decodedOffer.issuerSigningPubkey}
                                 sensitive
                             />
