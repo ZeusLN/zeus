@@ -176,6 +176,7 @@
     "general.unknownError": "Unknown error",
     "general.amount": "राशि",
     "general.clipboardError": "Error reading clipboard",
+    "general.clipboardEmpty": "Clipboard is empty",
     "general.retry": "पुनः प्रयास करें",
     "general.response": "प्रतिक्रिया",
     "general.approximately": "Approximately",
