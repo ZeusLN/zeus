@@ -204,6 +204,8 @@ export interface ChannelDetails {
     shortChannelId?: string;
 }
 
+export type RouteHintsMode = 'none' | 'automatic' | 'custom';
+
 export interface ClosedChannelDetails {
     channelId: string;
     userChannelId: string;
@@ -554,11 +556,15 @@ export interface ILdkNodeModule {
     receiveBolt11(
         amountMsat: number,
         description: string,
-        expirySecs: number
+        expirySecs: number,
+        routeHintsMode?: RouteHintsMode,
+        customRouteHintUserChannelIds?: string[] | null
     ): Promise<{ invoice: string }>;
     receiveVariableAmountBolt11(
         description: string,
-        expirySecs: number
+        expirySecs: number,
+        routeHintsMode?: RouteHintsMode,
+        customRouteHintUserChannelIds?: string[] | null
     ): Promise<{ invoice: string }>;
     sendBolt11(
         invoice: string,

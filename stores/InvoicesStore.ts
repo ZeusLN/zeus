@@ -12,6 +12,7 @@ import ChannelInfo from '../models/ChannelInfo';
 import SettingsStore from './SettingsStore';
 import LSPStore from './LSPStore';
 import BackendUtils from '../utils/BackendUtils';
+import { maxRouteHints } from '../utils/RouteHintUtils';
 import { toWalletrpcAddressTypeName } from '../utils/LndUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
@@ -322,59 +323,80 @@ export default class InvoicesStore {
         if (blindedPaths) req.is_blinded = true;
         if (routeHints) {
             if (routeHintChannels?.length) {
-                const routeHints = [];
-                for (const routeHintChannel of routeHintChannels) {
-                    let channelInfo =
-                        this.channelsStore.chanInfo[
-                            routeHintChannel.channelId!
-                        ];
-                    if (!channelInfo) {
-                        try {
-                            channelInfo = new ChannelInfo(
-                                await BackendUtils.getChannelInfo(
-                                    routeHintChannel.channelId
-                                )
+                if (BackendUtils.supportsRouteHintUserChannelIds()) {
+                    const userChannelIds = routeHintChannels
+                        .filter((channel) => channel.canBeRouteHint)
+                        .map((channel) => channel.user_channel_id as string);
+                    if (
+                        userChannelIds.length !== routeHintChannels.length ||
+                        userChannelIds.length > maxRouteHints()
+                    ) {
+                        runInAction(() => {
+                            this.creatingInvoiceError = true;
+                            this.creatingInvoice = false;
+                            this.error_msg = localeString(
+                                'stores.InvoicesStore.errorCreatingInvoice'
                             );
-                        } catch (error: any) {
-                            const error_msg = error?.toString();
-                            runInAction(() => {
-                                this.creatingInvoiceError = true;
-                                this.creatingInvoice = false;
-                                this.error_msg =
-                                    error_msg ||
-                                    localeString(
-                                        'stores.InvoicesStore.errorCreatingInvoice'
-                                    );
-                            });
-                            return;
-                        }
+                        });
+                        return;
                     }
-                    const remotePolicy =
-                        channelInfo.node1Pub ===
-                        this.nodeInfoStore.nodeInfo.nodeId
-                            ? channelInfo.node2Policy
-                            : channelInfo.node1Policy;
-                    routeHints.push({
-                        hop_hints: [
-                            {
-                                node_id: routeHintChannel.remotePubkey,
-                                chan_id:
-                                    routeHintChannel.peer_scid_alias &&
-                                    routeHintChannel.peer_scid_alias !== '0'
-                                        ? routeHintChannel.peer_scid_alias
-                                        : routeHintChannel.channelId, // must not be converted to Number as this might lead to a loss of precision
-                                fee_base_msat: Number(
-                                    remotePolicy?.fee_base_msat
-                                ),
-                                fee_proportional_millionths: Number(
-                                    remotePolicy?.fee_rate_milli_msat
-                                ),
-                                cltv_expiry_delta: remotePolicy?.time_lock_delta
+                    req.route_hint_user_channel_ids = userChannelIds;
+                } else {
+                    const routeHints = [];
+                    for (const routeHintChannel of routeHintChannels) {
+                        let channelInfo =
+                            this.channelsStore.chanInfo[
+                                routeHintChannel.channelId!
+                            ];
+                        if (!channelInfo) {
+                            try {
+                                channelInfo = new ChannelInfo(
+                                    await BackendUtils.getChannelInfo(
+                                        routeHintChannel.channelId
+                                    )
+                                );
+                            } catch (error: any) {
+                                const error_msg = error?.toString();
+                                runInAction(() => {
+                                    this.creatingInvoiceError = true;
+                                    this.creatingInvoice = false;
+                                    this.error_msg =
+                                        error_msg ||
+                                        localeString(
+                                            'stores.InvoicesStore.errorCreatingInvoice'
+                                        );
+                                });
+                                return;
                             }
-                        ]
-                    });
+                        }
+                        const remotePolicy =
+                            channelInfo.node1Pub ===
+                            this.nodeInfoStore.nodeInfo.nodeId
+                                ? channelInfo.node2Policy
+                                : channelInfo.node1Policy;
+                        routeHints.push({
+                            hop_hints: [
+                                {
+                                    node_id: routeHintChannel.remotePubkey,
+                                    chan_id:
+                                        routeHintChannel.peer_scid_alias &&
+                                        routeHintChannel.peer_scid_alias !== '0'
+                                            ? routeHintChannel.peer_scid_alias
+                                            : routeHintChannel.channelId, // must not be converted to Number as this might lead to a loss of precision
+                                    fee_base_msat: Number(
+                                        remotePolicy?.fee_base_msat
+                                    ),
+                                    fee_proportional_millionths: Number(
+                                        remotePolicy?.fee_rate_milli_msat
+                                    ),
+                                    cltv_expiry_delta:
+                                        remotePolicy?.time_lock_delta
+                                }
+                            ]
+                        });
+                    }
+                    req.route_hints = routeHints;
                 }
-                req.route_hints = routeHints;
             } else {
                 req.private = true;
             }

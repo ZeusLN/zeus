@@ -1315,13 +1315,46 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
 
     // BOLT11 Payment Methods
 
+    private fun parseRouteHints(
+        mode: String?,
+        customRouteHintUserChannelIds: ReadableArray?
+    ): RouteHints {
+        return when (mode?.lowercase()) {
+            "none" -> RouteHints.None
+            "custom" -> {
+                val ids = if (customRouteHintUserChannelIds == null || customRouteHintUserChannelIds.size() == 0) {
+                    emptyList()
+                } else {
+                    (0 until customRouteHintUserChannelIds.size()).mapNotNull { i ->
+                        customRouteHintUserChannelIds.getString(i)
+                    }
+                }
+                RouteHints.Custom(ids)
+            }
+            else -> RouteHints.Automatic
+        }
+    }
+
     @ReactMethod
-    fun receiveBolt11(amountMsat: Double, description: String, expirySecs: Double, promise: Promise) {
+    fun receiveBolt11(
+        amountMsat: Double,
+        description: String,
+        expirySecs: Double,
+        routeHintsMode: String?,
+        customRouteHintUserChannelIds: ReadableArray?,
+        promise: Promise
+    ) {
         try {
             val node = this.node ?: throw Exception("Node not initialized")
             val bolt11 = node.bolt11Payment()
             val invoiceDescription = Bolt11InvoiceDescription.Direct(description)
-            val invoice = bolt11.receive(amountMsat.toLong().toULong(), invoiceDescription, expirySecs.toInt().toUInt())
+            val routeHints = parseRouteHints(routeHintsMode, customRouteHintUserChannelIds)
+            val invoice = bolt11.receiveWithRouteHints(
+                amountMsat.toLong().toULong(),
+                invoiceDescription,
+                expirySecs.toInt().toUInt(),
+                routeHints
+            )
             val result = Arguments.createMap().apply { putString("invoice", invoice.toString()) }
             promise.resolve(result)
         } catch (e: Exception) {
@@ -1330,12 +1363,23 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     }
 
     @ReactMethod
-    fun receiveVariableAmountBolt11(description: String, expirySecs: Double, promise: Promise) {
+    fun receiveVariableAmountBolt11(
+        description: String,
+        expirySecs: Double,
+        routeHintsMode: String?,
+        customRouteHintUserChannelIds: ReadableArray?,
+        promise: Promise
+    ) {
         try {
             val node = this.node ?: throw Exception("Node not initialized")
             val bolt11 = node.bolt11Payment()
             val invoiceDescription = Bolt11InvoiceDescription.Direct(description)
-            val invoice = bolt11.receiveVariableAmount(invoiceDescription, expirySecs.toInt().toUInt())
+            val routeHints = parseRouteHints(routeHintsMode, customRouteHintUserChannelIds)
+            val invoice = bolt11.receiveVariableAmountWithRouteHints(
+                invoiceDescription,
+                expirySecs.toInt().toUInt(),
+                routeHints
+            )
             val result = Arguments.createMap().apply { putString("invoice", invoice.toString()) }
             promise.resolve(result)
         } catch (e: Exception) {
