@@ -23,6 +23,23 @@ export const MIN_EXPORT_PASSWORD_LENGTH = 8;
 export const isValidExportPassword = (password: string): boolean =>
     !!password && password.trim().length >= MIN_EXPORT_PASSWORD_LENGTH;
 
+// On-device wallets are never exported (the export picker disables them):
+// their config points at a local data directory and holds the seed. A file
+// that contains one anyway was not produced by ZEUS, and importing it would
+// let the file choose the directory that wallet deletion later removes.
+const NON_IMPORTABLE_IMPLEMENTATIONS = ['embedded-lnd', 'ldk-node'];
+
+// Drops entries that are not node objects or that belong to an on-device
+// implementation. Applied to every node list read from an import file.
+export const getImportableNodes = (nodes: unknown[]): Node[] =>
+    nodes.filter(
+        (node: any): node is Node =>
+            !!node &&
+            typeof node === 'object' &&
+            !Array.isArray(node) &&
+            !NON_IMPORTABLE_IMPLEMENTATIONS.includes(node.implementation)
+    );
+
 interface NodeConfigExport {
     version: number;
     encrypted: boolean;

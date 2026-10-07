@@ -5,6 +5,7 @@ import {
     exportNodeConfigs,
     decryptExportData,
     decryptExportDataV2,
+    getImportableNodes,
     isValidExportPassword,
     EXPORT_FORMAT_VERSION,
     MIN_EXPORT_PASSWORD_LENGTH
@@ -352,6 +353,35 @@ describe('NodeConfigUtils', () => {
             await expect(
                 decryptExportDataV2(envelope.data, padded)
             ).resolves.toEqual(testNodes);
+        });
+    });
+
+    describe('getImportableNodes', () => {
+        it('keeps remote node configs', () => {
+            const nodes = [
+                { implementation: 'lnd', host: 'a', macaroonHex: 'x' },
+                { implementation: 'cln-rest', host: 'b', rune: 'y' },
+                { implementation: 'nostr-wallet-connect' }
+            ];
+            expect(getImportableNodes(nodes)).toEqual(nodes);
+        });
+
+        it('drops on-device wallets, which ZEUS never exports', () => {
+            const remote = { implementation: 'lnd', host: 'a' };
+            expect(
+                getImportableNodes([
+                    { implementation: 'ldk-node', ldkNodeDir: '../victim' },
+                    remote,
+                    { implementation: 'embedded-lnd', lndDir: '..' }
+                ])
+            ).toEqual([remote]);
+        });
+
+        it('drops entries that are not node objects', () => {
+            const remote = { implementation: 'lnd', host: 'a' };
+            expect(
+                getImportableNodes([null, 'lnd', 1, [], remote, undefined])
+            ).toEqual([remote]);
         });
     });
 
