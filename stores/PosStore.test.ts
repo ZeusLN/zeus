@@ -226,6 +226,23 @@ describe('PosStore.getOrdersHistorical', () => {
         return store;
     };
 
+    // the payment record ZEUS saves locally when square-order is paid
+    const storePayment = (overrides: any = {}) =>
+        (Storage.getItem as jest.Mock).mockImplementation(async (key: string) =>
+            key === 'pos-square-order'
+                ? JSON.stringify({
+                      orderId: 'square-order',
+                      orderTotal: '10800',
+                      orderTip: '1000',
+                      exchangeRate: fiatStoreStub.getRate(),
+                      rate: RATE,
+                      type: 'ln',
+                      tx: 'lnbc1',
+                      ...overrides
+                  })
+                : null
+        );
+
     afterEach(() =>
         (Storage.getItem as jest.Mock).mockImplementation(async () => null)
     );
@@ -237,18 +254,7 @@ describe('PosStore.getOrdersHistorical', () => {
     });
 
     it('converts a stored Lightning tip to fiat and exports the payment', async () => {
-        const payment = {
-            orderId: 'square-order',
-            orderTotal: '10800',
-            orderTip: '1000',
-            exchangeRate: fiatStoreStub.getRate(),
-            rate: RATE,
-            type: 'ln',
-            tx: 'lnbc1'
-        };
-        (Storage.getItem as jest.Mock).mockImplementation(async (key: string) =>
-            key === 'pos-square-order' ? JSON.stringify(payment) : null
-        );
+        storePayment();
 
         const store = await recon([squareOrder()]);
 
@@ -256,6 +262,16 @@ describe('PosStore.getOrdersHistorical', () => {
         expect(store.reconExport).toBe(
             'orderId,totalSats,tipSats,rateFull,rateNumerical,type,tx\n' +
                 '"square-order","10800","1000","$100,000.00","100000","ln","lnbc1"\n'
+        );
+    });
+
+    it('escapes quotes inside an exported field', async () => {
+        storePayment({ exchangeRate: '100,000 "USD"' });
+
+        const store = await recon([squareOrder()]);
+
+        expect(store.reconExport.split('\n')[1]).toBe(
+            '"square-order","10800","1000","100,000 ""USD""","100000","ln","lnbc1"'
         );
     });
 
