@@ -25,6 +25,18 @@ import AddressUtils from './AddressUtils';
 import { nodeInfoStore } from '../stores/Stores';
 import { walletrpc } from '../proto/lightning';
 
+// Runs fn with the connected node's info swapped, and restores it even when
+// an assertion inside fn fails
+const withNodeInfo = (nodeInfo: any, fn: () => void) => {
+    const originalNodeInfo = nodeInfoStore.nodeInfo;
+    (nodeInfoStore as any).nodeInfo = nodeInfo;
+    try {
+        fn();
+    } finally {
+        (nodeInfoStore as any).nodeInfo = originalNodeInfo;
+    }
+};
+
 describe('AddressUtils', () => {
     describe('isValidBIP21Uri', () => {
         it('validates all BIP-21 URI variations', () => {
@@ -486,16 +498,13 @@ describe('AddressUtils', () => {
         });
 
         it("reads the connected node's info when called without an argument", () => {
-            const originalNodeInfo = nodeInfoStore.nodeInfo;
-            try {
-                (nodeInfoStore as any).nodeInfo = { isSigNet: true };
+            withNodeInfo({ isSigNet: true }, () => {
                 expect(AddressUtils.isNodeOnTestNetwork()).toBe(true);
                 expect(AddressUtils.isNodeOnTestNetwork(undefined)).toBe(true);
-                (nodeInfoStore as any).nodeInfo = {};
-                expect(AddressUtils.isNodeOnTestNetwork()).toBe(false);
-            } finally {
-                (nodeInfoStore as any).nodeInfo = originalNodeInfo;
-            }
+            });
+            withNodeInfo({}, () =>
+                expect(AddressUtils.isNodeOnTestNetwork()).toBe(false)
+            );
         });
 
         it('is false on mainnet', () => {
@@ -560,13 +569,9 @@ describe('AddressUtils', () => {
         });
 
         it("reads the connected node's info when called without an argument", () => {
-            const originalNodeInfo = nodeInfoStore.nodeInfo;
-            try {
-                (nodeInfoStore as any).nodeInfo = { isSigNet: true };
-                expect(AddressUtils.bitcoinNetworkForNode().bech32).toBe('tb');
-            } finally {
-                (nodeInfoStore as any).nodeInfo = originalNodeInfo;
-            }
+            withNodeInfo({ isSigNet: true }, () =>
+                expect(AddressUtils.bitcoinNetworkForNode().bech32).toBe('tb')
+            );
         });
     });
 
@@ -1720,19 +1725,14 @@ describe('AddressUtils', () => {
             ]
         ])(
             'encodes P2WPKH, P2WSH and P2TR outputs on %s',
-            (_name, nodeInfo, addresses) => {
-                const originalNodeInfo = nodeInfoStore.nodeInfo;
-                try {
-                    (nodeInfoStore as any).nodeInfo = nodeInfo;
+            (_name, nodeInfo, addresses) =>
+                withNodeInfo(nodeInfo, () =>
                     expect(
                         scripts.map((script) =>
                             AddressUtils.scriptPubKeyToAddress(script)
                         )
-                    ).toEqual(addresses);
-                } finally {
-                    (nodeInfoStore as any).nodeInfo = originalNodeInfo;
-                }
-            }
+                    ).toEqual(addresses)
+                )
         );
 
         test('should throw an error for an invalid scriptPubKey (non-hex input)', () => {
