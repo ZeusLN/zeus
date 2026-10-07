@@ -218,6 +218,7 @@ export default class LndHub extends LND {
     supportsChannelCoinControl = () => false;
     supportsHopPicking = () => false;
     supportsRouteHints = () => false;
+    supportsRouteHintUserChannelIds = () => false;
     supportsAccounts = () => false;
     supportsRouting = () => false;
     supportsNodeInfo = () => false;

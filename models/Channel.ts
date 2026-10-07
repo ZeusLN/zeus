@@ -69,6 +69,7 @@ export default class Channel extends BaseModel {
 
     channel_id?: string;
     user_channel_id?: string;
+    is_channel_ready?: boolean;
     alias?: string;
     // pending
     remote_node_pub?: string;
@@ -125,6 +126,12 @@ export default class Channel extends BaseModel {
             !this.closing &&
             !this.close_cause
         );
+    }
+
+    // LDK Node route hints can only reference open, ready channels
+    @computed
+    public get canBeRouteHint(): boolean {
+        return !!this.user_channel_id && this.is_channel_ready === true;
     }
 
     @computed
