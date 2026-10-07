@@ -61,6 +61,17 @@ const makeView = (supportsMinConfs: boolean, settings: any = {}) => {
 const updateSettingsOf = (view: ChannelsSettings) =>
     view.props.SettingsStore.updateSettings as jest.Mock;
 
+// the settings the last updateSettings call would write, given the
+// settings current when the store applies it
+const lastUpdateAgainst = (view: ChannelsSettings, current: any) => {
+    const calls = updateSettingsOf(view).mock.calls;
+    const update = calls[calls.length - 1][0];
+    return typeof update === 'function' ? update(current) : update;
+};
+
+const findAnnounceSwitch = (view: ChannelsSettings) =>
+    findElement(view.render(), (element) => element.type === 'Switch');
+
 const findMinConfsInput = (view: ChannelsSettings) =>
     findElement(
         view.render(),
@@ -161,9 +172,9 @@ describe('ChannelsSettings min confs input', () => {
         await findMinConfsInput(view).props.onChangeText('0');
 
         expect(view.state.min_confs).toBe(0);
-        expect(updateSettingsOf(view)).toHaveBeenCalledWith({
-            channels: { min_confs: 0 }
-        });
+        expect(lastUpdateAgainst(view, { channels: { min_confs: 1 } })).toEqual(
+            { channels: { min_confs: 0 } }
+        );
     });
 
     it('saves a cleared field as unset, not 0', async () => {
@@ -172,8 +183,40 @@ describe('ChannelsSettings min confs input', () => {
 
         expect(view.state.min_confs).toBeUndefined();
         expect(findMinConfsInput(view).props.value).toBe('');
-        expect(updateSettingsOf(view)).toHaveBeenCalledWith({
-            channels: { min_confs: undefined }
+        expect(lastUpdateAgainst(view, { channels: { min_confs: 3 } })).toEqual(
+            { channels: { min_confs: undefined } }
+        );
+    });
+});
+
+describe('ChannelsSettings writes merge into current settings', () => {
+    // a toggle saved after this render but before the next write lands
+    // must survive that write
+    const current = { channels: { min_confs: 1, privateChannel: false } };
+
+    it('keeps a toggle saved since render when min confs changes', async () => {
+        const view = makeView(true, {
+            channels: { min_confs: 1, privateChannel: true }
+        });
+        await findMinConfsInput(view).props.onChangeText('2');
+
+        expect(lastUpdateAgainst(view, current)).toEqual({
+            channels: { min_confs: 2, privateChannel: false }
+        });
+    });
+
+    it('keeps min confs saved since render when a toggle changes', async () => {
+        const view = makeView(true, {
+            channels: { min_confs: 1, scidAlias: true }
+        });
+        await findAnnounceSwitch(view).props.onValueChange();
+
+        expect(
+            lastUpdateAgainst(view, {
+                channels: { min_confs: 4, scidAlias: false }
+            })
+        ).toEqual({
+            channels: { min_confs: 4, scidAlias: false, privateChannel: false }
         });
     });
 });

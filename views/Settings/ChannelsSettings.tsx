@@ -9,7 +9,7 @@ import Switch from '../../components/Switch';
 import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 
-import SettingsStore from '../../stores/SettingsStore';
+import SettingsStore, { Settings } from '../../stores/SettingsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import OpenChannelUtils from '../../utils/OpenChannelUtils';
@@ -72,7 +72,7 @@ export default class ChannelsSettings extends React.Component<
         const { navigation, SettingsStore } = this.props;
         const { min_confs, privateChannel, scidAlias, simpleTaprootChannel } =
             this.state;
-        const { settings, updateSettings }: any = SettingsStore;
+        const { updateSettings }: any = SettingsStore;
 
         return (
             <Screen>
@@ -114,12 +114,14 @@ export default class ChannelsSettings extends React.Component<
                                     this.setState({
                                         min_confs: newMinConfs
                                     });
-                                    await updateSettings({
-                                        channels: {
-                                            ...settings.channels,
-                                            min_confs: newMinConfs
-                                        }
-                                    });
+                                    await updateSettings(
+                                        (current: Settings) => ({
+                                            channels: {
+                                                ...current.channels,
+                                                min_confs: newMinConfs
+                                            }
+                                        })
+                                    );
                                 }}
                             />
                         </>
@@ -148,12 +150,14 @@ export default class ChannelsSettings extends React.Component<
                                     this.setState({
                                         privateChannel: !privateChannel
                                     });
-                                    await updateSettings({
-                                        channels: {
-                                            ...settings.channels,
-                                            privateChannel: !privateChannel
-                                        }
-                                    });
+                                    await updateSettings(
+                                        (current: Settings) => ({
+                                            channels: {
+                                                ...current.channels,
+                                                privateChannel: !privateChannel
+                                            }
+                                        })
+                                    );
                                 }}
                                 disabled={
                                     simpleTaprootChannel ||
@@ -192,12 +196,14 @@ export default class ChannelsSettings extends React.Component<
                                         this.setState({
                                             scidAlias: !scidAlias
                                         });
-                                        await updateSettings({
-                                            channels: {
-                                                ...settings.channels,
-                                                scidAlias: !scidAlias
-                                            }
-                                        });
+                                        await updateSettings(
+                                            (current: Settings) => ({
+                                                channels: {
+                                                    ...current.channels,
+                                                    scidAlias: !scidAlias
+                                                }
+                                            })
+                                        );
                                     }}
                                 />
                             </View>
@@ -241,17 +247,19 @@ export default class ChannelsSettings extends React.Component<
                                             });
                                         }
 
-                                        await updateSettings({
-                                            channels: {
-                                                ...settings.channels,
-                                                privateChannel:
-                                                    !simpleTaprootChannel
-                                                        ? true
-                                                        : privateChannel,
-                                                simpleTaprootChannel:
-                                                    !simpleTaprootChannel
-                                            }
-                                        });
+                                        await updateSettings(
+                                            (current: Settings) => ({
+                                                channels: {
+                                                    ...current.channels,
+                                                    privateChannel:
+                                                        !simpleTaprootChannel
+                                                            ? true
+                                                            : privateChannel,
+                                                    simpleTaprootChannel:
+                                                        !simpleTaprootChannel
+                                                }
+                                            })
+                                        );
                                     }}
                                 />
                             </View>
