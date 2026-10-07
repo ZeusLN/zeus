@@ -87,21 +87,27 @@ await updateSettings({
     invoices: { receiverName: text }
 });
 
-// CORRECT — spread the existing group, then override
+// CORRECT: merge into the group inside the write queue
 // (real example: views/Settings/InvoicesSettings.tsx):
+await updateSettingsGroup('invoices', { receiverName: text });
+
+// ALSO WRONG: a render-time spread reverts earlier queued writes:
 await updateSettings({
-    invoices: {
-        ...settings.invoices,
-        receiverName: text
-    }
+    invoices: { ...settings.invoices, receiverName: text }
 });
 ```
 
-This is the single most likely way to silently destroy user data in this codebase. In review, treat any `updateSettings({ group: { ... } })` call without a spread of the existing group as a bug until proven otherwise. Top-level scalar keys (`fiat`, `locale`, `nodes`, …) are safe to pass alone.
+This is the single most likely way to silently destroy user data in this codebase. In review, treat any `updateSettings({ group: { ... } })` call as a bug until proven otherwise. Top-level scalar keys (`fiat`, `locale`, …) are safe to pass alone.
 
-`updateSettings` also accepts a function, `updateSettings((current: Settings) => ({ ... }))`. Calls are serialized on `updateSettingsQueue`, and the function runs inside the queue with the settings as they are at that point (5fc679ea4). Spreading `settings.group` read at render time is a stale snapshot: if two handlers write the same group back to back, the second one restores the old value of whatever the first one changed. Use the functional form for nested-group writes that can follow another write quickly (#4841 fixed this in `views/Settings/ChannelsSettings.tsx`, where a switch toggle followed by a min confs edit reverted the toggle in storage).
+**Why not spread `settings.group`:** calls are serialized on `updateSettingsQueue`, and `SettingsStore.settings` only changes once a write lands. A group spread from render-time settings copies the old value of whatever an earlier queued write changed and reverts it (#4841 in `ChannelsSettings`, then every settings view in #4903). Use:
 
-Also note: `updateSettings` internally calls `getSettings()` first (which can trigger migrations) and sets `settingsUpdateInProgress` / `triggerSettingsRefresh` flags (the latter only when the persisted settings actually change outside `REFRESH_EXEMPT_SETTINGS`) — do not call it in tight loops or during boot races.
+- `updateSettingsGroup(group, patch)` for nested groups. A function patch, `updateSettingsGroup('channels', (current) => ({ ... }))`, receives the group as it is inside the queue.
+- `updateSettings((current: Settings) => ({ ... }))` for anything else derived from current settings, such as the `nodes` array (`SeedRecovery`, `WalletConfiguration`, wallet deletion).
+- `updateSettingsGroupDebounced(group, patch)` for text inputs that write on every keystroke. It persists 500 ms after the last call. The screen must call `flushPendingSettings()` on unmount; pending patches also flush before any other update and when the app leaves the foreground.
+
+`check-settings-writes.test.ts` (part of `yarn test`) fails on any `...settings.<key>` spread in app code. Do not lock controls with `settingsUpdateInProgress` to serialize settings writes; the queue already does that. Keep a lock only when the handler does other async work (a server request, the theme change in `Display`).
+
+Also note: `updateSettings` internally calls `getSettings(true, true)` first (silent, so `loading` is not set; it can trigger migrations, whose one-shot flags `MigrationUtils` caches once they read `'true'`) and sets `settingsUpdateInProgress` / `triggerSettingsRefresh` flags (the latter only when the persisted settings actually change outside `REFRESH_EXEMPT_SETTINGS`). Each write still costs a keychain read and write; do not call it in tight loops or during boot races.
 
 ## 4. Migrations: load paths and the MOD_KEY recipe
 
