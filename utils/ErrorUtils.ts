@@ -23,6 +23,11 @@ const userFriendlyErrors: any = {
         'error.invalidResponse',
     ...FAILURE_REASON_LOCALE_KEYS,
     'Payment details incorrect': 'error.failureReasonIncorrectPaymentDetails',
+    // CLN xpay and legacy pay (sendpay) final-hop rejections
+    "Destination said it doesn't know invoice":
+        'error.failureReasonIncorrectPaymentDetails',
+    WIRE_INCORRECT_OR_UNKNOWN_PAYMENT_DETAILS:
+        'error.failureReasonIncorrectPaymentDetails',
     // LDK Node payment failure reasons
     recipientRejected: 'error.ldk.recipientRejected',
     retriesExhausted: 'error.ldk.retriesExhausted',
@@ -226,7 +231,7 @@ const stripJsonBlob = (msg: string): string => {
 // backtracks exponentially on a long lowercase run that does not match.
 const pascalCase = /^[A-Z](?:[a-z0-9]+[A-Z])*[a-z0-9]*$/;
 
-const errorToUserFriendly = (error: Error, errorContext?: string[]) => {
+const matchUserFriendlyError = (error: Error) => {
     let errorMessage: string = error?.message;
     let errorObject: any;
 
@@ -257,9 +262,33 @@ const errorToUserFriendly = (error: Error, errorContext?: string[]) => {
         pattern === 'Error' ? errorMsg === pattern : errorMsg?.includes(pattern)
     );
 
-    let localeKey = matchingPattern
+    const localeKey: string | null = matchingPattern
         ? userFriendlyErrors[matchingPattern]
         : null;
+
+    return { errorMsg, localeKey };
+};
+
+// Failures where the recipient's node rejected or canceled the payment
+// (unknown or canceled invoice, including a canceled hold invoice). Paying
+// the same invoice again fails the same way.
+const RECIPIENT_REJECTION_LOCALE_KEYS = [
+    'error.failureReasonIncorrectPaymentDetails',
+    'error.ldk.recipientRejected'
+];
+
+// accepts an Error, an object with a message, or a bare failure reason
+// string, like errorToUserFriendly
+const isRecipientRejection = (error: any) => {
+    if (typeof error !== 'string' && typeof error?.message !== 'string') {
+        return false;
+    }
+    const { localeKey } = matchUserFriendlyError(error as Error);
+    return !!localeKey && RECIPIENT_REJECTION_LOCALE_KEYS.includes(localeKey);
+};
+
+const errorToUserFriendly = (error: Error, errorContext?: string[]) => {
+    const { errorMsg, localeKey } = matchUserFriendlyError(error);
 
     const localeString = require('./LocaleUtils').localeString;
     let baseError = localeKey
@@ -292,6 +321,7 @@ const restErrorMessage = (body: unknown): string | undefined => {
 
 export {
     errorToUserFriendly,
+    isRecipientRejection,
     parseLdkNodeError,
     parseCashuDevKitError,
     cashuErrorForDisplay,
