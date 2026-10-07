@@ -1366,16 +1366,16 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
 
     private fun parseRouteHints(
         mode: String?,
-        customRouteHintChannelIds: ReadableArray?
+        customRouteHintUserChannelIds: ReadableArray?
     ): RouteHints {
         return when (mode?.lowercase()) {
             "none" -> RouteHints.None
             "custom" -> {
-                val ids = if (customRouteHintChannelIds == null || customRouteHintChannelIds.size() == 0) {
+                val ids = if (customRouteHintUserChannelIds == null || customRouteHintUserChannelIds.size() == 0) {
                     emptyList()
                 } else {
-                    (0 until customRouteHintChannelIds.size()).mapNotNull { i ->
-                        customRouteHintChannelIds.getString(i)
+                    (0 until customRouteHintUserChannelIds.size()).mapNotNull { i ->
+                        customRouteHintUserChannelIds.getString(i)
                     }
                 }
                 RouteHints.Custom(ids)
@@ -1390,14 +1390,14 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         description: String,
         expirySecs: Double,
         routeHintsMode: String?,
-        customRouteHintChannelIds: ReadableArray?,
+        customRouteHintUserChannelIds: ReadableArray?,
         promise: Promise
     ) {
         try {
             val node = this.node ?: throw Exception("Node not initialized")
             val bolt11 = node.bolt11Payment()
             val invoiceDescription = Bolt11InvoiceDescription.Direct(description)
-            val routeHints = parseRouteHints(routeHintsMode, customRouteHintChannelIds)
+            val routeHints = parseRouteHints(routeHintsMode, customRouteHintUserChannelIds)
             val invoice = bolt11.receiveWithRouteHints(
                 toULongExact(amountMsat, "amount"),
                 invoiceDescription,
@@ -1416,14 +1416,14 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         description: String,
         expirySecs: Double,
         routeHintsMode: String?,
-        customRouteHintChannelIds: ReadableArray?,
+        customRouteHintUserChannelIds: ReadableArray?,
         promise: Promise
     ) {
         try {
             val node = this.node ?: throw Exception("Node not initialized")
             val bolt11 = node.bolt11Payment()
             val invoiceDescription = Bolt11InvoiceDescription.Direct(description)
-            val routeHints = parseRouteHints(routeHintsMode, customRouteHintChannelIds)
+            val routeHints = parseRouteHints(routeHintsMode, customRouteHintUserChannelIds)
             val invoice = bolt11.receiveVariableAmountWithRouteHints(
                 invoiceDescription,
                 toUIntExact(expirySecs, "expiry"),

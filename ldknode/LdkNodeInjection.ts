@@ -427,8 +427,8 @@ const receiveBolt11 = async ({
         amountMsat,
         description,
         expirySecs,
-        routeHintsMode || 'none',
-        customRouteHintUserChannelIds || []
+        routeHintsMode || 'automatic',
+        customRouteHintUserChannelIds ?? null
     );
     return result.invoice;
 };
@@ -447,7 +447,7 @@ const receiveVariableAmountBolt11 = async ({
     const result = await LdkNodeModule.receiveVariableAmountBolt11(
         description,
         expirySecs,
-        routeHintsMode || 'none',
+        routeHintsMode || 'automatic',
         customRouteHintUserChannelIds ?? null
     );
     return result.invoice;
