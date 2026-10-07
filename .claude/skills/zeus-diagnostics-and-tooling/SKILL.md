@@ -388,16 +388,18 @@ pattern), `-` not declared anywhere → `BackendUtils.call()` returns literal
 `supportsForwardingHistoryChannelFilter`) are listed in the script header,
 not the matrix.
 
-Sample output (2026-07-06, excerpt; 56 flags total):
+Sample output (2026-10-07 at 03a8b1b71, excerpt; 62 flags total):
 
 ```
 FLAG                                      LND    eLND   LNC    LDK    CLN    Hub    NWC
 isLNDBased                                T      T      T      F      F      F      F
 supportsCashuWallet                       F      T      F      T      F      F      F
 supportsChannelFundMax                    T      T      T      T      T      ^T     F
+supportsChannelOpenFeeRate                T      ^T     T      F      T      F      F
+supportsChannelOpenMinConfs               T      ^T     T      F      T      F      F
 supportsDevTools                          -      -      -      -      T      T      -
 supportsOffers                            F      F      F      T      T      F      F
-supportsTaproot                           expr   expr   expr   T      T      F      F
+supportsTaproot                           expr   expr   expr   F      T      F      F
 supportsWatchtowerClient                  T      T      T      F      -      F      -
 ```
 
@@ -405,7 +407,11 @@ Hand-verified against source (3 flags): `supportsCashuWallet` T only in
 `backends/EmbeddedLND.ts` and `backends/LdkNode.ts`; `supportsOffers` T only
 in `backends/LdkNode.ts` and `backends/CLNRest.ts`; `supportsChannelFundMax`
 absent from `backends/LndHub.ts` hence inherited `^T` from `backends/LND.ts`
-(the known LndHub override gap).
+(the known LndHub override gap). `supportsChannelOpenMinConfs` (#4841) and
+`supportsChannelOpenFeeRate` show the opposite case: `EmbeddedLND.ts` does not
+declare them and inherits `^T`, which is correct because embedded LND honors
+both, while `LndHub.ts` overrides both to `F`. LDK Node's `supportsTaproot`
+changed from `T` to `F` in 63758ffc3.
 
 ### list-settings-defaults.sh — defaults drift review
 

@@ -135,6 +135,10 @@ Verified flag-by-flag against the six backend files at c5fd094fb (2026-07-06). "
 | Channel management (`supportsChannelManagement`) | Y | Y | perm | Y | Y | N | N |
 | Force close (`supportsForceClose`) | Y | Y | Y | N | Y | N | N |
 | Pending channels (`supportsPendingChannels`) | Y | Y | Y | N | Y | N | N |
+| Channel open min confs (`supportsChannelOpenMinConfs`) | Y | Y (inherited) | Y | Y | N (open calls take no min confs) | N | N |
+| Channel open fee rate (`supportsChannelOpenFeeRate`) | Y | Y (inherited) | Y | Y | N | N | N |
+| Channel fund max (`supportsChannelFundMax`) | Y | Y | Y | Y | Y | Y (inherited gap, see section 4) | N |
+| On-chain send fee rate (`supportsOnchainSendFeeRate`) | Y | Y (inherited) | Y | Y | N | N | N |
 | Coin control (`supportsCoinControl`) | v0.12 | v0.12 | perm | Y | Y | N | N |
 | Watchtower client (`supportsWatchtowerClient`) | Y | Y | Y | N (by omission) | N | N | N |
 | Cashu embedded wallet (`supportsCashuWallet`) | N | **Y** | N | N | **Y** | N | N |
@@ -158,6 +162,8 @@ Verified flag-by-flag against the six backend files at c5fd094fb (2026-07-06). "
 | Set invoice expiry (`supportsSettingInvoiceExpiration`) | Y | Y | Y | Y | Y | N | N |
 | NWC service (`supportsNostrWalletConnectService`) | Y | Y | Y | Y | Y | Y | N |
 | `requiresVerifyPubkey` (verifyMessage needs pubkey arg) | N | N | N | N | **Y** | N (inherited) | n/a |
+
+The four channel-open/fee-rate rows were verified at 03a8b1b71 (2026-10-07). `views/OpenChannel.tsx` and `views/Settings/ChannelsSettings.tsx` gate the min confs field on `supportsChannelOpenMinConfs()` alone; do not go back to an `isLNDBased() || implementation === 'cln-rest'` check (#4836 used one, #4841 replaced it). The setting's semantics (unset vs `0`) are in zeus-config-and-flags.
 
 \* LndHub URL-dependent: `supportsOnchainReceiving` is false for known custodial hosts (Alby, lntxbot, LNBits `/lndhub/ext/`, LNbank); `supportsLightningSends` is false for LNBits invoice-only credentials (`username === 'invoice'`). Read `backends/LndHub.ts` before assuming.
 
@@ -204,7 +210,7 @@ grep -n "supportsOffers" backends/*.ts
 
 **LndHub**
 - Thin custodial API; everything channel/on-chain is flagged off (with the URL-dependent exceptions in the matrix footnote). Inherits LND's REST plumbing: `request()` uses `host || lndhubUrl` and `macaroonHex || accessToken`, with `getHeaders` overridden to Bearer auth.
-- Known inheritance gaps (unfixed as of 2026-07-06): `supportsChannelFundMax` and `supportsAddressMessageSigning` are NOT overridden and inherit `true` from LND. This is the canonical example of the extends-LND hazard.
+- Known inheritance gaps (unfixed, re-checked 2026-10-07): `supportsChannelFundMax` and `supportsAddressMessageSigning` are NOT overridden and inherit `true` from LND. This is the canonical example of the extends-LND hazard.
 - `lnurlAuth` signs differently per `lndHubLnAuthMode` setting ('Alby' default vs 'BlueWallet').
 
 **NostrWalletConnect**
@@ -255,7 +261,7 @@ comm -23 <(grep -o "supports\w*" backends/LND.ts | sort -u) \
          <(grep -o "supports\w*" backends/LndHub.ts | sort -u)
 ```
 
-(The bare `supports` line in the output is LND's version-gate helper, not a flag — ignore it. Run 2026-07-06, this prints exactly `supportsAddressMessageSigning` and `supportsChannelFundMax`: the two open gaps above.)
+(The bare `supports` line in the output is LND's version-gate helper, not a flag; ignore it. Run 2026-10-07 at 03a8b1b71, this prints `supportsAccountImportRescan`, `supportsAddressMessageSigning` and `supportsChannelFundMax`. `supportsAccountImportRescan` is `false` on LND, so LndHub inherits `false` and it is not a gap. The other two are the open gaps above.)
 
 ## 6) Testing each backend cheaply
 

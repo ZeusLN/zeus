@@ -172,10 +172,19 @@ All defaults below are the inline initializer of `@observable settings: Settings
 
 | Axis | Options | Default |
 |---|---|---|
-| `min_confs` | number (confirmations for funding inputs) | `1` |
+| `min_confs` | optional number (`min_confs?: number`): confirmations required on the funding inputs. Unset falls back to 1. `0` is a real value: channel opens may spend unconfirmed funds (`spend_unconfirmed: min_confs === 0` in `views/OpenChannel.tsx`), and fund max counts the unconfirmed balance. See the notes below | `1` inline; unset after a cleared field |
 | `privateChannel` | bool (unannounced channel) | `true` |
 | `scidAlias` | bool (short-channel-id alias, needed for private-channel invoices) | `true` |
 | `simpleTaprootChannel` | bool (experimental taproot channel type) | `false` |
+
+`min_confs` rules (since #4841):
+
+- The field is shown in `views/Settings/ChannelsSettings.tsx` and `views/OpenChannel.tsx` only when `BackendUtils.supportsChannelOpenMinConfs()` is true: LND, embedded LND, LNC, CLN. It is hidden on LDK Node (its open calls take no min confs), LndHub and NWC. `spend_unconfirmed` is also ignored for fund max where the flag is false.
+- Text input goes through `OpenChannelUtils.parseMinConfs`: an empty or non-integer entry returns `undefined` (unset), so clearing the field never stores `0`. The open request sends `min_confs ?? 1`.
+- Read it with `??`, never `||`. `settings.channels.min_confs || 1` turned a saved `0` back into `1` before #4841.
+- Blobs that stored `0` from a cleared field before #4841 were not migrated. Those users now get `0` applied (opens may spend unconfirmed funds). This was a release-note decision, not an oversight.
+
+The three toggles are also read with `??` and their defaults (`privateChannel ?? true`, `scidAlias ?? true`, `simpleTaprootChannel ?? false`). A `!== null` check lets `undefined` through, which reads as falsy: the opposite of the `true` defaults.
 
 ### Embedded-node group — FLAT top-level keys — UI: `views/Settings/EmbeddedNode/*`
 
@@ -327,14 +336,14 @@ Follow every step; skipping any one has caused real bugs (data loss via shallow 
 4. **If it's an enumerated axis**, add an exported `*_KEYS` array (key/value/translateKey objects) next to the other pickers so DropdownSetting UIs and tests can consume it.
 5. **Build the UI** in the matching `views/Settings/*.tsx` (or per-node in `WalletConfiguration.tsx`). When persisting, use the shallow-merge-safe pattern — `SettingsStore.updateSettings` merges ONLY the top level, so nested groups are replaced wholesale:
    ```ts
-   await updateSettings({
+   await updateSettings((current: Settings) => ({
        payments: {
-           ...settings.payments, // MANDATORY spread — omitting it silently
-           myNewField: value     // destroys every sibling payments setting
+           ...current.payments, // MANDATORY spread: omitting it silently
+           myNewField: value    // destroys every sibling payments setting
        }
-   });
+   }));
    ```
-   Flat top-level keys (`updateSettings({ enableLSP: false })`) are safe without a spread.
+   Prefer the functional form: `updateSettings` is queued, and the updater receives the settings as they are when this write runs. Spreading a snapshot taken at render time (`...settings.payments`) reverts a sibling field written by an earlier queued call. In #4841, toggling a channel switch and then typing min confs reverted the switch in storage until `views/Settings/ChannelsSettings.tsx` moved to the functional form. Flat top-level keys (`updateSettings({ enableLSP: false })`) are safe without a spread.
 6. **Locale strings**: add English copy to `locales/en.json` ONLY (the other 33 locale files are Transifex-managed — rule owned by **zeus-change-control**). Reference via `localeString('views.Settings.<...>')`.
 7. **Changing an existing default for existing users?** That is a storage-format change: write a one-shot MOD_KEY migration (recipe, ordering, and `setSettings`-with-a-real-object rules in **zeus-storage-and-migrations**) and note that it must run on the modern `zeus-settings-v2` load path (like `migrateRgsDefaultToZeus`), not only inside `legacySettingsMigrations`. Maintainer sign-off required.
 8. **Creating a fresh-vs-migrated divergence?** Document it (§5).
