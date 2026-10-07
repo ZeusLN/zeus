@@ -17,6 +17,7 @@ import { inject, observer } from 'mobx-react';
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import backendUtils from '../utils/BackendUtils';
+import { maxRouteHints } from '../utils/RouteHintUtils';
 
 import Button from '../components/Button';
 import { ChannelItem } from './Channels/ChannelItem';
@@ -53,8 +54,6 @@ interface ChannelPickerState {
 }
 
 const DEFAULT_TITLE = localeString('components.HopPicker.defaultTitle');
-const MAX_NUMBER_ROUTE_HINTS_LND = 20;
-const MAX_NUMBER_ROUTE_HINTS_LDK = 3;
 
 @inject('ChannelsStore', 'UnitsStore')
 @observer
@@ -140,15 +139,13 @@ export default class ChannelPicker extends React.Component<
             if (selectedChannels.includes(item)) {
                 selectedChannels.splice(selectedChannels.indexOf(item), 1);
             } else {
-                const maxRouteHints = backendUtils.isLNDBased()
-                    ? MAX_NUMBER_ROUTE_HINTS_LND
-                    : MAX_NUMBER_ROUTE_HINTS_LDK;
-                if (selectedChannels.length >= maxRouteHints) {
+                const maxHints = maxRouteHints();
+                if (selectedChannels.length >= maxHints) {
                     Alert.alert(
                         localeString('general.limitexceed'),
                         localeString(
                             'components.HopPicker.routeHintsLimitReached',
-                            { count: maxRouteHints }
+                            { count: maxHints }
                         )
                     );
                     return;
@@ -232,7 +229,9 @@ export default class ChannelPicker extends React.Component<
         const { showChannelModal, valueSet, selectedChannels } = this.state;
         const { filteredChannels, loading } = ChannelsStore;
 
-        const channels = filteredChannels;
+        const channels = backendUtils.supportsRouteHintUserChannelIds()
+            ? filteredChannels.filter((channel) => channel.canBeRouteHint)
+            : filteredChannels;
 
         return (
             <React.Fragment>
@@ -331,9 +330,7 @@ export default class ChannelPicker extends React.Component<
                                                 selectedChannels.length === 0 ||
                                                 (selectionMode === 'multiple' &&
                                                     selectedChannels.length >
-                                                        (backendUtils.isLNDBased()
-                                                            ? MAX_NUMBER_ROUTE_HINTS_LND
-                                                            : MAX_NUMBER_ROUTE_HINTS_LDK))
+                                                        maxRouteHints())
                                             }
                                             onPress={() => {
                                                 this.updateValueSet();
