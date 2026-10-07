@@ -1258,10 +1258,9 @@ export default class LdkNode {
         // Ensure expiry is a number (it comes as a string from the UI)
         const expirySecs = Number(data.expiry_seconds) || 3600;
 
-        let routeHintsMode: RouteHintsMode = 'none';
-        if (data.private) {
-            routeHintsMode = 'automatic';
-        } else if (data.route_hint_user_channel_ids?.length) {
+        // Default to automatic hints (matches LDK Node's plain receive behavior)
+        let routeHintsMode: RouteHintsMode = 'automatic';
+        if (data.route_hint_user_channel_ids?.length) {
             routeHintsMode = 'custom';
         }
 
@@ -2214,6 +2213,7 @@ export default class LdkNode {
     supportsAddressesWithDerivationPaths = () => false;
     supportsCustomFeeLimit = () => true;
     supportsRouteHints = () => true;
+    supportsRouteHintUserChannelIds = () => true;
     isLNDBased = () => false;
     supportsForwardingHistory = () => false;
     supportInboundFees = () => false;

@@ -576,6 +576,7 @@ export default class EmbeddedLND extends LND {
     supportsChannelCoinControl = () => this.supports('v0.17.0');
     supportsHopPicking = () => this.supports('v0.11.0');
     supportsRouteHints = () => true;
+    supportsRouteHintUserChannelIds = () => false;
     supportsAccounts = () => true;
     supportsAccountImportRescan = () => true;
     supportsRouting = () => false;

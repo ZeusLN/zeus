@@ -559,13 +559,13 @@ export interface ILdkNodeModule {
         description: string,
         expirySecs: number,
         routeHintsMode?: RouteHintsMode,
-        customRouteHintChannelIds?: string[] | null
+        customRouteHintUserChannelIds?: string[] | null
     ): Promise<{ invoice: string }>;
     receiveVariableAmountBolt11(
         description: string,
         expirySecs: number,
         routeHintsMode?: RouteHintsMode,
-        customRouteHintChannelIds?: string[] | null
+        customRouteHintUserChannelIds?: string[] | null
     ): Promise<{ invoice: string }>;
     sendBolt11(
         invoice: string,

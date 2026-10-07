@@ -1028,8 +1028,7 @@ internal interface UniffiLib : Library {
         `ptr`: Pointer,
         `description`: RustBuffer.ByValue,
         `expirySecs`: Int,
-        `routeHintsMode`: RustBuffer.ByValue,
-        `customRouteHintUserChannelIds`: RustBuffer.ByValue,
+        `routeHints`: RustBuffer.ByValue,
         uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
 
@@ -1057,8 +1056,7 @@ internal interface UniffiLib : Library {
         `amountMsat`: Long,
         `description`: RustBuffer.ByValue,
         `expirySecs`: Int,
-        `routeHintsMode`: RustBuffer.ByValue,
-        `customRouteHintUserChannelIds`: RustBuffer.ByValue,
+        `routeHints`: RustBuffer.ByValue,
         uniffi_out_err: UniffiRustCallStatus,
     ): Pointer
 
@@ -3008,7 +3006,7 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_via_jit_channel_for_hash() != 38025.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_with_route_hints() != 37082.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_variable_amount_with_route_hints() != 44813.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_via_jit_channel() != 16532.toShort()) {
@@ -3017,7 +3015,7 @@ private fun uniffiCheckApiChecksums(lib: UniffiLib) {
     if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_via_jit_channel_for_hash() != 1143.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
-    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_with_route_hints() != 4129.toShort()) {
+    if (lib.uniffi_ldk_node_checksum_method_bolt11payment_receive_with_route_hints() != 6817.toShort()) {
         throw RuntimeException("UniFFI API checksum mismatch: try cleaning and rebuilding your project")
     }
     if (lib.uniffi_ldk_node_checksum_method_bolt11payment_send() != 53480.toShort()) {
@@ -4440,8 +4438,7 @@ public interface Bolt11PaymentInterface {
     fun `receiveVariableAmountWithRouteHints`(
         `description`: Bolt11InvoiceDescription,
         `expirySecs`: kotlin.UInt,
-        `routeHintsMode`: RouteHintsMode,
-        `customRouteHintUserChannelIds`: List<UserChannelId>?,
+        `routeHints`: RouteHints,
     ): Bolt11Invoice
 
     fun `receiveViaJitChannel`(
@@ -4463,8 +4460,7 @@ public interface Bolt11PaymentInterface {
         `amountMsat`: kotlin.ULong,
         `description`: Bolt11InvoiceDescription,
         `expirySecs`: kotlin.UInt,
-        `routeHintsMode`: RouteHintsMode,
-        `customRouteHintUserChannelIds`: List<UserChannelId>?,
+        `routeHints`: RouteHints,
     ): Bolt11Invoice
 
     fun `send`(
@@ -4733,8 +4729,7 @@ open class Bolt11Payment :
     override fun `receiveVariableAmountWithRouteHints`(
         `description`: Bolt11InvoiceDescription,
         `expirySecs`: kotlin.UInt,
-        `routeHintsMode`: RouteHintsMode,
-        `customRouteHintUserChannelIds`: List<UserChannelId>?,
+        `routeHints`: RouteHints,
     ): Bolt11Invoice =
         FfiConverterTypeBolt11Invoice.lift(
             callWithPointer {
@@ -4743,8 +4738,7 @@ open class Bolt11Payment :
                         it,
                         FfiConverterTypeBolt11InvoiceDescription.lower(`description`),
                         FfiConverterUInt.lower(`expirySecs`),
-                        FfiConverterTypeRouteHintsMode.lower(`routeHintsMode`),
-                        FfiConverterOptionalSequenceTypeUserChannelId.lower(`customRouteHintUserChannelIds`),
+                        FfiConverterTypeRouteHints.lower(`routeHints`),
                         _status,
                     )
                 }
@@ -4802,8 +4796,7 @@ open class Bolt11Payment :
         `amountMsat`: kotlin.ULong,
         `description`: Bolt11InvoiceDescription,
         `expirySecs`: kotlin.UInt,
-        `routeHintsMode`: RouteHintsMode,
-        `customRouteHintUserChannelIds`: List<UserChannelId>?,
+        `routeHints`: RouteHints,
     ): Bolt11Invoice =
         FfiConverterTypeBolt11Invoice.lift(
             callWithPointer {
@@ -4813,8 +4806,7 @@ open class Bolt11Payment :
                         FfiConverterULong.lower(`amountMsat`),
                         FfiConverterTypeBolt11InvoiceDescription.lower(`description`),
                         FfiConverterUInt.lower(`expirySecs`),
-                        FfiConverterTypeRouteHintsMode.lower(`routeHintsMode`),
-                        FfiConverterOptionalSequenceTypeUserChannelId.lower(`customRouteHintUserChannelIds`),
+                        FfiConverterTypeRouteHints.lower(`routeHints`),
                         _status,
                     )
                 }
@@ -15604,10 +15596,16 @@ sealed class QrPaymentResult {
     companion object
 }
 
-enum class RouteHintsMode {
-    NONE,
-    AUTOMATIC,
-    CUSTOM;
+sealed class RouteHints {
+    object None : RouteHints()
+
+    object Automatic : RouteHints()
+
+    data class Custom(
+        val `userChannelIds`: List<UserChannelId>,
+    ) : RouteHints() {
+        companion object
+    }
 
     companion object
 }
@@ -15615,21 +15613,41 @@ enum class RouteHintsMode {
 /**
  * @suppress
  */
-public object FfiConverterTypeRouteHintsMode : FfiConverterRustBuffer<RouteHintsMode> {
-    override fun read(buf: ByteBuffer): RouteHintsMode =
-        try {
-            RouteHintsMode.values()[buf.getInt() - 1]
-        } catch (e: IndexOutOfBoundsException) {
-            throw RuntimeException("invalid enum value, something is very wrong!!", e)
+public object FfiConverterTypeRouteHints : FfiConverterRustBuffer<RouteHints> {
+    override fun read(buf: ByteBuffer): RouteHints =
+        when (buf.getInt()) {
+            1 -> RouteHints.None
+            2 -> RouteHints.Automatic
+            3 ->
+                RouteHints.Custom(
+                    FfiConverterSequenceTypeUserChannelId.read(buf),
+                )
+            else -> throw RuntimeException("invalid enum value, something is very wrong!!")
         }
 
-    override fun allocationSize(value: RouteHintsMode): ULong = 4UL
+    override fun allocationSize(value: RouteHints): ULong =
+        when (value) {
+            is RouteHints.None -> 4UL
+            is RouteHints.Automatic -> 4UL
+            is RouteHints.Custom ->
+                (
+                    4UL +
+                        FfiConverterSequenceTypeUserChannelId.allocationSize(value.`userChannelIds`)
+                )
+        }
 
     override fun write(
-        value: RouteHintsMode,
+        value: RouteHints,
         buf: ByteBuffer,
     ) {
-        buf.putInt(value.ordinal + 1)
+        when (value) {
+            is RouteHints.None -> buf.putInt(1)
+            is RouteHints.Automatic -> buf.putInt(2)
+            is RouteHints.Custom -> {
+                buf.putInt(3)
+                FfiConverterSequenceTypeUserChannelId.write(value.`userChannelIds`, buf)
+            }
+        }
     }
 }
 
@@ -17535,38 +17553,6 @@ public object FfiConverterSequenceTypeUserChannelId : FfiConverterRustBuffer<Lis
         buf.putInt(value.size)
         value.iterator().forEach {
             FfiConverterTypeUserChannelId.write(it, buf)
-        }
-    }
-}
-
-/**
- * @suppress
- */
-public object FfiConverterOptionalSequenceTypeUserChannelId : FfiConverterRustBuffer<List<UserChannelId>?> {
-    override fun read(buf: ByteBuffer): List<UserChannelId>? {
-        if (buf.get().toInt() == 0) {
-            return null
-        }
-        return FfiConverterSequenceTypeUserChannelId.read(buf)
-    }
-
-    override fun allocationSize(value: List<UserChannelId>?): ULong {
-        if (value == null) {
-            return 1UL
-        } else {
-            return 1UL + FfiConverterSequenceTypeUserChannelId.allocationSize(value)
-        }
-    }
-
-    override fun write(
-        value: List<UserChannelId>?,
-        buf: ByteBuffer,
-    ) {
-        if (value == null) {
-            buf.put(0)
-        } else {
-            buf.put(1)
-            FfiConverterSequenceTypeUserChannelId.write(value, buf)
         }
     }
 }

@@ -12,6 +12,7 @@ import ChannelInfo from '../models/ChannelInfo';
 import SettingsStore from './SettingsStore';
 import LSPStore from './LSPStore';
 import BackendUtils from '../utils/BackendUtils';
+import { maxRouteHints } from '../utils/RouteHintUtils';
 import { toWalletrpcAddressTypeName } from '../utils/LndUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
@@ -322,13 +323,24 @@ export default class InvoicesStore {
         if (blindedPaths) req.is_blinded = true;
         if (routeHints) {
             if (routeHintChannels?.length) {
-                if (
-                    BackendUtils.supportsRouteHints() &&
-                    !BackendUtils.isLNDBased()
-                ) {
-                    req.route_hint_user_channel_ids = routeHintChannels
-                        .map((channel) => channel.user_channel_id)
-                        .filter((id): id is string => !!id);
+                if (BackendUtils.supportsRouteHintUserChannelIds()) {
+                    const userChannelIds = routeHintChannels
+                        .filter((channel) => channel.canBeRouteHint)
+                        .map((channel) => channel.user_channel_id as string);
+                    if (
+                        userChannelIds.length !== routeHintChannels.length ||
+                        userChannelIds.length > maxRouteHints()
+                    ) {
+                        runInAction(() => {
+                            this.creatingInvoiceError = true;
+                            this.creatingInvoice = false;
+                            this.error_msg = localeString(
+                                'stores.InvoicesStore.errorCreatingInvoice'
+                            );
+                        });
+                        return;
+                    }
+                    req.route_hint_user_channel_ids = userChannelIds;
                 } else {
                     const routeHints = [];
                     for (const routeHintChannel of routeHintChannels) {
