@@ -672,35 +672,35 @@ export default class WalletConfiguration extends React.Component<
             ldkVssServer
         };
 
-        let nodes: Node[];
+        // Built inside the queued update so a write still in the queue
+        // cannot be undone by a nodes array copied before it landed
         let originalNode: Node;
-        if (settings.nodes) {
-            nodes = [...settings.nodes];
-            if (index != null) {
-                originalNode = nodes[index];
-                nodes[index] = node;
+        const update = (current: Settings) => {
+            let nodes: Node[];
+            if (current.nodes) {
+                nodes = [...current.nodes];
+                if (index != null) {
+                    originalNode = nodes[index];
+                    nodes[index] = node;
+                } else {
+                    nodes.push(node);
+                }
             } else {
-                nodes.push(node);
+                nodes = [node];
             }
-        } else {
-            nodes = [node];
-        }
 
-        let update;
-        if (newEmbeddedLndWallet) {
-            update = {
-                nodes,
-                selectedNode: nodes.length - 1,
-                // Force Wallet view to restart connection for new wallet
-                justDeletedWallet: false,
-                // Ensure Express Graph Sync runs for new wallet
-                initialLoad: false
-            };
-        } else {
-            update = {
-                nodes
-            };
-        }
+            if (newEmbeddedLndWallet) {
+                return {
+                    nodes,
+                    selectedNode: nodes.length - 1,
+                    // Force Wallet view to restart connection for new wallet
+                    justDeletedWallet: false,
+                    // Ensure Express Graph Sync runs for new wallet
+                    initialLoad: false
+                };
+            }
+            return { nodes };
+        };
 
         updateSettings(update)
             .then(async () => {
@@ -1231,7 +1231,7 @@ export default class WalletConfiguration extends React.Component<
     ) => {
         const { SettingsStore, navigation } = this.props;
         const { nickname, photo, ldkPassphrase, ldkVssServer } = this.state;
-        const { setConnectingStatus, updateSettings, settings } = SettingsStore;
+        const { setConnectingStatus, updateSettings } = SettingsStore;
 
         const node = {
             nickname,
@@ -1249,17 +1249,13 @@ export default class WalletConfiguration extends React.Component<
             ldkVssServer: ldkVssServer || DEFAULT_VSS_SERVER
         };
 
-        let nodes: any;
-        if (settings.nodes) {
-            nodes = [...settings.nodes];
-            nodes.push(node);
-        } else {
-            nodes = [node];
-        }
-
-        updateSettings({
-            nodes,
-            selectedNode: nodes.length - 1
+        let nodes: any[] = [];
+        updateSettings((current: Settings) => {
+            nodes = [...(current.nodes || []), node];
+            return {
+                nodes,
+                selectedNode: nodes.length - 1
+            };
         }).then(async () => {
             this.setState({ saved: true });
             setConnectingStatus(true);

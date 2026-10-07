@@ -79,7 +79,8 @@ import SettingsStore, {
     SWAP_HOST_KEYS_MAINNET,
     SWAP_HOST_KEYS_TESTNET,
     EMBEDDED_NODE_NETWORK_KEYS,
-    getLspConfigForNetwork
+    getLspConfigForNetwork,
+    Settings
 } from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SwapStore from '../../stores/SwapStore';
@@ -408,7 +409,7 @@ export default class SeedRecovery extends React.PureComponent<
             lndDir,
             embeddedLndIsSqlite
         } = this.state;
-        const { updateSettings, settings } = SettingsStore;
+        const { updateSettings } = SettingsStore;
 
         const nickname = route.params?.nickname;
         const photo = route.params?.photo;
@@ -425,19 +426,17 @@ export default class SeedRecovery extends React.PureComponent<
             isSqlite: embeddedLndIsSqlite
         };
 
-        let nodes: any;
-        if (settings.nodes) {
-            nodes = [...settings.nodes];
-            nodes.push(node);
-        } else {
-            nodes = [node];
-        }
-
-        updateSettings({
-            nodes,
-            selectedNode: nodes.length - 1,
-            recovery: recoveryCipherSeed ? true : false,
-            initialLoad: false
+        // Appended inside the queued update so a write still in the queue
+        // cannot be undone by a nodes array copied before it landed
+        let nodes: any[] = [];
+        updateSettings((current: Settings) => {
+            nodes = [...(current.nodes || []), node];
+            return {
+                nodes,
+                selectedNode: nodes.length - 1,
+                recovery: recoveryCipherSeed ? true : false,
+                initialLoad: false
+            };
         }).then(async () => {
             this.finishRestoreWallet(nodes);
         });
@@ -450,7 +449,7 @@ export default class SeedRecovery extends React.PureComponent<
     ) => {
         const { SettingsStore, navigation, route } = this.props;
         const { ldkPassphrase } = this.state;
-        const { setConnectingStatus, updateSettings, settings } = SettingsStore;
+        const { setConnectingStatus, updateSettings } = SettingsStore;
 
         const nickname = route.params?.nickname;
         const photo = route.params?.photo;
@@ -474,18 +473,14 @@ export default class SeedRecovery extends React.PureComponent<
             ldkVssServer: route.params?.vssServer || DEFAULT_VSS_SERVER
         };
 
-        let nodes: any;
-        if (settings.nodes) {
-            nodes = [...settings.nodes];
-            nodes.push(node);
-        } else {
-            nodes = [node];
-        }
-
-        updateSettings({
-            nodes,
-            selectedNode: nodes.length - 1,
-            recovery: true
+        let nodes: any[] = [];
+        updateSettings((current: Settings) => {
+            nodes = [...(current.nodes || []), node];
+            return {
+                nodes,
+                selectedNode: nodes.length - 1,
+                recovery: true
+            };
         }).then(async () => {
             setConnectingStatus(true);
             if (nodes.length === 1) {
