@@ -1,6 +1,8 @@
 import RNFS from 'react-native-fs';
 import { Platform } from 'react-native';
 
+import { toCsvRow } from './CsvUtils';
+
 //  Keys for CSV export.
 export const CSV_KEYS = {
     invoice: [
@@ -53,9 +55,7 @@ export const convertActivityToCsv = async (
         const header = keysToInclude.map((field) => field.label).join(',');
         const rows = data
             .map((item) =>
-                keysToInclude
-                    .map((field) => `"${item[field.value] || ''}"`)
-                    .join(',')
+                toCsvRow(keysToInclude.map((field) => item[field.value]))
             )
             .join('\n');
 

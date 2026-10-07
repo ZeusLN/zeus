@@ -11,6 +11,7 @@ import Order from '../models/Order';
 
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
 import { calculateTaxSats } from '../utils/PosUtils';
+import { toCsvRow } from '../utils/CsvUtils';
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 
@@ -614,7 +615,7 @@ export default class PosStore {
                     let tax = 0;
                     let tips = 0;
                     let exportString =
-                        'orderId, totalSats, tipSats, rateFull, rateNumerical, type, tx\n';
+                        'orderId,totalSats,tipSats,rateFull,rateNumerical,type,tx\n';
 
                     // fetch hidden orders - orders customers couldn't pay
                     const hiddenOrdersItem = await Storage.getItem(
@@ -648,7 +649,15 @@ export default class PosStore {
                                     .dividedBy(SATS_PER_BTC)
                                     .toFixed(2);
 
-                                exportString += `${orderId}, ${orderTotal}, ${orderTip}, ${exchangeRate}, ${rate}, ${type}, ${tx}\n`;
+                                exportString += `${toCsvRow([
+                                    orderId,
+                                    orderTotal,
+                                    orderTip,
+                                    exchangeRate,
+                                    rate,
+                                    type,
+                                    tx
+                                ])}\n`;
                             }
 
                             // tally totals (total_money already includes tax)
