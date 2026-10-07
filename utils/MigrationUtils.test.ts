@@ -231,6 +231,12 @@ const mockConsoleError = jest
     .spyOn(console, 'error')
     .mockImplementation(() => {});
 
+// MigrationUtils is a process-wide singleton that caches one-shot flags
+// once they read 'true'; start every test with an empty cache
+beforeEach(() => {
+    MigrationUtils.clearConfirmedFlags();
+});
+
 describe('MigrationUtils', () => {
     // Everything below the `payments` line is a group legacySettingsMigrations
     // leaves entirely to applyMissingSettingsGroups: on an empty/legacy blob
@@ -1804,6 +1810,76 @@ describe('MigrationUtils', () => {
             expect(mockConsoleError).toHaveBeenCalledWith(
                 'Error saving migrated Cashu seed version:',
                 expect.any(Error)
+            );
+        });
+    });
+
+    // getSettings runs these migrations before every queued settings
+    // write, so a flag that already read 'true' must not cost another
+    // keychain read on the next write (#4903)
+    describe('one-shot flag cache', () => {
+        const EncryptedStorage = require('react-native-encrypted-storage');
+        const { Platform } = require('react-native');
+        const flagReads = (key: string) =>
+            EncryptedStorage.getItem.mock.calls.filter(
+                ([k]: [string]) => k === key
+            ).length;
+
+        beforeEach(() => {
+            EncryptedStorage.getItem.mockReset();
+            EncryptedStorage.setItem.mockReset();
+            Platform.OS = 'ios';
+        });
+
+        it('reads each flag once after it is set', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+
+            for (let i = 0; i < 3; i++) {
+                await MigrationUtils.keychainDesyncMigration();
+                await MigrationUtils.keychainCloudSyncMigration();
+                await MigrationUtils.purgeRescueKeyFiles();
+            }
+
+            expect(flagReads('keychain-desync-v1')).toBe(1);
+            expect(flagReads('ios-keychain-cloud-sync-migration-v1')).toBe(1);
+            expect(flagReads('rescue-key-file-cleanup')).toBe(1);
+            expect(EncryptedStorage.getItem).toHaveBeenCalledTimes(4);
+        });
+
+        it('keeps reading a flag that is not set', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            // The purge itself fails here; the flag stays unset
+            EncryptedStorage.setItem.mockRejectedValue(new Error('locked'));
+
+            await MigrationUtils.purgeRescueKeyFiles().catch(() => {});
+            await MigrationUtils.purgeRescueKeyFiles().catch(() => {});
+
+            expect(flagReads('rescue-key-file-cleanup')).toBe(2);
+        });
+
+        it('skips the read after the migration sets the flag itself', async () => {
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            EncryptedStorage.setItem.mockResolvedValue(undefined);
+
+            await MigrationUtils.purgeRescueKeyFiles();
+            await MigrationUtils.purgeRescueKeyFiles();
+
+            expect(flagReads('rescue-key-file-cleanup')).toBe(1);
+        });
+
+        it('reads the flags again after clearConfirmedFlags', async () => {
+            EncryptedStorage.getItem.mockResolvedValue('true');
+
+            await MigrationUtils.purgeRescueKeyFiles();
+            MigrationUtils.clearConfirmedFlags();
+            EncryptedStorage.getItem.mockResolvedValue(null);
+            EncryptedStorage.setItem.mockResolvedValue(undefined);
+            await MigrationUtils.purgeRescueKeyFiles();
+
+            expect(flagReads('rescue-key-file-cleanup')).toBe(2);
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                'rescue-key-file-cleanup',
+                'true'
             );
         });
     });

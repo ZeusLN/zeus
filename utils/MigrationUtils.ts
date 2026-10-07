@@ -114,6 +114,29 @@ import Storage, {
 export const KEYCHAIN_DESYNC_KEY = 'keychain-desync-v1';
 
 class MigrationsUtils {
+    // One-shot migration flags that have read 'true' in this process.
+    // They are only ever written as 'true', and Clear All Data (the only
+    // thing that removes them) calls clearConfirmedFlags. getSettings
+    // runs the flag-gated migrations before every queued settings write,
+    // so caching saves one keychain read per flag per write (#4903).
+    private confirmedFlags = new Set<string>();
+
+    private async readFlag(key: string): Promise<string | null> {
+        if (this.confirmedFlags.has(key)) return 'true';
+        const value = await EncryptedStorage.getItem(key);
+        if (value === 'true') this.confirmedFlags.add(key);
+        return value;
+    }
+
+    private async writeFlag(key: string): Promise<void> {
+        await EncryptedStorage.setItem(key, 'true');
+        this.confirmedFlags.add(key);
+    }
+
+    public clearConfirmedFlags(): void {
+        this.confirmedFlags.clear();
+    }
+
     /**
      * Migrates a key from old keychain (cloud or local) to new Storage namespace.
      * Safe order: read → write → verify → delete
@@ -888,14 +911,12 @@ class MigrationsUtils {
         }
 
         const MOD_KEY_RESCUE_FILE = 'rescue-key-file-cleanup';
-        const modRescueFile = await EncryptedStorage.getItem(
-            MOD_KEY_RESCUE_FILE
-        );
+        const modRescueFile = await this.readFlag(MOD_KEY_RESCUE_FILE);
         if (modRescueFile) return;
 
         await purgeLegacyRescueKeyFiles();
 
-        await EncryptedStorage.setItem(MOD_KEY_RESCUE_FILE, 'true');
+        await this.writeFlag(MOD_KEY_RESCUE_FILE);
     }
 
     public async storageMigrationV2(settings: any) {
@@ -1471,7 +1492,7 @@ class MigrationsUtils {
         if (Platform.OS !== 'ios') return;
 
         try {
-            const hasRun = await EncryptedStorage.getItem(KEYCHAIN_DESYNC_KEY);
+            const hasRun = await this.readFlag(KEYCHAIN_DESYNC_KEY);
             if (hasRun === 'true') return;
 
             console.log('Attempting keychain desync migration...');
@@ -1533,7 +1554,7 @@ class MigrationsUtils {
                 return;
             }
 
-            await EncryptedStorage.setItem(KEYCHAIN_DESYNC_KEY, 'true');
+            await this.writeFlag(KEYCHAIN_DESYNC_KEY);
             console.log(
                 `Keychain desync migration completed (${syncServers.length} synchronizable zeus: entries)`
             );
@@ -1550,9 +1571,7 @@ class MigrationsUtils {
 
     public async keychainCloudSyncMigration() {
         try {
-            const hasMigrated = await EncryptedStorage.getItem(
-                KEYCHAIN_MIGRATION_KEY
-            );
+            const hasMigrated = await this.readFlag(KEYCHAIN_MIGRATION_KEY);
 
             if (hasMigrated !== 'true') {
                 console.log('Attempting keychain cloud sync migration...');
@@ -1620,15 +1639,13 @@ class MigrationsUtils {
                     }
                 }
 
-                await EncryptedStorage.setItem(KEYCHAIN_MIGRATION_KEY, 'true');
+                await this.writeFlag(KEYCHAIN_MIGRATION_KEY);
                 console.log(
                     'Keychain cloud sync migration completed successfully.'
                 );
             }
 
-            const cashuMigration = await EncryptedStorage.getItem(
-                CASHU_MIGRATION_KEY
-            );
+            const cashuMigration = await this.readFlag(CASHU_MIGRATION_KEY);
 
             if (cashuMigration !== 'true') {
                 // Only run the Cashu keychain migration if the main keychain
@@ -1658,7 +1675,7 @@ class MigrationsUtils {
                         'Skipping Cashu migration - main keychain migration was already done.'
                     );
                 }
-                await EncryptedStorage.setItem(CASHU_MIGRATION_KEY, 'true');
+                await this.writeFlag(CASHU_MIGRATION_KEY);
             }
         } catch (error) {
             console.error('Error during keychain cloud sync migration:', error);
