@@ -55,6 +55,15 @@ describe('LdkNodeUtils', () => {
                 '/mock/documents/ldk-node/abc-123'
             );
         });
+
+        it.each(['', '..', '../victim', 'a/b'])(
+            'throws for the invalid directory name %j',
+            (nodeDir) => {
+                expect(() => getLdkNodeStoragePath(nodeDir)).toThrow(
+                    'Invalid node directory'
+                );
+            }
+        );
     });
 
     describe('ensureLdkNodeBackupExclusion', () => {
