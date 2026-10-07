@@ -1003,9 +1003,6 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                     channel.shortChannelId?.let {
                         putString("shortChannelId", it.toLong().toString())
                     }
-                    channel.inboundScidAlias?.let {
-                        putString("inboundScidAlias", it.toLong().toString())
-                    }
                 }
                 result.pushMap(channelMap)
             }
