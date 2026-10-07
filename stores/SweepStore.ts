@@ -7,6 +7,7 @@ import { decode as wifDecode } from 'wif';
 
 import NodeInfoStore from './NodeInfoStore';
 
+import AddressUtils from '../utils/AddressUtils';
 import { AddressType } from '../utils/WIFUtils';
 import { localeString } from '../utils/LocaleUtils';
 import UrlUtils from '../utils/UrlUtils';
@@ -105,15 +106,9 @@ export default class SweepStore {
     @action
     async prepareSweepInputs(wif: string) {
         this.wif = wif;
-        const { nodeInfo } = this.nodeInfoStore;
-        // Signet (including Mutinynet) shares testnet's address prefixes and
-        // bech32 HRP, so bitcoinjs has no separate signet params
-        const network = nodeInfo?.isRegTest
-            ? bitcoin.networks.regtest
-            : nodeInfo?.isTestNet || nodeInfo?.isSigNet
-            ? bitcoin.networks.testnet
-            : bitcoin.networks.bitcoin;
-        this.network = network;
+        this.network = AddressUtils.bitcoinNetworkForNode(
+            this.nodeInfoStore.nodeInfo
+        );
 
         try {
             const { privateKey } = wifDecode(this.wif);
