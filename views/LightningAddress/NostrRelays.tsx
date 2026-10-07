@@ -296,7 +296,8 @@ export default class NostrRelays extends React.Component<
                                                                         await updateSettingsGroup(
                                                                             'lightningAddress',
                                                                             {
-                                                                                relays: newNostrRelays
+                                                                                nostrRelays:
+                                                                                    newNostrRelays
                                                                             }
                                                                         );
                                                                     }
