@@ -6,7 +6,7 @@ jest.mock('../lndmobile/LndMobileInjection', () => ({
             subscribeCustomMessages: jest.fn(() => Promise.resolve()),
             decodeCustomMessage: jest.fn()
         },
-        channel: {}
+        channel: { channelAcceptor: jest.fn(() => Promise.resolve()) }
     }
 }));
 jest.mock('../storage', () => ({
@@ -44,6 +44,8 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import LSPStore from './LSPStore';
 import BackendUtils from '../utils/BackendUtils';
+import LndMobileInjection from '../lndmobile/LndMobileInjection';
+import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 
 const TIMEOUT_MS = 7000;
 
@@ -327,6 +329,43 @@ describe('LSPStore.initFlowLSP', () => {
         expect(store.initChannelAcceptor).toHaveBeenCalled();
     });
 
+    it('skips LSP info for remote LND over Tor', async () => {
+        const store = makeFlowStore('lnd');
+        (store as any).settingsStore.enableTor = true;
+        const getLSPInfo = jest.spyOn(store, 'getLSPInfo');
+
+        store.initFlowLSP();
+
+        expect(getLSPInfo).not.toHaveBeenCalled();
+        expect(store.subscribeCustomMessages).toHaveBeenCalled();
+        expect(store.initChannelAcceptor).toHaveBeenCalled();
+    });
+
+    it('logs a failed custom message subscription or channel acceptor', async () => {
+        const store = makeFlowStore('embedded-lnd');
+        jest.spyOn(store, 'getLSPInfo').mockResolvedValue({});
+        jest.mocked(store.subscribeCustomMessages).mockRejectedValue(
+            new Error('sub failed')
+        );
+        jest.mocked(store.initChannelAcceptor).mockRejectedValue(
+            new Error('acceptor failed')
+        );
+        const error = jest.spyOn(console, 'error').mockImplementation(() => {});
+
+        store.initFlowLSP();
+        await settle();
+
+        expect(error).toHaveBeenCalledWith(
+            'Failed to subscribe to custom messages:',
+            'sub failed'
+        );
+        expect(error).toHaveBeenCalledWith(
+            'Failed to start channel acceptor:',
+            'acceptor failed'
+        );
+        error.mockRestore();
+    });
+
     it('skips LSP info when the LSP is turned off', async () => {
         const store = makeFlowStore('ldk-node', false);
         const getLSPInfo = jest.spyOn(store, 'getLSPInfo');
@@ -482,5 +521,38 @@ describe('LSPStore embedded LND listeners', () => {
 
         expect(listener.remove).toHaveBeenCalledTimes(1);
         expect(store.customMessagesSubscriber).toBeUndefined();
+    });
+
+    it('removes the channel acceptor listener when the stream fails to start', async () => {
+        jest.clearAllMocks();
+        const { channel } = LndMobileInjection as any;
+        channel.channelAcceptor.mockRejectedValueOnce(new Error('rpc error'));
+        const store = makeStore('embedded-lnd');
+
+        await expect(store.initChannelAcceptor()).rejects.toThrow('rpc error');
+        const listener = jest.mocked(LndMobileEventEmitter.addListener).mock
+            .results[0].value;
+        expect(listener.remove).toHaveBeenCalledTimes(1);
+        expect(store.channelAcceptor).toBeNull();
+
+        await store.initChannelAcceptor();
+        expect(channel.channelAcceptor).toHaveBeenCalledTimes(2);
+        expect(store.channelAcceptor).toBeTruthy();
+    });
+
+    it('removes the custom message listener when the subscription fails to start', async () => {
+        const { index } = LndMobileInjection as any;
+        index.subscribeCustomMessages.mockRejectedValueOnce(
+            new Error('rpc error')
+        );
+        const store = makeStore('embedded-lnd');
+
+        await expect(store.subscribeCustomMessages()).rejects.toThrow(
+            'rpc error'
+        );
+        expect(store.customMessagesSubscriber).toBeNull();
+
+        await store.subscribeCustomMessages();
+        expect(store.customMessagesSubscriber).toBeTruthy();
     });
 });

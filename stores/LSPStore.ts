@@ -397,15 +397,19 @@ export default class LSPStore {
     // doesn't need the reply first. getLSPInfo rejects when the LSP can't
     // be reached, answers with an error (including the geoblock reply) or
     // returns a non-JSON body, and records the error in flow_error for
-    // the UI
+    // the UI. Remote LND over Tor skips the request: it goes over
+    // clearnet and would send the device IP to the Flow host on every
+    // startup (#4372)
     public initFlowLSP = () => {
         if (!BackendUtils.supportsFlowLSP()) return;
 
-        const { implementation, settings } = this.settingsStore;
+        const { implementation, settings, enableTor } = this.settingsStore;
         if (
             settings.enableLSP &&
             (implementation !== 'lnd' ||
-                !this.nodeInfoStore.flowLspNotConfigured().flowLspNotConfigured)
+                (!enableTor &&
+                    !this.nodeInfoStore.flowLspNotConfigured()
+                        .flowLspNotConfigured))
         ) {
             this.getLSPInfo().catch(() => {
                 // getLSPInfo rejects without a reason; the message is in
@@ -417,9 +421,16 @@ export default class LSPStore {
             });
         }
         if (BackendUtils.supportsLSPScustomMessage()) {
-            this.subscribeCustomMessages();
+            this.subscribeCustomMessages().catch((error: any) =>
+                console.error(
+                    'Failed to subscribe to custom messages:',
+                    error?.message
+                )
+            );
         }
-        this.initChannelAcceptor();
+        this.initChannelAcceptor().catch((error: any) =>
+            console.error('Failed to start channel acceptor:', error?.message)
+        );
     };
 
     @action
@@ -549,7 +560,10 @@ export default class LSPStore {
                 }
             );
 
-            await channel.channelAcceptor();
+            await this.startEmbeddedStream(
+                () => channel.channelAcceptor(),
+                'channelAcceptor'
+            );
         } else {
             // Only allow 0-conf chans from LSP or whitelisted peers
             const ws = BackendUtils.initChanAcceptor({
@@ -576,6 +590,23 @@ export default class LSPStore {
         };
         ws.addEventListener('error', release);
         ws.addEventListener('close', release);
+    };
+
+    // Embedded LND sets the listener before starting the native stream. If
+    // the start fails, remove the listener so the guard doesn't block the
+    // retry on the next fetch
+    private startEmbeddedStream = async (
+        start: () => Promise<any>,
+        key: 'channelAcceptor' | 'customMessagesSubscriber'
+    ) => {
+        const listener = this[key];
+        try {
+            await start();
+        } catch (error) {
+            listener?.remove();
+            if (this[key] === listener) this[key] = null;
+            throw error;
+        }
     };
 
     @action
@@ -843,7 +874,10 @@ export default class LSPStore {
                 }
             );
 
-            await index.subscribeCustomMessages();
+            await this.startEmbeddedStream(
+                () => index.subscribeCustomMessages(),
+                'customMessagesSubscriber'
+            );
         } else {
             const ws = BackendUtils.subscribeCustomMessages(
                 (response: any) => {
