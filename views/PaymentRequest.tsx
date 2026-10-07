@@ -151,8 +151,12 @@ export default class PaymentRequest extends React.Component<
 
     async componentDidMount() {
         this.isComponentMounted = true;
-        const { SettingsStore, InvoicesStore, route } = this.props;
+        const { SettingsStore, InvoicesStore, BalanceStore, route } =
+            this.props;
         const { getSettings, implementation } = SettingsStore;
+        // balance is not refreshed elsewhere after channel changes, so
+        // the no-balance warning could otherwise be stale
+        BalanceStore.getLightningBalance(true);
         const settings = await getSettings();
 
         if (route?.params?.fromGraphSync) {
