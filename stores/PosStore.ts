@@ -11,6 +11,7 @@ import Order from '../models/Order';
 
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
 import { calculateTaxSats } from '../utils/PosUtils';
+import { toCsvRow } from '../utils/CsvUtils';
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 
@@ -43,10 +44,6 @@ export const LEGACY_POS_STANDALONE_KEY = 'pos-standalone';
 
 export const POS_HIDDEN_KEY = 'zeus-pos-hidden';
 export const POS_STANDALONE_KEY = 'zeus-pos-standalone';
-
-// quoted so formatted rates like "$100,000 BTC/USD" stay in one field
-const toCsvRow = (fields: Array<string | number>) =>
-    fields.map((field) => `"${String(field).replace(/"/g, '""')}"`).join(',');
 
 export default class PosStore {
     @observable public currentOrder: Order | null = null;

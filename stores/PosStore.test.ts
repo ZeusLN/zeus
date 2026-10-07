@@ -275,6 +275,16 @@ describe('PosStore.getOrdersHistorical', () => {
         );
     });
 
+    it('leaves a field missing from an older payment record empty', async () => {
+        storePayment({ tx: undefined });
+
+        const store = await recon([squareOrder()]);
+
+        expect(store.reconExport.split('\n')[1]).toBe(
+            '"square-order","10800","1000","$100,000.00","100000","ln",""'
+        );
+    });
+
     it('falls back to an auto-gratuity line item for tips', async () => {
         const store = await recon([
             squareOrder({
