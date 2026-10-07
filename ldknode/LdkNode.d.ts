@@ -202,7 +202,6 @@ export interface ChannelDetails {
     inboundHtlcMinimumMsat: number;
     inboundHtlcMaximumMsat?: number;
     shortChannelId?: string;
-    inboundScidAlias?: string;
 }
 
 export type RouteHintsMode = 'none' | 'automatic' | 'custom';
