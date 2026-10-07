@@ -14,7 +14,7 @@ import SettingsStore from './SettingsStore';
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { sha256Hex } from '../utils/HashingUtils';
-import { errorToUserFriendly } from '../utils/ErrorUtils';
+import { errorToUserFriendly, isRecipientRejection } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { checkGraphSyncBeforePayment } from '../utils/GraphSyncUtils';
 import {
@@ -37,6 +37,10 @@ import {
     mayHaveBeenSent,
     makeSendLabel
 } from '../utils/OnchainSendUtils';
+import {
+    formatHeldDuration,
+    getRecipientRejection
+} from '../utils/RecipientRejectionUtils';
 
 import { lnrpc } from '../proto/lightning';
 import NodeInfoStore from './NodeInfoStore';
@@ -132,6 +136,7 @@ export interface PaymentOutcome {
     error?: boolean;
     error_msg?: string;
     payment_error?: string;
+    paymentRejectedByRecipient?: boolean;
 }
 
 export default class TransactionsStore {
@@ -153,6 +158,9 @@ export default class TransactionsStore {
     @observable isIncomplete: boolean | null;
     @observable payment_hash: any;
     @observable payment_error: any;
+    // the recipient rejected or canceled the payment (e.g. a canceled hold
+    // invoice); retrying the same invoice cannot succeed
+    @observable paymentRejectedByRecipient = false;
     @observable onchain_address: string;
     @observable txid: string | null;
     @observable status: string | number | null;
@@ -270,6 +278,7 @@ export default class TransactionsStore {
         this.isIncomplete = null;
         this.payment_hash = null;
         this.payment_error = null;
+        this.paymentRejectedByRecipient = false;
         this.onchain_address = '';
         this.txid = null;
         this.publishSuccess = false;
@@ -879,6 +888,7 @@ export default class TransactionsStore {
         this.isIncomplete = null;
         this.payment_hash = null;
         this.payment_error = null;
+        this.paymentRejectedByRecipient = false;
         this.status = null;
     };
 
@@ -1332,6 +1342,7 @@ export default class TransactionsStore {
         this.error = false;
         this.error_msg = null;
         this.payment_error = null;
+        this.paymentRejectedByRecipient = false;
     };
 
     // A failed record with no reason would leave the send screen with only
@@ -1498,8 +1509,10 @@ export default class TransactionsStore {
         const implementation = this.settingsStore.implementation;
         const status = this.getResultStatus(result);
 
+        // lnd attaches the keysend preimage record to the final hop
+        const keysendHops = result?.htlcs?.[0]?.route?.hops;
         const isKeysend =
-            result?.htlcs?.[0]?.route?.hops?.[0]?.custom_records?.[
+            keysendHops?.[keysendHops.length - 1]?.custom_records?.[
                 keySendPreimageType
             ] != null;
 
@@ -1513,21 +1526,57 @@ export default class TransactionsStore {
             (result.payment_error && result.payment_error !== '')
         ) {
             outcome.error = true;
+            const failureReason =
+                implementation === 'embedded-lnd'
+                    ? lnrpc.PaymentFailureReason[result.failure_reason]
+                    : result.failure_reason;
+            const errorContext = isKeysend ? ['Keysend'] : undefined;
+            outcome.paymentRejectedByRecipient =
+                isRecipientRejection(failureReason) ||
+                isRecipientRejection(result.payment_error);
             outcome.payment_error =
                 (implementation === 'embedded-lnd'
                     ? errorToUserFriendly(
-                          lnrpc.PaymentFailureReason[result.failure_reason]
-                              ? new Error(
-                                    lnrpc.PaymentFailureReason[
-                                        result.failure_reason
-                                    ]
-                                )
-                              : result.payment_error
+                          failureReason
+                              ? new Error(failureReason)
+                              : result.payment_error,
+                          errorContext
                       )
-                    : errorToUserFriendly(
-                          result.failure_reason,
-                          isKeysend ? ['Keysend'] : undefined
-                      )) || errorToUserFriendly(result.payment_error);
+                    : errorToUserFriendly(failureReason, errorContext)) ||
+                errorToUserFriendly(result.payment_error);
+
+            // The per-HTLC failure shows whether the recipient's node
+            // rejected the payment and how long it was pending first. It
+            // does not depend on failure_reason, which lnd may set to
+            // FAILURE_REASON_TIMEOUT when a hold outlasts timeout_seconds.
+            const htlcRejection = getRecipientRejection(result);
+            if (htlcRejection?.senderBehindChain) {
+                // the recipient rejected the HTLC's expiry as too soon
+                // because our node is behind the chain; paying again once
+                // it has synced can succeed
+                outcome.paymentRejectedByRecipient = false;
+                outcome.payment_error = localeString(
+                    'views.SendingLightning.senderBehindChain'
+                );
+            } else if (htlcRejection) {
+                outcome.paymentRejectedByRecipient = true;
+                if (htlcRejection.heldSeconds !== null) {
+                    outcome.payment_error = localeString(
+                        'views.SendingLightning.recipientCanceledHeldPayment',
+                        {
+                            duration: formatHeldDuration(
+                                htlcRejection.heldSeconds
+                            )
+                        }
+                    );
+                } else if (!isRecipientRejection(failureReason)) {
+                    // replaces the copy for another reason, such as TIMEOUT
+                    outcome.payment_error = errorToUserFriendly(
+                        new Error('FAILURE_REASON_INCORRECT_PAYMENT_DETAILS'),
+                        errorContext
+                    );
+                }
+            }
         }
         // lndhub
         if (result.error) {
@@ -1550,6 +1599,7 @@ export default class TransactionsStore {
         if (this.isStalePayment(seq)) return;
         this.error = true;
         this.loading = false;
+        this.paymentRejectedByRecipient = isRecipientRejection(err);
         const message =
             errorToUserFriendly(err) || localeString('error.sendingPayment');
         // A rejected dispatch (dropped connection, Tor timeout) doesn't
