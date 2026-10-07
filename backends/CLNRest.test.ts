@@ -25,7 +25,7 @@ jest.mock('./CoreLightningRequestHandler', () => ({
     listPeerChannels: jest.fn()
 }));
 
-import CLNRest from './CLNRest';
+import CLNRest, { sqlLimit } from './CLNRest';
 
 // CLNRest's own `getURL` is not reachable with ws=true today — its single
 // caller passes no ws argument — so these lock in the anchored behaviour
@@ -79,5 +79,49 @@ describe('CLNRest.getURL', () => {
                 cln.getURL('https://node.example.com/', '', '/v1/route')
             ).toBe('https://node.example.com/v1/route');
         });
+    });
+});
+
+describe('sqlLimit', () => {
+    it('passes positive integers through', () => {
+        expect(sqlLimit(20)).toBe(20);
+        expect(sqlLimit(1)).toBe(1);
+    });
+
+    it('falls back to 150 for anything else', () => {
+        expect(sqlLimit(undefined)).toBe(150);
+        expect(sqlLimit(0)).toBe(150);
+        expect(sqlLimit(-5)).toBe(150);
+        expect(sqlLimit(2.5)).toBe(150);
+        expect(sqlLimit('1; DROP TABLE invoices' as any)).toBe(150);
+    });
+});
+
+describe('CLNRest invoice and payment limits', () => {
+    const queryFor = async (
+        call: (cln: CLNRest) => Promise<any>
+    ): Promise<string> => {
+        const cln = new CLNRest();
+        const postRequest = jest.fn().mockResolvedValue({ rows: [] });
+        cln.postRequest = postRequest as any;
+        await call(cln);
+        return postRequest.mock.calls[0][1].query;
+    };
+
+    it('limits payments to the requested count', async () => {
+        const query = await queryFor((cln) =>
+            cln.getPayments({ maxPayments: 20 })
+        );
+        expect(query).toMatch(/limit 20$/);
+    });
+
+    it('keeps the 150 default for payments', async () => {
+        const query = await queryFor((cln) => cln.getPayments());
+        expect(query).toMatch(/limit 150$/);
+    });
+
+    it('limits invoices to the requested count', async () => {
+        const query = await queryFor((cln) => cln.getInvoices({ limit: 20 }));
+        expect(query).toMatch(/LIMIT 20;$/);
     });
 });

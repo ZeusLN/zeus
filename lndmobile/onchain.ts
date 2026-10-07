@@ -17,7 +17,8 @@ export const getTransactions = async (
         response: lnrpc.TransactionDetails,
         method: 'GetTransactions',
         options: {
-            max_transactions: data?.max_transactions || 500
+            start_height: data?.start_height,
+            max_transactions: data?.max_transactions ?? 500
         }
     });
     return response;

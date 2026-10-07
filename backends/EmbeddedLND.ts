@@ -1,6 +1,7 @@
 import LND from './LND';
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
+import { TransactionPageRequest } from '../utils/OnchainTransactionUtils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 import { decodeSubscribeTransactionsResult } from '../lndmobile/onchain';
@@ -90,7 +91,10 @@ import {
 export default class EmbeddedLND extends LND {
     openChannelListener: any;
 
-    getTransactions = async (data?: any) => await getTransactions(data);
+    getTransactionsPage = async (data?: TransactionPageRequest | null) => {
+        const response = await getTransactions(data);
+        return { transactions: response.transactions || [] };
+    };
     getChannels = async () => await listChannels();
     getPendingChannels = async () => await pendingChannels();
     getClosedChannels = async () => await closedChannels();
@@ -112,7 +116,8 @@ export default class EmbeddedLND extends LND {
     getMyNodeInfo = async () => await getInfo();
     getNetworkInfo = async () => await getNetworkInfo();
     getRecoveryInfo = async () => await getRecoveryInfo();
-    getInvoices = async () => await listInvoices();
+    getInvoices = async (params?: { limit?: number }) =>
+        await listInvoices(params?.limit);
     createInvoice = async (data: any) =>
         await addInvoice({
             amount: data.value ? Number(data.value) : undefined,
