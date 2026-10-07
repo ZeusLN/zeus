@@ -1,15 +1,6 @@
 #import "AppDelegate.h"
 
-#import <React/RCTBundleURLProvider.h>
-#import <React/RCTLinkingManager.h>
 #import "RNNotifications.h"
-
-#if __has_include(<ReactAppDependencyProvider/RCTAppDependencyProvider.h>)
-#define USE_OSS_CODEGEN 1
-#import <ReactAppDependencyProvider/RCTAppDependencyProvider.h>
-#else
-#define USE_OSS_CODEGEN 0
-#endif
 
 static NSString *const kHasRunBeforeKey = @"HAS_RUN_BEFORE";
 
@@ -97,13 +88,7 @@ static BOOL RunPendingKeychainCheck(BOOL *pending, BOOL protectedDataAvailable, 
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
-  self.moduleName = @"zeus";
-  self.initialProps = @{};
-
-#if USE_OSS_CODEGEN
-  self.dependencyProvider = [RCTAppDependencyProvider new];
-#endif
-
+  // React Native is started by SceneDelegate once the window scene connects.
   [RNNotifications startMonitorNotifications];
   _keychainCheckPending = !ClearKeychainIfNecessary(application.isProtectedDataAvailable, StandardDefaultsPath());
   if (_keychainCheckPending) {
@@ -127,23 +112,7 @@ static BOOL RunPendingKeychainCheck(BOOL *pending, BOOL protectedDataAvailable, 
     }
   }
 
-  return [super application:application didFinishLaunchingWithOptions:launchOptions];
-}
-
-- (NSURL *)bundleURL
-{
-#if DEBUG
-  return [[RCTBundleURLProvider sharedSettings] jsBundleURLForBundleRoot:@"index"];
-#else
-  return [[NSBundle mainBundle] URLForResource:@"main" withExtension:@"jsbundle"];
-#endif
-}
-
-- (BOOL)application:(UIApplication *)application
-   openURL:(NSURL *)url
-   options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options
-{
-  return [RCTLinkingManager application:application openURL:url options:options];
+  return YES;
 }
 
 - (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
@@ -168,14 +137,6 @@ static BOOL RunPendingKeychainCheck(BOOL *pending, BOOL protectedDataAvailable, 
 
 - (void)applicationProtectedDataDidBecomeAvailable:(UIApplication *)application {
   [self runPendingKeychainCheck];
-}
-
-- (void)applicationDidEnterBackground:(UIApplication *)application {
-  NSLog(@"App entered background");
-}
-
-- (void)applicationWillEnterForeground:(UIApplication *)application {
-  NSLog(@"App will enter foreground");
 }
 
 - (void)applicationWillTerminate:(UIApplication *)application {
