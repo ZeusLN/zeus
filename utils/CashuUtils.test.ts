@@ -259,6 +259,42 @@ describe('CashuUtils', () => {
         });
     });
 
+    describe('isSameMintUrl', () => {
+        it('ignores trailing slashes and scheme/host case', () => {
+            expect(
+                CashuUtils.isSameMintUrl(
+                    'https://Mint.Example.com/',
+                    'https://mint.example.com'
+                )
+            ).toBe(true);
+            expect(
+                CashuUtils.isSameMintUrl(
+                    'HTTPS://mint.example.com/Bitcoin//',
+                    'https://mint.example.com/Bitcoin'
+                )
+            ).toBe(true);
+        });
+
+        it('keeps the path case-sensitive', () => {
+            expect(
+                CashuUtils.isSameMintUrl(
+                    'https://mint.example.com/Bitcoin',
+                    'https://mint.example.com/bitcoin'
+                )
+            ).toBe(false);
+        });
+
+        it('rejects missing or different mints', () => {
+            expect(CashuUtils.isSameMintUrl(undefined, 'https://a.com')).toBe(
+                false
+            );
+            expect(CashuUtils.isSameMintUrl('', '')).toBe(false);
+            expect(
+                CashuUtils.isSameMintUrl('https://a.com', 'https://b.com')
+            ).toBe(false);
+        });
+    });
+
     describe('sumProofsValue', () => {
         it('sums proof amounts', () => {
             expect(

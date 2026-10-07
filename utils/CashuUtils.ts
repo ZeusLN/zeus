@@ -209,6 +209,26 @@ class CashuUtils {
         return await CashuDevKit.isValidToken(cleanToken);
     };
 
+    /**
+     * Strip trailing slashes so the same mint compares equal across CDK,
+     * storage and token payloads
+     */
+    normalizeMintUrl = (url: string): string => url.replace(/\/+$/, '');
+
+    /**
+     * Compare two mint URLs for identity. Scheme and host are
+     * case-insensitive, the path is not.
+     */
+    isSameMintUrl = (a?: string, b?: string): boolean => {
+        if (!a || !b) return false;
+        const key = (url: string) =>
+            this.normalizeMintUrl(url).replace(
+                /^[a-z][a-z0-9+.-]*:\/\/[^/]*/i,
+                (origin) => origin.toLowerCase()
+            );
+        return key(a) === key(b);
+    };
+
     sumProofsValue = (proofs: any) => {
         if (!proofs || !Array.isArray(proofs)) {
             return 0;
