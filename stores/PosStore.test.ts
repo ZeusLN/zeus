@@ -254,8 +254,8 @@ describe('PosStore.getOrdersHistorical', () => {
 
         expect(store.reconTips).toBe('1.00');
         expect(store.reconExport).toBe(
-            'orderId, totalSats, tipSats, rateFull, rateNumerical, type, tx\n' +
-                'square-order, 10800, 1000, $100,000.00, 100000, ln, lnbc1\n'
+            'orderId,totalSats,tipSats,rateFull,rateNumerical,type,tx\n' +
+                '"square-order","10800","1000","$100,000.00","100000","ln","lnbc1"\n'
         );
     });
 

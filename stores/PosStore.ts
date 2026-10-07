@@ -44,6 +44,10 @@ export const LEGACY_POS_STANDALONE_KEY = 'pos-standalone';
 export const POS_HIDDEN_KEY = 'zeus-pos-hidden';
 export const POS_STANDALONE_KEY = 'zeus-pos-standalone';
 
+// quoted so formatted rates like "$100,000 BTC/USD" stay in one field
+const toCsvRow = (fields: Array<string | number>) =>
+    fields.map((field) => `"${String(field).replace(/"/g, '""')}"`).join(',');
+
 export default class PosStore {
     @observable public currentOrder: Order | null = null;
     @observable public openOrders: Array<Order> = [];
@@ -614,7 +618,7 @@ export default class PosStore {
                     let tax = 0;
                     let tips = 0;
                     let exportString =
-                        'orderId, totalSats, tipSats, rateFull, rateNumerical, type, tx\n';
+                        'orderId,totalSats,tipSats,rateFull,rateNumerical,type,tx\n';
 
                     // fetch hidden orders - orders customers couldn't pay
                     const hiddenOrdersItem = await Storage.getItem(
@@ -648,7 +652,15 @@ export default class PosStore {
                                     .dividedBy(SATS_PER_BTC)
                                     .toFixed(2);
 
-                                exportString += `${orderId}, ${orderTotal}, ${orderTip}, ${exchangeRate}, ${rate}, ${type}, ${tx}\n`;
+                                exportString += `${toCsvRow([
+                                    orderId,
+                                    orderTotal,
+                                    orderTip,
+                                    exchangeRate,
+                                    rate,
+                                    type,
+                                    tx
+                                ])}\n`;
                             }
 
                             // tally totals (total_money already includes tax)
