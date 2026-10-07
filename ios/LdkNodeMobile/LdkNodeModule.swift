@@ -841,9 +841,6 @@ class LdkNodeModule: RCTEventEmitter {
             if let shortChannelId = channel.shortChannelId {
                 result["shortChannelId"] = String(shortChannelId)
             }
-            if let inboundScidAlias = channel.inboundScidAlias {
-                result["inboundScidAlias"] = String(inboundScidAlias)
-            }
             return result
         }
         resolve(["channels": channelList])

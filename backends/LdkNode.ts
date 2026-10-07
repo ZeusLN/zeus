@@ -2106,7 +2106,6 @@ export default class LdkNode {
                 : '',
             // chan_id is the numeric SCID (formatted as NNNxNNNxNNN by formatScid)
             chan_id: channel.shortChannelId || '',
-            peer_scid_alias: channel.inboundScidAlias || '',
             // channel_id is the 32-byte hex channel ID
             channel_id: channel.channelId,
             capacity: channel.channelValueSats.toString(),
