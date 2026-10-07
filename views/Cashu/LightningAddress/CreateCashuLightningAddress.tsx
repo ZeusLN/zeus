@@ -103,7 +103,7 @@ export default class CreateCashuLightningAddress extends React.Component<
         const { mintUrl, mintList } = this.state;
         const { createCashu, update, deleteLocalHashes, error_msg } =
             LightningAddressStore;
-        const { updateSettings, settings }: any = SettingsStore;
+        const { updateSettingsGroup } = SettingsStore;
         const switchTo = route.params?.switchTo;
 
         const mintsNotConfigured = mintList.length === 0;
@@ -220,12 +220,12 @@ export default class CreateCashuLightningAddress extends React.Component<
                                                         });
                                                     if (response.success) {
                                                         await deleteLocalHashes();
-                                                        await updateSettings({
-                                                            lightningAddress: {
-                                                                ...settings.lightningAddress,
+                                                        await updateSettingsGroup(
+                                                            'lightningAddress',
+                                                            {
                                                                 mintUrl
                                                             }
-                                                        });
+                                                        );
                                                         navigation.popTo(
                                                             'LightningAddress'
                                                         );

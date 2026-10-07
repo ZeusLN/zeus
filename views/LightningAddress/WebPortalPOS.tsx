@@ -73,6 +73,11 @@ export default class WebPortalPOS extends React.Component<
         }
     }
 
+    componentWillUnmount() {
+        // Persist a merchant name or tax rate typed just before leaving
+        this.props.SettingsStore.flushPendingSettings();
+    }
+
     renderSeparator = () => (
         <View
             style={{
@@ -93,8 +98,13 @@ export default class WebPortalPOS extends React.Component<
             taxPercentage,
             disableTips
         } = this.state;
-        const { updateSettings, settingsUpdateInProgress, settings }: any =
-            SettingsStore;
+        const {
+            updateSettings,
+            updateSettingsGroup,
+            updateSettingsGroupDebounced,
+            settingsUpdateInProgress,
+            settings
+        } = SettingsStore;
         const { update, loading, error_msg } = LightningAddressStore;
 
         const LIST_ITEMS = [
@@ -154,17 +164,16 @@ export default class WebPortalPOS extends React.Component<
                         >
                             <Switch
                                 value={posEnabled}
-                                disabled={settingsUpdateInProgress}
-                                onValueChange={async () => {
+                                onValueChange={async (value: boolean) => {
                                     this.setState({
-                                        posEnabled: !posEnabled
+                                        posEnabled: value
                                     });
-                                    await updateSettings({
-                                        lightningAddress: {
-                                            ...settings.lightningAddress,
-                                            posEnabled: !posEnabled
+                                    await updateSettingsGroup(
+                                        'lightningAddress',
+                                        {
+                                            posEnabled: value
                                         }
-                                    });
+                                    );
                                 }}
                             />
                         </View>
@@ -224,9 +233,10 @@ export default class WebPortalPOS extends React.Component<
                                 >
                                     <Switch
                                         value={fiatEnabled}
-                                        disabled={settingsUpdateInProgress}
-                                        onValueChange={async () => {
-                                            const newFiatEnabled = !fiatEnabled;
+                                        onValueChange={async (
+                                            value: boolean
+                                        ) => {
+                                            const newFiatEnabled = value;
                                             this.setState({
                                                 fiatEnabled: newFiatEnabled
                                             });
@@ -289,16 +299,13 @@ export default class WebPortalPOS extends React.Component<
                                 </Text>
                                 <TextInput
                                     value={merchantName}
-                                    onChangeText={async (text: string) => {
+                                    onChangeText={(text: string) => {
                                         this.setState({
                                             merchantName: text
                                         });
 
-                                        await updateSettings({
-                                            pos: {
-                                                ...settings.pos,
-                                                merchantName: text
-                                            }
+                                        updateSettingsGroupDebounced('pos', {
+                                            merchantName: text
                                         });
                                     }}
                                 />
@@ -318,16 +325,13 @@ export default class WebPortalPOS extends React.Component<
                                     placeholder={'0'}
                                     value={taxPercentage}
                                     keyboardType="numeric"
-                                    onChangeText={async (text: string) => {
+                                    onChangeText={(text: string) => {
                                         this.setState({
                                             taxPercentage: text
                                         });
 
-                                        await updateSettings({
-                                            pos: {
-                                                ...settings.pos,
-                                                taxPercentage: text
-                                            }
+                                        updateSettingsGroupDebounced('pos', {
+                                            taxPercentage: text
                                         });
                                     }}
                                     suffix="%"
@@ -358,16 +362,14 @@ export default class WebPortalPOS extends React.Component<
                                 >
                                     <Switch
                                         value={disableTips}
-                                        disabled={settingsUpdateInProgress}
-                                        onValueChange={async () => {
+                                        onValueChange={async (
+                                            value: boolean
+                                        ) => {
                                             this.setState({
-                                                disableTips: !disableTips
+                                                disableTips: value
                                             });
-                                            await updateSettings({
-                                                pos: {
-                                                    ...settings.pos,
-                                                    disableTips: !disableTips
-                                                }
+                                            await updateSettingsGroup('pos', {
+                                                disableTips: value
                                             });
                                         }}
                                     />
