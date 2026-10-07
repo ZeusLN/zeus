@@ -286,18 +286,21 @@ export default class PaymentRequest extends React.Component<
 
     checkIfLndReady = async () => {
         const { BalanceStore, NodeInfoStore } = this.props;
-        const noBalance = BalanceStore.lightningBalance === 0;
         const { isLightningReadyToSend } = NodeInfoStore;
-        while (
-            !this.state.lightningReadyToSend &&
-            this.isComponentMounted &&
-            !noBalance
-        ) {
-            const isReady = await isLightningReadyToSend();
-            if (isReady) {
-                this.setState({
-                    lightningReadyToSend: true
-                });
+        while (!this.state.lightningReadyToSend && this.isComponentMounted) {
+            // re-read each pass: the balance refresh started on mount may
+            // land after this loop begins
+            if (BalanceStore.lightningBalance !== 0) {
+                try {
+                    const isReady = await isLightningReadyToSend();
+                    if (isReady) {
+                        this.setState({
+                            lightningReadyToSend: true
+                        });
+                    }
+                } catch (e) {
+                    // RPC can fail while LND is still starting; keep polling
+                }
             }
             await sleep(3000);
         }
