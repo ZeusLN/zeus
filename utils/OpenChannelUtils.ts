@@ -60,8 +60,17 @@ const hasInvalidAdditionalChannels = (
             !isValidAdditionalChannelHost(channel)
     );
 
+// min confs typed into a text field. An empty or non-integer entry is unset
+// (the default of 1 applies), so clearing the field never stores 0, which
+// would let channel opens spend unconfirmed funds
+const parseMinConfs = (text: string): number | undefined => {
+    const trimmed = text.trim();
+    return /^\d+$/.test(trimmed) ? Number(trimmed) : undefined;
+};
+
 const OpenChannelUtils = {
     isValidChannelAmount,
+    parseMinConfs,
     getFundMaxAmount,
     isInvalidMainChannelAmount,
     isValidAdditionalChannelPubkey,

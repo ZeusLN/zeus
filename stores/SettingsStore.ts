@@ -155,7 +155,7 @@ interface InvoicesSettings {
 }
 
 interface ChannelsSettings {
-    min_confs: number;
+    min_confs?: number;
     privateChannel: boolean;
     scidAlias: boolean;
     simpleTaprootChannel: boolean;

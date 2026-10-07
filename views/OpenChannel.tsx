@@ -71,7 +71,7 @@ interface OpenChannelState {
     local_funding_amount: string;
     fundMax: boolean;
     satAmount: string | number;
-    min_confs: number;
+    min_confs?: number;
     spend_unconfirmed: boolean;
     sat_per_vbyte: string;
     privateChannel: boolean;
@@ -152,20 +152,16 @@ export default class OpenChannel extends React.Component<
             }
         }
 
+        // a saved default of 0 is valid and lets the open spend unconfirmed
+        // funds
+        const min_confs = settings?.channels?.min_confs ?? 1;
         this.setState({
-            min_confs: settings?.channels?.min_confs || 1,
-            privateChannel:
-                settings?.channels?.privateChannel !== null
-                    ? settings.channels.privateChannel
-                    : true,
-            scidAlias:
-                settings?.channels?.scidAlias !== null
-                    ? settings.channels.scidAlias
-                    : true,
+            min_confs,
+            spend_unconfirmed: min_confs === 0,
+            privateChannel: settings?.channels?.privateChannel ?? true,
+            scidAlias: settings?.channels?.scidAlias ?? true,
             simpleTaprootChannel:
-                settings?.channels?.simpleTaprootChannel !== null
-                    ? settings.channels.simpleTaprootChannel
-                    : false
+                settings?.channels?.simpleTaprootChannel ?? false
         });
 
         this.initFromProps(this.props);
@@ -379,11 +375,8 @@ export default class OpenChannel extends React.Component<
             utxoBalance,
             confirmedBlockchainBalance,
             unconfirmedBlockchainBalance,
-            // LDK Node does not pass min confs to the node, so it won't
-            // spend unconfirmed funds
             spendUnconfirmed:
-                spend_unconfirmed &&
-                (BackendUtils.isLNDBased() || implementation === 'cln-rest')
+                spend_unconfirmed && BackendUtils.supportsChannelOpenMinConfs()
         });
         const isInvalidAmount = OpenChannelUtils.isInvalidMainChannelAmount({
             satAmount,
@@ -1212,37 +1205,46 @@ export default class OpenChannel extends React.Component<
                                             </View>
                                         )}
 
-                                        <>
-                                            <Text
-                                                style={{
-                                                    ...styles.text,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    'views.OpenChannel.numConf'
-                                                )}
-                                            </Text>
-                                            <TextInput
-                                                keyboardType="numeric"
-                                                placeholder={'1'}
-                                                value={min_confs.toString()}
-                                                onChangeText={(
-                                                    text: string
-                                                ) => {
-                                                    const newMinConfs =
-                                                        Number(text);
-                                                    this.setState({
-                                                        min_confs: newMinConfs,
-                                                        spend_unconfirmed:
-                                                            newMinConfs === 0
-                                                    });
-                                                }}
-                                                locked={openingChannel}
-                                            />
-                                        </>
+                                        {BackendUtils.supportsChannelOpenMinConfs() && (
+                                            <>
+                                                <Text
+                                                    style={{
+                                                        ...styles.text,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        'views.OpenChannel.numConf'
+                                                    )}
+                                                </Text>
+                                                <TextInput
+                                                    keyboardType="numeric"
+                                                    placeholder={'1'}
+                                                    value={
+                                                        min_confs?.toString() ??
+                                                        ''
+                                                    }
+                                                    onChangeText={(
+                                                        text: string
+                                                    ) => {
+                                                        const newMinConfs =
+                                                            OpenChannelUtils.parseMinConfs(
+                                                                text
+                                                            );
+                                                        this.setState({
+                                                            min_confs:
+                                                                newMinConfs,
+                                                            spend_unconfirmed:
+                                                                newMinConfs ===
+                                                                0
+                                                        });
+                                                    }}
+                                                    locked={openingChannel}
+                                                />
+                                            </>
+                                        )}
 
                                         {BackendUtils.isLNDBased() && (
                                             <View style={{ marginTop: 10 }}>
@@ -1402,6 +1404,7 @@ export default class OpenChannel extends React.Component<
                                         connectPeer(
                                             {
                                                 ...this.state,
+                                                min_confs: min_confs ?? 1,
                                                 local_funding_amount:
                                                     satAmount.toString()
                                             },

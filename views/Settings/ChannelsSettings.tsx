@@ -9,9 +9,10 @@ import Switch from '../../components/Switch';
 import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 
-import SettingsStore from '../../stores/SettingsStore';
+import SettingsStore, { Settings } from '../../stores/SettingsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
+import OpenChannelUtils from '../../utils/OpenChannelUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -21,11 +22,21 @@ interface ChannelsSettingsProps {
 }
 
 interface ChannelsSettingsState {
-    min_confs: number;
+    min_confs?: number;
     privateChannel: boolean;
     scidAlias: boolean;
     simpleTaprootChannel: boolean;
 }
+
+const stateFromSettings = (settings: any): ChannelsSettingsState => {
+    const channels = settings?.channels;
+    return {
+        min_confs: channels?.min_confs ?? 1,
+        privateChannel: channels?.privateChannel ?? true,
+        scidAlias: channels?.scidAlias ?? true,
+        simpleTaprootChannel: channels?.simpleTaprootChannel ?? false
+    };
+};
 
 @inject('SettingsStore')
 @observer
@@ -33,33 +44,19 @@ export default class ChannelsSettings extends React.Component<
     ChannelsSettingsProps,
     ChannelsSettingsState
 > {
-    state = {
-        min_confs: 1,
-        privateChannel: true,
-        scidAlias: true,
-        simpleTaprootChannel: false
-    };
+    constructor(props: ChannelsSettingsProps) {
+        super(props);
+        // settings are loaded before this view opens, so the first render
+        // already shows the saved values (a saved 0 does not flash 1)
+        this.state = stateFromSettings(props.SettingsStore.settings);
+    }
 
     async componentDidMount() {
         const { SettingsStore } = this.props;
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
 
-        this.setState({
-            min_confs: settings?.channels?.min_confs || 1,
-            privateChannel:
-                settings?.channels?.privateChannel !== null
-                    ? settings.channels.privateChannel
-                    : true,
-            scidAlias:
-                settings?.channels?.scidAlias !== null
-                    ? settings.channels.scidAlias
-                    : true,
-            simpleTaprootChannel:
-                settings?.channels?.simpleTaprootChannel !== null
-                    ? settings.channels.simpleTaprootChannel
-                    : false
-        });
+        this.setState(stateFromSettings(settings));
     }
 
     renderSeparator = () => (
@@ -75,7 +72,7 @@ export default class ChannelsSettings extends React.Component<
         const { navigation, SettingsStore } = this.props;
         const { min_confs, privateChannel, scidAlias, simpleTaprootChannel } =
             this.state;
-        const { settings, updateSettings }: any = SettingsStore;
+        const { updateSettings }: any = SettingsStore;
 
         return (
             <Screen>
@@ -97,31 +94,38 @@ export default class ChannelsSettings extends React.Component<
                         marginTop: 5
                     }}
                 >
-                    <Text
-                        style={{
-                            ...styles.text,
-                            color: themeColor('secondaryText')
-                        }}
-                    >
-                        {localeString('views.OpenChannel.numConf')}
-                    </Text>
-                    <TextInput
-                        keyboardType="numeric"
-                        placeholder={'1'}
-                        value={min_confs.toString()}
-                        onChangeText={async (text: string) => {
-                            const newMinConfs = Number(text);
-                            this.setState({
-                                min_confs: newMinConfs
-                            });
-                            await updateSettings({
-                                channels: {
-                                    ...settings.channels,
-                                    min_confs: newMinConfs
-                                }
-                            });
-                        }}
-                    />
+                    {BackendUtils.supportsChannelOpenMinConfs() && (
+                        <>
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    color: themeColor('secondaryText')
+                                }}
+                            >
+                                {localeString('views.OpenChannel.numConf')}
+                            </Text>
+                            <TextInput
+                                keyboardType="numeric"
+                                placeholder={'1'}
+                                value={min_confs?.toString() ?? ''}
+                                onChangeText={async (text: string) => {
+                                    const newMinConfs =
+                                        OpenChannelUtils.parseMinConfs(text);
+                                    this.setState({
+                                        min_confs: newMinConfs
+                                    });
+                                    await updateSettings(
+                                        (current: Settings) => ({
+                                            channels: {
+                                                ...current.channels,
+                                                min_confs: newMinConfs
+                                            }
+                                        })
+                                    );
+                                }}
+                            />
+                        </>
+                    )}
 
                     <View style={{ flexDirection: 'row', marginTop: 20 }}>
                         <View style={{ flex: 1 }}>
@@ -146,12 +150,14 @@ export default class ChannelsSettings extends React.Component<
                                     this.setState({
                                         privateChannel: !privateChannel
                                     });
-                                    await updateSettings({
-                                        channels: {
-                                            ...settings.channels,
-                                            privateChannel: !privateChannel
-                                        }
-                                    });
+                                    await updateSettings(
+                                        (current: Settings) => ({
+                                            channels: {
+                                                ...current.channels,
+                                                privateChannel: !privateChannel
+                                            }
+                                        })
+                                    );
                                 }}
                                 disabled={
                                     simpleTaprootChannel ||
@@ -190,12 +196,14 @@ export default class ChannelsSettings extends React.Component<
                                         this.setState({
                                             scidAlias: !scidAlias
                                         });
-                                        await updateSettings({
-                                            channels: {
-                                                ...settings.channels,
-                                                scidAlias: !scidAlias
-                                            }
-                                        });
+                                        await updateSettings(
+                                            (current: Settings) => ({
+                                                channels: {
+                                                    ...current.channels,
+                                                    scidAlias: !scidAlias
+                                                }
+                                            })
+                                        );
                                     }}
                                 />
                             </View>
@@ -239,17 +247,19 @@ export default class ChannelsSettings extends React.Component<
                                             });
                                         }
 
-                                        await updateSettings({
-                                            channels: {
-                                                ...settings.channels,
-                                                privateChannel:
-                                                    !simpleTaprootChannel
-                                                        ? true
-                                                        : privateChannel,
-                                                simpleTaprootChannel:
-                                                    !simpleTaprootChannel
-                                            }
-                                        });
+                                        await updateSettings(
+                                            (current: Settings) => ({
+                                                channels: {
+                                                    ...current.channels,
+                                                    privateChannel:
+                                                        !simpleTaprootChannel
+                                                            ? true
+                                                            : privateChannel,
+                                                    simpleTaprootChannel:
+                                                        !simpleTaprootChannel
+                                                }
+                                            })
+                                        );
                                     }}
                                 />
                             </View>

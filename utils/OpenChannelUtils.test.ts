@@ -92,6 +92,21 @@ describe('isInvalidMainChannelAmount', () => {
     });
 });
 
+describe('parseMinConfs', () => {
+    it.each([
+        ['0', 0],
+        ['1', 1],
+        [' 6 ', 6],
+        ['', undefined],
+        ['  ', undefined],
+        ['-1', undefined],
+        ['1.5', undefined],
+        ['abc', undefined]
+    ])('parses %p as %p', (text, expected) => {
+        expect(OpenChannelUtils.parseMinConfs(text)).toBe(expected);
+    });
+});
+
 describe('getFundMaxAmount', () => {
     it('uses the selected UTXOs', () => {
         expect(

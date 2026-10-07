@@ -18,6 +18,7 @@ jest.mock('../stores/SettingsStore', () => ({
 }));
 jest.mock('../utils/BackendUtils', () => ({
     supportsChannelOpenFeeRate: () => false,
+    supportsChannelOpenMinConfs: jest.fn(() => true),
     supportsChannelFundMax: () => true,
     supportsChannelBatching: () => false,
     supportsChannelCoinControl: () => false,
@@ -98,15 +99,20 @@ const makeView = ({
     implementation = 'lnd',
     confirmedBlockchainBalance = BALANCE,
     unconfirmedBlockchainBalance = 0,
-    routeParams = {}
+    routeParams = {},
+    settings = {}
 }: {
     implementation?: string;
     confirmedBlockchainBalance?: number;
     unconfirmedBlockchainBalance?: number;
     routeParams?: { node_pubkey_string?: string; host?: string };
+    settings?: any;
 } = {}) => {
     (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(
         implementation === 'lnd'
+    );
+    (BackendUtils.supportsChannelOpenMinConfs as jest.Mock).mockReturnValue(
+        implementation !== 'ldk-node'
     );
     const view = new OpenChannel({
         navigation: { navigate: jest.fn() },
@@ -118,11 +124,13 @@ const makeView = ({
         ChannelsStore: {
             channelsView: 'channels',
             aliasesByPubkey: {},
-            nodes: {}
+            nodes: {},
+            resetOpenChannel: jest.fn(),
+            connectPeer: jest.fn(() => Promise.resolve())
         },
         ModalStore: {},
         NodeInfoStore: { nodeInfo: {} },
-        SettingsStore: { implementation, settings: {} },
+        SettingsStore: { implementation, settings },
         UTXOsStore: {}
     } as unknown as React.ComponentProps<typeof OpenChannel>);
     // setState on a class that was never mounted does nothing, so apply it
@@ -183,37 +191,50 @@ describe('OpenChannel fund max toggle', () => {
     });
 });
 
+const findMinConfsInput = (view: OpenChannel) =>
+    findElement(
+        view.render(),
+        (element) =>
+            element.type === 'TextInput' && element.props.placeholder === '1'
+    );
+
 describe('OpenChannel fund max with unconfirmed funds and min confs 0', () => {
     const UNCONFIRMED = 100000;
 
-    const setMinConfsZero = (view: OpenChannel) =>
-        findElement(
-            view.render(),
-            (element) =>
-                element.type === 'TextInput' &&
-                element.props.placeholder === '1'
-        ).props.onChangeText('0');
-
-    it.each([
-        ['lnd', String(UNCONFIRMED), false],
-        ['cln-rest', String(UNCONFIRMED), false],
-        // LDK Node does not pass min confs to the node
-        ['ldk-node', '0', true]
-    ])(
-        'on %s shows %s and sets the open button disabled to %s',
-        (implementation, shownAmount, disabled) => {
+    it.each(['lnd', 'cln-rest'])(
+        'on %s counts unconfirmed funds',
+        (implementation) => {
             const view = makeView({
                 implementation,
                 confirmedBlockchainBalance: 0,
                 unconfirmedBlockchainBalance: UNCONFIRMED
             });
-            setMinConfsZero(view);
+            findMinConfsInput(view).props.onChangeText('0');
             toggleFundMax(view);
 
-            expect(amountInputProps(view).amount).toBe(shownAmount);
-            expect(isOpenDisabled(view)).toBe(disabled);
+            expect(amountInputProps(view).amount).toBe(String(UNCONFIRMED));
+            expect(isOpenDisabled(view)).toBe(false);
         }
     );
+
+    it('on ldk-node hides the min confs field', () => {
+        const view = makeView({ implementation: 'ldk-node' });
+
+        expect(findMinConfsInput(view)).toBeUndefined();
+    });
+
+    it('on ldk-node ignores a min confs of 0 from settings', () => {
+        const view = makeView({
+            implementation: 'ldk-node',
+            confirmedBlockchainBalance: 0,
+            unconfirmedBlockchainBalance: UNCONFIRMED
+        });
+        view.setState({ min_confs: 0, spend_unconfirmed: true });
+        toggleFundMax(view);
+
+        expect(amountInputProps(view).amount).toBe('0');
+        expect(isOpenDisabled(view)).toBe(true);
+    });
 });
 
 describe('OpenChannel LSP channel partner', () => {
@@ -366,5 +387,82 @@ describe('OpenChannel LSP channel partner', () => {
 
         expect(view.state.node_pubkey_string).toBe(OTHER.lsps1Pubkey);
         expect(view.state.host).toBe(OTHER.lsps1Host);
+    });
+});
+
+describe('OpenChannel min confs default from settings', () => {
+    it.each([
+        [0, 0, true],
+        [3, 3, false],
+        [undefined, 1, false]
+    ])(
+        'a saved min confs of %s loads as %s with spend unconfirmed %s',
+        async (saved, minConfs, spendUnconfirmed) => {
+            const view = makeView({
+                settings: { channels: { min_confs: saved } }
+            });
+            await view.componentDidMount();
+
+            expect(view.state.min_confs).toBe(minConfs);
+            expect(view.state.spend_unconfirmed).toBe(spendUnconfirmed);
+        }
+    );
+
+    it('uses the default for each toggle missing from saved settings', async () => {
+        const view = makeView({ settings: { channels: { min_confs: 3 } } });
+        await view.componentDidMount();
+
+        expect(view.state.privateChannel).toBe(true);
+        expect(view.state.scidAlias).toBe(true);
+        expect(view.state.simpleTaprootChannel).toBe(false);
+    });
+
+    it('counts unconfirmed funds for fund max with a saved default of 0', async () => {
+        const view = makeView({
+            confirmedBlockchainBalance: 0,
+            unconfirmedBlockchainBalance: 100000,
+            settings: { channels: { min_confs: 0 } }
+        });
+        await view.componentDidMount();
+        toggleFundMax(view);
+
+        expect(amountInputProps(view).amount).toBe('100000');
+    });
+});
+
+describe('OpenChannel min confs field', () => {
+    it('treats a cleared field as unset and opens with the default of 1', () => {
+        const view = makeView();
+        findMinConfsInput(view).props.onChangeText('0');
+        findMinConfsInput(view).props.onChangeText('');
+
+        expect(view.state.min_confs).toBeUndefined();
+        expect(view.state.spend_unconfirmed).toBe(false);
+        expect(findMinConfsInput(view).props.value).toBe('');
+
+        findByType(
+            view.render(),
+            'Button',
+            'views.OpenChannel.openChannel'
+        ).props.onPress();
+        const request = (view.props.ChannelsStore.connectPeer as jest.Mock).mock
+            .calls[0][0];
+        expect(request.min_confs).toBe(1);
+        expect(request.spend_unconfirmed).toBe(false);
+    });
+
+    it('sends a typed 0 with spend unconfirmed', () => {
+        const view = makeView();
+        findMinConfsInput(view).props.onChangeText('0');
+
+        findByType(
+            view.render(),
+            'Button',
+            'views.OpenChannel.openChannel'
+        ).props.onPress();
+        const request = (view.props.ChannelsStore.connectPeer as jest.Mock).mock
+            .calls[0][0];
+        expect(request.min_confs).toBe(0);
+        expect(request.spend_unconfirmed).toBe(true);
     });
 });
