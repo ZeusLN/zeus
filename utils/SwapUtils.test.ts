@@ -40,8 +40,14 @@ import {
     saveRescueKeyFile,
     unlinkRescueKeyStagingFile,
     RESCUE_KEY_FILENAME,
-    deriveSwapPreimage
+    deriveSwapPreimage,
+    aggregateMusigKeys,
+    buildReverseSwapLeaves,
+    deriveReverseSwapOutputKey,
+    verifyReverseSwapResponse,
+    checkLockupOutput
 } from './SwapUtils';
+import ecc from '@bitcoinerlab/secp256k1';
 
 // regtest BOLT11 vector: 123 sats,
 // payment_hash f2cbe057ae04a29a28b098de1eea199d8f1802810fb4f0269dac84c6f8c8762d
@@ -499,6 +505,326 @@ describe('SwapUtils', () => {
             const privateKey = Uint8Array.from(Array(32).fill(1));
             expect(deriveSwapPreimage(privateKey)).toEqual(
                 crypto.sha256(Buffer.from(privateKey))
+            );
+        });
+    });
+
+    // boltz-client v2.9.0 pkg/boltz/swaptree_test.go, BTC reverse swap
+    describe('reverse swap lockup verification', () => {
+        const hex = (value: string) => Buffer.from(value, 'hex');
+        const pubFromPriv = (priv: string) =>
+            Buffer.from(ecc.pointFromScalar(hex(priv), true)!);
+
+        const OUR_PUBKEY = pubFromPriv(
+            '7886fd6464350f85c941bd80c824b1ad4f776b0aa1b4783a300b987d69966086'
+        );
+        const SERVER_PUBKEY =
+            '0328baf0584489b39d218d0a59bbee01e93be6fba696b348a4033045f3cdc7dc37';
+        const PREIMAGE_HASH = hex(
+            'a1164fdb247b47931ed41fa1bd53391205406aa723adf4fda10b9ed013001016'
+        );
+        const TIMEOUT = 827793;
+        const CLAIM_LEAF =
+            '82012088a914fedcea7dea7e4c7923984fab9c0b409a4ea7f38a882017ccb3202dd3a3ad29f4bc046f2b51904ece962a6e5b05da73f5eb5eeb99b1b3ac';
+        const REFUND_LEAF =
+            '2028baf0584489b39d218d0a59bbee01e93be6fba696b348a4033045f3cdc7dc37ad0391a10cb1';
+        const LOCKUP_ADDRESS =
+            'bc1prmxmvl5z79ddhesfzu3ya0f8ck9k3tfvdcrxfzc8t9s7stm4nfrsyc9hzw';
+        // a valid taproot address for a different swap (the submarine
+        // vector from the same boltz-client test)
+        const OTHER_TAPROOT_ADDRESS =
+            'bc1px6up6cxg2vhf049x9g0v8wcztc0vvvd25zjqt6qf3streqvuzm7qm0dpkp';
+        const OTHER_PUBKEY = pubFromPriv('01'.repeat(32));
+
+        const response = (overrides: any = {}) => ({
+            swapTree: {
+                claimLeaf: { version: 192, output: CLAIM_LEAF },
+                refundLeaf: { version: 192, output: REFUND_LEAF }
+            },
+            lockupAddress: LOCKUP_ADDRESS,
+            serverPubKey: SERVER_PUBKEY,
+            timeoutBlockHeight: TIMEOUT,
+            onchainAmount: 100000,
+            ourPubKey: OUR_PUBKEY,
+            preimageHash: PREIMAGE_HASH,
+            ...overrides
+        });
+
+        describe('aggregateMusigKeys', () => {
+            // BIP 327 key_agg_vectors.json
+            const X = [
+                '02F9308A019258C31049344F85F89D5229B531C845836F99B08601F113BCE036F9',
+                '03DFF1D77F2A671C5F36183726DB2341BE58FEAE1DA2DECED843240F7B502BA659',
+                '023590A94E768F8E1815C2F24B4D80A8E3149316C3518CE7B7AD338368D038CA66'
+            ].map(hex);
+
+            it.each([
+                [
+                    [0, 1, 2],
+                    '90539EEDE565F5D054F32CC0C220126889ED1E5D193BAF15AEF344FE59D4610C'
+                ],
+                [
+                    [2, 1, 0],
+                    '6204DE8B083426DC6EAF9502D27024D53FC826BF7D2012148A0575435DF54B2B'
+                ],
+                [
+                    [0, 0, 0],
+                    'B436E3BAD62B8CD409969A224731C193D051162D8C5AE8B109306127DA3AA935'
+                ],
+                [
+                    [0, 0, 1, 1],
+                    '69BC22BFA5D106306E48A20679DE1D7389386124D07571D0D872686028C26A3E'
+                ]
+            ])('matches BIP 327 vector for keys %j', (indices, expected) => {
+                expect(
+                    aggregateMusigKeys(indices.map((i) => X[i]))
+                        .toString('hex')
+                        .toUpperCase()
+                ).toBe(expected);
+            });
+        });
+
+        it('rebuilds the boltz-client reverse swap leaves byte for byte', () => {
+            const { claimLeaf, refundLeaf } = buildReverseSwapLeaves({
+                claimPubKey: OUR_PUBKEY,
+                refundPubKey: hex(SERVER_PUBKEY),
+                preimageHash: PREIMAGE_HASH,
+                timeoutBlockHeight: TIMEOUT
+            });
+            expect(claimLeaf.toString('hex')).toBe(CLAIM_LEAF);
+            expect(refundLeaf.toString('hex')).toBe(REFUND_LEAF);
+        });
+
+        it('derives the boltz-client reverse swap lockup address', () => {
+            const outputKey = deriveReverseSwapOutputKey({
+                ourPubKey: OUR_PUBKEY,
+                serverPubKey: hex(SERVER_PUBKEY),
+                claimLeaf: hex(CLAIM_LEAF),
+                refundLeaf: hex(REFUND_LEAF)
+            });
+            const check = verifyReverseSwapResponse(response());
+            expect(check.valid).toBe(true);
+            expect(check.valid && check.outputScript.toString('hex')).toBe(
+                `5120${outputKey.toString('hex')}`
+            );
+        });
+
+        describe('verifyReverseSwapResponse', () => {
+            const otherClaimLeaf = (
+                claimPubKey: Buffer,
+                preimageHash: Buffer
+            ) =>
+                buildReverseSwapLeaves({
+                    claimPubKey,
+                    refundPubKey: hex(SERVER_PUBKEY),
+                    preimageHash,
+                    timeoutBlockHeight: TIMEOUT
+                }).claimLeaf.toString('hex');
+
+            it('accepts the vector with an on-chain amount above the minimum', () => {
+                expect(
+                    verifyReverseSwapResponse(
+                        response({ minOnchainAmount: 99000 })
+                    ).valid
+                ).toBe(true);
+            });
+
+            it.each([
+                [
+                    'the lockup address is another taproot address',
+                    { lockupAddress: OTHER_TAPROOT_ADDRESS },
+                    'lockup-address-mismatch'
+                ],
+                [
+                    'the lockup address is not taproot',
+                    {
+                        lockupAddress:
+                            'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4'
+                    },
+                    'lockup-address-mismatch'
+                ],
+                [
+                    'the lockup address is garbage',
+                    { lockupAddress: 'not-an-address' },
+                    'lockup-address-mismatch'
+                ],
+                [
+                    'the claim leaf pays another key',
+                    {
+                        swapTree: {
+                            claimLeaf: {
+                                version: 192,
+                                output: otherClaimLeaf(
+                                    OTHER_PUBKEY,
+                                    PREIMAGE_HASH
+                                )
+                            },
+                            refundLeaf: { version: 192, output: REFUND_LEAF }
+                        }
+                    },
+                    'claim-leaf-mismatch'
+                ],
+                [
+                    'the claim leaf commits to another preimage hash',
+                    {
+                        swapTree: {
+                            claimLeaf: {
+                                version: 192,
+                                output: otherClaimLeaf(
+                                    OUR_PUBKEY,
+                                    Buffer.alloc(32, 9)
+                                )
+                            },
+                            refundLeaf: { version: 192, output: REFUND_LEAF }
+                        }
+                    },
+                    'claim-leaf-mismatch'
+                ],
+                [
+                    'the refund leaf has another timeout',
+                    { timeoutBlockHeight: TIMEOUT + 1 },
+                    'refund-leaf-mismatch'
+                ],
+                [
+                    'a leaf has a non-tapscript version',
+                    {
+                        swapTree: {
+                            claimLeaf: { version: 0xc4, output: CLAIM_LEAF },
+                            refundLeaf: { version: 192, output: REFUND_LEAF }
+                        }
+                    },
+                    'leaf-version'
+                ],
+                [
+                    'the server key is not the one in the refund leaf',
+                    {
+                        serverPubKey: OTHER_PUBKEY.toString('hex'),
+                        timeoutBlockHeight: undefined
+                    },
+                    'refund-leaf-mismatch'
+                ],
+                [
+                    'the on-chain amount is not above the minimum',
+                    { onchainAmount: 1000, minOnchainAmount: 99000 },
+                    'onchain-amount-low'
+                ],
+                [
+                    'the on-chain amount is missing but a minimum is set',
+                    { onchainAmount: undefined, minOnchainAmount: 99000 },
+                    'onchain-amount-low'
+                ],
+                [
+                    'the swap tree is missing',
+                    { swapTree: undefined },
+                    'missing-fields'
+                ],
+                [
+                    'the lockup address is missing',
+                    { lockupAddress: undefined },
+                    'missing-fields'
+                ],
+                [
+                    'the server key is not a point',
+                    { serverPubKey: 'ab' },
+                    'missing-fields'
+                ]
+            ])('rejects when %s', (_, overrides, reason) => {
+                expect(verifyReverseSwapResponse(response(overrides))).toEqual({
+                    valid: false,
+                    reason
+                });
+            });
+
+            it('accepts a rescued swap without a timeout or leaf versions', () => {
+                expect(
+                    verifyReverseSwapResponse(
+                        response({
+                            swapTree: {
+                                claimLeaf: { output: CLAIM_LEAF },
+                                refundLeaf: { output: REFUND_LEAF }
+                            },
+                            timeoutBlockHeight: undefined,
+                            onchainAmount: undefined
+                        })
+                    ).valid
+                ).toBe(true);
+            });
+        });
+
+        describe('checkLockupOutput', () => {
+            const check = verifyReverseSwapResponse(response());
+            const outputScript = check.valid
+                ? check.outputScript
+                : Buffer.alloc(0);
+            const scriptHex = outputScript.toString('hex');
+            const tx = (vout: any[], confirmed = true) => ({
+                vout,
+                status: { confirmed }
+            });
+
+            it.each([
+                [
+                    'a confirmed output for the exact amount',
+                    tx([{ scriptpubkey: scriptHex, value: 100000 }]),
+                    100000,
+                    'ok'
+                ],
+                [
+                    'a confirmed output above the amount',
+                    tx([{ scriptpubkey: scriptHex, value: 100500 }]),
+                    100000,
+                    'ok'
+                ],
+                [
+                    'an unconfirmed output',
+                    tx([{ scriptpubkey: scriptHex, value: 100000 }], false),
+                    100000,
+                    'unconfirmed'
+                ],
+                [
+                    'no output to the lockup script',
+                    tx([
+                        {
+                            scriptpubkey: '0014' + '00'.repeat(20),
+                            value: 100000
+                        }
+                    ]),
+                    100000,
+                    'missing-output'
+                ],
+                [
+                    'an output far below the amount',
+                    tx([{ scriptpubkey: scriptHex, value: 1000 }]),
+                    100000,
+                    'underfunded'
+                ],
+                [
+                    'two outputs to the script, the larger one funded',
+                    tx([
+                        { scriptpubkey: scriptHex, value: 1000 },
+                        { scriptpubkey: scriptHex, value: 100000 }
+                    ]),
+                    100000,
+                    'ok'
+                ],
+                [
+                    'a rescued swap with no recorded amount',
+                    tx([{ scriptpubkey: scriptHex, value: 1 }]),
+                    undefined,
+                    'ok'
+                ],
+                ['an empty response', {}, 100000, 'missing-output']
+            ])(
+                'returns the status for %s',
+                (_, esploraTx, minAmount, expected) => {
+                    expect(
+                        checkLockupOutput(
+                            esploraTx as any,
+                            outputScript,
+                            minAmount
+                        )
+                    ).toBe(expected);
+                }
             );
         });
     });

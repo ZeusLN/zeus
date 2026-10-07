@@ -20,7 +20,10 @@ import KeyValue from '../../components/KeyValue';
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
-import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import {
+    ErrorMessage,
+    WarningMessage
+} from '../../components/SuccessErrorMessage';
 import { Row } from '../../components/layout/Row';
 import Text from '../../components/Text';
 
@@ -75,7 +78,11 @@ interface SwapDetailsState {
     socketConnected: boolean;
     swapTreeToggle: boolean;
     swapData: Swap;
+    lockupNotice: string | null;
 }
+
+// how often to re-check an unconfirmed or unreachable lockup
+const LOCKUP_RECHECK_MS = 60 * 1000;
 
 @inject('InvoicesStore', 'NodeInfoStore', 'SwapStore')
 @observer
@@ -92,7 +99,8 @@ export default class SwapDetails extends React.Component<
             loading: false,
             socketConnected: true,
             swapTreeToggle: false,
-            swapData: new Swap(props.route.params.swapData)
+            swapData: new Swap(props.route.params.swapData),
+            lockupNotice: null
         };
     }
 
@@ -446,6 +454,73 @@ export default class SwapDetails extends React.Component<
         }
 
         let submitted = false;
+        let verifyingLockup = false;
+        let lockupRecheck: ReturnType<typeof setTimeout> | undefined;
+
+        // The provider's update is not proof of a lockup. Look the
+        // transaction up on the user's mempool instance and only claim,
+        // which reveals the preimage, once it is confirmed and pays the
+        // swap's output in full.
+        const claimIfLockupVerified = async (transactionHex: string) => {
+            if (submitted || verifyingLockup || !SwapStore) return;
+            verifyingLockup = true;
+            clearTimeout(lockupRecheck);
+            try {
+                const lockup = await SwapStore.verifyReverseLockup(
+                    new Swap({
+                        ...createdResponse,
+                        keys,
+                        preimage: swapData.preimage
+                    }),
+                    transactionHex
+                );
+
+                if (lockup.status === 'invalid') {
+                    console.error(
+                        'Reverse swap lockup verification failed:',
+                        lockup.reason
+                    );
+                    this.setState({
+                        error: localeString(
+                            'views.SwapDetails.lockupVerificationFailed'
+                        ),
+                        lockupNotice: null,
+                        loading: false
+                    });
+                    return;
+                }
+
+                if (lockup.status !== 'ok') {
+                    this.setState({
+                        lockupNotice: localeString(
+                            lockup.status === 'unconfirmed'
+                                ? 'views.SwapDetails.waitingForLockupConfirmation'
+                                : 'views.SwapDetails.lockupVerificationUnavailable'
+                        )
+                    });
+                    lockupRecheck = setTimeout(
+                        () => claimIfLockupVerified(transactionHex),
+                        LOCKUP_RECHECK_MS
+                    );
+                    return;
+                }
+
+                this.setState({ lockupNotice: null });
+                console.log('Creating claim transaction');
+                submitted = await this.createReverseClaimTransaction(
+                    createdResponse,
+                    keys,
+                    endpoint,
+                    swapData.lockupAddress!,
+                    swapData.destinationAddress!,
+                    swapData.preimage,
+                    transactionHex,
+                    fee
+                );
+            } finally {
+                verifyingLockup = false;
+            }
+        };
 
         console.log('Connecting to WebSocket for updates...');
         this.setState({ loading: true });
@@ -520,19 +595,8 @@ export default class SwapDetails extends React.Component<
                         console.log(
                             'Claim transaction already created and submitted successfully. Skipping.'
                         );
-                    } else {
-                        console.log('Creating claim transaction');
-
-                        submitted = await this.createReverseClaimTransaction(
-                            createdResponse,
-                            keys,
-                            endpoint,
-                            swapData.lockupAddress!,
-                            swapData.destinationAddress!,
-                            swapData.preimage,
-                            data.transaction.hex,
-                            fee
-                        );
+                    } else if (data.transaction?.hex) {
+                        await claimIfLockupVerified(data.transaction.hex);
                     }
                     break;
 
@@ -576,6 +640,7 @@ export default class SwapDetails extends React.Component<
         };
 
         this.componentWillUnmount = () => {
+            clearTimeout(lockupRecheck);
             if (webSocket) {
                 webSocket.close();
             }
@@ -806,7 +871,8 @@ export default class SwapDetails extends React.Component<
     render() {
         const { navigation, SwapStore } = this.props;
 
-        const { updates, error, failureReason, swapData } = this.state;
+        const { updates, error, failureReason, swapData, lockupNotice } =
+            this.state;
 
         const serviceProvider = this.props.route.params?.serviceProvider ?? '';
 
@@ -927,6 +993,9 @@ export default class SwapDetails extends React.Component<
                                 {progressUpdate}
                             </Text>
                         </View>
+                    )}
+                    {lockupNotice && !error && (
+                        <WarningMessage message={lockupNotice} />
                     )}
                     {error && (
                         <ErrorMessage

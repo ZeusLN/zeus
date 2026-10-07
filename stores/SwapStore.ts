@@ -1,14 +1,16 @@
 import { action, observable, computed, runInAction, reaction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import BigNumber from 'bignumber.js';
 import { ECPairAPI, ECPairFactory } from 'ecpair';
 import ecc from '@bitcoinerlab/secp256k1';
-import { crypto, initEccLib } from 'bitcoinjs-lib';
+import { crypto, initEccLib, Transaction } from 'bitcoinjs-lib';
 import { HDKey } from '@scure/bip32';
 import { mnemonicToSeedSync, generateMnemonic } from '@scure/bip39';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
+import UrlUtils from '../utils/UrlUtils';
 import {
     SWAPS_KEY,
     REVERSE_SWAPS_KEY,
@@ -16,6 +18,9 @@ import {
     SWAPS_LAST_USED_KEY,
     isValidRescueKey,
     verifyReverseSwapInvoice,
+    verifyReverseSwapResponse,
+    checkLockupOutput,
+    calculateReceiveAmount,
     deriveSwapPreimage
 } from '../utils/SwapUtils';
 
@@ -30,6 +35,15 @@ import SettingsStore, {
 import Storage from '../storage';
 
 import Swap, { SwapState, SwapType } from '../models/Swap';
+import {
+    privateKeyFromKeys,
+    preimageHexFrom
+} from '../models/ClaimTransaction';
+
+export type ReverseLockupCheck = {
+    status: 'ok' | 'unconfirmed' | 'invalid' | 'unavailable';
+    reason?: string;
+};
 
 interface SubmarineSwapInfo {
     fees?: {
@@ -546,6 +560,45 @@ export default class SwapStore {
                 return;
             }
 
+            // Verify the rest of the response before saving or paying: the
+            // swap tree must pay our key against our preimage hash, the
+            // lockup address must be that tree's taproot output, and the
+            // provider must lock up more than the amount the Swaps screen
+            // showed. Otherwise a host could point the claim at an output
+            // it controls and still learn the preimage when we claim.
+            const fees = this.reverseInfo?.fees;
+            const minOnchainAmount = calculateReceiveAmount(
+                new BigNumber(invoiceAmount),
+                fees?.percentage || 0,
+                new BigNumber(fees?.minerFees?.claim || 0)
+                    .plus(fees?.minerFees?.lockup || 0)
+                    .toNumber(),
+                true
+            ).toNumber();
+            const responseCheck = verifyReverseSwapResponse({
+                swapTree: responseData.swapTree,
+                lockupAddress: responseData.lockupAddress,
+                serverPubKey: responseData.refundPublicKey,
+                timeoutBlockHeight: responseData.timeoutBlockHeight,
+                onchainAmount: responseData.onchainAmount,
+                ourPubKey: Buffer.from(keys.publicKey),
+                preimageHash: crypto.sha256(preimage),
+                minOnchainAmount
+            });
+            if (!responseCheck.valid) {
+                runInAction(() => {
+                    this.apiError = localeString(
+                        'views.Swaps.invalidReverseSwapResponse'
+                    );
+                    this.loading = false;
+                });
+                console.error(
+                    'Reverse swap response verification failed:',
+                    responseCheck.reason
+                );
+                return;
+            }
+
             // Add the creation date
             const createdAt = new Date().toISOString();
             responseData.createdAt = createdAt;
@@ -586,6 +639,92 @@ export default class SwapStore {
             });
             console.error('Error creating reverse swap:', error);
         }
+    };
+
+    /**
+     * Checks a reverse swap's lockup before the claim reveals the
+     * preimage. The provider's swap update only supplies the transaction
+     * hex; the transaction itself is looked up by txid on the user's
+     * mempool instance, and it must be confirmed and pay the swap's
+     * taproot output at least the swap's on-chain amount. The swap tree
+     * and lockup address are re-checked here too, which covers swaps
+     * saved or rescued before creation-time verification existed.
+     *
+     * 'unconfirmed' (including not yet seen) and 'unavailable' are
+     * retryable; 'invalid' means the claim must not be attempted.
+     */
+    public verifyReverseLockup = async (
+        swap: Swap,
+        providerTxHex: string
+    ): Promise<ReverseLockupCheck> => {
+        const privateKeyHex = privateKeyFromKeys(swap.keys);
+        const preimageHex = preimageHexFrom(swap.preimage as any);
+        if (!privateKeyHex || !preimageHex) {
+            return { status: 'invalid', reason: 'missing-keys' };
+        }
+        const ourPubKey = this.ECPair.fromPrivateKey(
+            Buffer.from(privateKeyHex, 'hex')
+        ).publicKey;
+
+        const responseCheck = verifyReverseSwapResponse({
+            swapTree: swap.swapTreeDetails,
+            lockupAddress: swap.effectiveLockupAddress,
+            serverPubKey: swap.refundPubKey,
+            timeoutBlockHeight: swap.timeoutBlockHeight,
+            onchainAmount: swap.onchainAmount,
+            ourPubKey: Buffer.from(ourPubKey),
+            preimageHash: crypto.sha256(Buffer.from(preimageHex, 'hex'))
+        });
+        if (!responseCheck.valid) {
+            return { status: 'invalid', reason: responseCheck.reason };
+        }
+
+        let txid: string;
+        try {
+            txid = Transaction.fromHex(providerTxHex).getId();
+        } catch (e) {
+            return { status: 'invalid', reason: 'undecodable-lockup' };
+        }
+
+        let tx: any;
+        try {
+            const response = await ReactNativeBlobUtil.fetch(
+                'GET',
+                `${UrlUtils.getMempoolApiUrl(
+                    this.nodeInfoStore.nodeInfo
+                )}/tx/${txid}`
+            );
+            const httpStatus = response.info().status;
+            // not seen yet is retryable: an honest lockup may not have
+            // reached this instance, and one that never appears is
+            // never claimed
+            if (httpStatus === 404) {
+                return { status: 'unconfirmed', reason: 'lockup-not-found' };
+            }
+            if (httpStatus !== 200) {
+                return {
+                    status: 'unavailable',
+                    reason: `http-${httpStatus}`
+                };
+            }
+            tx = response.json();
+        } catch (e) {
+            return { status: 'unavailable', reason: 'request-failed' };
+        }
+
+        if (swap.onchainAmount == null) {
+            console.log(
+                'Reverse swap has no recorded on-chain amount; skipping the lockup amount check'
+            );
+        }
+        const outputStatus = checkLockupOutput(
+            tx,
+            responseCheck.outputScript,
+            swap.onchainAmount
+        );
+        if (outputStatus === 'ok') return { status: 'ok' };
+        if (outputStatus === 'unconfirmed') return { status: 'unconfirmed' };
+        return { status: 'invalid', reason: outputStatus };
     };
 
     private saveReverseSwaps = async (

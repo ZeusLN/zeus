@@ -35,6 +35,11 @@ jest.mock('../storage', () => ({
 }));
 jest.mock('../utils/LocaleUtils', () => ({ localeString: (k: string) => k }));
 jest.mock('../utils/ThemeUtils', () => ({ themeColor: () => '#000' }));
+// the real UrlUtils imports the whole store graph via Stores
+jest.mock('../utils/UrlUtils', () => ({
+    __esModule: true,
+    default: { getMempoolApiUrl: () => 'https://mempool.test/api' }
+}));
 jest.mock('ecpair', () => ({ ECPairFactory: () => ({}) }));
 jest.mock('@bitcoinerlab/secp256k1', () => ({ __esModule: true, default: {} }));
 jest.mock('bitcoinjs-lib', () => ({

@@ -3,7 +3,15 @@ import { Platform } from 'react-native';
 import RNFS from 'react-native-fs';
 import { saveDocuments } from '@react-native-documents/picker';
 import { validateMnemonic } from '@scure/bip39';
-import { crypto } from 'bitcoinjs-lib';
+import ecc from '@bitcoinerlab/secp256k1';
+import {
+    address as bitcoinAddress,
+    crypto,
+    initEccLib,
+    opcodes,
+    payments,
+    script as bitcoinScript
+} from 'bitcoinjs-lib';
 
 import { BIP39_WORD_LIST } from './Bip39Utils';
 
@@ -50,6 +58,283 @@ export const verifyReverseSwapInvoice = (
     }
 
     return { valid: true };
+};
+
+const SECP256K1_ORDER = new BigNumber(
+    'fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141',
+    16
+);
+const TAPSCRIPT_LEAF_VERSION = 0xc0;
+
+const toXOnly = (pubkey: Buffer): Buffer =>
+    pubkey.length === 32 ? pubkey : pubkey.subarray(1, 33);
+
+/**
+ * BIP 327 KeyAgg over 33-byte compressed public keys, in the order given
+ * (no sorting). Returns the x-only aggregate key. Boltz aggregates
+ * [serverKey, ourKey] in that order for the taproot internal key.
+ */
+export const aggregateMusigKeys = (pubkeys: Buffer[]): Buffer => {
+    const keyList = crypto.taggedHash('KeyAgg list', Buffer.concat(pubkeys));
+    const secondKey = pubkeys.find((pubkey) => !pubkey.equals(pubkeys[0]));
+
+    let aggregate: Uint8Array | null = null;
+    for (const pubkey of pubkeys) {
+        const coefficient =
+            secondKey && pubkey.equals(secondKey)
+                ? new BigNumber(1)
+                : new BigNumber(
+                      crypto
+                          .taggedHash(
+                              'KeyAgg coefficient',
+                              Buffer.concat([keyList, pubkey])
+                          )
+                          .toString('hex'),
+                      16
+                  ).mod(SECP256K1_ORDER);
+        const tweak = Buffer.from(
+            coefficient.toString(16).padStart(64, '0'),
+            'hex'
+        );
+        const term = ecc.pointMultiply(pubkey, tweak, true);
+        if (!term) throw new Error('KeyAgg: invalid public key');
+        aggregate = aggregate ? ecc.pointAdd(aggregate, term, true) : term;
+        if (!aggregate) throw new Error('KeyAgg: point at infinity');
+    }
+    return toXOnly(Buffer.from(aggregate!));
+};
+
+/**
+ * The two tapscript leaves of a Boltz reverse swap, as boltz-client's
+ * SwapTree.Check expects them. The claim leaf pays our key against the
+ * preimage, the refund leaf pays the server's key after the timeout.
+ */
+export const buildReverseSwapLeaves = ({
+    claimPubKey,
+    refundPubKey,
+    preimageHash,
+    timeoutBlockHeight
+}: {
+    claimPubKey: Buffer;
+    refundPubKey: Buffer;
+    preimageHash: Buffer;
+    timeoutBlockHeight: number;
+}): { claimLeaf: Buffer; refundLeaf: Buffer } => ({
+    claimLeaf: bitcoinScript.compile([
+        opcodes.OP_SIZE,
+        bitcoinScript.number.encode(32),
+        opcodes.OP_EQUALVERIFY,
+        opcodes.OP_HASH160,
+        crypto.ripemd160(preimageHash),
+        opcodes.OP_EQUALVERIFY,
+        toXOnly(claimPubKey),
+        opcodes.OP_CHECKSIG
+    ]),
+    refundLeaf: bitcoinScript.compile([
+        toXOnly(refundPubKey),
+        opcodes.OP_CHECKSIGVERIFY,
+        bitcoinScript.number.encode(timeoutBlockHeight),
+        opcodes.OP_CHECKLOCKTIMEVERIFY
+    ])
+});
+
+/**
+ * The taproot output key of a reverse swap lockup: the MuSig2 aggregate of
+ * [serverKey, ourKey] tweaked with the two-leaf script tree.
+ */
+export const deriveReverseSwapOutputKey = ({
+    ourPubKey,
+    serverPubKey,
+    claimLeaf,
+    refundLeaf
+}: {
+    ourPubKey: Buffer;
+    serverPubKey: Buffer;
+    claimLeaf: Buffer;
+    refundLeaf: Buffer;
+}): Buffer => {
+    initEccLib(ecc);
+    const { pubkey } = payments.p2tr({
+        internalPubkey: aggregateMusigKeys([serverPubKey, ourPubKey]),
+        scriptTree: [
+            { output: claimLeaf, version: TAPSCRIPT_LEAF_VERSION },
+            { output: refundLeaf, version: TAPSCRIPT_LEAF_VERSION }
+        ]
+    });
+    return Buffer.from(pubkey!);
+};
+
+const isRefundLeafFor = (
+    refundLeaf: Buffer,
+    serverPubKey: Buffer,
+    timeoutBlockHeight?: number
+): boolean => {
+    if (timeoutBlockHeight != null) {
+        return refundLeaf.equals(
+            buildReverseSwapLeaves({
+                claimPubKey: serverPubKey,
+                refundPubKey: serverPubKey,
+                preimageHash: Buffer.alloc(32),
+                timeoutBlockHeight
+            }).refundLeaf
+        );
+    }
+    // rescued swaps don't carry the timeout; check the shape only
+    const chunks = bitcoinScript.decompile(refundLeaf);
+    return (
+        !!chunks &&
+        chunks.length === 4 &&
+        Buffer.isBuffer(chunks[0]) &&
+        chunks[0].equals(toXOnly(serverPubKey)) &&
+        chunks[1] === opcodes.OP_CHECKSIGVERIFY &&
+        Buffer.isBuffer(chunks[2]) &&
+        chunks[3] === opcodes.OP_CHECKLOCKTIMEVERIFY
+    );
+};
+
+export type ReverseSwapResponseCheck =
+    | { valid: true; outputScript: Buffer }
+    | {
+          valid: false;
+          reason:
+              | 'missing-fields'
+              | 'leaf-version'
+              | 'claim-leaf-mismatch'
+              | 'refund-leaf-mismatch'
+              | 'lockup-address-mismatch'
+              | 'onchain-amount-low';
+      };
+
+/**
+ * Verifies the provider's reverse swap details against what ZEUS chose:
+ * the claim leaf must pay our key against our preimage hash, the refund
+ * leaf must pay the server key, and the lockup address must be the
+ * taproot output of exactly that tree. When minOnchainAmount is given,
+ * the provider must also lock up more than that (the amount the Swaps
+ * screen showed the user they would receive).
+ *
+ * Without this a provider can hand out a lockup address it controls, or
+ * a tree we can't claim from, and still get the preimage when we claim.
+ * Returns the lockup output script so the caller can match it on chain.
+ */
+export const verifyReverseSwapResponse = ({
+    swapTree,
+    lockupAddress,
+    serverPubKey,
+    timeoutBlockHeight,
+    onchainAmount,
+    ourPubKey,
+    preimageHash,
+    minOnchainAmount
+}: {
+    swapTree?: {
+        claimLeaf?: { output?: string; version?: number };
+        refundLeaf?: { output?: string; version?: number };
+    };
+    lockupAddress?: string;
+    serverPubKey?: string;
+    timeoutBlockHeight?: number;
+    onchainAmount?: number;
+    ourPubKey: Buffer;
+    preimageHash: Buffer;
+    minOnchainAmount?: number;
+}): ReverseSwapResponseCheck => {
+    const claimLeafHex = swapTree?.claimLeaf?.output;
+    const refundLeafHex = swapTree?.refundLeaf?.output;
+    if (!claimLeafHex || !refundLeafHex || !lockupAddress || !serverPubKey) {
+        return { valid: false, reason: 'missing-fields' };
+    }
+
+    // the native claim assumes tapscript leaves when no version is given
+    for (const leaf of [swapTree!.claimLeaf!, swapTree!.refundLeaf!]) {
+        if (leaf.version != null && leaf.version !== TAPSCRIPT_LEAF_VERSION) {
+            return { valid: false, reason: 'leaf-version' };
+        }
+    }
+
+    let serverKey: Buffer;
+    try {
+        serverKey = Buffer.from(serverPubKey, 'hex');
+        if (!ecc.isPoint(serverKey)) throw new Error('invalid server key');
+    } catch (e) {
+        return { valid: false, reason: 'missing-fields' };
+    }
+
+    const claimLeaf = Buffer.from(claimLeafHex, 'hex');
+    const refundLeaf = Buffer.from(refundLeafHex, 'hex');
+    const { claimLeaf: expectedClaimLeaf } = buildReverseSwapLeaves({
+        claimPubKey: ourPubKey,
+        refundPubKey: serverKey,
+        preimageHash,
+        timeoutBlockHeight: 0
+    });
+    if (!claimLeaf.equals(expectedClaimLeaf)) {
+        return { valid: false, reason: 'claim-leaf-mismatch' };
+    }
+    if (!isRefundLeafFor(refundLeaf, serverKey, timeoutBlockHeight)) {
+        return { valid: false, reason: 'refund-leaf-mismatch' };
+    }
+
+    const outputKey = deriveReverseSwapOutputKey({
+        ourPubKey,
+        serverPubKey: serverKey,
+        claimLeaf,
+        refundLeaf
+    });
+    // compare the witness program, so this holds on every network
+    let addressKey: Buffer | undefined;
+    try {
+        const decoded = bitcoinAddress.fromBech32(lockupAddress);
+        if (decoded.version === 1) addressKey = Buffer.from(decoded.data);
+    } catch (e) {
+        addressKey = undefined;
+    }
+    if (!addressKey || !addressKey.equals(outputKey)) {
+        return { valid: false, reason: 'lockup-address-mismatch' };
+    }
+
+    if (
+        minOnchainAmount != null &&
+        !(Number(onchainAmount) > minOnchainAmount)
+    ) {
+        return { valid: false, reason: 'onchain-amount-low' };
+    }
+
+    return {
+        valid: true,
+        outputScript: Buffer.concat([Buffer.from([0x51, 0x20]), outputKey])
+    };
+};
+
+export type LockupOutputStatus =
+    | 'ok'
+    | 'unconfirmed'
+    | 'missing-output'
+    | 'underfunded';
+
+/**
+ * Checks an Esplora /tx/:txid response for the swap's lockup output. Uses
+ * the largest output paying outputScript; minAmount is skipped when the
+ * swap has no recorded amount (rescued swaps).
+ */
+export const checkLockupOutput = (
+    tx: {
+        vout?: Array<{ scriptpubkey?: string; value?: number }>;
+        status?: { confirmed?: boolean };
+    },
+    outputScript: Buffer,
+    minAmount?: number
+): LockupOutputStatus => {
+    const scriptHex = outputScript.toString('hex');
+    const values = (tx?.vout || [])
+        .filter((output) => output?.scriptpubkey?.toLowerCase() === scriptHex)
+        .map((output) => Number(output.value) || 0);
+    if (values.length === 0) return 'missing-output';
+    if (minAmount != null && Math.max(...values) < minAmount) {
+        return 'underfunded';
+    }
+    if (!tx?.status?.confirmed) return 'unconfirmed';
+    return 'ok';
 };
 
 /**
