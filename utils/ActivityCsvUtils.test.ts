@@ -149,6 +149,36 @@ describe('activityCsvUtils', () => {
             );
             expect(result).toContain('"txhash1","2000","","",""');
         });
+
+        it('keeps a zero fee', async () => {
+            const mockTransactions = [
+                {
+                    tx: 'txhash1',
+                    getAmount: 2000,
+                    getFee: 0,
+                    getNote: '',
+                    getDate: '2024-02-07'
+                }
+            ];
+            const result = await convertActivityToCsv(
+                mockTransactions,
+                CSV_KEYS.transaction
+            );
+            expect(result).toContain('"txhash1","2000","0","","2024-02-07"');
+        });
+
+        it('escapes quotes in a memo', async () => {
+            const mockInvoices = [
+                { getAmount: 1500, getMemo: 'Coffee "large", to go' }
+            ];
+            const result = await convertActivityToCsv(
+                mockInvoices,
+                CSV_KEYS.invoice
+            );
+            expect(result).toContain(
+                '"1500","","","Coffee ""large"", to go","","",""'
+            );
+        });
     });
 
     describe('saveCsvFile', () => {
