@@ -183,6 +183,7 @@ class Bolt11Utils {
             parser: (words: number[]) => any,
             tagLength: number,
             tagWords: number[];
+        let paymentHashSeen = false;
         while (words.length > 0) {
             const tagCode = words[0].toString();
             tagName = this.TAGNAMES[tagCode] || 'unknown_tag';
@@ -204,33 +205,82 @@ class Bolt11Utils {
             });
             letters = letters.slice(1 + 2 + tagLength);
 
+            // These are singleton tags per BOLT11. A crafted invoice that
+            // repeats one must not make the app track a different
+            // payment_hash / payee than the node settles on.
+            //
+            // payment_hash: reject any invoice with more than one `p` field,
+            // counted by presence regardless of length, per
+            // lightning/bolts#1357 and lnd's zpay32 (lnd#11190).
+            //
+            // Other tags: the first well-formed occurrence wins and
+            // wrong-length fixed-size fields are skipped, matching zpay32.
+            // `sections` still records every occurrence.
             switch (tagName) {
                 case 'payment_hash':
-                    result.payment_hash = value;
+                    if (paymentHashSeen) {
+                        throw new Error(
+                            'Invoice contains multiple payment hashes'
+                        );
+                    }
+                    paymentHashSeen = true;
+                    if (tagWords.length === this.HASH_TAG_WORDS) {
+                        result.payment_hash = value;
+                    }
                     break;
                 case 'payment_secret':
-                    result.payment_secret = value;
+                    if (
+                        result.payment_secret === undefined &&
+                        tagWords.length === this.HASH_TAG_WORDS
+                    ) {
+                        result.payment_secret = value;
+                    }
                     break;
                 case 'description':
-                    result.description = value;
+                    if (result.description === undefined) {
+                        result.description = value;
+                    }
                     break;
                 case 'description_hash':
-                    result.description_hash = value;
+                    if (
+                        result.description_hash === undefined &&
+                        tagWords.length === this.HASH_TAG_WORDS
+                    ) {
+                        result.description_hash = value;
+                    }
                     break;
                 case 'payee':
-                    result.destination = value;
-                    result.payeeNodeKey = value;
+                    if (
+                        result.destination === undefined &&
+                        tagWords.length === this.PAYEE_TAG_WORDS
+                    ) {
+                        result.destination = value;
+                        result.payeeNodeKey = value;
+                    }
                     break;
                 case 'expiry':
-                    result.expiry = value;
+                    if (result.expiry === undefined) {
+                        result.expiry = value;
+                    }
                     break;
                 case 'min_final_cltv_expiry':
-                    result.cltv_expiry = value;
+                    if (result.cltv_expiry === undefined) {
+                        result.cltv_expiry = value;
+                    }
                     break;
                 case 'metadata':
-                    result.metadata = value;
+                    if (result.metadata === undefined) {
+                        result.metadata = value;
+                    }
                     break;
             }
+        }
+
+        // lnd's zpay32 rejects an invoice without a valid payment hash
+        // (no node can settle it), so fail loudly rather than return a
+        // result whose payment_hash is silently absent.
+        if (result.payment_hash === undefined) {
+            throw new Error('No valid payment hash found');
         }
 
         if (result.expiry != null) {
@@ -402,6 +452,13 @@ class Bolt11Utils {
         fallback_address: 9,
         metadata: 27
     };
+
+    // Fixed-size singleton tags measured in 5-bit words: the 32-byte
+    // p / s / h fields span exactly 52 words, the 33-byte payee pubkey
+    // (n) spans 53. lnd's zpay32 skips occurrences of any other length,
+    // so the reader here must too.
+    private HASH_TAG_WORDS = 52;
+    private PAYEE_TAG_WORDS = 53;
 
     private TAGPARSERS: { [tagCode: string]: (words: number[]) => any } = {
         '1': (words: number[]) => this.wordsToHex(words),
