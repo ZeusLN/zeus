@@ -1,20 +1,40 @@
 import BaseModel from './BaseModel';
 import Swap from './Swap';
 
+// JSON.stringify turns a plain Uint8Array into { "0": b0, "1": b1, ... }
+function bytesFromIndexedObject(raw: any): number[] | null {
+    if (!raw || typeof raw !== 'object') return null;
+    const keys = Object.keys(raw);
+    if (keys.length === 0) return null;
+    const bytes: number[] = [];
+    for (let i = 0; i < keys.length; i++) {
+        const byte = raw[i];
+        if (!Number.isInteger(byte) || byte < 0 || byte > 255) return null;
+        bytes.push(byte);
+    }
+    return bytes;
+}
+
 function privateKeyFromKeys(
-    keys: { __D?: number[] | { data?: number[] } } | null | undefined
+    keys:
+        | { __D?: Uint8Array | number[] | { data?: number[] } }
+        | null
+        | undefined
 ): string | null {
-    const raw = keys?.__D;
+    const raw: any = keys?.__D;
     if (!raw) {
         console.error('ClaimTransaction: keys.__D is missing');
         return null;
     }
 
-    const bytes: number[] | null = Array.isArray(raw)
-        ? raw
-        : Array.isArray(raw?.data)
-        ? raw.data
-        : null;
+    // A live ECPair (the swap screen right after creation) holds a
+    // Buffer/Uint8Array; a stored swap holds its JSON form.
+    const bytes: Uint8Array | number[] | null =
+        raw instanceof Uint8Array || Array.isArray(raw)
+            ? raw
+            : Array.isArray(raw?.data)
+            ? raw.data
+            : bytesFromIndexedObject(raw);
 
     if (!bytes) {
         console.error('ClaimTransaction: unexpected key format', typeof raw);
