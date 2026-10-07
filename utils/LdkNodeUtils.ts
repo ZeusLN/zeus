@@ -10,6 +10,7 @@ import LdkNode from '../ldknode/LdkNodeInjection';
 import type { Network } from '../ldknode/LdkNode.d';
 
 import { localeString } from './LocaleUtils';
+import { assertValidNodeDir } from './NodeDirUtils';
 import { retry } from './SleepUtils';
 import { deriveVssSigningKeyFromSeed } from './VssAuthUtils';
 
@@ -93,6 +94,9 @@ export function getLdkNodeBaseDirectory(): string {
  * Get the storage directory path for LDK Node data
  */
 export function getLdkNodeStoragePath(nodeDir: string): string {
+    // Every create, start, and delete of a wallet directory resolves its
+    // path here, so this check covers all of them
+    assertValidNodeDir(nodeDir);
     return `${getLdkNodeBaseDirectory()}/${nodeDir}`;
 }
 

@@ -230,6 +230,13 @@ class LndMobileTools: RCTEventEmitter {
 
   @objc(deleteLndDirectory:resolver:rejecter:)
   func deleteLndDirectory(lndDir: String, resolver resolve: RCTPromiseResolveBlock, rejecter reject: RCTPromiseRejectBlock) {
+    // lndDir is a single path segment ZEUS generates (a UUID or the legacy
+    // "lnd"). Reject anything else so a stored value like ".." cannot point
+    // removeItem outside the wallet's own directory.
+    if lndDir.range(of: "\\A[A-Za-z0-9_-]+\\z", options: .regularExpression) == nil {
+      reject("error deleting lnd dir", "Invalid LND directory: \(lndDir)", nil)
+      return
+    }
     let fileManager = FileManager.default
     let applicationSupportUrl = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
     let lndUrl = applicationSupportUrl.appendingPathComponent(lndDir)

@@ -741,6 +741,13 @@ class LndMobileTools extends ReactContextBaseJavaModule {
 
   @ReactMethod
   public void deleteLndDirectory(String lndDir, Promise promise) {
+    // lndDir is a single path segment ZEUS generates (a UUID or the legacy
+    // "lnd"). Reject anything else so a stored value like ".." cannot point
+    // the recursive delete outside the wallet's own directory.
+    if (lndDir == null || !lndDir.matches("[A-Za-z0-9_-]+")) {
+      promise.reject("deleteLndDirectory", "Invalid LND directory: " + lndDir);
+      return;
+    }
     File filesDir = getReactApplicationContext().getFilesDir();
     boolean success = true;
     if (lndDir.equals("lnd")) {

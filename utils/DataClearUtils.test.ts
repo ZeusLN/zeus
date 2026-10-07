@@ -817,6 +817,33 @@ describe('deleteNodeDataDirectoryWithRetry (single-wallet deletion path)', () =>
         expect(mockedStopLdkNode).toHaveBeenCalled();
         expect(mockedDeleteLdkNodeWallet).toHaveBeenCalledWith('ldk-2');
     });
+
+    it.each(['..', '../victim', '../../files', 'a/b'])(
+        'never deletes an ldk-node directory named %j',
+        async (ldkNodeDir) => {
+            const result = await deleteNodeDataDirectoryWithRetry({
+                implementation: 'ldk-node',
+                ldkNodeDir
+            });
+
+            expect(result).toBe(true);
+            expect(mockedStopLdkNode).not.toHaveBeenCalled();
+            expect(mockedDeleteLdkNodeWallet).not.toHaveBeenCalled();
+        }
+    );
+
+    it.each(['..', '../victim', 'a/b'])(
+        'never deletes an embedded-lnd directory named %j',
+        async (lndDir) => {
+            const result = await deleteNodeDataDirectoryWithRetry({
+                implementation: 'embedded-lnd',
+                lndDir
+            });
+
+            expect(result).toBe(true);
+            expect(mockedDeleteLndWallet).not.toHaveBeenCalled();
+        }
+    );
 });
 
 describe('CDK database deletion', () => {
