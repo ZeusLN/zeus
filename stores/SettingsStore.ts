@@ -2147,14 +2147,16 @@ export default class SettingsStore {
     // call itself is typed `false | Result`); in-memory settings only
     // update when the write landed, so a blocked write cannot leave the
     // store advertising state that will not survive the imminent restart.
+    //
+    // Does not touch `loading`: the only caller is a queued update, and
+    // views that render a spinner on `loading` (Receive, ReceiveEcash)
+    // would flash it for every settings write.
     public async setSettings(settings: any): Promise<boolean> {
-        this.loading = true;
         const persisted =
             (await Storage.setItem(STORAGE_KEY, settings)) !== false;
         if (persisted) {
             this.settings = settings;
         }
-        this.loading = false;
         return persisted;
     }
 
@@ -2282,8 +2284,9 @@ export default class SettingsStore {
         this.settingsUpdateInProgress = true;
         try {
             // fromQueue: this is the queue's critical section, so a
-            // pending consolidation folds into this update's write
-            const existingSettings = await this.getSettings(false, true);
+            // pending consolidation folds into this update's write.
+            // silentUpdate: a write is not a load; see setSettings.
+            const existingSettings = await this.getSettings(true, true);
             // Functional updates read the settings inside the critical
             // section, so callers whose new value depends on the current
             // one (delete node X from the array) cannot act on a snapshot

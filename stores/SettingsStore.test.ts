@@ -639,6 +639,31 @@ describe('SettingsStore.updateSettingsGroupDebounced', () => {
     });
 });
 
+describe('SettingsStore.updateSettings loading flag', () => {
+    it('does not set loading while a write runs', async () => {
+        seedSettings({ fiat: 'USD' });
+        const store = new SettingsStore();
+        await store.getSettings();
+        const seen: boolean[] = [];
+        StorageMock.getItem.mockImplementationOnce(async (key: string) => {
+            seen.push(store.loading);
+            return StorageMock._backing[key] ?? false;
+        });
+        StorageMock.setItem.mockImplementationOnce(
+            async (key: string, value: any) => {
+                seen.push(store.loading);
+                StorageMock._backing[key] = JSON.stringify(value);
+                return true;
+            }
+        );
+
+        await store.updateSettings({ fiat: 'EUR' });
+
+        expect(seen).toEqual([false, false]);
+        expect(store.loading).toEqual(false);
+    });
+});
+
 // triggerSettingsRefresh makes the Wallet screen run a full node refetch on
 // its next focus, which costs the user a noticeable loading time.
 // Writes that re-persist what is already stored must not arm it.
