@@ -309,9 +309,7 @@ export default class LightningAddressSettings extends React.Component<
                             >
                                 <Switch
                                     value={allowComments ?? true}
-                                    disabled={
-                                        SettingsStore.settingsUpdateInProgress
-                                    }
+                                    disabled={loading}
                                     onValueChange={async (value: boolean) => {
                                         const next = value;
                                         this.setState({
@@ -368,9 +366,7 @@ export default class LightningAddressSettings extends React.Component<
                             >
                                 <Switch
                                     value={zapReceiptsEnabled}
-                                    disabled={
-                                        SettingsStore.settingsUpdateInProgress
-                                    }
+                                    disabled={loading}
                                     onValueChange={async (value: boolean) => {
                                         const next = value;
                                         this.setState({
@@ -429,9 +425,7 @@ export default class LightningAddressSettings extends React.Component<
                                     }
                                 }}
                                 values={NOTIFICATIONS_PREF_KEYS}
-                                disabled={
-                                    SettingsStore.settingsUpdateInProgress
-                                }
+                                disabled={loading}
                             />
                         </View>
                         <ListItem

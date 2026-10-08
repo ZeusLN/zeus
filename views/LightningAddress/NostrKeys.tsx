@@ -390,7 +390,7 @@ export default class NostrKey extends React.Component<
                                             existingNostrPrivateKey ===
                                                 nostrPrivateKey ||
                                             !nostrNpub ||
-                                            SettingsStore.settingsUpdateInProgress
+                                            loading
                                         }
                                     />
                                 </View>
