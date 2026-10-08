@@ -254,40 +254,43 @@ describe('lockup verification retry wiring', () => {
             data: JSON.stringify({ event: 'update', args: [{ status }] })
         });
 
-    it('schedules no recheck when a lookup in flight at unmount comes back unavailable', async () => {
-        const { store, view } = makeView();
-        let resolveLookup!: (value: any) => void;
-        store.verifyReverseLockup.mockReturnValueOnce(
-            new Promise((resolve) => {
-                resolveLookup = resolve;
-            })
-        );
-        jest.spyOn(view, 'resolveDestinationAddress').mockResolvedValue(
-            'destination'
-        );
-        view.getReverseSwapUpdates({ id: 'swap' }, false);
-        const update = socket.onmessage({
-            data: JSON.stringify({
-                event: 'update',
-                args: [
-                    {
-                        status: 'transaction.confirmed',
-                        transaction: { hex: 'txhex' }
-                    }
-                ]
-            })
-        });
-        await jest.advanceTimersByTimeAsync(0);
-        expect(store.verifyReverseLockup).toHaveBeenCalledTimes(1);
+    it.each(['unavailable', 'ok'])(
+        'neither rechecks nor claims when a lookup in flight at unmount comes back %s',
+        async (status) => {
+            const { store, view } = makeView();
+            let resolveLookup!: (value: any) => void;
+            store.verifyReverseLockup.mockReturnValueOnce(
+                new Promise((resolve) => {
+                    resolveLookup = resolve;
+                })
+            );
+            jest.spyOn(view, 'resolveDestinationAddress').mockResolvedValue(
+                'destination'
+            );
+            view.getReverseSwapUpdates({ id: 'swap' }, false);
+            const update = socket.onmessage({
+                data: JSON.stringify({
+                    event: 'update',
+                    args: [
+                        {
+                            status: 'transaction.confirmed',
+                            transaction: { hex: 'txhex' }
+                        }
+                    ]
+                })
+            });
+            await jest.advanceTimersByTimeAsync(0);
+            expect(store.verifyReverseLockup).toHaveBeenCalledTimes(1);
 
-        view.componentWillUnmount?.();
-        resolveLookup({ status: 'unavailable' });
-        await update;
-        await jest.advanceTimersByTimeAsync(120000);
+            view.componentWillUnmount?.();
+            resolveLookup({ status });
+            await update;
+            await jest.advanceTimersByTimeAsync(120000);
 
-        expect(store.verifyReverseLockup).toHaveBeenCalledTimes(1);
-        expect(nativeClaim).not.toHaveBeenCalled();
-    });
+            expect(store.verifyReverseLockup).toHaveBeenCalledTimes(1);
+            expect(nativeClaim).not.toHaveBeenCalled();
+        }
+    );
 
     it.each([
         'swap.expired',

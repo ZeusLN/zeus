@@ -495,7 +495,8 @@ export default class SwapDetails extends React.Component<
                     swapData.preimage,
                     transactionHex,
                     fee,
-                    confirmedLockupAmount
+                    confirmedLockupAmount,
+                    () => stopped
                 );
                 if (typeof result === 'boolean') {
                     submitted = result;
@@ -818,7 +819,10 @@ export default class SwapDetails extends React.Component<
         preimage: any,
         transactionHex: string,
         fee: string,
-        confirmedLockupAmount?: number
+        confirmedLockupAmount?: number,
+        // true once the screen is done with the swap: no new native claim
+        // may start after that, though one already running finishes
+        isStopped: () => boolean = () => false
     ): Promise<boolean | ReverseLockupCheck> => {
         try {
             const { SwapStore } = this.props;
@@ -882,6 +886,7 @@ export default class SwapDetails extends React.Component<
             for (let i = 0; i <= 10; i++) {
                 try {
                     await sleep(1000);
+                    if (isStopped()) return false;
 
                     // Fee/address resolution and a previous native attempt
                     // can take arbitrarily long. Never reuse an earlier
@@ -897,6 +902,7 @@ export default class SwapDetails extends React.Component<
                         transactionHex,
                         { confirmedLockupAmount }
                     );
+                    if (isStopped()) return false;
                     if (lockup.status !== 'ok') return lockup;
                     this.setState({ lockupNotice: null });
                     await createReverseClaimTransaction(claim);
