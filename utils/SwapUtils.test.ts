@@ -799,10 +799,39 @@ describe('SwapUtils', () => {
                     'underfunded'
                 ],
                 [
-                    'two outputs to the script, the larger one funded',
+                    'two outputs to the script, only the second funded (the claim spends the first)',
                     tx([
                         { scriptpubkey: scriptHex, value: 1000 },
                         { scriptpubkey: scriptHex, value: 100000 }
+                    ]),
+                    100000,
+                    'underfunded'
+                ],
+                [
+                    'two outputs to the script, the first funded',
+                    tx([
+                        { scriptpubkey: scriptHex, value: 100000 },
+                        { scriptpubkey: scriptHex, value: 1000 }
+                    ]),
+                    100000,
+                    'ok'
+                ],
+                [
+                    'a v0 output with the same program ahead of ours (the claim would pick it)',
+                    tx([
+                        {
+                            scriptpubkey: '0020' + scriptHex.slice(4),
+                            value: 330
+                        },
+                        { scriptpubkey: scriptHex, value: 100000 }
+                    ]),
+                    100000,
+                    'missing-output'
+                ],
+                [
+                    'an uppercase script hex',
+                    tx([
+                        { scriptpubkey: scriptHex.toUpperCase(), value: 100000 }
                     ]),
                     100000,
                     'ok'

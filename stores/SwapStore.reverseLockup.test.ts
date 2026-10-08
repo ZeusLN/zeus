@@ -374,6 +374,23 @@ describe('SwapStore.verifyReverseLockup', () => {
         expect(fetchMock).not.toHaveBeenCalled();
     });
 
+    it('refuses a key fromPrivateKey rejects, without throwing or a lookup', async () => {
+        esplora(200);
+        const swap = storedSwap();
+        // out of range: the curve order n
+        swap.keys = {
+            __D: Buffer.from(
+                'fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141',
+                'hex'
+            )
+        } as any;
+        await expect(verify(swap)).resolves.toEqual({
+            status: 'invalid',
+            reason: 'invalid-key'
+        });
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+
     it('refuses undecodable lockup hex', async () => {
         esplora(200);
         await expect(verify(storedSwap(), 'zz')).resolves.toEqual({

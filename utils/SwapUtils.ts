@@ -313,9 +313,13 @@ export type LockupOutputStatus =
     | 'underfunded';
 
 /**
- * Checks an Esplora /tx/:txid response for the swap's lockup output. Uses
- * the largest output paying outputScript; minAmount is skipped when the
- * swap has no recorded amount (rescued swaps).
+ * Checks an Esplora /tx/:txid response for the swap's lockup output.
+ * Checks the output the native claim will spend: boltz-client's FindVout
+ * takes the first output whose script after the 2-byte version/length
+ * prefix equals the witness program, whatever the witness version. That
+ * output must be our exact taproot script and hold at least minAmount.
+ * minAmount is skipped when the swap has no recorded amount (rescued
+ * swaps).
  */
 export const checkLockupOutput = (
     tx: {
@@ -326,11 +330,15 @@ export const checkLockupOutput = (
     minAmount?: number
 ): LockupOutputStatus => {
     const scriptHex = outputScript.toString('hex');
-    const values = (tx?.vout || [])
-        .filter((output) => output?.scriptpubkey?.toLowerCase() === scriptHex)
-        .map((output) => Number(output.value) || 0);
-    if (values.length === 0) return 'missing-output';
-    if (minAmount != null && Math.max(...values) < minAmount) {
+    const programHex = scriptHex.slice(4);
+    const claimed = (tx?.vout || []).find(
+        (output) =>
+            (output?.scriptpubkey || '').toLowerCase().slice(4) === programHex
+    );
+    if (!claimed || claimed.scriptpubkey!.toLowerCase() !== scriptHex) {
+        return 'missing-output';
+    }
+    if (minAmount != null && (Number(claimed.value) || 0) < minAmount) {
         return 'underfunded';
     }
     if (!tx?.status?.confirmed) return 'unconfirmed';

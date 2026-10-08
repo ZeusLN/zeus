@@ -662,9 +662,17 @@ export default class SwapStore {
         if (!privateKeyHex || !preimageHex) {
             return { status: 'invalid', reason: 'missing-keys' };
         }
-        const ourPubKey = this.ECPair.fromPrivateKey(
-            Buffer.from(privateKeyHex, 'hex')
-        ).publicKey;
+        // fromPrivateKey throws on a key that is not 32 bytes or out of
+        // range; the caller has no catch, so an exception here would leave
+        // the swap screen loading with no error
+        let ourPubKey: Uint8Array;
+        try {
+            ourPubKey = this.ECPair.fromPrivateKey(
+                Buffer.from(privateKeyHex, 'hex')
+            ).publicKey;
+        } catch (e) {
+            return { status: 'invalid', reason: 'invalid-key' };
+        }
 
         const responseCheck = verifyReverseSwapResponse({
             swapTree: swap.swapTreeDetails,
