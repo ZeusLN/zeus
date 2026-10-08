@@ -145,6 +145,9 @@ jest.mock('../stores/NostrWalletConnectStore', () => ({
     NWC_LUD16_ENABLED: 'zeus-nwc-lud16-enabled',
     NWC_PERSISTENT_SERVICE_ENABLED: 'persistentNWCServicesEnabled'
 }));
+jest.mock('../stores/TorStore', () => ({
+    TOR_PERSISTENT_SERVICE_ENABLED: 'persistentTorServiceEnabled'
+}));
 jest.mock('../utils/RatingUtils', () => ({
     PAYMENT_COUNT_KEY: 'successfulPaymentCount',
     RATING_DISMISSED_KEY: 'ratingDismissedPermanently'
@@ -414,6 +417,14 @@ describe('clearAllData orphaned key material (KEY-006 regression)', () => {
         await clearAllData();
 
         expect(removedKeys()).toContain('ldk-cashu-seed-phrase');
+    });
+
+    it('clears the persistent Tor service flag', async () => {
+        mockedStorageGetItem.mockImplementation(settingsWithNodes([]).getItem);
+
+        await clearAllData();
+
+        expect(removedKeys()).toContain('persistentTorServiceEnabled');
     });
 
     it('clears the hashed LNC pairing credentials for an LNC node', async () => {
