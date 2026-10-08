@@ -47,11 +47,11 @@ Use a sibling skill instead when you need:
 "verify": "concurrently \"yarn test\" \"yarn prettier\" \"yarn tsc\" \"yarn lint\""
 ```
 
-These SAME four checks are the ENTIRE PR CI gate. `.github/workflows/` contains `test.yml`, `lint.yml`, `prettier.yml`, `tsc.yml` (each: ubuntu-latest, Node 24.x, `yarn install --frozen-lockfile`, then the one script). `build-android.yml` and `dependency-scan.yml` are `workflow_dispatch`-only, and `telegram.yml` is a push/issues/release notification workflow, not a check — no mobile build, no emulator, no dependency scan runs on PRs. Green CI proves types, format, lint, and 48 unit-test suites. Nothing more.
+These SAME four checks are the ENTIRE PR CI gate. `.github/workflows/` contains `test.yml`, `lint.yml`, `prettier.yml`, `tsc.yml` (each: ubuntu-latest, Node 24.x, `yarn install --frozen-lockfile`, then the one script). `test.yml` runs `yarn run test:coverage --coverageReporters=json-summary` rather than plain `yarn test` (same suites, plus a coverage summary); `coverage-comment.yml` then posts or updates one coverage comment on the PR (#4676). It reports coverage, it does not gate on it. `build-android.yml` and `dependency-scan.yml` are `workflow_dispatch`-only, and `telegram.yml` is a push/issues/release notification workflow, not a check: no mobile build, no emulator, no dependency scan runs on PRs. Green CI proves types, format, lint, and the Jest suites (about 122 as of 2026-10-08, see section 4). Nothing more.
 
 | CI check name | Exact local command | What it runs | Common failure modes |
 |---|---|---|---|
-| Test | `yarn test` | `jest` — 48 suites (45 `utils/`, 2 `models/`, 1 `lndmobile/`); `check-styles.test.ts` excluded via `testPathIgnorePatterns` | New ESM dependency not in `transformIgnorePatterns` ("Cannot use import statement outside a module"); un-mocked native module; importing `stores/Stores` without mocking it drags in the whole app graph |
+| Test | `yarn test` | `jest`, all suites (about 122 as of 2026-10-08; breakdown in section 4) including `check-locales.test.ts`, which fails if a literal `localeString('key')` is missing from `locales/en.json` (#4674); `check-styles.test.ts` and `zeus_modules` excluded via `testPathIgnorePatterns`. CI runs it as `yarn run test:coverage --coverageReporters=json-summary` | New ESM dependency not in `transformIgnorePatterns` ("Cannot use import statement outside a module"); un-mocked native module; importing `stores/Stores` without mocking it drags in the whole app graph |
 | Prettier | `yarn prettier` | `prettier --check "**/*.ts*"` (ignores only `zeus_modules`, per `.prettierignore`) | Formatting with a global/newer Prettier — the repo pins **prettier 2.4.1** (devDependency) with `.prettierrc`: tabWidth 4, singleQuote, semi, trailingComma "none". Newer Prettier majors format differently and fail CI. Fix: `yarn prettier-write` (uses the pinned version) |
 | Typescript Check | `yarn tsc` | `tsc` check-only; tsconfig has `strict: true`, `noUnusedLocals: true`, `noUnusedParameters: true`, but `strictPropertyInitialization: false` (MobX store fields) | Unused variables/params fail the build; excludes are `node_modules`, `zeus_modules`, `android`, `ios`. Type errors are suppressed with `@ts-ignore` (ban-ts-comment is off). `eslint-disable` comments are only used for `zeus/no-negative-layout-offset`, always with a reason — see the Lint row |
 | Lint | `yarn lint` | `eslint . && yarn run test check-styles.test.ts --testPathIgnorePatterns=` | ESLint 9 flat config (`eslint.config.js`) includes `prettier/prettier` as an **error** rule — so a formatting mistake fails BOTH the Prettier and Lint checks. The local rule `zeus/no-negative-layout-offset` (`eslint-rules/`) fails on negative margin/position values unless disabled inline with `-- TODO #2794` or `-- intentional: <reason>`; `reportUnusedDisableDirectives: 'error'` also fails on a directive that no longer suppresses anything (e.g. after fixing the offset). Second half is the style-sheet ban, see section 2. ESLint ignores `zeus_modules/`, `android/`, `ios/`, `proto/`, `shim.js`, config JS files |
@@ -111,7 +111,7 @@ Symptom of a missing entry: `SyntaxError: Cannot use import statement outside a 
 
 **`moduleNameMapper` for `@noble/hashes`.** Five explicit mappings (`_assert`, `pbkdf2`, `sha256`, `sha512`, `utils`) pin `@noble/hashes/*` subpath imports to concrete `.js` files, because jest's resolver predates that package's `exports`-map style. If you import a new `@noble/hashes` subpath in tested code and jest says "Cannot find module", add a matching mapper line.
 
-**Colocated test convention.** Tests live NEXT TO the code, named `<File>.test.ts`: `utils/FeeUtils.ts` + `utils/FeeUtils.test.ts`. No `__tests__/` directories, no `.spec.ts`, no `.test.tsx` anywhere. Variants are allowed (`utils/AddressUtils-testnet.test.ts`, `utils/UnitsUtils.alt.test.ts`).
+**Colocated test convention.** Tests live NEXT TO the code, named `<File>.test.ts`: `utils/FeeUtils.ts` + `utils/FeeUtils.test.ts`. No `__tests__/` directories, no `.spec.ts`. Component and view tests use `.test.tsx` (e.g. `components/Switch.test.tsx`, `views/Send.test.tsx`). Variants are allowed (`utils/AddressUtils-testnet.test.ts`, `utils/UnitsUtils.alt.test.ts`).
 
 **Mock before import.** Test files start with `jest.mock(...)` calls for native modules and stores BEFORE importing the unit under test — see the top of `utils/handleAnything.test.ts` (mocks `../stores/Stores`, `react-native-notifications`, AsyncStorage, `./BackendUtils`, the Cashu FFI) and `utils/MigrationUtils.test.ts`. Copy one of these preambles when your unit transitively touches stores or native code; importing `stores/Stores` un-mocked pulls in the entire 30-store app graph and usually explodes on a native module.
 
@@ -125,11 +125,11 @@ yarn jest --listTests                        # enumerate all suites jest will ru
 
 ## 4) Coverage reality — where automation actually protects you
 
-Counted at `c5fd094fb`: **48 test suites** run by `yarn test` — `utils/` 45, `models/` 2 (`Payment.test.ts`, `ClaimTransaction.test.ts`), `lndmobile/` 1 (`channel.test.ts`) — plus the lint-only `check-styles.test.ts` (49 `.test.ts` files total).
+About **122 test suites** run by `yarn test` as of 2026-10-08 (upstream `6acd84a84`): `utils/` 71, `stores/` 17, `views/` 15, `backends/` 7, `models/` 5, `components/` 3, `lndmobile/` 2, `eslint-rules/` 1, and the root `check-locales.test.ts`. The repo has 127 `.test.*` files; the other 5 are excluded by `testPathIgnorePatterns`: the lint-only `check-styles.test.ts` and 4 vendored suites under `zeus_modules/`. The count grows with most PRs, so recount instead of trusting this number: `git ls-tree -r --name-only upstream/master | grep -E '\.test\.(ts|tsx|js)$'` or `yarn jest --listTests | wc -l`.
 
-**Zero tests exist for `stores/`, `views/`, `components/`, and `backends/`.** That is: all MobX state logic (including the 5000+-line CashuStore), every screen, every reusable component, and all 7 node-backend implementations have NO automated safety net. Consequences you must act on:
+**Coverage outside `utils/` is thin.** `stores/`, `views/`, `components/`, and `backends/` now have tests, but they cover specific regressions rather than whole modules: most stores (including the 5000+-line CashuStore), most screens, and most backend methods still have no automated safety net. Consequences you must act on:
 
-- A green `yarn verify` on a store/view/backend change proves only that it compiles, lints, and didn't break *utility* tests. **Manual testing is the real safety net there** (section 5).
+- A green `yarn verify` on a store/view/backend change proves only that it compiles, lints, and didn't break the existing tests. Check whether the code you touched is covered; if not, **manual testing is the real safety net there** (section 5).
 - CONTRIBUTING.md ("Test Coverage"): *bug fixes should include a test that would have caught the bug*. For store/view bugs, satisfy this via the extraction pattern in section 7.
 - The maintainer-confirmed rule "no drive-by refactors in payment paths" exists largely BECAUSE of this coverage hole (see **zeus-change-control**).
 
@@ -170,9 +170,9 @@ Read these before writing your own; they are the house style. Line counts at `c5
 | `models/Payment.test.ts` | 105 | `Payment.getAmount` with partial/multi-HTLC successes, fee exclusion — displayed-amount correctness. |
 | `lndmobile/channel.test.ts` | 57 | The only native-bridge-layer test: verifies channel-backup commands encode the right protobuf request/response types. |
 
-## 7) Testing store-like logic despite zero store tests
+## 7) Testing store-like logic
 
-Do NOT try to instantiate a real MobX store in jest — none of the 30 stores is constructed in any existing test, the DI graph makes it impractical, and there is no established harness. The observed, accepted pattern is **extract pure logic into `utils/` and test it there**:
+Store tests exist now (`stores/*.test.ts`): they construct a single store directly with its collaborators passed as `{} as any` or mocked via `jest.mock` (see `stores/NodeInfoStore.test.ts`), never through `stores/Stores`. Use that when the bug lives in store control flow (request ordering, promise settlement). For computations, the older pattern still applies: **extract pure logic into `utils/` and test it there**:
 
 - `stores/ActivityStore.ts` delegates filtering to `utils/ActivityFilterUtils.ts` → tested in `utils/ActivityFilterUtils.test.ts` (464 lines).
 - `stores/SettingsStore.ts` and `stores/CashuStore.ts` delegate migrations to `utils/MigrationUtils.ts` → tested in `utils/MigrationUtils.test.ts`.
@@ -182,7 +182,7 @@ Recipe when fixing a bug in a store:
 2. Add colocated `utils/<Thing>Utils.test.ts` with a case reproducing the bug (fails before the fix, passes after) — this satisfies CONTRIBUTING's "test that would have caught the bug".
 3. Where the logic genuinely needs store/native context, mock at the boundary exactly as `utils/MigrationUtils.test.ts` mocks `../stores/Stores` and `utils/handleAnything.test.ts` mocks `./BackendUtils` — mock modules the unit imports, before importing the unit.
 
-Writing the FIRST test harness for an actual store class would be new ground: treat it as a proposal for maintainer discussion, not something to bolt onto a bug-fix PR (see **zeus-research-methodology** for the evidence bar).
+Building a shared harness that boots the whole `stores/Stores` graph would be new ground: treat it as a proposal for maintainer discussion, not something to bolt onto a bug-fix PR (see **zeus-research-methodology** for the evidence bar).
 
 ## Provenance and maintenance
 
@@ -199,8 +199,7 @@ Re-verify volatile facts:
 | check-styles ban + regex | `cat check-styles.test.ts` |
 | Prettier pin + config | `grep '"prettier"' package.json` (expect `2.4.1` in devDependencies); `cat .prettierrc .prettierignore` |
 | tsconfig strictness | `grep 'strict\|noUnused\|exclude' tsconfig.json` |
-| Test-file census (expect 45/2/1 + check-styles) | `find . -name "*.test.ts" -not -path "./node_modules/*" -not -path "./zeus_modules/*" \| grep -v check-styles \| awk -F/ '{print $2}' \| sort \| uniq -c` |
-| Stores/views/components/backends still untested | `find stores views components backends -name "*.test.ts*"` (expect empty) |
+| Test-file census by directory (section 4) | `git ls-tree -r --name-only upstream/master \| grep -E '\.test\.(ts\|tsx\|js)$' \| grep -v -e check-styles -e '^zeus_modules/' \| awk -F/ '{print (NF==1 ? "(root)" : $1)}' \| sort \| uniq -c` |
 | Suite line counts (golden inventory) | `wc -l utils/*.test.ts models/*.test.ts lndmobile/*.test.ts \| sort -rn \| head` |
 | PR template backend matrix | `cat .github/PULL_REQUEST_TEMPLATE.md` |
 | CONTRIBUTING testing rules | `grep -n -A5 'Test Coverage\|Manual Testing' CONTRIBUTING.md` |
