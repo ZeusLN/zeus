@@ -2548,6 +2548,7 @@
     "views.SwapDetails.claimBroadcastFailed": "Could not broadcast the claim transaction for this swap. Open this swap again to retry.",
     "views.SwapDetails.confirmLockupAmount": "Confirm swap amount",
     "views.SwapDetails.confirmLockupAmount.message": "The swap provider has locked up {{amount}} sats for this swap. This wallet has no record of the Lightning payment you made for it, so ZEUS can't check that amount. Claim only if it matches what you paid, less the swap fees. Claiming reveals the secret that lets the provider collect your payment.",
+    "views.SwapDetails.confirmLockupAmount.shortfall": "You paid {{paid}} sats for this swap, but the swap provider has locked up only {{amount}} sats, more than swap fees should take. Claim only if you accept that amount. Claiming reveals the secret that lets the provider collect your full payment. If you don't claim, your Lightning payment is returned when the swap times out.",
     "views.SwapDetails.confirmLockupAmount.claim": "Claim",
     "views.SwapDetails.lockupAmountDeclined": "This swap was not claimed. Open it again to claim, or your Lightning payment will be returned when the swap times out.",
     "views.SwapSettings.customHost": "Enter a custom host",

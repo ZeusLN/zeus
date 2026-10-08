@@ -611,8 +611,8 @@ describe('SwapStore.verifyReverseLockup', () => {
     describe('a rescued swap, which has no on-chain amount', () => {
         const getPayments = BackendUtils.getPayments as jest.Mock;
         const PAYMENT_HASH = crypto.sha256(PREIMAGE).toString('hex');
-        // 100000 - 5% - 10000 sats
-        const FLOOR = 85000;
+        // 90% of a 100000-sat payment
+        const FLOOR = 90000;
 
         const rescuedSwap = () =>
             storedSwap({
@@ -648,6 +648,12 @@ describe('SwapStore.verifyReverseLockup', () => {
                 ]
             });
 
+        const shortOf = (paidAmount: number, amount: number) => ({
+            status: 'confirm-amount',
+            amount,
+            paidAmount
+        });
+
         it.each([99100, FLOOR])(
             'claims a lockup of %s sats against a payment of 100000 sats',
             async (value) => {
@@ -660,26 +666,42 @@ describe('SwapStore.verifyReverseLockup', () => {
         );
 
         it.each([1000, FLOOR - 1])(
-            'refuses a lockup of %s sats against a payment of 100000 sats',
+            'asks before claiming a lockup of %s sats against a payment of 100000 sats',
             async (value) => {
                 // the host trades a small lockup for the preimage that
                 // settles the whole Lightning payment
                 paid();
                 lockedUp(value);
-                await expect(verify(rescuedSwap())).resolves.toEqual({
-                    status: 'invalid',
-                    reason: 'underfunded'
-                });
+                await expect(verify(rescuedSwap())).resolves.toEqual(
+                    shortOf(100000, value)
+                );
+            }
+        );
+
+        it.each([
+            // a fixed sat allowance would have let these through
+            [10000, 1000, false],
+            [10000, 8999, false],
+            [10000, 9000, true],
+            [25000, 22499, false],
+            [25000, 22500, true]
+        ])(
+            'against a payment of %s sats, a lockup of %s sats is claimed without asking: %s',
+            async (payment, value, claims) => {
+                paid({ value_sat: String(payment) });
+                lockedUp(value);
+                await expect(verify(rescuedSwap())).resolves.toEqual(
+                    claims ? { status: 'ok' } : shortOf(payment, value)
+                );
             }
         );
 
         it('reads a payment amount given in msat', async () => {
             paid({ value_sat: undefined, amount_msat: '100000000msat' });
             lockedUp(1000);
-            await expect(verify(rescuedSwap())).resolves.toEqual({
-                status: 'invalid',
-                reason: 'underfunded'
-            });
+            await expect(verify(rescuedSwap())).resolves.toEqual(
+                shortOf(100000, 1000)
+            );
         });
 
         it('takes the amount from the invoice when the payment record has none', async () => {
@@ -693,10 +715,9 @@ describe('SwapStore.verifyReverseLockup', () => {
                 .spyOn(Bolt11Utils, 'decode')
                 .mockReturnValue({ satoshis: 100000 } as any);
             lockedUp(1000);
-            await expect(verify(rescuedSwap())).resolves.toEqual({
-                status: 'invalid',
-                reason: 'underfunded'
-            });
+            await expect(verify(rescuedSwap())).resolves.toEqual(
+                shortOf(100000, 1000)
+            );
             expect(decode).toHaveBeenCalledWith('lnbc-pending');
             decode.mockRestore();
         });

@@ -51,6 +51,9 @@ export type ReverseLockupCheck = {
     reason?: string;
     // the lockup output's value in sats, with 'confirm-amount'
     amount?: number;
+    // this wallet's own payment for the swap in sats, with 'confirm-amount'
+    // when the lockup falls short of the floor for it
+    paidAmount?: number;
 };
 
 interface SubmarineSwapInfo {
@@ -851,10 +854,12 @@ export default class SwapStore {
         }
 
         // A rescued swap's on-chain amount could only come from the host,
-        // so none is stored. Take the floor from this wallet's own payment
-        // for the swap instead; with no such payment, the user has to
-        // confirm the amount before the preimage is revealed.
+        // so none is stored. Compare the lockup with this wallet's own
+        // payment for the swap instead. With no such payment, or a lockup
+        // short of the floor for it, the user has to confirm the amount
+        // before the preimage is revealed.
         let minAmount: number | undefined = swap.onchainAmount ?? undefined;
+        let paidAmount: number | undefined;
         let needsConfirmation = false;
         if (minAmount == null) {
             if (confirmedLockupAmount != null) {
@@ -874,7 +879,7 @@ export default class SwapStore {
                 if (paid === null) {
                     needsConfirmation = true;
                 } else {
-                    minAmount = rescuedLockupFloor(paid);
+                    paidAmount = paid;
                 }
             }
         }
@@ -926,7 +931,8 @@ export default class SwapStore {
             responseCheck.timeoutBlockHeight,
             apiUrl
         );
-        if (deadline.status !== 'ok' || !needsConfirmation) return deadline;
+        if (deadline.status !== 'ok') return deadline;
+        if (!needsConfirmation && paidAmount == null) return deadline;
 
         const scriptHex = responseCheck.outputScript.toString('hex');
         const amount = Number(
@@ -935,7 +941,9 @@ export default class SwapStore {
                     (output?.scriptpubkey || '').toLowerCase() === scriptHex
             )?.value
         );
-        return { status: 'confirm-amount', amount };
+        if (needsConfirmation) return { status: 'confirm-amount', amount };
+        if (amount >= rescuedLockupFloor(paidAmount!)) return deadline;
+        return { status: 'confirm-amount', amount, paidAmount };
     };
 
     /**

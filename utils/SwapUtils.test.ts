@@ -513,13 +513,13 @@ describe('SwapUtils', () => {
     // boltz-client v2.9.0 pkg/boltz/swaptree_test.go, BTC reverse swap
     describe('rescuedLockupFloor', () => {
         it.each([
-            [100000, 85000],
-            [25000, 13750],
-            // 5% of 33333 rounds up to 1667
-            [33333, 21666],
-            [10000, 1],
+            [100000, 90000],
+            [25000, 22500],
+            [10000, 9000],
+            // 90% of 33333 is 29999.7, rounded up
+            [33333, 30000],
             [1, 1]
-        ])('allows %s sats paid to drop to %s sats', (paid, floor) => {
+        ])('claims %s sats paid without asking from %s sats', (paid, floor) => {
             expect(rescuedLockupFloor(paid)).toBe(floor);
         });
     });

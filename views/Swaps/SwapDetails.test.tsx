@@ -329,6 +329,9 @@ describe('lockup verification retry wiring', () => {
     });
 
     describe('a lockup amount nothing in the wallet vouches for', () => {
+        // a failing test would otherwise leave its Alert spy to the next
+        afterEach(() => jest.restoreAllMocks());
+
         const alertButtons = (alert: jest.SpyInstance) =>
             alert.mock.calls[alert.mock.calls.length - 1][2];
 
@@ -376,6 +379,27 @@ describe('lockup verification retry wiring', () => {
                 { confirmedLockupAmount: 1000 }
             );
             expect(nativeClaim).toHaveBeenCalledTimes(1);
+            alert.mockRestore();
+            view.componentWillUnmount?.();
+        });
+
+        it('shows what the user paid when the lockup falls short of it', async () => {
+            const alert = jest
+                .spyOn(Alert, 'alert')
+                .mockImplementation(() => {});
+            const { store, view } = makeView();
+            store.verifyReverseLockup.mockResolvedValue({
+                status: 'confirm-amount',
+                amount: 1000,
+                paidAmount: 10000
+            });
+
+            await start(view);
+
+            expect(alert.mock.calls[0][1]).toBe(
+                'views.SwapDetails.confirmLockupAmount.shortfall'
+            );
+            expect(nativeClaim).not.toHaveBeenCalled();
             alert.mockRestore();
             view.componentWillUnmount?.();
         });

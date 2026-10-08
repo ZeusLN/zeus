@@ -172,30 +172,21 @@ const LOCKTIME_THRESHOLD = 500000000;
 // Leave time for a unilateral claim if the provider refuses to co-sign.
 export const MIN_REVERSE_SWAP_CLAIM_BLOCKS = 6;
 
-// The most a rescued reverse swap may cost: the lockup must be at least
-// the wallet's own payment less this share and this many sats. Covers the
-// service fee and the lockup and claim miner fees with room for busy blocks.
-export const RESCUED_SWAP_MAX_FEE_PERCENT = 5;
-export const RESCUED_SWAP_MAX_MINER_FEES_SATS = 10000;
+// A rescued reverse swap is claimed without asking only if the lockup is at
+// least this share of the wallet's own payment for it. Real swap fees are
+// well under this; a larger shortfall goes to the user to confirm.
+export const RESCUED_SWAP_MIN_LOCKUP_PERCENT = 90;
 
 /**
- * The smallest lockup to accept for a rescued reverse swap, given the
- * amount in sats this wallet paid for it. A rescued swap's on-chain amount
- * only comes from the host, so the floor comes from the user's own payment
- * instead. Never below 1 sat, so a tiny payment can't make it 0.
+ * The smallest lockup to claim without asking for a rescued reverse swap,
+ * given the amount in sats this wallet paid for it. A rescued swap's
+ * on-chain amount only comes from the host, so the floor comes from the
+ * user's own payment instead. Proportional, so a small payment can't be
+ * all but wiped out by a fixed allowance.
  */
 export const rescuedLockupFloor = (paidSats: number): number =>
-    BigNumber.maximum(
-        new BigNumber(paidSats)
-            .minus(
-                bigCeil(
-                    new BigNumber(paidSats)
-                        .times(RESCUED_SWAP_MAX_FEE_PERCENT)
-                        .div(100)
-                )
-            )
-            .minus(RESCUED_SWAP_MAX_MINER_FEES_SATS),
-        1
+    bigCeil(
+        new BigNumber(paidSats).times(RESCUED_SWAP_MIN_LOCKUP_PERCENT).div(100)
     ).toNumber();
 
 const refundHeightFor = (

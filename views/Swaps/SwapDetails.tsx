@@ -510,12 +510,24 @@ export default class SwapDetails extends React.Component<
                     this.setState({ lockupNotice: null, loading: false });
                     Alert.alert(
                         localeString('views.SwapDetails.confirmLockupAmount'),
-                        localeString(
-                            'views.SwapDetails.confirmLockupAmount.message'
-                        ).replace(
-                            '{{amount}}',
-                            numberWithCommas(lockup.amount ?? 0)
-                        ),
+                        lockup.paidAmount != null
+                            ? localeString(
+                                  'views.SwapDetails.confirmLockupAmount.shortfall'
+                              )
+                                  .replace(
+                                      '{{paid}}',
+                                      numberWithCommas(lockup.paidAmount)
+                                  )
+                                  .replace(
+                                      '{{amount}}',
+                                      numberWithCommas(lockup.amount ?? 0)
+                                  )
+                            : localeString(
+                                  'views.SwapDetails.confirmLockupAmount.message'
+                              ).replace(
+                                  '{{amount}}',
+                                  numberWithCommas(lockup.amount ?? 0)
+                              ),
                         [
                             {
                                 text: localeString('general.cancel'),
