@@ -81,3 +81,81 @@ describe('CLNRest.getURL', () => {
         });
     });
 });
+
+describe('CLNRest.watchInvoicePaid', () => {
+    const paid = (sats: number) => ({
+        status: 'paid',
+        amount_received_msat: sats * 1000,
+        bolt11: 'lnbc1test'
+    });
+    const unpaid = () => ({ status: 'unpaid', amount_msat: 7100000 });
+
+    let cln: CLNRest;
+    let lookupInvoice: jest.SpyInstance;
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        cln = new CLNRest();
+        lookupInvoice = jest.spyOn(cln, 'lookupInvoice');
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    const tick = async () => {
+        jest.advanceTimersByTime(5000);
+        await Promise.resolve();
+        await Promise.resolve();
+    };
+
+    it('fires when the paid sat amount covers the watched sat amount', async () => {
+        lookupInvoice.mockResolvedValue(paid(7100));
+        const onPaid = jest.fn();
+        cln.watchInvoicePaid({ rHash: 'abcd', value: '7100' }, onPaid);
+
+        await tick();
+
+        expect(lookupInvoice).toHaveBeenCalledWith({ r_hash: 'abcd' });
+        expect(onPaid).toHaveBeenCalledTimes(1);
+        expect(onPaid.mock.calls[0][0].amountSat).toBe(7100);
+    });
+
+    it('fires for an amountless watch with no value', async () => {
+        lookupInvoice.mockResolvedValue(paid(500));
+        const onPaid = jest.fn();
+        cln.watchInvoicePaid({ rHash: 'abcd' }, onPaid);
+
+        await tick();
+
+        expect(onPaid).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not fire while the invoice is unpaid or underpaid', async () => {
+        lookupInvoice
+            .mockResolvedValueOnce(unpaid())
+            .mockResolvedValueOnce(paid(7099));
+        const onPaid = jest.fn();
+        cln.watchInvoicePaid({ rHash: 'abcd', value: '7100' }, onPaid);
+
+        await tick();
+        await tick();
+
+        expect(lookupInvoice).toHaveBeenCalledTimes(2);
+        expect(onPaid).not.toHaveBeenCalled();
+    });
+
+    it('stops polling once unsubscribed', async () => {
+        lookupInvoice.mockResolvedValue(unpaid());
+        const unsubscribe = cln.watchInvoicePaid(
+            { rHash: 'abcd', value: '7100' },
+            jest.fn()
+        );
+
+        await tick();
+        unsubscribe();
+        await tick();
+
+        expect(lookupInvoice).toHaveBeenCalledTimes(1);
+    });
+});

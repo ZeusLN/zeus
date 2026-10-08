@@ -527,7 +527,7 @@ export default class EmbeddedLND extends LND {
                     if (
                         transaction.dest_addresses.includes(address) &&
                         transaction.num_confirmations > numConfPreference &&
-                        Number(transaction.amount) >= Number(value)
+                        Number(transaction.amount) >= Number(value || 0)
                     ) {
                         listener.remove();
                         onReceived({

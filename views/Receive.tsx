@@ -851,7 +851,9 @@ export default class Receive extends React.Component<
 
     subscribeInvoice = (rHash?: string, onChainAddress?: string) => {
         const { SettingsStore, NodeInfoStore } = this.props;
-        const { value } = this.state;
+        // the watchers compare against sats; state.value is in the display
+        // unit (sats, BTC, or fiat)
+        const { satAmount } = this.state;
         const { settings } = SettingsStore;
         const { nodeInfo } = NodeInfoStore;
 
@@ -863,7 +865,7 @@ export default class Receive extends React.Component<
         if (rHash) {
             this.stopInvoiceWatcher();
             const unsubscribe = BackendUtils.watchInvoicePaid(
-                { rHash, value },
+                { rHash, value: satAmount },
                 ({
                     amountSat,
                     tx,
@@ -892,7 +894,7 @@ export default class Receive extends React.Component<
             const unsubscribe = BackendUtils.watchOnchainReceived(
                 {
                     address: onChainAddress,
-                    value,
+                    value: satAmount,
                     numConfPreference,
                     blockHeight: nodeInfo?.block_height
                 },

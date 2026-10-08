@@ -313,7 +313,7 @@ export default class CLNRest {
                     const amountPaid = invoice.getAmount;
                     if (
                         invoice.isPaid &&
-                        Number(amountPaid) >= Number(value) &&
+                        Number(amountPaid) >= Number(value || 0) &&
                         Number(amountPaid) !== 0
                     ) {
                         clearInterval(interval);
