@@ -994,8 +994,15 @@ export default class LightningAddressStore {
         };
     };
 
-    private calculateFeeMsat = (amountMsat: string | number) => {
-        let feeMsat;
+    // Mirrors calculateFeeMsat in zeus-pay routes/lnurl.js: a matched fee
+    // of 0 is returned as 0, and the 250 sat fallback only applies when the
+    // loaded tiers have no match. Before status loads the tiers, return
+    // undefined so analyzeAttestation fails closed instead of guessing.
+    private calculateFeeMsat = (
+        amountMsat: string | number
+    ): number | undefined => {
+        let feeMsat: number | undefined;
+        if (!Array.isArray(this.fees)) return undefined;
         for (let i = this.fees.length - 1; i >= 0; i--) {
             const feeItem = this.fees[i];
             const { limitAmount, limitQualifier, fee, feeQualifier } = feeItem;
@@ -1022,7 +1029,7 @@ export default class LightningAddressStore {
             }
         }
 
-        if (feeMsat) {
+        if (feeMsat !== undefined) {
             return feeMsat;
         } else {
             // return 250 sat fee in case of error

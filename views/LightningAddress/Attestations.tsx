@@ -156,7 +156,7 @@ export default function Attestations(props: AttestationProps) {
                                             />
                                         )}
 
-                                        {item.feeMsat && (
+                                        {item.feeMsat !== undefined && (
                                             <KeyValue
                                                 keyValue={localeString(
                                                     'models.Payment.fee'

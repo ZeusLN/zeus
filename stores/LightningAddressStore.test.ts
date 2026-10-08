@@ -18,6 +18,7 @@ jest.mock('../storage', () => ({
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import LightningAddressStore from './LightningAddressStore';
+import Bolt11Utils from '../utils/Bolt11Utils';
 
 const newStore = (settings: any = {}) =>
     new LightningAddressStore(
@@ -155,6 +156,192 @@ describe('LightningAddressStore', () => {
                 'Failed to update push credentials',
                 expect.any(Error)
             );
+        });
+    });
+
+    // FEES in zeus-pay routes/lnurl.js
+    const liveServerFees = [
+        {
+            limitAmount: 1,
+            limitQualifier: 'gte',
+            feeQualifier: 'percentage',
+            fee: 0
+        }
+    ];
+
+    describe('calculateFeeMsat', () => {
+        const feeFor = (fees: any, amountMsat: number) => {
+            const store = newStore();
+            store.fees = fees;
+            return (store as any).calculateFeeMsat(amountMsat);
+        };
+
+        it('returns 0 for a 0 sat fixed tier', () => {
+            expect(
+                feeFor(
+                    [
+                        {
+                            limitAmount: 100000,
+                            limitQualifier: 'lt',
+                            fee: 0,
+                            feeQualifier: 'fixedSats'
+                        }
+                    ],
+                    50000000
+                )
+            ).toBe(0);
+        });
+
+        it('returns 0 for a 0% percentage tier', () => {
+            expect(
+                feeFor(
+                    [
+                        {
+                            limitAmount: 0,
+                            limitQualifier: 'gte',
+                            fee: 0,
+                            feeQualifier: 'percentage'
+                        }
+                    ],
+                    50000000
+                )
+            ).toBe(0);
+        });
+
+        it('returns a nonzero fixed tier fee in msat', () => {
+            expect(
+                feeFor(
+                    [
+                        {
+                            limitAmount: 100000,
+                            limitQualifier: 'lte',
+                            fee: 10,
+                            feeQualifier: 'fixedSats'
+                        }
+                    ],
+                    50000000
+                )
+            ).toBe(10000);
+        });
+
+        it('returns a nonzero percentage tier fee in msat', () => {
+            expect(
+                feeFor(
+                    [
+                        {
+                            limitAmount: 100000,
+                            limitQualifier: 'gt',
+                            fee: 0.5,
+                            feeQualifier: 'percentage'
+                        }
+                    ],
+                    200000000
+                )
+            ).toBe(1000000);
+        });
+
+        it('returns undefined before status has loaded the fee tiers', () => {
+            expect(feeFor({}, 50000000)).toBeUndefined();
+        });
+
+        it('falls back to 250 sats when loaded tiers have no match', () => {
+            expect(
+                feeFor(
+                    [
+                        {
+                            limitAmount: 1000,
+                            limitQualifier: 'lt',
+                            fee: 1,
+                            feeQualifier: 'fixedSats'
+                        }
+                    ],
+                    50000000
+                )
+            ).toBe(250000);
+        });
+
+        it('returns 0 for the live ZEUS Pay tier (gte 1 sat, 0%)', () => {
+            expect(feeFor(liveServerFees, 50000000)).toBe(0);
+        });
+
+        it('uses the first matching tier in array order when tiers overlap', () => {
+            const fees = [
+                {
+                    limitAmount: 100000,
+                    limitQualifier: 'lt',
+                    fee: 0,
+                    feeQualifier: 'fixedSats'
+                },
+                {
+                    limitAmount: 0,
+                    limitQualifier: 'gte',
+                    fee: 1,
+                    feeQualifier: 'percentage'
+                }
+            ];
+            // 50k sats matches both tiers: the first one (0 sats) wins
+            expect(feeFor(fees, 50000000)).toBe(0);
+            // 200k sats only matches the second tier
+            expect(feeFor(fees, 200000000)).toBe(2000000);
+        });
+    });
+
+    describe('analyzeAttestation', () => {
+        const analyze = (
+            fees: any,
+            invoiceMsat: string,
+            amountMsat: number
+        ) => {
+            const store = newStore();
+            store.fees = fees;
+            jest.spyOn(Bolt11Utils, 'decode').mockReturnValue({
+                payment_hash: 'hash',
+                millisatoshis: invoiceMsat
+            } as any);
+            return (store as any).analyzeAttestation(
+                { content: 'lnbc' },
+                'hash',
+                amountMsat
+            );
+        };
+
+        it('accepts an invoice equal to the amount under the live tier', () => {
+            const attestation = analyze(liveServerFees, '50000000', 50000000);
+            expect(attestation.feeMsat).toBe(0);
+            expect(attestation.isAmountValid).toBe(true);
+            expect(attestation.isValid).toBe(true);
+        });
+
+        it('rejects an invoice padded with 250 sats under the live tier', () => {
+            const attestation = analyze(liveServerFees, '50250000', 50000000);
+            expect(attestation.isAmountValid).toBe(false);
+            expect(attestation.isValid).toBe(false);
+        });
+
+        it('accepts the 250 sat fallback when loaded tiers have no match', () => {
+            const attestation = analyze(
+                [
+                    {
+                        limitAmount: 1000,
+                        limitQualifier: 'lt',
+                        fee: 1,
+                        feeQualifier: 'fixedSats'
+                    }
+                ],
+                '50250000',
+                50000000
+            );
+            expect(attestation.feeMsat).toBe(250000);
+            expect(attestation.isAmountValid).toBe(true);
+        });
+
+        it('fails closed without throwing when fee tiers are not loaded', () => {
+            const attestation = analyze({}, '50250000', 50000000);
+            expect(attestation.feeMsat).toBeUndefined();
+            expect(attestation.isValidLightningInvoice).toBe(true);
+            expect(attestation.isHashValid).toBe(true);
+            expect(attestation.isAmountValid).toBe(false);
+            expect(attestation.isValid).toBe(false);
         });
     });
 });
