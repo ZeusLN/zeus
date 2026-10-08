@@ -30,9 +30,22 @@ export default class NodeInfo extends BaseModel {
         return this.id || this.pubkey || this.identity_pubkey || '';
     }
 
+    // LND sets the deprecated testnet bool on testnet4 too and reports
+    // 'testnet4' in chains; CLN reports 'testnet4' in network only
+    @computed public get isTestNet4(): boolean {
+        return (
+            this.network === 'testnet4' ||
+            (this.chains &&
+                this.chains[0] &&
+                this.chains[0].network === 'testnet4') ||
+            false
+        );
+    }
+
     @computed public get isTestNet(): boolean {
         return (
             this.testnet ||
+            this.isTestNet4 ||
             this.network === 'testnet' ||
             (this.chains &&
                 this.chains[0] &&
