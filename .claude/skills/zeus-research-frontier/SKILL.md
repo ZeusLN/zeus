@@ -50,7 +50,7 @@ Open problems where Zeus can advance the state of the art in self-custodial Ligh
 **Zeus's specific assets.**
 - Two embedded node engines behind one UI: `embedded-lnd` (gomobile AAR/xcframework) and `ldk-node` (uniffi FFI, ZeusLN fork `v0.7.0-zeus-pathfinder-config` per `fetch-libraries-versions.json`).
 - A three-generation LSP stack in `stores/LSPStore.ts`: Olympus Flow 2.0 REST (default `https://0conf.lnolymp.us`, JIT invoice wrapping via `jit_bolt11`), LSPS1 over three transports (custom message type `37913`, REST, native — chosen per backend via `supportsLSPScustomMessage` / `supportsLSPS1rest` / `supportsLSPS1native`), and LSPS7 lease extension (`supportsLSPS7native`, currently `true` only on `backends/LdkNode.ts`).
-- ZEUS Pay lightning address (`stores/LightningAddressStore.ts`) with three receive modes — `zaplocker`, `cashu`, `nwc` — giving offline receive without custody of keys.
+- ZEUS Pay lightning address (`stores/LightningAddressStore.ts`) with two receive modes — `cashu` (custodial until redeemed) and `nwc` (self-custodial via a remote node). The self-custodial `zaplocker` mode has been retired and its client code removed.
 - Boltz-protocol swaps (`stores/SwapStore.ts`, default host `https://satsrouting.exchange/v2` defined in `stores/SettingsStore.ts`) with deterministic rescue keys (`DERIVATION_PATH = 'm/44/0/0/0'`).
 
 **First three concrete steps in this repo.**
@@ -135,7 +135,6 @@ Three things in Zeus are *candidates* for genuine novelty. For each, the proof o
 
 | Candidate claim | What's actually in the repo | Known prior art to check | Proof obligation before claiming |
 |---|---|---|---|
-| Self-custodial lightning address at scale (ZEUS Pay zaplocker mode) | `stores/LightningAddressStore.ts`: 250 pre-generated preimages, schnorr-signed hash submission to `zeuspay.com`, redemption by creating an invoice with a fixed preimage, nostr kind-`55869` attestations (>1 attestation per hash = fraud signal). Requires `supportsCustomPreimages()` (true on LND family only). | The Zaplocker scheme itself is supertestnet's prior work — Zeus's contribution is the production implementation + attestation-based fraud detection, NOT the scheme | Prior-art survey vs. Zaplocker repo and any LSP-held-invoice services; then claim "production deployment of" not "invention of" |
 | Multimint NUT-15 MPP melt (pay one invoice from multiple mints) | `stores/CashuStore.ts` `queryMeltQuoteMpp` + per-mint NUT-15 probing and rejection classification, bypassing CDK | NUT-15 is specified; nutshell implements the mint side. Survey client wallets (Minibits, eNuts, cashu-ts consumers) for client-side multi-mint orchestration before claiming first | Working mainnet demo across ≥2 public mints, reproducible by a third party from a tagged release |
 | NWC as a full wallet backend (not just a service) | `backends/NostrWalletConnect.ts` is one of the 7 dispatched backends; Zeus is simultaneously an NWC wallet-service (`stores/NostrWalletConnectStore.ts`) | Alby Go and others are NWC-native clients — "NWC as one of N interchangeable backends" is the defensible framing, plain "NWC client" is not novel | Comparative table vs. named wallets, dated |
 
@@ -175,6 +174,5 @@ Re-verify volatile facts before relying on them:
 | NWC typo flag | `grep -n supportsLSPS1customMessage backends/NostrWalletConnect.ts` |
 | nitro-tor version (0.6.0) | `grep -n nitro-tor package.json` |
 | PGP key fingerprint | `gpg --show-keys PGP.txt` |
-| Zaplocker constants (250 preimages, kind 55869, zeuspay.com) | `grep -n "i < 250\|55869\|zeuspay.com" stores/LightningAddressStore.ts` |
 | Stealth aliases disabled by default | `grep -n -A2 activity-alias android/app/src/main/AndroidManifest.xml` |
 | Reproducible-build pins | `head -12 build.sh` |
