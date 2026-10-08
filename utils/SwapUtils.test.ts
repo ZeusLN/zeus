@@ -25,7 +25,7 @@ import { Platform } from 'react-native';
 import RNFS from 'react-native-fs';
 import { mnemonicToSeedSync } from '@scure/bip39';
 import { HDKey } from '@scure/bip32';
-import { crypto } from 'bitcoinjs-lib';
+import { crypto, payments } from 'bitcoinjs-lib';
 import {
     bigCeil,
     bigFloor,
@@ -763,6 +763,101 @@ describe('SwapUtils', () => {
                     ).valid
                 ).toBe(true);
             });
+
+            it('extracts the refund height from the reference script when metadata is absent', () => {
+                expect(
+                    verifyReverseSwapResponse(
+                        response({ timeoutBlockHeight: undefined })
+                    )
+                ).toMatchObject({
+                    valid: true,
+                    timeoutBlockHeight: TIMEOUT
+                });
+            });
+
+            it.each([0, -1, 500000000, 1700000000])(
+                'rejects a rescued refund script with non-height CLTV %s',
+                (height) => {
+                    const { refundLeaf } = buildReverseSwapLeaves({
+                        claimPubKey: OUR_PUBKEY,
+                        refundPubKey: hex(SERVER_PUBKEY),
+                        preimageHash: PREIMAGE_HASH,
+                        timeoutBlockHeight: height
+                    });
+                    expect(
+                        verifyReverseSwapResponse(
+                            response({
+                                timeoutBlockHeight: undefined,
+                                swapTree: {
+                                    claimLeaf: { output: CLAIM_LEAF },
+                                    refundLeaf: {
+                                        output: refundLeaf.toString('hex')
+                                    }
+                                }
+                            })
+                        )
+                    ).toEqual({ valid: false, reason: 'refund-leaf-mismatch' });
+                }
+            );
+
+            it.each([1, 16, 17, 499999999])(
+                'decodes canonical refund height %s including small-integer opcodes',
+                (height) => {
+                    const { claimLeaf, refundLeaf } = buildReverseSwapLeaves({
+                        claimPubKey: OUR_PUBKEY,
+                        refundPubKey: hex(SERVER_PUBKEY),
+                        preimageHash: PREIMAGE_HASH,
+                        timeoutBlockHeight: height
+                    });
+                    const pubkey = deriveReverseSwapOutputKey({
+                        ourPubKey: OUR_PUBKEY,
+                        serverPubKey: hex(SERVER_PUBKEY),
+                        claimLeaf,
+                        refundLeaf
+                    });
+                    expect(
+                        verifyReverseSwapResponse(
+                            response({
+                                timeoutBlockHeight: undefined,
+                                lockupAddress: payments.p2tr({ pubkey })
+                                    .address,
+                                swapTree: {
+                                    claimLeaf: {
+                                        output: claimLeaf.toString('hex')
+                                    },
+                                    refundLeaf: {
+                                        output: refundLeaf.toString('hex')
+                                    }
+                                }
+                            })
+                        )
+                    ).toMatchObject({
+                        valid: true,
+                        timeoutBlockHeight: height
+                    });
+                }
+            );
+
+            it.each(['0491a10c00', '0691a10c000000', '4c0391a10c'])(
+                'rejects nonminimal or oversized refund operands %s',
+                (operand) => {
+                    expect(
+                        verifyReverseSwapResponse(
+                            response({
+                                timeoutBlockHeight: undefined,
+                                swapTree: {
+                                    claimLeaf: { output: CLAIM_LEAF },
+                                    refundLeaf: {
+                                        output: `20${SERVER_PUBKEY.slice(
+                                            2
+                                        )}ad${operand}b1`
+                                    }
+                                }
+                            })
+                        )
+                    ).toEqual({ valid: false, reason: 'refund-leaf-mismatch' });
+                }
+            );
         });
 
         describe('checkLockupOutput', () => {

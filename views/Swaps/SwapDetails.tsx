@@ -39,7 +39,7 @@ import UrlUtils from '../../utils/UrlUtils';
 
 import InvoicesStore from '../../stores/InvoicesStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
-import SwapStore from '../../stores/SwapStore';
+import SwapStore, { ReverseLockupCheck } from '../../stores/SwapStore';
 import { nodeInfoStore, unitsStore } from '../../stores/Stores';
 
 import Swap, { SwapState, SwapType } from '../../models/Swap';
@@ -466,14 +466,21 @@ export default class SwapDetails extends React.Component<
             verifyingLockup = true;
             clearTimeout(lockupRecheck);
             try {
-                const lockup = await SwapStore.verifyReverseLockup(
-                    new Swap({
-                        ...createdResponse,
-                        keys,
-                        preimage: swapData.preimage
-                    }),
-                    transactionHex
+                const result = await this.createReverseClaimTransaction(
+                    createdResponse,
+                    keys,
+                    endpoint,
+                    swapData.lockupAddress!,
+                    swapData.destinationAddress!,
+                    swapData.preimage,
+                    transactionHex,
+                    fee
                 );
+                if (typeof result === 'boolean') {
+                    submitted = result;
+                    return;
+                }
+                const lockup = result;
 
                 if (lockup.status === 'invalid') {
                     console.error(
@@ -504,19 +511,6 @@ export default class SwapDetails extends React.Component<
                     );
                     return;
                 }
-
-                this.setState({ lockupNotice: null });
-                console.log('Creating claim transaction');
-                submitted = await this.createReverseClaimTransaction(
-                    createdResponse,
-                    keys,
-                    endpoint,
-                    swapData.lockupAddress!,
-                    swapData.destinationAddress!,
-                    swapData.preimage,
-                    transactionHex,
-                    fee
-                );
             } finally {
                 verifyingLockup = false;
             }
@@ -756,7 +750,7 @@ export default class SwapDetails extends React.Component<
         preimage: any,
         transactionHex: string,
         fee: string
-    ): Promise<boolean> => {
+    ): Promise<boolean | ReverseLockupCheck> => {
         try {
             const { SwapStore } = this.props;
 
@@ -820,6 +814,21 @@ export default class SwapDetails extends React.Component<
                 try {
                     await sleep(1000);
 
+                    // Fee/address resolution and a previous native attempt
+                    // can take arbitrarily long. Never reuse an earlier
+                    // unspent/deadline check before revealing the preimage.
+                    if (!SwapStore) return { status: 'unavailable' };
+                    const lockup = await SwapStore.verifyReverseLockup(
+                        new Swap({
+                            ...createdResponse,
+                            keys,
+                            preimage,
+                            lockupAddress
+                        }),
+                        transactionHex
+                    );
+                    if (lockup.status !== 'ok') return lockup;
+                    this.setState({ lockupNotice: null });
                     await createReverseClaimTransaction(claim);
 
                     console.log(

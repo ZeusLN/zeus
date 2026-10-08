@@ -20,6 +20,7 @@ import {
     verifyReverseSwapInvoice,
     verifyReverseSwapResponse,
     checkLockupOutput,
+    MIN_REVERSE_SWAP_CLAIM_BLOCKS,
     calculateReceiveAmount,
     deriveSwapPreimage
 } from '../utils/SwapUtils';
@@ -599,6 +600,22 @@ export default class SwapStore {
                 return;
             }
 
+            const deadline = await this.verifyReverseSwapDeadline(
+                responseCheck.timeoutBlockHeight,
+                UrlUtils.getMempoolApiUrl(this.nodeInfoStore.nodeInfo)
+            );
+            if (deadline.status !== 'ok') {
+                runInAction(() => {
+                    this.apiError = localeString(
+                        deadline.status === 'unavailable'
+                            ? 'views.SwapDetails.lockupVerificationUnavailable'
+                            : 'views.Swaps.invalidReverseSwapResponse'
+                    );
+                    this.loading = false;
+                });
+                return;
+            }
+
             // Add the creation date
             const createdAt = new Date().toISOString();
             responseData.createdAt = createdAt;
@@ -641,13 +658,42 @@ export default class SwapStore {
         }
     };
 
+    // Fetch a fresh tip from the same independent observer used for the
+    // lockup. The wallet's cached height may be stale or absent (LndHub/NWC).
+    private verifyReverseSwapDeadline = async (
+        timeoutBlockHeight: number,
+        apiUrl: string
+    ): Promise<ReverseLockupCheck> => {
+        try {
+            const response = await ReactNativeBlobUtil.fetch(
+                'GET',
+                `${apiUrl}/blocks/tip/height`
+            );
+            if (response.info().status !== 200) {
+                return { status: 'unavailable', reason: 'tip-unavailable' };
+            }
+            const text = (await response.text()).trim();
+            const height = /^\d+$/.test(text) ? Number(text) : NaN;
+            if (!Number.isSafeInteger(height) || height <= 0) {
+                return { status: 'unavailable', reason: 'invalid-tip' };
+            }
+            if (timeoutBlockHeight - height < MIN_REVERSE_SWAP_CLAIM_BLOCKS) {
+                return { status: 'invalid', reason: 'refund-deadline' };
+            }
+            return { status: 'ok' };
+        } catch {
+            return { status: 'unavailable', reason: 'tip-unavailable' };
+        }
+    };
+
     /**
      * Checks a reverse swap's lockup before the claim reveals the
      * preimage. The provider's swap update only supplies the transaction
      * hex; the transaction itself is looked up by txid on the user's
      * mempool instance, and it must be confirmed and pay the swap's
-     * taproot output at least the swap's on-chain amount. The swap tree
-     * and lockup address are re-checked here too, which covers swaps
+     * taproot output at least the swap's on-chain amount. That output must
+     * still be unspent, with at least six blocks before its refund deadline.
+     * The swap tree and lockup address are re-checked here too, covering swaps
      * saved or rescued before creation-time verification existed.
      *
      * 'unconfirmed' (including not yet seen) and 'unavailable' are
@@ -687,20 +733,20 @@ export default class SwapStore {
             return { status: 'invalid', reason: responseCheck.reason };
         }
 
-        let txid: string;
+        let lockup: Transaction;
         try {
-            txid = Transaction.fromHex(providerTxHex).getId();
+            lockup = Transaction.fromHex(providerTxHex);
         } catch (e) {
             return { status: 'invalid', reason: 'undecodable-lockup' };
         }
 
+        const txid = lockup.getId();
+        const apiUrl = UrlUtils.getMempoolApiUrl(this.nodeInfoStore.nodeInfo);
         let tx: any;
         try {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
-                `${UrlUtils.getMempoolApiUrl(
-                    this.nodeInfoStore.nodeInfo
-                )}/tx/${txid}`
+                `${apiUrl}/tx/${txid}`
             );
             const httpStatus = response.info().status;
             // not seen yet is retryable: an honest lockup may not have
@@ -730,9 +776,49 @@ export default class SwapStore {
             responseCheck.outputScript,
             swap.onchainAmount
         );
-        if (outputStatus === 'ok') return { status: 'ok' };
         if (outputStatus === 'unconfirmed') return { status: 'unconfirmed' };
-        return { status: 'invalid', reason: outputStatus };
+        if (outputStatus !== 'ok')
+            return { status: 'invalid', reason: outputStatus };
+
+        // Match the native FindVout on the exact transaction it will spend.
+        // The outspend lookup must not accidentally check a second output
+        // to the same address while the first has already been refunded.
+        const program = responseCheck.outputScript.toString('hex').slice(4);
+        const vout = lockup.outs.findIndex(
+            (output) => output.script.toString('hex').slice(4) === program
+        );
+        if (
+            vout < 0 ||
+            !lockup.outs[vout].script.equals(responseCheck.outputScript)
+        ) {
+            return { status: 'invalid', reason: 'missing-output' };
+        }
+        try {
+            const response = await ReactNativeBlobUtil.fetch(
+                'GET',
+                `${apiUrl}/tx/${txid}/outspend/${vout}`
+            );
+            if (response.info().status !== 200) {
+                return {
+                    status: 'unavailable',
+                    reason: 'outspend-unavailable'
+                };
+            }
+            const outspend = response.json();
+            if (outspend?.spent === true) {
+                return { status: 'invalid', reason: 'lockup-spent' };
+            }
+            if (outspend?.spent !== false) {
+                return { status: 'unavailable', reason: 'invalid-outspend' };
+            }
+        } catch {
+            return { status: 'unavailable', reason: 'outspend-unavailable' };
+        }
+        // Read the tip last so the other lookups cannot age the height check.
+        return this.verifyReverseSwapDeadline(
+            responseCheck.timeoutBlockHeight,
+            apiUrl
+        );
     };
 
     private saveReverseSwaps = async (

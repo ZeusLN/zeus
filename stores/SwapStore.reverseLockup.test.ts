@@ -167,10 +167,13 @@ describe('SwapStore.createReverseSwap response verification', () => {
         fees: { percentage: 0.5, minerFees: { claim: 300, lockup: 400 } }
     };
 
-    const create = async (responseOverrides: any = {}) => {
+    const create = async (
+        responseOverrides: any = {},
+        tip: any = TIMEOUT - 100
+    ) => {
         storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
         const { outputScript: _outputScript, ...details } = VALID;
-        fetchMock.mockResolvedValue({
+        fetchMock.mockResolvedValueOnce({
             data: JSON.stringify({
                 id: 'reverse-swap',
                 invoice: 'lnbc-provider-invoice',
@@ -178,6 +181,10 @@ describe('SwapStore.createReverseSwap response verification', () => {
                 ...details,
                 ...responseOverrides
             })
+        });
+        fetchMock.mockResolvedValue({
+            info: () => ({ status: 200 }),
+            text: () => String(tip)
         });
 
         const store = newStore();
@@ -204,6 +211,25 @@ describe('SwapStore.createReverseSwap response verification', () => {
             'SwapDetails',
             expect.anything()
         );
+    });
+
+    it.each([TIMEOUT + 1, TIMEOUT, TIMEOUT - 1, TIMEOUT - 5])(
+        'does not save or offer payment when the explorer tip is %s',
+        async (tip) => {
+            const { store, navigation, stored } = await create({}, tip);
+            expect(store.apiError).toBe(
+                'views.Swaps.invalidReverseSwapResponse'
+            );
+            expect(store.loading).toBe(false);
+            expect(stored).toHaveLength(0);
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        }
+    );
+
+    it('fails closed before payment when the explorer height is unusable', async () => {
+        const { navigation, stored } = await create({}, 'not a height');
+        expect(stored).toHaveLength(0);
+        expect(navigation.navigate).not.toHaveBeenCalled();
     });
 
     it.each([
@@ -277,11 +303,23 @@ describe('SwapStore.verifyReverseLockup', () => {
             ],
             status: { confirmed: true }
         }
-    ) =>
-        fetchMock.mockResolvedValue({
-            info: () => ({ status }),
-            json: () => body
+    ) => {
+        fetchMock.mockImplementation(async (_method: string, url: string) => {
+            if (url.endsWith('/blocks/tip/height')) {
+                return {
+                    info: () => ({ status: 200 }),
+                    text: () => String(TIMEOUT - 100)
+                };
+            }
+            if (url.includes('/outspend/')) {
+                return {
+                    info: () => ({ status: 200 }),
+                    json: () => ({ spent: false })
+                };
+            }
+            return { info: () => ({ status }), json: () => body };
         });
+    };
 
     const verify = (swap = storedSwap(), hex = LOCKUP_TX.toHex()) =>
         newStore().verifyReverseLockup(swap, hex);
@@ -294,12 +332,173 @@ describe('SwapStore.verifyReverseLockup', () => {
     it('looks the lockup up on the mempool instance, not the provider', async () => {
         esplora(200);
         await verify();
-        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(fetchMock).toHaveBeenCalledTimes(3);
         expect(fetchMock).toHaveBeenCalledWith(
             'GET',
             `https://mempool.test/api/tx/${LOCKUP_TX.getId()}`
         );
+        expect(fetchMock).toHaveBeenCalledWith(
+            'GET',
+            `https://mempool.test/api/tx/${LOCKUP_TX.getId()}/outspend/0`
+        );
+        expect(fetchMock).toHaveBeenCalledWith(
+            'GET',
+            'https://mempool.test/api/blocks/tip/height'
+        );
     });
+
+    it.each([false, true])(
+        'refuses a spent output (spend confirmed: %s)',
+        async (confirmed) => {
+            esplora(200);
+            const fetch = fetchMock.getMockImplementation()!;
+            fetchMock.mockImplementation(async (method, url) =>
+                url.includes('/outspend/')
+                    ? {
+                          info: () => ({ status: 200 }),
+                          json: () => ({ spent: true, status: { confirmed } })
+                      }
+                    : fetch(method, url)
+            );
+            await expect(verify()).resolves.toEqual({
+                status: 'invalid',
+                reason: 'lockup-spent'
+            });
+        }
+    );
+
+    it.each([{}, { spent: 'false' }, null])(
+        'fails closed on malformed outspend data %j',
+        async (body) => {
+            esplora(200);
+            const fetch = fetchMock.getMockImplementation()!;
+            fetchMock.mockImplementation(async (method, url) =>
+                url.includes('/outspend/')
+                    ? { info: () => ({ status: 200 }), json: () => body }
+                    : fetch(method, url)
+            );
+            await expect(verify()).resolves.toMatchObject({
+                status: 'unavailable'
+            });
+        }
+    );
+
+    it.each([TIMEOUT + 1, TIMEOUT, TIMEOUT - 1, TIMEOUT - 5])(
+        'refuses a deadline too close to fresh tip %s, including rescued swaps',
+        async (tip) => {
+            esplora(200);
+            const fetch = fetchMock.getMockImplementation()!;
+            fetchMock.mockImplementation(async (method, url) =>
+                url.endsWith('/blocks/tip/height')
+                    ? { info: () => ({ status: 200 }), text: () => String(tip) }
+                    : fetch(method, url)
+            );
+            await expect(verify()).resolves.toEqual({
+                status: 'invalid',
+                reason: 'refund-deadline'
+            });
+            await expect(
+                verify(storedSwap({ timeoutBlockHeight: undefined }))
+            ).resolves.toEqual({
+                status: 'invalid',
+                reason: 'refund-deadline'
+            });
+        }
+    );
+
+    it('allows exactly six blocks before the refund deadline', async () => {
+        esplora(200);
+        const fetch = fetchMock.getMockImplementation()!;
+        fetchMock.mockImplementation(async (method, url) =>
+            url.endsWith('/blocks/tip/height')
+                ? {
+                      info: () => ({ status: 200 }),
+                      text: () => String(TIMEOUT - 6)
+                  }
+                : fetch(method, url)
+        );
+        await expect(verify()).resolves.toEqual({ status: 'ok' });
+    });
+
+    it('checks the first matching output at its actual index, not a later unspent duplicate', async () => {
+        const tx = new Transaction();
+        tx.addInput(Buffer.alloc(32, 1), 0);
+        tx.addOutput(Buffer.from('0014' + '00'.repeat(20), 'hex'), 1000);
+        tx.addOutput(VALID.outputScript, ONCHAIN_AMOUNT);
+        tx.addOutput(VALID.outputScript, ONCHAIN_AMOUNT);
+        esplora(200, {
+            txid: tx.getId(),
+            vout: tx.outs.map((out) => ({
+                scriptpubkey: out.script.toString('hex'),
+                value: out.value
+            })),
+            status: { confirmed: true }
+        });
+        const fetch = fetchMock.getMockImplementation()!;
+        fetchMock.mockImplementation(async (method, url) =>
+            url.endsWith('/outspend/1')
+                ? {
+                      info: () => ({ status: 200 }),
+                      json: () => ({ spent: true })
+                  }
+                : fetch(method, url)
+        );
+        await expect(verify(storedSwap(), tx.toHex())).resolves.toEqual({
+            status: 'invalid',
+            reason: 'lockup-spent'
+        });
+        expect(fetchMock).toHaveBeenCalledWith(
+            'GET',
+            `https://mempool.test/api/tx/${tx.getId()}/outspend/1`
+        );
+    });
+
+    it.each(['', 'NaN', '-1', '1.5', '0', 'null'])(
+        'retries rather than claiming with invalid height %j',
+        async (height) => {
+            esplora(200);
+            const fetch = fetchMock.getMockImplementation()!;
+            fetchMock.mockImplementation(async (method, url) =>
+                url.endsWith('/blocks/tip/height')
+                    ? { info: () => ({ status: 200 }), text: () => height }
+                    : fetch(method, url)
+            );
+            await expect(verify()).resolves.toMatchObject({
+                status: 'unavailable'
+            });
+        }
+    );
+
+    it.each(['/outspend/0', '/blocks/tip/height'])(
+        'retries when %s is unavailable',
+        async (path) => {
+            esplora(200);
+            const fetch = fetchMock.getMockImplementation()!;
+            fetchMock.mockImplementation(async (method, url) =>
+                url.endsWith(path)
+                    ? { info: () => ({ status: 503 }) }
+                    : fetch(method, url)
+            );
+            await expect(verify()).resolves.toMatchObject({
+                status: 'unavailable'
+            });
+        }
+    );
+
+    it.each(['/outspend/0', '/blocks/tip/height'])(
+        'retries when %s rejects',
+        async (path) => {
+            esplora(200);
+            const fetch = fetchMock.getMockImplementation()!;
+            fetchMock.mockImplementation(async (method, url) => {
+                if (url.endsWith(path)) throw new Error('offline');
+                return fetch(method, url);
+            });
+            await expect(verify()).resolves.toMatchObject({
+                status: 'unavailable'
+            });
+        }
+    );
 
     it('waits on a fabricated lockup the mempool instance has never seen', async () => {
         // the report's case: syntactically valid hex, never broadcast

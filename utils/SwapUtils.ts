@@ -167,36 +167,59 @@ export const deriveReverseSwapOutputKey = ({
     return Buffer.from(pubkey!);
 };
 
-const isRefundLeafFor = (
+// CLTV values below this threshold are block heights, not timestamps.
+const LOCKTIME_THRESHOLD = 500000000;
+// Leave time for a unilateral claim if the provider refuses to co-sign.
+export const MIN_REVERSE_SWAP_CLAIM_BLOCKS = 6;
+
+const refundHeightFor = (
     refundLeaf: Buffer,
     serverPubKey: Buffer,
     timeoutBlockHeight?: number
-): boolean => {
-    if (timeoutBlockHeight != null) {
-        return refundLeaf.equals(
-            buildReverseSwapLeaves({
-                claimPubKey: serverPubKey,
-                refundPubKey: serverPubKey,
-                preimageHash: Buffer.alloc(32),
-                timeoutBlockHeight
-            }).refundLeaf
-        );
-    }
-    // rescued swaps don't carry the timeout; check the shape only
+): number | undefined => {
+    // Rescued swaps omit the timeout field. Read the actual CLTV operand
+    // from the committed script, rather than trusting optional metadata.
     const chunks = bitcoinScript.decompile(refundLeaf);
-    return (
-        !!chunks &&
-        chunks.length === 4 &&
-        Buffer.isBuffer(chunks[0]) &&
-        chunks[0].equals(toXOnly(serverPubKey)) &&
-        chunks[1] === opcodes.OP_CHECKSIGVERIFY &&
-        Buffer.isBuffer(chunks[2]) &&
-        chunks[3] === opcodes.OP_CHECKLOCKTIMEVERIFY
-    );
+    if (
+        !chunks ||
+        chunks.length !== 4 ||
+        !Buffer.isBuffer(chunks[0]) ||
+        !chunks[0].equals(toXOnly(serverPubKey)) ||
+        chunks[1] !== opcodes.OP_CHECKSIGVERIFY ||
+        chunks[3] !== opcodes.OP_CHECKLOCKTIMEVERIFY
+    )
+        return undefined;
+
+    let height: number;
+    try {
+        const operand = chunks[2];
+        height = Buffer.isBuffer(operand)
+            ? bitcoinScript.number.decode(operand, 5, true)
+            : operand >= opcodes.OP_1 && operand <= opcodes.OP_16
+            ? operand - opcodes.OP_1 + 1
+            : 0;
+    } catch {
+        return undefined;
+    }
+    if (
+        !Number.isSafeInteger(height) ||
+        height <= 0 ||
+        height >= LOCKTIME_THRESHOLD ||
+        (timeoutBlockHeight != null && timeoutBlockHeight !== height)
+    )
+        return undefined;
+
+    const expected = buildReverseSwapLeaves({
+        claimPubKey: serverPubKey,
+        refundPubKey: serverPubKey,
+        preimageHash: Buffer.alloc(32),
+        timeoutBlockHeight: height
+    }).refundLeaf;
+    return refundLeaf.equals(expected) ? height : undefined;
 };
 
 export type ReverseSwapResponseCheck =
-    | { valid: true; outputScript: Buffer }
+    | { valid: true; outputScript: Buffer; timeoutBlockHeight: number }
     | {
           valid: false;
           reason:
@@ -274,7 +297,12 @@ export const verifyReverseSwapResponse = ({
     if (!claimLeaf.equals(expectedClaimLeaf)) {
         return { valid: false, reason: 'claim-leaf-mismatch' };
     }
-    if (!isRefundLeafFor(refundLeaf, serverKey, timeoutBlockHeight)) {
+    const refundHeight = refundHeightFor(
+        refundLeaf,
+        serverKey,
+        timeoutBlockHeight
+    );
+    if (refundHeight === undefined) {
         return { valid: false, reason: 'refund-leaf-mismatch' };
     }
 
@@ -305,7 +333,8 @@ export const verifyReverseSwapResponse = ({
 
     return {
         valid: true,
-        outputScript: Buffer.concat([Buffer.from([0x51, 0x20]), outputKey])
+        outputScript: Buffer.concat([Buffer.from([0x51, 0x20]), outputKey]),
+        timeoutBlockHeight: refundHeight
     };
 };
 
