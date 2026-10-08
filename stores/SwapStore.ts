@@ -93,6 +93,60 @@ const pickFields = (source: any, fields: string[]): { [key: string]: any } => {
     return picked;
 };
 
+const hasPreimage = (swap: any) => !!preimageHexFrom(swap?.preimage);
+
+/**
+ * Keeps one stored entry per swap ID. Running the rescue again used to
+ * append a second copy of a reverse swap already re-filed under
+ * REVERSE_SWAPS_KEY; keep the copy with a preimage, else the first.
+ */
+const dedupeStoredSwaps = (submarineSwaps: any[], reverseSwaps: any[]) => {
+    const kept = new Map<string, any>();
+    for (const swap of [...reverseSwaps, ...submarineSwaps]) {
+        if (!swap?.id) continue;
+        const current = kept.get(swap.id);
+        if (!current || (!hasPreimage(current) && hasPreimage(swap))) {
+            kept.set(swap.id, swap);
+        }
+    }
+    const isKept = (swap: any) => !swap?.id || kept.get(swap.id) === swap;
+    return {
+        submarineSwaps: submarineSwaps.filter(isKept),
+        reverseSwaps: reverseSwaps.filter(isKept)
+    };
+};
+
+/**
+ * Gives a stored reverse swap the preimage it lacks. Swaps rescued before
+ * the preimage was re-derived were stored without one, so their claims
+ * fail. The preimage is only attached if it comes from the key the stored
+ * swap already uses and matches any preimage hash on record.
+ */
+const repairRescuedPreimage = (stored: any, rescued: any) => {
+    if (hasPreimage(stored)) return;
+
+    const rescuedKey = privateKeyFromKeys(rescued.keys);
+    if (stored.keys && privateKeyFromKeys(stored.keys) !== rescuedKey) {
+        console.error(
+            `Not repairing rescued swap ${stored.id}: its stored key is not the one at the restored key index`
+        );
+        return;
+    }
+    if (
+        stored.preimageHash !== undefined &&
+        String(stored.preimageHash).toLowerCase() !==
+            crypto.sha256(rescued.preimage).toString('hex')
+    ) {
+        console.error(
+            `Not repairing rescued swap ${stored.id}: preimage hash does not match`
+        );
+        return;
+    }
+
+    stored.preimage = rescued.preimage;
+    if (!stored.keys) stored.keys = rescued.keys;
+};
+
 export default class SwapStore {
     @observable public subInfo: SubmarineSwapInfo = {};
     @observable public reverseInfo: ReverseSwapInfo = {};
@@ -1240,6 +1294,96 @@ export default class SwapStore {
         return { index, keys };
     };
 
+    /**
+     * Builds the stored form of one swap from a /swap/restore response, or
+     * returns null for an entry without an ID or key details, and for a
+     * reverse swap whose preimage hash doesn't match the key at its keyIndex.
+     */
+    private buildRescuedSwap = (
+        swap: any,
+        mnemonic: string,
+        {
+            implementation,
+            nodePubkey,
+            host
+        }: { implementation: string; nodePubkey: string; host: string }
+    ): any | null => {
+        const isReverseSwap = swap.type === 'reverse';
+        const details = isReverseSwap ? swap.claimDetails : swap.refundDetails;
+        if (!swap?.id || !details) return null;
+
+        // Only fields describing the host's side of the swap are taken from
+        // the response. The claim address, keys and preimage are ours to set:
+        // a host that could set the claim address would be paid the lockup
+        // and get the preimage to settle the hold invoice.
+        const swapDetails = pickFields(swap, RESCUE_SWAP_FIELDS);
+        const hostDetails = pickFields(details, RESCUE_DETAIL_FIELDS);
+
+        const { keyIndex } = details;
+
+        const hdKey = this.mnemonicToHDKey(mnemonic);
+        const childKey = hdKey.derive(this.getPath(keyIndex));
+
+        if (!childKey.privateKey) {
+            throw new Error(`No private key at index ${keyIndex}`);
+        }
+
+        const ecPair = this.ECPair.fromPrivateKey(
+            Buffer.from(childKey.privateKey)
+        );
+
+        const refundPrivateKey = Buffer.from(ecPair.privateKey!).toString(
+            'hex'
+        );
+        const refundPublicKey = Buffer.from(ecPair.publicKey).toString('hex');
+
+        const rescuedSwapBase = {
+            ...swapDetails,
+            ...hostDetails,
+            imported: true,
+            implementation,
+            nodePubkey,
+            endpoint: host,
+            serviceProvider: this.getServiceProvider,
+            keys: ecPair
+        };
+
+        if (isReverseSwap) {
+            // Re-derive the preimage. Only reverse swaps have one of ours: the
+            // host knows just its hash, so without this the rescued claim is
+            // built with an empty preimage, fails every retry, and the host
+            // reclaims the lockup at timeout.
+            const preimage = deriveSwapPreimage(childKey.privateKey);
+
+            // A hash that doesn't match means the host sent the wrong
+            // keyIndex; claiming would reveal the preimage of another swap's
+            // hold invoice
+            if (
+                hostDetails.preimageHash !== undefined &&
+                String(hostDetails.preimageHash).toLowerCase() !==
+                    crypto.sha256(preimage).toString('hex')
+            ) {
+                console.error(
+                    `Skipping rescued swap ${swap.id}: preimage hash does not match key index ${keyIndex}`
+                );
+                return null;
+            }
+
+            return {
+                ...rescuedSwapBase,
+                type: SwapType.Reverse,
+                preimage
+            };
+        } else {
+            return {
+                ...rescuedSwapBase,
+                type: SwapType.Submarine,
+                refundPrivateKey,
+                refundPublicKey
+            };
+        }
+    };
+
     @action
     public getRescuableSwaps = async ({
         seedArray,
@@ -1279,129 +1423,50 @@ export default class SwapStore {
                 const importedSwaps = JSON.parse(response.data || '[]');
 
                 if (importedSwaps.length > 0) {
-                    const storedSwaps = await Storage.getItem(SWAPS_KEY);
-                    const existingSwaps = storedSwaps
-                        ? JSON.parse(storedSwaps)
-                        : [];
-                    const existingSwapIds = existingSwaps.map((s: any) => s.id);
-
-                    const rescuedSwaps = await Promise.all(
-                        importedSwaps
-                            .filter(
-                                (swap: any) =>
-                                    !existingSwapIds.includes(swap.id)
-                            )
-                            .map(async (swap: any) => {
-                                const isReverseSwap = swap.type === 'reverse';
-                                const details = isReverseSwap
-                                    ? swap.claimDetails
-                                    : swap.refundDetails;
-
-                                // Only fields describing the host's side of
-                                // the swap are taken from the response. The
-                                // claim address, keys and preimage are ours
-                                // to set: a host that could set the claim
-                                // address would be paid the lockup and get
-                                // the preimage to settle the hold invoice.
-                                const swapDetails = pickFields(
-                                    swap,
-                                    RESCUE_SWAP_FIELDS
-                                );
-                                const hostDetails = pickFields(
-                                    details,
-                                    RESCUE_DETAIL_FIELDS
-                                );
-
-                                const { keyIndex } = details;
-
-                                const hdKey = this.mnemonicToHDKey(mnemonic);
-                                const childKey = hdKey.derive(
-                                    this.getPath(keyIndex)
-                                );
-
-                                if (!childKey.privateKey) {
-                                    throw new Error(
-                                        `No private key at index ${keyIndex}`
-                                    );
-                                }
-
-                                const ecPair = this.ECPair.fromPrivateKey(
-                                    Buffer.from(childKey.privateKey)
-                                );
-
-                                const refundPrivateKey = Buffer.from(
-                                    ecPair.privateKey!
-                                ).toString('hex');
-                                const refundPublicKey = Buffer.from(
-                                    ecPair.publicKey
-                                ).toString('hex');
-
-                                const rescuedSwapBase = {
-                                    ...swapDetails,
-                                    ...hostDetails,
-                                    imported: true,
-                                    implementation,
-                                    nodePubkey,
-                                    endpoint: host,
-                                    serviceProvider: this.getServiceProvider,
-                                    keys: ecPair
-                                };
-
-                                if (isReverseSwap) {
-                                    // Re-derive the preimage. Only reverse
-                                    // swaps have one of ours: the host knows
-                                    // just its hash, so without this the
-                                    // rescued claim is built with an empty
-                                    // preimage, fails every retry, and the
-                                    // host reclaims the lockup at timeout.
-                                    const preimage = deriveSwapPreimage(
-                                        childKey.privateKey
-                                    );
-
-                                    // A hash that doesn't match means the
-                                    // host sent the wrong keyIndex; claiming
-                                    // would reveal the preimage of another
-                                    // swap's hold invoice
-                                    if (
-                                        hostDetails.preimageHash !==
-                                            undefined &&
-                                        String(
-                                            hostDetails.preimageHash
-                                        ).toLowerCase() !==
-                                            crypto
-                                                .sha256(preimage)
-                                                .toString('hex')
-                                    ) {
-                                        console.error(
-                                            `Skipping rescued swap ${swap.id}: preimage hash does not match key index ${keyIndex}`
-                                        );
-                                        return null;
-                                    }
-
-                                    return {
-                                        ...rescuedSwapBase,
-                                        type: SwapType.Reverse,
-                                        preimage
-                                    };
-                                } else {
-                                    return {
-                                        ...rescuedSwapBase,
-                                        type: SwapType.Submarine,
-                                        refundPrivateKey,
-                                        refundPublicKey
-                                    };
-                                }
-                            })
+                    // Rescued swaps are written to SWAPS_KEY whatever their
+                    // type and only re-filed by the next fetchAndUpdateSwaps,
+                    // so a swap rescued before can be under either key
+                    const storedSubmarineSwaps = await Storage.getItem(
+                        SWAPS_KEY
                     );
+                    const storedReverseSwaps = await Storage.getItem(
+                        REVERSE_SWAPS_KEY
+                    );
+                    const { submarineSwaps, reverseSwaps } = dedupeStoredSwaps(
+                        storedSubmarineSwaps
+                            ? JSON.parse(storedSubmarineSwaps)
+                            : [],
+                        storedReverseSwaps ? JSON.parse(storedReverseSwaps) : []
+                    );
+                    const existingSwaps = [...submarineSwaps, ...reverseSwaps];
 
-                    const updatedSwaps = [
-                        ...existingSwaps,
-                        ...rescuedSwaps.filter(Boolean)
-                    ];
+                    const newSwaps: any[] = [];
+                    for (const swap of importedSwaps) {
+                        const rescued = this.buildRescuedSwap(swap, mnemonic, {
+                            implementation,
+                            nodePubkey,
+                            host
+                        });
+                        if (!rescued) continue;
+
+                        const existing = existingSwaps.find(
+                            (s: any) => s?.id === rescued.id
+                        );
+                        if (!existing) {
+                            newSwaps.push(rescued);
+                            existingSwaps.push(rescued);
+                        } else if (rescued.type === SwapType.Reverse) {
+                            repairRescuedPreimage(existing, rescued);
+                        }
+                    }
 
                     await Storage.setItem(
                         SWAPS_KEY,
-                        JSON.stringify(updatedSwaps)
+                        JSON.stringify([...submarineSwaps, ...newSwaps])
+                    );
+                    await Storage.setItem(
+                        REVERSE_SWAPS_KEY,
+                        JSON.stringify(reverseSwaps)
                     );
                     console.log('Rescued swaps saved to storage');
                     return { success: true };

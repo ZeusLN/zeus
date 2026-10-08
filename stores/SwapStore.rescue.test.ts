@@ -298,6 +298,169 @@ describe('SwapStore.getRescuableSwaps', () => {
     });
 });
 
+describe('SwapStore.getRescuableSwaps, run again (#4821)', () => {
+    const SEED = RESCUE_MNEMONIC.split(' ');
+    const HOST = 'https://swaps.example.com';
+
+    const restoreResponse = (swaps: any[]) => {
+        (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValue({
+            data: JSON.stringify(swaps)
+        });
+    };
+
+    const reverseAt = (keyIndex: number, id = 'rescued-reverse') => ({
+        id,
+        type: 'reverse',
+        status: 'transaction.mempool',
+        claimDetails: { keyIndex, serverPublicKey: 'ab' }
+    });
+
+    // The stored form of a swap rescued before the preimage was re-derived
+    // (#4460): the same entry a rescue writes today, keys and all, with no
+    // preimage
+    const rescueWithoutPreimage = async (keyIndex = 0) => {
+        restoreResponse([reverseAt(keyIndex)]);
+        await newStore().getRescuableSwaps({ seedArray: SEED, host: HOST });
+        const [stored] = getStored(SWAPS_KEY);
+        delete stored.preimage;
+        return stored;
+    };
+
+    const allStored = () => [
+        ...(getStored(SWAPS_KEY) || []),
+        ...(getStored(REVERSE_SWAPS_KEY) || [])
+    ];
+
+    const preimageOf = (swap: any) =>
+        swap.preimage && Buffer.from(swap.preimage.data).toString('hex');
+
+    it('does not append a reverse swap already re-filed under the reverse list', async () => {
+        restoreResponse([reverseAt(0)]);
+        await newStore().getRescuableSwaps({ seedArray: SEED, host: HOST });
+        // fetchAndUpdateSwaps re-files it
+        setStored(REVERSE_SWAPS_KEY, getStored(SWAPS_KEY));
+        setStored(SWAPS_KEY, []);
+        const before = getStored(REVERSE_SWAPS_KEY);
+
+        await newStore().getRescuableSwaps({ seedArray: SEED, host: HOST });
+
+        expect(getStored(SWAPS_KEY)).toEqual([]);
+        expect(getStored(REVERSE_SWAPS_KEY)).toEqual(before);
+    });
+
+    it.each([REVERSE_SWAPS_KEY, SWAPS_KEY])(
+        'repairs the missing preimage of a swap stored under %s and keeps its other fields',
+        async (key) => {
+            const stored = await rescueWithoutPreimage();
+            const otherKey = key === SWAPS_KEY ? REVERSE_SWAPS_KEY : SWAPS_KEY;
+            setStored(otherKey, []);
+            setStored(key, [
+                {
+                    ...stored,
+                    status: 'transaction.confirmed',
+                    destinationAddress: 'bc1qwallet',
+                    claimAddressFromWallet: true
+                }
+            ]);
+            restoreResponse([reverseAt(0)]);
+
+            await newStore().getRescuableSwaps({ seedArray: SEED, host: HOST });
+
+            const [repaired, ...rest] = allStored();
+            expect(rest).toEqual([]);
+            expect(getStored(key)).toHaveLength(1);
+            expect(preimageOf(repaired)).toBe(KEY_0_PREIMAGE);
+            expect(repaired).toMatchObject({
+                id: 'rescued-reverse',
+                status: 'transaction.confirmed',
+                destinationAddress: 'bc1qwallet',
+                claimAddressFromWallet: true,
+                keys: stored.keys
+            });
+        }
+    );
+
+    it('leaves a stored reverse swap that already has a preimage unchanged', async () => {
+        restoreResponse([reverseAt(0)]);
+        await newStore().getRescuableSwaps({ seedArray: SEED, host: HOST });
+        const [stored] = getStored(SWAPS_KEY);
+        const own = { ...stored, preimage: { type: 'Buffer', data: [7] } };
+        setStored(SWAPS_KEY, [own]);
+
+        await newStore().getRescuableSwaps({ seedArray: SEED, host: HOST });
+
+        expect(allStored()).toEqual([own]);
+    });
+
+    it('does not repair a stored swap from a key the host does not point at', async () => {
+        // the stored swap uses key 1; a preimage derived at the host's key
+        // index 0 would not open its lockup, and belongs to another swap
+        const stored = await rescueWithoutPreimage(1);
+        setStored(SWAPS_KEY, [stored]);
+        restoreResponse([reverseAt(0)]);
+
+        await newStore().getRescuableSwaps({ seedArray: SEED, host: HOST });
+
+        expect(allStored()).toEqual([stored]);
+    });
+
+    it('does not repair a stored swap whose preimage hash is not the derived one', async () => {
+        const stored = await rescueWithoutPreimage();
+        const withHash = { ...stored, preimageHash: 'ff'.repeat(32) };
+        setStored(SWAPS_KEY, [withHash]);
+        restoreResponse([reverseAt(0)]);
+
+        await newStore().getRescuableSwaps({ seedArray: SEED, host: HOST });
+
+        expect(allStored()).toEqual([withHash]);
+    });
+
+    it('skips a submarine swap it already has and adds no preimage', async () => {
+        const submarine = {
+            id: 'rescued-submarine',
+            type: 'Submarine',
+            status: 'invoice.set'
+        };
+        setStored(SWAPS_KEY, [submarine]);
+        restoreResponse([
+            {
+                id: 'rescued-submarine',
+                type: 'submarine',
+                refundDetails: { keyIndex: 3 }
+            }
+        ]);
+
+        await newStore().getRescuableSwaps({ seedArray: SEED, host: HOST });
+
+        expect(allStored()).toEqual([submarine]);
+    });
+
+    it('collapses copies left by earlier runs, keeping the one with a preimage', async () => {
+        restoreResponse([reverseAt(0)]);
+        await newStore().getRescuableSwaps({ seedArray: SEED, host: HOST });
+        const [withPreimage] = getStored(SWAPS_KEY);
+        const withoutPreimage = { ...withPreimage };
+        delete withoutPreimage.preimage;
+        const other = { id: 'other', type: 'Reverse' };
+        setStored(REVERSE_SWAPS_KEY, [withoutPreimage, other]);
+        setStored(SWAPS_KEY, [withPreimage]);
+        restoreResponse([reverseAt(0)]);
+
+        await newStore().getRescuableSwaps({ seedArray: SEED, host: HOST });
+
+        expect(getStored(REVERSE_SWAPS_KEY)).toEqual([other]);
+        expect(getStored(SWAPS_KEY)).toEqual([withPreimage]);
+    });
+
+    it('stores a swap the host lists twice only once', async () => {
+        restoreResponse([reverseAt(0), reverseAt(0)]);
+
+        await newStore().getRescuableSwaps({ seedArray: SEED, host: HOST });
+
+        expect(allStored()).toHaveLength(1);
+    });
+});
+
 describe('SwapStore.updateSwapDestinationAddress', () => {
     it('records the address on a reverse swap', async () => {
         setStored(REVERSE_SWAPS_KEY, [{ id: 'other' }, { id: 'reverse-swap' }]);
