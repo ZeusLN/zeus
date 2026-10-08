@@ -671,6 +671,7 @@ export default class Receive extends React.Component<
                     : undefined,
                 noLsp: !effectiveLspIsActive,
                 forceLsp: !!this.props.route.params?.forceLsp,
+                useLsp: effectiveLspIsActive,
                 skipOnchain,
                 ...this.getUnifiedAccountParams()
             })
@@ -781,6 +782,7 @@ export default class Receive extends React.Component<
                             lnurl: lnurlParams,
                             noLsp: !lspIsActive,
                             forceLsp: !!this.props.route.params?.forceLsp,
+                            useLsp: lspIsActive,
                             skipOnchain,
                             ...this.getUnifiedAccountParams()
                         })
@@ -3001,6 +3003,7 @@ export default class Receive extends React.Component<
                                                             forceLsp:
                                                                 !!route.params
                                                                     ?.forceLsp,
+                                                            useLsp: lspIsActive,
                                                             skipOnchain,
                                                             ...this.getUnifiedAccountParams()
                                                         })

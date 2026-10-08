@@ -189,6 +189,7 @@ export default class InvoicesStore {
         customPreimage,
         noLsp,
         forceLsp,
+        useLsp,
         skipOnchain
     }: {
         memo: string;
@@ -204,6 +205,7 @@ export default class InvoicesStore {
         customPreimage?: string;
         noLsp?: boolean;
         forceLsp?: boolean;
+        useLsp?: boolean;
         skipOnchain?: boolean;
     }) => {
         this.creatingInvoice = true;
@@ -219,7 +221,8 @@ export default class InvoicesStore {
             unified: true,
             customPreimage,
             noLsp,
-            forceLsp
+            forceLsp,
+            useLsp
         })
             .then((result) => {
                 if (!result?.rHash || !result?.paymentRequest) {
@@ -290,7 +293,8 @@ export default class InvoicesStore {
         unified,
         customPreimage,
         noLsp,
-        forceLsp
+        forceLsp,
+        useLsp
     }: {
         memo: string;
         value: string;
@@ -304,7 +308,15 @@ export default class InvoicesStore {
         customPreimage?: string;
         noLsp?: boolean;
         forceLsp?: boolean;
+        useLsp?: boolean;
     }) => {
+        // useLsp is the caller's own decision. Receive passes it because
+        // its LSP switch writes enableLSP through the settings queue, so
+        // settings.enableLSP can still hold the old value when the user
+        // taps Create invoice right after flipping the switch.
+        const lspRequested =
+            useLsp ?? (!!this.settingsStore.settings?.enableLSP || !!forceLsp);
+
         this.lspStore?.resetFee();
         this.payment_request = null;
         this.payment_request_amt = null;
@@ -384,7 +396,7 @@ export default class InvoicesStore {
 
         if (
             BackendUtils.supportsFlowLSP() &&
-            (this.settingsStore.settings?.enableLSP || forceLsp) &&
+            lspRequested &&
             value &&
             value !== '0' &&
             !noLsp
@@ -463,7 +475,7 @@ export default class InvoicesStore {
                 let jit_bolt11: string = '';
                 if (
                     BackendUtils.supportsFlowLSP() &&
-                    (this.settingsStore.settings?.enableLSP || forceLsp) &&
+                    lspRequested &&
                     value !== '0' &&
                     !noLsp
                 ) {
