@@ -23,7 +23,8 @@ import {
     MIN_REVERSE_SWAP_CLAIM_BLOCKS,
     calculateReceiveAmount,
     deriveSwapPreimage,
-    rescuedLockupFloor
+    rescuedLockupFloor,
+    isAlreadyBroadcastError
 } from '../utils/SwapUtils';
 import BackendUtils from '../utils/BackendUtils';
 import Bolt11Utils from '../utils/Bolt11Utils';
@@ -1227,6 +1228,127 @@ export default class SwapStore {
                 error
             );
             return false;
+        }
+    };
+
+    /**
+     * Writes fields onto a stored swap, wherever it is filed. Rescued swaps
+     * stay in SWAPS_KEY until the next fetchAndUpdateSwaps, so both lists
+     * are searched.
+     */
+    private updateStoredSwap = async (
+        swapId: string,
+        fields: { [key: string]: any }
+    ): Promise<boolean> => {
+        for (const key of [REVERSE_SWAPS_KEY, SWAPS_KEY]) {
+            const storedSwaps = await Storage.getItem(key);
+            const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+            if (!swaps.some((swap: any) => swap?.id === swapId)) continue;
+
+            await Storage.setItem(
+                key,
+                JSON.stringify(
+                    swaps.map((swap: any) =>
+                        swap?.id === swapId ? { ...swap, ...fields } : swap
+                    )
+                )
+            );
+            return true;
+        }
+        console.error(`No stored swap found for swap ID ${swapId}`);
+        return false;
+    };
+
+    /**
+     * Stores a reverse swap's signed claim before it is first broadcast.
+     * The claim may already have handed the preimage to the host, so if
+     * the broadcast fails it has to be retried with this transaction.
+     */
+    public saveClaimTransaction = (
+        swapId: string,
+        claimTransactionHex: string
+    ) => this.updateStoredSwap(swapId, { claimTransactionHex });
+
+    public saveClaimTxid = (swapId: string, claimTxid: string) =>
+        this.updateStoredSwap(swapId, { claimTxid });
+
+    /**
+     * Broadcasts a swap claim or refund: first to the user's mempool
+     * instance, then to the swap host if that fails. A transaction that is
+     * already in the mempool or a block counts as broadcast. Returns the
+     * txid, or throws with both errors.
+     */
+    public broadcastSwapTransaction = async (
+        txHex: string,
+        endpoint?: string
+    ): Promise<string> => {
+        const txid = Transaction.fromHex(txHex).getId();
+        const errors: string[] = [];
+
+        const apiUrl = UrlUtils.getMempoolApiUrl(this.nodeInfoStore.nodeInfo);
+        try {
+            const response = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${apiUrl}/tx`,
+                { 'Content-Type': 'text/plain' },
+                txHex
+            );
+            const httpStatus = response.info().status;
+            const text = String((await response.text()) || '');
+            if (httpStatus === 200 || isAlreadyBroadcastError(text)) {
+                return txid;
+            }
+            errors.push(`${apiUrl}: ${httpStatus} ${text}`);
+        } catch (e: any) {
+            errors.push(`${apiUrl}: ${e?.message ?? e}`);
+        }
+
+        if (endpoint) {
+            try {
+                const response = await ReactNativeBlobUtil.fetch(
+                    'POST',
+                    `${endpoint}/chain/BTC/transaction`,
+                    { 'Content-Type': 'application/json' },
+                    JSON.stringify({ hex: txHex })
+                );
+                const httpStatus = response.info().status;
+                const text = String((await response.text()) || '');
+                if (
+                    httpStatus === 200 ||
+                    httpStatus === 201 ||
+                    isAlreadyBroadcastError(text)
+                ) {
+                    return txid;
+                }
+                errors.push(`${endpoint}: ${httpStatus} ${text}`);
+            } catch (e: any) {
+                errors.push(`${endpoint}: ${e?.message ?? e}`);
+            }
+        }
+
+        throw new Error(errors.join('; '));
+    };
+
+    /**
+     * The lockup transaction of a reverse swap, from its host. Used to
+     * claim a swap whose invoice was settled before the claim was
+     * broadcast; the invoice.settled update carries no transaction.
+     */
+    public getReverseLockupTransactionHex = async (
+        id: string,
+        endpoint: string
+    ): Promise<string | undefined> => {
+        try {
+            const response = await ReactNativeBlobUtil.fetch(
+                'GET',
+                `${endpoint}/swap/reverse/${id}/transaction`
+            );
+            if (response.info().status !== 200) return undefined;
+            const hex = response.json()?.hex;
+            return typeof hex === 'string' && hex ? hex : undefined;
+        } catch (e) {
+            console.error('Could not fetch the reverse swap lockup', e);
+            return undefined;
         }
     };
 

@@ -3,7 +3,7 @@ jest.mock('mobx-react', () => ({
     observer: (component: any) => component
 }));
 jest.mock('../../lndmobile/LndMobileInjection', () => ({
-    swaps: { createRefundTransaction: jest.fn() }
+    swaps: { buildRefundTransaction: jest.fn() }
 }));
 jest.mock('../../utils/BackendUtils', () => ({
     getMyNodeInfo: jest.fn(),
@@ -76,12 +76,15 @@ import RefundSwap from './Refund';
 import lndMobile from '../../lndmobile/LndMobileInjection';
 import BackendUtils from '../../utils/BackendUtils';
 
-const nativeRefund = lndMobile.swaps.createRefundTransaction as jest.Mock;
+const nativeBuild = lndMobile.swaps.buildRefundTransaction as jest.Mock;
 const getMyNodeInfo = BackendUtils.getMyNodeInfo as jest.Mock;
 
 const TIMEOUT = 900000;
 const NOT_COSIGNED = 'could not create refund transaction: all outputs invalid';
-const NON_FINAL = 'non-200 response: 400, body: non-final';
+// broadcastSwapTransaction's error when neither the mempool instance nor
+// the host takes a transaction whose locktime is above the tip
+const NON_FINAL =
+    'https://mempool.space/api: 400 sendrawtransaction RPC error: {"code":-26,"message":"non-final"}; https://provider.test/v2: 400 {"error":"non-final"}';
 
 const SWAP = {
     id: 'swap',
@@ -100,17 +103,26 @@ const SWAP = {
 const hostOfType = (type: string) =>
     screen.container.queryAll((n) => n.type === type)[0];
 
+// broadcastSwapTransaction for the next refund; reset before each test
+let broadcast: jest.Mock;
+
 // Opens the refund screen, enters the destination and a 3 sat/vB fee, turns
 // the uncooperative switch on if asked, and presses Initiate refund
-const refund = async ({ uncooperative = false } = {}) => {
-    const store = { updateSwapOnRefund: jest.fn().mockResolvedValue(true) };
+const refund = async ({
+    uncooperative = false,
+    nodeInfo = {}
+}: { uncooperative?: boolean; nodeInfo?: any } = {}) => {
+    const store = {
+        updateSwapOnRefund: jest.fn().mockResolvedValue(true),
+        broadcastSwapTransaction: broadcast
+    };
     await render(
         <RefundSwap
             {...({
                 navigation: { navigate: jest.fn(), setParams: jest.fn() },
                 route: { params: { swapData: { ...SWAP } } },
                 SwapStore: store,
-                NodeInfoStore: { nodeInfo: { isTestNet: false } },
+                NodeInfoStore: { nodeInfo },
                 InvoicesStore: {}
             } as any)}
         />
@@ -138,10 +150,12 @@ const tipAt = (height: number) =>
     getMyNodeInfo.mockResolvedValue({ block_height: height });
 
 const cooperativeFlags = () =>
-    nativeRefund.mock.calls.map(([args]) => args.cooperative);
+    nativeBuild.mock.calls.map(([args]) => args.cooperative);
 
 beforeEach(() => {
-    nativeRefund.mockReset();
+    nativeBuild.mockReset();
+    nativeBuild.mockResolvedValue('signedhex');
+    broadcast = jest.fn();
     getMyNodeInfo.mockReset();
     jest.spyOn(console, 'log').mockImplementation(() => {});
     jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -151,7 +165,7 @@ afterEach(() => jest.restoreAllMocks());
 
 describe('RefundSwap refund button', () => {
     it('records a cooperative refund without looking up the tip', async () => {
-        nativeRefund.mockResolvedValue('txid-coop');
+        broadcast.mockResolvedValue('txid-coop');
 
         const store = await refund();
 
@@ -171,37 +185,39 @@ describe('RefundSwap refund button', () => {
     });
 
     it('hands native code the host without its /v2 suffix', async () => {
-        nativeRefund.mockResolvedValue('txid');
+        broadcast.mockResolvedValue('txid');
 
         await refund();
 
-        expect(nativeRefund.mock.calls[0][0]).toMatchObject({
+        expect(nativeBuild.mock.calls[0][0]).toMatchObject({
             endpoint: 'https://provider.test',
             swapId: 'swap',
             transactionHex: 'lockuphex',
             feeRate: 3,
             timeoutBlockHeight: TIMEOUT,
             destinationAddress: 'bc1qdestination',
-            lockupAddress: 'bc1plockup'
+            lockupAddress: 'bc1plockup',
+            network: 'mainnet'
         });
     });
 
     it('hands native code the host without its /v2 suffix on the uncooperative retry too', async () => {
         tipAt(TIMEOUT);
-        nativeRefund
+        nativeBuild
             .mockRejectedValueOnce(new Error(NOT_COSIGNED))
-            .mockResolvedValueOnce('txid-uncoop');
+            .mockResolvedValueOnce('hex-uncoop');
+        broadcast.mockResolvedValue('txid-uncoop');
 
         await refund();
 
-        expect(nativeRefund.mock.calls.map(([args]) => args.endpoint)).toEqual([
+        expect(nativeBuild.mock.calls.map(([args]) => args.endpoint)).toEqual([
             'https://provider.test',
             'https://provider.test'
         ]);
     });
 
     it('shows the host without its /v2 suffix in the raw details', async () => {
-        nativeRefund.mockResolvedValue('txid');
+        broadcast.mockResolvedValue('txid');
 
         await refund();
 
@@ -211,17 +227,47 @@ describe('RefundSwap refund button', () => {
         expect(endpointRow?.props.value).toBe('https://provider.test');
     });
 
+    it.each([
+        [{ isTestNet: true }, 'testnet'],
+        [{ isSigNet: true }, 'testnet'],
+        [{ isRegTest: true }, 'regtest']
+    ])(
+        'builds the refund for the node network %j as %s',
+        async (nodeInfo, network) => {
+            broadcast.mockResolvedValue('txid');
+
+            await refund({ nodeInfo });
+
+            expect(nativeBuild.mock.calls[0][0].network).toBe(network);
+        }
+    );
+
+    it('broadcasts the signed refund from the app, with the host as fallback', async () => {
+        broadcast.mockResolvedValue('txid');
+
+        await refund();
+
+        expect(broadcast).toHaveBeenCalledTimes(1);
+        expect(broadcast).toHaveBeenCalledWith(
+            'signedhex',
+            'https://provider.test/v2'
+        );
+    });
+
     it.each([TIMEOUT, TIMEOUT + 10])(
         'retries uncooperatively when the host will not co-sign and the tip is %s',
         async (tip) => {
             tipAt(tip);
-            nativeRefund
+            nativeBuild
                 .mockRejectedValueOnce(new Error(NOT_COSIGNED))
-                .mockResolvedValueOnce('txid-uncoop');
+                .mockResolvedValueOnce('hex-uncoop');
+            broadcast.mockResolvedValue('txid-uncoop');
 
             const store = await refund();
 
             expect(cooperativeFlags()).toEqual([true, false]);
+            expect(broadcast).toHaveBeenCalledTimes(1);
+            expect(broadcast).toHaveBeenCalledWith('hex-uncoop', SWAP.endpoint);
             expect(uncooperativeOn()).toBe(true);
             expect(store.updateSwapOnRefund).toHaveBeenCalledWith(
                 'swap',
@@ -234,11 +280,12 @@ describe('RefundSwap refund button', () => {
 
     it('says when an uncooperative refund becomes possible if the timeout is ahead', async () => {
         tipAt(TIMEOUT - 1234);
-        nativeRefund.mockRejectedValue(new Error(NOT_COSIGNED));
+        nativeBuild.mockRejectedValue(new Error(NOT_COSIGNED));
 
         const store = await refund();
 
         expect(cooperativeFlags()).toEqual([true]);
+        expect(broadcast).not.toHaveBeenCalled();
         expect(uncooperativeOn()).toBe(false);
         expect(errorShown()).toBe(
             'views.Swaps.refundNotCosigned after block 900,000 (1,234 to go). views.Swaps.turnOnUncooperativeRefund'
@@ -260,7 +307,7 @@ describe('RefundSwap refund button', () => {
         'leaves out the block count, and does not retry, when %s',
         async (_, setUpTip) => {
             setUpTip();
-            nativeRefund.mockRejectedValue(new Error(NOT_COSIGNED));
+            nativeBuild.mockRejectedValue(new Error(NOT_COSIGNED));
 
             await refund();
 
@@ -273,7 +320,7 @@ describe('RefundSwap refund button', () => {
 
     it('shows any other cooperative failure as is', async () => {
         tipAt(TIMEOUT + 10);
-        nativeRefund.mockRejectedValue(new Error('fee too low'));
+        nativeBuild.mockRejectedValue(new Error('fee too low'));
 
         await refund();
 
@@ -284,7 +331,7 @@ describe('RefundSwap refund button', () => {
 
     it('shows only the block message when an uncooperative refund is rejected as non-final', async () => {
         tipAt(TIMEOUT - 3);
-        nativeRefund.mockRejectedValue(new Error(NON_FINAL));
+        broadcast.mockRejectedValue(new Error(NON_FINAL));
 
         await refund({ uncooperative: true });
 
@@ -294,7 +341,7 @@ describe('RefundSwap refund button', () => {
 
     it('shows any other uncooperative failure as is', async () => {
         tipAt(TIMEOUT + 10);
-        nativeRefund.mockRejectedValue(new Error('invalid address'));
+        nativeBuild.mockRejectedValue(new Error('invalid address'));
 
         await refund({ uncooperative: true });
 
@@ -303,9 +350,8 @@ describe('RefundSwap refund button', () => {
 
     it('shows the retry error, and records nothing, when the uncooperative retry fails', async () => {
         tipAt(TIMEOUT);
-        nativeRefund
-            .mockRejectedValueOnce(new Error(NOT_COSIGNED))
-            .mockRejectedValueOnce(new Error('broadcast failed'));
+        nativeBuild.mockRejectedValueOnce(new Error(NOT_COSIGNED));
+        broadcast.mockRejectedValue(new Error('broadcast failed'));
 
         const store = await refund();
 
