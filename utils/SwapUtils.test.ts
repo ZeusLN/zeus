@@ -33,6 +33,7 @@ import {
     calculateServiceFeeOnSend,
     calculateSendAmount,
     calculateLimit,
+    fetchBlockHeight,
     isValidRescueKey,
     refundFailureAction,
     swapWebSocketUrl,
@@ -362,20 +363,37 @@ describe('SwapUtils', () => {
             expect(action(true, '', 900_010)).toEqual({ type: 'show-error' });
         });
 
-        it('says how long to wait when an uncooperative refund is tried too early', () => {
-            expect(action(false, 'non-final', 899_999)).toEqual({
+        // mempool.space relays bitcoind's rejection in the response body
+        const NON_FINAL =
+            'non-200 response: 400, body: sendrawtransaction RPC error: {"code":-26,"message":"non-final"}';
+
+        it('says how long to wait when an uncooperative refund is rejected as non-final', () => {
+            expect(action(false, NON_FINAL, 899_999)).toEqual({
                 type: 'wait-for-timeout',
                 blocksRemaining: 1
             });
         });
 
-        it('shows uncooperative errors as-is past the timeout or with an unknown tip', () => {
-            expect(action(false, 'non-final', 900_000)).toEqual({
+        it('says to wait without a count when a non-final rejection has no usable tip', () => {
+            expect(action(false, NON_FINAL, 0)).toEqual({
+                type: 'wait-for-timeout'
+            });
+            // the node is past the timeout but the broadcaster is not yet
+            expect(action(false, NON_FINAL, 900_000)).toEqual({
+                type: 'wait-for-timeout'
+            });
+        });
+
+        it('shows other uncooperative errors as-is, even before the timeout', () => {
+            const fee = 'non-200 response: 400, body: min relay fee not met';
+            const address =
+                'could not create refund transaction: invalid address';
+            expect(action(false, fee, 899_000)).toEqual({ type: 'show-error' });
+            expect(action(false, address, 899_000)).toEqual({
                 type: 'show-error'
             });
-            expect(action(false, 'non-final', 0)).toEqual({
-                type: 'show-error'
-            });
+            expect(action(false, fee, 0)).toEqual({ type: 'show-error' });
+            expect(action(false, '', 899_000)).toEqual({ type: 'show-error' });
         });
 
         it('shows the error when the swap has no timeout block', () => {
@@ -385,6 +403,27 @@ describe('SwapUtils', () => {
             expect(action(true, NOT_COSIGNED, 900_000, NaN)).toEqual({
                 type: 'show-error'
             });
+        });
+    });
+
+    describe('fetchBlockHeight', () => {
+        it('returns the fetched tip', async () => {
+            expect(await fetchBlockHeight(async () => 900_123)).toBe(900_123);
+        });
+
+        it('returns 0 (unknown) when the fetch fails', async () => {
+            const log = jest.spyOn(console, 'log').mockImplementation();
+            expect(
+                await fetchBlockHeight(() =>
+                    Promise.reject(new Error('offline'))
+                )
+            ).toBe(0);
+            log.mockRestore();
+        });
+
+        it('returns 0 (unknown) when the backend reports no height', async () => {
+            expect(await fetchBlockHeight(async () => undefined)).toBe(0);
+            expect(await fetchBlockHeight(async () => 0)).toBe(0);
         });
     });
 

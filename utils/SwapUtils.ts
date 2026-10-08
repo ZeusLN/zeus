@@ -101,7 +101,8 @@ export type RefundFailureAction =
  * - cooperative, not co-signed, timeout reached: retry uncooperatively
  * - cooperative, not co-signed, timeout not reached or tip unknown: tell
  *   the user when an uncooperative refund becomes possible
- * - uncooperative, timeout not reached: same, the refund can't be final yet
+ * - uncooperative, rejected as "non-final" (bitcoind's error for a
+ *   transaction whose locktime is above the tip): same
  * Anything else (fee, address, broadcast errors) is shown as-is.
  */
 export const refundFailureAction = ({
@@ -130,9 +131,27 @@ export const refundFailureAction = ({
             : { type: 'retry-uncooperative' };
     }
 
+    if (!/non-final/i.test(errorMessage || '')) return { type: 'show-error' };
     return tipKnown && blocksRemaining > 0
         ? { type: 'wait-for-timeout', blocksRemaining }
-        : { type: 'show-error' };
+        : { type: 'wait-for-timeout' };
+};
+
+/**
+ * Returns the current chain tip from getBlockHeight, or 0 (unknown) if it
+ * fails. There is deliberately no fallback to stored node info: it can be
+ * hours old, and a stale tip would count down blocks already mined and
+ * rule out a refund that is possible now.
+ */
+export const fetchBlockHeight = async (
+    getBlockHeight: () => Promise<number | Number | undefined>
+): Promise<number> => {
+    try {
+        return Number(await getBlockHeight()) || 0;
+    } catch (e) {
+        console.log('Could not refresh the block height:', e);
+        return 0;
+    }
 };
 
 export const SWAPS_KEY = 'swaps';

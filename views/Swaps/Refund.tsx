@@ -28,6 +28,7 @@ import { localeString, pascalToHumanReadable } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
 import {
+    fetchBlockHeight,
     refundFailureAction,
     RefundFailureAction
 } from '../../utils/SwapUtils';
@@ -105,21 +106,12 @@ export default class RefundSwap extends React.Component<
             isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
         });
 
-    // The stored node info can be hours old; whether the refund timeout
-    // has passed depends on the current tip.
-    latestBlockHeight = async (): Promise<number> => {
-        try {
-            const nodeInfo = new NodeInfo(await BackendUtils.getMyNodeInfo());
-            if (nodeInfo.currentBlockHeight) {
-                return Number(nodeInfo.currentBlockHeight);
-            }
-        } catch (e) {
-            console.log('Could not refresh the block height:', e);
-        }
-        return (
-            Number(this.props.NodeInfoStore!.nodeInfo.currentBlockHeight) || 0
+    latestBlockHeight = (): Promise<number> =>
+        fetchBlockHeight(
+            async () =>
+                new NodeInfo(await BackendUtils.getMyNodeInfo())
+                    .currentBlockHeight
         );
-    };
 
     refundErrorText = (
         action: RefundFailureAction,
@@ -141,9 +133,13 @@ export default class RefundSwap extends React.Component<
                       'views.Swaps.uncooperativeRefundAfterBlock'
                   ).replace('{{block}}', block);
 
-        return cooperative
-            ? `${localeString('views.Swaps.refundNotCosigned')} ${wait}`
-            : wait;
+        // The switch is already on after an uncooperative attempt
+        if (!cooperative) return wait;
+        return [
+            localeString('views.Swaps.refundNotCosigned'),
+            wait,
+            localeString('views.Swaps.turnOnUncooperativeRefund')
+        ].join(' ');
     };
 
     createRefundTransaction = async (
