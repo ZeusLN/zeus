@@ -4,7 +4,6 @@ import {
     Dimensions,
     NativeEventSubscription,
     Text,
-    TouchableOpacity,
     View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -38,10 +37,8 @@ import UrlUtils from '../../utils/UrlUtils';
 
 import Storage from '../../storage';
 
-import Clock from '../../assets/images/SVG/Clock.svg';
 import Wordmark from '../../assets/images/SVG/wordmark-black.svg';
 
-import ModalBox from '../../components/ModalBox';
 import Header from '../../components/Header';
 import PaymentDetailsSheet from '../../components/PaymentDetailsSheet';
 
@@ -71,7 +68,6 @@ interface CashuSendingLightningState {
     donationPreimage: string;
     amountDonated: number | null;
     donationIsPaid: boolean;
-    showZaplockerWarning: boolean;
     showPaymentDetails: boolean;
 }
 
@@ -99,7 +95,6 @@ export default class CashuSendingLightning extends React.Component<
             wasSuccessful: false,
             paymentType: 'main',
             donationIsPaid: false,
-            showZaplockerWarning: false,
             showPaymentDetails: false
         };
     }
@@ -229,66 +224,6 @@ export default class CashuSendingLightning extends React.Component<
         }
     };
 
-    renderZaplockerWarningModal = () => {
-        const { showZaplockerWarning } = this.state;
-
-        return (
-            <ModalBox
-                isOpen={showZaplockerWarning}
-                style={{
-                    backgroundColor: 'transparent'
-                }}
-                onClosed={() => {
-                    this.setState({
-                        showZaplockerWarning: false
-                    });
-                }}
-                position="center"
-            >
-                <View
-                    style={{
-                        flex: 1,
-                        justifyContent: 'center',
-                        alignItems: 'center'
-                    }}
-                >
-                    <View
-                        style={{
-                            backgroundColor: themeColor('secondary'),
-                            borderRadius: 24,
-                            padding: 20,
-                            alignItems: 'center',
-                            width: '90%'
-                        }}
-                    >
-                        <Text
-                            style={{
-                                fontFamily: 'PPNeueMontreal-Book',
-                                color: themeColor('text'),
-                                fontSize: 18,
-                                marginBottom: 20,
-                                textAlign: 'center'
-                            }}
-                        >
-                            {localeString('views.SendingLightning.isZaplocker')}
-                        </Text>
-
-                        <Button
-                            title={localeString('general.close')}
-                            onPress={() =>
-                                this.setState({ showZaplockerWarning: false })
-                            }
-                            containerStyle={{
-                                marginTop: 18
-                            }}
-                            tertiary
-                        />
-                    </View>
-                </View>
-            </ModalBox>
-        );
-    };
-
     private handleBackPress(): boolean {
         const { CashuStore, navigation } = this.props;
         if (!CashuStore.error && this.successfullySent(CashuStore)) {
@@ -359,27 +294,7 @@ export default class CashuSendingLightning extends React.Component<
 
         return (
             <Screen>
-                {!loading && (
-                    <Header
-                        rightComponent={
-                            LnurlPayStore.isZaplocker &&
-                            (!success || !!paymentError) ? (
-                                <TouchableOpacity
-                                    onPress={() =>
-                                        this.setState({
-                                            showZaplockerWarning: true
-                                        })
-                                    }
-                                >
-                                    <Clock color={themeColor('bitcoin')} />
-                                </TouchableOpacity>
-                            ) : (
-                                <></>
-                            )
-                        }
-                    />
-                )}
-                {this.renderZaplockerWarningModal()}
+                {!loading && <Header />}
                 <DonationInfoModal
                     isOpen={this.state.showDonationInfo}
                     onClose={() => this.setState({ showDonationInfo: false })}
@@ -418,14 +333,11 @@ export default class CashuSendingLightning extends React.Component<
                                     paymentDuration={paymentDuration}
                                 />
                             )}
-                            {(!!paymentError || !!paymentErrorMsg) &&
-                                !LnurlPayStore.isZaplocker && (
-                                    <PaymentErrorView
-                                        errorMessage={
-                                            paymentErrorMsg || error_msg
-                                        }
-                                    />
-                                )}
+                            {(!!paymentError || !!paymentErrorMsg) && (
+                                <PaymentErrorView
+                                    errorMessage={paymentErrorMsg || error_msg}
+                                />
+                            )}
                             {!paymentError &&
                                 payment_hash === LnurlPayStore.paymentHash &&
                                 LnurlPayStore.successAction &&
