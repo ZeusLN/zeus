@@ -56,15 +56,7 @@ export default class VssServer extends React.Component<
 
     saveSettings = async (server: string) => {
         const { SettingsStore } = this.props;
-        const { settings, updateSettings } = SettingsStore;
-        const selectedNode = settings.selectedNode || 0;
-        const nodes = [...(settings.nodes || [])];
-        if (nodes[selectedNode]) {
-            nodes[selectedNode] = {
-                ...nodes[selectedNode],
-                ldkVssServer: server
-            };
-            await updateSettings({ nodes });
+        if (await SettingsStore.updateSelectedNode({ ldkVssServer: server })) {
             this.setState({ savedVssServer: server });
             restartNeeded();
         }

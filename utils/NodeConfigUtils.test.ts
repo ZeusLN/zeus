@@ -111,10 +111,21 @@ jest.mock('@react-native-documents/picker', () => ({
 }));
 
 const mockUpdateSettings = jest.fn().mockResolvedValue(undefined);
-const createMockSettingsStore = (nodes?: any[]): Partial<SettingsStore> => ({
-    settings: { nodes } as any as Settings,
-    updateSettings: mockUpdateSettings
-});
+const createMockSettingsStore = (nodes?: any[]): Partial<SettingsStore> => {
+    mockStoreSettings = { nodes };
+    return {
+        settings: mockStoreSettings as Settings,
+        updateSettings: mockUpdateSettings
+    };
+};
+
+// saveNodeConfigs passes a functional update; apply it to the settings
+// as they are inside the queue (by default, the mock store's own)
+let mockStoreSettings: any;
+const appliedUpdate = (current: any = mockStoreSettings) => {
+    const update = mockUpdateSettings.mock.calls[0][0];
+    return typeof update === 'function' ? update(current) : update;
+};
 
 // Long enough to clear MIN_EXPORT_PASSWORD_LENGTH.
 const testPassword = 'hunter2!';
@@ -149,7 +160,7 @@ describe('NodeConfigUtils', () => {
 
             await saveNodeConfigs(newNodes, store as SettingsStore);
 
-            expect(mockUpdateSettings).toHaveBeenCalledWith({
+            expect(appliedUpdate()).toEqual({
                 nodes: [
                     { implementation: 'lnd', dismissCustodialWarning: true },
                     {
@@ -168,9 +179,36 @@ describe('NodeConfigUtils', () => {
 
             await saveNodeConfigs(newNodes, store as SettingsStore);
 
-            expect(mockUpdateSettings).toHaveBeenCalledWith({
+            expect(appliedUpdate()).toEqual({
                 nodes: [
                     { implementation: 'lnd', dismissCustodialWarning: true }
+                ]
+            });
+        });
+
+        it('appends to the nodes as they are inside the queue', async () => {
+            // A wallet added by a write still in the queue is not in the
+            // store's settings yet; copying those would drop it.
+            const store = createMockSettingsStore([
+                { implementation: 'lnd' } as any
+            ]);
+            await saveNodeConfigs(
+                [{ implementation: 'cln-rest' } as any],
+                store as SettingsStore
+            );
+
+            expect(
+                appliedUpdate({
+                    nodes: [
+                        { implementation: 'lnd' },
+                        { implementation: 'ldk-node' }
+                    ]
+                })
+            ).toEqual({
+                nodes: [
+                    { implementation: 'lnd' },
+                    { implementation: 'ldk-node' },
+                    { implementation: 'cln-rest' }
                 ]
             });
         });

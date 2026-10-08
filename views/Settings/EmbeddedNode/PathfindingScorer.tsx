@@ -44,15 +44,7 @@ export default class PathfindingScorer extends React.Component<
 
     saveSettings = async (server: string) => {
         const { SettingsStore } = this.props;
-        const { settings, updateSettings } = SettingsStore;
-        const selectedNode = settings.selectedNode || 0;
-        const nodes = [...(settings.nodes || [])];
-        if (nodes[selectedNode]) {
-            nodes[selectedNode] = {
-                ...nodes[selectedNode],
-                ldkScorerUrl: server
-            };
-            await updateSettings({ nodes });
+        if (await SettingsStore.updateSelectedNode({ ldkScorerUrl: server })) {
             this.setState({ savedScorerUrl: server });
             restartNeeded();
         }

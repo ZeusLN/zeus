@@ -502,6 +502,63 @@ describe('SettingsStore.updateSettingsGroup', () => {
     });
 });
 
+describe('SettingsStore.updateSelectedNode', () => {
+    it('keeps a change an earlier queued write made to the nodes', async () => {
+        // Saving a custom Esplora server, then an RGS server while the
+        // first write is still queued (#4904 review)
+        seedSettings({
+            selectedNode: 1,
+            nodes: [{ implementation: 'lnd' }, { implementation: 'ldk-node' }]
+        });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        const results = await Promise.all([
+            store.updateSelectedNode({ ldkEsploraServer: 'https://e' }),
+            store.updateSelectedNode({ ldkRgsServer: 'https://r' })
+        ]);
+
+        expect(results).toEqual([true, true]);
+        expect(persistedSettings().nodes).toEqual([
+            { implementation: 'lnd' },
+            {
+                implementation: 'ldk-node',
+                ldkEsploraServer: 'https://e',
+                ldkRgsServer: 'https://r'
+            }
+        ]);
+    });
+
+    it('updates the node selected inside the queue', async () => {
+        seedSettings({
+            selectedNode: 0,
+            nodes: [{ implementation: 'lnd' }, { implementation: 'ldk-node' }]
+        });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        await Promise.all([
+            store.updateSettings({ selectedNode: 1 }),
+            store.updateSelectedNode({ ldkScorerUrl: 'https://s' })
+        ]);
+
+        expect(persistedSettings().nodes).toEqual([
+            { implementation: 'lnd' },
+            { implementation: 'ldk-node', ldkScorerUrl: 'https://s' }
+        ]);
+    });
+
+    it('resolves false and adds no node when none is selected', async () => {
+        seedSettings({ nodes: [] });
+        const store = new SettingsStore();
+
+        expect(
+            await store.updateSelectedNode({ dismissCustodialWarning: true })
+        ).toBe(false);
+        expect(persistedSettings().nodes).toEqual([]);
+    });
+});
+
 describe('SettingsStore.updateSettingsGroupDebounced', () => {
     const { AppState } = require('react-native');
     let appStateHandler: ((state: string) => void) | undefined;

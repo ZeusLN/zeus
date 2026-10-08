@@ -64,15 +64,7 @@ export default class RapidGossipSync extends React.Component<
 
     saveSettings = async (server: string) => {
         const { SettingsStore } = this.props;
-        const { settings, updateSettings } = SettingsStore;
-        const selectedNode = settings.selectedNode || 0;
-        const nodes = [...(settings.nodes || [])];
-        if (nodes[selectedNode]) {
-            nodes[selectedNode] = {
-                ...nodes[selectedNode],
-                ldkRgsServer: server
-            };
-            await updateSettings({ nodes });
+        if (await SettingsStore.updateSelectedNode({ ldkRgsServer: server })) {
             this.setState({ savedRgsServer: server });
             restartNeeded();
         }

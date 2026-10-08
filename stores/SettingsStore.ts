@@ -2217,6 +2217,25 @@ export default class SettingsStore {
             }
         }));
 
+    // Merges `patch` into the selected node's config inside the queue,
+    // for the same reason as updateSettingsGroup: a nodes array copied
+    // from render-time settings would revert an earlier queued write to
+    // any node. Resolves whether a selected node existed to update.
+    public updateSelectedNode = async (
+        patch: Partial<Node>
+    ): Promise<boolean> => {
+        let updated = false;
+        await this.updateSettings((current: Settings) => {
+            const index = current?.selectedNode || 0;
+            const nodes = [...(current?.nodes || [])];
+            if (!nodes[index]) return {};
+            nodes[index] = { ...nodes[index], ...patch };
+            updated = true;
+            return { nodes };
+        });
+        return updated;
+    };
+
     private pendingGroupPatches: { [group: string]: any } = {};
     private pendingFlushTimer?: ReturnType<typeof setTimeout>;
     private pendingFlushAppStateListener?: ReturnType<

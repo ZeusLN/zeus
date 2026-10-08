@@ -3,7 +3,7 @@ import { saveDocuments } from '@react-native-documents/picker';
 import * as CryptoJS from 'crypto-js';
 import moment from 'moment';
 
-import SettingsStore, { Node } from '../stores/SettingsStore';
+import SettingsStore, { Node, Settings } from '../stores/SettingsStore';
 import { encryptFile, decryptFile } from './ZipUtils';
 
 // Bump when the on-disk export format changes. v1 = legacy CryptoJS
@@ -47,12 +47,11 @@ export const saveNodeConfigs = async (
     nodes: Node[],
     settingsStore: SettingsStore
 ): Promise<void> => {
-    const { settings } = settingsStore;
-    const existingNodes = settings.nodes || [];
-    const updatedNodes = [...existingNodes, ...nodes];
-    await settingsStore.updateSettings({
-        nodes: updatedNodes
-    });
+    // Appended inside the queued update so a write still in the queue
+    // cannot be undone by a nodes array copied before it landed
+    await settingsStore.updateSettings((current: Settings) => ({
+        nodes: [...(current?.nodes || []), ...nodes]
+    }));
 };
 
 // Encrypts the selected node configs with the user's password using the native

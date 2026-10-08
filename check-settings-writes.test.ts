@@ -17,9 +17,11 @@ const SOURCE_DIRS = [
 ];
 
 // `...settings.invoices`, `...SettingsStore.settings.nodes`,
-// `...this.settingsStore.settings?.ecash`
+// `...this.settingsStore.settings?.ecash`, `...(settings.nodes || [])`.
+// Copies taken by destructuring (`const { nodes } = settings`) are not
+// caught.
 const SETTINGS_SPREAD =
-    /\.\.\.(?:[A-Za-z_$][\w$]*\??\.)*settings\??\.[A-Za-z_$][\w$]*/;
+    /\.\.\.\(?(?:[A-Za-z_$][\w$]*\??\.)*settings\??\.[A-Za-z_$][\w$]*/;
 
 const sourceFiles = (entry: string): string[] => {
     if (!fs.statSync(entry).isDirectory()) return [entry];
