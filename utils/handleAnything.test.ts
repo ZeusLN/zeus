@@ -519,16 +519,36 @@ describe('handleAnything', () => {
                 expect(mockGetLnurlParamsFn).toHaveBeenCalledWith(
                     'https://demo.lnbits.com/bitcoinswitch/api/v1/lnurl/bD34dEpKaanBiabk7mEo2D?pin=13'
                 );
-                expect(result).toEqual([
+                expect(result).toStrictEqual([
                     'LnurlPay',
                     {
                         lnurlParams: mockGetLnurlParams,
-                        amount: undefined,
+                        satAmount: undefined,
                         ecash: false
                     }
                 ]);
             }
         );
+
+        it('should pass a provided amount through as satAmount', async () => {
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'lnurlp://demo.lnbits.com/bitcoinswitch/api/v1/lnurl/bD34dEpKaanBiabk7mEo2D?pin=13'
+            });
+
+            const result = await handleAnything(
+                'LIGHTNING:lnurlp://demo.lnbits.com/bitcoinswitch/api/v1/lnurl/bD34dEpKaanBiabk7mEo2D?pin=13',
+                '2100'
+            );
+
+            expect(result).toStrictEqual([
+                'LnurlPay',
+                {
+                    lnurlParams: mockGetLnurlParams,
+                    satAmount: '2100',
+                    ecash: false
+                }
+            ]);
+        });
 
         it('should handle LIGHTNING:lnurlp:// with .onion address and convert to http://', async () => {
             const data =
@@ -551,11 +571,11 @@ describe('handleAnything', () => {
             expect(mockGetLnurlParamsFn).toHaveBeenCalledWith(
                 'http://example.onion/api/v1/lnurl/test123'
             );
-            expect(result).toEqual([
+            expect(result).toStrictEqual([
                 'LnurlPay',
                 {
                     lnurlParams: onionParams,
-                    amount: undefined,
+                    satAmount: undefined,
                     ecash: false
                 }
             ]);
