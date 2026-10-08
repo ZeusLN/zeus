@@ -50,7 +50,7 @@ export default class NostrRelays extends React.Component<
         addRelay: ''
     };
 
-    remove = (arrOriginal: Array<string>, elementToRemove: Array<string>) => {
+    remove = (arrOriginal: Array<string>, elementToRemove: string) => {
         return arrOriginal.filter(function (el: any) {
             return el !== elementToRemove;
         });
@@ -309,9 +309,10 @@ export default class NostrRelays extends React.Component<
                                             </View>
                                         </Row>
                                     )}
-                                    keyExtractor={(item: any, index: number) =>
-                                        `${item.txid}-${index}`
-                                    }
+                                    keyExtractor={(
+                                        item: string,
+                                        index: number
+                                    ) => `${item}-${index}`}
                                     onEndReachedThreshold={50}
                                     scrollEnabled={false}
                                 />
