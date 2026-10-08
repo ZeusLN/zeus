@@ -595,6 +595,20 @@ describe('SwapUtils', () => {
             expect(refundLeaf.toString('hex')).toBe(REFUND_LEAF);
         });
 
+        // In the app, the buffer polyfill's subarray returns a plain
+        // Uint8Array, so the x-only key reached script.compile as one and
+        // was compiled as OP_0. Plain Uint8Array keys reproduce that here.
+        it('rebuilds the same leaves from plain Uint8Array keys', () => {
+            const { claimLeaf, refundLeaf } = buildReverseSwapLeaves({
+                claimPubKey: Uint8Array.from(OUR_PUBKEY) as Buffer,
+                refundPubKey: Uint8Array.from(hex(SERVER_PUBKEY)) as Buffer,
+                preimageHash: PREIMAGE_HASH,
+                timeoutBlockHeight: TIMEOUT
+            });
+            expect(claimLeaf.toString('hex')).toBe(CLAIM_LEAF);
+            expect(refundLeaf.toString('hex')).toBe(REFUND_LEAF);
+        });
+
         it('derives the boltz-client reverse swap lockup address', () => {
             const outputKey = deriveReverseSwapOutputKey({
                 ourPubKey: OUR_PUBKEY,

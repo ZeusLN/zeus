@@ -66,8 +66,11 @@ const SECP256K1_ORDER = new BigNumber(
 );
 const TAPSCRIPT_LEAF_VERSION = 0xc0;
 
-const toXOnly = (pubkey: Buffer): Buffer =>
-    pubkey.length === 32 ? pubkey : pubkey.subarray(1, 33);
+// Always returns a Buffer. In the app, the buffer polyfill's subarray
+// returns a plain Uint8Array, which bitcoinjs script.compile does not
+// treat as data: it compiles the key as OP_0 and every leaf check fails.
+const toXOnly = (pubkey: Uint8Array): Buffer =>
+    Buffer.from(pubkey.length === 32 ? pubkey : pubkey.subarray(1, 33));
 
 /**
  * BIP 327 KeyAgg over 33-byte compressed public keys, in the order given
