@@ -6,7 +6,7 @@ Features:
 * Non-custodial
 * No processing fees
 * No KYC
-* Fully open source (APGLv3)
+* Fully open source (AGPLv3)
 * Connect to LND or Core Lightning remote nodes
 * Manage multiple lightning nodes at once
 * Connect via LNDHub instances
