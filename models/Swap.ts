@@ -54,6 +54,7 @@ export default class Swap extends BaseModel {
     claimMinerFee?: number;
     failureReason?: string;
     imported?: boolean;
+    claimAddressFromWallet?: boolean;
     keyIndex?: number;
     preimageHash?: string;
     serverPublicKey?: string;
@@ -111,6 +112,17 @@ export default class Swap extends BaseModel {
 
     @computed get swapTreeDetails(): any {
         return this.swapTree || this.tree;
+    }
+
+    /**
+     * The address a reverse swap's claim may pay out to. On a rescued swap
+     * this is only the address this wallet generated for the claim: earlier
+     * rescues stored whatever the host's /swap/restore response held, so a
+     * destinationAddress without claimAddressFromWallet may be the host's.
+     */
+    @computed get claimDestinationAddress(): string | undefined {
+        if (this.imported && !this.claimAddressFromWallet) return undefined;
+        return this.destinationAddress;
     }
 
     @computed get effectiveLockupAddress(): string | undefined {

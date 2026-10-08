@@ -71,6 +71,28 @@ interface ReverseSwapInfo {
     };
 }
 
+// The fields a rescued swap takes from the host's /swap/restore response,
+// at the top level and inside claimDetails/refundDetails
+const RESCUE_SWAP_FIELDS = ['id', 'status', 'createdAt'];
+const RESCUE_DETAIL_FIELDS = [
+    'tree',
+    'keyIndex',
+    'lockupAddress',
+    'serverPublicKey',
+    'timeoutBlockHeight',
+    'amount',
+    'preimageHash'
+];
+
+const pickFields = (source: any, fields: string[]): { [key: string]: any } => {
+    const picked: { [key: string]: any } = {};
+    if (!source || typeof source !== 'object') return picked;
+    for (const field of fields) {
+        if (source[field] !== undefined) picked[field] = source[field];
+    }
+    return picked;
+};
+
 export default class SwapStore {
     @observable public subInfo: SubmarineSwapInfo = {};
     @observable public reverseInfo: ReverseSwapInfo = {};
@@ -1027,7 +1049,13 @@ export default class SwapStore {
                 if (!swaps.some((swap: any) => swap?.id === swapId)) continue;
 
                 const updatedSwaps = swaps.map((swap: any) =>
-                    swap?.id === swapId ? { ...swap, destinationAddress } : swap
+                    swap?.id === swapId
+                        ? {
+                              ...swap,
+                              destinationAddress,
+                              claimAddressFromWallet: true
+                          }
+                        : swap
                 );
 
                 await Storage.setItem(key, JSON.stringify(updatedSwaps));
@@ -1269,16 +1297,20 @@ export default class SwapStore {
                                     ? swap.claimDetails
                                     : swap.refundDetails;
 
-                                const swapDetails: any = {};
-
-                                for (const key in swap) {
-                                    if (
-                                        key !== 'claimDetails' &&
-                                        key !== 'refundDetails'
-                                    ) {
-                                        swapDetails[key] = swap[key];
-                                    }
-                                }
+                                // Only fields describing the host's side of
+                                // the swap are taken from the response. The
+                                // claim address, keys and preimage are ours
+                                // to set: a host that could set the claim
+                                // address would be paid the lockup and get
+                                // the preimage to settle the hold invoice.
+                                const swapDetails = pickFields(
+                                    swap,
+                                    RESCUE_SWAP_FIELDS
+                                );
+                                const hostDetails = pickFields(
+                                    details,
+                                    RESCUE_DETAIL_FIELDS
+                                );
 
                                 const { keyIndex } = details;
 
@@ -1306,7 +1338,7 @@ export default class SwapStore {
 
                                 const rescuedSwapBase = {
                                     ...swapDetails,
-                                    ...details,
+                                    ...hostDetails,
                                     imported: true,
                                     implementation,
                                     nodePubkey,
@@ -1322,12 +1354,34 @@ export default class SwapStore {
                                     // rescued claim is built with an empty
                                     // preimage, fails every retry, and the
                                     // host reclaims the lockup at timeout.
+                                    const preimage = deriveSwapPreimage(
+                                        childKey.privateKey
+                                    );
+
+                                    // A hash that doesn't match means the
+                                    // host sent the wrong keyIndex; claiming
+                                    // would reveal the preimage of another
+                                    // swap's hold invoice
+                                    if (
+                                        hostDetails.preimageHash !==
+                                            undefined &&
+                                        String(
+                                            hostDetails.preimageHash
+                                        ).toLowerCase() !==
+                                            crypto
+                                                .sha256(preimage)
+                                                .toString('hex')
+                                    ) {
+                                        console.error(
+                                            `Skipping rescued swap ${swap.id}: preimage hash does not match key index ${keyIndex}`
+                                        );
+                                        return null;
+                                    }
+
                                     return {
                                         ...rescuedSwapBase,
                                         type: SwapType.Reverse,
-                                        preimage: deriveSwapPreimage(
-                                            childKey.privateKey
-                                        )
+                                        preimage
                                     };
                                 } else {
                                     return {
@@ -1340,7 +1394,10 @@ export default class SwapStore {
                             })
                     );
 
-                    const updatedSwaps = [...existingSwaps, ...rescuedSwaps];
+                    const updatedSwaps = [
+                        ...existingSwaps,
+                        ...rescuedSwaps.filter(Boolean)
+                    ];
 
                     await Storage.setItem(
                         SWAPS_KEY,

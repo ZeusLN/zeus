@@ -471,7 +471,7 @@ export default class SwapDetails extends React.Component<
                     keys,
                     endpoint,
                     swapData.lockupAddress!,
-                    swapData.destinationAddress!,
+                    swapData.claimDestinationAddress || '',
                     swapData.preimage,
                     transactionHex,
                     fee
@@ -709,14 +709,15 @@ export default class SwapDetails extends React.Component<
      *
      * A rescued swap has none: ZEUS attaches the address client-side and
      * never sends it to the host (only claimPublicKey and preimageHash go
-     * over the wire), so /swap/restore has nothing to return. SwapStore
+     * over the wire), so /swap/restore has nothing to return, and an
+     * address a rescued swap stored from the host is ignored. SwapStore
      * falls back to a fresh address from the wallet in use, which is the
      * same source the swap creation screen defaults to.
      */
     resolveDestinationAddress = async (swapId: string): Promise<string> => {
         const { InvoicesStore, SwapStore } = this.props;
 
-        const existing = this.state.swapData?.destinationAddress;
+        const existing = this.state.swapData?.claimDestinationAddress;
         const destinationAddress =
             (await SwapStore?.resolveClaimAddress({
                 swapId,
@@ -730,7 +731,8 @@ export default class SwapDetails extends React.Component<
             this.setState((prevState) => ({
                 swapData: new Swap({
                     ...prevState.swapData,
-                    destinationAddress
+                    destinationAddress,
+                    claimAddressFromWallet: true
                 })
             }));
         }

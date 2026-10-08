@@ -84,10 +84,18 @@ import Swap from '../models/Swap';
 import { ReverseClaimTransaction } from '../models/ClaimTransaction';
 import { mnemonicToSeedSync } from '@scure/bip39';
 import { HDKey } from '@scure/bip32';
+import { crypto } from 'bitcoinjs-lib';
 
 // BIP39 canonical test mnemonic, used as a swap rescue key
 const RESCUE_MNEMONIC =
     'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+
+// sha256 of m/44/0/0/0/0 under RESCUE_MNEMONIC, pinned in SwapUtils.test.ts
+const KEY_0_PREIMAGE =
+    '03c0b3323daab895d806870bd1f050bdca624a24882d3e317b151d537fa75bb7';
+const KEY_0_PREIMAGE_HASH = crypto
+    .sha256(Buffer.from(KEY_0_PREIMAGE, 'hex'))
+    .toString('hex');
 
 const storageBacking = (Storage as any).__store as { [key: string]: string };
 
@@ -166,6 +174,117 @@ describe('SwapStore.getRescuableSwaps', () => {
         expect(rescued.preimage).toBeUndefined();
     });
 
+    it('takes no claim address, keys or preimage from the host', async () => {
+        // A host that could set the claim address would be paid the lockup
+        // and learn the preimage, which settles the user's hold invoice
+        restoreResponse([
+            {
+                id: 'rescued-reverse',
+                type: 'reverse',
+                status: 'transaction.mempool',
+                createdAt: 1700000000,
+                destinationAddress: 'bc1qhost',
+                claimAddressFromWallet: true,
+                imported: false,
+                preimage: { type: 'Buffer', data: [1, 2, 3] },
+                keys: { privateKey: 'host' },
+                refundPrivateKey: 'host',
+                lockupTransaction: { hex: 'host' },
+                txid: 'host',
+                claimDetails: {
+                    keyIndex: 0,
+                    serverPublicKey: 'ab',
+                    lockupAddress: 'bc1plockup',
+                    timeoutBlockHeight: 900000,
+                    amount: 50000,
+                    tree: { claimLeaf: { output: 'c1' } },
+                    preimageHash: KEY_0_PREIMAGE_HASH,
+                    destinationAddress: 'bc1qhost-details',
+                    claimAddressFromWallet: true
+                }
+            }
+        ]);
+
+        await newStore().getRescuableSwaps({
+            seedArray: RESCUE_MNEMONIC.split(' '),
+            host: 'https://swaps.example.com'
+        });
+
+        const [rescued] = getStored(SWAPS_KEY);
+        expect(rescued.destinationAddress).toBeUndefined();
+        expect(rescued.claimAddressFromWallet).toBeUndefined();
+        expect(rescued.lockupTransaction).toBeUndefined();
+        expect(rescued.txid).toBeUndefined();
+        expect(rescued.refundPrivateKey).toBeUndefined();
+        expect(rescued.imported).toBe(true);
+        expect(Buffer.from(rescued.preimage.data).toString('hex')).toBe(
+            KEY_0_PREIMAGE
+        );
+        expect(new Swap(rescued).claimDestinationAddress).toBeUndefined();
+        // the host's side of the swap is kept for the claim and its checks
+        expect(rescued).toMatchObject({
+            id: 'rescued-reverse',
+            status: 'transaction.mempool',
+            createdAt: 1700000000,
+            keyIndex: 0,
+            serverPublicKey: 'ab',
+            lockupAddress: 'bc1plockup',
+            timeoutBlockHeight: 900000,
+            amount: 50000,
+            tree: { claimLeaf: { output: 'c1' } },
+            preimageHash: KEY_0_PREIMAGE_HASH
+        });
+    });
+
+    it('keeps a reverse swap whose preimage hash matches, in any case', async () => {
+        restoreResponse([
+            {
+                id: 'rescued-reverse',
+                type: 'reverse',
+                claimDetails: {
+                    keyIndex: 0,
+                    preimageHash: KEY_0_PREIMAGE_HASH.toUpperCase()
+                }
+            }
+        ]);
+
+        await newStore().getRescuableSwaps({
+            seedArray: RESCUE_MNEMONIC.split(' '),
+            host: 'https://swaps.example.com'
+        });
+
+        expect(getStored(SWAPS_KEY).map((s: any) => s.id)).toEqual([
+            'rescued-reverse'
+        ]);
+    });
+
+    it('skips a reverse swap whose preimage hash is not the one at its key index', async () => {
+        // the host pointed this swap at another swap's key; claiming it
+        // would hand over that swap's preimage
+        restoreResponse([
+            {
+                id: 'wrong-key',
+                type: 'reverse',
+                claimDetails: { keyIndex: 1, preimageHash: KEY_0_PREIMAGE_HASH }
+            },
+            {
+                id: 'right-key',
+                type: 'reverse',
+                claimDetails: { keyIndex: 0, preimageHash: KEY_0_PREIMAGE_HASH }
+            }
+        ]);
+
+        const result = await newStore().getRescuableSwaps({
+            seedArray: RESCUE_MNEMONIC.split(' '),
+            host: 'https://swaps.example.com'
+        });
+
+        expect(result?.success).toBe(true);
+        expect(getStored(SWAPS_KEY).map((s: any) => s.id)).toEqual([
+            'right-key'
+        ]);
+    });
+
     it('rejects an invalid rescue key without calling the host', async () => {
         const result = await newStore().getRescuableSwaps({
             seedArray: 'not a valid bip39 mnemonic at all whatsoever'.split(
@@ -191,7 +310,11 @@ describe('SwapStore.updateSwapDestinationAddress', () => {
         expect(updated).toBe(true);
         expect(getStored(REVERSE_SWAPS_KEY)).toEqual([
             { id: 'other' },
-            { id: 'reverse-swap', destinationAddress: 'bc1qclaim' }
+            {
+                id: 'reverse-swap',
+                destinationAddress: 'bc1qclaim',
+                claimAddressFromWallet: true
+            }
         ]);
     });
 
@@ -211,7 +334,8 @@ describe('SwapStore.updateSwapDestinationAddress', () => {
             {
                 id: 'rescued-reverse',
                 imported: true,
-                destinationAddress: 'bc1qclaim'
+                destinationAddress: 'bc1qclaim',
+                claimAddressFromWallet: true
             }
         ]);
         expect(getStored(REVERSE_SWAPS_KEY)).toEqual([{ id: 'unrelated' }]);
@@ -316,7 +440,11 @@ describe('SwapStore.resolveClaimAddress', () => {
 
         expect(address).toBe('bc1qfresh');
         expect(getStored(REVERSE_SWAPS_KEY)).toEqual([
-            { id: 'reverse-swap', destinationAddress: 'bc1qfresh' }
+            {
+                id: 'reverse-swap',
+                destinationAddress: 'bc1qfresh',
+                claimAddressFromWallet: true
+            }
         ]);
     });
 });
@@ -333,6 +461,7 @@ describe('rescued reverse swap, from storage to claim', () => {
                     id: 'rescued-reverse',
                     type: 'reverse',
                     status: 'transaction.mempool',
+                    destinationAddress: 'bc1qhost',
                     claimDetails: {
                         keyIndex: 0,
                         serverPublicKey: 'ab',
@@ -353,9 +482,10 @@ describe('rescued reverse swap, from storage to claim', () => {
         });
 
         const [stored] = getStored(SWAPS_KEY);
+        // SwapDetails reads the claim address through the model
         const destinationAddress = await store.resolveClaimAddress({
             swapId: stored.id,
-            destinationAddress: stored.destinationAddress,
+            destinationAddress: new Swap(stored).claimDestinationAddress,
             canReceiveOnchain: true,
             getNewAddress: jest.fn().mockResolvedValue('bc1qclaim')
         });
@@ -384,5 +514,57 @@ describe('rescued reverse swap, from storage to claim', () => {
         expect(claim!.destinationAddress).toBe('bc1qclaim');
         expect(claim!.lockupAddress).toBe('bc1plockup');
         expect(claim!.servicePubKey).toBe('ab');
+    });
+});
+
+describe('Swap.claimDestinationAddress', () => {
+    it('uses the address picked for a swap created on this device', () => {
+        expect(
+            new Swap({ id: 's', destinationAddress: 'bc1qpicked' })
+                .claimDestinationAddress
+        ).toBe('bc1qpicked');
+    });
+
+    it('ignores an address a rescue stored from the host', () => {
+        // rescues before the field allow-list copied /swap/restore verbatim
+        expect(
+            new Swap({
+                id: 's',
+                imported: true,
+                destinationAddress: 'bc1qhost'
+            }).claimDestinationAddress
+        ).toBeUndefined();
+    });
+
+    it('uses an address the wallet generated for a rescued swap', () => {
+        expect(
+            new Swap({
+                id: 's',
+                imported: true,
+                destinationAddress: 'bc1qwallet',
+                claimAddressFromWallet: true
+            }).claimDestinationAddress
+        ).toBe('bc1qwallet');
+    });
+
+    it('replaces a host address stored by an earlier rescue with a wallet address', async () => {
+        setStored(SWAPS_KEY, [
+            { id: 'old-rescue', imported: true, destinationAddress: 'bc1qhost' }
+        ]);
+        const store = newStore();
+
+        const address = await store.resolveClaimAddress({
+            swapId: 'old-rescue',
+            destinationAddress: new Swap(getStored(SWAPS_KEY)[0])
+                .claimDestinationAddress,
+            canReceiveOnchain: true,
+            getNewAddress: jest.fn().mockResolvedValue('bc1qwallet')
+        });
+
+        expect(address).toBe('bc1qwallet');
+        // a later attempt claims to the same wallet address
+        expect(new Swap(getStored(SWAPS_KEY)[0]).claimDestinationAddress).toBe(
+            'bc1qwallet'
+        );
     });
 });

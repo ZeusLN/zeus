@@ -6,7 +6,9 @@ jest.mock('@rneui/themed', () => ({ LinearProgress: 'LinearProgress' }));
 jest.mock('react-native-blob-util', () => ({}));
 jest.mock('../../stores/Stores', () => ({}));
 jest.mock('../../utils/handleAnything', () => jest.fn());
-jest.mock('../../utils/BackendUtils', () => ({}));
+jest.mock('../../utils/BackendUtils', () => ({
+    supportsOnchainReceiving: () => true
+}));
 jest.mock('../../utils/UrlUtils', () => ({}));
 jest.mock('../../utils/SwapUtils', () => ({
     swapWebSocketUrl: () => 'wss://swap.test'
@@ -50,18 +52,23 @@ jest.mock('../../assets/images/SVG/QR.svg', () => 'QR');
 
 import SwapDetails from './SwapDetails';
 import lndMobile from '../../lndmobile/LndMobileInjection';
+import { ReverseClaimTransaction } from '../../models/ClaimTransaction';
 
 const nativeClaim = lndMobile.swaps.createReverseClaimTransaction as jest.Mock;
 
-const makeView = () => {
+const makeView = (swapData: any = { id: 'swap' }) => {
     const store = {
         claimMinerFee: 100,
         getSwapFees: jest.fn(),
         updateSwapStatus: jest.fn().mockResolvedValue(undefined),
-        verifyReverseLockup: jest.fn().mockResolvedValue({ status: 'ok' })
+        verifyReverseLockup: jest.fn().mockResolvedValue({ status: 'ok' }),
+        resolveClaimAddress: jest.fn(
+            async ({ destinationAddress }: any) =>
+                destinationAddress || 'bc1qwallet'
+        )
     };
     const view = new SwapDetails({
-        route: { params: { swapData: { id: 'swap' } } },
+        route: { params: { swapData } },
         NodeInfoStore: { nodeInfo: { isTestNet: false } },
         SwapStore: store
     } as any);
@@ -84,6 +91,7 @@ const makeView = () => {
 
 beforeEach(() => {
     nativeClaim.mockReset();
+    (ReverseClaimTransaction.build as jest.Mock).mockClear();
 });
 
 it.each(['invalid', 'unconfirmed', 'unavailable'])(
@@ -157,12 +165,7 @@ describe('lockup verification retry wiring', () => {
         jest.useRealTimers();
     });
 
-    const start = async (view: SwapDetails) => {
-        // Avoid address generation in these tests, which exercise the
-        // verification results crossing back into the websocket handler.
-        jest.spyOn(view, 'resolveDestinationAddress').mockResolvedValue(
-            'destination'
-        );
+    const sendConfirmedLockup = async (view: SwapDetails) => {
         view.getReverseSwapUpdates({ id: 'swap' }, false);
         await socket.onmessage({
             data: JSON.stringify({
@@ -176,6 +179,46 @@ describe('lockup verification retry wiring', () => {
             })
         });
     };
+
+    const start = async (view: SwapDetails) => {
+        // Avoid address generation in these tests, which exercise the
+        // verification results crossing back into the websocket handler.
+        jest.spyOn(view, 'resolveDestinationAddress').mockResolvedValue(
+            'destination'
+        );
+        await sendConfirmedLockup(view);
+    };
+
+    const claimedTo = () =>
+        (ReverseClaimTransaction.build as jest.Mock).mock.calls[0][0].swap
+            .destinationAddress;
+
+    it('claims a rescued swap to a wallet address, not one stored from the host', async () => {
+        const { store, view } = makeView({
+            id: 'swap',
+            imported: true,
+            destinationAddress: 'bc1qhost'
+        });
+        nativeClaim.mockResolvedValue(undefined);
+        await sendConfirmedLockup(view);
+        expect(claimedTo()).toBe('bc1qwallet');
+        expect(store.resolveClaimAddress).toHaveBeenCalledWith(
+            expect.objectContaining({ destinationAddress: undefined })
+        );
+        expect(nativeClaim).toHaveBeenCalledTimes(1);
+        view.componentWillUnmount?.();
+    });
+
+    it('claims a swap created on this device to the address picked for it', async () => {
+        const { view } = makeView({
+            id: 'swap',
+            destinationAddress: 'bc1qpicked'
+        });
+        nativeClaim.mockResolvedValue(undefined);
+        await sendConfirmedLockup(view);
+        expect(claimedTo()).toBe('bc1qpicked');
+        view.componentWillUnmount?.();
+    });
 
     it.each(['unavailable', 'unconfirmed'])(
         'rechecks a %s lockup and claims once it verifies',
