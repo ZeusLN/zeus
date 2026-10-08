@@ -1,0 +1,23 @@
+PP Neue Montreal and Marlide Display: commercial font licence notice
+====================================================================
+
+The following font files are commercial typefaces. They are NOT covered by
+ZEUS's open source licence (GNU Affero General Public License v3) and are
+used in ZEUS under licence by Atlas 21 Inc.
+
+  PPNeueMontreal-Book.otf
+  PPNeueMontreal-Medium.otf
+  PPNeueMontreal-Bold.otf
+      PP Neue Montreal. Copyright Pangram Pangram Foundry.
+      "Neue Montreal" is a trademark of Pangram Pangram Foundry.
+      https://pangrampangram.com
+
+  Marlide-Display.ttf
+  Marlide-Display-Bold.ttf
+      Marlide Display. Copyright 2022 Kontour Type, LLC.
+      "Marlide Display" is a trademark of Kontour Type, LLC.
+      https://kontour.com
+
+All rights reserved by their owners. You may not copy, redistribute or reuse
+these files outside ZEUS. If you fork or redistribute ZEUS, remove these
+files or obtain your own licence from the foundries.

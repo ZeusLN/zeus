@@ -142,4 +142,4 @@ Thank you.
 
 ## License
 
-Distributed under the GNU Affero General Public License (AGPL v3). See [LICENSE file](LICENSE).
+Distributed under the GNU Affero General Public License (AGPL v3). See [LICENSE file](LICENSE) for details and exceptions.
