@@ -179,6 +179,25 @@ describe('activityCsvUtils', () => {
                 '"1500","","","Coffee ""large"", to go","","",""'
             );
         });
+
+        it('keeps a payee-set formula memo as text but leaves negative amounts as numbers', async () => {
+            const mockTransactions = [
+                {
+                    tx: 'txhash1',
+                    getAmount: '-2050',
+                    getFee: 50,
+                    getNote: '=HYPERLINK("http://x","refund")',
+                    getDate: '2024-02-07'
+                }
+            ];
+            const result = await convertActivityToCsv(
+                mockTransactions,
+                CSV_KEYS.transaction
+            );
+            expect(result).toContain(
+                '"txhash1","-2050","50","\'=HYPERLINK(""http://x"",""refund"")","2024-02-07"'
+            );
+        });
     });
 
     describe('saveCsvFile', () => {

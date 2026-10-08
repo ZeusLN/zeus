@@ -27,5 +27,48 @@ describe('CsvUtils', () => {
         it('leaves missing values empty', () => {
             expect(toCsvRow([undefined, null, ''])).toBe('"","",""');
         });
+
+        it.each(['=1+1', '+1+1', '-1+1', '@SUM(A1)', '\t=1', '\r=1'])(
+            'prefixes text a spreadsheet would run as a formula: %j',
+            (value) => {
+                expect(toCsvRow([value])).toBe(`"'${value}"`);
+            }
+        );
+
+        it('escapes quotes after prefixing a formula', () => {
+            expect(toCsvRow(['=HYPERLINK("http://x","pay")'])).toBe(
+                '"\'=HYPERLINK(""http://x"",""pay"")"'
+            );
+        });
+
+        it('leaves negative and signed numbers alone', () => {
+            expect(toCsvRow(['-2000', -2000, '-0.5', '+21'])).toBe(
+                '"-2000","-2000","-0.5","+21"'
+            );
+        });
+
+        it.each(['-Infinity', '\t1', '-1 '])(
+            'prefixes a trigger value that is not a plain number: %j',
+            (value) => {
+                expect(toCsvRow([value])).toBe(`"'${value}"`);
+            }
+        );
+
+        it.each([' =1', '  @SUM(A1)', '\n=1', ' \t-1+1'])(
+            'prefixes a formula after leading whitespace: %j',
+            (value) => {
+                expect(toCsvRow([value])).toBe(`"'${value}"`);
+            }
+        );
+
+        it('leaves text with leading whitespace but no trigger alone', () => {
+            expect(toCsvRow([' coffee', '\nnote'])).toBe('" coffee","\nnote"');
+        });
+
+        it('leaves a trigger character later in the text alone', () => {
+            expect(toCsvRow(['a=b', 'coffee @ 3pm'])).toBe(
+                '"a=b","coffee @ 3pm"'
+            );
+        });
     });
 });
