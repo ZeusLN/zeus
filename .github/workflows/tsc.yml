@@ -6,6 +6,8 @@ on:
   pull_request:
     branches:
       - "**"
+permissions:
+  contents: read
 jobs:
   tsc:
     runs-on: ubuntu-latest

@@ -7,12 +7,15 @@ on:
     types: [opened, pinned, closed, reopened]
   release:
     types: [published]
+# The action receives the full github context (including the token) by
+# default and needs no repository access, so the token gets no scopes.
+permissions: {}
 jobs:
   notify:
     runs-on: ubuntu-latest
     steps:
       - name: Notify the commit on Telegram.
-        uses: EverythingSuckz/github-telegram-notify@main
+        uses: EverythingSuckz/github-telegram-notify@11cbbc4c9284459d289584e9da5c24e0bdfc07b9 # v1.1.2
         with:
           bot_token: '${{ secrets.BOT_TOKEN }}'
           chat_id: '${{ secrets.CHAT_ID }}'
