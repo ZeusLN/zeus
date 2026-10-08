@@ -164,13 +164,13 @@ interface ChannelsSettings {
 interface LightningAddressSettings {
     enabled: boolean;
     automaticallyAccept: boolean;
-    automaticallyAcceptAttestationLevel: number;
+    automaticallyAcceptAttestationLevel: number; // deprecated (Zaplocker)
     automaticallyRequestOlympusChannels: boolean; // deprecated
-    routeHints: boolean;
+    routeHints: boolean; // deprecated (Zaplocker)
     allowComments: boolean;
     zapReceiptsEnabled: boolean;
-    nostrPrivateKey: string;
-    nostrRelays: Array<string>;
+    nostrPrivateKey: string; // deprecated (Zaplocker)
+    nostrRelays: Array<string>; // deprecated (Zaplocker)
     notifications: number;
     mintUrl: string; // Cashu
     posEnabled?: boolean; // ZEUS Pay+
@@ -1477,22 +1477,6 @@ export const NOTIFICATIONS_PREF_KEYS = [
     },
     {
         key: 'Nostr',
-        value: 2
-    }
-];
-
-export const AUTOMATIC_ATTESTATION_KEYS = [
-    { key: 'Disabled', translateKey: 'general.disabled', value: 0 },
-    {
-        key: 'Successful only',
-        translateKey:
-            'views.Settings.LightningAddressSettings.automaticallyAcceptAttestationLevel.successOnly',
-        value: 1
-    },
-    {
-        key: 'Successful and not found',
-        translateKey:
-            'views.Settings.LightningAddressSettings.automaticallyAcceptAttestationLevel.successAndNotFound',
         value: 2
     }
 ];
