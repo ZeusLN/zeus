@@ -39,7 +39,7 @@ forwarded through chains of channels using **HTLCs** (Hashed Time-Locked Contrac
 hop's payment is locked to the SHA-256 hash of a secret (the **preimage**); revealing the
 preimage settles every hop atomically. A **hodl invoice** is one where the receiver
 deliberately delays revealing the preimage — the payment hangs "in-flight" until released
-(ZEUS Pay's Zaplocker scheme, section 5, is built on this). **0-conf** channels are usable
+(ZEUS Pay's retired Zaplocker scheme, section 5, was built on this). **0-conf** channels are usable
 before their funding transaction confirms — safe only when you trust the channel opener,
 which is why Zeus only auto-accepts 0-conf from its LSP (section 6).
 
@@ -191,47 +191,27 @@ LNURL endpoints currently error out of that path. Open gap, not a bug you introd
 Nested URI schemes `lnurlp://` / `lnurlw://` / `lnurlc://` / `lnurlauth://` are rewritten
 to `https://` (or `http://` for `.onion`) before processing.
 
-## 5. ZEUS Pay / Zaplocker — `stores/LightningAddressStore.ts` + `stores/LnurlPayStore.ts`
+## 5. ZEUS Pay — `stores/LightningAddressStore.ts` + `stores/LnurlPayStore.ts`
 
-ZEUS Pay gives a self-custodial wallet a lightning address (`user@zeuspay.com`) even
-though the phone is usually offline. Server: `LNURL_HOST = 'https://zeuspay.com'`. Three
-address types exist (`address_type` sent to the server): `'zaplocker'` (hodl-invoice
-scheme, below), `'cashu'` (payments held as Cashu mint quotes, redeemed via
-`/api/lnurl/nuts/redeem`), and `'nwc'`. Gate: `supportsLightningAddress()` in
-`utils/BackendUtils.ts` is the composite `supportsCustomPreimages() || supportsCashuWallet()`.
+ZEUS Pay gives a wallet a lightning address (`user@zeuspay.com`) even though the phone is
+usually offline. Server: `LNURL_HOST = 'https://zeuspay.com'`. The client creates two
+address types (`address_type` sent to the server): `'cashu'` (payments held as Cashu mint
+quotes, redeemed via `/api/lnurl/nuts/redeem`) and `'nwc'` (the server pays through the
+user's NWC connection, nothing to redeem). Gate: `supportsLightningAddress()` in
+`utils/BackendUtils.ts` is the composite `supportsCustomPreimages() || supportsCashuWallet()`;
+the `supportsCustomPreimages` half is what lets remote LND and LNC reach the NWC address type.
 
-**Zaplocker lifecycle (receiver side):**
-
-1. **Pre-generate preimages**: `generatePreimages` creates **250 preimages per batch**
-   (32-byte entropy each), computes `hash = sha256(preimage)`, schnorr-signs each hash
-   with the user's nostr private key, and POSTs `{pubkey, hashes, nostrSignatures, ...}`
-   to `zeuspay.com/api/lnurl/submitHashes`. Preimages stay ONLY on the phone
-   (storage key `zeuspay-lightning-address-hashes`). Auto-replenishes when the server
-   reports fewer than 50 unused hashes.
-2. **Someone pays**: zeuspay.com issues a hodl invoice against one of your hashes and
-   holds the HTLC. It cannot settle — it doesn't know the preimage.
-3. **Redeem** (`lookupPreimageAndRedeemZaplocker`): the app looks up the preimage for the
-   hash, creates a local invoice with that **fixed preimage**
-   (`BackendUtils.createInvoice({ preimage, expiry: '86400', ... })`), and POSTs it to
-   `/api/lnurl/redeem`; the server pays it, which reveals the preimage and settles the
-   held HTLC. This is why the gate is `supportsCustomPreimages` — the backend must accept
-   caller-chosen preimages.
-
-**Anti-fraud attestations (nostr kind 55869):**
-
-- **Payer side** (`LnurlPayStore.broadcastAttestation`, triggered from
-  `views/PaymentRequest.tsx` when `isZaplocker`): publish a kind-`55869` event, signed by
-  an **ephemeral key**, whose `p` tag is `getPublicKey(paymentHash)` — the payment hash
-  itself is used as a nostr secret key so anyone holding the hash can find attestations —
-  and whose content is the bolt11 invoice being paid.
-- **Receiver side** (`LightningAddressStore.lookupAttestations`): for each hash, query
-  relays for kind 55869 with `#p = getPublicKey(hash)`, then `analyzeAttestation` checks
-  the embedded invoice actually commits to that hash and amount. Exactly one valid
-  attestation → success status; **more than one attestation → status `'error'`** (a fraud
-  signal: two different "payers" claiming the same hash means someone is lying).
-- The payer also verifies the receiver's zaplocker setup: `LnurlPayStore.load` checks
-  schnorr signatures over the payment hash (`isPmtHashSigValid`) and the relay list
-  (`isRelaysSigValid`) against the receiver's advertised nostr pubkey.
+**Zaplocker (retired).** The third type, `'zaplocker'`, was a hodl-invoice scheme: the phone
+pre-generated preimages and submitted their hashes, the server held each payer's HTLC, and
+the app later redeemed it by creating an invoice with the fixed preimage. Payers published
+nostr kind-`55869` attestations so the receiver could detect a server lying about amounts.
+All of that client code was removed (onboarding in #4419, redemption, attestations, nostr
+keys/relays screens and the payer-side checks afterwards). What is left: a hub banner and a
+pared-down `views/LightningAddress/LightningAddressSettings.tsx` that let an existing
+Zaplocker address switch to Cashu/NWC or be deleted; `status()` drops held Zaplocker payments
+from `paid`; the storage key `zeuspay-lightning-address-hashes` stays only so address
+deletion and data wipes clear it; the Zaplocker-only `lightningAddress` settings fields are
+marked deprecated but still in the settings type and defaults.
 
 ## 6. LSP integration — three generations, all in `stores/LSPStore.ts`
 
@@ -470,7 +450,7 @@ implementing files directly. No commands below mutate anything.
 | MPP/AMP version gates | `grep -rn "supportsMPP\|supportsAMP" backends/` |
 | cryptoqr.net casing exception, merchant QR 500-char cap | `grep -n "isCryptoQR\|MERCHANT_QR_MAX_LEN" utils/handleAnything.ts` |
 | js-lnurl version | `grep js-lnurl package.json` |
-| Zaplocker: 250 preimages, kind 55869, zeuspay.com | `grep -n "250\|55869\|zeuspay" stores/LightningAddressStore.ts stores/LnurlPayStore.ts` |
+| ZEUS Pay host, address types | `grep -n "LNURL_HOST\|address_type" stores/LightningAddressStore.ts` |
 | LSPS0 message type 37913 / 7 s timeout | `grep -n "CUSTOM_MESSAGE_TYPE\|TIMEOUT_MS" stores/LSPStore.ts` |
 | Flow amount mutation + jit_bolt11 swap | `grep -n "zeroConfFee\|jit_bolt11" stores/InvoicesStore.ts` |
 | Flow/LSPS1 default hosts | `grep -n "DEFAULT_LSP" stores/SettingsStore.ts` |
