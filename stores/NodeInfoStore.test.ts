@@ -38,7 +38,9 @@ const getMyNodeInfoMock = BackendUtils.getMyNodeInfo as jest.Mock;
 
 // Resolves to { settled: true } if the promise settles within `ms`,
 // { settled: false } otherwise. Used to detect orphaned promises
-// without hanging the test.
+// without hanging the test. The tests run under fake timers and call
+// jest.advanceTimersByTimeAsync, which flushes pending microtasks before
+// the timeout fires, so the result does not depend on wall-clock timing.
 const settlesWithin = (promise: Promise<any>, ms: number) =>
     Promise.race([
         promise.then(
@@ -52,7 +54,12 @@ const settlesWithin = (promise: Promise<any>, ms: number) =>
 
 describe('NodeInfoStore.getNodeInfo', () => {
     beforeEach(() => {
+        jest.useFakeTimers();
         getMyNodeInfoMock.mockReset();
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
     });
 
     it('settles a superseded call when the shared request succeeds', async () => {
@@ -70,9 +77,13 @@ describe('NodeInfoStore.getNodeInfo', () => {
         const superseded = store.getNodeInfo();
         const current = store.getNodeInfo();
 
-        resolveBackend({ identity_pubkey: 'pk1', version: '0.18.0-beta' });
+        const currentSettled = settlesWithin(current, 200);
+        const supersededSettled = settlesWithin(superseded, 200);
 
-        const currentResult = await settlesWithin(current, 200);
+        resolveBackend({ identity_pubkey: 'pk1', version: '0.18.0-beta' });
+        await jest.advanceTimersByTimeAsync(200);
+
+        const currentResult = await currentSettled;
         expect(currentResult.settled).toBe(true);
         expect((currentResult as any).value.nodeId).toEqual('pk1');
 
@@ -80,7 +91,7 @@ describe('NodeInfoStore.getNodeInfo', () => {
         // superseded call bailed out without resolving, leaving this
         // promise pending forever (and, in the app, wedging Wallet's
         // fetchData on the connecting overlay).
-        const supersededResult = await settlesWithin(superseded, 200);
+        const supersededResult = await supersededSettled;
         expect(supersededResult.settled).toBe(true);
     });
 
@@ -96,12 +107,16 @@ describe('NodeInfoStore.getNodeInfo', () => {
         const superseded = store.getNodeInfo();
         const current = store.getNodeInfo();
 
-        rejectBackend(new Error('connection refused'));
+        const supersededSettled = settlesWithin(superseded, 200);
+        const currentSettled = settlesWithin(current, 200);
 
-        const supersededResult = await settlesWithin(superseded, 200);
+        rejectBackend(new Error('connection refused'));
+        await jest.advanceTimersByTimeAsync(200);
+
+        const supersededResult = await supersededSettled;
         expect(supersededResult.settled).toBe(true);
 
-        const currentResult = await settlesWithin(current, 200);
+        const currentResult = await currentSettled;
         expect(currentResult.settled).toBe(true);
         expect((currentResult as any).error).toBeDefined();
     });

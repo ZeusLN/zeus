@@ -68,10 +68,20 @@ describe('listFormattedDate', () => {
     });
 });
 
+// listFormattedDateShort and listFormattedDateOrder compare against the
+// current year, so pin the clock. Dates are built in local time, the same
+// way the code under test reads them, so the results do not depend on TZ.
 describe('listFormattedDateShort', () => {
+    beforeEach(() => {
+        jest.useFakeTimers().setSystemTime(new Date(2026, 5, 15, 12, 0));
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
     it('returns timestamp without year if timestamp is current year', () => {
-        const timestamp =
-            new Date(new Date().getFullYear(), 0, 1, 5, 6).getTime() / 1000;
+        const timestamp = new Date(2026, 0, 1, 5, 6).getTime() / 1000;
 
         const result = DateTimeUtils.listFormattedDateShort(timestamp);
 
@@ -79,26 +89,23 @@ describe('listFormattedDateShort', () => {
     });
 
     it('returns timestamp with year if timestamp is next year', () => {
-        const year = new Date().getFullYear() + 1;
-        const timestamp = new Date(year, 0, 1, 5, 6).getTime() / 1000;
+        const timestamp = new Date(2027, 0, 1, 5, 6).getTime() / 1000;
 
         const result = DateTimeUtils.listFormattedDateShort(timestamp);
 
-        expect(result).toEqual(`Jan 1, '${year % 100}, 05:06`);
+        expect(result).toEqual("Jan 1, '27, 05:06");
     });
 
     it('returns timestamp with year if timestamp is last year', () => {
-        const year = new Date().getFullYear() - 1;
-        const timestamp = new Date(year, 0, 1, 5, 6).getTime() / 1000;
+        const timestamp = new Date(2025, 0, 1, 5, 6).getTime() / 1000;
 
         const result = DateTimeUtils.listFormattedDateShort(timestamp);
 
-        expect(result).toEqual(`Jan 1, '${year % 100}, 05:06`);
+        expect(result).toEqual("Jan 1, '25, 05:06");
     });
 
     it('returns timestamp if input is string', () => {
-        const timestamp =
-            new Date(new Date().getFullYear(), 0, 1, 5, 6).getTime() / 1000;
+        const timestamp = new Date(2026, 0, 1, 5, 6).getTime() / 1000;
 
         const result = DateTimeUtils.listFormattedDateShort(
             timestamp.toString()
@@ -106,42 +113,84 @@ describe('listFormattedDateShort', () => {
 
         expect(result).toEqual('Jan 1, 05:06');
     });
+
+    it('shows the year for a timestamp one minute into next year', () => {
+        jest.setSystemTime(new Date(2026, 11, 31, 23, 59));
+        const timestamp = new Date(2027, 0, 1, 0, 0).getTime() / 1000;
+
+        const result = DateTimeUtils.listFormattedDateShort(timestamp);
+
+        expect(result).toEqual("Jan 1, '27, 00:00");
+    });
+
+    it('shows the year for a timestamp one minute before new year', () => {
+        jest.setSystemTime(new Date(2027, 0, 1, 0, 0));
+        const timestamp = new Date(2026, 11, 31, 23, 59).getTime() / 1000;
+
+        const result = DateTimeUtils.listFormattedDateShort(timestamp);
+
+        expect(result).toEqual("Dec 31, '26, 23:59");
+    });
+
+    it('omits the year on the last minute of the current year', () => {
+        jest.setSystemTime(new Date(2026, 11, 31, 23, 59));
+        const timestamp = new Date(2026, 0, 1, 0, 0).getTime() / 1000;
+
+        const result = DateTimeUtils.listFormattedDateShort(timestamp);
+
+        expect(result).toEqual('Jan 1, 00:00');
+    });
 });
 
 describe('listFormattedDateOrder', () => {
+    beforeEach(() => {
+        jest.useFakeTimers().setSystemTime(new Date(2026, 5, 15, 12, 0));
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
     it('returns timestamp without year if timestamp is current year', () => {
-        const timestamp = new Date(new Date().getFullYear(), 0, 1, 5, 6);
-        const dayName = timestamp.toLocaleDateString('en-US', {
-            weekday: 'short'
-        });
+        const timestamp = new Date(2026, 0, 1, 5, 6);
 
         const result = DateTimeUtils.listFormattedDateOrder(timestamp);
 
-        expect(result).toEqual(`05:06 am | ${dayName}, Jan 01`);
+        expect(result).toEqual('05:06 am | Thu, Jan 01');
     });
 
     it('returns timestamp with year if timestamp is next year', () => {
-        const year = new Date().getFullYear() + 1;
-        const timestamp = new Date(year, 0, 1, 5, 6);
-        const dayName = timestamp.toLocaleDateString('en-US', {
-            weekday: 'short'
-        });
+        const timestamp = new Date(2027, 0, 1, 5, 6);
 
         const result = DateTimeUtils.listFormattedDateOrder(timestamp);
 
-        expect(result).toEqual(`05:06 am | ${dayName}, Jan 01, '${year % 100}`);
+        expect(result).toEqual("05:06 am | Fri, Jan 01, '27");
     });
 
     it('returns timestamp with year if timestamp is last year', () => {
-        const year = new Date().getFullYear() - 1;
-        const timestamp = new Date(year, 0, 1, 5, 6);
-        const dayName = timestamp.toLocaleDateString('en-US', {
-            weekday: 'short'
-        });
+        const timestamp = new Date(2025, 0, 1, 5, 6);
 
         const result = DateTimeUtils.listFormattedDateOrder(timestamp);
 
-        expect(result).toEqual(`05:06 am | ${dayName}, Jan 01, '${year % 100}`);
+        expect(result).toEqual("05:06 am | Wed, Jan 01, '25");
+    });
+
+    it('shows the year for a timestamp one minute into next year', () => {
+        jest.setSystemTime(new Date(2026, 11, 31, 23, 59));
+        const timestamp = new Date(2027, 0, 1, 0, 0);
+
+        const result = DateTimeUtils.listFormattedDateOrder(timestamp);
+
+        expect(result).toEqual("00:00 am | Fri, Jan 01, '27");
+    });
+
+    it('shows the year for a timestamp one minute before new year', () => {
+        jest.setSystemTime(new Date(2027, 0, 1, 0, 0));
+        const timestamp = new Date(2026, 11, 31, 23, 59);
+
+        const result = DateTimeUtils.listFormattedDateOrder(timestamp);
+
+        expect(result).toEqual("23:59 pm | Thu, Dec 31, '26");
     });
 });
 
