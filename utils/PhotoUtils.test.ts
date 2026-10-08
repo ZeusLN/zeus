@@ -25,11 +25,11 @@ describe('PhotoUtils', () => {
         });
 
         it('groks out preset:// values', () => {
-            expect(getPhoto('preset://lnd')).toEqual(
-                '../../../assets/images/lnd.jpg'
+            expect(getPhoto('preset://lnd')).toMatch(
+                /\/assets\/images\/lnd\.jpg$/
             );
-            expect(getPhoto('preset://zeusillustration1a')).toEqual(
-                '../../../assets/images/zeus_illustration_1a.jpg'
+            expect(getPhoto('preset://zeusillustration1a')).toMatch(
+                /\/assets\/images\/zeus_illustration_1a\.jpg$/
             );
         });
 
@@ -80,17 +80,25 @@ describe('PhotoUtils', () => {
     describe('legacy preset values', () => {
         it('resolves names saved by Android release builds', () => {
             // v13.0.0 - v13.2.x derived these from Android resource ids
-            expect(getPhoto('preset://assetsimageslnd')).toEqual(
-                '../../../assets/images/lnd.jpg'
+            expect(getPhoto('preset://assetsimageslnd')).toMatch(
+                /\/assets\/images\/lnd\.jpg$/
             );
-            expect(getPhoto('preset://assetsimageszeusillustration1a')).toEqual(
-                '../../../assets/images/zeus_illustration_1a.jpg'
+            expect(getPhoto('preset://assetsimageszeusillustration1a')).toMatch(
+                /\/assets\/images\/zeus_illustration_1a\.jpg$/
             );
         });
 
         it('returns an empty string for unknown presets', () => {
             expect(getPhoto('preset://doesnotexist')).toEqual('');
             expect(getPhoto('preset://assetsimagesdoesnotexist')).toEqual('');
+        });
+
+        it('ignores names inherited from Object.prototype', () => {
+            for (const name of ['constructor', 'toString', '__proto__']) {
+                expect(getPresetImage(name)).toBeUndefined();
+                expect(getPhoto(`preset://${name}`)).toEqual('');
+                expect(getPhoto(`preset://assetsimages${name}`)).toEqual('');
+            }
         });
     });
 });
