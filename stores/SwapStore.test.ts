@@ -34,6 +34,7 @@ jest.mock('../storage', () => ({
     default: { getItem: jest.fn(), setItem: jest.fn(), removeItem: jest.fn() }
 }));
 jest.mock('../utils/LocaleUtils', () => ({ localeString: (k: string) => k }));
+jest.mock('../utils/BackendUtils', () => ({}));
 jest.mock('../utils/ThemeUtils', () => ({ themeColor: () => '#000' }));
 // the real UrlUtils imports the whole store graph via Stores
 jest.mock('../utils/UrlUtils', () => ({

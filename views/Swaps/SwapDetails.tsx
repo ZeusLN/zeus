@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, View, TouchableOpacity } from 'react-native';
+import { Alert, ScrollView, View, TouchableOpacity } from 'react-native';
 import { LinearProgress } from '@rneui/themed';
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -459,6 +459,11 @@ export default class SwapDetails extends React.Component<
         // Set once the screen unmounts or the swap reaches a final state, so
         // a lookup still in flight can't schedule another recheck
         let stopped = false;
+        // A rescued swap paid from elsewhere has no trusted amount, so the
+        // user confirms the lockup amount before the preimage is revealed
+        let confirmedLockupAmount: number | undefined;
+        let confirmingAmount = false;
+        let amountDeclined = false;
         const stopRechecks = () => {
             stopped = true;
             clearTimeout(lockupRecheck);
@@ -469,7 +474,15 @@ export default class SwapDetails extends React.Component<
         // which reveals the preimage, once it is confirmed and pays the
         // swap's output in full.
         const claimIfLockupVerified = async (transactionHex: string) => {
-            if (stopped || submitted || verifyingLockup || !SwapStore) return;
+            if (
+                stopped ||
+                submitted ||
+                verifyingLockup ||
+                confirmingAmount ||
+                amountDeclined ||
+                !SwapStore
+            )
+                return;
             verifyingLockup = true;
             clearTimeout(lockupRecheck);
             try {
@@ -481,7 +494,8 @@ export default class SwapDetails extends React.Component<
                     swapData.claimDestinationAddress || '',
                     swapData.preimage,
                     transactionHex,
-                    fee
+                    fee,
+                    confirmedLockupAmount
                 );
                 if (typeof result === 'boolean') {
                     submitted = result;
@@ -489,6 +503,47 @@ export default class SwapDetails extends React.Component<
                 }
                 if (stopped) return;
                 const lockup = result;
+
+                if (lockup.status === 'confirm-amount') {
+                    confirmingAmount = true;
+                    this.setState({ lockupNotice: null, loading: false });
+                    Alert.alert(
+                        localeString('views.SwapDetails.confirmLockupAmount'),
+                        localeString(
+                            'views.SwapDetails.confirmLockupAmount.message'
+                        ).replace(
+                            '{{amount}}',
+                            numberWithCommas(lockup.amount ?? 0)
+                        ),
+                        [
+                            {
+                                text: localeString('general.cancel'),
+                                style: 'cancel',
+                                onPress: () => {
+                                    confirmingAmount = false;
+                                    amountDeclined = true;
+                                    this.setState({
+                                        error: localeString(
+                                            'views.SwapDetails.lockupAmountDeclined'
+                                        )
+                                    });
+                                }
+                            },
+                            {
+                                text: localeString(
+                                    'views.SwapDetails.confirmLockupAmount.claim'
+                                ),
+                                onPress: () => {
+                                    confirmingAmount = false;
+                                    confirmedLockupAmount = lockup.amount;
+                                    claimIfLockupVerified(transactionHex);
+                                }
+                            }
+                        ],
+                        { cancelable: false }
+                    );
+                    return;
+                }
 
                 if (lockup.status === 'invalid') {
                     console.error(
@@ -762,7 +817,8 @@ export default class SwapDetails extends React.Component<
         destinationAddress: string,
         preimage: any,
         transactionHex: string,
-        fee: string
+        fee: string,
+        confirmedLockupAmount?: number
     ): Promise<boolean | ReverseLockupCheck> => {
         try {
             const { SwapStore } = this.props;
@@ -838,7 +894,8 @@ export default class SwapDetails extends React.Component<
                             preimage,
                             lockupAddress
                         }),
-                        transactionHex
+                        transactionHex,
+                        { confirmedLockupAmount }
                     );
                     if (lockup.status !== 'ok') return lockup;
                     this.setState({ lockupNotice: null });

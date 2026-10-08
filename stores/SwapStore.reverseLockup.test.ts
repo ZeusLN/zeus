@@ -36,7 +36,7 @@ jest.mock('react-native-encrypted-storage', () => ({
     setItem: jest.fn().mockResolvedValue(undefined),
     removeItem: jest.fn().mockResolvedValue(undefined)
 }));
-jest.mock('../utils/BackendUtils', () => ({}));
+jest.mock('../utils/BackendUtils', () => ({ getPayments: jest.fn() }));
 jest.mock('../utils/BiometricUtils', () => ({
     getSupportedBiometryType: jest.fn().mockResolvedValue(undefined)
 }));
@@ -86,6 +86,8 @@ import { mnemonicToSeedSync } from '@scure/bip39';
 import { HDKey } from '@scure/bip32';
 
 import SwapStore from './SwapStore';
+import BackendUtils from '../utils/BackendUtils';
+import Bolt11Utils from '../utils/Bolt11Utils';
 import Storage from '../storage';
 import Swap from '../models/Swap';
 import {
@@ -606,24 +608,163 @@ describe('SwapStore.verifyReverseLockup', () => {
         await expect(verify(swap)).resolves.toEqual({ status: 'ok' });
     });
 
-    it('verifies a rescued swap (tree + serverPublicKey, no timeout or amount)', async () => {
-        esplora(200, {
-            vout: [
-                {
-                    scriptpubkey: VALID.outputScript.toString('hex'),
-                    value: 5000
-                }
-            ],
-            status: { confirmed: true }
+    describe('a rescued swap, which has no on-chain amount', () => {
+        const getPayments = BackendUtils.getPayments as jest.Mock;
+        const PAYMENT_HASH = crypto.sha256(PREIMAGE).toString('hex');
+        // 100000 - 5% - 10000 sats
+        const FLOOR = 85000;
+
+        const rescuedSwap = () =>
+            storedSwap({
+                swapTree: undefined,
+                refundPublicKey: undefined,
+                timeoutBlockHeight: undefined,
+                onchainAmount: undefined,
+                tree: VALID.swapTree,
+                serverPublicKey: VALID.refundPublicKey
+            });
+
+        const lockedUp = (value: number) =>
+            esplora(200, {
+                vout: [
+                    {
+                        scriptpubkey: VALID.outputScript.toString('hex'),
+                        value
+                    }
+                ],
+                status: { confirmed: true }
+            });
+
+        const paid = (payment: any = {}) =>
+            getPayments.mockResolvedValue({
+                payments: [
+                    { payment_hash: 'ab'.repeat(32), value_sat: '500' },
+                    {
+                        payment_hash: PAYMENT_HASH,
+                        value_sat: '100000',
+                        status: 'IN_FLIGHT',
+                        ...payment
+                    }
+                ]
+            });
+
+        it.each([99100, FLOOR])(
+            'claims a lockup of %s sats against a payment of 100000 sats',
+            async (value) => {
+                paid();
+                lockedUp(value);
+                await expect(verify(rescuedSwap())).resolves.toEqual({
+                    status: 'ok'
+                });
+            }
+        );
+
+        it.each([1000, FLOOR - 1])(
+            'refuses a lockup of %s sats against a payment of 100000 sats',
+            async (value) => {
+                // the host trades a small lockup for the preimage that
+                // settles the whole Lightning payment
+                paid();
+                lockedUp(value);
+                await expect(verify(rescuedSwap())).resolves.toEqual({
+                    status: 'invalid',
+                    reason: 'underfunded'
+                });
+            }
+        );
+
+        it('reads a payment amount given in msat', async () => {
+            paid({ value_sat: undefined, amount_msat: '100000000msat' });
+            lockedUp(1000);
+            await expect(verify(rescuedSwap())).resolves.toEqual({
+                status: 'invalid',
+                reason: 'underfunded'
+            });
         });
-        const swap = storedSwap({
-            swapTree: undefined,
-            refundPublicKey: undefined,
-            timeoutBlockHeight: undefined,
-            onchainAmount: undefined,
-            tree: VALID.swapTree,
-            serverPublicKey: VALID.refundPublicKey
+
+        it('takes the amount from the invoice when the payment record has none', async () => {
+            // CLN sums amount_msat only over completed parts
+            paid({
+                value_sat: undefined,
+                amount_msat: '0',
+                bolt11: 'lnbc-pending'
+            });
+            const decode = jest
+                .spyOn(Bolt11Utils, 'decode')
+                .mockReturnValue({ satoshis: 100000 } as any);
+            lockedUp(1000);
+            await expect(verify(rescuedSwap())).resolves.toEqual({
+                status: 'invalid',
+                reason: 'underfunded'
+            });
+            expect(decode).toHaveBeenCalledWith('lnbc-pending');
+            decode.mockRestore();
         });
-        await expect(verify(swap)).resolves.toEqual({ status: 'ok' });
+
+        it('asks for confirmation, with the lockup amount, when the wallet has no payment for it', async () => {
+            getPayments.mockResolvedValue({
+                payments: [{ payment_hash: 'ab'.repeat(32), value_sat: '1' }]
+            });
+            lockedUp(1000);
+            await expect(verify(rescuedSwap())).resolves.toEqual({
+                status: 'confirm-amount',
+                amount: 1000
+            });
+        });
+
+        it('still refuses an invalid lockup before asking for confirmation', async () => {
+            getPayments.mockResolvedValue({ payments: [] });
+            esplora(200, {
+                vout: [
+                    {
+                        scriptpubkey: VALID.outputScript.toString('hex'),
+                        value: 1000
+                    }
+                ],
+                status: { confirmed: false }
+            });
+            await expect(verify(rescuedSwap())).resolves.toEqual({
+                status: 'unconfirmed'
+            });
+        });
+
+        it('claims once the user confirms the amount', async () => {
+            getPayments.mockResolvedValue({ payments: [] });
+            lockedUp(1000);
+            await expect(
+                newStore().verifyReverseLockup(
+                    rescuedSwap(),
+                    LOCKUP_TX.toHex(),
+                    { confirmedLockupAmount: 1000 }
+                )
+            ).resolves.toEqual({ status: 'ok' });
+            expect(getPayments).not.toHaveBeenCalled();
+        });
+
+        it('refuses a lockup below the amount the user confirmed', async () => {
+            lockedUp(999);
+            await expect(
+                newStore().verifyReverseLockup(
+                    rescuedSwap(),
+                    LOCKUP_TX.toHex(),
+                    { confirmedLockupAmount: 1000 }
+                )
+            ).resolves.toEqual({ status: 'invalid', reason: 'underfunded' });
+        });
+
+        it('retries when the payments cannot be listed', async () => {
+            getPayments.mockRejectedValue(new Error('offline'));
+            lockedUp(99100);
+            await expect(verify(rescuedSwap())).resolves.toEqual({
+                status: 'unavailable',
+                reason: 'payment-lookup-failed'
+            });
+        });
+
+        it('does not look up payments for a swap with an on-chain amount', async () => {
+            esplora(200);
+            await expect(verify()).resolves.toEqual({ status: 'ok' });
+            expect(getPayments).not.toHaveBeenCalled();
+        });
     });
 });

@@ -22,8 +22,11 @@ import {
     checkLockupOutput,
     MIN_REVERSE_SWAP_CLAIM_BLOCKS,
     calculateReceiveAmount,
-    deriveSwapPreimage
+    deriveSwapPreimage,
+    rescuedLockupFloor
 } from '../utils/SwapUtils';
+import BackendUtils from '../utils/BackendUtils';
+import Bolt11Utils from '../utils/Bolt11Utils';
 
 import NodeInfoStore from './NodeInfoStore';
 import SettingsStore, {
@@ -42,8 +45,12 @@ import {
 } from '../models/ClaimTransaction';
 
 export type ReverseLockupCheck = {
-    status: 'ok' | 'unconfirmed' | 'invalid' | 'unavailable';
+    // 'confirm-amount': every check passed, but nothing trusted says how
+    // much the lockup should hold; ask the user before claiming
+    status: 'ok' | 'unconfirmed' | 'invalid' | 'unavailable' | 'confirm-amount';
     reason?: string;
+    // the lockup output's value in sats, with 'confirm-amount'
+    amount?: number;
 };
 
 interface SubmarineSwapInfo {
@@ -777,7 +784,8 @@ export default class SwapStore {
      */
     public verifyReverseLockup = async (
         swap: Swap,
-        providerTxHex: string
+        providerTxHex: string,
+        { confirmedLockupAmount }: { confirmedLockupAmount?: number } = {}
     ): Promise<ReverseLockupCheck> => {
         const privateKeyHex = privateKeyFromKeys(swap.keys);
         const preimageHex = preimageHexFrom(swap.preimage as any);
@@ -842,15 +850,38 @@ export default class SwapStore {
             return { status: 'unavailable', reason: 'request-failed' };
         }
 
-        if (swap.onchainAmount == null) {
-            console.log(
-                'Reverse swap has no recorded on-chain amount; skipping the lockup amount check'
-            );
+        // A rescued swap's on-chain amount could only come from the host,
+        // so none is stored. Take the floor from this wallet's own payment
+        // for the swap instead; with no such payment, the user has to
+        // confirm the amount before the preimage is revealed.
+        let minAmount: number | undefined = swap.onchainAmount ?? undefined;
+        let needsConfirmation = false;
+        if (minAmount == null) {
+            if (confirmedLockupAmount != null) {
+                minAmount = confirmedLockupAmount;
+            } else {
+                const paid = await this.findOwnPaymentAmount(
+                    crypto
+                        .sha256(Buffer.from(preimageHex, 'hex'))
+                        .toString('hex')
+                );
+                if (paid === undefined) {
+                    return {
+                        status: 'unavailable',
+                        reason: 'payment-lookup-failed'
+                    };
+                }
+                if (paid === null) {
+                    needsConfirmation = true;
+                } else {
+                    minAmount = rescuedLockupFloor(paid);
+                }
+            }
         }
         const outputStatus = checkLockupOutput(
             tx,
             responseCheck.outputScript,
-            swap.onchainAmount
+            minAmount
         );
         if (outputStatus === 'unconfirmed') return { status: 'unconfirmed' };
         if (outputStatus !== 'ok')
@@ -891,10 +922,71 @@ export default class SwapStore {
             return { status: 'unavailable', reason: 'outspend-unavailable' };
         }
         // Read the tip last so the other lookups cannot age the height check.
-        return this.verifyReverseSwapDeadline(
+        const deadline = await this.verifyReverseSwapDeadline(
             responseCheck.timeoutBlockHeight,
             apiUrl
         );
+        if (deadline.status !== 'ok' || !needsConfirmation) return deadline;
+
+        const scriptHex = responseCheck.outputScript.toString('hex');
+        const amount = Number(
+            (tx?.vout || []).find(
+                (output: any) =>
+                    (output?.scriptpubkey || '').toLowerCase() === scriptHex
+            )?.value
+        );
+        return { status: 'confirm-amount', amount };
+    };
+
+    /**
+     * The amount in sats of this wallet's own Lightning payment with the
+     * given hash. null when the wallet has no such payment, or it records
+     * no amount; undefined when the payments could not be listed.
+     */
+    public findOwnPaymentAmount = async (
+        paymentHash: string
+    ): Promise<number | null | undefined> => {
+        let payments: any[];
+        try {
+            const response = await BackendUtils.getPayments();
+            payments = response?.payments || [];
+        } catch (e) {
+            console.error('Could not list payments for a swap', e);
+            return undefined;
+        }
+
+        // Read the fields directly rather than through the Payment model,
+        // which would pull the store graph into SwapStore's imports
+        const decode = (paymentRequest?: string) => {
+            if (!paymentRequest) return undefined;
+            try {
+                return Bolt11Utils.decode(paymentRequest);
+            } catch (e) {
+                return undefined;
+            }
+        };
+        const paymentRequestOf = (p: any) => p?.payment_request || p?.bolt11;
+        const hash = paymentHash.toLowerCase();
+        const payment = payments.find((p: any) => {
+            const ownHash =
+                typeof p?.payment_hash === 'string'
+                    ? p.payment_hash
+                    : decode(paymentRequestOf(p))?.payment_hash;
+            return ownHash?.toLowerCase() === hash;
+        });
+        if (!payment) return null;
+
+        let amount = Number(payment.value_sat);
+        if (!(amount > 0)) {
+            amount =
+                Number(String(payment.amount_msat ?? '').replace('msat', '')) /
+                1000;
+        }
+        // CLN reports no amount for a payment that hasn't completed
+        if (!(amount > 0)) {
+            amount = Number(decode(paymentRequestOf(payment))?.satoshis);
+        }
+        return amount > 0 ? amount : null;
     };
 
     private saveReverseSwaps = async (

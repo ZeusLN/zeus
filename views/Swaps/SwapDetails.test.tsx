@@ -50,6 +50,7 @@ jest.mock('../../assets/images/SVG/Caret Down.svg', () => 'CaretDown');
 jest.mock('../../assets/images/SVG/Caret Right.svg', () => 'CaretRight');
 jest.mock('../../assets/images/SVG/QR.svg', () => 'QR');
 
+import { Alert } from 'react-native';
 import SwapDetails from './SwapDetails';
 import lndMobile from '../../lndmobile/LndMobileInjection';
 import { ReverseClaimTransaction } from '../../models/ClaimTransaction';
@@ -312,6 +313,95 @@ describe('lockup verification retry wiring', () => {
 
         expect(store.verifyReverseLockup).toHaveBeenCalledTimes(1);
         view.componentWillUnmount?.();
+    });
+
+    describe('a lockup amount nothing in the wallet vouches for', () => {
+        const alertButtons = (alert: jest.SpyInstance) =>
+            alert.mock.calls[alert.mock.calls.length - 1][2];
+
+        it('asks before claiming and claims once the user confirms', async () => {
+            const alert = jest
+                .spyOn(Alert, 'alert')
+                .mockImplementation(() => {});
+            const { store, view } = makeView();
+            store.verifyReverseLockup
+                .mockResolvedValueOnce({
+                    status: 'confirm-amount',
+                    amount: 1000
+                })
+                .mockResolvedValue({ status: 'ok' });
+            nativeClaim.mockResolvedValue(undefined);
+
+            await start(view);
+            expect(nativeClaim).not.toHaveBeenCalled();
+            expect(alert).toHaveBeenCalledTimes(1);
+            expect(alert.mock.calls[0][1]).toBe(
+                'views.SwapDetails.confirmLockupAmount.message'
+            );
+
+            // another update while the prompt is up doesn't ask again
+            await socket.onmessage({
+                data: JSON.stringify({
+                    event: 'update',
+                    args: [
+                        {
+                            status: 'transaction.confirmed',
+                            transaction: { hex: 'txhex' }
+                        }
+                    ]
+                })
+            });
+            expect(store.verifyReverseLockup).toHaveBeenCalledTimes(1);
+            expect(alert).toHaveBeenCalledTimes(1);
+
+            alertButtons(alert)[1].onPress();
+            await jest.advanceTimersByTimeAsync(2000);
+
+            expect(store.verifyReverseLockup).toHaveBeenLastCalledWith(
+                expect.anything(),
+                'txhex',
+                { confirmedLockupAmount: 1000 }
+            );
+            expect(nativeClaim).toHaveBeenCalledTimes(1);
+            alert.mockRestore();
+            view.componentWillUnmount?.();
+        });
+
+        it('does not claim or ask again once the user declines', async () => {
+            const alert = jest
+                .spyOn(Alert, 'alert')
+                .mockImplementation(() => {});
+            const { store, view } = makeView();
+            store.verifyReverseLockup.mockResolvedValue({
+                status: 'confirm-amount',
+                amount: 1000
+            });
+
+            await start(view);
+            alertButtons(alert)[0].onPress();
+            expect(view.state.error).toBe(
+                'views.SwapDetails.lockupAmountDeclined'
+            );
+
+            await socket.onmessage({
+                data: JSON.stringify({
+                    event: 'update',
+                    args: [
+                        {
+                            status: 'transaction.confirmed',
+                            transaction: { hex: 'txhex' }
+                        }
+                    ]
+                })
+            });
+            await jest.advanceTimersByTimeAsync(120000);
+
+            expect(alert).toHaveBeenCalledTimes(1);
+            expect(store.verifyReverseLockup).toHaveBeenCalledTimes(1);
+            expect(nativeClaim).not.toHaveBeenCalled();
+            alert.mockRestore();
+            view.componentWillUnmount?.();
+        });
     });
 
     it('shows a fatal verification error without scheduling another claim', async () => {
