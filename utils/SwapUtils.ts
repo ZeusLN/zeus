@@ -86,6 +86,55 @@ export const bigFloor = (big: BigNumber): BigNumber => {
 export const swapWebSocketUrl = (endpoint: string): string =>
     endpoint.replace(/^https/, 'wss').replace(/^http/, 'ws') + '/ws';
 
+export type RefundFailureAction =
+    | { type: 'retry-uncooperative' }
+    | { type: 'wait-for-timeout'; blocksRemaining?: number }
+    | { type: 'show-error' };
+
+/**
+ * Decides what to do after a submarine swap refund fails.
+ *
+ * boltz-client does not fall back to the script path when a cooperative
+ * refund fails: if the host won't co-sign, ConstructTransaction returns
+ * "all outputs invalid" (pkg/boltz/transaction.go, v2.9.0). The script
+ * path only works once the chain tip reaches the swap's timeout block, so:
+ * - cooperative, not co-signed, timeout reached: retry uncooperatively
+ * - cooperative, not co-signed, timeout not reached or tip unknown: tell
+ *   the user when an uncooperative refund becomes possible
+ * - uncooperative, timeout not reached: same, the refund can't be final yet
+ * Anything else (fee, address, broadcast errors) is shown as-is.
+ */
+export const refundFailureAction = ({
+    cooperative,
+    errorMessage,
+    currentBlockHeight,
+    timeoutBlockHeight
+}: {
+    cooperative: boolean;
+    errorMessage?: string;
+    currentBlockHeight: number;
+    timeoutBlockHeight: number;
+}): RefundFailureAction => {
+    if (!(timeoutBlockHeight > 0)) return { type: 'show-error' };
+
+    const tipKnown = currentBlockHeight > 0;
+    const blocksRemaining = timeoutBlockHeight - currentBlockHeight;
+
+    if (cooperative) {
+        if (!/all outputs invalid/i.test(errorMessage || '')) {
+            return { type: 'show-error' };
+        }
+        if (!tipKnown) return { type: 'wait-for-timeout' };
+        return blocksRemaining > 0
+            ? { type: 'wait-for-timeout', blocksRemaining }
+            : { type: 'retry-uncooperative' };
+    }
+
+    return tipKnown && blocksRemaining > 0
+        ? { type: 'wait-for-timeout', blocksRemaining }
+        : { type: 'show-error' };
+};
+
 export const SWAPS_KEY = 'swaps';
 export const REVERSE_SWAPS_KEY = 'reverse-swaps';
 export const SWAPS_RESCUE_KEY = 'swaps-rescue-key';

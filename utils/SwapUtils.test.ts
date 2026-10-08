@@ -34,6 +34,7 @@ import {
     calculateSendAmount,
     calculateLimit,
     isValidRescueKey,
+    refundFailureAction,
     swapWebSocketUrl,
     verifyReverseSwapInvoice,
     purgeLegacyRescueKeyFiles,
@@ -308,6 +309,82 @@ describe('SwapUtils', () => {
             expect(swapWebSocketUrl('https://http.http/https')).toBe(
                 'wss://http.http/https/ws'
             );
+        });
+    });
+
+    describe('refundFailureAction', () => {
+        const NOT_COSIGNED =
+            'could not create refund transaction: all outputs invalid';
+        const action = (
+            cooperative: boolean,
+            errorMessage: string,
+            currentBlockHeight: number,
+            timeoutBlockHeight = 900_000
+        ) =>
+            refundFailureAction({
+                cooperative,
+                errorMessage,
+                currentBlockHeight,
+                timeoutBlockHeight
+            });
+
+        it('retries uncooperatively once the timeout block is reached', () => {
+            expect(action(true, NOT_COSIGNED, 900_000)).toEqual({
+                type: 'retry-uncooperative'
+            });
+            expect(action(true, NOT_COSIGNED, 900_010)).toEqual({
+                type: 'retry-uncooperative'
+            });
+        });
+
+        it('says how long to wait when the host did not co-sign before the timeout', () => {
+            expect(action(true, NOT_COSIGNED, 899_958)).toEqual({
+                type: 'wait-for-timeout',
+                blocksRemaining: 42
+            });
+        });
+
+        it('says to wait without a count when the tip is unknown', () => {
+            expect(action(true, NOT_COSIGNED, 0)).toEqual({
+                type: 'wait-for-timeout'
+            });
+        });
+
+        it('shows other cooperative errors as-is, even past the timeout', () => {
+            const broadcast =
+                'non-200 response: 400, body: min relay fee not met';
+            expect(action(true, broadcast, 900_010)).toEqual({
+                type: 'show-error'
+            });
+            expect(action(true, broadcast, 899_000)).toEqual({
+                type: 'show-error'
+            });
+            expect(action(true, '', 900_010)).toEqual({ type: 'show-error' });
+        });
+
+        it('says how long to wait when an uncooperative refund is tried too early', () => {
+            expect(action(false, 'non-final', 899_999)).toEqual({
+                type: 'wait-for-timeout',
+                blocksRemaining: 1
+            });
+        });
+
+        it('shows uncooperative errors as-is past the timeout or with an unknown tip', () => {
+            expect(action(false, 'non-final', 900_000)).toEqual({
+                type: 'show-error'
+            });
+            expect(action(false, 'non-final', 0)).toEqual({
+                type: 'show-error'
+            });
+        });
+
+        it('shows the error when the swap has no timeout block', () => {
+            expect(action(true, NOT_COSIGNED, 900_000, 0)).toEqual({
+                type: 'show-error'
+            });
+            expect(action(true, NOT_COSIGNED, 900_000, NaN)).toEqual({
+                type: 'show-error'
+            });
         });
     });
 
