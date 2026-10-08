@@ -121,6 +121,7 @@ describe('LND activity date filtering', () => {
     let getRequest: jest.SpyInstance;
 
     beforeEach(() => {
+        nodeInfoStore.nodeInfo = { version: '' };
         lnd = new LND();
         getRequest = jest
             .spyOn(lnd, 'getRequest')
@@ -151,6 +152,16 @@ describe('LND activity date filtering', () => {
 
         expect(getRequest).toHaveBeenCalledWith(
             '/v1/invoices?reversed=true&num_max_invoices=0'
+        );
+    });
+
+    it('preserves an explicit zero payment limit in the request', async () => {
+        nodeInfoStore.nodeInfo.version = '0.20.0-beta';
+
+        await lnd.getPayments({ maxPayments: 0 });
+
+        expect(getRequest).toHaveBeenCalledWith(
+            '/v1/payments?include_incomplete=true&max_payments=0&reversed=true'
         );
     });
 

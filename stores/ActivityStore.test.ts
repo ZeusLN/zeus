@@ -27,6 +27,7 @@ jest.mock('../utils/ActivityFilterUtils', () => ({
 }));
 
 import ActivityStore, { DEFAULT_FILTERS } from './ActivityStore';
+import BackendUtils from '../utils/BackendUtils';
 
 const activityItem = (timestamp: number) => ({
     getTimestamp: timestamp,
@@ -34,6 +35,10 @@ const activityItem = (timestamp: number) => ({
 });
 
 describe('ActivityStore scoped LND fetches', () => {
+    beforeEach(() => {
+        (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(true);
+    });
+
     it('keeps date-scoped results out of the shared invoice and payment stores', async () => {
         const canonicalPayment = activityItem(1);
         const canonicalInvoice = activityItem(2);
@@ -79,12 +84,14 @@ describe('ActivityStore scoped LND fetches', () => {
         expect(invoicesStore.fetchInvoices).toHaveBeenCalledWith({
             creationDateEnd: expect.any(Number)
         });
+        expect(paymentsStore.getPayments).toHaveBeenCalledTimes(1);
+        expect(invoicesStore.getInvoices).toHaveBeenCalledTimes(1);
         expect(paymentsStore.payments).toEqual([canonicalPayment]);
         expect(invoicesStore.invoices).toEqual([canonicalInvoice]);
         expect(store.activity).toEqual([scopedInvoice, scopedPayment]);
     });
 
-    it('loads node information before a version-gated date request', async () => {
+    it('does not refresh global node information for a date request', async () => {
         const nodeInfoStore = {
             nodeInfo: {},
             getNodeInfo: jest.fn().mockImplementation(async () => {
@@ -116,7 +123,7 @@ describe('ActivityStore scoped LND fetches', () => {
             endDate: new Date(2024, 4, 12)
         });
 
-        expect(nodeInfoStore.getNodeInfo).toHaveBeenCalledTimes(1);
+        expect(nodeInfoStore.getNodeInfo).not.toHaveBeenCalled();
     });
 
     it('clears node-scoped activity before starting a new wallet fetch', async () => {
@@ -149,8 +156,8 @@ describe('ActivityStore scoped LND fetches', () => {
             })
         ).rejects.toThrow('wallet unavailable');
 
-        expect((store as any).activityPayments).toEqual([]);
-        expect((store as any).activityInvoices).toEqual([]);
+        expect((store as any).activityPayments).toBeUndefined();
+        expect((store as any).activityInvoices).toBeUndefined();
     });
 
     it('refreshes canonical invoices as well as scoped LNC activity', async () => {
@@ -189,5 +196,51 @@ describe('ActivityStore scoped LND fetches', () => {
         });
         expect(invoicesStore.invoices).toEqual([canonicalInvoice]);
         expect(store.activity).toEqual([scopedInvoice]);
+    });
+
+    it('keeps non-LND activity unscoped and bound to canonical stores', async () => {
+        (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(false);
+        const initialPayment = activityItem(1);
+        const initialInvoice = activityItem(2);
+        const refreshedPayment = activityItem(3);
+        const refreshedInvoice = activityItem(4);
+        const paymentsStore = {
+            payments: [initialPayment],
+            getPayments: jest.fn(),
+            fetchPayments: jest.fn()
+        };
+        const invoicesStore = {
+            invoices: [initialInvoice],
+            getInvoices: jest.fn(),
+            fetchInvoices: jest.fn()
+        };
+        const store = new ActivityStore(
+            { implementation: 'cln-rest', settings: {} } as any,
+            paymentsStore as any,
+            invoicesStore as any,
+            { transactions: [] } as any,
+            { checkPendingItems: jest.fn() } as any,
+            { swaps: [], fetchAndUpdateSwaps: jest.fn() } as any,
+            { nodeInfo: {} } as any
+        );
+
+        await store.getActivityAndFilter(undefined, {
+            ...DEFAULT_FILTERS,
+            startDate: new Date(2024, 4, 10),
+            endDate: new Date(2024, 4, 12)
+        });
+
+        expect(paymentsStore.fetchPayments).not.toHaveBeenCalled();
+        expect(invoicesStore.fetchInvoices).not.toHaveBeenCalled();
+        expect(paymentsStore.getPayments).toHaveBeenCalledTimes(1);
+        expect(invoicesStore.getInvoices).toHaveBeenCalledTimes(1);
+
+        paymentsStore.payments = [refreshedPayment];
+        invoicesStore.invoices = [refreshedInvoice];
+
+        expect(await store.getSortedActivity()).toEqual([
+            refreshedInvoice,
+            refreshedPayment
+        ]);
     });
 });

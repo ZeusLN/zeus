@@ -366,8 +366,8 @@ export default class ActivityStore {
 
     private getActivity = async (filters: Filter) => {
         this.activity = [];
-        this.activityPayments = [];
-        this.activityInvoices = [];
+        this.activityPayments = undefined;
+        this.activityInvoices = undefined;
         const paymentDateRange = BackendUtils.isLNDBased()
             ? getLndCreationDateRange(filters.startDate, filters.endDate)
             : undefined;
@@ -379,27 +379,19 @@ export default class ActivityStore {
             ? getLndInvoiceCreationDateRange(filters.endDate)
             : undefined;
 
-        if (
-            (paymentDateRange || invoiceDateRange) &&
-            !this.nodeInfoStore.nodeInfo?.version &&
-            this.settingsStore.implementation !== 'embedded-lnd'
-        ) {
-            try {
-                await this.nodeInfoStore.getNodeInfo();
-            } catch {}
-        }
-
         if (paymentDateRange) {
-            this.activityPayments = await this.paymentsStore.fetchPayments(
-                paymentDateRange
-            );
+            const [activityPayments] = await Promise.all([
+                this.paymentsStore.fetchPayments(paymentDateRange),
+                this.paymentsStore.getPayments()
+            ]);
+            this.activityPayments = activityPayments;
         } else {
             await this.paymentsStore.getPayments();
-            this.activityPayments = this.paymentsStore.payments;
         }
         if (BackendUtils.supportsOnchainSends())
             await this.transactionsStore.getTransactions();
         if (invoiceDateRange) {
+            const canonicalRefresh = this.invoicesStore.getInvoices();
             try {
                 const { invoices } = await this.invoicesStore.fetchInvoices(
                     invoiceDateRange
@@ -408,9 +400,9 @@ export default class ActivityStore {
             } catch {
                 this.activityInvoices = [];
             }
+            await canonicalRefresh;
         } else {
             await this.invoicesStore.getInvoices();
-            this.activityInvoices = this.invoicesStore.invoices;
         }
 
         await this.swapStore.fetchAndUpdateSwaps();
@@ -439,7 +431,7 @@ export default class ActivityStore {
             await canonicalRefresh;
         } else {
             await this.invoicesStore.getInvoices();
-            this.activityInvoices = this.invoicesStore.invoices;
+            this.activityInvoices = undefined;
         }
         await runInAction(async () => {
             this.activity = await this.getSortedActivity();

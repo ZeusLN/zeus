@@ -395,9 +395,7 @@ export default class LND {
         const supportsCreationDateFilter = this.supports('v0.16.0');
 
         return this.getRequest(
-            `/v1/payments?include_incomplete=true${
-                maxPayments ? `&max_payments=${maxPayments}` : ''
-            }&reversed=${reversed}${
+            `/v1/payments?include_incomplete=true&max_payments=${maxPayments}&reversed=${reversed}${
                 supportsCreationDateFilter &&
                 params.creationDateStart !== undefined
                     ? `&creation_date_start=${params.creationDateStart}`
