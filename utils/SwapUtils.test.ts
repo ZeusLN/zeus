@@ -25,7 +25,7 @@ import { Platform } from 'react-native';
 import RNFS from 'react-native-fs';
 import { mnemonicToSeedSync } from '@scure/bip39';
 import { HDKey } from '@scure/bip32';
-import { crypto, payments } from 'bitcoinjs-lib';
+import { address as bitcoinAddress, crypto, payments } from 'bitcoinjs-lib';
 import {
     bigCeil,
     bigFloor,
@@ -747,6 +747,52 @@ describe('SwapUtils', () => {
                     valid: false,
                     reason
                 });
+            });
+
+            it('rejects an uncompressed server key whose lockup address matches the raw-bytes aggregate', () => {
+                // The same point in 65-byte form. KeyAgg over those bytes
+                // gives another output key than native boltz-client, which
+                // aggregates compressed keys, so a host could fund this
+                // address, take the preimage from the cooperative claim
+                // request, and leave the claim unsignable.
+                const uncompressed = Buffer.from(
+                    ecc.pointCompress(hex(SERVER_PUBKEY), false)
+                );
+                expect(uncompressed).toHaveLength(65);
+                const rawBytesKey = deriveReverseSwapOutputKey({
+                    ourPubKey: OUR_PUBKEY,
+                    serverPubKey: uncompressed,
+                    claimLeaf: hex(CLAIM_LEAF),
+                    refundLeaf: hex(REFUND_LEAF)
+                });
+                const nativeKey =
+                    bitcoinAddress.fromBech32(LOCKUP_ADDRESS).data;
+                expect(rawBytesKey.equals(Buffer.from(nativeKey))).toBe(false);
+
+                expect(
+                    verifyReverseSwapResponse(
+                        response({
+                            serverPubKey: uncompressed.toString('hex'),
+                            lockupAddress: bitcoinAddress.toBech32(
+                                rawBytesKey,
+                                1,
+                                'bc'
+                            )
+                        })
+                    )
+                ).toEqual({ valid: false, reason: 'server-key-encoding' });
+            });
+
+            it('rejects an uncompressed server key with the native lockup address', () => {
+                expect(
+                    verifyReverseSwapResponse(
+                        response({
+                            serverPubKey: Buffer.from(
+                                ecc.pointCompress(hex(SERVER_PUBKEY), false)
+                            ).toString('hex')
+                        })
+                    )
+                ).toEqual({ valid: false, reason: 'server-key-encoding' });
             });
 
             it('accepts a rescued swap without a timeout or leaf versions', () => {

@@ -224,6 +224,7 @@ export type ReverseSwapResponseCheck =
           valid: false;
           reason:
               | 'missing-fields'
+              | 'server-key-encoding'
               | 'leaf-version'
               | 'claim-leaf-mismatch'
               | 'refund-leaf-mismatch'
@@ -284,6 +285,15 @@ export const verifyReverseSwapResponse = ({
         if (!ecc.isPoint(serverKey)) throw new Error('invalid server key');
     } catch (e) {
         return { valid: false, reason: 'missing-fields' };
+    }
+    // KeyAgg hashes the key bytes as given, while the native claim hashes
+    // the compressed encoding. An uncompressed key would pass here against
+    // a different output key than the one the claim signs for.
+    if (
+        serverKey.length !== 33 ||
+        (serverKey[0] !== 0x02 && serverKey[0] !== 0x03)
+    ) {
+        return { valid: false, reason: 'server-key-encoding' };
     }
 
     const claimLeaf = Buffer.from(claimLeafHex, 'hex');
