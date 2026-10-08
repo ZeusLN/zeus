@@ -211,8 +211,8 @@ Three provable claims fall out: (a) the msat↔sat conversions occur exactly at 
 
 **Steps**
 
-1. **Write the test before (or at worst, alongside) the fix, at the layer that owns the logic.** Reality check (verified): tests exist only for `utils/` (45 files), `models/` (2), and `lndmobile/channel.test.ts` — plus the repo-root `check-styles.test.ts` lint helper, 49 files total. `stores/`, `views/`, `components/`, `backends/` have **zero** coverage.
-2. **If the bug lives in an untested layer, extract the pure logic into `utils/` first, then test it there.** This is established repo practice, not a workaround — see the worked examples.
+1. **Write the test before (or at worst, alongside) the fix, at the layer that owns the logic.** Reality check (2026-10-08): every top-level code directory now has tests (census and recount command in zeus-validation-and-qa section 4), but coverage outside `utils/` is shallow. A store or view usually has a test file that exercises only a few of its paths.
+2. **If the bug lives in code that is hard to test in place (a store or view), extract the pure logic into `utils/` first, then test it there.** This is established repo practice; see the worked examples.
 3. **Demonstrate the test fails without the fix.** Temporarily undo the fix hunk in your working tree, run the single test, watch it fail, restore. State this in the PR ("test fails on pre-fix code").
 4. **Run the full gate:** `yarn verify` (jest + prettier + tsc + eslint, matching the 4 PR checks — anatomy and jest traps in zeus-validation-and-qa).
 5. The test must **encode the bug's mechanism, not its symptom** — assert the property whose violation caused the bug.

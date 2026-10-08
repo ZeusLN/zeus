@@ -324,7 +324,7 @@ proofs); paying Lightning from proofs = **melt quote**. Tokens serialize as
   in the background is the hard part: on iOS the store drives a **background-audio
   keep-alive** (`utils/IOSAudioKeepAliveUtils.ts`, bundled silent m4a) that auto-starts
   whenever at least one connection exists; Android uses a foreground service. This store
-  is a known hotspot (~3200 lines, zero tests) — see `zeus-debugging-playbook` before
+  is a known hotspot (~4400 lines, about a third of its statements tested); see `zeus-debugging-playbook` before
   touching it.
 - **Client backend** (`backends/NostrWalletConnect.ts`): Zeus can itself be a thin client
   driving a remote NWC wallet, via `@getalby/sdk`'s `NostrWebLNProvider` constructed from
