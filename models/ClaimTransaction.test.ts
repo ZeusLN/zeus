@@ -1,3 +1,6 @@
+import ecc from '@bitcoinerlab/secp256k1';
+import { ECPairFactory } from 'ecpair';
+
 import {
     SubmarineClaimTransaction,
     ReverseClaimTransaction
@@ -173,13 +176,36 @@ describe('private key deserialization (via SubmarineClaimTransaction.build)', ()
         expect(buildWith({ __D: rehydrated })?.privateKey).toBe('0a0b0c0d');
     });
 
+    it('handles a live ECPair, as passed by the swap screen after creation', () => {
+        const privateKey = Buffer.alloc(32, 7);
+        const keys = ECPairFactory(ecc).fromPrivateKey(privateKey);
+        expect(buildWith(keys)?.privateKey).toBe(privateKey.toString('hex'));
+    });
+
+    it('handles a live ECPair whose key is a plain Uint8Array', () => {
+        const keys = ECPairFactory(ecc).makeRandom();
+        expect(buildWith(keys)?.privateKey).toBe(
+            Buffer.from(keys.privateKey!).toString('hex')
+        );
+    });
+
+    it('handles a JSON-round-tripped Uint8Array (index-keyed object)', () => {
+        const keys = ECPairFactory(ecc).makeRandom();
+        const rehydrated = JSON.parse(JSON.stringify(keys));
+        expect(buildWith(rehydrated)?.privateKey).toBe(
+            Buffer.from(keys.privateKey!).toString('hex')
+        );
+    });
+
     it.each([
         ['null', null],
         ['undefined', undefined],
         ['no __D', {}],
         ['__D as a string', { __D: 'oops' }],
         ['__D as a number', { __D: 42 }],
-        ['__D object without data', { __D: { something: 'else' } }]
+        ['__D object without data', { __D: { something: 'else' } }],
+        ['__D index object with a gap', { __D: { 0: 1, 2: 3 } }],
+        ['__D index object with a non-byte', { __D: { 0: 1, 1: 256 } }]
     ])('returns null for %s keys', (_, keys) => {
         expect(buildWith(keys)).toBeNull();
     });
