@@ -133,7 +133,7 @@ export default class CashuLightningAddressSettings extends React.Component<
             mintUrl,
             mintList
         } = this.state;
-        const { updateSettings, settings }: any = SettingsStore;
+        const { updateSettingsGroup } = SettingsStore;
         const { loading, update, error_msg } = LightningAddressStore;
 
         const mintsNotConfigured = mintList.length === 0;
@@ -189,21 +189,18 @@ export default class CashuLightningAddressSettings extends React.Component<
                             >
                                 <Switch
                                     value={automaticallyAccept ?? false}
-                                    disabled={
-                                        SettingsStore.settingsUpdateInProgress
-                                    }
-                                    onValueChange={async () => {
-                                        const next = !automaticallyAccept;
+                                    onValueChange={async (value: boolean) => {
+                                        const next = value;
                                         this.setState({
                                             automaticallyAccept: next
                                         });
                                         try {
-                                            await updateSettings({
-                                                lightningAddress: {
-                                                    ...settings.lightningAddress,
+                                            await updateSettingsGroup(
+                                                'lightningAddress',
+                                                {
                                                     automaticallyAccept: next
                                                 }
-                                            });
+                                            );
                                             restartNeeded();
                                         } catch (e) {
                                             this.setState({
@@ -238,11 +235,9 @@ export default class CashuLightningAddressSettings extends React.Component<
                             >
                                 <Switch
                                     value={allowComments ?? false}
-                                    disabled={
-                                        SettingsStore.settingsUpdateInProgress
-                                    }
-                                    onValueChange={async () => {
-                                        const next = !allowComments;
+                                    disabled={loading}
+                                    onValueChange={async (value: boolean) => {
+                                        const next = value;
                                         this.setState({
                                             allowComments: next
                                         });
@@ -250,12 +245,12 @@ export default class CashuLightningAddressSettings extends React.Component<
                                             await update({
                                                 allow_comments: next
                                             });
-                                            await updateSettings({
-                                                lightningAddress: {
-                                                    ...settings.lightningAddress,
+                                            await updateSettingsGroup(
+                                                'lightningAddress',
+                                                {
                                                     allowComments: next
                                                 }
-                                            });
+                                            );
                                         } catch (e) {
                                             this.setState({
                                                 allowComments: !next
@@ -297,11 +292,9 @@ export default class CashuLightningAddressSettings extends React.Component<
                             >
                                 <Switch
                                     value={zapReceiptsEnabled}
-                                    disabled={
-                                        SettingsStore.settingsUpdateInProgress
-                                    }
-                                    onValueChange={async () => {
-                                        const next = !zapReceiptsEnabled;
+                                    disabled={loading}
+                                    onValueChange={async (value: boolean) => {
+                                        const next = value;
                                         this.setState({
                                             zapReceiptsEnabled: next
                                         });
@@ -309,12 +302,12 @@ export default class CashuLightningAddressSettings extends React.Component<
                                             await update({
                                                 zap_receipts_enabled: next
                                             });
-                                            await updateSettings({
-                                                lightningAddress: {
-                                                    ...settings.lightningAddress,
+                                            await updateSettingsGroup(
+                                                'lightningAddress',
+                                                {
                                                     zapReceiptsEnabled: next
                                                 }
-                                            });
+                                            );
                                         } catch (e) {
                                             this.setState({
                                                 zapReceiptsEnabled: !next
@@ -338,12 +331,12 @@ export default class CashuLightningAddressSettings extends React.Component<
                                         await update({
                                             notifications: value
                                         });
-                                        await updateSettings({
-                                            lightningAddress: {
-                                                ...settings.lightningAddress,
+                                        await updateSettingsGroup(
+                                            'lightningAddress',
+                                            {
                                                 notifications: value
                                             }
-                                        });
+                                        );
                                         if (value === 1) {
                                             LightningAddressStore.updatePushCredentials().catch(
                                                 (e) =>
@@ -358,9 +351,7 @@ export default class CashuLightningAddressSettings extends React.Component<
                                     }
                                 }}
                                 values={NOTIFICATIONS_PREF_KEYS}
-                                disabled={
-                                    SettingsStore.settingsUpdateInProgress
-                                }
+                                disabled={loading}
                             />
                         </View>
                         {mintsNotConfigured ? (
@@ -393,12 +384,12 @@ export default class CashuLightningAddressSettings extends React.Component<
                                             await update({
                                                 mint_url: value
                                             });
-                                            await updateSettings({
-                                                lightningAddress: {
-                                                    ...settings.lightningAddress,
+                                            await updateSettingsGroup(
+                                                'lightningAddress',
+                                                {
                                                     mintUrl: value
                                                 }
-                                            });
+                                            );
                                         } catch (e) {
                                             this.setState({ mintUrl: prev });
                                         }

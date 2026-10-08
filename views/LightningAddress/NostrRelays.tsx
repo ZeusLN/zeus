@@ -75,7 +75,7 @@ export default class NostrRelays extends React.Component<
     render() {
         const { navigation, SettingsStore, LightningAddressStore } = this.props;
         const { relays, addRelay, setup } = this.state;
-        const { updateSettings, settings }: any = SettingsStore;
+        const { updateSettingsGroup, settings }: any = SettingsStore;
         const { lightningAddress } = settings;
         const { nostrPrivateKey } = lightningAddress;
         const { update, loading, error_msg } = LightningAddressStore;
@@ -161,9 +161,7 @@ export default class NostrRelays extends React.Component<
                                             color: themeColor('text')
                                         }}
                                         iconOnly
-                                        disabled={
-                                            SettingsStore.settingsUpdateInProgress
-                                        }
+                                        disabled={loading}
                                         onPress={async () => {
                                             if (
                                                 !addRelay ||
@@ -206,13 +204,13 @@ export default class NostrRelays extends React.Component<
                                                             relays: newNostrRelays,
                                                             addRelay: ''
                                                         });
-                                                        await updateSettings({
-                                                            lightningAddress: {
-                                                                ...settings.lightningAddress,
+                                                        await updateSettingsGroup(
+                                                            'lightningAddress',
+                                                            {
                                                                 nostrRelays:
                                                                     newNostrRelays
                                                             }
-                                                        });
+                                                        );
                                                     });
                                                 } catch (e) {}
                                             }
@@ -251,9 +249,7 @@ export default class NostrRelays extends React.Component<
                                                         )
                                                     }}
                                                     iconOnly
-                                                    disabled={
-                                                        SettingsStore.settingsUpdateInProgress
-                                                    }
+                                                    disabled={loading}
                                                     onPress={async () => {
                                                         const newNostrRelays =
                                                             this.remove(
@@ -297,13 +293,10 @@ export default class NostrRelays extends React.Component<
                                                                                 relays: newNostrRelays
                                                                             }
                                                                         );
-                                                                        await updateSettings(
+                                                                        await updateSettingsGroup(
+                                                                            'lightningAddress',
                                                                             {
-                                                                                lightningAddress:
-                                                                                    {
-                                                                                        ...settings.lightningAddress,
-                                                                                        relays: newNostrRelays
-                                                                                    }
+                                                                                relays: newNostrRelays
                                                                             }
                                                                         );
                                                                     }

@@ -107,6 +107,7 @@ import SettingsStore, {
     DEFAULT_LSPS1_REST_TESTNET,
     DEFAULT_THEME,
     RETIRED_THEMES,
+    SETTINGS_WRITE_DEBOUNCE_MS,
     STORAGE_KEY,
     THEME_KEYS,
     getLspConfigForNetwork,
@@ -403,6 +404,409 @@ describe('SettingsStore.updateSettings', () => {
         expect(result.fiat).toEqual('CAD');
         expect(persistedSettings().fiat).toEqual('CAD');
         expect(store.settingsUpdateInProgress).toEqual(false);
+    });
+});
+
+// Settings views used to build nested group writes from the settings they
+// rendered with (`{ ...settings.invoices, memo }`). A write built while an
+// earlier one was still queued copied the old value of whatever that
+// earlier write changed and reverted it (#4903). updateSettingsGroup does
+// the merge inside the queue instead.
+describe('SettingsStore.updateSettingsGroup', () => {
+    it('reverts an earlier queued write when the group is spread from render-time settings', async () => {
+        // Documents the bug the helper exists for
+        seedSettings({ invoices: { memo: '', routeHints: false } });
+        const store = new SettingsStore();
+        await store.getSettings();
+        const rendered: any = store.settings;
+
+        await Promise.all([
+            store.updateSettings({
+                invoices: { ...rendered.invoices, routeHints: true }
+            }),
+            store.updateSettings({
+                invoices: { ...rendered.invoices, memo: 'X' }
+            })
+        ]);
+
+        expect(persistedSettings().invoices).toEqual({
+            memo: 'X',
+            routeHints: false
+        });
+    });
+
+    it('keeps a field changed by an earlier queued write', async () => {
+        seedSettings({ invoices: { memo: '', routeHints: false } });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        await Promise.all([
+            store.updateSettingsGroup('invoices', { routeHints: true }),
+            store.updateSettingsGroup('invoices', { memo: 'X' })
+        ]);
+
+        expect(persistedSettings().invoices).toEqual({
+            memo: 'X',
+            routeHints: true
+        });
+        expect(store.settings.invoices).toEqual({
+            memo: 'X',
+            routeHints: true
+        });
+    });
+
+    it('leaves other groups and top-level keys alone', async () => {
+        seedSettings({
+            fiat: 'USD',
+            privacy: { clipboard: true },
+            invoices: { memo: '' }
+        });
+        const store = new SettingsStore();
+
+        await store.updateSettingsGroup('invoices', { memo: 'coffee' });
+
+        const persisted = persistedSettings();
+        expect(persisted.fiat).toEqual('USD');
+        expect(persisted.privacy).toEqual({ clipboard: true });
+        expect(persisted.invoices).toEqual({ memo: 'coffee' });
+    });
+
+    it('creates the group when it is missing', async () => {
+        seedSettings({ fiat: 'USD' });
+        const store = new SettingsStore();
+
+        await store.updateSettingsGroup('networking', {
+            disableOfflineCheck: true
+        });
+
+        expect(persistedSettings().networking).toEqual({
+            disableOfflineCheck: true
+        });
+    });
+
+    it('passes the group as it is inside the queue to a function patch', async () => {
+        seedSettings({ channels: { min_confs: 1 } });
+        const store = new SettingsStore();
+        const seen: any[] = [];
+
+        await Promise.all([
+            store.updateSettingsGroup('channels', { min_confs: 3 }),
+            store.updateSettingsGroup('channels', (current: any) => {
+                seen.push(current);
+                return { min_confs: current.min_confs + 1 };
+            })
+        ]);
+
+        expect(seen).toEqual([{ min_confs: 3 }]);
+        expect(persistedSettings().channels).toEqual({ min_confs: 4 });
+    });
+});
+
+describe('SettingsStore.updateSelectedNode', () => {
+    it('keeps a change an earlier queued write made to the nodes', async () => {
+        // Saving a custom Esplora server, then an RGS server while the
+        // first write is still queued (#4904 review)
+        seedSettings({
+            selectedNode: 1,
+            nodes: [{ implementation: 'lnd' }, { implementation: 'ldk-node' }]
+        });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        const results = await Promise.all([
+            store.updateSelectedNode({ ldkEsploraServer: 'https://e' }),
+            store.updateSelectedNode({ ldkRgsServer: 'https://r' })
+        ]);
+
+        expect(results).toEqual([true, true]);
+        expect(persistedSettings().nodes).toEqual([
+            { implementation: 'lnd' },
+            {
+                implementation: 'ldk-node',
+                ldkEsploraServer: 'https://e',
+                ldkRgsServer: 'https://r'
+            }
+        ]);
+    });
+
+    it('updates the node selected inside the queue', async () => {
+        seedSettings({
+            selectedNode: 0,
+            nodes: [{ implementation: 'lnd' }, { implementation: 'ldk-node' }]
+        });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        await Promise.all([
+            store.updateSettings({ selectedNode: 1 }),
+            store.updateSelectedNode({ ldkScorerUrl: 'https://s' })
+        ]);
+
+        expect(persistedSettings().nodes).toEqual([
+            { implementation: 'lnd' },
+            { implementation: 'ldk-node', ldkScorerUrl: 'https://s' }
+        ]);
+    });
+
+    it('resolves false and adds no node when none is selected', async () => {
+        seedSettings({ nodes: [] });
+        const store = new SettingsStore();
+
+        expect(
+            await store.updateSelectedNode({ dismissCustodialWarning: true })
+        ).toBe(false);
+        expect(persistedSettings().nodes).toEqual([]);
+    });
+});
+
+describe('SettingsStore.updateSettingsGroupDebounced', () => {
+    const { AppState } = require('react-native');
+    let appStateHandler: ((state: string) => void) | undefined;
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        appStateHandler = undefined;
+        jest.spyOn(AppState, 'addEventListener').mockImplementation(
+            (_event: any, handler: any) => {
+                appStateHandler = handler;
+                return { remove: jest.fn() } as any;
+            }
+        );
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+        (AppState.addEventListener as jest.Mock).mockRestore();
+    });
+
+    const writes = () =>
+        StorageMock.setItem.mock.calls.filter(
+            ([key]: [string]) => key === STORAGE_KEY
+        );
+
+    it('persists only the last value once typing stops', async () => {
+        seedSettings({ invoices: { memo: '' } });
+        const store = new SettingsStore();
+        StorageMock.setItem.mockClear();
+
+        store.updateSettingsGroupDebounced('invoices', { memo: 'c' });
+        await jest.advanceTimersByTimeAsync(SETTINGS_WRITE_DEBOUNCE_MS - 1);
+        store.updateSettingsGroupDebounced('invoices', { memo: 'co' });
+        await jest.advanceTimersByTimeAsync(SETTINGS_WRITE_DEBOUNCE_MS - 1);
+        store.updateSettingsGroupDebounced('invoices', { memo: 'coffee' });
+        expect(writes()).toHaveLength(0);
+
+        await jest.advanceTimersByTimeAsync(SETTINGS_WRITE_DEBOUNCE_MS);
+
+        expect(writes()).toHaveLength(1);
+        expect(persistedSettings().invoices).toEqual({ memo: 'coffee' });
+    });
+
+    it('merges pending fields from different inputs into one write', async () => {
+        seedSettings({ invoices: { memo: '', receiverName: '' } });
+        const store = new SettingsStore();
+        StorageMock.setItem.mockClear();
+
+        store.updateSettingsGroupDebounced('invoices', { memo: 'coffee' });
+        store.updateSettingsGroupDebounced('invoices', {
+            receiverName: 'Satoshi'
+        });
+        store.updateSettingsGroupDebounced('pos', { taxPercentage: '8' });
+        await jest.advanceTimersByTimeAsync(SETTINGS_WRITE_DEBOUNCE_MS);
+
+        expect(writes()).toHaveLength(1);
+        expect(persistedSettings().invoices).toEqual({
+            memo: 'coffee',
+            receiverName: 'Satoshi'
+        });
+        expect(persistedSettings().pos).toEqual({ taxPercentage: '8' });
+    });
+
+    it('writes immediately on flush and does not write again later', async () => {
+        seedSettings({ invoices: { memo: '' } });
+        const store = new SettingsStore();
+        StorageMock.setItem.mockClear();
+
+        store.updateSettingsGroupDebounced('invoices', { memo: 'coffee' });
+        await store.flushPendingSettings();
+
+        expect(persistedSettings().invoices).toEqual({ memo: 'coffee' });
+        await jest.advanceTimersByTimeAsync(SETTINGS_WRITE_DEBOUNCE_MS);
+        expect(writes()).toHaveLength(1);
+    });
+
+    it('resolves a flush with nothing pending without writing', async () => {
+        seedSettings({ invoices: { memo: '' } });
+        const store = new SettingsStore();
+        StorageMock.setItem.mockClear();
+
+        await expect(store.flushPendingSettings()).resolves.toBeUndefined();
+        expect(writes()).toHaveLength(0);
+    });
+
+    it('lands a pending patch before a later immediate write to the same field', async () => {
+        // InvoicesSettings: the expiry input (debounced) and the time
+        // period dropdown (immediate) both write expirySeconds
+        seedSettings({
+            invoices: {
+                expiry: '1',
+                timePeriod: 'Hours',
+                expirySeconds: '3600'
+            }
+        });
+        const store = new SettingsStore();
+
+        store.updateSettingsGroupDebounced('invoices', {
+            expiry: '5',
+            expirySeconds: '18000'
+        });
+        await store.updateSettingsGroup('invoices', {
+            timePeriod: 'Days',
+            expirySeconds: '432000'
+        });
+        await jest.advanceTimersByTimeAsync(SETTINGS_WRITE_DEBOUNCE_MS);
+
+        expect(persistedSettings().invoices).toEqual({
+            expiry: '5',
+            timePeriod: 'Days',
+            expirySeconds: '432000'
+        });
+    });
+
+    const failNextWrite = () =>
+        StorageMock.setItem.mockImplementationOnce(async () => {
+            throw new Error('keychain unavailable');
+        });
+
+    it('keeps a patch whose write failed for the next flush', async () => {
+        seedSettings({ invoices: { memo: '', receiverName: '' } });
+        const store = new SettingsStore();
+
+        store.updateSettingsGroupDebounced('invoices', {
+            memo: 'coffee',
+            receiverName: 'Satoshi'
+        });
+        failNextWrite();
+        await expect(store.flushPendingSettings()).rejects.toThrow(
+            'keychain unavailable'
+        );
+        expect(persistedSettings().invoices).toEqual({
+            memo: '',
+            receiverName: ''
+        });
+
+        await store.flushPendingSettings();
+
+        expect(persistedSettings().invoices).toEqual({
+            memo: 'coffee',
+            receiverName: 'Satoshi'
+        });
+        expect(errorSpy).toHaveBeenCalledWith(
+            'Could not persist pending settings',
+            expect.any(Error)
+        );
+    });
+
+    it('lets a newer pending value win over a restored one', async () => {
+        seedSettings({ invoices: { memo: '', receiverName: '' } });
+        const store = new SettingsStore();
+
+        store.updateSettingsGroupDebounced('invoices', {
+            memo: 'cof',
+            receiverName: 'Satoshi'
+        });
+        failNextWrite();
+        const failed = store.flushPendingSettings();
+        // typed while the failing write was in the queue
+        store.updateSettingsGroupDebounced('invoices', { memo: 'coffee' });
+        await expect(failed).rejects.toThrow('keychain unavailable');
+
+        await jest.advanceTimersByTimeAsync(SETTINGS_WRITE_DEBOUNCE_MS);
+
+        expect(persistedSettings().invoices).toEqual({
+            memo: 'coffee',
+            receiverName: 'Satoshi'
+        });
+    });
+
+    it('drops a failed patch when a later update was queued behind it', async () => {
+        seedSettings({
+            invoices: {
+                expiry: '1',
+                timePeriod: 'Hours',
+                expirySeconds: '3600'
+            }
+        });
+        const store = new SettingsStore();
+
+        store.updateSettingsGroupDebounced('invoices', {
+            expiry: '5',
+            expirySeconds: '18000'
+        });
+        failNextWrite();
+        const failed = store.flushPendingSettings();
+        const later = store.updateSettingsGroup('invoices', {
+            timePeriod: 'Days',
+            expirySeconds: '86400'
+        });
+        await expect(failed).rejects.toThrow('keychain unavailable');
+        await later;
+
+        await store.flushPendingSettings();
+        await jest.advanceTimersByTimeAsync(SETTINGS_WRITE_DEBOUNCE_MS);
+
+        expect(persistedSettings().invoices).toEqual({
+            expiry: '1',
+            timePeriod: 'Days',
+            expirySeconds: '86400'
+        });
+    });
+
+    it('flushes when the app leaves the foreground', async () => {
+        seedSettings({ invoices: { memo: '' } });
+        const store = new SettingsStore();
+
+        store.updateSettingsGroupDebounced('invoices', { memo: 'coffee' });
+        expect(appStateHandler).toBeDefined();
+        appStateHandler!('background');
+        // Let the queued write run without reaching the debounce delay
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(persistedSettings().invoices).toEqual({ memo: 'coffee' });
+    });
+
+    it('registers one AppState listener per store', () => {
+        const store = new SettingsStore();
+
+        store.updateSettingsGroupDebounced('invoices', { memo: 'a' });
+        store.updateSettingsGroupDebounced('invoices', { memo: 'ab' });
+
+        expect(AppState.addEventListener).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('SettingsStore.updateSettings loading flag', () => {
+    it('does not set loading while a write runs', async () => {
+        seedSettings({ fiat: 'USD' });
+        const store = new SettingsStore();
+        await store.getSettings();
+        const seen: boolean[] = [];
+        StorageMock.getItem.mockImplementationOnce(async (key: string) => {
+            seen.push(store.loading);
+            return StorageMock._backing[key] ?? false;
+        });
+        StorageMock.setItem.mockImplementationOnce(
+            async (key: string, value: any) => {
+                seen.push(store.loading);
+                StorageMock._backing[key] = JSON.stringify(value);
+                return true;
+            }
+        );
+
+        await store.updateSettings({ fiat: 'EUR' });
+
+        expect(seen).toEqual([false, false]);
+        expect(store.loading).toEqual(false);
     });
 });
 

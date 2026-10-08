@@ -7,7 +7,9 @@ jest.mock('../utils/BackendUtils', () => ({
         decodePaymentRequest: jest.fn(),
         getNewAddress: jest.fn(),
         getNewChangeAddress: jest.fn(),
-        isLNDBased: jest.fn(() => false)
+        isLNDBased: jest.fn(() => false),
+        supportsFlowLSP: jest.fn(() => false),
+        createInvoice: jest.fn()
     }
 }));
 jest.mock('../utils/LocaleUtils', () => ({
@@ -155,5 +157,61 @@ describe('InvoicesStore.getNewChangeAddress', () => {
             account: 'SeedSigner',
             type: 'TAPROOT_PUBKEY'
         });
+    });
+});
+
+describe('InvoicesStore.createInvoice LSP decision', () => {
+    const lspStoreMock = () => ({
+        resetFee: jest.fn(),
+        info: { pubkey: 'lsp', connection_methods: [] },
+        getZeroConfFee: jest.fn(() => Promise.resolve()),
+        zeroConfFee: 0,
+        flow_error: false
+    });
+
+    const create = async (enableLSP: boolean, params: any) => {
+        const lspStore = lspStoreMock();
+        const store = new InvoicesStore(
+            { settings: { enableLSP } } as any,
+            lspStore as any,
+            {} as any,
+            {} as any
+        );
+        (BackendUtils.supportsFlowLSP as jest.Mock).mockReturnValue(true);
+        // stop right after the LSP fee step
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            error: true,
+            message: 'stop'
+        });
+        await store.createInvoice({
+            memo: '',
+            value: '50000',
+            expirySeconds: '3600',
+            ...params
+        });
+        return lspStore;
+    };
+
+    afterEach(() => {
+        (BackendUtils.supportsFlowLSP as jest.Mock).mockReturnValue(false);
+    });
+
+    it('takes the LSP path when the caller asks for it before settings.enableLSP has been written', async () => {
+        // Receive: switch flipped on, enableLSP write still queued
+        const lspStore = await create(false, { useLsp: true, noLsp: false });
+        expect(lspStore.getZeroConfFee).toHaveBeenCalledWith(50000000);
+    });
+
+    it('skips the LSP when the caller says no, even with enableLSP set', async () => {
+        const lspStore = await create(true, { useLsp: false, noLsp: true });
+        expect(lspStore.getZeroConfFee).not.toHaveBeenCalled();
+    });
+
+    it('falls back to settings.enableLSP when the caller does not decide', async () => {
+        expect((await create(true, {})).getZeroConfFee).toHaveBeenCalled();
+        expect((await create(false, {})).getZeroConfFee).not.toHaveBeenCalled();
+        expect(
+            (await create(false, { forceLsp: true })).getZeroConfFee
+        ).toHaveBeenCalled();
     });
 });

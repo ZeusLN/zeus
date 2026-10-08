@@ -110,7 +110,7 @@ export default class CreateZaplockerLightningAddress extends React.Component<
             this.state;
         const { createZaplocker, update, fees, error_msg } =
             LightningAddressStore;
-        const { updateSettings, settings }: any = SettingsStore;
+        const { updateSettingsGroup } = SettingsStore;
         const switchTo = route.params?.switchTo;
 
         const loading = this.state.loading || LightningAddressStore.loading;
@@ -306,13 +306,13 @@ export default class CreateZaplockerLightningAddress extends React.Component<
                                                                 'zaplocker'
                                                         });
                                                     if (response.success) {
-                                                        await updateSettings({
-                                                            lightningAddress: {
-                                                                ...settings.lightningAddress,
+                                                        await updateSettingsGroup(
+                                                            'lightningAddress',
+                                                            {
                                                                 nostrPrivateKey,
                                                                 nostrRelays
                                                             }
-                                                        });
+                                                        );
                                                         navigation.popTo(
                                                             'LightningAddress'
                                                         );

@@ -9,7 +9,7 @@ import Switch from '../../components/Switch';
 import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
 
-import SettingsStore, { Settings } from '../../stores/SettingsStore';
+import SettingsStore from '../../stores/SettingsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import OpenChannelUtils from '../../utils/OpenChannelUtils';
@@ -72,7 +72,7 @@ export default class ChannelsSettings extends React.Component<
         const { navigation, SettingsStore } = this.props;
         const { min_confs, privateChannel, scidAlias, simpleTaprootChannel } =
             this.state;
-        const { updateSettings }: any = SettingsStore;
+        const { updateSettingsGroup } = SettingsStore;
 
         return (
             <Screen>
@@ -114,14 +114,9 @@ export default class ChannelsSettings extends React.Component<
                                     this.setState({
                                         min_confs: newMinConfs
                                     });
-                                    await updateSettings(
-                                        (current: Settings) => ({
-                                            channels: {
-                                                ...current.channels,
-                                                min_confs: newMinConfs
-                                            }
-                                        })
-                                    );
+                                    await updateSettingsGroup('channels', {
+                                        min_confs: newMinConfs
+                                    });
                                 }}
                             />
                         </>
@@ -146,23 +141,15 @@ export default class ChannelsSettings extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={!privateChannel}
-                                onValueChange={async () => {
+                                onValueChange={async (announce: boolean) => {
                                     this.setState({
-                                        privateChannel: !privateChannel
+                                        privateChannel: !announce
                                     });
-                                    await updateSettings(
-                                        (current: Settings) => ({
-                                            channels: {
-                                                ...current.channels,
-                                                privateChannel: !privateChannel
-                                            }
-                                        })
-                                    );
+                                    await updateSettingsGroup('channels', {
+                                        privateChannel: !announce
+                                    });
                                 }}
-                                disabled={
-                                    simpleTaprootChannel ||
-                                    SettingsStore.settingsUpdateInProgress
-                                }
+                                disabled={simpleTaprootChannel}
                             />
                         </View>
                     </View>
@@ -189,21 +176,13 @@ export default class ChannelsSettings extends React.Component<
                             >
                                 <Switch
                                     value={scidAlias}
-                                    disabled={
-                                        SettingsStore.settingsUpdateInProgress
-                                    }
-                                    onValueChange={async () => {
+                                    onValueChange={async (value: boolean) => {
                                         this.setState({
-                                            scidAlias: !scidAlias
+                                            scidAlias: value
                                         });
-                                        await updateSettings(
-                                            (current: Settings) => ({
-                                                channels: {
-                                                    ...current.channels,
-                                                    scidAlias: !scidAlias
-                                                }
-                                            })
-                                        );
+                                        await updateSettingsGroup('channels', {
+                                            scidAlias: value
+                                        });
                                     }}
                                 />
                             </View>
@@ -232,34 +211,24 @@ export default class ChannelsSettings extends React.Component<
                             >
                                 <Switch
                                     value={simpleTaprootChannel}
-                                    disabled={
-                                        SettingsStore.settingsUpdateInProgress
-                                    }
-                                    onValueChange={async () => {
+                                    onValueChange={async (value: boolean) => {
                                         this.setState({
-                                            simpleTaprootChannel:
-                                                !simpleTaprootChannel
+                                            simpleTaprootChannel: value
                                         });
 
-                                        if (!simpleTaprootChannel) {
+                                        if (value) {
                                             this.setState({
                                                 privateChannel: true
                                             });
                                         }
 
-                                        await updateSettings(
-                                            (current: Settings) => ({
-                                                channels: {
-                                                    ...current.channels,
-                                                    privateChannel:
-                                                        !simpleTaprootChannel
-                                                            ? true
-                                                            : privateChannel,
-                                                    simpleTaprootChannel:
-                                                        !simpleTaprootChannel
-                                                }
-                                            })
-                                        );
+                                        // Taproot channels must be private
+                                        await updateSettingsGroup('channels', {
+                                            privateChannel: value
+                                                ? true
+                                                : privateChannel,
+                                            simpleTaprootChannel: value
+                                        });
                                     }}
                                 />
                             </View>

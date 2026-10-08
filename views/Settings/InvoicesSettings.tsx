@@ -89,6 +89,11 @@ export default class InvoicesSettings extends React.Component<
         });
     }
 
+    componentWillUnmount() {
+        // Persist a memo, name or expiry typed just before leaving
+        this.props.SettingsStore.flushPendingSettings();
+    }
+
     renderSeparator = () => (
         <View
             style={{
@@ -114,7 +119,8 @@ export default class InvoicesSettings extends React.Component<
             showCustomPreimageField,
             defaultInvoiceType
         } = this.state;
-        const { settings, updateSettings }: any = SettingsStore;
+        const { updateSettingsGroup, updateSettingsGroupDebounced } =
+            SettingsStore;
 
         const ADDRESS_TYPES = [];
 
@@ -196,13 +202,10 @@ export default class InvoicesSettings extends React.Component<
                                 'views.Receive.memoPlaceholder'
                             )}
                             value={memo}
-                            onChangeText={async (text: string) => {
+                            onChangeText={(text: string) => {
                                 this.setState({ memo: text });
-                                await updateSettings({
-                                    invoices: {
-                                        ...settings.invoices,
-                                        memo: text
-                                    }
+                                updateSettingsGroupDebounced('invoices', {
+                                    memo: text
                                 });
                             }}
                         />
@@ -223,13 +226,10 @@ export default class InvoicesSettings extends React.Component<
                         <TextInput
                             placeholder="Satoshi"
                             value={receiverName}
-                            onChangeText={async (text: string) => {
+                            onChangeText={(text: string) => {
                                 this.setState({ receiverName: text });
-                                await updateSettings({
-                                    invoices: {
-                                        ...settings.invoices,
-                                        receiverName: text
-                                    }
+                                updateSettingsGroupDebounced('invoices', {
+                                    receiverName: text
                                 });
                             }}
                         />
@@ -254,19 +254,14 @@ export default class InvoicesSettings extends React.Component<
                             <DropdownSetting
                                 selectedValue={defaultInvoiceType}
                                 values={DEFAULT_INVOICE_TYPE_KEYS}
-                                disabled={
-                                    SettingsStore.settingsUpdateInProgress
-                                }
                                 onValueChange={async (value: string) => {
                                     this.setState({
                                         defaultInvoiceType:
                                             value as DefaultInvoiceType
                                     });
-                                    await updateSettings({
-                                        invoices: {
-                                            ...settings.invoices,
-                                            defaultInvoiceType: value
-                                        }
+                                    await updateSettingsGroup('invoices', {
+                                        defaultInvoiceType:
+                                            value as DefaultInvoiceType
                                     });
                                 }}
                             />
@@ -291,7 +286,7 @@ export default class InvoicesSettings extends React.Component<
                                     style={{
                                         width: '58%'
                                     }}
-                                    onChangeText={async (text: string) => {
+                                    onChangeText={(text: string) => {
                                         const digits = text.replace(
                                             /[^0-9]/g,
                                             ''
@@ -307,13 +302,13 @@ export default class InvoicesSettings extends React.Component<
                                             expirySeconds
                                         });
                                         if (digits && Number(digits) > 0) {
-                                            await updateSettings({
-                                                invoices: {
-                                                    ...settings.invoices,
+                                            updateSettingsGroupDebounced(
+                                                'invoices',
+                                                {
                                                     expiry: digits,
                                                     expirySeconds
                                                 }
-                                            });
+                                            );
                                         }
                                     }}
                                 />
@@ -326,9 +321,6 @@ export default class InvoicesSettings extends React.Component<
                                     <DropdownSetting
                                         selectedValue={timePeriod}
                                         values={TIME_PERIOD_KEYS}
-                                        disabled={
-                                            SettingsStore.settingsUpdateInProgress
-                                        }
                                         onValueChange={async (
                                             value: string
                                         ) => {
@@ -343,13 +335,13 @@ export default class InvoicesSettings extends React.Component<
                                                 expirySeconds
                                             });
 
-                                            await updateSettings({
-                                                invoices: {
-                                                    ...settings.invoices,
+                                            await updateSettingsGroup(
+                                                'invoices',
+                                                {
                                                     timePeriod: value,
                                                     expirySeconds
                                                 }
-                                            });
+                                            );
                                         }}
                                     />
                                 </View>
@@ -387,21 +379,15 @@ export default class InvoicesSettings extends React.Component<
                             >
                                 <Switch
                                     value={routeHints}
-                                    onValueChange={async () => {
+                                    onValueChange={async (value: boolean) => {
                                         this.setState({
-                                            routeHints: !routeHints
+                                            routeHints: value
                                         });
-                                        await updateSettings({
-                                            invoices: {
-                                                ...settings.invoices,
-                                                routeHints: !routeHints
-                                            }
+                                        await updateSettingsGroup('invoices', {
+                                            routeHints: value
                                         });
                                     }}
-                                    disabled={
-                                        blindedPaths ||
-                                        SettingsStore.settingsUpdateInProgress
-                                    }
+                                    disabled={blindedPaths}
                                 />
                             </View>
                         </View>
@@ -438,21 +424,15 @@ export default class InvoicesSettings extends React.Component<
                             >
                                 <Switch
                                     value={ampInvoice}
-                                    onValueChange={async () => {
+                                    onValueChange={async (value: boolean) => {
                                         this.setState({
-                                            ampInvoice: !ampInvoice
+                                            ampInvoice: value
                                         });
-                                        await updateSettings({
-                                            invoices: {
-                                                ...settings.invoices,
-                                                ampInvoice: !ampInvoice
-                                            }
+                                        await updateSettingsGroup('invoices', {
+                                            ampInvoice: value
                                         });
                                     }}
-                                    disabled={
-                                        blindedPaths ||
-                                        SettingsStore.settingsUpdateInProgress
-                                    }
+                                    disabled={blindedPaths}
                                 />
                             </View>
                         </View>
@@ -488,23 +468,17 @@ export default class InvoicesSettings extends React.Component<
                             >
                                 <Switch
                                     value={blindedPaths}
-                                    disabled={
-                                        SettingsStore.settingsUpdateInProgress
-                                    }
-                                    onValueChange={async () => {
+                                    onValueChange={async (value: boolean) => {
                                         this.setState({
-                                            blindedPaths: !blindedPaths,
+                                            blindedPaths: value,
                                             ampInvoice: false,
                                             routeHints: false
                                         });
 
-                                        await updateSettings({
-                                            invoices: {
-                                                ...settings.invoices,
-                                                blindedPaths: !blindedPaths,
-                                                routeHints: false,
-                                                ampInvoice: false
-                                            }
+                                        await updateSettingsGroup('invoices', {
+                                            blindedPaths: value,
+                                            routeHints: false,
+                                            ampInvoice: false
                                         });
                                     }}
                                 />
@@ -537,20 +511,12 @@ export default class InvoicesSettings extends React.Component<
                             >
                                 <Switch
                                     value={showCustomPreimageField}
-                                    disabled={
-                                        SettingsStore.settingsUpdateInProgress
-                                    }
-                                    onValueChange={async () => {
+                                    onValueChange={async (value: boolean) => {
                                         this.setState({
-                                            showCustomPreimageField:
-                                                !showCustomPreimageField
+                                            showCustomPreimageField: value
                                         });
-                                        await updateSettings({
-                                            invoices: {
-                                                ...settings.invoices,
-                                                showCustomPreimageField:
-                                                    !showCustomPreimageField
-                                            }
+                                        await updateSettingsGroup('invoices', {
+                                            showCustomPreimageField: value
                                         });
                                     }}
                                 />
@@ -594,11 +560,8 @@ export default class InvoicesSettings extends React.Component<
                                         return;
                                     }
                                     this.setState({ addressType: d.value });
-                                    await updateSettings({
-                                        invoices: {
-                                            ...settings.invoices,
-                                            addressType: d.value
-                                        }
+                                    await updateSettingsGroup('invoices', {
+                                        addressType: d.value
                                     });
                                     this.modalBoxRef.current?.close();
                                 }}

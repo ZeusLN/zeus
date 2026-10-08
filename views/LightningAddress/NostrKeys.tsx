@@ -115,7 +115,7 @@ export default class NostrKey extends React.Component<
             revealSensitive
         } = this.state;
         const { update, error_msg, loading } = LightningAddressStore;
-        const { updateSettings, settings } = SettingsStore;
+        const { updateSettingsGroup, settings } = SettingsStore;
 
         const VisibilityButton = () => (
             <View>
@@ -377,12 +377,12 @@ export default class NostrKey extends React.Component<
                                                             nostrPrivateKey,
                                                         editMode: false
                                                     });
-                                                    await updateSettings({
-                                                        lightningAddress: {
-                                                            ...settings.lightningAddress,
+                                                    await updateSettingsGroup(
+                                                        'lightningAddress',
+                                                        {
                                                             nostrPrivateKey
                                                         }
-                                                    });
+                                                    );
                                                 } catch (e) {}
                                             }
                                         }}
@@ -390,7 +390,7 @@ export default class NostrKey extends React.Component<
                                             existingNostrPrivateKey ===
                                                 nostrPrivateKey ||
                                             !nostrNpub ||
-                                            SettingsStore.settingsUpdateInProgress
+                                            loading
                                         }
                                     />
                                 </View>

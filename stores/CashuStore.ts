@@ -3808,12 +3808,11 @@ export default class CashuStore {
                         );
                     }
                 }
-                // Clear initialMintUrls from settings
-                await this.settingsStore.updateSettings({
-                    ecash: {
-                        ...settings.ecash,
-                        initialMintUrls: undefined
-                    }
+                // Clear initialMintUrls from settings. `settings` was read
+                // before the addMint calls above, so merge into the ecash
+                // group as it is when the write runs.
+                await this.settingsStore.updateSettingsGroup('ecash', {
+                    initialMintUrls: undefined
                 });
             }
         } catch (e) {

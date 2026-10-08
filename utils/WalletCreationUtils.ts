@@ -4,7 +4,7 @@ import { optimizeNeutrinoPeers, createLndWallet } from './LndMobileUtils';
 import { createLdkNodeWallet } from './LdkNodeUtils';
 import { localeString } from './LocaleUtils';
 
-import SettingsStore from '../stores/SettingsStore';
+import SettingsStore, { Settings } from '../stores/SettingsStore';
 
 interface WalletCreationParams {
     settingsStore: SettingsStore;
@@ -51,22 +51,25 @@ export async function createOnboardingWallet(params: WalletCreationParams) {
         return;
     }
 
-    const commonSettings = {
+    // Merged into the settings current when the write runs: wallet
+    // creation takes seconds, and a group spread from `settings` here
+    // would revert privacy or ecash changes made in the meantime.
+    const commonSettings = (current: Settings) => ({
         privacy: {
-            ...settings.privacy,
+            ...current.privacy,
             clipboard
         },
         fiatEnabled,
         fiat: selectedCurrency,
         fiatRatesSource,
         ecash: {
-            ...settings.ecash,
+            ...current.ecash,
             enableCashu,
             ...(initialMintUrls && initialMintUrls.length > 0
                 ? { initialMintUrls }
                 : {})
         }
-    };
+    });
 
     if (implementation === 'ldk-node') {
         onCreatingWallet();
@@ -90,10 +93,10 @@ export async function createOnboardingWallet(params: WalletCreationParams) {
                     }
                 ];
 
-                await updateSettings({
+                await updateSettings((current: Settings) => ({
                     nodes,
-                    ...commonSettings
-                });
+                    ...commonSettings(current)
+                }));
 
                 // Node is already built — tell Wallet.tsx to skip re-init
                 settingsStore.walletJustCreated = true;
@@ -144,10 +147,10 @@ export async function createOnboardingWallet(params: WalletCreationParams) {
                 }
             ];
 
-            await updateSettings({
+            await updateSettings((current: Settings) => ({
                 nodes,
-                ...commonSettings
-            });
+                ...commonSettings(current)
+            }));
 
             setConnectingStatus(true);
             onSuccess();

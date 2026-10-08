@@ -77,30 +77,24 @@ export default class EcashSettings extends React.Component<
         });
     }
 
-    handleThresholdChange = async (
-        amount: string,
-        satAmount: string | number
-    ) => {
+    handleThresholdChange = (amount: string, satAmount: string | number) => {
         const threshold =
             typeof satAmount === 'number' ? satAmount : parseInt(satAmount, 10);
         const finalThreshold =
             isNaN(threshold) || threshold < 0 ? 0 : threshold;
 
-        this.setState({ sweepThresholdSats: amount, loading: true });
+        this.setState({ sweepThresholdSats: amount });
 
-        await this.props.SettingsStore.updateSettings({
-            ecash: {
-                ...this.props.SettingsStore.settings.ecash,
-                sweepThresholdSats: finalThreshold
-            }
-        });
-
-        // Update state with the cleaned threshold value after saving
-        this.setState({
-            sweepThresholdSats: finalThreshold.toString(),
-            loading: false
+        // Called on every keystroke, so the write is debounced
+        this.props.SettingsStore.updateSettingsGroupDebounced('ecash', {
+            sweepThresholdSats: finalThreshold
         });
     };
+
+    componentWillUnmount() {
+        // Persist a threshold typed just before leaving
+        this.props.SettingsStore.flushPendingSettings();
+    }
 
     render() {
         const { navigation, CashuStore, ChannelsStore, SettingsStore } =
@@ -112,7 +106,7 @@ export default class EcashSettings extends React.Component<
             automaticallySweep,
             sweepThresholdSats
         } = this.state;
-        const { settings, updateSettings }: any = SettingsStore;
+        const { updateSettingsGroup } = SettingsStore;
         const hasOpenChannels = ChannelsStore.channels.length > 0;
 
         return (
@@ -171,34 +165,28 @@ export default class EcashSettings extends React.Component<
                         >
                             <Switch
                                 value={enableCashu}
-                                onValueChange={async () => {
+                                onValueChange={async (value: boolean) => {
                                     this.setState({
-                                        enableCashu: !enableCashu,
+                                        enableCashu: value,
                                         loading: true
                                     });
-                                    await updateSettings({
-                                        ecash: {
-                                            ...settings.ecash,
-                                            enableCashu: !enableCashu,
-                                            enableMultiMint: !enableCashu
-                                                ? enableMultiMint
-                                                : false
-                                        }
+                                    await updateSettingsGroup('ecash', {
+                                        enableCashu: value,
+                                        enableMultiMint: value
+                                            ? enableMultiMint
+                                            : false
                                     });
-                                    if (!enableCashu) {
+                                    if (value) {
                                         await CashuStore.initializeWallets();
                                     }
                                     this.setState({
-                                        enableMultiMint: !enableCashu
+                                        enableMultiMint: value
                                             ? enableMultiMint
                                             : false,
                                         loading: false
                                     });
                                 }}
-                                disabled={
-                                    SettingsStore.settingsUpdateInProgress ||
-                                    loading
-                                }
+                                disabled={loading}
                             />
                         </View>
                     </View>
@@ -232,28 +220,21 @@ export default class EcashSettings extends React.Component<
                         >
                             <Switch
                                 value={enableMultiMint}
-                                onValueChange={async () => {
+                                onValueChange={async (value: boolean) => {
                                     this.setState({
-                                        enableMultiMint: !enableMultiMint,
+                                        enableMultiMint: value,
                                         loading: true
                                     });
 
-                                    await updateSettings({
-                                        ecash: {
-                                            ...settings.ecash,
-                                            enableMultiMint: !enableMultiMint
-                                        }
+                                    await updateSettingsGroup('ecash', {
+                                        enableMultiMint: value
                                     });
 
                                     this.setState({
                                         loading: false
                                     });
                                 }}
-                                disabled={
-                                    !enableCashu ||
-                                    SettingsStore.settingsUpdateInProgress ||
-                                    loading
-                                }
+                                disabled={!enableCashu || loading}
                             />
                         </View>
                     </View>
@@ -397,27 +378,21 @@ export default class EcashSettings extends React.Component<
                                 >
                                     <Switch
                                         value={automaticallySweep}
-                                        onValueChange={async () => {
+                                        onValueChange={async (
+                                            value: boolean
+                                        ) => {
                                             this.setState({
                                                 loading: true
                                             });
-                                            await updateSettings({
-                                                ecash: {
-                                                    ...settings.ecash,
-                                                    automaticallySweep:
-                                                        !automaticallySweep
-                                                }
+                                            await updateSettingsGroup('ecash', {
+                                                automaticallySweep: value
                                             });
                                             this.setState({
-                                                automaticallySweep:
-                                                    !automaticallySweep,
+                                                automaticallySweep: value,
                                                 loading: false
                                             });
                                         }}
-                                        disabled={
-                                            SettingsStore.settingsUpdateInProgress ||
-                                            loading
-                                        }
+                                        disabled={loading}
                                     />
                                 </View>
                             </View>

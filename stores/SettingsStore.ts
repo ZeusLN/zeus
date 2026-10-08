@@ -1,5 +1,5 @@
 import { action, observable, runInAction } from 'mobx';
-import { Platform } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { BiometryType } from 'react-native-biometrics';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import EncryptedStorage from 'react-native-encrypted-storage';
@@ -274,6 +274,26 @@ export interface Settings {
 interface NetworkingSettings {
     disableOfflineCheck?: boolean;
 }
+
+// Top-level settings keys that hold a nested group object (invoices,
+// privacy, ...), as opposed to scalars and arrays such as nodes.
+export type SettingsGroup = {
+    [K in keyof Settings]-?: NonNullable<Settings[K]> extends any[]
+        ? never
+        : NonNullable<Settings[K]> extends object
+        ? K
+        : never;
+}[keyof Settings];
+
+export type SettingsGroupPatch<K extends SettingsGroup> = Partial<
+    NonNullable<Settings[K]>
+>;
+
+// Delay before a debounced group write is persisted. Text inputs call
+// updateSettingsGroupDebounced on every keystroke; each persisted write
+// costs a keychain read and write (several hundred ms on a mid-range
+// Android device), so only the value the user settles on is written.
+export const SETTINGS_WRITE_DEBOUNCE_MS = 500;
 
 export const FIAT_RATES_SOURCE_KEYS = [
     { key: 'ZEUS', value: 'Zeus' },
@@ -2127,14 +2147,16 @@ export default class SettingsStore {
     // call itself is typed `false | Result`); in-memory settings only
     // update when the write landed, so a blocked write cannot leave the
     // store advertising state that will not survive the imminent restart.
+    //
+    // Does not touch `loading`: the only caller is a queued update, and
+    // views that render a spinner on `loading` (Receive, ReceiveEcash)
+    // would flash it for every settings write.
     public async setSettings(settings: any): Promise<boolean> {
-        this.loading = true;
         const persisted =
             (await Storage.setItem(STORAGE_KEY, settings)) !== false;
         if (persisted) {
             this.settings = settings;
         }
-        this.loading = false;
         return persisted;
     }
 
@@ -2148,6 +2170,21 @@ export default class SettingsStore {
     public updateSettings = (
         newSetting: any | ((currentSettings: Settings) => any)
     ): Promise<Settings> => {
+        // Pending debounced patches were made before this call, so they
+        // must land before it. Otherwise a debounced field this update
+        // also sets (expirySeconds from both the expiry input and the
+        // time period dropdown) would overwrite the newer value.
+        this.flushPendingSettings();
+        return this.enqueueSettingsUpdate(newSetting);
+    };
+
+    // Counts updates ever enqueued; see flushPendingSettings
+    private settingsUpdatesEnqueued = 0;
+
+    private enqueueSettingsUpdate = (
+        newSetting: any | ((currentSettings: Settings) => any)
+    ): Promise<Settings> => {
+        this.settingsUpdatesEnqueued++;
         const task = this.updateSettingsQueue.then(() =>
             this.applySettingsUpdate(newSetting)
         );
@@ -2157,14 +2194,136 @@ export default class SettingsStore {
         return task;
     };
 
+    // Merges `patch` into one settings group. The merge runs inside the
+    // queue against the settings current at that point, so it keeps
+    // every field an earlier queued write changed. Building the group
+    // from render-time settings (`{ ...settings.invoices, memo }`) would
+    // copy the old values of those fields and revert them (#4903).
+    //
+    // A function patch receives the group as it is inside the queue, for
+    // values derived from the current one.
+    public updateSettingsGroup = <K extends SettingsGroup>(
+        group: K,
+        patch:
+            | SettingsGroupPatch<K>
+            | ((current: Settings[K] | undefined) => SettingsGroupPatch<K>)
+    ): Promise<Settings> =>
+        this.updateSettings((current: Settings) => ({
+            [group]: {
+                ...current?.[group],
+                ...(typeof patch === 'function'
+                    ? patch(current?.[group])
+                    : patch)
+            }
+        }));
+
+    // Merges `patch` into the selected node's config inside the queue,
+    // for the same reason as updateSettingsGroup: a nodes array copied
+    // from render-time settings would revert an earlier queued write to
+    // any node. Resolves whether a selected node existed to update.
+    public updateSelectedNode = async (
+        patch: Partial<Node>
+    ): Promise<boolean> => {
+        let updated = false;
+        await this.updateSettings((current: Settings) => {
+            const index = current?.selectedNode || 0;
+            const nodes = [...(current?.nodes || [])];
+            if (!nodes[index]) return {};
+            nodes[index] = { ...nodes[index], ...patch };
+            updated = true;
+            return { nodes };
+        });
+        return updated;
+    };
+
+    private pendingGroupPatches: { [group: string]: any } = {};
+    private pendingFlushTimer?: ReturnType<typeof setTimeout>;
+    private pendingFlushAppStateListener?: ReturnType<
+        typeof AppState.addEventListener
+    >;
+
+    // For text inputs that write on every keystroke: collects the patch
+    // and persists it SETTINGS_WRITE_DEBOUNCE_MS after the last call.
+    // Screens that use this must call flushPendingSettings when they
+    // unmount, because onBlur does not reliably fire on back navigation.
+    // Pending patches are also flushed when the app leaves the
+    // foreground and before any other settings update.
+    public updateSettingsGroupDebounced = <K extends SettingsGroup>(
+        group: K,
+        patch: SettingsGroupPatch<K>
+    ): void => {
+        this.pendingGroupPatches[group] = {
+            ...this.pendingGroupPatches[group],
+            ...patch
+        };
+        if (this.pendingFlushTimer) clearTimeout(this.pendingFlushTimer);
+        this.pendingFlushTimer = setTimeout(
+            () => this.flushPendingSettings(),
+            SETTINGS_WRITE_DEBOUNCE_MS
+        );
+        if (!this.pendingFlushAppStateListener) {
+            this.pendingFlushAppStateListener = AppState.addEventListener(
+                'change',
+                (state) => {
+                    if (state !== 'active') this.flushPendingSettings();
+                }
+            );
+        }
+    };
+
+    // Enqueues the pending debounced patches as one update. Resolves
+    // once it is written, or immediately when nothing is pending.
+    public flushPendingSettings = (): Promise<Settings | undefined> => {
+        if (this.pendingFlushTimer) {
+            clearTimeout(this.pendingFlushTimer);
+            this.pendingFlushTimer = undefined;
+        }
+        const patches = this.pendingGroupPatches;
+        if (Object.keys(patches).length === 0) {
+            return Promise.resolve(undefined);
+        }
+        this.pendingGroupPatches = {};
+        const task = this.enqueueSettingsUpdate((current: Settings) => {
+            const update: { [group: string]: any } = {};
+            for (const group of Object.keys(patches)) {
+                update[group] = {
+                    ...(current as any)?.[group],
+                    ...patches[group]
+                };
+            }
+            return update;
+        });
+        const enqueued = this.settingsUpdatesEnqueued;
+        // Callers that only flush (unmount, backgrounding) do not await,
+        // so a failed write is logged here rather than left unhandled.
+        // The patches go back under any newer pending ones and ride the
+        // next flush (debounced edit, unmount, backgrounding, or any
+        // other update); there is no timer retry, so a write that keeps
+        // failing cannot loop. They are dropped if another update was
+        // queued behind this flush: it may set the same fields, and
+        // restoring would overwrite its newer values.
+        task.catch((error) => {
+            console.error('Could not persist pending settings', error);
+            if (this.settingsUpdatesEnqueued !== enqueued) return;
+            for (const group of Object.keys(patches)) {
+                this.pendingGroupPatches[group] = {
+                    ...patches[group],
+                    ...this.pendingGroupPatches[group]
+                };
+            }
+        });
+        return task;
+    };
+
     private applySettingsUpdate = async (
         newSetting: any | ((currentSettings: Settings) => any)
     ) => {
         this.settingsUpdateInProgress = true;
         try {
             // fromQueue: this is the queue's critical section, so a
-            // pending consolidation folds into this update's write
-            const existingSettings = await this.getSettings(false, true);
+            // pending consolidation folds into this update's write.
+            // silentUpdate: a write is not a load; see setSettings.
+            const existingSettings = await this.getSettings(true, true);
             // Functional updates read the settings inside the critical
             // section, so callers whose new value depends on the current
             // one (delete node X from the array) cannot act on a snapshot

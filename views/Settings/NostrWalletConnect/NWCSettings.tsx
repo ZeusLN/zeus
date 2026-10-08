@@ -562,10 +562,7 @@ export default class NWCSettings extends React.Component<
                                                 onValueChange={
                                                     this.toggleCashuWallet
                                                 }
-                                                disabled={
-                                                    SettingsStore.settingsUpdateInProgress ||
-                                                    loading
-                                                }
+                                                disabled={loading}
                                             />
                                         </View>
                                     </View>
@@ -615,10 +612,7 @@ export default class NWCSettings extends React.Component<
                                                 onValueChange={
                                                     this.toggleLud16Enabled
                                                 }
-                                                disabled={
-                                                    SettingsStore.settingsUpdateInProgress ||
-                                                    loading
-                                                }
+                                                disabled={loading}
                                             />
                                         </View>
                                     </View>
@@ -676,10 +670,7 @@ export default class NWCSettings extends React.Component<
                                             onValueChange={
                                                 this.togglePersistentNWCService
                                             }
-                                            disabled={
-                                                SettingsStore.settingsUpdateInProgress ||
-                                                loading
-                                            }
+                                            disabled={loading}
                                         />
                                     </View>
                                 </View>

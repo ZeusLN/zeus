@@ -48,7 +48,7 @@ import {
     ACTIVITY_FILTERS_KEY,
     LEGACY_ACTIVITY_FILTERS_KEY
 } from '../stores/ActivityStore';
-import { IS_BACKED_UP_KEY } from '../utils/MigrationUtils';
+import MigrationUtils, { IS_BACKED_UP_KEY } from '../utils/MigrationUtils';
 import {
     SWAPS_KEY,
     REVERSE_SWAPS_KEY,
@@ -768,6 +768,7 @@ export async function clearAllData(): Promise<void> {
         // Also explicitly clear the legacy settings key
         await EncryptedStorage.removeItem('zeus-settings');
         await EncryptedStorage.clear();
+        MigrationUtils.clearConfirmedFlags();
         console.log('[ClearData] EncryptedStorage cleared');
     } catch (e) {
         console.warn('[ClearData] Error clearing EncryptedStorage:', e);

@@ -176,39 +176,27 @@ export default class StealthMode extends React.Component<
         }
     };
 
-    handleToggleStealth = async () => {
+    handleToggleStealth = async (newStealthEnabled: boolean) => {
         const { SettingsStore } = this.props;
-        const { stealthEnabled } = this.state;
-        const { settings, updateSettings } = SettingsStore;
-
-        const newStealthEnabled = !stealthEnabled;
 
         this.setState({ stealthEnabled: newStealthEnabled });
 
         // Only save the setting - native stealth mode change will be applied
         // when the user navigates back from this screen
-        await updateSettings({
-            privacy: {
-                ...settings.privacy,
-                stealthMode: newStealthEnabled
-            }
+        await SettingsStore.updateSettingsGroup('privacy', {
+            stealthMode: newStealthEnabled
         });
     };
 
     handleSelectApp = async (app: StealthApp) => {
         const { SettingsStore } = this.props;
-        const { settings, updateSettings } = SettingsStore;
+        const { updateSettingsGroup } = SettingsStore;
 
         this.setState({ selectedApp: app });
 
         // Only save the setting - native stealth mode change will be applied
         // when the app goes to background or is closed
-        await updateSettings({
-            privacy: {
-                ...settings.privacy,
-                stealthApp: app
-            }
-        });
+        await updateSettingsGroup('privacy', { stealthApp: app });
     };
 
     getSelectedAppInfo = () => {
@@ -250,7 +238,7 @@ export default class StealthMode extends React.Component<
 
     handleUpdateVpnCountry = async (country: string) => {
         const { SettingsStore } = this.props;
-        const { settings, updateSettings } = SettingsStore;
+        const { updateSettingsGroup } = SettingsStore;
 
         // Get first server of the new country
         const countryData = VPN_LOCATIONS.find(
@@ -260,46 +248,33 @@ export default class StealthMode extends React.Component<
 
         this.setState({ stealthVpnCountry: country, stealthVpnServer: server });
 
-        await updateSettings({
-            privacy: {
-                ...settings.privacy,
-                stealthVpnCountry: country,
-                stealthVpnServer: server
-            }
+        await updateSettingsGroup('privacy', {
+            stealthVpnCountry: country,
+            stealthVpnServer: server
         });
     };
 
     handleUpdateVpnServer = async (server: string) => {
         const { SettingsStore } = this.props;
-        const { settings, updateSettings } = SettingsStore;
+        const { updateSettingsGroup } = SettingsStore;
 
         this.setState({ stealthVpnServer: server });
 
-        await updateSettings({
-            privacy: {
-                ...settings.privacy,
-                stealthVpnServer: server
-            }
-        });
+        await updateSettingsGroup('privacy', { stealthVpnServer: server });
     };
 
     handleUpdateTapCount = async (count: string) => {
         const { SettingsStore } = this.props;
-        const { settings, updateSettings } = SettingsStore;
+        const { updateSettingsGroup } = SettingsStore;
 
         const pinLength = parseInt(count, 10);
         this.setState({ stealthPinLength: pinLength });
 
-        await updateSettings({
-            privacy: {
-                ...settings.privacy,
-                stealthPinLength: pinLength
-            }
-        });
+        await updateSettingsGroup('privacy', { stealthPinLength: pinLength });
     };
 
     render() {
-        const { navigation, SettingsStore } = this.props;
+        const { navigation } = this.props;
         const {
             stealthEnabled,
             selectedApp,
@@ -390,9 +365,6 @@ export default class StealthMode extends React.Component<
                             <Switch
                                 value={stealthEnabled}
                                 onValueChange={this.handleToggleStealth}
-                                disabled={
-                                    SettingsStore.settingsUpdateInProgress
-                                }
                             />
                         </View>
                     </View>
@@ -444,9 +416,6 @@ export default class StealthMode extends React.Component<
                                     ]}
                                     onPress={() =>
                                         this.handleSelectApp(app.key)
-                                    }
-                                    disabled={
-                                        SettingsStore.settingsUpdateInProgress
                                     }
                                 >
                                     <Image
@@ -506,9 +475,6 @@ export default class StealthMode extends React.Component<
                                         key: loc.country,
                                         value: loc.country
                                     }))}
-                                    disabled={
-                                        SettingsStore.settingsUpdateInProgress
-                                    }
                                 />
                                 <DropdownSetting
                                     title={localeString(
@@ -528,9 +494,6 @@ export default class StealthMode extends React.Component<
                                         key: server,
                                         value: server
                                     }))}
-                                    disabled={
-                                        SettingsStore.settingsUpdateInProgress
-                                    }
                                 />
                             </>
                         )}
@@ -548,9 +511,6 @@ export default class StealthMode extends React.Component<
                                     this.handleUpdateTapCount(value)
                                 }
                                 values={TAP_COUNT_OPTIONS}
-                                disabled={
-                                    SettingsStore.settingsUpdateInProgress
-                                }
                             />
                         )}
                     </View>

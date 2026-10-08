@@ -251,12 +251,12 @@ export default class WalletSettings extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={clipboard}
-                                onValueChange={() => {
-                                    const newValue = !clipboard;
-                                    this.setState({ clipboard: newValue });
-                                    this.props.SettingsStore.updateSettings({
-                                        privacy: { clipboard: newValue }
-                                    });
+                                onValueChange={(value: boolean) => {
+                                    this.setState({ clipboard: value });
+                                    this.props.SettingsStore.updateSettingsGroup(
+                                        'privacy',
+                                        { clipboard: value }
+                                    );
                                 }}
                             />
                         </View>

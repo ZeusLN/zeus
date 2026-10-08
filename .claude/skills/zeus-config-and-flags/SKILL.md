@@ -336,14 +336,12 @@ Follow every step; skipping any one has caused real bugs (data loss via shallow 
 4. **If it's an enumerated axis**, add an exported `*_KEYS` array (key/value/translateKey objects) next to the other pickers so DropdownSetting UIs and tests can consume it.
 5. **Build the UI** in the matching `views/Settings/*.tsx` (or per-node in `WalletConfiguration.tsx`). When persisting, use the shallow-merge-safe pattern — `SettingsStore.updateSettings` merges ONLY the top level, so nested groups are replaced wholesale:
    ```ts
-   await updateSettings((current: Settings) => ({
-       payments: {
-           ...current.payments, // MANDATORY spread: omitting it silently
-           myNewField: value    // destroys every sibling payments setting
-       }
-   }));
+   // switch or dropdown: take the value from onValueChange
+   await updateSettingsGroup('payments', { myNewField: value });
+   // text input that writes per keystroke; flushPendingSettings() on unmount
+   updateSettingsGroupDebounced('payments', { myNewField: text });
    ```
-   Prefer the functional form: `updateSettings` is queued, and the updater receives the settings as they are when this write runs. Spreading a snapshot taken at render time (`...settings.payments`) reverts a sibling field written by an earlier queued call. In #4841, toggling a channel switch and then typing min confs reverted the switch in storage until `views/Settings/ChannelsSettings.tsx` moved to the functional form. Flat top-level keys (`updateSettings({ enableLSP: false })`) are safe without a spread.
+   `updateSettingsGroup` merges into the group inside the write queue. Spreading a snapshot taken at render time (`...settings.payments`) reverts a sibling field written by an earlier queued call (#4841, #4903), and `check-settings-writes.test.ts` fails on it. Do not disable the control with `settingsUpdateInProgress`. Flat top-level keys (`updateSettings({ enableLSP: false })`) are safe as they are.
 6. **Locale strings**: add English copy to `locales/en.json` ONLY (the other 33 locale files are Transifex-managed — rule owned by **zeus-change-control**). Reference via `localeString('views.Settings.<...>')`.
 7. **Changing an existing default for existing users?** That is a storage-format change: write a one-shot MOD_KEY migration (recipe, ordering, and `setSettings`-with-a-real-object rules in **zeus-storage-and-migrations**) and note that it must run on the modern `zeus-settings-v2` load path (like `migrateRgsDefaultToZeus`), not only inside `legacySettingsMigrations`. Maintainer sign-off required.
 8. **Creating a fresh-vs-migrated divergence?** Document it (§5).
