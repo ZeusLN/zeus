@@ -5,7 +5,7 @@ description: The discipline that turns a hunch into an accepted change in Zeus �
 
 # Zeus Research Methodology
 
-How an idea (a bug hypothesis, a feature, a protocol integration) becomes an accepted change in Zeus — a React Native Bitcoin/Lightning wallet — or gets retired with a paper trail. Zeus moves real money across 7 node backends on 2 mobile platforms with near-zero automated test coverage outside `utils/`; the methodology below is what has actually kept quality up, reconstructed from the repo's own history. Every stage, rule, and example here is verifiable with the commands in the final section.
+How an idea (a bug hypothesis, a feature, a protocol integration) becomes an accepted change in Zeus (a React Native Bitcoin/Lightning wallet) or gets retired with a paper trail. Zeus moves real money across 7 node backends on 2 mobile platforms with low automated test coverage outside `utils/`; the methodology below is what has actually kept quality up, reconstructed from the repo's own history. Every stage, rule, and example here is verifiable with the commands in the final section.
 
 Glossary (defined once, used throughout):
 

@@ -56,7 +56,7 @@ A regression found during release testing gets **reverted the same day**, never 
 
 Changes to send/receive/payment-handling code (`views/Send.tsx`, `views/PaymentRequest.tsx`, `stores/TransactionsStore.ts`, `backends/*`, `utils/BackendUtils.ts` dispatch) must be **minimal diffs**. No drive-by refactoring, renaming, or "cleanup" inside a funds-touching change.
 
-- WHY: stores, views, components, and backends have **zero automated test coverage** — only `utils/`, `models/`, and `lndmobile/` have tests (plus the root `check-styles.test.ts`; see zeus-validation-and-qa). A refactor there is reviewed and safety-netted by human eyeballs alone, across 7 backends.
+- WHY: automated coverage of payment-handling code is thin. As of 2026-10-08, `stores/TransactionsStore.ts` had 8% statement coverage and `views/Send.tsx` 19%, and no test loads `views/PaymentRequest.tsx` or `utils/BackendUtils.ts` (census and measurement: zeus-validation-and-qa). A refactor there is checked mostly by human review, across 7 backends.
 - INCIDENT (refactors bite even outside payment code): `fdad118ed` (2025-10-24), a "replace UNSAFE React lifecycle methods" refactor, caused an infinite-loading regression fixed only 3 weeks later by `93227029e` (2025-11-12, which cites the offending hash in its subject).
 
 ### Rule 4 — Manual two-platform testing is mandatory

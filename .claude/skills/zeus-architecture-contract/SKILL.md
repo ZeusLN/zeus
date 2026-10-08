@@ -285,7 +285,7 @@ campaigns). Cite them; don't silently "clean them up".
 
 | Weak point | Location (verified) | Status |
 |---|---|---|
-| Zero test coverage for stores/, views/, components/, backends/ | 0 `*.test.ts*` files in those trees; all 49 test files live in utils/, models/, lndmobile/, plus `check-styles.test.ts` at the repo root | Open. No safety net for architecture-level changes; see zeus-validation-and-qa |
+| Thin test coverage for stores/, views/, components/, backends/ | All four trees have test files (census in zeus-validation-and-qa section 4), but as of 2026-10-08 `stores/TransactionsStore.ts` had 8% statement coverage and `views/Send.tsx` 19%, and no test loads `utils/BackendUtils.ts` or `views/PaymentRequest.tsx` | Open. Little safety net for architecture-level changes; see zeus-validation-and-qa |
 | `thread.run()` instead of `thread.start()` in the LND sync worker (runs the "thread" synchronously on the caller) | `android/app/src/main/java/com/zeus/LndMobileScheduledSyncWorker.java`, `FIXME(hsjoberg)` comment: "this is really wrong" (Looper.prepare crash blocked the correct form) | Open, Blixt-inherited |
 | `unbindLndMobileService` acknowledged broken | `lndmobile/LndMobile.d.ts`: `// TODO(hsjoberg): function looks broken`; Java side parks a Promise in `requests` that the unbind path never resolves | Open |
 | EmbeddedLND subscription methods disabled | `backends/EmbeddedLND.ts`: `subscribeInvoice`/`subscribeTransactions` commented out under `// TODO rewrite subscription logic`; un-overridden methods fall through to REST (§4) | Open; LSPStore bypasses via native `lndmobile` |

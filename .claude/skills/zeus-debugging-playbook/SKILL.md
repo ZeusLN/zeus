@@ -46,7 +46,7 @@ Symptom → triage for Zeus's recurring failure modes. Each row names the first 
 3. **Fresh install or upgrade?** One-shot migrations (the MOD_KEY blocks in `utils/MigrationUtils.ts`) only run once per install. Upgrade-only bugs live there — a fresh install will never reproduce them. See zeus-storage-and-migrations.
 4. **Tor on or off?** Tor changes the request path (dedup-cache retention, TLS rules, WebSocket bypass). Toggle it as a discriminating experiment.
 
-Also remember: `stores/`, `views/`, `components/`, and `backends/` have **zero test coverage** (tests exist only for `utils/`, `models/`, `lndmobile/`) — a green `yarn test` proves nothing about a store bug. See zeus-validation-and-qa.
+Also remember: test coverage outside `utils/` is thin. `stores/`, `views/`, `components/` and `backends/` have test files, but most of their code is not exercised (as of 2026-10-08, 8% of `stores/TransactionsStore.ts` statements, and no test loads `utils/BackendUtils.ts`). A green `yarn test` proves little about a store bug unless a test covers that path. See zeus-validation-and-qa.
 
 ## Triage table
 
