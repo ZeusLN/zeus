@@ -23,7 +23,10 @@ ruleTester.run('no-themecolor-in-static-stylesheet', rule, {
         'class C { styles = StyleSheet.create({ a: { color: themeColor("text") } }); }',
         'const styles = StyleSheet.create({ a: { color: "red" } });\nconst C = () => <Text style={{ color: themeColor("text") }} />;',
         'const styles = Other.create({ a: { color: themeColor("text") } });',
-        'const styles = StyleSheet.flatten({ color: themeColor("text") });'
+        'const styles = StyleSheet.flatten({ color: themeColor("text") });',
+        'function C() { return StyleSheet.create({ a: keys.map((k) => themeColor(k)) }); }',
+        'const getStyles = () => StyleSheet.create({ a: { color: placeholderColor() } });',
+        'const styles = StyleSheet.create({ a: { color: otherColor() } });'
     ],
     invalid: [
         {
@@ -66,6 +69,22 @@ ruleTester.run('no-themecolor-in-static-stylesheet', rule, {
         {
             code: 'const styles = StyleSheet.create<Styles>({ a: { color: themeColor("text") } });',
             languageOptions: { parser: tsParser },
+            errors: [error]
+        },
+        {
+            code: 'const styles = StyleSheet.create(Object.fromEntries(keys.map((k) => [k, { color: themeColor(k) }])));',
+            errors: [error]
+        },
+        {
+            code: 'const styles = StyleSheet.create({ a: { color: (() => themeColor("text"))() } });',
+            errors: [error]
+        },
+        {
+            code: 'const styles = StyleSheet.create({ a: { color: placeholderColor() } });',
+            errors: [error]
+        },
+        {
+            code: 'const styles = StyleSheet.create({ a: { backgroundColor: getUpgradeBackgroundColor(base, 1) } });',
             errors: [error]
         }
     ]

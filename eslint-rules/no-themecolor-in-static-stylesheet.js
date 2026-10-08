@@ -3,12 +3,20 @@
 // its colors stay on the theme that was active at that time. Styles that use
 // themeColor() must be built inside a component or function (e.g. a
 // getStyles() helper or an inline style object) so they follow theme changes.
+// placeholderColor() and getUpgradeBackgroundColor() call themeColor(), so
+// they are checked too.
 
 const FUNCTION_TYPES = new Set([
     'FunctionDeclaration',
     'FunctionExpression',
     'ArrowFunctionExpression'
 ]);
+
+const THEME_FUNCTIONS = [
+    'themeColor',
+    'placeholderColor',
+    'getUpgradeBackgroundColor'
+];
 
 const isStyleSheetCreate = (node) => {
     if (node.type !== 'CallExpression') return false;
@@ -45,21 +53,29 @@ module.exports = {
         },
         messages: {
             themeColorInStaticStyleSheet:
-                'Do not call themeColor() inside a module-level StyleSheet.create(); the color will not update when the theme changes. Move the style into the component or a function that builds the styles.'
+                'Do not call {{name}}() inside a module-level StyleSheet.create(); the color will not update when the theme changes. Move the style into the component or a function that builds the styles.'
         },
         schema: []
     },
     create(context) {
         return {
-            "CallExpression[callee.type='Identifier'][callee.name='themeColor']"(
-                node
-            ) {
+            [`CallExpression[callee.type='Identifier'][callee.name=/^(${THEME_FUNCTIONS.join(
+                '|'
+            )})$/]`](node) {
                 let child = node;
                 let parent = node.parent;
                 let inStyleSheet = false;
                 while (parent) {
-                    if (FUNCTION_TYPES.has(parent.type)) return;
-                    if (isInstanceField(parent) && parent.value === child) {
+                    // A function or instance field only defers the call when
+                    // it wraps the StyleSheet.create() call. One inside the
+                    // create() arguments (a map callback or an IIFE) runs
+                    // while the sheet is built.
+                    if (inStyleSheet && FUNCTION_TYPES.has(parent.type)) return;
+                    if (
+                        inStyleSheet &&
+                        isInstanceField(parent) &&
+                        parent.value === child
+                    ) {
                         return;
                     }
                     if (
@@ -74,7 +90,8 @@ module.exports = {
                 if (inStyleSheet) {
                     context.report({
                         node,
-                        messageId: 'themeColorInStaticStyleSheet'
+                        messageId: 'themeColorInStaticStyleSheet',
+                        data: { name: node.callee.name }
                     });
                 }
             }
