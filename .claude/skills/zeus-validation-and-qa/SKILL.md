@@ -125,7 +125,7 @@ yarn jest --listTests                        # enumerate all suites jest will ru
 
 ## 4) Coverage reality — where automation actually protects you
 
-About **122 test suites** run by `yarn test` as of 2026-10-08 (upstream `6acd84a84`): `utils/` 71, `stores/` 17, `views/` 15, `backends/` 7, `models/` 5, `components/` 3, `lndmobile/` 2, `eslint-rules/` 1, and the root `check-locales.test.ts`. The repo has 127 `.test.*` files; the other 5 are excluded by `testPathIgnorePatterns`: the lint-only `check-styles.test.ts` and 4 vendored suites under `zeus_modules/`. The count grows with most PRs, so recount instead of trusting this number: `git ls-tree -r --name-only upstream/master | grep -E '\.test\.(ts|tsx|js)$'` or `yarn jest --listTests | wc -l`.
+About **122 test suites** run by `yarn test` as of 2026-10-08 (upstream `6acd84a84`): `utils/` 71, `stores/` 17, `views/` 15, `backends/` 7, `models/` 5, `components/` 3, `lndmobile/` 2, `eslint-rules/` 1, and the root `check-locales.test.ts`. The repo has 127 `.test.*` files; the other 5 are excluded by `testPathIgnorePatterns`: the lint-only `check-styles.test.ts` and 4 vendored suites under `zeus_modules/`. The count grows with most PRs, so recount on your checkout instead of trusting this number: `git ls-files | grep -E '\.test\.(ts|tsx|js)$' | grep -v -e check-styles -e '^zeus_modules/' | wc -l`. Don't use `yarn jest --listTests` for this: `testPathIgnorePatterns` doesn't exclude `.claude/worktrees/`, so in a checkout with agent worktrees it lists every worktree's suites too.
 
 **Coverage outside `utils/` is thin.** `stores/`, `views/`, `components/`, and `backends/` now have tests, but they cover specific regressions rather than whole modules: most stores (including the 5000+-line CashuStore), most screens, and most backend methods still have no automated safety net. Consequences you must act on:
 
@@ -199,7 +199,7 @@ Re-verify volatile facts:
 | check-styles ban + regex | `cat check-styles.test.ts` |
 | Prettier pin + config | `grep '"prettier"' package.json` (expect `2.4.1` in devDependencies); `cat .prettierrc .prettierignore` |
 | tsconfig strictness | `grep 'strict\|noUnused\|exclude' tsconfig.json` |
-| Test-file census by directory (section 4) | `git ls-tree -r --name-only upstream/master \| grep -E '\.test\.(ts\|tsx\|js)$' \| grep -v -e check-styles -e '^zeus_modules/' \| awk -F/ '{print (NF==1 ? "(root)" : $1)}' \| sort \| uniq -c` |
+| Test-file census by directory (section 4) | `git ls-files \| grep -E '\.test\.(ts\|tsx\|js)$' \| grep -v -e check-styles -e '^zeus_modules/' \| awk -F/ '{print (NF==1 ? "(root)" : $1)}' \| sort \| uniq -c` |
 | Suite line counts (golden inventory) | `wc -l utils/*.test.ts models/*.test.ts lndmobile/*.test.ts \| sort -rn \| head` |
 | PR template backend matrix | `cat .github/PULL_REQUEST_TEMPLATE.md` |
 | CONTRIBUTING testing rules | `grep -n -A5 'Test Coverage\|Manual Testing' CONTRIBUTING.md` |
