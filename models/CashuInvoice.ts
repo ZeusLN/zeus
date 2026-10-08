@@ -42,12 +42,18 @@ export default class CashuInvoice extends BaseModel {
         mint_url: string;
         timestamp: number;
         memo?: string;
-        state: string;
+        // absent before CDK 0.18, when every recorded transaction is completed
+        state?: string;
     }): CashuInvoice {
         const invoice = new CashuInvoice({
             quote: tx.id,
             request: '',
-            state: tx.state === 'Pending' ? 'UNPAID' : 'PAID',
+            state:
+                tx.state === 'Pending'
+                    ? 'UNPAID'
+                    : tx.state === 'Failed'
+                    ? 'FAILED'
+                    : 'PAID',
             paid: tx.state !== 'Pending' && tx.state !== 'Failed',
             mintUrl: tx.mint_url,
             expires_at: tx.timestamp,
@@ -76,9 +82,13 @@ export default class CashuInvoice extends BaseModel {
 
     @computed public get isPaid(): boolean {
         if (this.fromCDK) {
-            return this.state !== 'UNPAID' && this.state !== 'Failed';
+            return this.state !== 'UNPAID' && this.state !== 'FAILED';
         }
         return this.paid || this.state === 'PAID' || false;
+    }
+
+    @computed public get isFailed(): boolean {
+        return !!this.fromCDK && this.state === 'FAILED';
     }
 
     @computed public get key(): string {
@@ -155,8 +165,9 @@ export default class CashuInvoice extends BaseModel {
     }
 
     @computed public get isExpired(): boolean {
-        // CDK transactions from history are completed, not expired
-        if (this.fromCDK) return false;
+        // CDK transactions from history are not expired; a failed one is
+        // closed out like an expired request so it does not render as pending
+        if (this.fromCDK) return this.isFailed;
 
         const getExpiryTimestamp = this.getExpiryUnixTimestamp();
 
