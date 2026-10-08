@@ -349,6 +349,62 @@ RCT_EXPORT_METHOD(createRefundTransaction:(NSString *)endpoint
     }
 }
 
+// Builds and signs a reverse swap claim and returns its hex without
+// broadcasting it; the app stores it and broadcasts it itself
+RCT_EXPORT_METHOD(buildReverseClaimTransaction:(NSString *)endpoint
+                 swapId:(NSString *)swapId
+                 claimLeaf:(NSString *)claimLeaf
+                 refundLeaf:(NSString *)refundLeaf
+                 privateKey:(NSString *)privateKey
+                 servicePubKey:(NSString *)servicePubKey
+                 preimageHex:(NSString *)preimageHex
+                 transactionHex:(NSString *)transactionHex
+                 lockupAddress:(NSString *)lockupAddress
+                 destinationAddress:(NSString *)destinationAddress
+                 feeRate:(NSInteger)feeRate
+                 minerFee:(NSInteger)minerFee
+                 network:(NSString *)network
+                 resolver:(RCTPromiseResolveBlock)resolve
+                 rejecter:(RCTPromiseRejectBlock)reject)
+{
+    NSError *error;
+    NSString *txHex = LndmobileBuildReverseClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, preimageHex, transactionHex, lockupAddress, destinationAddress, (int32_t)feeRate, (int32_t)minerFee, network, &error);
+    if (error) {
+        NSLog(@"buildReverseClaimTransaction error   %@",   error);
+        reject(@"buildReverseClaimTransaction_error", error.localizedDescription, error);
+    } else {
+        resolve(txHex);
+    }
+}
+
+// Builds and signs a submarine swap refund and returns its hex without
+// broadcasting it
+RCT_EXPORT_METHOD(buildRefundTransaction:(NSString *)endpoint
+                 swapId:(NSString *)swapId
+                 claimLeaf:(NSString *)claimLeaf
+                 refundLeaf:(NSString *)refundLeaf
+                 transactionHex:(NSString *)transactionHex
+                 privateKey:(NSString *)privateKey
+                 servicePubKey:(NSString *)servicePubKey
+                 feeRate:(NSInteger)feeRate
+                 timeoutBlockHeight:(NSInteger)timeoutBlockHeight
+                 destinationAddress:(NSString *)destinationAddress
+                 lockupAddress:(NSString *)lockupAddress
+                 cooperative:(BOOL)cooperative
+                 network:(NSString *)network
+                 resolver:(RCTPromiseResolveBlock)resolve
+                 rejecter:(RCTPromiseRejectBlock)reject)
+{
+    NSError *error;
+    NSString *txHex = LndmobileBuildRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, (int32_t)feeRate, (int32_t)timeoutBlockHeight, destinationAddress, lockupAddress, cooperative, network, &error);
+    if (error) {
+        NSLog(@"buildRefundTransaction error   %@",   error);
+        reject(@"buildRefundTransaction_error", error.localizedDescription, error);
+    } else {
+        resolve(txHex);
+    }
+}
+
 // TurboModule support disabled - no codegen spec available
 // #ifdef RCT_NEW_ARCH_ENABLED
 // - (std::shared_ptr<facebook::react::TurboModule>)getTurboModule:

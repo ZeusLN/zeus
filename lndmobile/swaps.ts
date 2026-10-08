@@ -169,3 +169,107 @@ export const createRefundTransaction = async ({
         throw e;
     }
 };
+
+/**
+ * Builds and signs a reverse swap claim and returns its hex. Nothing is
+ * broadcast: a cooperative claim has already sent the preimage to the swap
+ * host by the time this resolves, so the caller must store the result and
+ * keep broadcasting it until it confirms.
+ *
+ * @throws
+ */
+export const buildReverseClaimTransaction = async ({
+    endpoint,
+    swapId,
+    claimLeaf,
+    refundLeaf,
+    privateKey,
+    servicePubKey,
+    preimageHex,
+    transactionHex,
+    lockupAddress,
+    destinationAddress,
+    feeRate,
+    minerFee,
+    network
+}: {
+    endpoint: string;
+    swapId: string;
+    claimLeaf: string;
+    refundLeaf: string;
+    privateKey: string;
+    servicePubKey: string;
+    preimageHex: string;
+    transactionHex: string;
+    lockupAddress: string;
+    destinationAddress: string;
+    feeRate: number;
+    minerFee: number;
+    network: string;
+}): Promise<string> =>
+    LncModule.buildReverseClaimTransaction(
+        endpoint,
+        swapId,
+        claimLeaf,
+        refundLeaf,
+        privateKey,
+        servicePubKey,
+        preimageHex,
+        transactionHex,
+        lockupAddress,
+        destinationAddress,
+        feeRate,
+        minerFee,
+        network
+    );
+
+/**
+ * Builds and signs a submarine swap refund and returns its hex. Nothing is
+ * broadcast.
+ *
+ * @throws
+ */
+export const buildRefundTransaction = async ({
+    endpoint,
+    swapId,
+    claimLeaf,
+    refundLeaf,
+    transactionHex,
+    privateKey,
+    servicePubKey,
+    feeRate,
+    timeoutBlockHeight,
+    destinationAddress,
+    lockupAddress,
+    cooperative = false,
+    network
+}: {
+    endpoint: string;
+    swapId: string;
+    claimLeaf: string;
+    refundLeaf: string;
+    transactionHex: string;
+    privateKey: string;
+    servicePubKey: string;
+    feeRate: number;
+    timeoutBlockHeight: number;
+    destinationAddress: string;
+    lockupAddress: string;
+    cooperative?: boolean;
+    network: string;
+}): Promise<string> =>
+    LncModule.buildRefundTransaction(
+        endpoint,
+        swapId,
+        claimLeaf,
+        refundLeaf,
+        transactionHex,
+        privateKey,
+        servicePubKey,
+        feeRate,
+        timeoutBlockHeight,
+        destinationAddress,
+        lockupAddress,
+        cooperative,
+        network
+    );
