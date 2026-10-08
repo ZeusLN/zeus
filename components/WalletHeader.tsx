@@ -296,6 +296,24 @@ const SyncBadge = ({
     );
 };
 
+// Network badge text, or undefined on mainnet. testnet4 nodes also have
+// isTestNet set, so check it first
+export const networkBadgeLabel = (nodeInfo: {
+    isMutinynet?: boolean;
+    isTestNet?: boolean;
+    isTestNet4?: boolean;
+    isRegTest?: boolean;
+    isSigNet?: boolean;
+}): string | undefined => {
+    if (nodeInfo.isMutinynet) return localeString('network.mutinynet');
+    if (nodeInfo.isTestNet4) return localeString('network.testnet4');
+    if (nodeInfo.isTestNet)
+        return localeString('views.Wallet.MainPane.testnet');
+    if (nodeInfo.isRegTest) return localeString('views.Wallet.MainPane.regnet');
+    if (nodeInfo.isSigNet) return localeString('views.Wallet.MainPane.signet');
+    return undefined;
+};
+
 interface WalletHeaderProps {
     AlertStore?: AlertStore;
     CashuStore?: CashuStore;
@@ -468,16 +486,7 @@ export default class WalletHeader extends React.Component<
         const displayName = selectedNode && selectedNode.nickname;
         const nodeAddress = SettingsStore!.host || SettingsStore!.url;
 
-        let infoValue: string;
-        if (NodeInfoStore!.nodeInfo.isMutinynet) {
-            infoValue = localeString('network.mutinynet');
-        } else if (NodeInfoStore!.nodeInfo.isTestNet) {
-            infoValue = localeString('views.Wallet.MainPane.testnet');
-        } else if (NodeInfoStore!.nodeInfo.isRegTest) {
-            infoValue = localeString('views.Wallet.MainPane.regnet');
-        } else if (NodeInfoStore!.nodeInfo.isSigNet) {
-            infoValue = localeString('views.Wallet.MainPane.signet');
-        }
+        const infoValue = networkBadgeLabel(NodeInfoStore!.nodeInfo);
 
         const { fontScale } = Dimensions.get('window');
 

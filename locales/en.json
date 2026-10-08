@@ -231,6 +231,7 @@
     "views.Settings.SocialMedia.twitter": "X / Twitter",
     "network.mainnet": "Mainnet",
     "network.testnet": "Testnet",
+    "network.testnet4": "Testnet4",
     "network.mutinynet": "Mutinynet",
     "nostr.nostr": "Nostr",
     "nostr.keys": "Nostr keys",

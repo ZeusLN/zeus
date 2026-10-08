@@ -34,7 +34,7 @@ jest.mock('../components/NodeIdenticon', () => 'NodeIdenticon');
 jest.mock('./ToggleButton', () => 'ToggleButton');
 
 import Clipboard from '@react-native-clipboard/clipboard';
-import WalletHeader from './WalletHeader';
+import WalletHeader, { networkBadgeLabel } from './WalletHeader';
 import { isClipboardValue } from '../utils/handleAnything';
 
 const INVOICE = 'lnbcrt1pexample';
@@ -119,5 +119,38 @@ describe('WalletHeader.readClipboard', () => {
 
         expect(Clipboard.getString).toHaveBeenCalledTimes(1);
         expect(header.state.clipboard).toBe('');
+    });
+});
+
+describe('networkBadgeLabel', () => {
+    it('labels each test network', () => {
+        expect(networkBadgeLabel({ isTestNet: true })).toEqual(
+            'views.Wallet.MainPane.testnet'
+        );
+        expect(
+            networkBadgeLabel({ isTestNet: true, isTestNet4: true })
+        ).toEqual('network.testnet4');
+        expect(networkBadgeLabel({ isRegTest: true })).toEqual(
+            'views.Wallet.MainPane.regnet'
+        );
+        expect(networkBadgeLabel({ isSigNet: true })).toEqual(
+            'views.Wallet.MainPane.signet'
+        );
+        expect(
+            networkBadgeLabel({ isSigNet: true, isMutinynet: true })
+        ).toEqual('network.mutinynet');
+    });
+
+    it('shows no badge on mainnet or before node info loads', () => {
+        expect(
+            networkBadgeLabel({
+                isTestNet: false,
+                isTestNet4: false,
+                isRegTest: false,
+                isSigNet: false,
+                isMutinynet: false
+            })
+        ).toBeUndefined();
+        expect(networkBadgeLabel({})).toBeUndefined();
     });
 });
