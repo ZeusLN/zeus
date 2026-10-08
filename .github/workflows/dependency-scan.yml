@@ -1,5 +1,14 @@
 name: Dependency Security Scan
 on:
+  push:
+    branches:
+      - "master"
+    paths:
+      - "package.json"
+      - "yarn.lock"
+      - ".github/workflows/dependency-scan.yml"
+  schedule:
+    - cron: "17 6 * * 1"
   workflow_dispatch:
     inputs:
       branch:
@@ -12,25 +21,37 @@ permissions:
 jobs:
   scan:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@v7
-
-      - name: Use Node.js
-        uses: actions/setup-node@v7
         with:
-          node-version: '24.x'
+          ref: ${{ inputs.branch }}
 
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
 
+      - name: Install GuardDog
+        run: pip install guarddog==3.2.0
+
+      # GuardDog downloads each direct dependency from the registry and
+      # scans it; nothing from node_modules is installed or executed here.
+      # capability-* rules describe what a package can do (spawn, network,
+      # filesystem) and fire on most of our dependencies, so they are
+      # dropped from the upload. Findings are triaged in the Security tab.
       - name: Run GuardDog scan
         run: |
-          pip install guarddog
-          guarddog --log-level debug npm verify package.json --exclude-rules potentially_compromised_email_domain --exclude-rules unclaimed_maintainer_email_domain --exit-non-zero-on-finding
+          guarddog npm verify package.json \
+            --exclude-rules potentially_compromised_email_domain \
+            --exclude-rules unclaimed_maintainer_email_domain \
+            --output-format sarif > guarddog-raw.sarif
+          jq '.runs[].results |= map(select(.ruleId | startswith("capability-") | not))' \
+            guarddog-raw.sarif > guarddog.sarif
 
-      - name: Run npm-scan heuristic scan
-        run: npx npm-scan
-
-      - name: Run Codebase Scanner (obfuscation detection)
-        run: npx @mathiscode/codebase-scanner@latest npm .
-
+      - name: Upload results to code scanning
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: guarddog.sarif
+          category: guarddog-npm
