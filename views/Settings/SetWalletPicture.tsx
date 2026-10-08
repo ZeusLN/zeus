@@ -6,8 +6,7 @@ import {
     Image,
     StyleSheet,
     FlatList,
-    Dimensions,
-    ImageSourcePropType
+    Dimensions
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import RNFS from 'react-native-fs';
@@ -16,7 +15,11 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import AddIcon from '../../assets/images/SVG/Add.svg';
 
-import { getPhoto, getPresetName } from '../../utils/PhotoUtils';
+import {
+    getPhoto,
+    getPresetImage,
+    getPresetNames
+} from '../../utils/PhotoUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Screen from '../../components/Screen';
@@ -42,52 +45,8 @@ export default class SetWalletPicture extends React.Component<
     constructor(props: SetWalletPictureProps) {
         super(props);
         const implementation = this.props.route.params?.implementation;
-        let images: string[] = [
-            require('../../assets/images/zeus_illustration_1a.jpg'),
-            require('../../assets/images/zeus_illustration_1b.jpg'),
-            require('../../assets/images/zeus_illustration_2a.jpg'),
-            require('../../assets/images/zeus_illustration_2b.jpg'),
-            require('../../assets/images/zeus_illustration_3a.jpg'),
-            require('../../assets/images/zeus_illustration_3b.jpg'),
-            require('../../assets/images/zeus_illustration_4a.jpg'),
-            require('../../assets/images/zeus_illustration_4b.jpg'),
-            require('../../assets/images/zeus_illustration_5a.jpg'),
-            require('../../assets/images/zeus_illustration_5b.jpg'),
-            require('../../assets/images/zeus_illustration_6a.jpg'),
-            require('../../assets/images/zeus_illustration_6b.jpg'),
-            require('../../assets/images/zeus_illustration_7a.jpg'),
-            require('../../assets/images/zeus_illustration_7b.jpg')
-        ];
-
-        // Map implementations to corresponding images
-        const implementationImagesMap: { [key: string]: any[] } = {
-            lndhub: [require('../../assets/images/alby.jpg')],
-            'nostr-wallet-connect': [
-                require('../../assets/images/alby.jpg'),
-                require('../../assets/images/albyhub.jpg'),
-                require('../../assets/images/cashu.jpg'),
-                require('../../assets/images/nostr.jpg'),
-                require('../../assets/images/nostrwalletconnect.jpg')
-            ],
-            lnd: [
-                require('../../assets/images/btcpay.jpg'),
-                require('../../assets/images/lnd.jpg')
-            ],
-            'embedded-lnd': [require('../../assets/images/lnd.jpg')],
-            'lightning-node-connect': [require('../../assets/images/lnd.jpg')],
-            'cln-rest': [
-                require('../../assets/images/cln.jpg'),
-                require('../../assets/images/btcpay.jpg')
-            ],
-            'ldk-node': [require('../../assets/images/ldk.png')]
-        };
-
-        if (implementation && implementation in implementationImagesMap) {
-            images.push(...implementationImagesMap[implementation]);
-        }
-
         this.state = {
-            images,
+            images: getPresetNames(implementation),
             photo: ''
         };
     }
@@ -134,12 +93,9 @@ export default class SetWalletPicture extends React.Component<
         );
     };
 
-    handleImageTap = async (item: any) => {
-        const presetImageUri = Image.resolveAssetSource(item).uri;
-        const photo = `preset://${getPresetName(presetImageUri)}`;
-
+    handleImageTap = (name: string) => {
         this.setState({
-            photo
+            photo: `preset://${name}`
         });
     };
 
@@ -221,11 +177,7 @@ export default class SetWalletPicture extends React.Component<
                                 }}
                             >
                                 <Image
-                                    source={
-                                        typeof item === 'string'
-                                            ? { uri: item }
-                                            : (item as ImageSourcePropType)
-                                    }
+                                    source={getPresetImage(item)}
                                     style={styles.presetImage}
                                     resizeMode="contain"
                                 />
@@ -233,7 +185,7 @@ export default class SetWalletPicture extends React.Component<
                         </TouchableOpacity>
                     )}
                     numColumns={3}
-                    keyExtractor={(_item, index) => index.toString()}
+                    keyExtractor={(item) => item}
                     contentContainerStyle={{
                         justifyContent: 'center',
                         alignItems: 'center'
