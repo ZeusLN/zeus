@@ -25,6 +25,9 @@ jest.mock('../../components/TextInput', () => 'TextInput');
 
 import * as React from 'react';
 import { FlatList } from 'react-native';
+import { schnorr } from '@noble/curves/secp256k1.js';
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
+import hashjs from 'hash.js';
 import NostrRelays from './NostrRelays';
 
 const childrenOf = (element: any): any[] =>
@@ -43,11 +46,12 @@ const findElement = (node: any, match: (element: any) => boolean): any => {
 
 const RELAY_A = 'wss://relay.a.example';
 const RELAY_B = 'wss://relay.b.example';
+const NOSTR_PRIVATE_KEY = '01'.repeat(32);
 
 const makeView = () => {
     const settings = {
         lightningAddress: {
-            nostrPrivateKey: '01'.repeat(32),
+            nostrPrivateKey: NOSTR_PRIVATE_KEY,
             nostrRelays: [RELAY_A, RELAY_B]
         }
     };
@@ -94,9 +98,24 @@ describe('NostrRelays remove', () => {
         await removeButtonFor(view, RELAY_A).props.onPress();
 
         const { update } = view.props.LightningAddressStore as any;
-        expect(update).toHaveBeenCalledWith(
-            expect.objectContaining({ relays: [RELAY_B] })
+        expect(update).toHaveBeenCalledTimes(1);
+        const { relays, relays_sig } = update.mock.calls[0][0];
+        expect(relays).toEqual([RELAY_B]);
+        // zeus-pay returns relays and relays_sig to payers unchanged;
+        // LnurlPayStore accepts the list only if this check passes
+        // the nostr_pk zeus-pay hands payers as user_pubkey
+        const userPubkey = bytesToHex(
+            schnorr.getPublicKey(hexToBytes(NOSTR_PRIVATE_KEY))
         );
+        expect(
+            schnorr.verify(
+                hexToBytes(relays_sig),
+                hexToBytes(
+                    hashjs.sha256().update(JSON.stringify(relays)).digest('hex')
+                ),
+                hexToBytes(userPubkey)
+            )
+        ).toBe(true);
         const { updateSettingsGroup } = view.props.SettingsStore as any;
         expect(updateSettingsGroup).toHaveBeenCalledTimes(1);
         expect(updateSettingsGroup.mock.calls[0][0]).toBe('lightningAddress');
