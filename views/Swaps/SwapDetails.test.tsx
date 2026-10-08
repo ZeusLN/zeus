@@ -10,7 +10,16 @@ jest.mock('../../utils/BackendUtils', () => ({
     supportsOnchainReceiving: () => true
 }));
 jest.mock('../../utils/UrlUtils', () => ({}));
+// the real SwapUtils below touches the filesystem and save dialog for the
+// rescue key export; neither is exercised here
+jest.mock('react-native-fs', () => ({}));
+jest.mock('@react-native-documents/picker', () => ({
+    saveDocuments: jest.fn()
+}));
+// keep the real helpers, so exports added later (e.g. nativeSwapEndpoint
+// from #4944) don't turn into undefined functions here
 jest.mock('../../utils/SwapUtils', () => ({
+    ...jest.requireActual('../../utils/SwapUtils'),
     swapWebSocketUrl: () => 'wss://swap.test'
 }));
 jest.mock('../../utils/UnitsUtils', () => ({
@@ -69,7 +78,8 @@ const makeView = (swapData: any = { id: 'swap' }) => {
         )
     };
     const view = new SwapDetails({
-        route: { params: { swapData } },
+        // a stored host keeps its /v2 suffix, as in the app
+        route: { params: { swapData, endpoint: 'https://provider.test/v2' } },
         NodeInfoStore: { nodeInfo: { isTestNet: false } },
         SwapStore: store
     } as any);
