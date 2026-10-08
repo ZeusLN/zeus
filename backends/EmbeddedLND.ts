@@ -206,8 +206,8 @@ export default class EmbeddedLND extends LND {
                     bytes_recv: peer.bytes_recv || '0',
                     ping_time: peer.ping_time || '0',
                     sync_type: peer.sync_type || '',
-                    sat_sent: peer.sats_sent || '0',
-                    sat_recv: peer.sats_recv || '0',
+                    sat_sent: peer.sat_sent?.toString() || '0',
+                    sat_recv: peer.sat_recv?.toString() || '0',
                     inbound: peer.inbound || false,
                     flap_count: peer.flap_count || '0'
                 };
