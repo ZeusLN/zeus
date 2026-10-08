@@ -4,7 +4,7 @@ import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 
 import lndMobile from '../../lndmobile/LndMobileInjection';
-const { createRefundTransaction } = lndMobile.swaps;
+const { buildRefundTransaction } = lndMobile.swaps;
 
 import Button from '../../components/Button';
 
@@ -30,7 +30,8 @@ import { numberWithCommas } from '../../utils/UnitsUtils';
 import {
     fetchBlockHeight,
     refundFailureAction,
-    RefundFailureAction
+    RefundFailureAction,
+    swapNetworkName
 } from '../../utils/SwapUtils';
 
 import SwapStore from '../../stores/SwapStore';
@@ -84,13 +85,15 @@ export default class RefundSwap extends React.Component<
 
     private scrollViewRef = React.createRef<ScrollView>();
 
-    broadcastRefund = (
+    // Built natively, broadcast through the user's mempool instance (then
+    // the swap host) rather than by native code
+    broadcastRefund = async (
         swapData: Swap,
         fee: any,
         destinationAddress: string,
         cooperative: boolean
-    ): Promise<string> =>
-        createRefundTransaction({
+    ): Promise<string> => {
+        const txHex = await buildRefundTransaction({
             endpoint: swapData.endpoint.replace('/v2', ''),
             swapId: swapData.id,
             claimLeaf: swapData?.swapTreeDetails.claimLeaf.output,
@@ -103,8 +106,13 @@ export default class RefundSwap extends React.Component<
             destinationAddress,
             lockupAddress: swapData.effectiveLockupAddress!,
             cooperative,
-            isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
+            network: swapNetworkName(this.props.NodeInfoStore!.nodeInfo)
         });
+        return this.props.SwapStore!.broadcastSwapTransaction(
+            txHex,
+            swapData.endpoint
+        );
+    };
 
     latestBlockHeight = (): Promise<number> =>
         fetchBlockHeight(
@@ -249,7 +257,7 @@ export default class RefundSwap extends React.Component<
             destinationAddress,
             lockupAddress: swapData.effectiveLockupAddress,
             cooperative: !uncooperative,
-            isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
+            network: swapNetworkName(this.props.NodeInfoStore!.nodeInfo)
         };
 
         return (

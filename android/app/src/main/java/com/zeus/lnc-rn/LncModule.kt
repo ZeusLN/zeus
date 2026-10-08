@@ -261,6 +261,30 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
      }
   }
 
+  // Builds and signs a reverse swap claim and returns its hex without
+  // broadcasting it; the app stores it and broadcasts it itself
+  @ReactMethod
+  fun buildReverseClaimTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, privateKey: String, servicePubKey: String, preimageHex: String, transactionHex: String, lockupAddress: String, destinationAddress: String, feeRate: Int, minerFee: Int, network: String, promise: Promise) {
+     try {
+         val txHex = Lndmobile.buildReverseClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, preimageHex, transactionHex, lockupAddress, destinationAddress, feeRate, minerFee, network)
+         promise.resolve(txHex)
+     } catch (e: Exception) {
+         promise.reject("BUILD_REVERSE_CLAIM_ERROR", e.toString())
+     }
+  }
+
+  // Builds and signs a submarine swap refund and returns its hex without
+  // broadcasting it
+  @ReactMethod
+  fun buildRefundTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, transactionHex: String, privateKey: String, servicePubKey: String, feeRate: Int, timeoutBlockHeight: Int, destinationAddress: String, lockupAddress: String, cooperative: Boolean?, network: String, promise: Promise) {
+     try {
+         val txHex = Lndmobile.buildRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, feeRate, timeoutBlockHeight, destinationAddress, lockupAddress, cooperative ?: false, network)
+         promise.resolve(txHex)
+     } catch (e: Exception) {
+         promise.reject("BUILD_REFUND_ERROR", e.toString())
+     }
+  }
+
   @ReactMethod
   fun createRefundTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, transactionHex: String, privateKey: String, servicePubKey: String, feeRate: Int, timeoutBlockHeight: Int, destinationAddress: String, lockupAddress: String, cooperative: Boolean?, isTestnet: Boolean?, promise: Promise) {
      Log.d("createRefundTransaction called", "");
