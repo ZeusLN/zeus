@@ -98,10 +98,26 @@ export default class Privacy extends React.Component<
         // so decide against the group as it is inside the queue. State
         // holds the latest dropdown choice, so it rules out the write
         // when neither dropdown is on 'Custom'.
+        //
+        // A valid URL in state has been written or is queued by the
+        // flush, so a dropdown showing one needs no fallback and the
+        // check can be skipped.
         const { SettingsStore } = this.props;
-        const { defaultBlockExplorer, mempoolInstance } = this.state;
+        const {
+            defaultBlockExplorer,
+            customBlockExplorer,
+            mempoolInstance,
+            customMempoolInstance
+        } = this.state;
         SettingsStore.flushPendingSettings();
-        if (defaultBlockExplorer !== 'Custom' && mempoolInstance !== 'Custom') {
+        const hasCustomUrl = (url: string) =>
+            !!url.trim() && this.isValidCustomUrl(url);
+        if (
+            (defaultBlockExplorer !== 'Custom' ||
+                hasCustomUrl(customBlockExplorer)) &&
+            (mempoolInstance !== 'Custom' ||
+                hasCustomUrl(customMempoolInstance))
+        ) {
             return;
         }
         SettingsStore.updateSettingsGroup('privacy', (privacy) =>
