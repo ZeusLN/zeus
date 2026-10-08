@@ -456,13 +456,20 @@ export default class SwapDetails extends React.Component<
         let submitted = false;
         let verifyingLockup = false;
         let lockupRecheck: ReturnType<typeof setTimeout> | undefined;
+        // Set once the screen unmounts or the swap reaches a final state, so
+        // a lookup still in flight can't schedule another recheck
+        let stopped = false;
+        const stopRechecks = () => {
+            stopped = true;
+            clearTimeout(lockupRecheck);
+        };
 
         // The provider's update is not proof of a lockup. Look the
         // transaction up on the user's mempool instance and only claim,
         // which reveals the preimage, once it is confirmed and pays the
         // swap's output in full.
         const claimIfLockupVerified = async (transactionHex: string) => {
-            if (submitted || verifyingLockup || !SwapStore) return;
+            if (stopped || submitted || verifyingLockup || !SwapStore) return;
             verifyingLockup = true;
             clearTimeout(lockupRecheck);
             try {
@@ -480,6 +487,7 @@ export default class SwapDetails extends React.Component<
                     submitted = result;
                     return;
                 }
+                if (stopped) return;
                 const lockup = result;
 
                 if (lockup.status === 'invalid') {
@@ -549,6 +557,7 @@ export default class SwapDetails extends React.Component<
 
             // Check for API errors
             if (data?.error) {
+                stopRechecks();
                 if (data.error === 'Operation timeout') {
                     this.setState({
                         error: 'The operation timed out.',
@@ -597,6 +606,7 @@ export default class SwapDetails extends React.Component<
                 case SwapState.InvoiceExpired:
                 case SwapState.TransactionFailed:
                 case SwapState.SwapExpired:
+                    stopRechecks();
                     webSocket.close();
                     data?.failureReason &&
                         this.setState({
@@ -607,6 +617,7 @@ export default class SwapDetails extends React.Component<
 
                 case SwapState.InvoiceSettled:
                     console.log('Swap successful');
+                    stopRechecks();
                     webSocket.close();
                     this.setState({
                         socketConnected: false
@@ -634,7 +645,7 @@ export default class SwapDetails extends React.Component<
         };
 
         this.componentWillUnmount = () => {
-            clearTimeout(lockupRecheck);
+            stopRechecks();
             if (webSocket) {
                 webSocket.close();
             }

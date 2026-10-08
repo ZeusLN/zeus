@@ -238,6 +238,82 @@ describe('lockup verification retry wiring', () => {
         }
     );
 
+    const sendStatus = (status: string) =>
+        socket.onmessage({
+            data: JSON.stringify({ event: 'update', args: [{ status }] })
+        });
+
+    it('schedules no recheck when a lookup in flight at unmount comes back unavailable', async () => {
+        const { store, view } = makeView();
+        let resolveLookup!: (value: any) => void;
+        store.verifyReverseLockup.mockReturnValueOnce(
+            new Promise((resolve) => {
+                resolveLookup = resolve;
+            })
+        );
+        jest.spyOn(view, 'resolveDestinationAddress').mockResolvedValue(
+            'destination'
+        );
+        view.getReverseSwapUpdates({ id: 'swap' }, false);
+        const update = socket.onmessage({
+            data: JSON.stringify({
+                event: 'update',
+                args: [
+                    {
+                        status: 'transaction.confirmed',
+                        transaction: { hex: 'txhex' }
+                    }
+                ]
+            })
+        });
+        await jest.advanceTimersByTimeAsync(0);
+        expect(store.verifyReverseLockup).toHaveBeenCalledTimes(1);
+
+        view.componentWillUnmount?.();
+        resolveLookup({ status: 'unavailable' });
+        await update;
+        await jest.advanceTimersByTimeAsync(120000);
+
+        expect(store.verifyReverseLockup).toHaveBeenCalledTimes(1);
+        expect(nativeClaim).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        'swap.expired',
+        'invoice.expired',
+        'transaction.failed',
+        'invoice.settled'
+    ])('cancels a scheduled recheck on %s', async (status) => {
+        const { store, view } = makeView();
+        store.verifyReverseLockup.mockResolvedValue({ status: 'unavailable' });
+        await start(view);
+        expect(view.state.lockupNotice).not.toBeNull();
+
+        await sendStatus(status);
+        await jest.advanceTimersByTimeAsync(120000);
+
+        expect(store.verifyReverseLockup).toHaveBeenCalledTimes(1);
+        expect(nativeClaim).not.toHaveBeenCalled();
+        view.componentWillUnmount?.();
+    });
+
+    it('cancels a scheduled recheck when the host reports an error', async () => {
+        const { store, view } = makeView();
+        store.verifyReverseLockup.mockResolvedValue({ status: 'unavailable' });
+        await start(view);
+
+        await socket.onmessage({
+            data: JSON.stringify({
+                event: 'update',
+                args: [{ error: 'Operation timeout' }]
+            })
+        });
+        await jest.advanceTimersByTimeAsync(120000);
+
+        expect(store.verifyReverseLockup).toHaveBeenCalledTimes(1);
+        view.componentWillUnmount?.();
+    });
+
     it('shows a fatal verification error without scheduling another claim', async () => {
         const { store, view } = makeView();
         store.verifyReverseLockup.mockResolvedValue({
