@@ -235,6 +235,10 @@ export default class KeypadAmountDisplay extends React.Component<
 
         const isSingularSat = units === 'sats' && parseFloat(amount) === 1;
 
+        // β scales 1:1 with the digits like ₿; the sat/sats word and RTL fiat
+        // symbols stay a small secondary label
+        const fullSizeSuffix = units === 'sats' && useSatsSymbol;
+
         let prefix = '';
         let suffix = '';
         if (units === 'BTC') {
@@ -255,7 +259,8 @@ export default class KeypadAmountDisplay extends React.Component<
             prefix.length +
             formattedNumber.length +
             (decimalPlaceholder.string?.length ?? 0);
-        const totalWeightedChars = mainChars + suffix.length * 0.25;
+        const totalWeightedChars =
+            mainChars + suffix.length * (fullSizeSuffix ? 1 : 0.25);
         const scaledFontSize =
             totalWeightedChars > 0
                 ? Math.min(
@@ -375,11 +380,11 @@ export default class KeypadAmountDisplay extends React.Component<
                                 style={{
                                     zIndex: 1,
                                     color: textColor,
-                                    fontSize: useSatsSymbol
+                                    fontSize: fullSizeSuffix
                                         ? scaledFontSize
                                         : Math.max(scaledFontSize * 0.2, 12),
                                     fontFamily: 'PPNeueMontreal-Medium',
-                                    ...(useSatsSymbol && {
+                                    ...(fullSizeSuffix && {
                                         lineHeight: scaledLineHeight
                                     })
                                 }}
