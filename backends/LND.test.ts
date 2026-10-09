@@ -139,3 +139,26 @@ describe('LND.sendCoins', () => {
         );
     });
 });
+
+describe('LND.openChannelSync', () => {
+    it('passes the channel memo to lnd', () => {
+        const lnd = new LND();
+        const postRequest = jest
+            .spyOn(lnd, 'postRequest')
+            .mockResolvedValue({});
+
+        lnd.openChannelSync({
+            node_pubkey_string: '02peer',
+            local_funding_amount: '100000',
+            memo: 'ZEUS open 0011223344556677'
+        } as any);
+
+        expect(postRequest).toHaveBeenCalledWith(
+            '/v1/channels',
+            expect.objectContaining({
+                node_pubkey_string: '02peer',
+                memo: 'ZEUS open 0011223344556677'
+            })
+        );
+    });
+});
