@@ -145,6 +145,15 @@ const repairChannel = async (channel: any): Promise<boolean> => {
     }
 };
 
+const hasPendingHtlcs = async (pubkey: string): Promise<boolean> => {
+    const response = await BackendUtils.getChannels();
+    return (response?.channels || []).some(
+        (channel: any) =>
+            channel.remote_pubkey === pubkey &&
+            channel.pending_htlcs?.length > 0
+    );
+};
+
 const reconnectPeer = async (
     lndDir: string,
     pubkey: string,
@@ -152,6 +161,15 @@ const reconnectPeer = async (
 ): Promise<boolean> => {
     try {
         ensureCurrentWallet(lndDir);
+        // Checked right before the disconnect so payments started during
+        // earlier reconnects are seen. The peer stays pending and is
+        // reconnected on a later run once its HTLCs are resolved.
+        const busy = await hasPendingHtlcs(pubkey);
+        ensureCurrentWallet(lndDir);
+        if (busy) {
+            log.w(`Not reconnecting ${pubkey}: HTLCs in flight`);
+            return false;
+        }
         // The embedded backend returns null instead of throwing
         if (!(await BackendUtils.disconnectPeer(pubkey))) {
             log.w(`Could not disconnect ${pubkey} to reconnect`);
@@ -183,7 +201,8 @@ const reconnectPeer = async (
 // A recreated edge has no policy from the peer: lnd dropped the peer's
 // channel_update because it arrived before the edge existed, and the peer
 // only sends it again on reconnect. lnd leaves channels without the peer's
-// policy out of invoice route hints, so reconnect to each affected peer.
+// policy out of invoice route hints, so reconnect to each affected peer,
+// except while one of its channels has HTLCs in flight.
 // Removes peers from pending once they are reconnected or cannot be helped,
 // and leaves the rest for a later run.
 const reconnectPeers = async (

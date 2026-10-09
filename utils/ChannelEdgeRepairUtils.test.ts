@@ -427,10 +427,11 @@ describe('repairMissingChannelEdges', () => {
 
         const second = await repairMissingChannelEdges('lnd');
         expect(second?.repaired).toEqual([`${TXID_A}:0`]);
+        const calls = getChannels.mock.calls.length;
 
         // The second pass was clean, so the node is done
         expect(await repairMissingChannelEdges('lnd')).toBeUndefined();
-        expect(getChannels).toHaveBeenCalledTimes(2);
+        expect(getChannels).toHaveBeenCalledTimes(calls);
     });
 
     it('retries failed repairs at most MAX_REPAIR_ATTEMPTS times', async () => {
@@ -843,6 +844,133 @@ describe('repairMissingChannelEdges', () => {
             }
             expect(await repairMissingChannelEdges('lnd')).toBeUndefined();
             expect(disconnectPeer).toHaveBeenCalledTimes(MAX_REPAIR_ATTEMPTS);
+        });
+    });
+
+    describe('in-flight HTLCs', () => {
+        const withHtlc = (ch: any) => ({
+            ...ch,
+            pending_htlcs: [{ incoming: false, amount: '1000' }]
+        });
+
+        it('does not disconnect a peer with HTLCs on the repaired channel', async () => {
+            getChannels.mockResolvedValue({
+                channels: [withHtlc(channel('1', TXID_A, 0, '1000'))]
+            });
+            getChannelInfo.mockImplementation(edgeNotFound);
+
+            const result = await repairMissingChannelEdges('lnd');
+
+            expect(result?.repaired).toEqual([`${TXID_A}:0`]);
+            expect(result?.pendingPeers).toEqual([PEER_A]);
+            expect(disconnectPeer).not.toHaveBeenCalled();
+            expect(connectPeer).not.toHaveBeenCalled();
+        });
+
+        it('does not disconnect a peer with HTLCs on its other channel', async () => {
+            getChannels.mockResolvedValue({
+                channels: [
+                    channel('1', TXID_A, 0, '1000', PEER_A),
+                    withHtlc(channel('2', TXID_B, 0, '1000', PEER_A))
+                ]
+            });
+            getChannelInfo.mockImplementation((chanId: string) =>
+                chanId === '1'
+                    ? edgeNotFound()
+                    : Promise.resolve(edge(PEER_A, true))
+            );
+
+            const result = await repairMissingChannelEdges('lnd');
+
+            expect(result?.pendingPeers).toEqual([PEER_A]);
+            expect(disconnectPeer).not.toHaveBeenCalled();
+        });
+
+        it('reconnects on a later run once the HTLCs are resolved', async () => {
+            getChannels.mockResolvedValue({
+                channels: [withHtlc(channel('1', TXID_A, 0, '1000'))]
+            });
+            getChannelInfo
+                .mockImplementationOnce(edgeNotFound)
+                .mockResolvedValue(edge(PEER_A, false));
+
+            await repairMissingChannelEdges('lnd');
+            expect(disconnectPeer).not.toHaveBeenCalled();
+
+            getChannels.mockResolvedValue({
+                channels: [channel('1', TXID_A, 0, '1000')]
+            });
+            const second = await repairMissingChannelEdges('lnd');
+
+            expect(second?.pendingPeers).toEqual([]);
+            expect(disconnectPeer).toHaveBeenCalledWith(PEER_A);
+            expect(connectPeer).toHaveBeenCalledTimes(1);
+            expect(await repairMissingChannelEdges('lnd')).toBeUndefined();
+        });
+
+        it('still reconnects peers without HTLCs', async () => {
+            getChannels.mockResolvedValue({
+                channels: [
+                    withHtlc(channel('1', TXID_A, 0, '1000', PEER_A)),
+                    channel('2', TXID_B, 0, '1000', PEER_B)
+                ]
+            });
+            getChannelInfo.mockImplementation(edgeNotFound);
+
+            const result = await repairMissingChannelEdges('lnd');
+
+            expect(disconnectPeer.mock.calls).toEqual([[PEER_B]]);
+            expect(result?.pendingPeers).toEqual([PEER_A]);
+        });
+
+        it('checks for HTLCs right before each disconnect', async () => {
+            const channels = [
+                channel('1', TXID_A, 0, '1000', PEER_A),
+                channel('2', TXID_B, 0, '1000', PEER_B)
+            ];
+            getChannels
+                // Listing channels for the run, then the check for PEER_A
+                .mockResolvedValueOnce({ channels })
+                .mockResolvedValueOnce({ channels })
+                // A payment to PEER_B started during PEER_A's reconnect
+                .mockResolvedValue({
+                    channels: [channels[0], withHtlc(channels[1])]
+                });
+            getChannelInfo.mockImplementation(edgeNotFound);
+
+            const result = await repairMissingChannelEdges('lnd');
+
+            expect(disconnectPeer.mock.calls).toEqual([[PEER_A]]);
+            expect(result?.pendingPeers).toEqual([PEER_B]);
+        });
+
+        it('does not disconnect if the HTLC check fails', async () => {
+            getChannels
+                .mockResolvedValueOnce({
+                    channels: [channel('1', TXID_A, 0, '1000')]
+                })
+                .mockRejectedValue(new Error('rpc not ready'));
+            getChannelInfo.mockImplementation(edgeNotFound);
+
+            const result = await repairMissingChannelEdges('lnd');
+
+            expect(disconnectPeer).not.toHaveBeenCalled();
+            expect(result?.pendingPeers).toEqual([PEER_A]);
+        });
+
+        it('does not disconnect if the wallet changed during the HTLC check', async () => {
+            getChannels
+                .mockResolvedValueOnce({
+                    channels: [channel('1', TXID_A, 0, '1000')]
+                })
+                .mockImplementation(async () => {
+                    selectWallet('embedded-lnd', 'other');
+                    return { channels: [] };
+                });
+            getChannelInfo.mockImplementation(edgeNotFound);
+
+            expect(await repairMissingChannelEdges('lnd')).toBeUndefined();
+            expect(disconnectPeer).not.toHaveBeenCalled();
         });
     });
 
