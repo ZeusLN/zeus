@@ -623,6 +623,51 @@ describe('SwapDetails lockup verification retry wiring', () => {
             expect(nativeClaim).not.toHaveBeenCalled();
         });
 
+        it('leaves a claim still being built to finish', async () => {
+            // the host settles as soon as the cooperative request inside the
+            // native build gives it the preimage, before the build returns
+            let resolveBuild!: (hex: string) => void;
+            nativeClaim.mockReturnValueOnce(
+                new Promise((resolve) => {
+                    resolveBuild = resolve;
+                })
+            );
+            const { store } = await renderView();
+
+            // the update handler waits on the build, so it is not awaited
+            // until the build is released
+            let confirmed!: Promise<void>;
+            await act(async () => {
+                confirmed = socket.onmessage({
+                    data: JSON.stringify({
+                        event: 'update',
+                        args: [
+                            {
+                                status: 'transaction.confirmed',
+                                transaction: { hex: 'txhex' }
+                            }
+                        ]
+                    })
+                });
+            });
+            await advance(1000);
+            expect(nativeClaim).toHaveBeenCalledTimes(1);
+
+            await sendStatus('invoice.settled');
+            await act(async () => {
+                resolveBuild('claimhex');
+                await confirmed;
+            });
+
+            expect(store.getReverseLockupTransactionHex).not.toHaveBeenCalled();
+            expect(nativeClaim).toHaveBeenCalledTimes(1);
+            expect(store.broadcastSwapTransaction).toHaveBeenCalledTimes(1);
+            expect(store.saveClaimTxid).toHaveBeenCalledWith(
+                'swap',
+                'claim-txid'
+            );
+        });
+
         it('does not claim again after a claim broadcast on this screen', async () => {
             const { store } = await renderView();
 
