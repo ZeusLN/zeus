@@ -946,7 +946,7 @@
     "views.Bolt12OfferReview.offerAmount": "Minimální nabídka",
     "views.Bolt12OfferReview.payOffer": "Zaplatit nabídku",
     "views.Bolt12OfferReview.expired": "Tato nabídka expirovala",
-    "views.Bolt12OfferReview.expectsQuantity": "Tato nabídka očekává částku, kterou ZEUS nemůže nastavit. ZEUS tuto platbu neodešle.",
+    "views.Bolt12OfferReview.expectsQuantity": "Tato nabídka očekává množství, které ZEUS nemůže nastavit. ZEUS tuto platbu neodešle.",
     "views.Bolt12OfferReview.currencyDenominated": "ZEUS nemůže zaplatit nabídky denominované ve fiat měně.",
     "views.Bolt12OfferReview.belowOfferAmount": "Částka je nižší než minimum této nabídky ve výši {amount}. ZEUS tuto platbu neodešle.",
     "views.ClinkPay.title": "Zaplatit nabídku CLINK",
