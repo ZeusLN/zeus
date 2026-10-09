@@ -2973,6 +2973,40 @@ export default class CashuStore {
     };
 
     /**
+     * Startup half of the Nostr mint restore: fetches the backed-up mint
+     * list and persists it so later starts skip the fetch. Skipped while
+     * offline, where every relay would time out; nothing is persisted, so
+     * the next start tries again.
+     */
+    public restoreMintUrlsAtStartup = async (
+        lndDir: string
+    ): Promise<string[] | null> => {
+        if (this.isOffline) {
+            console.log('Offline, skipping Nostr mint restore');
+            return null;
+        }
+        let nostrMints: string[] | null;
+        try {
+            nostrMints = await this.nostrRestoreMints();
+        } catch (e) {
+            console.warn('Failed to restore mints from Nostr:', e);
+            return null;
+        }
+        if (!nostrMints || nostrMints.length === 0) return null;
+        console.log(`Restored ${nostrMints.length} mint(s) from Nostr backup`);
+        try {
+            // Persist so we don't re-fetch next time
+            await Storage.setItem(
+                `${lndDir}-cashu-mintUrls`,
+                JSON.stringify(nostrMints)
+            );
+        } catch (e) {
+            console.warn('Failed to persist mints restored from Nostr:', e);
+        }
+        return nostrMints;
+    };
+
+    /**
      * Restores mint list from Nostr relays using the seed-derived keypair.
      * Returns the list of mint URLs found, or null if none.
      */
@@ -3460,22 +3494,10 @@ export default class CashuStore {
                 // mints from a relay that never received the empty backup
                 // that removeMint publishes
                 if (!storedMintUrls) {
-                    try {
-                        const nostrMints = await this.nostrRestoreMints();
-                        if (nostrMints && nostrMints.length > 0) {
-                            localMintUrls = nostrMints;
-                            console.log(
-                                `Restored ${nostrMints.length} mint(s) from Nostr backup`
-                            );
-                            // Persist so we don't re-fetch next time
-                            await Storage.setItem(
-                                `${lndDir}-cashu-mintUrls`,
-                                JSON.stringify(localMintUrls)
-                            );
-                        }
-                    } catch (e) {
-                        console.warn('Failed to restore mints from Nostr:', e);
-                    }
+                    const nostrMints = await this.restoreMintUrlsAtStartup(
+                        lndDir
+                    );
+                    if (nostrMints) localMintUrls = nostrMints;
                 }
 
                 const localNorm = new Set(
