@@ -856,6 +856,7 @@ export default class CLNRest {
     supportsCustomPreimages = () => false;
     supportsSweep = () => true;
     supportsOnchainSendMax = () => true;
+    supportsChannelMemo = () => false;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
     supportsChannelFundMax = () => true;
