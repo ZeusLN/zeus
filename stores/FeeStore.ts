@@ -63,12 +63,12 @@ export default class FeeStore {
             .then((response: any) => {
                 const status = response.info().status;
                 if (status == 200) {
-                    // These rates are applied without the user having to
-                    // look at them — including by the reverse-swap claim,
-                    // which broadcasts on a websocket event — so an
-                    // implausible response is rejected outright rather
-                    // than trusted. Consumers already handle a failed
-                    // fetch by showing an error and asking for a rate.
+                    // These rates become defaults the user does not have
+                    // to look at (Sweep sends at one without a confirm
+                    // screen), so an implausible response is rejected
+                    // rather than trusted. Consumers already handle a
+                    // failed fetch by showing an error and asking for a
+                    // rate.
                     const sanitized = sanitizeRecommendedFees(response.json());
                     if (!sanitized) {
                         console.error(

@@ -33,7 +33,7 @@ import ModalBox from '../../components/ModalBox';
 import Switch from '../../components/Switch';
 
 import { font } from '../../utils/FontUtils';
-import { isPlausibleSatPerVbyte } from '../../utils/FeeUtils';
+import { hasUsableClaimFee } from '../../utils/FeeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { reAuthNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -215,14 +215,12 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 ? true
                 : currentInputSatsBN.isLessThanOrEqualTo(maxSendAmount));
 
-        // A reverse swap's claim is built and broadcast automatically on a
-        // websocket event using this rate, with no further chance to set
-        // one. Starting a swap without a usable rate would fall back to
-        // 2 sats/vB at claim time, which can fail to confirm before the
-        // timeout and hand the lockup back to the host, so require one up
-        // front instead. The rate is editable in the fee section above.
+        // The reverse claim is broadcast without asking, so it needs a fee
+        // before the swap starts: the host's claim miner fee, or else a
+        // usable rate from the fee section above
         const feeRateUsable =
-            !reverse || isPlausibleSatPerVbyte(this.state.fee);
+            !reverse ||
+            hasUsableClaimFee(SwapStore.claimMinerFee, this.state.fee);
 
         const newIsValid =
             invoiceAddressValid &&

@@ -22,7 +22,11 @@ import Screen from '../components/Screen';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
-import { isPlausibleSatPerVbyte } from '../utils/FeeUtils';
+import {
+    isPlausibleSatPerVbyte,
+    MAX_SAT_PER_VBYTE,
+    MIN_SAT_PER_VBYTE
+} from '../utils/FeeUtils';
 import UrlUtils from '../utils/UrlUtils';
 
 import MempoolSpace from '../assets/images/affiliates/Mempool.svg';
@@ -407,8 +411,16 @@ export default class EditFee extends React.Component<
                                         }}
                                     >
                                         {localeString(
-                                            'views.EditFee.customFeeTooHigh'
-                                        )}
+                                            'views.EditFee.customFeeOutOfRange'
+                                        )
+                                            .replace(
+                                                '{min}',
+                                                String(MIN_SAT_PER_VBYTE)
+                                            )
+                                            .replace(
+                                                '{max}',
+                                                String(MAX_SAT_PER_VBYTE)
+                                            )}
                                     </Text>
                                 )}
 
