@@ -298,7 +298,8 @@ export default class LND {
             amount: data.amount,
             spend_unconfirmed: data.spend_unconfirmed,
             send_all: data.send_all,
-            outpoints: data.outpoints
+            outpoints: data.outpoints,
+            label: data.label
         });
     sendCustomMessage = (data: any) =>
         this.postRequest('/v1/custommessage', {
