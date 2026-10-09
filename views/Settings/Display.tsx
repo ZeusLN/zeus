@@ -321,18 +321,12 @@ export default class Display extends React.Component<
                         <View style={{ alignSelf: 'center', marginLeft: 5 }}>
                             <Switch
                                 value={useSatsSymbol}
-                                disabled={
-                                    SettingsStore.settingsUpdateInProgress
-                                }
-                                onValueChange={async () => {
+                                onValueChange={async (value: boolean) => {
                                     this.setState({
-                                        useSatsSymbol: !useSatsSymbol
+                                        useSatsSymbol: value
                                     });
-                                    await updateSettings({
-                                        display: {
-                                            ...settings.display,
-                                            useSatsSymbol: !useSatsSymbol
-                                        }
+                                    await updateSettingsGroup('display', {
+                                        useSatsSymbol: value
                                     });
                                 }}
                             />
