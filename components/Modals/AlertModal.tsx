@@ -7,12 +7,9 @@ import ModalBox from '../ModalBox';
 
 import AlertStore from '../../stores/AlertStore';
 import ModalStore from '../../stores/ModalStore';
-import NodeInfoStore from '../../stores/NodeInfoStore';
-import SettingsStore from '../../stores/SettingsStore';
 
 import { NEUTRINO_PING_THRESHOLD_MS } from '../../utils/LndMobileUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import NavigationService from '../../NavigationService';
@@ -20,16 +17,13 @@ import NavigationService from '../../NavigationService';
 interface AlertModalProps {
     AlertStore: AlertStore;
     ModalStore: ModalStore;
-    NodeInfoStore: NodeInfoStore;
-    SettingsStore: SettingsStore;
 }
 
-@inject('AlertStore', 'ModalStore', 'NodeInfoStore', 'SettingsStore')
+@inject('AlertStore', 'ModalStore')
 @observer
 export default class AlertModal extends React.Component<AlertModalProps, {}> {
     render() {
-        const { AlertStore, ModalStore, NodeInfoStore, SettingsStore } =
-            this.props;
+        const { AlertStore, ModalStore } = this.props;
         const { showAlertModal, toggleAlertModal } = ModalStore;
 
         const peers: any[] = [];
@@ -87,57 +81,6 @@ export default class AlertModal extends React.Component<AlertModalProps, {}> {
                                     'components.AlertModal.zeusDetected'
                                 )}
                             </Text>
-
-                            {AlertStore.zombieError && (
-                                <>
-                                    <Text
-                                        style={{
-                                            ...styles.header,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'components.AlertModal.highZombieCount'
-                                        )}{' '}
-                                        (
-                                        {
-                                            NodeInfoStore.networkInfo
-                                                .num_zombie_chans
-                                        }
-                                        )
-                                    </Text>
-
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('text')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'components.AlertModal.zombieExplainer'
-                                        )}
-                                    </Text>
-
-                                    <View style={styles.button}>
-                                        <Button
-                                            title={localeString(
-                                                'components.AlertModal.resetEGS'
-                                            )}
-                                            onPress={async () => {
-                                                await SettingsStore.updateSettings(
-                                                    {
-                                                        expressGraphSync: true,
-                                                        resetExpressGraphSyncOnStartup:
-                                                            true
-                                                    }
-                                                );
-                                                restartNeeded();
-                                            }}
-                                            tertiary
-                                        />
-                                    </View>
-                                </>
-                            )}
 
                             {AlertStore.vssError && (
                                 <>

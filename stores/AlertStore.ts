@@ -1,12 +1,9 @@
-import { action, reaction, observable } from 'mobx';
+import { action, observable } from 'mobx';
 
 import SettingsStore from './SettingsStore';
-import NodeInfoStore from './NodeInfoStore';
 import { localeString } from '../utils/LocaleUtils';
 
 import { NEUTRINO_PING_THRESHOLD_MS, pingPeer } from '../utils/LndMobileUtils';
-
-const ZOMBIE_CHAN_THRESHOLD = 21000;
 
 interface Peer {
     peer: string;
@@ -15,38 +12,20 @@ interface Peer {
 
 export default class AlertStore {
     @observable public hasError: boolean = false;
-    @observable public zombieError: boolean = false;
     @observable public neutrinoPeerError: boolean = false;
     @observable public problematicNeutrinoPeers: Array<Peer> = [];
     @observable public vssError: string | null = null;
     @observable public esploraError: string | null = null;
     @observable public rgsError: string | null = null;
     settingsStore: SettingsStore;
-    nodeInfoStore: NodeInfoStore;
 
-    constructor(settingsStore: SettingsStore, nodeInfoStore: NodeInfoStore) {
+    constructor(settingsStore: SettingsStore) {
         this.settingsStore = settingsStore;
-        this.nodeInfoStore = nodeInfoStore;
-
-        reaction(
-            () => this.nodeInfoStore.networkInfo,
-            () => {
-                if (
-                    this.settingsStore?.implementation === 'embedded-lnd' &&
-                    this.nodeInfoStore?.networkInfo?.num_zombie_chans >
-                        ZOMBIE_CHAN_THRESHOLD
-                ) {
-                    this.hasError = true;
-                    this.zombieError = true;
-                }
-            }
-        );
     }
 
     @action
     public reset = () => {
         this.hasError = false;
-        this.zombieError = false;
         this.neutrinoPeerError = false;
         this.problematicNeutrinoPeers = [];
         this.vssError = null;
