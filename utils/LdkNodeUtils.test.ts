@@ -147,8 +147,8 @@ describe('LdkNodeUtils', () => {
                 .spyOn(console, 'warn')
                 .mockImplementation(() => {});
             mockMkdir.mockResolvedValue(undefined);
-            // 'boom' doesn't match shouldRetry (LDK_NODE_NOT_INITIALIZED)
-            // or the fee-rate branches, so start fails fast and rethrows
+            // 'boom' doesn't match shouldRetry (LDK_NODE_NOT_INITIALIZED),
+            // so start fails fast and rethrows
             mockStart.mockRejectedValue(new Error('boom'));
 
             await expect(
@@ -166,6 +166,28 @@ describe('LdkNodeUtils', () => {
             expect(mockMkdir.mock.invocationCallOrder[0]).toBeLessThan(
                 mockStart.mock.invocationCallOrder[0]
             );
+            warnSpy.mockRestore();
+        });
+
+        it('rethrows a fee rate start error without syncing', async () => {
+            const warnSpy = jest
+                .spyOn(console, 'warn')
+                .mockImplementation(() => {});
+            mockMkdir.mockResolvedValue(undefined);
+            mockStart.mockRejectedValue(
+                new Error('FeerateEstimationUpdateFailed')
+            );
+
+            await expect(
+                startLdkNodeWallet({
+                    nodeDir: 'abc-123',
+                    seedMnemonic: 'x',
+                    network: 'mainnet',
+                    skipInit: true
+                })
+            ).rejects.toThrow('FeerateEstimationUpdateFailed');
+
+            expect(mockSyncWallets).not.toHaveBeenCalled();
             warnSpy.mockRestore();
         });
 

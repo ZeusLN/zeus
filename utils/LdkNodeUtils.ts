@@ -465,11 +465,8 @@ export async function startLdkNodeWallet({
         vssError = result.vssError;
     }
 
-    // Start the node — start() kicks off background tasks (including fee estimation)
-    // that can reject asynchronously, so we catch those too
     let esploraError: string | undefined;
     let rgsError: string | undefined;
-    let nodeStarted = false;
 
     try {
         await retry({
@@ -481,64 +478,52 @@ export async function startLdkNodeWallet({
                 return errMsg.includes(LDK_NODE_NOT_INITIALIZED);
             }
         });
-        nodeStarted = true;
         console.log('LDK Node: Started successfully');
     } catch (e: any) {
+        // start() fails before the node is marked running, so there is no
+        // node to sync or wait for. This includes FeerateEstimation errors
+        // from binaries that still fail the start on a fee rate update;
+        // treating those as a running node made waitForLdkNodeReady wait
+        // 60s and then report "LDK Node not running yet".
         const errorMsg = e?.message || e?.toString?.() || String(e);
         console.warn('LDK Node: Start error:', errorMsg);
+        throw e;
+    }
+
+    onSyncStart?.();
+    try {
+        await LdkNode.node.syncWallets();
+        console.log('LDK Node: Sync complete');
+    } catch (e: any) {
+        const errorMsg = e?.message || e?.toString?.() || String(e);
+        console.warn('LDK Node: Sync error:', errorMsg);
+
         if (
             errorMsg.includes('FeerateEstimation') ||
+            errorMsg.includes('Esplora') ||
             errorMsg.includes('fee rate')
         ) {
             esploraError = errorMsg;
-            // Node may still be running despite fee estimation failure —
-            // attempt sync to detect RGS errors too
-            nodeStarted = true;
-        } else {
-            // Surface non-fee-rate failures to the caller instead of
-            // returning silently — a phantom-success makes the downstream
-            // waitForLdkNodeReady timeout in 60s with a misleading error.
-            throw e;
+        } else if (
+            errorMsg.includes('RapidGossipSync') ||
+            errorMsg.includes('Rgs') ||
+            errorMsg.includes('gossip')
+        ) {
+            rgsError = errorMsg;
+        } else if (!errorMsg.includes('NotRunning')) {
+            esploraError = errorMsg;
         }
     }
 
-    // Only sync if the node actually started
-    if (nodeStarted) {
-        onSyncStart?.();
-        try {
-            await LdkNode.node.syncWallets();
-            console.log('LDK Node: Sync complete');
-        } catch (e: any) {
-            const errorMsg = e?.message || e?.toString?.() || String(e);
-            console.warn('LDK Node: Sync error:', errorMsg);
-
-            if (
-                errorMsg.includes('FeerateEstimation') ||
-                errorMsg.includes('Esplora') ||
-                errorMsg.includes('fee rate')
-            ) {
-                esploraError = errorMsg;
-            } else if (
-                errorMsg.includes('RapidGossipSync') ||
-                errorMsg.includes('Rgs') ||
-                errorMsg.includes('gossip')
-            ) {
-                rgsError = errorMsg;
-            } else if (!errorMsg.includes('NotRunning')) {
-                esploraError = errorMsg;
-            }
+    // Check if RGS actually populated — use the node status timestamp
+    // rather than graph counts, which can race with background RGS sync
+    try {
+        const status = await LdkNode.node.status();
+        if (!status.latestRgsSnapshotTimestamp && !rgsError) {
+            rgsError = localeString('components.AlertModal.rgsEmptyGraph');
         }
-
-        // Check if RGS actually populated — use the node status timestamp
-        // rather than graph counts, which can race with background RGS sync
-        try {
-            const status = await LdkNode.node.status();
-            if (!status.latestRgsSnapshotTimestamp && !rgsError) {
-                rgsError = localeString('components.AlertModal.rgsEmptyGraph');
-            }
-        } catch (e) {
-            console.log('LDK Node: Could not fetch node status:', e);
-        }
+    } catch (e) {
+        console.log('LDK Node: Could not fetch node status:', e);
     }
 
     return { vssError, esploraError, rgsError };
