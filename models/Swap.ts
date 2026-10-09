@@ -116,12 +116,12 @@ export default class Swap extends BaseModel {
 
     /**
      * The address a reverse swap's claim may pay out to. On a rescued swap
-     * this is only the address this wallet generated for the claim: earlier
-     * rescues stored whatever the host's /swap/restore response held, so a
-     * destinationAddress without claimAddressFromWallet may be the host's.
+     * always resolve a fresh wallet address. Legacy rescues copied arbitrary
+     * host fields, including claimAddressFromWallet, so no persisted marker
+     * proves ownership, even after the preimage has been repaired.
      */
     @computed get claimDestinationAddress(): string | undefined {
-        if (this.imported && !this.claimAddressFromWallet) return undefined;
+        if (this.imported) return undefined;
         return this.destinationAddress;
     }
 
