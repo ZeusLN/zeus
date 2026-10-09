@@ -108,6 +108,18 @@ export function getSatsUnitLabel(plural: boolean, useSymbol?: boolean): string {
 }
 
 /**
+ * Satoshi unit label for field labels, input suffixes and notification text
+ * that use the translated `general.sats` string. Returns β when the symbol
+ * setting is on, otherwise the translated word.
+ *
+ * @param plural - false only when the amount is exactly one sat
+ */
+export function getLocalizedSatsUnitLabel(plural: boolean = true): string {
+    if (shouldUseSatsSymbol()) return 'β';
+    return plural ? localeString('general.sats') : 'sat';
+}
+
+/**
  * Gets the fiat entry from fiatStore for a given currency code
  * @param currencyCode - The currency code to look up (e.g., 'USD', 'EUR')
  * @returns The fiat entry object or undefined if not found
