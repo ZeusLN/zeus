@@ -80,11 +80,13 @@ export default class SendingOnChain extends React.Component<
 
     private handleBackPress = (): boolean => {
         const { TransactionsStore, navigation } = this.props;
-        // going back to Send after an unknown outcome would invite the
-        // same resend that Try Again is hidden for
+        // going back to Send after an unknown outcome, or while the send
+        // and any timeout lookup are still running, would invite the same
+        // resend that Try Again is hidden for
         if (
             TransactionsStore.publishSuccess ||
-            TransactionsStore.sendOutcomeUnknown
+            TransactionsStore.sendOutcomeUnknown ||
+            TransactionsStore.loading
         ) {
             navigation.popTo('Wallet');
             return true;
