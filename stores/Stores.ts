@@ -37,7 +37,7 @@ export const fiatStore = new FiatStore(settingsStore);
 export const balanceStore = new BalanceStore();
 export const channelsStore = new ChannelsStore(settingsStore, balanceStore);
 export const nodeInfoStore = new NodeInfoStore(channelsStore, settingsStore);
-export const alertStore = new AlertStore(settingsStore, nodeInfoStore);
+export const alertStore = new AlertStore(settingsStore);
 export const lspStore = new LSPStore(
     settingsStore,
     channelsStore,
