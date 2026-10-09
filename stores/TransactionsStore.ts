@@ -19,6 +19,11 @@ import { localeString } from '../utils/LocaleUtils';
 import { checkGraphSyncBeforePayment } from '../utils/GraphSyncUtils';
 import UrlUtils from '../utils/UrlUtils';
 import { RATING_MODAL_TRIGGER_DELAY } from '../utils/RatingUtils';
+import {
+    findLabeledSend,
+    isRequestTimeout,
+    makeSendLabel
+} from '../utils/OnchainSendUtils';
 
 import { lnrpc } from '../proto/lightning';
 import NodeInfoStore from './NodeInfoStore';
@@ -82,6 +87,9 @@ export default class TransactionsStore {
 
     // in lieu of receiving txid on LND's publishTransaction
     @observable publishSuccess = false;
+    // an on-chain send timed out and was not found among the wallet's
+    // transactions; it may still have been broadcast, so no retry is offered
+    @observable sendOutcomeUnknown = false;
     @observable broadcast_txid: string;
     @observable broadcast_err: string | null;
     // coin control
@@ -119,6 +127,7 @@ export default class TransactionsStore {
     @action
     public reset = () => {
         this.loading = false;
+        this.sendOutcomeUnknown = false;
         this.paymentInFlight = false;
         this.inFlightOwnerSeq = null;
         this.error = false;
@@ -480,6 +489,7 @@ export default class TransactionsStore {
     public sendCoins = (transactionRequest: TransactionRequest) => {
         this.funded_psbt = '';
         this.error = false;
+        this.sendOutcomeUnknown = false;
         this.error_msg = null;
         this.txid = null;
         this.publishSuccess = false;
@@ -521,16 +531,39 @@ export default class TransactionsStore {
 
         this.crafting = false;
 
-        BackendUtils.sendCoins(transactionRequest)
-            .then((data: any) => {
-                runInAction(() => {
-                    this.txid = data.txid;
-                    this.publishSuccess = true;
-                    this.loading = false;
-                    this.balanceStore.getCombinedBalance();
-                });
-            })
-            .catch((error: Error) => {
+        // lets a timed out send be found among the wallet's transactions;
+        // only the LND backends label sends
+        const label = BackendUtils.isLNDBased() ? makeSendLabel() : undefined;
+
+        const onSent = (txid: string) =>
+            runInAction(() => {
+                this.txid = txid;
+                this.publishSuccess = true;
+                this.loading = false;
+                this.balanceStore.getCombinedBalance();
+            });
+
+        BackendUtils.sendCoins(
+            label ? { ...transactionRequest, label } : transactionRequest
+        )
+            .then((data: any) => onSent(data.txid))
+            .catch(async (error: Error) => {
+                if (label && isRequestTimeout(error)) {
+                    const txid = await this.findTimedOutSend(label);
+                    if (txid) {
+                        onSent(txid);
+                        return;
+                    }
+                    runInAction(() => {
+                        this.error_msg = localeString(
+                            'stores.TransactionsStore.sendOutcomeUnknown'
+                        );
+                        this.error = true;
+                        this.sendOutcomeUnknown = true;
+                        this.loading = false;
+                    });
+                    return;
+                }
                 const errorMsg = errorToUserFriendly(error);
                 runInAction(() => {
                     this.error_msg = errorMsg;
@@ -538,6 +571,21 @@ export default class TransactionsStore {
                     this.loading = false;
                 });
             });
+    };
+
+    // The send may have been broadcast before its request timed out. Only
+    // recent blocks and unconfirmed transactions can hold it.
+    private findTimedOutSend = (label: string) => {
+        const height = Number(
+            this.nodeInfoStore.nodeInfo?.currentBlockHeight || 0
+        );
+        return findLabeledSend(
+            () =>
+                BackendUtils.getTransactions(
+                    height > 6 ? { start_height: height - 6 } : undefined
+                ),
+            label
+        );
     };
 
     @action
