@@ -10,6 +10,9 @@ jest.mock('./NodeInfoStore', () => ({}));
 jest.mock('./SettingsStore', () => ({}));
 jest.mock('../utils/BackendUtils', () => ({}));
 jest.mock('../utils/LocaleUtils', () => ({ localeString: (s: string) => s }));
+jest.mock('../utils/AmountUtils', () => ({
+    getLocalizedSatsUnitLabel: () => 'β'
+}));
 jest.mock('../storage', () => ({
     getItem: jest.fn().mockResolvedValue(null),
     setItem: jest.fn().mockResolvedValue(true),
