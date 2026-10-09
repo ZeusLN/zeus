@@ -97,6 +97,9 @@ export default class TransactionsStore {
 
     // monotonic id assigned to each dispatched payment
     private paymentSequence = 0;
+    // id of the current on-chain send; reset() and the next send change it,
+    // so a late result (e.g. a timeout lookup) for an earlier send is dropped
+    private sendCoinsSeq = 0;
     // sequence of the payment that set paymentInFlight (null when none);
     // completion callbacks and the backstop timer only clear the flag on
     // behalf of that payment, so overlapping payments (e.g. a background
@@ -126,6 +129,7 @@ export default class TransactionsStore {
 
     @action
     public reset = () => {
+        this.sendCoinsSeq++;
         this.loading = false;
         this.sendOutcomeUnknown = false;
         this.paymentInFlight = false;
@@ -487,6 +491,11 @@ export default class TransactionsStore {
 
     @action
     public sendCoins = (transactionRequest: TransactionRequest) => {
+        // also invalidates a lookup still running for an earlier send,
+        // including when this send takes the coin control path
+        const seq = ++this.sendCoinsSeq;
+        const isCurrent = () => seq === this.sendCoinsSeq;
+
         this.funded_psbt = '';
         this.error = false;
         this.sendOutcomeUnknown = false;
@@ -537,6 +546,7 @@ export default class TransactionsStore {
 
         const onSent = (txid: string) =>
             runInAction(() => {
+                if (!isCurrent()) return;
                 this.txid = txid;
                 this.publishSuccess = true;
                 this.loading = false;
@@ -548,13 +558,19 @@ export default class TransactionsStore {
         )
             .then((data: any) => onSent(data.txid))
             .catch(async (error: Error) => {
-                if (label && isRequestTimeout(error)) {
-                    const txid = await this.findTimedOutSend(label);
+                // a timed out send may still have been broadcast on any
+                // backend (e.g. CLN's withdraw past the 30s REST timeout);
+                // only labeled sends can be looked up
+                if (isRequestTimeout(error)) {
+                    const txid = label
+                        ? await this.findTimedOutSend(label)
+                        : undefined;
                     if (txid) {
                         onSent(txid);
                         return;
                     }
                     runInAction(() => {
+                        if (!isCurrent()) return;
                         this.error_msg = localeString(
                             'stores.TransactionsStore.sendOutcomeUnknown'
                         );
@@ -566,6 +582,7 @@ export default class TransactionsStore {
                 }
                 const errorMsg = errorToUserFriendly(error);
                 runInAction(() => {
+                    if (!isCurrent()) return;
                     this.error_msg = errorMsg;
                     this.error = true;
                     this.loading = false;
