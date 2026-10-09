@@ -156,6 +156,16 @@ class AppIconUtils {
         return [];
     }
 
+    // Stealth Mode owns the Android launcher while it is enabled, so the
+    // picker is locked. Read the saved setting, not the native launcher
+    // state: the native switch only runs when the app goes to background,
+    // so it lags a toggle made earlier in this session.
+    isLockedByStealthMode(settings?: {
+        privacy?: { stealthMode?: boolean };
+    }): boolean {
+        return Platform.OS === 'android' && !!settings?.privacy?.stealthMode;
+    }
+
     async setAppIcon(variant: AppIconVariant): Promise<boolean> {
         if (!this.isSupported()) return false;
 
