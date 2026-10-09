@@ -302,3 +302,55 @@ describe('LightningNodeConnect', () => {
         });
     });
 });
+
+describe('LightningNodeConnect on-chain sends', () => {
+    const makeBackend = () => {
+        const backend = new LightningNodeConnect();
+        backend.lnc = {
+            lnd: {
+                lightning: {
+                    sendCoins: jest.fn(async () => ({ txid: 'abc' })),
+                    getTransactions: jest.fn(async () => ({
+                        transactions: [{ txHash: 'abc' }]
+                    }))
+                }
+            }
+        };
+        return backend;
+    };
+
+    it('passes the send label to lnd', async () => {
+        const backend = makeBackend();
+        await backend.sendCoins({
+            addr: 'bc1qrecipient',
+            amount: '100000',
+            label: 'ZEUS send 0011223344556677'
+        });
+
+        expect(backend.lnc.lnd.lightning.sendCoins).toHaveBeenCalledWith(
+            expect.objectContaining({
+                addr: 'bc1qrecipient',
+                label: 'ZEUS send 0011223344556677'
+            })
+        );
+    });
+
+    it('asks for transactions from a start height', async () => {
+        const backend = makeBackend();
+        await backend.getTransactions({ start_height: 799994 });
+
+        expect(backend.lnc.lnd.lightning.getTransactions).toHaveBeenCalledWith({
+            maxTransactions: 500,
+            startHeight: 799994
+        });
+    });
+
+    it('asks for all transactions without a start height', async () => {
+        const backend = makeBackend();
+        await backend.getTransactions(undefined);
+
+        expect(backend.lnc.lnd.lightning.getTransactions).toHaveBeenCalledWith({
+            maxTransactions: 500
+        });
+    });
+});
