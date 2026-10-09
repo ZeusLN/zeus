@@ -490,6 +490,14 @@ export async function startLdkNodeWallet({
         throw e;
     }
 
+    // Offline, syncWallets() would wait out its Esplora and RGS timeouts,
+    // and the RGS check below would report an empty graph that was never
+    // fetched. The node's background sync picks up once we're online.
+    if (offline) {
+        console.log('LDK Node: Offline, skipping wallet sync');
+        return { vssError };
+    }
+
     onSyncStart?.();
     try {
         await LdkNode.node.syncWallets();

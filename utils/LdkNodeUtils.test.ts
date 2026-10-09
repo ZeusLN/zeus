@@ -191,7 +191,7 @@ describe('LdkNodeUtils', () => {
             warnSpy.mockRestore();
         });
 
-        describe('VSS while offline', () => {
+        describe('offline start', () => {
             const start = (offline: boolean) =>
                 startLdkNodeWallet({
                     nodeDir: 'abc-123',
@@ -238,6 +238,37 @@ describe('LdkNodeUtils', () => {
                     storeId: '02'
                 });
                 expect(args.failOnVssError).toBe(true);
+            });
+
+            it('skips the wallet sync and RGS check when offline', async () => {
+                mockExists.mockResolvedValue(true);
+                mockStatus.mockResolvedValue({});
+                const onSyncStart = jest.fn();
+
+                const result = await startLdkNodeWallet({
+                    nodeDir: 'abc-123',
+                    seedMnemonic: 'x',
+                    network: 'mainnet',
+                    offline: true,
+                    onSyncStart
+                });
+
+                expect(mockStart).toHaveBeenCalledTimes(1);
+                expect(mockSyncWallets).not.toHaveBeenCalled();
+                expect(onSyncStart).not.toHaveBeenCalled();
+                expect(result).toEqual({ vssError: undefined });
+            });
+
+            it('syncs and reports an empty RGS graph when online', async () => {
+                mockExists.mockResolvedValue(true);
+                mockStatus.mockResolvedValue({});
+
+                const result = await start(false);
+
+                expect(mockSyncWallets).toHaveBeenCalledTimes(1);
+                expect(result.rgsError).toBe(
+                    'components.AlertModal.rgsEmptyGraph'
+                );
             });
 
             it('builds an existing node with VSS when online', async () => {
