@@ -269,21 +269,25 @@ describe('SwapDetails reverse claim', () => {
         expect(errorShown()).toBe('views.SwapDetails.lockupVerificationFailed');
     });
 
-    it('claims a rescued swap to a wallet address, not one stored from the host', async () => {
-        const { store } = await renderView({
-            imported: true,
-            destinationAddress: 'bc1qhost'
-        });
-        nativeClaim.mockResolvedValue(undefined);
+    it.each([undefined, true])(
+        'claims a rescued swap to a wallet address despite stored marker %s',
+        async (claimAddressFromWallet) => {
+            const { store } = await renderView({
+                imported: true,
+                claimAddressFromWallet,
+                destinationAddress: 'bc1qhost'
+            });
+            nativeClaim.mockResolvedValue(undefined);
 
-        await sendConfirmedLockup();
+            await sendConfirmedLockup();
 
-        expect(claimedTo()).toBe('bc1qwallet');
-        expect(store.resolveClaimAddress).toHaveBeenCalledWith(
-            expect.objectContaining({ destinationAddress: undefined })
-        );
-        expect(nativeClaim).toHaveBeenCalledTimes(1);
-    });
+            expect(claimedTo()).toBe('bc1qwallet');
+            expect(store.resolveClaimAddress).toHaveBeenCalledWith(
+                expect.objectContaining({ destinationAddress: undefined })
+            );
+            expect(nativeClaim).toHaveBeenCalledTimes(1);
+        }
+    );
 
     it('claims a swap created on this device to the address picked for it', async () => {
         await renderView({ destinationAddress: 'bc1qpicked' });
