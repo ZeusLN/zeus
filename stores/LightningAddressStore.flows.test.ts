@@ -7,6 +7,12 @@ jest.mock('socket.io-client', () => ({ io: jest.fn() }));
 jest.mock('./CashuStore', () => ({}));
 jest.mock('./NodeInfoStore', () => ({}));
 jest.mock('./SettingsStore', () => ({}));
+// AmountUtils reads the β setting from the stores singleton
+jest.mock('./Stores', () => ({
+    settingsStore: { settings: { display: { useSatsSymbol: false } } },
+    fiatStore: {},
+    unitsStore: {}
+}));
 jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
     default: { signMessage: jest.fn() }
