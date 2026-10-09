@@ -38,6 +38,7 @@ import LnurlPayStore from '../../stores/LnurlPayStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
+import { getLocalizedSatsUnitLabel } from '../../utils/AmountUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import LinkingUtils from '../../utils/LinkingUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -896,8 +897,10 @@ export default class CashuPaymentRequest extends React.Component<
                                                                 >
                                                                     {`${numberWithCommas(
                                                                         donationAmount
-                                                                    )} ${localeString(
-                                                                        'general.sats'
+                                                                    )} ${getLocalizedSatsUnitLabel(
+                                                                        Number(
+                                                                            donationAmount
+                                                                        ) !== 1
                                                                     )}`}
                                                                 </Text>
                                                                 <Text
@@ -1001,8 +1004,10 @@ export default class CashuPaymentRequest extends React.Component<
                                                 {numberWithCommas(
                                                     donationAmount
                                                 ) +
-                                                    ` ${localeString(
-                                                        'general.sats'
+                                                    ` ${getLocalizedSatsUnitLabel(
+                                                        Number(
+                                                            donationAmount
+                                                        ) !== 1
                                                     )}`}
                                             </Text>
                                         </Row>
@@ -1020,8 +1025,11 @@ export default class CashuPaymentRequest extends React.Component<
                                                 )} = ${numberWithCommas(
                                                     (requestAmount || 0) +
                                                         donationAmount
-                                                )} ${localeString(
-                                                    'general.sats'
+                                                )} ${getLocalizedSatsUnitLabel(
+                                                    Number(
+                                                        (requestAmount || 0) +
+                                                            donationAmount
+                                                    ) !== 1
                                                 )}`}
                                             </Text>
                                         </Row>

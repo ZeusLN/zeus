@@ -12,6 +12,7 @@ import TextInput from './../components/TextInput';
 
 import BackendUtils from './../utils/BackendUtils';
 import { localeString } from './../utils/LocaleUtils';
+import { getLocalizedSatsUnitLabel } from '../utils/AmountUtils';
 import { themeColor } from './../utils/ThemeUtils';
 
 import ChannelsStore from './../stores/ChannelsStore';
@@ -125,7 +126,7 @@ export default class SetFeesForm extends React.Component<
                 >
                     {`${localeString(
                         'components.SetFeesForm.baseFee'
-                    )} (${localeString('general.sats')})`}
+                    )} (${getLocalizedSatsUnitLabel()})`}
                 </Text>
                 <TextInput
                     keyboardType="numeric"
@@ -180,7 +181,7 @@ export default class SetFeesForm extends React.Component<
                                 'views.Channel.inbound'
                             )} ${localeString(
                                 'components.SetFeesForm.baseFee'
-                            )} (${localeString('general.sats')})`}
+                            )} (${getLocalizedSatsUnitLabel()})`}
                         </Text>
                         <TextInput
                             // @ts-ignore:next-line

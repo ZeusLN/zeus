@@ -14,6 +14,7 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { getLocalizedSatsUnitLabel } from '../../utils/AmountUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Text from '../../components/Text';
@@ -162,7 +163,7 @@ export default class PaymentsSettings extends React.Component<
                                     }}
                                     keyboardType="numeric"
                                     value={feeLimit}
-                                    suffix={localeString('general.sats')}
+                                    suffix={getLocalizedSatsUnitLabel()}
                                     onChangeText={(text: string) => {
                                         this.setState({
                                             feeLimit: text

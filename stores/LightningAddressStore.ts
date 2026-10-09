@@ -23,6 +23,7 @@ import Base64Utils from '../utils/Base64Utils';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
 import { sleep } from '../utils/SleepUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { getLocalizedSatsUnitLabel } from '../utils/AmountUtils';
 
 import Storage from '../storage';
 
@@ -842,8 +843,7 @@ export default class LightningAddressStore {
             const title = localeString('zeuspay.paymentReceived.title');
             const body = localeString('zeuspay.paymentReceived.body', {
                 value: value_commas,
-                unit:
-                    value_commas === '1' ? 'sat' : localeString('general.sats')
+                unit: getLocalizedSatsUnitLabel(value_commas !== '1')
             });
             if (Platform.OS === 'android') {
                 // @ts-ignore:next-line
@@ -1132,10 +1132,7 @@ export default class LightningAddressStore {
                 const title = localeString('zeuspay.paymentReceived.title');
                 const body = localeString('zeuspay.paymentReceived.body', {
                     value: value_commas,
-                    unit:
-                        value_commas === '1'
-                            ? 'sat'
-                            : localeString('general.sats')
+                    unit: getLocalizedSatsUnitLabel(value_commas !== '1')
                 });
                 if (Platform.OS === 'android') {
                     // @ts-ignore:next-line
