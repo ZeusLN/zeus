@@ -154,7 +154,8 @@ describe('ChannelsStore.openChannel through openChannelSync', () => {
         expect(store.errorMsgChannel).toBe('peer is not online');
     });
 
-    it('leaves timeouts on other backends as plain errors', async () => {
+    it('blocks a second open after a timeout on other backends', async () => {
+        // e.g. CLN's fundchannel past the 30s REST timeout
         isLNDBased.mockReturnValue(false);
         openChannelSync.mockRejectedValue(new Error('Request timeout'));
         const store = makeStore();
@@ -163,8 +164,76 @@ describe('ChannelsStore.openChannel through openChannelSync', () => {
 
         expect(sentRequest().memo).toBeUndefined();
         expect(getPendingChannels).not.toHaveBeenCalled();
+        expect(store.openOutcomeUnknown).toBe(true);
+        expect(store.errorMsgChannel).toBe(
+            'stores.ChannelsStore.openOutcomeUnknown'
+        );
+    });
+
+    it('shows a node error as before on other backends', async () => {
+        isLNDBased.mockReturnValue(false);
+        openChannelSync.mockRejectedValue(new Error('peer is not online'));
+        const store = makeStore();
+        open(store);
+        await settle();
+
         expect(store.openOutcomeUnknown).toBe(false);
-        expect(store.errorMsgChannel).toBe('Request timeout');
+        expect(store.errorMsgChannel).toBe('peer is not online');
+    });
+
+    it('drops a lookup result that lands after a reset', async () => {
+        openChannelSync.mockRejectedValue(new Error('Request timeout'));
+        getPendingChannels.mockImplementation(async () => ({
+            pending_open_channels: [
+                {
+                    channel: {
+                        channel_point: 'funding:1',
+                        memo: sentRequest().memo
+                    }
+                }
+            ]
+        }));
+        const store = makeStore();
+        open(store);
+        // the open has timed out and the lookup is waiting on its first call
+        store.resetOpenChannel();
+        await settle();
+
+        expect(store.channelSuccess).toBe(false);
+        expect(store.funding_txid_str).toBe(null);
+    });
+
+    it('drops an unknown outcome that lands after a reset', async () => {
+        openChannelSync.mockRejectedValue(new Error('Request timeout'));
+        const store = makeStore();
+        open(store);
+        await jest.advanceTimersByTimeAsync(0);
+        store.resetOpenChannel();
+        await settle();
+
+        expect(store.openOutcomeUnknown).toBe(false);
+        expect(store.errorOpenChannel).toBe(false);
+        expect(store.errorMsgChannel).toBe(null);
+    });
+
+    it("does not end a newer open with an earlier open's error", async () => {
+        let rejectFirst: (error: Error) => void = () => undefined;
+        openChannelSync.mockReturnValueOnce(
+            new Promise((_, reject) => {
+                rejectFirst = reject;
+            })
+        );
+        const store = makeStore();
+        open(store);
+
+        openChannelSync.mockReturnValueOnce(new Promise(() => undefined));
+        open(store);
+        rejectFirst(new Error('peer is not online'));
+        await settle();
+
+        expect(store.errorOpenChannel).toBe(false);
+        expect(store.errorMsgChannel).toBeFalsy();
+        expect(store.openingChannel).toBe(true);
     });
 
     it('clears an unknown outcome when the open screen resets', async () => {
