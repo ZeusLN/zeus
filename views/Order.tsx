@@ -24,11 +24,7 @@ import TextInput from '../components/TextInput';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
-import {
-    getFormattedAmount,
-    getSatsUnitLabel,
-    shouldUseSatsSymbol
-} from '../utils/AmountUtils';
+import { getFormattedAmount, getSatsUnitLabel } from '../utils/AmountUtils';
 
 import BackendUtils from '../utils/BackendUtils';
 import { calculateTaxSats, calculateTotalSats } from '../utils/PosUtils';
@@ -1115,12 +1111,6 @@ export default class OrderView extends React.Component<OrderProps, OrderState> {
                                                 : getSymbol().rtl &&
                                                   units === 'fiat' &&
                                                   getSymbol().symbol
-                                        }
-                                        right={
-                                            units === 'sats' &&
-                                            shouldUseSatsSymbol()
-                                                ? 25
-                                                : undefined
                                         }
                                         toggleUnits={() => {
                                             this.setState({
