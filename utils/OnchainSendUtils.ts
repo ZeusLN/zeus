@@ -21,28 +21,41 @@ export const isRequestTimeout = (error: any): boolean => {
 
 const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// Looks for a sent transaction in the wallet's transactions. Each lookup
-// can fail on the same connection that timed out the send, so it retries a
-// few times. Resolves the txid, or undefined if the send was not found.
-export const findSentTransaction = async (
-    getTransactions: () => Promise<any>,
-    isSent: (tx: any) => boolean,
-    {
-        attempts = 3,
-        delayMs = 5000
-    }: { attempts?: number; delayMs?: number } = {}
-): Promise<string | undefined> => {
+export interface LookupOptions {
+    attempts?: number;
+    delayMs?: number;
+}
+
+// Runs a lookup until it finds something. Each lookup can fail on the same
+// connection that timed out the original request, so a few attempts are
+// made, delayMs apart. Resolves undefined if nothing was found.
+export const lookUpWithRetries = async <T>(
+    lookup: () => Promise<T | undefined>,
+    { attempts = 3, delayMs = 5000 }: LookupOptions = {}
+): Promise<T | undefined> => {
     for (let attempt = 0; attempt < attempts; attempt++) {
         if (attempt > 0) await wait(delayMs);
         try {
-            const result = await getTransactions();
-            const match = (result?.transactions || []).find(
-                (tx: any) => tx && isSent(tx)
-            );
-            if (match?.tx_hash) return match.tx_hash;
+            const found = await lookup();
+            if (found !== undefined) return found;
         } catch (error) {
-            console.log('Error looking up a timed out send', error);
+            console.log('Error looking up a timed out request', error);
         }
     }
     return undefined;
 };
+
+// Looks for a sent transaction in the wallet's transactions. Resolves the
+// txid, or undefined if the send was not found.
+export const findSentTransaction = (
+    getTransactions: () => Promise<any>,
+    isSent: (tx: any) => boolean,
+    options?: LookupOptions
+): Promise<string | undefined> =>
+    lookUpWithRetries(async () => {
+        const result = await getTransactions();
+        const match = (result?.transactions || []).find(
+            (tx: any) => tx && isSent(tx)
+        );
+        return match?.tx_hash || undefined;
+    }, options);
