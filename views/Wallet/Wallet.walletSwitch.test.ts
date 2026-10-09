@@ -200,6 +200,11 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
     view.props.SwapStore.fetchAndUpdateSwaps = jest.fn();
     view.props.LSPStore.initFlowLSP = jest.fn();
     view.props.PosStore.getOrders = jest.fn();
+    view.props.ConnectivityStore = {
+        start: jest.fn(),
+        checkNow: jest.fn(async () => {}),
+        isOffline: false
+    };
     view.state = { initialLoad: false, unlocked: true };
     view.setState = (patch: any) => Object.assign(view.state, patch);
     view.processPendingShareIntent = jest.fn();
