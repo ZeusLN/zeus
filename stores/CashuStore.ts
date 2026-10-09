@@ -3309,6 +3309,46 @@ export default class CashuStore {
     };
 
     /**
+     * Startup half of the Nostr mint restore: fetches the backed-up mint
+     * list and persists it so later starts skip the fetch. Skipped while
+     * offline, where every relay would time out; nothing is persisted, so
+     * the next start tries again. The restore stays owed (backups held
+     * back) while offline or when no relay answered.
+     */
+    public restoreMintUrlsAtStartup = async (
+        lndDir: string
+    ): Promise<{ mintUrls: string[] | null; restoreOwed: boolean }> => {
+        if (this.isOffline) {
+            console.log('Offline, skipping Nostr mint restore');
+            return { mintUrls: null, restoreOwed: true };
+        }
+        let nostrMints: string[] | null;
+        try {
+            nostrMints = await this.nostrRestoreMints();
+        } catch (e) {
+            console.warn('Failed to restore mints from Nostr:', e);
+            return {
+                mintUrls: null,
+                restoreOwed: e instanceof MintBackupRelaysUnreachableError
+            };
+        }
+        if (!nostrMints || nostrMints.length === 0) {
+            return { mintUrls: null, restoreOwed: false };
+        }
+        console.log(`Restored ${nostrMints.length} mint(s) from Nostr backup`);
+        try {
+            // Persist so we don't re-fetch next time
+            await Storage.setItem(
+                `${lndDir}-cashu-mintUrls`,
+                JSON.stringify(nostrMints)
+            );
+        } catch (e) {
+            console.warn('Failed to persist mints restored from Nostr:', e);
+        }
+        return { mintUrls: nostrMints, restoreOwed: false };
+    };
+
+    /**
      * Restores mint list from Nostr relays using the seed-derived keypair.
      * Returns the list of mint URLs found, or null if none. Throws
      * MintBackupRelaysUnreachableError if no relay answered.
@@ -4273,25 +4313,11 @@ export default class CashuStore {
                 if (!storedMintUrls) {
                     // Backups stay held back after the relays answer, until
                     // the restored mints are in this.mintUrls below
-                    try {
-                        const nostrMints = await this.nostrRestoreMints();
-                        restoreOwed = false;
-                        if (nostrMints && nostrMints.length > 0) {
-                            localMintUrls = nostrMints;
-                            console.log(
-                                `Restored ${nostrMints.length} mint(s) from Nostr backup`
-                            );
-                            // Persist so we don't re-fetch next time
-                            await Storage.setItem(
-                                `${lndDir}-cashu-mintUrls`,
-                                JSON.stringify(localMintUrls)
-                            );
-                        }
-                    } catch (e) {
-                        console.warn('Failed to restore mints from Nostr:', e);
-                        restoreOwed =
-                            e instanceof MintBackupRelaysUnreachableError;
-                    }
+                    const restored = await this.restoreMintUrlsAtStartup(
+                        lndDir
+                    );
+                    restoreOwed = restored.restoreOwed;
+                    if (restored.mintUrls) localMintUrls = restored.mintUrls;
                 }
 
                 const localNorm = new Set(
