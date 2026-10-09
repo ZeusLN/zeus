@@ -1,4 +1,5 @@
 import FeeUtils, {
+    hasUsableClaimFee,
     isPlausibleSatPerVbyte,
     sanitizeRecommendedFees,
     MAX_SAT_PER_VBYTE
@@ -144,6 +145,48 @@ describe('FeeUtils', () => {
             ).toBeNull();
         });
 
+        it('raises rates between 0 and 1 sat/vB to 1', () => {
+            // the shape of mempool's /v1/fees/precise response, which a
+            // custom mempool instance could serve as recommended fees
+            expect(
+                sanitizeRecommendedFees({
+                    fastestFee: 1,
+                    halfHourFee: 0.621,
+                    hourFee: 0.319,
+                    economyFee: 0.2,
+                    minimumFee: 0.1
+                })
+            ).toEqual({
+                fastestFee: 1,
+                halfHourFee: 1,
+                hourFee: 1,
+                economyFee: 1,
+                minimumFee: 1
+            });
+            expect(
+                sanitizeRecommendedFees({ ...VALID_FEES, minimumFee: 0.999 })
+            ).toEqual(VALID_FEES);
+            expect(
+                sanitizeRecommendedFees({ ...VALID_FEES, minimumFee: '0.5' })
+            ).toEqual(VALID_FEES);
+            // a fastestFee below 1 is still a usable rate once raised
+            expect(sanitizeRecommendedFees({ fastestFee: 0.5 })).toEqual({
+                fastestFee: 1
+            });
+        });
+
+        it('still rejects zero and negative rates', () => {
+            expect(
+                sanitizeRecommendedFees({ ...VALID_FEES, minimumFee: 0 })
+            ).toBeNull();
+            expect(
+                sanitizeRecommendedFees({ ...VALID_FEES, minimumFee: -0.5 })
+            ).toBeNull();
+            expect(
+                sanitizeRecommendedFees({ ...VALID_FEES, minimumFee: 'abc' })
+            ).toBeNull();
+        });
+
         it('rejects a response with no fastestFee to fall back to', () => {
             const { fastestFee, ...withoutFastest } = VALID_FEES;
             expect(fastestFee).toBe(12);
@@ -165,6 +208,27 @@ describe('FeeUtils', () => {
             expect(sanitizeRecommendedFees('nope')).toBeNull();
             expect(sanitizeRecommendedFees([])).toBeNull();
             expect(sanitizeRecommendedFees({})).toBeNull();
+        });
+    });
+
+    describe('hasUsableClaimFee', () => {
+        it('accepts a quoted claim miner fee whatever the rate', () => {
+            // the claim pays the quoted fee and ignores the rate, so a
+            // failed or rejected mempool fetch must not block the swap
+            expect(hasUsableClaimFee(462, '')).toBe(true);
+            expect(hasUsableClaimFee(462, undefined)).toBe(true);
+            expect(hasUsableClaimFee(462, '0')).toBe(true);
+        });
+
+        it('needs a plausible rate without a quoted claim miner fee', () => {
+            expect(hasUsableClaimFee(0, '12')).toBe(true);
+            expect(hasUsableClaimFee(undefined, '12')).toBe(true);
+            expect(hasUsableClaimFee(0, '')).toBe(false);
+            expect(hasUsableClaimFee(0, '0')).toBe(false);
+            expect(hasUsableClaimFee(undefined, undefined)).toBe(false);
+            expect(hasUsableClaimFee(0, String(MAX_SAT_PER_VBYTE + 1))).toBe(
+                false
+            );
         });
     });
 });
