@@ -82,13 +82,15 @@ const makeProps = ({
     confirmedBlockchainBalance = BALANCE,
     unconfirmedBlockchainBalance = 0,
     routeParams = PEER,
-    settings = {}
+    settings = {},
+    openOutcomeUnknown = false
 }: {
     implementation?: string;
     confirmedBlockchainBalance?: number;
     unconfirmedBlockchainBalance?: number;
     routeParams?: { node_pubkey_string?: string; host?: string };
     settings?: any;
+    openOutcomeUnknown?: boolean;
 } = {}) => {
     (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(
         implementation === 'lnd'
@@ -107,6 +109,7 @@ const makeProps = ({
             channelsView: 'channels',
             aliasesByPubkey: {},
             nodes: {},
+            openOutcomeUnknown,
             resetOpenChannel: jest.fn(),
             connectPeer: jest.fn(() => Promise.resolve())
         },
@@ -163,6 +166,22 @@ const openRequest = async (props: any) => {
     await fireEvent.press(openButton());
     return props.ChannelsStore.connectPeer.mock.calls[0][0];
 };
+
+describe('OpenChannel after an open with an unknown outcome', () => {
+    it('allows opening with a valid amount', async () => {
+        await renderView();
+        await enterAmount('50000', 50000);
+
+        expect(isOpenDisabled()).toBe(false);
+    });
+
+    it('does not allow opening again', async () => {
+        await renderView({ openOutcomeUnknown: true });
+        await enterAmount('50000', 50000);
+
+        expect(isOpenDisabled()).toBe(true);
+    });
+});
 
 describe('OpenChannel fund max toggle', () => {
     it('restores the entered amount when fund max is turned off', async () => {
