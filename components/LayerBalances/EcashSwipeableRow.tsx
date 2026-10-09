@@ -1,11 +1,12 @@
 import React, { Component } from 'react';
 import { Alert, View, I18nManager, TouchableOpacity } from 'react-native';
 import { SharedValue } from 'react-native-reanimated';
-import { getParams as getlnurlParams, LNURLWithdrawParams } from 'js-lnurl';
+import { LNURLWithdrawParams } from 'js-lnurl';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
 
 import BackendUtils from '../../utils/BackendUtils';
+import { getLnurlParams as getlnurlParams } from '../../utils/LnurlUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -147,10 +148,32 @@ export default class EcashSwipeableRow extends Component<
         }
     };
 
-    private fetchLnInvoice = () => {
+    private showError = (error: any) => {
+        Alert.alert(
+            localeString('general.error'),
+            error?.message || String(error),
+            [
+                {
+                    text: localeString('general.ok'),
+                    onPress: () => void 0
+                }
+            ],
+            { cancelable: false }
+        );
+    };
+
+    private fetchLnInvoice = async () => {
         const { lightning, lnurlParams, navigation } = this.props;
         if (lightning?.toLowerCase().startsWith('lnurl') || lnurlParams) {
-            this.handleLnurlRequest(lightning, lnurlParams, navigation);
+            try {
+                await this.handleLnurlRequest(
+                    lightning,
+                    lnurlParams,
+                    navigation
+                );
+            } catch (error) {
+                this.showError(error);
+            }
             return;
         } else {
             cashuStore.getPayReq(lightning ?? '');
