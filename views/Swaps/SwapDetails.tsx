@@ -614,7 +614,9 @@ export default class SwapDetails extends React.Component<
         // the timeout: resend a stored claim, or fetch the lockup from the
         // host and claim it through the usual checks.
         const recoverSettledClaim = async () => {
-            if (submitted || stopped || !SwapStore) return;
+            // A claim in progress on this screen is what told the host the
+            // preimage; it stores and broadcasts its own transaction
+            if (submitted || stopped || verifyingLockup || !SwapStore) return;
             if (this.state.swapData?.claimTransactionHex) {
                 await claimIfLockupVerified('');
                 return;

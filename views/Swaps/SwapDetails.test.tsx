@@ -558,6 +558,48 @@ describe('lockup verification retry wiring', () => {
             view.componentWillUnmount?.();
         });
 
+        it('leaves a claim still being built to finish', async () => {
+            // the host settles as soon as the cooperative request inside the
+            // native build gives it the preimage, before the build returns
+            const { store, view } = makeView();
+            let resolveBuild!: (hex: string) => void;
+            nativeClaim.mockReturnValueOnce(
+                new Promise((resolve) => {
+                    resolveBuild = resolve;
+                })
+            );
+            jest.spyOn(view, 'resolveDestinationAddress').mockResolvedValue(
+                'destination'
+            );
+            view.getReverseSwapUpdates({ id: 'swap' }, false);
+            const confirmed = socket.onmessage({
+                data: JSON.stringify({
+                    event: 'update',
+                    args: [
+                        {
+                            status: 'transaction.confirmed',
+                            transaction: { hex: 'txhex' }
+                        }
+                    ]
+                })
+            });
+            await jest.advanceTimersByTimeAsync(1000);
+            expect(nativeClaim).toHaveBeenCalledTimes(1);
+
+            await sendStatus('invoice.settled');
+            resolveBuild('claimhex');
+            await confirmed;
+
+            expect(store.getReverseLockupTransactionHex).not.toHaveBeenCalled();
+            expect(nativeClaim).toHaveBeenCalledTimes(1);
+            expect(store.broadcastSwapTransaction).toHaveBeenCalledTimes(1);
+            expect(store.saveClaimTxid).toHaveBeenCalledWith(
+                'swap',
+                'claim-txid'
+            );
+            view.componentWillUnmount?.();
+        });
+
         it('does not claim again after a claim broadcast on this screen', async () => {
             const { store, view } = makeView();
 
