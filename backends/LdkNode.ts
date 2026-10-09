@@ -2312,6 +2312,7 @@ export default class LdkNode {
     supportsCustomPreimages = () => false;
     supportsSweep = () => false;
     supportsOnchainSendMax = () => true;
+    supportsChannelMemo = () => false;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
     supportsChannelFundMax = () => true;
