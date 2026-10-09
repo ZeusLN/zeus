@@ -17,7 +17,8 @@ export const getTransactions = async (
         response: lnrpc.TransactionDetails,
         method: 'GetTransactions',
         options: {
-            max_transactions: data?.max_transactions || 500
+            max_transactions: data?.max_transactions || 500,
+            start_height: data?.start_height
         }
     });
     return response;
@@ -102,7 +103,8 @@ export const sendCoins = async (
     feeRate?: number,
     spend_unconfirmed?: boolean,
     send_all?: boolean,
-    outpoints?: Array<lnrpc.IOutPoint>
+    outpoints?: Array<lnrpc.IOutPoint>,
+    label?: string
 ): Promise<lnrpc.SendCoinsResponse> => {
     const response = await sendCommand<
         lnrpc.ISendCoinsRequest,
@@ -118,7 +120,8 @@ export const sendCoins = async (
             sat_per_vbyte: feeRate ? Long.fromValue(feeRate) : undefined,
             spend_unconfirmed,
             send_all,
-            outpoints
+            outpoints,
+            label
         }
     });
     return response;
