@@ -155,6 +155,27 @@ describe('TransactionsStore.sendPayment with an offer', () => {
         expect(store.status).toBeNull();
     });
 
+    // LdkNode reports an offer payment still pending at its timeout as
+    // IN_FLIGHT; SendingLightning then shows it as in transit with no retry
+    it('records an offer payment still pending at timeout as in transit, not an error', async () => {
+        payOffer.mockResolvedValue({
+            payment_hash: '',
+            payment_preimage: '',
+            fee_msat: '0',
+            status: 'IN_FLIGHT'
+        });
+
+        const store = newStore();
+        store.sendPayment({ offer, amount: '1000' });
+        await flushPromises();
+
+        expect(store.loading).toBe(false);
+        expect(store.error).toBe(false);
+        expect(store.error_msg).toBeNull();
+        expect(store.payment_error).toBeNull();
+        expect(store.status).toBe('IN_FLIGHT');
+    });
+
     it('ignores a second send while a payment is in flight', () => {
         payOffer.mockReturnValue(deferred().promise);
 

@@ -1413,17 +1413,17 @@ export default class LdkNode {
                 paymentTimeoutSecs
             });
 
-        const { hash, preimage, feeMsat } = await this.awaitPaymentCompletion(
-            paymentId,
-            paymentTimeoutSecs
-        );
+        const { hash, preimage, feeMsat, pending } =
+            await this.awaitPaymentCompletion(paymentId, paymentTimeoutSecs, {
+                pendingOnTimeout: true
+            });
 
         return {
             payment_hash: hash,
             payment_preimage: preimage,
             fee_msat: feeMsat,
             payment_route: {},
-            status: 'SUCCEEDED'
+            status: pending ? 'IN_FLIGHT' : 'SUCCEEDED'
         };
     };
 
@@ -1811,16 +1811,16 @@ export default class LdkNode {
             paymentTimeoutSecs
         });
 
-        const { hash, preimage, feeMsat } = await this.awaitPaymentCompletion(
-            paymentId,
-            paymentTimeoutSecs
-        );
+        const { hash, preimage, feeMsat, pending } =
+            await this.awaitPaymentCompletion(paymentId, paymentTimeoutSecs, {
+                pendingOnTimeout: true
+            });
 
         return {
             payment_hash: hash,
             payment_preimage: preimage,
             fee_msat: feeMsat,
-            status: 'SUCCEEDED'
+            status: pending ? 'IN_FLIGHT' : 'SUCCEEDED'
         };
     };
 
@@ -1900,11 +1900,21 @@ export default class LdkNode {
      * Captures failure reason from events for better error messages.
      * Returns the payment's hash, preimage, and fee paid, or throws on
      * failure/timeout.
+     *
+     * With `pendingOnTimeout`, a payment that has neither succeeded nor
+     * failed when polling ends is returned with `pending: true` instead of
+     * throwing.
      */
     private awaitPaymentCompletion = async (
         paymentId: string,
-        paymentTimeoutSecs?: number
-    ): Promise<{ hash: string; preimage: string; feeMsat: string }> => {
+        paymentTimeoutSecs?: number,
+        { pendingOnTimeout = false }: { pendingOnTimeout?: boolean } = {}
+    ): Promise<{
+        hash: string;
+        preimage: string;
+        feeMsat: string;
+        pending: boolean;
+    }> => {
         const delayMs = 1000;
         // Size polling to LDK's timeout plus a small grace period so the
         // terminal PaymentFailed/PaymentSuccessful event can land before we
@@ -1941,6 +1951,21 @@ export default class LdkNode {
             }
 
             if (payment?.status !== 'succeeded') {
+                // Keysend and BOLT 12 sends get a fresh payment id on every
+                // attempt, so LDK can't reject a retry as a duplicate.
+                // Reporting a timeout as a failure there lets the user send
+                // again while this payment can still complete: LDK keeps
+                // in-flight HTLCs after its retry timeout, and waits for a
+                // BOLT 12 invoice for one to two timer ticks regardless of
+                // it. Those callers report the payment as in flight instead.
+                if (pendingOnTimeout) {
+                    return {
+                        hash: payment?.kind.hash || '',
+                        preimage: '',
+                        feeMsat: '0',
+                        pending: true
+                    };
+                }
                 throw new Error(localeString('error.paymentTimedOut'));
             }
 
@@ -1949,7 +1974,8 @@ export default class LdkNode {
                 preimage: payment?.kind.preimage || '',
                 // Without this the success screen and NWC fee accounting
                 // read the fee as 0 for every LDK payment.
-                feeMsat: (payment?.feePaidMsat || 0).toString()
+                feeMsat: (payment?.feePaidMsat || 0).toString(),
+                pending: false
             };
         } finally {
             unsubscribe();
