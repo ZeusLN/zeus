@@ -18,6 +18,7 @@ export const getTransactions = async (
         method: 'GetTransactions',
         options: {
             start_height: data?.start_height,
+            end_height: data?.end_height,
             max_transactions: data?.max_transactions ?? 500
         }
     });

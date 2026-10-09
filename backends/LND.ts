@@ -282,7 +282,7 @@ export default class LND {
 
     getTransactionsPage = (data?: TransactionPageRequest | null) =>
         this.getRequest(
-            `/v1/transactions?end_height=-1${
+            `/v1/transactions?end_height=${data?.end_height ?? -1}${
                 data?.start_height ? `&start_height=${data.start_height}` : ''
             }&max_transactions=${
                 data?.max_transactions ?? DEFAULT_MAX_TRANSACTIONS
@@ -304,8 +304,6 @@ export default class LND {
                 this.getTransactionsPage(request).then(
                     (page: any) => page.transactions
                 ),
-            getTipHeight: () =>
-                this.getMyNodeInfo().then((info: any) => info?.block_height),
             limit: data?.max_transactions || DEFAULT_MAX_TRANSACTIONS
         });
         return { transactions };

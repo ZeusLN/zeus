@@ -112,6 +112,7 @@ export default class LightningNodeConnect {
             await this.lnc.lnd.lightning
                 .getTransactions({
                     startHeight: request.start_height,
+                    endHeight: request.end_height,
                     maxTransactions: request.max_transactions
                 })
                 .then(
@@ -127,10 +128,6 @@ export default class LightningNodeConnect {
                   })
                 : await getNewestTransactions({
                       fetchPage,
-                      getTipHeight: () =>
-                          this.getMyNodeInfo().then(
-                              (info: any) => info?.block_height
-                          ),
                       limit: data?.max_transactions || DEFAULT_MAX_TRANSACTIONS
                   });
         return {

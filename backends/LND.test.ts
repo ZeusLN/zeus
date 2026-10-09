@@ -116,44 +116,68 @@ describe('LND.getURL', () => {
 });
 
 describe('LND.getTransactions', () => {
-    // lnd 0.19+ slices GetTransactions oldest first, unconfirmed last
+    // Follows lnd 0.19+: a negative height is the top of the range, blocks
+    // are read backwards when start > end, unconfirmed transactions come
+    // after the mined ones, the page is sliced, then sorted by confirmations
     const serve = (confirmedHeights: number[], unconfirmed = 0) => {
+        const tip = 900_000;
+        const top = 2 ** 31 - 1;
         const lnd = new LND();
         const urls: string[] = [];
         lnd.getRequest = jest.fn(async (route: string) => {
             urls.push(route);
             const params = new URLSearchParams(route.split('?')[1]);
-            const start = Number(params.get('start_height') || 0);
+            const startHeight = Number(params.get('start_height') || 0);
+            const endHeight = Number(params.get('end_height') || -1);
             const max = Number(params.get('max_transactions'));
+            const begin = startHeight < 0 ? top : startHeight;
+            const end = endHeight < 0 ? top : endHeight;
+            const heights = confirmedHeights
+                .filter(
+                    (h) =>
+                        h >= Math.min(begin, end) && h <= Math.max(begin, end)
+                )
+                .sort((a, b) => (begin < end ? a - b : b - a));
             const txs = [
-                ...confirmedHeights
-                    .filter((h) => h >= start)
-                    .map((h) => ({ tx_hash: `h${h}`, block_height: h })),
-                ...Array.from({ length: unconfirmed }, (_, i) => ({
-                    tx_hash: `pending${i}`,
-                    block_height: 0
-                }))
+                ...heights.map((h) => ({
+                    tx_hash: `h${h}`,
+                    block_height: h,
+                    num_confirmations: tip - h + 1
+                })),
+                ...(startHeight < 0 || endHeight < 0
+                    ? Array.from({ length: unconfirmed }, (_, i) => ({
+                          tx_hash: `pending${i}`,
+                          block_height: 0,
+                          num_confirmations: 0
+                      }))
+                    : [])
             ];
-            return { transactions: max === 0 ? txs : txs.slice(0, max) };
+            const page = max === 0 ? txs : txs.slice(0, max);
+            return {
+                transactions: page.sort(
+                    (a, b) => a.num_confirmations - b.num_confirmations
+                )
+            };
         }) as any;
-        lnd.getMyNodeInfo = jest.fn(async () => ({
-            block_height: 900_000
-        })) as any;
         return { lnd, urls };
     };
 
     it('returns the newest 500 transactions, not the oldest, when there are more', async () => {
         const heights = Array.from({ length: 600 }, (_, i) => 899_401 + i);
-        const { lnd } = serve(heights, 1);
+        const { lnd, urls } = serve(heights, 1);
 
         const { transactions } = await lnd.getTransactions();
 
         expect(transactions).toHaveLength(500);
-        expect(transactions[transactions.length - 1].tx_hash).toBe('pending0');
-        expect(transactions[transactions.length - 2].tx_hash).toBe('h900000');
+        expect(transactions[0].tx_hash).toBe('pending0');
+        expect(transactions[1].tx_hash).toBe('h900000');
         expect(transactions.map((tx: any) => tx.tx_hash)).not.toContain(
             'h899401'
         );
+        expect(urls).toEqual([
+            '/v1/transactions?end_height=1&start_height=-1&max_transactions=500',
+            '/v1/transactions?end_height=-1&start_height=-1&max_transactions=0'
+        ]);
     });
 
     it('makes one request when the wallet has fewer than 500 transactions', async () => {
@@ -161,9 +185,13 @@ describe('LND.getTransactions', () => {
 
         const { transactions } = await lnd.getTransactions();
 
-        expect(transactions).toHaveLength(3);
+        expect(transactions.map((tx: any) => tx.tx_hash)).toEqual([
+            'pending0',
+            'h800001',
+            'h800000'
+        ]);
         expect(urls).toEqual([
-            '/v1/transactions?end_height=-1&max_transactions=500'
+            '/v1/transactions?end_height=1&start_height=-1&max_transactions=500'
         ]);
     });
 
@@ -178,6 +206,5 @@ describe('LND.getTransactions', () => {
         expect(urls).toEqual([
             '/v1/transactions?end_height=-1&start_height=899997&max_transactions=500'
         ]);
-        expect(lnd.getMyNodeInfo).not.toHaveBeenCalled();
     });
 });
