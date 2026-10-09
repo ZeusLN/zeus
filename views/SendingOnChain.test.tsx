@@ -133,6 +133,14 @@ describe('SendingOnChain back button', () => {
         expect(navigation.popTo).toHaveBeenCalledWith('Wallet');
     });
 
+    it('returns to the wallet while the send is still running', () => {
+        const { view, navigation } = makeView({ loading: true });
+
+        expect(pressBack(view)).toBe(true);
+        expect(navigation.popTo).toHaveBeenCalledWith('Wallet');
+        expect(navigation.goBack).not.toHaveBeenCalled();
+    });
+
     it('goes back to Send after a failed send', () => {
         const { view, navigation } = makeView({ error: true });
 
