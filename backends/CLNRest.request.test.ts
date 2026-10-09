@@ -642,7 +642,8 @@ describe('CLNRest capability flags', () => {
         supportsCashuWallet: false,
         supportsSettingInvoiceExpiration: true,
         supportsNostrWalletConnectService: true,
-        supportsPaymentLookup: false
+        supportsPaymentLookup: false,
+        supportsChannelMemo: false
     };
 
     it.each(Object.entries(expected))('%s() returns %s', (flag, value) => {

@@ -618,3 +618,26 @@ describe('LightningNodeConnect on-chain sends', () => {
         });
     });
 });
+
+describe('LightningNodeConnect channel opens', () => {
+    it('passes the channel memo to lnd', async () => {
+        mockSettings.implementation = 'lightning-node-connect';
+        mockSettings.mailboxServer = 'mailbox.example.com:443';
+        const backend = new LightningNodeConnect();
+        const lnc = await openWallet(backend, 'phrase-a');
+        lnc.lnd.lightning.openChannelSync = jest.fn(async () => ({}));
+
+        await backend.openChannelSync({
+            node_pubkey_string: '02peer',
+            local_funding_amount: '100000',
+            memo: 'ZEUS open 0011223344556677'
+        } as any);
+
+        expect(backend.lnc.lnd.lightning.openChannelSync).toHaveBeenCalledWith(
+            expect.objectContaining({
+                node_pubkey_string: '02peer',
+                memo: 'ZEUS open 0011223344556677'
+            })
+        );
+    });
+});
