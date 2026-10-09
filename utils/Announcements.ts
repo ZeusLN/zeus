@@ -9,12 +9,13 @@
 //   2. Append a new entry to ANNOUNCEMENTS below with a stable, unique `id`.
 //   3. (Optional) provide a `shouldShow` predicate for additional gating.
 //
-// Only one announcement is surfaced per session — entries earlier in the
+// Only one announcement is surfaced per check, and entries earlier in the
 // array win. Ordering by importance is fine; reordering won't re-show
-// already-dismissed entries.
+// already-dismissed entries. New users are marked as having seen every
+// current announcement when onboarding starts (IntroSplash).
 
 export interface Announcement {
-    // Stable id — used as the dismissal Storage key suffix.
+    // Stable id, used in the dismissal Storage key.
     // Renaming an id will re-surface the announcement to all users.
     id: string;
     titleKey: string;
@@ -28,6 +29,9 @@ export interface Announcement {
 }
 
 export const ANNOUNCEMENT_DISMISSED_KEY_PREFIX = 'announcement_';
+
+export const getAnnouncementDismissedKey = (id: string) =>
+    `${ANNOUNCEMENT_DISMISSED_KEY_PREFIX}${id}_dismissed`;
 
 export const ANNOUNCEMENTS: Announcement[] = [
     {

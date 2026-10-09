@@ -9,7 +9,7 @@ import {
 } from '../utils/RatingUtils';
 import {
     ANNOUNCEMENTS,
-    ANNOUNCEMENT_DISMISSED_KEY_PREFIX
+    getAnnouncementDismissedKey
 } from '../utils/Announcements';
 
 export default class ModalStore {
@@ -145,18 +145,29 @@ export default class ModalStore {
         this.toggleRatingModal(false);
     };
 
+    private isAnyModalVisible = () =>
+        this.showExternalLinkModal ||
+        this.showAndroidNfcModal ||
+        this.showInfoModal ||
+        this.showAlertModal ||
+        this.showShareModal ||
+        this.showNewChannelModal ||
+        this.showRatingModal ||
+        this.showRestoreChannelModal;
+
     @action
     public checkAndTriggerAnnouncements = async (navigation: any) => {
         try {
             for (const announcement of ANNOUNCEMENTS) {
-                const key =
-                    ANNOUNCEMENT_DISMISSED_KEY_PREFIX +
-                    announcement.id +
-                    '_dismissed';
+                const key = getAnnouncementDismissedKey(announcement.id);
                 const dismissed = await Storage.getItem(key);
                 if (dismissed === 'true') continue;
                 if (announcement.shouldShow && !announcement.shouldShow())
                     continue;
+
+                // Leave it for the next check rather than marking it seen
+                // while another modal covers it
+                if (this.isAnyModalVisible()) return;
 
                 // Persist dismissal up-front so each announcement is strictly
                 // one-shot per device regardless of how the user closes it.
@@ -178,9 +189,24 @@ export default class ModalStore {
                         : undefined
                 });
 
-                // Only surface one announcement per session — avoids stacking
+                // Only surface one announcement per check to avoid stacking
                 // modals when several land in the same release.
                 return;
+            }
+        } catch (e) {
+            console.log(e);
+        }
+    };
+
+    // Called when onboarding starts: a new user already gets the defaults
+    // the current announcements describe, so mark them all as seen.
+    public markAnnouncementsSeen = async () => {
+        try {
+            for (const announcement of ANNOUNCEMENTS) {
+                await Storage.setItem(
+                    getAnnouncementDismissedKey(announcement.id),
+                    'true'
+                );
             }
         } catch (e) {
             console.log(e);
