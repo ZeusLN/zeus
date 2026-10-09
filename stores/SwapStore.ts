@@ -1014,8 +1014,8 @@ export default class SwapStore {
             return { status: 'unavailable', reason: 'request-failed' };
         }
 
-        // A rescued swap's on-chain amount could only come from the host,
-        // so none is stored. Compare the lockup with this wallet's own
+        // Legacy rescues persisted arbitrary host fields, so ignore their
+        // onchainAmount even after repair. Compare with this wallet's own
         // payment for the swap instead. With no such payment, or a lockup
         // short of the floor for it, the user has to confirm the amount
         // before the preimage is revealed.
@@ -1026,7 +1026,9 @@ export default class SwapStore {
         // the host's own figure, and its invoice, which is what this wallet
         // pays, adds the same floor a rescued swap's payment does.
         const amountUnchecked = !swap.imported && !swap.onchainAmountVerified;
-        let minAmount: number | undefined = swap.onchainAmount ?? undefined;
+        let minAmount: number | undefined = swap.imported
+            ? undefined
+            : swap.onchainAmount ?? undefined;
         let paidAmount: number | undefined;
         let needsConfirmation = false;
         if (minAmount == null || amountUnchecked) {

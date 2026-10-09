@@ -850,6 +850,25 @@ describe('SwapStore.verifyReverseLockup', () => {
             paidAmount
         });
 
+        it.each([1000, 0, 99100])(
+            'ignores a legacy imported onchainAmount of %s',
+            async (onchainAmount) => {
+                paid();
+                lockedUp(1000);
+                const swap = rescuedSwap();
+                swap.onchainAmount = onchainAmount;
+                await expect(verify(swap)).resolves.toEqual(
+                    shortOf(100000, 1000)
+                );
+                expect(getPayments).toHaveBeenCalled();
+                await expect(
+                    newStore().verifyReverseLockup(swap, LOCKUP_TX.toHex(), {
+                        confirmedLockupAmount: 1000
+                    })
+                ).resolves.toEqual({ status: 'ok' });
+            }
+        );
+
         it.each([99100, FLOOR])(
             'claims a lockup of %s sats against a payment of 100000 sats',
             async (value) => {
