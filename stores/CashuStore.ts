@@ -311,6 +311,8 @@ export default class CashuStore {
 
     private ndk?: NDK;
     private ndkConnect?: Promise<void>;
+    // Discovery calls currently using the shared NDK instance.
+    private ndkUsers = 0;
 
     constructor(
         settingsStore: SettingsStore,
@@ -1898,6 +1900,7 @@ export default class CashuStore {
         this.showOfflineSpentAlert = false;
         this.isSweeping = false;
         this.stopConnectivityMonitoring();
+        this.disconnectNdk();
     };
 
     @action
@@ -1976,8 +1979,9 @@ export default class CashuStore {
 
     /**
      * Returns the shared NDK instance, creating and connecting it on first
-     * use. Concurrent callers wait on the same connect. A failed connect is
-     * dropped so the next call starts over.
+     * use. Concurrent callers wait on the same connect. A failed connect, or
+     * one that ends with no relay connected, is dropped so the next call
+     * starts over.
      */
     private getNdk = async (): Promise<NDK> => {
         if (!this.ndk || !this.ndkConnect) {
@@ -1988,17 +1992,62 @@ export default class CashuStore {
             this.ndk = ndk;
             this.ndkConnect = ndk
                 .connect(NDK_CONNECT_TIMEOUT_MS)
-                .catch((e: any) => {
-                    if (this.ndk === ndk) {
-                        this.ndk = undefined;
-                        this.ndkConnect = undefined;
+                .then(() => {
+                    // connect() also resolves when its timeout elapses, even
+                    // if no relay connected. Fetching would then never end.
+                    if (ndk.pool.connectedRelays().length === 0) {
+                        throw new Error('No Nostr relay connected');
                     }
+                })
+                .catch((e: any) => {
+                    this.disconnectNdk(ndk);
                     throw e;
                 });
         }
         const ndk = this.ndk;
         await this.ndkConnect;
         return ndk;
+    };
+
+    /**
+     * Gets the shared NDK instance for one discovery call. Each successful
+     * call must be paired with releaseNdk().
+     */
+    private acquireNdk = async (): Promise<NDK> => {
+        this.ndkUsers++;
+        try {
+            return await this.getNdk();
+        } catch (e) {
+            this.ndkUsers--;
+            throw e;
+        }
+    };
+
+    /**
+     * Ends one discovery call. Once no call uses the instance anymore, its
+     * relays are disconnected so their sockets and monitoring timers do not
+     * stay alive for the rest of the session.
+     */
+    private releaseNdk = (ndk: NDK) => {
+        this.ndkUsers = Math.max(0, this.ndkUsers - 1);
+        if (this.ndkUsers === 0) {
+            this.disconnectNdk(ndk);
+        }
+    };
+
+    /**
+     * Disconnects and removes every relay of the given NDK instance (the
+     * shared one by default), and forgets it if it is the shared one.
+     */
+    private disconnectNdk = (ndk: NDK | undefined = this.ndk) => {
+        if (!ndk) return;
+        for (const url of ndk.pool.urls()) {
+            ndk.pool.removeRelay(url);
+        }
+        if (this.ndk === ndk) {
+            this.ndk = undefined;
+            this.ndkConnect = undefined;
+        }
     };
 
     /**
@@ -2010,27 +2059,23 @@ export default class CashuStore {
         logPrefix: string
     ): Promise<Set<NDKEvent>> => {
         const events = new Set<NDKEvent>();
-        let eoseCount = 0;
-        const totalRelays = DEFAULT_NOSTR_RELAYS.length;
         const sub = ndk.subscribe(filter, { closeOnEose: true });
 
         await new Promise<void>((resolve) => {
+            // NDKSubscription emits 'eose' once for the whole subscription,
+            // not once per relay.
+            const timeout = setTimeout(() => {
+                console.log(`${logPrefix}: Timeout reached`);
+                resolve();
+            }, 10000);
             sub.on('event', (event: NDKEvent) => {
                 events.add(event);
             });
             sub.on('eose', () => {
-                eoseCount++;
-                if (eoseCount >= Math.ceil(totalRelays / 2)) {
-                    console.log(
-                        `${logPrefix}: EOSE received from majority of relays`
-                    );
-                    resolve();
-                }
-            });
-            setTimeout(() => {
-                console.log(`${logPrefix}: Timeout reached`);
+                console.log(`${logPrefix}: EOSE received`);
+                clearTimeout(timeout);
                 resolve();
-            }, 10000);
+            });
         });
 
         sub.stop();
@@ -2192,6 +2237,7 @@ export default class CashuStore {
 
     @action
     public fetchMints = async () => {
+        let ndk: NDK | undefined;
         try {
             runInAction(() => {
                 this.loading = true;
@@ -2199,7 +2245,7 @@ export default class CashuStore {
                 this.error_msg = undefined;
             });
 
-            const ndk = await this.getNdk();
+            ndk = await this.acquireNdk();
 
             const filter: NDKFilter = {
                 kinds: [38000 as NDKKind],
@@ -2235,6 +2281,8 @@ export default class CashuStore {
                     'stores.CashuStore.errorDiscoveringMints'
                 );
             });
+        } finally {
+            if (ndk) this.releaseNdk(ndk);
         }
     };
 
@@ -2245,6 +2293,7 @@ export default class CashuStore {
 
     @action
     public fetchMintsFromFollows = async (npubInput?: string) => {
+        let ndk: NDK | undefined;
         try {
             runInAction(() => {
                 this.loadingTrustedMints = true;
@@ -2267,7 +2316,7 @@ export default class CashuStore {
                 return [];
             }
 
-            const ndk = await this.getNdk();
+            ndk = await this.acquireNdk();
 
             // Fetch follow list (kind 3)
             const followFilter: NDKFilter = {
@@ -2348,6 +2397,8 @@ export default class CashuStore {
                     'stores.CashuStore.errorDiscoveringMints'
                 );
             });
+        } finally {
+            if (ndk) this.releaseNdk(ndk);
         }
     };
 
@@ -2355,6 +2406,7 @@ export default class CashuStore {
     public fetchReviewerProfiles = async (pubkeys: string[]) => {
         if (!pubkeys.length) return;
 
+        let ndk: NDK | undefined;
         try {
             runInAction(() => {
                 this.loadingReviews = true;
@@ -2372,7 +2424,7 @@ export default class CashuStore {
                 return;
             }
 
-            const ndk = await this.getNdk();
+            ndk = await this.acquireNdk();
 
             // Fetch profiles (kind 0)
             const profileFilter: NDKFilter = {
@@ -2425,6 +2477,8 @@ export default class CashuStore {
             runInAction(() => {
                 this.loadingReviews = false;
             });
+        } finally {
+            if (ndk) this.releaseNdk(ndk);
         }
     };
 
