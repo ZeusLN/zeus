@@ -389,8 +389,11 @@ export default class OpenChannel extends React.Component<
                 additionalChannels,
                 connectPeerOnly
             );
+        // a timed out open may still have opened the channel; submitting
+        // again could open a second one
         const isSubmitDisabled =
             loading ||
+            ChannelsStore.openOutcomeUnknown ||
             (!connectPeerOnly && isInvalidFeeRate) ||
             isInvalidAmount ||
             isInvalidAdditionalChannel ||
