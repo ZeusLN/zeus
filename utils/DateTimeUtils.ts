@@ -35,7 +35,7 @@ class DateTimeUtils {
         const currentYear = new Date().getFullYear();
         const dateYear = timestamp.getFullYear();
 
-        const time = dateFormat(timestamp, 'HH:MM tt');
+        const time = dateFormat(timestamp, 'hh:MM tt');
         const monthAndDay = dateFormat(timestamp, 'ddd, mmm dd');
         const year =
             dateYear !== currentYear ? `, '${dateFormat(timestamp, 'yy')}` : '';

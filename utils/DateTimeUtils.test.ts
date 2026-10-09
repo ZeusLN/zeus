@@ -143,6 +143,22 @@ describe('listFormattedDateOrder', () => {
 
         expect(result).toEqual(`05:06 am | ${dayName}, Jan 01, '${year % 100}`);
     });
+
+    it.each([
+        ['00:00', '12:00 am'],
+        ['00:59', '12:59 am'],
+        ['11:59', '11:59 am'],
+        ['12:00', '12:00 pm'],
+        ['14:30', '02:30 pm'],
+        ['23:59', '11:59 pm']
+    ])('formats %s on a 12-hour clock as %s', (clock, time) => {
+        const [hours, minutes] = clock.split(':').map(Number);
+        const timestamp = new Date(2026, 9, 8, hours, minutes);
+
+        const result = DateTimeUtils.listFormattedDateOrder(timestamp);
+
+        expect(result.split(' | ')[0]).toEqual(time);
+    });
 });
 
 describe('blocksToMonthsAndDays', () => {
