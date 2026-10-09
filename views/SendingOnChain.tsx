@@ -80,7 +80,12 @@ export default class SendingOnChain extends React.Component<
 
     private handleBackPress = (): boolean => {
         const { TransactionsStore, navigation } = this.props;
-        if (TransactionsStore.publishSuccess) {
+        // going back to Send after an unknown outcome would invite the
+        // same resend that Try Again is hidden for
+        if (
+            TransactionsStore.publishSuccess ||
+            TransactionsStore.sendOutcomeUnknown
+        ) {
             navigation.popTo('Wallet');
             return true;
         }
@@ -95,6 +100,7 @@ export default class SendingOnChain extends React.Component<
             publishSuccess,
             error,
             error_msg,
+            sendOutcomeUnknown,
             txid,
             funded_psbt
         } = TransactionsStore;
@@ -274,7 +280,7 @@ export default class SendingOnChain extends React.Component<
                                 </>
                             )}
 
-                            {error && (
+                            {error && !sendOutcomeUnknown && (
                                 <Button
                                     title={localeString(
                                         'views.SendingLightning.tryAgain'
