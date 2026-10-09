@@ -26,11 +26,18 @@ import { Row } from '../../components/layout/Row';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString, pascalToHumanReadable } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { numberWithCommas } from '../../utils/UnitsUtils';
+import {
+    fetchBlockHeight,
+    refundFailureAction,
+    RefundFailureAction
+} from '../../utils/SwapUtils';
 
 import SwapStore from '../../stores/SwapStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 
+import NodeInfo from '../../models/NodeInfo';
 import Swap from '../../models/Swap';
 
 interface RefundSwapProps {
@@ -77,30 +84,111 @@ export default class RefundSwap extends React.Component<
 
     private scrollViewRef = React.createRef<ScrollView>();
 
+    broadcastRefund = (
+        swapData: Swap,
+        fee: any,
+        destinationAddress: string,
+        cooperative: boolean
+    ): Promise<string> =>
+        createRefundTransaction({
+            endpoint: swapData.endpoint.replace('/v2', ''),
+            swapId: swapData.id,
+            claimLeaf: swapData?.swapTreeDetails.claimLeaf.output,
+            refundLeaf: swapData?.swapTreeDetails.refundLeaf.output,
+            transactionHex: swapData.lockupTransaction?.hex,
+            privateKey: swapData.refundPrivateKey!,
+            servicePubKey: swapData.servicePubKey!,
+            feeRate: Number(fee),
+            timeoutBlockHeight: Number(swapData.timeoutBlockHeight),
+            destinationAddress,
+            lockupAddress: swapData.effectiveLockupAddress!,
+            cooperative,
+            isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
+        });
+
+    latestBlockHeight = (): Promise<number> =>
+        fetchBlockHeight(
+            async () =>
+                new NodeInfo(await BackendUtils.getMyNodeInfo())
+                    .currentBlockHeight
+        );
+
+    refundErrorText = (
+        action: RefundFailureAction,
+        cooperative: boolean,
+        timeoutBlockHeight: number
+    ): string | undefined => {
+        if (action.type !== 'wait-for-timeout') return;
+
+        const block = numberWithCommas(timeoutBlockHeight);
+        const wait =
+            action.blocksRemaining !== undefined
+                ? localeString('views.Swaps.uncooperativeRefundAfterBlocks')
+                      .replace('{{block}}', block)
+                      .replace(
+                          '{{blocks}}',
+                          numberWithCommas(action.blocksRemaining)
+                      )
+                : localeString(
+                      'views.Swaps.uncooperativeRefundAfterBlock'
+                  ).replace('{{block}}', block);
+
+        // The switch is already on after an uncooperative attempt
+        if (!cooperative) return wait;
+        return [
+            localeString('views.Swaps.refundNotCosigned'),
+            wait,
+            localeString('views.Swaps.turnOnUncooperativeRefund')
+        ].join(' ');
+    };
+
     createRefundTransaction = async (
         swapData: Swap,
         fee: any,
         destinationAddress: string
     ): Promise<void> => {
         const { SwapStore } = this.props;
-        const { uncooperative } = this.state;
+        const cooperative = !this.state.uncooperative;
+        const timeoutBlockHeight = Number(swapData.timeoutBlockHeight);
+        let errorText: string | undefined;
 
         try {
-            const txid = await createRefundTransaction({
-                endpoint: swapData.endpoint.replace('/v2', ''),
-                swapId: swapData.id,
-                claimLeaf: swapData?.swapTreeDetails.claimLeaf.output,
-                refundLeaf: swapData?.swapTreeDetails.refundLeaf.output,
-                transactionHex: swapData.lockupTransaction?.hex,
-                privateKey: swapData.refundPrivateKey!,
-                servicePubKey: swapData.servicePubKey!,
-                feeRate: Number(fee),
-                timeoutBlockHeight: Number(swapData.timeoutBlockHeight),
-                destinationAddress,
-                lockupAddress: swapData.effectiveLockupAddress!,
-                cooperative: !uncooperative,
-                isTestnet: this.props.NodeInfoStore!.nodeInfo.isTestNet
-            });
+            let txid: string;
+            try {
+                txid = await this.broadcastRefund(
+                    swapData,
+                    fee,
+                    destinationAddress,
+                    cooperative
+                );
+            } catch (error: any) {
+                const action = refundFailureAction({
+                    cooperative,
+                    errorMessage: error?.message,
+                    currentBlockHeight: await this.latestBlockHeight(),
+                    timeoutBlockHeight
+                });
+                if (action.type !== 'retry-uncooperative') {
+                    errorText = this.refundErrorText(
+                        action,
+                        cooperative,
+                        timeoutBlockHeight
+                    );
+                    throw error;
+                }
+
+                console.log(
+                    'Cooperative refund not co-signed after the timeout, retrying uncooperatively:',
+                    error
+                );
+                this.setState({ uncooperative: true });
+                txid = await this.broadcastRefund(
+                    swapData,
+                    fee,
+                    destinationAddress,
+                    false
+                );
+            }
 
             await SwapStore?.updateSwapOnRefund(swapData.id, txid);
 
@@ -114,7 +202,7 @@ export default class RefundSwap extends React.Component<
         } catch (error: any) {
             this.setState({
                 loading: false,
-                error: error.message
+                error: errorText || error.message
             });
             console.error('Error creating refund transaction:', error);
             throw error;
