@@ -21,7 +21,6 @@ import AppIconUtils, {
     AppIconVariant,
     platformDefaultAppIcon
 } from '../../utils/AppIconUtils';
-import StealthModeUtils from '../../utils/StealthModeUtils';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -56,17 +55,15 @@ export default class AppIcon extends React.Component<
             ? (storedRaw as AppIconVariant)
             : platformDefaultAppIcon();
 
-        const stealthActive =
-            Platform.OS === 'android'
-                ? await StealthModeUtils.isStealthModeActive()
-                : false;
-
-        this.setState({ selected: stored, stealthActive });
+        this.setState({
+            selected: stored,
+            stealthActive: AppIconUtils.isLockedByStealthMode(settings)
+        });
     }
 
     handleSelect = async (variant: AppIconVariant) => {
         const { SettingsStore } = this.props;
-        const { settings, updateSettings } = SettingsStore;
+        const { updateSettingsGroup } = SettingsStore;
         const previous = this.state.selected;
 
         if (this.state.stealthActive) return;
@@ -91,12 +88,7 @@ export default class AppIcon extends React.Component<
         }
 
         try {
-            await updateSettings({
-                display: {
-                    ...settings.display,
-                    appIcon: variant
-                }
-            });
+            await updateSettingsGroup('display', { appIcon: variant });
         } catch (error) {
             console.error('Failed to persist app icon setting:', error);
             // Restore both the native icon and the picker selection.
