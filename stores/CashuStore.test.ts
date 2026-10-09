@@ -1,4 +1,10 @@
-jest.mock('./Stores', () => ({}));
+jest.mock('./Stores', () => ({
+    connectivityStore: {
+        start: jest.fn(),
+        stop: jest.fn(),
+        onReconnect: jest.fn()
+    }
+}));
 jest.mock('./SettingsStore', () => ({
     DEFAULT_NOSTR_RELAYS: ['wss://relay.one', 'wss://relay.two']
 }));
@@ -27,6 +33,7 @@ import { Platform } from 'react-native';
 import { validateMnemonic } from '@scure/bip39';
 import NDK from '@nostr-dev-kit/ndk';
 import CashuStore from './CashuStore';
+import { connectivityStore } from './Stores';
 import Storage, { getRawItem } from '../storage';
 import CashuDevKit from '../cashu-cdk';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
@@ -291,5 +298,45 @@ describe('CashuStore NDK instance', () => {
 
         expect(MockNDK).toHaveBeenCalledTimes(2);
         expect(connect).toHaveBeenCalledTimes(2);
+    });
+});
+
+describe('CashuStore connectivity monitoring', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    it('registers the reconnect callback once across repeated starts and resets', () => {
+        const store = newStore();
+
+        store.startConnectivityMonitoring();
+        store.startConnectivityMonitoring();
+        store.reset();
+        store.startConnectivityMonitoring();
+
+        expect(connectivityStore.onReconnect).toHaveBeenCalledTimes(1);
+        expect(connectivityStore.start).toHaveBeenCalledTimes(3);
+        expect(connectivityStore.stop).toHaveBeenCalledTimes(1);
+    });
+
+    it('sweeps and checks pending items once per reconnect', () => {
+        jest.useFakeTimers();
+        const store = newStore();
+        const sweep = jest
+            .spyOn(store, 'sweepOfflinePendingTokens')
+            .mockResolvedValue(undefined as any);
+        const check = jest
+            .spyOn(store, 'checkPendingItems')
+            .mockResolvedValue(undefined as any);
+
+        store.startConnectivityMonitoring();
+        store.startConnectivityMonitoring();
+        const [[onReconnect]] = (connectivityStore.onReconnect as jest.Mock)
+            .mock.calls;
+        onReconnect();
+        jest.advanceTimersByTime(3000);
+
+        expect(sweep).toHaveBeenCalledTimes(1);
+        expect(check).toHaveBeenCalledTimes(1);
+        jest.useRealTimers();
+        jest.restoreAllMocks();
     });
 });
