@@ -732,3 +732,28 @@ describe('LND.restReq errors', () => {
         expect(isNodeResponse(error)).toBe(false);
     });
 });
+
+describe('LND.sendCoins', () => {
+    it('passes the send label to lnd', () => {
+        const lnd = new LND();
+        const postRequest = jest
+            .spyOn(lnd, 'postRequest')
+            .mockResolvedValue({ txid: 'abc' });
+
+        lnd.sendCoins({
+            addr: 'bc1qrecipient',
+            amount: '100000',
+            sat_per_vbyte: '2',
+            label: 'ZEUS send 0011223344556677'
+        });
+
+        expect(postRequest).toHaveBeenCalledWith(
+            '/v1/transactions',
+            expect.objectContaining({
+                addr: 'bc1qrecipient',
+                amount: '100000',
+                label: 'ZEUS send 0011223344556677'
+            })
+        );
+    });
+});
