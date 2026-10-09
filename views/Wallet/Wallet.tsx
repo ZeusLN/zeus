@@ -751,6 +751,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         trustedPeers0conf: trustedPeers,
                         vssServerUrl: ldkVssServer || DEFAULT_VSS_SERVER,
                         skipInit: justCreated,
+                        offline: ConnectivityStore.isOffline,
                         onSyncStart: () => {
                             SettingsStore.ldkNodeSyncing = true;
                         }

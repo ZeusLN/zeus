@@ -1,6 +1,10 @@
 const mockMkdir = jest.fn();
 const mockExists = jest.fn();
 const mockStart = jest.fn();
+const mockInitializeNode = jest.fn();
+const mockMnemonicToSeed = jest.fn();
+const mockSyncWallets = jest.fn();
+const mockStatus = jest.fn();
 
 jest.mock('react-native', () => ({
     Platform: { OS: 'ios' }
@@ -15,7 +19,19 @@ jest.mock('react-native-fs', () => ({
 
 jest.mock('../ldknode/LdkNodeInjection', () => ({
     __esModule: true,
-    default: { node: { start: (...args: any[]) => mockStart(...args) } }
+    default: {
+        node: {
+            start: (...args: any[]) => mockStart(...args),
+            syncWallets: (...args: any[]) => mockSyncWallets(...args),
+            status: (...args: any[]) => mockStatus(...args)
+        },
+        utils: {
+            initializeNode: (...args: any[]) => mockInitializeNode(...args)
+        },
+        crypto: {
+            mnemonicToSeed: (...args: any[]) => mockMnemonicToSeed(...args)
+        }
+    }
 }));
 
 jest.mock('./LocaleUtils', () => ({
@@ -23,7 +39,10 @@ jest.mock('./LocaleUtils', () => ({
 }));
 
 jest.mock('./VssAuthUtils', () => ({
-    deriveVssSigningKeyFromSeed: jest.fn()
+    deriveVssSigningKeyFromSeed: () => ({
+        privateKey: new Uint8Array([1]),
+        publicKey: new Uint8Array([2])
+    })
 }));
 
 import { Platform } from 'react-native';
@@ -148,6 +167,69 @@ describe('LdkNodeUtils', () => {
                 mockStart.mock.invocationCallOrder[0]
             );
             warnSpy.mockRestore();
+        });
+
+        describe('VSS while offline', () => {
+            const start = (offline: boolean) =>
+                startLdkNodeWallet({
+                    nodeDir: 'abc-123',
+                    seedMnemonic: 'x',
+                    network: 'mainnet',
+                    vssServerUrl: 'https://vss.example.com',
+                    offline
+                });
+
+            beforeEach(() => {
+                jest.spyOn(console, 'log').mockImplementation(() => {});
+                mockMkdir.mockResolvedValue(undefined);
+                mockInitializeNode.mockResolvedValue({});
+                mockMnemonicToSeed.mockResolvedValue('00');
+                mockStart.mockResolvedValue(undefined);
+                mockSyncWallets.mockResolvedValue(undefined);
+                mockStatus.mockResolvedValue({
+                    latestRgsSnapshotTimestamp: 1
+                });
+            });
+
+            afterEach(() => jest.restoreAllMocks());
+
+            it('builds an existing node without VSS when offline', async () => {
+                mockExists.mockResolvedValue(true);
+
+                await start(true);
+
+                const [args] = mockInitializeNode.mock.calls[0];
+                expect(args.vssConfig).toBeUndefined();
+                expect(args.vssKey).toBeUndefined();
+                expect(args.failOnVssError).toBe(false);
+                expect(mockMnemonicToSeed).not.toHaveBeenCalled();
+            });
+
+            it('keeps VSS and the hard failure when offline without a local DB', async () => {
+                mockExists.mockResolvedValue(false);
+
+                await start(true);
+
+                const [args] = mockInitializeNode.mock.calls[0];
+                expect(args.vssConfig).toEqual({
+                    url: 'https://vss.example.com',
+                    storeId: '02'
+                });
+                expect(args.failOnVssError).toBe(true);
+            });
+
+            it('builds an existing node with VSS when online', async () => {
+                mockExists.mockResolvedValue(true);
+
+                await start(false);
+
+                const [args] = mockInitializeNode.mock.calls[0];
+                expect(args.vssConfig).toEqual({
+                    url: 'https://vss.example.com',
+                    storeId: '02'
+                });
+                expect(args.failOnVssError).toBe(false);
+            });
         });
     });
 });

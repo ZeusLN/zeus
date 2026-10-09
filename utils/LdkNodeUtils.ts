@@ -234,7 +234,8 @@ async function initNode({
     lsps1Config,
     trustedPeers0conf,
     vssServerUrl,
-    failOnVssError
+    failOnVssError,
+    skipVss
 }: {
     storagePath: string;
     mnemonic: string;
@@ -252,17 +253,28 @@ async function initNode({
     trustedPeers0conf?: string[];
     vssServerUrl?: string;
     failOnVssError?: boolean;
+    // Build on the local store only; see startLdkNodeWallet
+    skipVss?: boolean;
 }): Promise<{ vssError?: string }> {
     const networkType = getNetworkType(network);
     const esploraUrl = esploraServerUrl || getDefaultEsploraServer(network);
     const rgsUrl = rgsServerUrl || getDefaultRgsServer(network);
-    const vssUrl = vssServerUrl || DEFAULT_VSS_SERVER;
 
-    // Derive VSS signing keypair using native PBKDF2 (avoids ~3s JS PBKDF2).
-    // The seed is derived once and reused for both storeId and auth headers.
-    const seedHex = await LdkNode.crypto.mnemonicToSeed(mnemonic, passphrase);
-    const vssKey = deriveVssSigningKeyFromSeed(Buffer.from(seedHex, 'hex'));
-    const vssStoreId = Buffer.from(vssKey.publicKey).toString('hex');
+    let vssConfig: { url: string; storeId: string } | undefined;
+    let vssKey: { privateKey: Uint8Array; publicKey: Uint8Array } | undefined;
+    if (!skipVss) {
+        // Derive VSS signing keypair using native PBKDF2 (avoids ~3s JS PBKDF2).
+        // The seed is derived once and reused for both storeId and auth headers.
+        const seedHex = await LdkNode.crypto.mnemonicToSeed(
+            mnemonic,
+            passphrase
+        );
+        vssKey = deriveVssSigningKeyFromSeed(Buffer.from(seedHex, 'hex'));
+        vssConfig = {
+            url: vssServerUrl || DEFAULT_VSS_SERVER,
+            storeId: Buffer.from(vssKey.publicKey).toString('hex')
+        };
+    }
 
     return await LdkNode.utils.initializeNode({
         network: networkType,
@@ -275,10 +287,7 @@ async function initNode({
         listeningAddresses,
         lsps1Config,
         trustedPeers0conf,
-        vssConfig: {
-            url: vssUrl,
-            storeId: vssStoreId
-        },
+        vssConfig,
         vssKey,
         failOnVssError
     });
@@ -395,6 +404,7 @@ export async function startLdkNodeWallet({
     trustedPeers0conf,
     vssServerUrl,
     skipInit,
+    offline,
     onSyncStart
 }: {
     nodeDir: string;
@@ -413,6 +423,8 @@ export async function startLdkNodeWallet({
     trustedPeers0conf?: string[];
     vssServerUrl?: string;
     skipInit?: boolean;
+    // ConnectivityStore.isOffline at call time
+    offline?: boolean;
     onSyncStart?: () => void;
 }): Promise<{ vssError?: string; esploraError?: string; rgsError?: string }> {
     // Idempotent repair for wallets created before the backup exclusion
@@ -442,7 +454,13 @@ export async function startLdkNodeWallet({
             lsps1Config,
             trustedPeers0conf,
             vssServerUrl,
-            failOnVssError: !hasLocalDb
+            failOnVssError: !hasLocalDb,
+            // Offline, the VSS build would wait out its 30s timeout and then
+            // fall back to the local store anyway. Only an existing node can
+            // skip it: without a local DB this start is a restore and must
+            // fail rather than build an empty wallet. VSS is used again on
+            // the next start while online.
+            skipVss: offline && hasLocalDb
         });
         vssError = result.vssError;
     }
