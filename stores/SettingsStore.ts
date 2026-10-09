@@ -13,6 +13,7 @@ import { VerifierRecord, hasVerifier } from '../utils/LockVerifierUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { SETTINGS_VERSION } from '../utils/SettingsVersion';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
+import type { AppIconVariant } from '../utils/AppIconUtils';
 import {
     DEFAULT_SCORER_URL,
     DEFAULT_VSS_SERVER,
@@ -104,21 +105,7 @@ interface DisplaySettings {
     dateFormat?: string;
     timeFormat?: string;
     showSeconds?: boolean;
-    appIcon?:
-        | 'maxGradient'
-        | 'maxFlat'
-        | 'maxYellow'
-        | 'maxGradientInverse'
-        | 'maxRed'
-        | 'maxGradientRed'
-        | 'maxBlackAndWhite'
-        | 'gradient'
-        | 'flat'
-        | 'yellow'
-        | 'gradientInverse'
-        | 'red'
-        | 'gradientRed'
-        | 'blackAndWhite';
+    appIcon?: AppIconVariant;
 }
 
 export enum PosEnabled {
