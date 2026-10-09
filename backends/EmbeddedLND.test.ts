@@ -24,8 +24,11 @@ jest.mock('../lndmobile/LndMobileInjection', () => ({
             decodeCloseStatusUpdate: (data: string) => JSON.parse(data)
         },
         wallet: {},
-        onchain: {},
-        wtclient: {}
+        wtclient: {},
+        onchain: {
+            getTransactions: jest.fn(),
+            sendCoins: jest.fn()
+        }
     }
 }));
 jest.mock('../lndmobile/onchain', () => ({
@@ -265,5 +268,44 @@ describe('EmbeddedLND.closeChannel', () => {
         expect(close.settled).toBe(true);
         expect(close.error).toBeUndefined();
         expect(listening()).toBe(false);
+    });
+});
+
+const { getTransactions, sendCoins } = lndMobile.onchain as unknown as {
+    getTransactions: jest.Mock;
+    sendCoins: jest.Mock;
+};
+
+describe('EmbeddedLND on-chain sends', () => {
+    beforeEach(() => {
+        getTransactions.mockReset();
+        sendCoins.mockReset();
+    });
+
+    it('passes the send label to SendCoins', async () => {
+        await new EmbeddedLND().sendCoins({
+            addr: 'bcrt1qrecipient',
+            amount: '100000',
+            sat_per_vbyte: '2',
+            label: 'ZEUS send 0123456789abcdef'
+        });
+
+        expect(sendCoins).toHaveBeenCalledWith(
+            'bcrt1qrecipient',
+            '100000',
+            '2',
+            undefined,
+            undefined,
+            undefined,
+            'ZEUS send 0123456789abcdef'
+        );
+    });
+
+    it('passes the lookup start height to GetTransactions', async () => {
+        await new EmbeddedLND().getTransactions({ start_height: 799994 });
+
+        expect(getTransactions).toHaveBeenCalledWith({
+            start_height: 799994
+        });
     });
 });
