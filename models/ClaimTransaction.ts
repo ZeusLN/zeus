@@ -15,7 +15,7 @@ function bytesFromIndexedObject(raw: any): number[] | null {
     return bytes;
 }
 
-function privateKeyFromKeys(
+export function privateKeyFromKeys(
     keys:
         | { __D?: Uint8Array | number[] | { data?: number[] } }
         | null
@@ -44,7 +44,7 @@ function privateKeyFromKeys(
     return Buffer.from(bytes).toString('hex');
 }
 
-function preimageHexFrom(
+export function preimageHexFrom(
     preimage: string | Buffer | { data?: number[] } | null | undefined
 ): string {
     if (typeof preimage === 'string') return preimage;

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView, View, TouchableOpacity } from 'react-native';
+import { Alert, ScrollView, View, TouchableOpacity } from 'react-native';
 import { LinearProgress } from '@rneui/themed';
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -20,7 +20,10 @@ import KeyValue from '../../components/KeyValue';
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
 import LoadingIndicator from '../../components/LoadingIndicator';
-import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import {
+    ErrorMessage,
+    WarningMessage
+} from '../../components/SuccessErrorMessage';
 import { Row } from '../../components/layout/Row';
 import Text from '../../components/Text';
 
@@ -36,7 +39,7 @@ import UrlUtils from '../../utils/UrlUtils';
 
 import InvoicesStore from '../../stores/InvoicesStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
-import SwapStore from '../../stores/SwapStore';
+import SwapStore, { ReverseLockupCheck } from '../../stores/SwapStore';
 import { nodeInfoStore, unitsStore } from '../../stores/Stores';
 
 import Swap, { SwapState, SwapType } from '../../models/Swap';
@@ -75,7 +78,11 @@ interface SwapDetailsState {
     socketConnected: boolean;
     swapTreeToggle: boolean;
     swapData: Swap;
+    lockupNotice: string | null;
 }
+
+// how often to re-check an unconfirmed or unreachable lockup
+const LOCKUP_RECHECK_MS = 60 * 1000;
 
 @inject('InvoicesStore', 'NodeInfoStore', 'SwapStore')
 @observer
@@ -92,7 +99,8 @@ export default class SwapDetails extends React.Component<
             loading: false,
             socketConnected: true,
             swapTreeToggle: false,
-            swapData: new Swap(props.route.params.swapData)
+            swapData: new Swap(props.route.params.swapData),
+            lockupNotice: null
         };
     }
 
@@ -446,6 +454,143 @@ export default class SwapDetails extends React.Component<
         }
 
         let submitted = false;
+        let verifyingLockup = false;
+        let lockupRecheck: ReturnType<typeof setTimeout> | undefined;
+        // Set once the screen unmounts or the swap reaches a final state, so
+        // a lookup still in flight can't schedule another recheck
+        let stopped = false;
+        // A rescued swap paid from elsewhere has no trusted amount, so the
+        // user confirms the lockup amount before the preimage is revealed
+        let confirmedLockupAmount: number | undefined;
+        let confirmingAmount = false;
+        let amountDeclined = false;
+        const stopRechecks = () => {
+            stopped = true;
+            clearTimeout(lockupRecheck);
+        };
+
+        // The provider's update is not proof of a lockup. Look the
+        // transaction up on the user's mempool instance and only claim,
+        // which reveals the preimage, once it is confirmed and pays the
+        // swap's output in full.
+        const claimIfLockupVerified = async (transactionHex: string) => {
+            if (
+                stopped ||
+                submitted ||
+                verifyingLockup ||
+                confirmingAmount ||
+                amountDeclined ||
+                !SwapStore
+            )
+                return;
+            verifyingLockup = true;
+            clearTimeout(lockupRecheck);
+            try {
+                const result = await this.createReverseClaimTransaction(
+                    createdResponse,
+                    keys,
+                    endpoint,
+                    swapData.lockupAddress!,
+                    swapData.claimDestinationAddress || '',
+                    swapData.preimage,
+                    transactionHex,
+                    fee,
+                    confirmedLockupAmount,
+                    () => stopped
+                );
+                if (typeof result === 'boolean') {
+                    submitted = result;
+                    return;
+                }
+                if (stopped) return;
+                const lockup = result;
+
+                if (lockup.status === 'confirm-amount') {
+                    confirmingAmount = true;
+                    this.setState({ lockupNotice: null, loading: false });
+                    Alert.alert(
+                        localeString('views.SwapDetails.confirmLockupAmount'),
+                        lockup.paidAmount != null
+                            ? localeString(
+                                  'views.SwapDetails.confirmLockupAmount.shortfall'
+                              )
+                                  .replace(
+                                      '{{paid}}',
+                                      numberWithCommas(lockup.paidAmount)
+                                  )
+                                  .replace(
+                                      '{{amount}}',
+                                      numberWithCommas(lockup.amount ?? 0)
+                                  )
+                            : localeString(
+                                  'views.SwapDetails.confirmLockupAmount.message'
+                              ).replace(
+                                  '{{amount}}',
+                                  numberWithCommas(lockup.amount ?? 0)
+                              ),
+                        [
+                            {
+                                text: localeString('general.cancel'),
+                                style: 'cancel',
+                                onPress: () => {
+                                    confirmingAmount = false;
+                                    amountDeclined = true;
+                                    this.setState({
+                                        error: localeString(
+                                            'views.SwapDetails.lockupAmountDeclined'
+                                        )
+                                    });
+                                }
+                            },
+                            {
+                                text: localeString(
+                                    'views.SwapDetails.confirmLockupAmount.claim'
+                                ),
+                                onPress: () => {
+                                    confirmingAmount = false;
+                                    confirmedLockupAmount = lockup.amount;
+                                    claimIfLockupVerified(transactionHex);
+                                }
+                            }
+                        ],
+                        { cancelable: false }
+                    );
+                    return;
+                }
+
+                if (lockup.status === 'invalid') {
+                    console.error(
+                        'Reverse swap lockup verification failed:',
+                        lockup.reason
+                    );
+                    this.setState({
+                        error: localeString(
+                            'views.SwapDetails.lockupVerificationFailed'
+                        ),
+                        lockupNotice: null,
+                        loading: false
+                    });
+                    return;
+                }
+
+                if (lockup.status !== 'ok') {
+                    this.setState({
+                        lockupNotice: localeString(
+                            lockup.status === 'unconfirmed'
+                                ? 'views.SwapDetails.waitingForLockupConfirmation'
+                                : 'views.SwapDetails.lockupVerificationUnavailable'
+                        )
+                    });
+                    lockupRecheck = setTimeout(
+                        () => claimIfLockupVerified(transactionHex),
+                        LOCKUP_RECHECK_MS
+                    );
+                    return;
+                }
+            } finally {
+                verifyingLockup = false;
+            }
+        };
 
         console.log('Connecting to WebSocket for updates...');
         this.setState({ loading: true });
@@ -480,6 +625,7 @@ export default class SwapDetails extends React.Component<
 
             // Check for API errors
             if (data?.error) {
+                stopRechecks();
                 if (data.error === 'Operation timeout') {
                     this.setState({
                         error: 'The operation timed out.',
@@ -520,25 +666,15 @@ export default class SwapDetails extends React.Component<
                         console.log(
                             'Claim transaction already created and submitted successfully. Skipping.'
                         );
-                    } else {
-                        console.log('Creating claim transaction');
-
-                        submitted = await this.createReverseClaimTransaction(
-                            createdResponse,
-                            keys,
-                            endpoint,
-                            swapData.lockupAddress!,
-                            swapData.destinationAddress!,
-                            swapData.preimage,
-                            data.transaction.hex,
-                            fee
-                        );
+                    } else if (data.transaction?.hex) {
+                        await claimIfLockupVerified(data.transaction.hex);
                     }
                     break;
 
                 case SwapState.InvoiceExpired:
                 case SwapState.TransactionFailed:
                 case SwapState.SwapExpired:
+                    stopRechecks();
                     webSocket.close();
                     data?.failureReason &&
                         this.setState({
@@ -549,6 +685,7 @@ export default class SwapDetails extends React.Component<
 
                 case SwapState.InvoiceSettled:
                     console.log('Swap successful');
+                    stopRechecks();
                     webSocket.close();
                     this.setState({
                         socketConnected: false
@@ -576,6 +713,7 @@ export default class SwapDetails extends React.Component<
         };
 
         this.componentWillUnmount = () => {
+            stopRechecks();
             if (webSocket) {
                 webSocket.close();
             }
@@ -650,14 +788,15 @@ export default class SwapDetails extends React.Component<
      *
      * A rescued swap has none: ZEUS attaches the address client-side and
      * never sends it to the host (only claimPublicKey and preimageHash go
-     * over the wire), so /swap/restore has nothing to return. SwapStore
+     * over the wire), so /swap/restore has nothing to return, and an
+     * address a rescued swap stored from the host is ignored. SwapStore
      * falls back to a fresh address from the wallet in use, which is the
      * same source the swap creation screen defaults to.
      */
     resolveDestinationAddress = async (swapId: string): Promise<string> => {
         const { InvoicesStore, SwapStore } = this.props;
 
-        const existing = this.state.swapData?.destinationAddress;
+        const existing = this.state.swapData?.claimDestinationAddress;
         const destinationAddress =
             (await SwapStore?.resolveClaimAddress({
                 swapId,
@@ -671,7 +810,8 @@ export default class SwapDetails extends React.Component<
             this.setState((prevState) => ({
                 swapData: new Swap({
                     ...prevState.swapData,
-                    destinationAddress
+                    destinationAddress,
+                    claimAddressFromWallet: true
                 })
             }));
         }
@@ -690,8 +830,12 @@ export default class SwapDetails extends React.Component<
         destinationAddress: string,
         preimage: any,
         transactionHex: string,
-        fee: string
-    ): Promise<boolean> => {
+        fee: string,
+        confirmedLockupAmount?: number,
+        // true once the screen is done with the swap: no new native claim
+        // may start after that, though one already running finishes
+        isStopped: () => boolean = () => false
+    ): Promise<boolean | ReverseLockupCheck> => {
         try {
             const { SwapStore } = this.props;
 
@@ -754,7 +898,25 @@ export default class SwapDetails extends React.Component<
             for (let i = 0; i <= 10; i++) {
                 try {
                     await sleep(1000);
+                    if (isStopped()) return false;
 
+                    // Fee/address resolution and a previous native attempt
+                    // can take arbitrarily long. Never reuse an earlier
+                    // unspent/deadline check before revealing the preimage.
+                    if (!SwapStore) return { status: 'unavailable' };
+                    const lockup = await SwapStore.verifyReverseLockup(
+                        new Swap({
+                            ...createdResponse,
+                            keys,
+                            preimage,
+                            lockupAddress
+                        }),
+                        transactionHex,
+                        { confirmedLockupAmount }
+                    );
+                    if (isStopped()) return false;
+                    if (lockup.status !== 'ok') return lockup;
+                    this.setState({ lockupNotice: null });
                     await createReverseClaimTransaction(claim);
 
                     console.log(
@@ -806,7 +968,8 @@ export default class SwapDetails extends React.Component<
     render() {
         const { navigation, SwapStore } = this.props;
 
-        const { updates, error, failureReason, swapData } = this.state;
+        const { updates, error, failureReason, swapData, lockupNotice } =
+            this.state;
 
         const serviceProvider = this.props.route.params?.serviceProvider ?? '';
 
@@ -927,6 +1090,9 @@ export default class SwapDetails extends React.Component<
                                 {progressUpdate}
                             </Text>
                         </View>
+                    )}
+                    {lockupNotice && !error && (
+                        <WarningMessage message={lockupNotice} />
                     )}
                     {error && (
                         <ErrorMessage

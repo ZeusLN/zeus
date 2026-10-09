@@ -1,14 +1,16 @@
 import { action, observable, computed, runInAction, reaction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import BigNumber from 'bignumber.js';
 import { ECPairAPI, ECPairFactory } from 'ecpair';
 import ecc from '@bitcoinerlab/secp256k1';
-import { crypto, initEccLib } from 'bitcoinjs-lib';
+import { crypto, initEccLib, Transaction } from 'bitcoinjs-lib';
 import { HDKey } from '@scure/bip32';
 import { mnemonicToSeedSync, generateMnemonic } from '@scure/bip39';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
+import UrlUtils from '../utils/UrlUtils';
 import {
     SWAPS_KEY,
     REVERSE_SWAPS_KEY,
@@ -16,8 +18,15 @@ import {
     SWAPS_LAST_USED_KEY,
     isValidRescueKey,
     verifyReverseSwapInvoice,
-    deriveSwapPreimage
+    verifyReverseSwapResponse,
+    checkLockupOutput,
+    MIN_REVERSE_SWAP_CLAIM_BLOCKS,
+    calculateReceiveAmount,
+    deriveSwapPreimage,
+    rescuedLockupFloor
 } from '../utils/SwapUtils';
+import BackendUtils from '../utils/BackendUtils';
+import Bolt11Utils from '../utils/Bolt11Utils';
 
 import NodeInfoStore from './NodeInfoStore';
 import SettingsStore, {
@@ -30,6 +39,22 @@ import SettingsStore, {
 import Storage from '../storage';
 
 import Swap, { SwapState, SwapType } from '../models/Swap';
+import {
+    privateKeyFromKeys,
+    preimageHexFrom
+} from '../models/ClaimTransaction';
+
+export type ReverseLockupCheck = {
+    // 'confirm-amount': every check passed, but nothing trusted says how
+    // much the lockup should hold; ask the user before claiming
+    status: 'ok' | 'unconfirmed' | 'invalid' | 'unavailable' | 'confirm-amount';
+    reason?: string;
+    // the lockup output's value in sats, with 'confirm-amount'
+    amount?: number;
+    // this wallet's own payment for the swap in sats, with 'confirm-amount'
+    // when the lockup falls short of the floor for it
+    paidAmount?: number;
+};
 
 interface SubmarineSwapInfo {
     fees?: {
@@ -55,6 +80,82 @@ interface ReverseSwapInfo {
         maximal?: number;
     };
 }
+
+// The fields a rescued swap takes from the host's /swap/restore response,
+// at the top level and inside claimDetails/refundDetails
+const RESCUE_SWAP_FIELDS = ['id', 'status', 'createdAt'];
+const RESCUE_DETAIL_FIELDS = [
+    'tree',
+    'keyIndex',
+    'lockupAddress',
+    'serverPublicKey',
+    'timeoutBlockHeight',
+    'amount',
+    'preimageHash'
+];
+
+const pickFields = (source: any, fields: string[]): { [key: string]: any } => {
+    const picked: { [key: string]: any } = {};
+    if (!source || typeof source !== 'object') return picked;
+    for (const field of fields) {
+        if (source[field] !== undefined) picked[field] = source[field];
+    }
+    return picked;
+};
+
+const hasPreimage = (swap: any) => !!preimageHexFrom(swap?.preimage);
+
+/**
+ * Keeps one stored entry per swap ID. Running the rescue again used to
+ * append a second copy of a reverse swap already re-filed under
+ * REVERSE_SWAPS_KEY; keep the copy with a preimage, else the first.
+ */
+const dedupeStoredSwaps = (submarineSwaps: any[], reverseSwaps: any[]) => {
+    const kept = new Map<string, any>();
+    for (const swap of [...reverseSwaps, ...submarineSwaps]) {
+        if (!swap?.id) continue;
+        const current = kept.get(swap.id);
+        if (!current || (!hasPreimage(current) && hasPreimage(swap))) {
+            kept.set(swap.id, swap);
+        }
+    }
+    const isKept = (swap: any) => !swap?.id || kept.get(swap.id) === swap;
+    return {
+        submarineSwaps: submarineSwaps.filter(isKept),
+        reverseSwaps: reverseSwaps.filter(isKept)
+    };
+};
+
+/**
+ * Gives a stored reverse swap the preimage it lacks. Swaps rescued before
+ * the preimage was re-derived were stored without one, so their claims
+ * fail. The preimage is only attached if it comes from the key the stored
+ * swap already uses and matches any preimage hash on record.
+ */
+const repairRescuedPreimage = (stored: any, rescued: any) => {
+    if (hasPreimage(stored)) return;
+
+    const rescuedKey = privateKeyFromKeys(rescued.keys);
+    if (stored.keys && privateKeyFromKeys(stored.keys) !== rescuedKey) {
+        console.error(
+            `Not repairing rescued swap ${stored.id}: its stored key is not the one at the restored key index`
+        );
+        return;
+    }
+    if (
+        stored.preimageHash !== undefined &&
+        String(stored.preimageHash).toLowerCase() !==
+            crypto.sha256(rescued.preimage).toString('hex')
+    ) {
+        console.error(
+            `Not repairing rescued swap ${stored.id}: preimage hash does not match`
+        );
+        return;
+    }
+
+    stored.preimage = rescued.preimage;
+    if (!stored.keys) stored.keys = rescued.keys;
+};
 
 export default class SwapStore {
     @observable public subInfo: SubmarineSwapInfo = {};
@@ -546,6 +647,61 @@ export default class SwapStore {
                 return;
             }
 
+            // Verify the rest of the response before saving or paying: the
+            // swap tree must pay our key against our preimage hash, the
+            // lockup address must be that tree's taproot output, and the
+            // provider must lock up more than the amount the Swaps screen
+            // showed. Otherwise a host could point the claim at an output
+            // it controls and still learn the preimage when we claim.
+            const fees = this.reverseInfo?.fees;
+            const minOnchainAmount = calculateReceiveAmount(
+                new BigNumber(invoiceAmount),
+                fees?.percentage || 0,
+                new BigNumber(fees?.minerFees?.claim || 0)
+                    .plus(fees?.minerFees?.lockup || 0)
+                    .toNumber(),
+                true
+            ).toNumber();
+            const responseCheck = verifyReverseSwapResponse({
+                swapTree: responseData.swapTree,
+                lockupAddress: responseData.lockupAddress,
+                serverPubKey: responseData.refundPublicKey,
+                timeoutBlockHeight: responseData.timeoutBlockHeight,
+                onchainAmount: responseData.onchainAmount,
+                ourPubKey: Buffer.from(keys.publicKey),
+                preimageHash: crypto.sha256(preimage),
+                minOnchainAmount
+            });
+            if (!responseCheck.valid) {
+                runInAction(() => {
+                    this.apiError = localeString(
+                        'views.Swaps.invalidReverseSwapResponse'
+                    );
+                    this.loading = false;
+                });
+                console.error(
+                    'Reverse swap response verification failed:',
+                    responseCheck.reason
+                );
+                return;
+            }
+
+            const deadline = await this.verifyReverseSwapDeadline(
+                responseCheck.timeoutBlockHeight,
+                UrlUtils.getMempoolApiUrl(this.nodeInfoStore.nodeInfo)
+            );
+            if (deadline.status !== 'ok') {
+                runInAction(() => {
+                    this.apiError = localeString(
+                        deadline.status === 'unavailable'
+                            ? 'views.SwapDetails.lockupVerificationUnavailable'
+                            : 'views.Swaps.invalidReverseSwapResponse'
+                    );
+                    this.loading = false;
+                });
+                return;
+            }
+
             // Add the creation date
             const createdAt = new Date().toISOString();
             responseData.createdAt = createdAt;
@@ -586,6 +742,259 @@ export default class SwapStore {
             });
             console.error('Error creating reverse swap:', error);
         }
+    };
+
+    // Fetch a fresh tip from the same independent observer used for the
+    // lockup. The wallet's cached height may be stale or absent (LndHub/NWC).
+    private verifyReverseSwapDeadline = async (
+        timeoutBlockHeight: number,
+        apiUrl: string
+    ): Promise<ReverseLockupCheck> => {
+        try {
+            const response = await ReactNativeBlobUtil.fetch(
+                'GET',
+                `${apiUrl}/blocks/tip/height`
+            );
+            if (response.info().status !== 200) {
+                return { status: 'unavailable', reason: 'tip-unavailable' };
+            }
+            const text = (await response.text()).trim();
+            const height = /^\d+$/.test(text) ? Number(text) : NaN;
+            if (!Number.isSafeInteger(height) || height <= 0) {
+                return { status: 'unavailable', reason: 'invalid-tip' };
+            }
+            if (timeoutBlockHeight - height < MIN_REVERSE_SWAP_CLAIM_BLOCKS) {
+                return { status: 'invalid', reason: 'refund-deadline' };
+            }
+            return { status: 'ok' };
+        } catch {
+            return { status: 'unavailable', reason: 'tip-unavailable' };
+        }
+    };
+
+    /**
+     * Checks a reverse swap's lockup before the claim reveals the
+     * preimage. The provider's swap update only supplies the transaction
+     * hex; the transaction itself is looked up by txid on the user's
+     * mempool instance, and it must be confirmed and pay the swap's
+     * taproot output at least the swap's on-chain amount. That output must
+     * still be unspent, with at least six blocks before its refund deadline.
+     * The swap tree and lockup address are re-checked here too, covering swaps
+     * saved or rescued before creation-time verification existed.
+     *
+     * 'unconfirmed' (including not yet seen) and 'unavailable' are
+     * retryable; 'invalid' means the claim must not be attempted.
+     */
+    public verifyReverseLockup = async (
+        swap: Swap,
+        providerTxHex: string,
+        { confirmedLockupAmount }: { confirmedLockupAmount?: number } = {}
+    ): Promise<ReverseLockupCheck> => {
+        const privateKeyHex = privateKeyFromKeys(swap.keys);
+        const preimageHex = preimageHexFrom(swap.preimage as any);
+        if (!privateKeyHex || !preimageHex) {
+            return { status: 'invalid', reason: 'missing-keys' };
+        }
+        // fromPrivateKey throws on a key that is not 32 bytes or out of
+        // range; the caller has no catch, so an exception here would leave
+        // the swap screen loading with no error
+        let ourPubKey: Uint8Array;
+        try {
+            ourPubKey = this.ECPair.fromPrivateKey(
+                Buffer.from(privateKeyHex, 'hex')
+            ).publicKey;
+        } catch (e) {
+            return { status: 'invalid', reason: 'invalid-key' };
+        }
+
+        const responseCheck = verifyReverseSwapResponse({
+            swapTree: swap.swapTreeDetails,
+            lockupAddress: swap.effectiveLockupAddress,
+            serverPubKey: swap.refundPubKey,
+            timeoutBlockHeight: swap.timeoutBlockHeight,
+            onchainAmount: swap.onchainAmount,
+            ourPubKey: Buffer.from(ourPubKey),
+            preimageHash: crypto.sha256(Buffer.from(preimageHex, 'hex'))
+        });
+        if (!responseCheck.valid) {
+            return { status: 'invalid', reason: responseCheck.reason };
+        }
+
+        let lockup: Transaction;
+        try {
+            lockup = Transaction.fromHex(providerTxHex);
+        } catch (e) {
+            return { status: 'invalid', reason: 'undecodable-lockup' };
+        }
+
+        const txid = lockup.getId();
+        const apiUrl = UrlUtils.getMempoolApiUrl(this.nodeInfoStore.nodeInfo);
+        let tx: any;
+        try {
+            const response = await ReactNativeBlobUtil.fetch(
+                'GET',
+                `${apiUrl}/tx/${txid}`
+            );
+            const httpStatus = response.info().status;
+            // not seen yet is retryable: an honest lockup may not have
+            // reached this instance, and one that never appears is
+            // never claimed
+            if (httpStatus === 404) {
+                return { status: 'unconfirmed', reason: 'lockup-not-found' };
+            }
+            if (httpStatus !== 200) {
+                return {
+                    status: 'unavailable',
+                    reason: `http-${httpStatus}`
+                };
+            }
+            tx = response.json();
+        } catch (e) {
+            return { status: 'unavailable', reason: 'request-failed' };
+        }
+
+        // A rescued swap's on-chain amount could only come from the host,
+        // so none is stored. Compare the lockup with this wallet's own
+        // payment for the swap instead. With no such payment, or a lockup
+        // short of the floor for it, the user has to confirm the amount
+        // before the preimage is revealed.
+        let minAmount: number | undefined = swap.onchainAmount ?? undefined;
+        let paidAmount: number | undefined;
+        let needsConfirmation = false;
+        if (minAmount == null) {
+            if (confirmedLockupAmount != null) {
+                minAmount = confirmedLockupAmount;
+            } else {
+                const paid = await this.findOwnPaymentAmount(
+                    crypto
+                        .sha256(Buffer.from(preimageHex, 'hex'))
+                        .toString('hex')
+                );
+                if (paid === undefined) {
+                    return {
+                        status: 'unavailable',
+                        reason: 'payment-lookup-failed'
+                    };
+                }
+                if (paid === null) {
+                    needsConfirmation = true;
+                } else {
+                    paidAmount = paid;
+                }
+            }
+        }
+        const outputStatus = checkLockupOutput(
+            tx,
+            responseCheck.outputScript,
+            minAmount
+        );
+        if (outputStatus === 'unconfirmed') return { status: 'unconfirmed' };
+        if (outputStatus !== 'ok')
+            return { status: 'invalid', reason: outputStatus };
+
+        // Match the native FindVout on the exact transaction it will spend.
+        // The outspend lookup must not accidentally check a second output
+        // to the same address while the first has already been refunded.
+        const program = responseCheck.outputScript.toString('hex').slice(4);
+        const vout = lockup.outs.findIndex(
+            (output) => output.script.toString('hex').slice(4) === program
+        );
+        if (
+            vout < 0 ||
+            !lockup.outs[vout].script.equals(responseCheck.outputScript)
+        ) {
+            return { status: 'invalid', reason: 'missing-output' };
+        }
+        try {
+            const response = await ReactNativeBlobUtil.fetch(
+                'GET',
+                `${apiUrl}/tx/${txid}/outspend/${vout}`
+            );
+            if (response.info().status !== 200) {
+                return {
+                    status: 'unavailable',
+                    reason: 'outspend-unavailable'
+                };
+            }
+            const outspend = response.json();
+            if (outspend?.spent === true) {
+                return { status: 'invalid', reason: 'lockup-spent' };
+            }
+            if (outspend?.spent !== false) {
+                return { status: 'unavailable', reason: 'invalid-outspend' };
+            }
+        } catch {
+            return { status: 'unavailable', reason: 'outspend-unavailable' };
+        }
+        // Read the tip last so the other lookups cannot age the height check.
+        const deadline = await this.verifyReverseSwapDeadline(
+            responseCheck.timeoutBlockHeight,
+            apiUrl
+        );
+        if (deadline.status !== 'ok') return deadline;
+        if (!needsConfirmation && paidAmount == null) return deadline;
+
+        const scriptHex = responseCheck.outputScript.toString('hex');
+        const amount = Number(
+            (tx?.vout || []).find(
+                (output: any) =>
+                    (output?.scriptpubkey || '').toLowerCase() === scriptHex
+            )?.value
+        );
+        if (needsConfirmation) return { status: 'confirm-amount', amount };
+        if (amount >= rescuedLockupFloor(paidAmount!)) return deadline;
+        return { status: 'confirm-amount', amount, paidAmount };
+    };
+
+    /**
+     * The amount in sats of this wallet's own Lightning payment with the
+     * given hash. null when the wallet has no such payment, or it records
+     * no amount; undefined when the payments could not be listed.
+     */
+    public findOwnPaymentAmount = async (
+        paymentHash: string
+    ): Promise<number | null | undefined> => {
+        let payments: any[];
+        try {
+            const response = await BackendUtils.getPayments();
+            payments = response?.payments || [];
+        } catch (e) {
+            console.error('Could not list payments for a swap', e);
+            return undefined;
+        }
+
+        // Read the fields directly rather than through the Payment model,
+        // which would pull the store graph into SwapStore's imports
+        const decode = (paymentRequest?: string) => {
+            if (!paymentRequest) return undefined;
+            try {
+                return Bolt11Utils.decode(paymentRequest);
+            } catch (e) {
+                return undefined;
+            }
+        };
+        const paymentRequestOf = (p: any) => p?.payment_request || p?.bolt11;
+        const hash = paymentHash.toLowerCase();
+        const payment = payments.find((p: any) => {
+            const ownHash =
+                typeof p?.payment_hash === 'string'
+                    ? p.payment_hash
+                    : decode(paymentRequestOf(p))?.payment_hash;
+            return ownHash?.toLowerCase() === hash;
+        });
+        if (!payment) return null;
+
+        let amount = Number(payment.value_sat);
+        if (!(amount > 0)) {
+            amount =
+                Number(String(payment.amount_msat ?? '').replace('msat', '')) /
+                1000;
+        }
+        // CLN reports no amount for a payment that hasn't completed
+        if (!(amount > 0)) {
+            amount = Number(decode(paymentRequestOf(payment))?.satoshis);
+        }
+        return amount > 0 ? amount : null;
     };
 
     private saveReverseSwaps = async (
@@ -794,7 +1203,13 @@ export default class SwapStore {
                 if (!swaps.some((swap: any) => swap?.id === swapId)) continue;
 
                 const updatedSwaps = swaps.map((swap: any) =>
-                    swap?.id === swapId ? { ...swap, destinationAddress } : swap
+                    swap?.id === swapId
+                        ? {
+                              ...swap,
+                              destinationAddress,
+                              claimAddressFromWallet: true
+                          }
+                        : swap
                 );
 
                 await Storage.setItem(key, JSON.stringify(updatedSwaps));
@@ -979,6 +1394,96 @@ export default class SwapStore {
         return { index, keys };
     };
 
+    /**
+     * Builds the stored form of one swap from a /swap/restore response, or
+     * returns null for an entry without an ID or key details, and for a
+     * reverse swap whose preimage hash doesn't match the key at its keyIndex.
+     */
+    private buildRescuedSwap = (
+        swap: any,
+        mnemonic: string,
+        {
+            implementation,
+            nodePubkey,
+            host
+        }: { implementation: string; nodePubkey: string; host: string }
+    ): any | null => {
+        const isReverseSwap = swap.type === 'reverse';
+        const details = isReverseSwap ? swap.claimDetails : swap.refundDetails;
+        if (!swap?.id || !details) return null;
+
+        // Only fields describing the host's side of the swap are taken from
+        // the response. The claim address, keys and preimage are ours to set:
+        // a host that could set the claim address would be paid the lockup
+        // and get the preimage to settle the hold invoice.
+        const swapDetails = pickFields(swap, RESCUE_SWAP_FIELDS);
+        const hostDetails = pickFields(details, RESCUE_DETAIL_FIELDS);
+
+        const { keyIndex } = details;
+
+        const hdKey = this.mnemonicToHDKey(mnemonic);
+        const childKey = hdKey.derive(this.getPath(keyIndex));
+
+        if (!childKey.privateKey) {
+            throw new Error(`No private key at index ${keyIndex}`);
+        }
+
+        const ecPair = this.ECPair.fromPrivateKey(
+            Buffer.from(childKey.privateKey)
+        );
+
+        const refundPrivateKey = Buffer.from(ecPair.privateKey!).toString(
+            'hex'
+        );
+        const refundPublicKey = Buffer.from(ecPair.publicKey).toString('hex');
+
+        const rescuedSwapBase = {
+            ...swapDetails,
+            ...hostDetails,
+            imported: true,
+            implementation,
+            nodePubkey,
+            endpoint: host,
+            serviceProvider: this.getServiceProvider,
+            keys: ecPair
+        };
+
+        if (isReverseSwap) {
+            // Re-derive the preimage. Only reverse swaps have one of ours: the
+            // host knows just its hash, so without this the rescued claim is
+            // built with an empty preimage, fails every retry, and the host
+            // reclaims the lockup at timeout.
+            const preimage = deriveSwapPreimage(childKey.privateKey);
+
+            // A hash that doesn't match means the host sent the wrong
+            // keyIndex; claiming would reveal the preimage of another swap's
+            // hold invoice
+            if (
+                hostDetails.preimageHash !== undefined &&
+                String(hostDetails.preimageHash).toLowerCase() !==
+                    crypto.sha256(preimage).toString('hex')
+            ) {
+                console.error(
+                    `Skipping rescued swap ${swap.id}: preimage hash does not match key index ${keyIndex}`
+                );
+                return null;
+            }
+
+            return {
+                ...rescuedSwapBase,
+                type: SwapType.Reverse,
+                preimage
+            };
+        } else {
+            return {
+                ...rescuedSwapBase,
+                type: SwapType.Submarine,
+                refundPrivateKey,
+                refundPublicKey
+            };
+        }
+    };
+
     @action
     public getRescuableSwaps = async ({
         seedArray,
@@ -1018,100 +1523,50 @@ export default class SwapStore {
                 const importedSwaps = JSON.parse(response.data || '[]');
 
                 if (importedSwaps.length > 0) {
-                    const storedSwaps = await Storage.getItem(SWAPS_KEY);
-                    const existingSwaps = storedSwaps
-                        ? JSON.parse(storedSwaps)
-                        : [];
-                    const existingSwapIds = existingSwaps.map((s: any) => s.id);
-
-                    const rescuedSwaps = await Promise.all(
-                        importedSwaps
-                            .filter(
-                                (swap: any) =>
-                                    !existingSwapIds.includes(swap.id)
-                            )
-                            .map(async (swap: any) => {
-                                const isReverseSwap = swap.type === 'reverse';
-                                const details = isReverseSwap
-                                    ? swap.claimDetails
-                                    : swap.refundDetails;
-
-                                const swapDetails: any = {};
-
-                                for (const key in swap) {
-                                    if (
-                                        key !== 'claimDetails' &&
-                                        key !== 'refundDetails'
-                                    ) {
-                                        swapDetails[key] = swap[key];
-                                    }
-                                }
-
-                                const { keyIndex } = details;
-
-                                const hdKey = this.mnemonicToHDKey(mnemonic);
-                                const childKey = hdKey.derive(
-                                    this.getPath(keyIndex)
-                                );
-
-                                if (!childKey.privateKey) {
-                                    throw new Error(
-                                        `No private key at index ${keyIndex}`
-                                    );
-                                }
-
-                                const ecPair = this.ECPair.fromPrivateKey(
-                                    Buffer.from(childKey.privateKey)
-                                );
-
-                                const refundPrivateKey = Buffer.from(
-                                    ecPair.privateKey!
-                                ).toString('hex');
-                                const refundPublicKey = Buffer.from(
-                                    ecPair.publicKey
-                                ).toString('hex');
-
-                                const rescuedSwapBase = {
-                                    ...swapDetails,
-                                    ...details,
-                                    imported: true,
-                                    implementation,
-                                    nodePubkey,
-                                    endpoint: host,
-                                    serviceProvider: this.getServiceProvider,
-                                    keys: ecPair
-                                };
-
-                                if (isReverseSwap) {
-                                    // Re-derive the preimage. Only reverse
-                                    // swaps have one of ours: the host knows
-                                    // just its hash, so without this the
-                                    // rescued claim is built with an empty
-                                    // preimage, fails every retry, and the
-                                    // host reclaims the lockup at timeout.
-                                    return {
-                                        ...rescuedSwapBase,
-                                        type: SwapType.Reverse,
-                                        preimage: deriveSwapPreimage(
-                                            childKey.privateKey
-                                        )
-                                    };
-                                } else {
-                                    return {
-                                        ...rescuedSwapBase,
-                                        type: SwapType.Submarine,
-                                        refundPrivateKey,
-                                        refundPublicKey
-                                    };
-                                }
-                            })
+                    // Rescued swaps are written to SWAPS_KEY whatever their
+                    // type and only re-filed by the next fetchAndUpdateSwaps,
+                    // so a swap rescued before can be under either key
+                    const storedSubmarineSwaps = await Storage.getItem(
+                        SWAPS_KEY
                     );
+                    const storedReverseSwaps = await Storage.getItem(
+                        REVERSE_SWAPS_KEY
+                    );
+                    const { submarineSwaps, reverseSwaps } = dedupeStoredSwaps(
+                        storedSubmarineSwaps
+                            ? JSON.parse(storedSubmarineSwaps)
+                            : [],
+                        storedReverseSwaps ? JSON.parse(storedReverseSwaps) : []
+                    );
+                    const existingSwaps = [...submarineSwaps, ...reverseSwaps];
 
-                    const updatedSwaps = [...existingSwaps, ...rescuedSwaps];
+                    const newSwaps: any[] = [];
+                    for (const swap of importedSwaps) {
+                        const rescued = this.buildRescuedSwap(swap, mnemonic, {
+                            implementation,
+                            nodePubkey,
+                            host
+                        });
+                        if (!rescued) continue;
+
+                        const existing = existingSwaps.find(
+                            (s: any) => s?.id === rescued.id
+                        );
+                        if (!existing) {
+                            newSwaps.push(rescued);
+                            existingSwaps.push(rescued);
+                        } else if (rescued.type === SwapType.Reverse) {
+                            repairRescuedPreimage(existing, rescued);
+                        }
+                    }
 
                     await Storage.setItem(
                         SWAPS_KEY,
-                        JSON.stringify(updatedSwaps)
+                        JSON.stringify([...submarineSwaps, ...newSwaps])
+                    );
+                    await Storage.setItem(
+                        REVERSE_SWAPS_KEY,
+                        JSON.stringify(reverseSwaps)
                     );
                     console.log('Rescued swaps saved to storage');
                     return { success: true };
