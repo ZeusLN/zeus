@@ -5,7 +5,10 @@ jest.mock('mobx-react', () => ({
 jest.mock('../../lndmobile/LndMobileInjection', () => ({
     swaps: { createRefundTransaction: jest.fn() }
 }));
-jest.mock('../../utils/BackendUtils', () => ({ getMyNodeInfo: jest.fn() }));
+jest.mock('../../utils/BackendUtils', () => ({
+    getMyNodeInfo: jest.fn(),
+    supportsOnchainSends: () => true
+}));
 jest.mock('../../models/NodeInfo', () => ({
     __esModule: true,
     default: class {
@@ -163,6 +166,43 @@ describe('RefundSwap.createRefundTransaction', () => {
             expect(view.state.error).toBe('');
         }
     );
+
+    it('hands native code the host without its /v2 suffix on the uncooperative retry too', async () => {
+        const { refund } = makeView();
+        tipAt(TIMEOUT);
+        nativeRefund
+            .mockRejectedValueOnce(new Error(NOT_COSIGNED))
+            .mockResolvedValueOnce('txid-uncoop');
+
+        await refund();
+
+        expect(nativeRefund.mock.calls.map(([args]) => args.endpoint)).toEqual([
+            'https://provider.test',
+            'https://provider.test'
+        ]);
+    });
+
+    it('shows the host without its /v2 suffix in the raw details', () => {
+        const { view } = makeView();
+        const findEndpointRow = (node: any): any => {
+            if (!node || typeof node !== 'object') return undefined;
+            if (Array.isArray(node)) {
+                for (const child of node) {
+                    const found = findEndpointRow(child);
+                    if (found) return found;
+                }
+                return undefined;
+            }
+            if (node.type === 'KeyValue' && node.key === 'endpoint') {
+                return node;
+            }
+            return findEndpointRow(node.props?.children);
+        };
+
+        const row = findEndpointRow(view.render());
+
+        expect(row?.props.value).toBe('https://provider.test');
+    });
 
     it('says when an uncooperative refund becomes possible if the timeout is ahead', async () => {
         const { store, view, refund } = makeView();
