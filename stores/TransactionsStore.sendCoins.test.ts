@@ -192,7 +192,8 @@ describe('TransactionsStore.sendCoins', () => {
         );
     });
 
-    it('does not look up a timeout on backends that do not label', async () => {
+    it('offers no retry for a timeout on backends that do not label', async () => {
+        // e.g. CLN's withdraw past the 30s REST timeout
         isLNDBased.mockReturnValue(false);
         sendCoins.mockRejectedValue(new Error('Request timeout'));
         const store = newStore();
@@ -200,8 +201,107 @@ describe('TransactionsStore.sendCoins', () => {
         await settle();
 
         expect(getTransactions).not.toHaveBeenCalled();
+        expect(store.sendOutcomeUnknown).toBe(true);
+        expect(store.error).toBe(true);
+        expect(store.loading).toBe(false);
+        expect(store.error_msg).toBe(
+            'stores.TransactionsStore.sendOutcomeUnknown'
+        );
+    });
+
+    it('shows a node error as before on backends that do not label', async () => {
+        isLNDBased.mockReturnValue(false);
+        sendCoins.mockRejectedValue(new Error('insufficient funds'));
+        const store = newStore();
+        store.sendCoins(request());
+        await settle();
+
         expect(store.sendOutcomeUnknown).toBe(false);
-        expect(store.error_msg).toBe('Request timeout');
+        expect(store.error_msg).toBe('insufficient funds');
+    });
+
+    it('drops a lookup result that lands after a reset', async () => {
+        sendCoins.mockRejectedValue(new Error('Request timeout'));
+        getTransactions.mockImplementation(async () => ({
+            transactions: [
+                {
+                    tx_hash: 'old',
+                    label: sendCoins.mock.calls[0][0].label
+                }
+            ]
+        }));
+        const store = newStore();
+        store.sendCoins(request());
+        // the send has timed out and the lookup is waiting on its first call
+        store.reset();
+        await settle();
+
+        expect(store.txid).toBe(null);
+        expect(store.publishSuccess).toBe(false);
+        expect(store.loading).toBe(false);
+    });
+
+    it('drops an unknown outcome that lands after a reset', async () => {
+        sendCoins.mockRejectedValue(new Error('Request timeout'));
+        getTransactions.mockResolvedValue({ transactions: [] });
+        const store = newStore();
+        store.sendCoins(request());
+        await jest.advanceTimersByTimeAsync(0);
+        store.reset();
+        await settle();
+
+        expect(store.sendOutcomeUnknown).toBe(false);
+        expect(store.error).toBe(false);
+        expect(store.error_msg).toBe(null);
+    });
+
+    it("does not report an earlier send's txid for a newer send", async () => {
+        sendCoins.mockRejectedValueOnce(new Error('Request timeout'));
+        let answerLookup: (result: any) => void = () => undefined;
+        getTransactions.mockReturnValueOnce(
+            new Promise((resolve) => {
+                answerLookup = resolve;
+            })
+        );
+        const store = newStore();
+        store.sendCoins(request());
+        await jest.advanceTimersByTimeAsync(0);
+        expect(getTransactions).toHaveBeenCalledTimes(1);
+
+        // the newer send is still waiting on the node when the earlier
+        // send's lookup finds it
+        sendCoins.mockReturnValueOnce(new Promise(() => undefined));
+        store.sendCoins(request());
+        answerLookup({
+            transactions: [
+                { tx_hash: 'old', label: sendCoins.mock.calls[0][0].label }
+            ]
+        });
+        await settle();
+
+        expect(store.txid).toBe(null);
+        expect(store.publishSuccess).toBe(false);
+        expect(store.loading).toBe(true);
+    });
+
+    it("does not end a newer send with an earlier send's error", async () => {
+        let rejectFirst: (error: Error) => void = () => undefined;
+        sendCoins.mockReturnValueOnce(
+            new Promise((_, reject) => {
+                rejectFirst = reject;
+            })
+        );
+        const store = newStore();
+        store.sendCoins(request());
+
+        sendCoins.mockReturnValueOnce(new Promise(() => undefined));
+        store.sendCoins(request());
+        rejectFirst(new Error('insufficient funds'));
+        await settle();
+
+        expect(store.error).toBe(false);
+        expect(store.error_msg).toBe(null);
+        expect(store.loading).toBe(true);
     });
 
     it('clears an unknown outcome when the next send starts', async () => {
