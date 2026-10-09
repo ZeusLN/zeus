@@ -115,6 +115,48 @@ describe('fetchLncData', () => {
         expect(stores.NodeInfoStore.getNodeInfo).toHaveBeenCalled();
     });
 
+    it.each([undefined, 'old timeout'])(
+        'stops a stale connection before fetching node data (result: %s)',
+        async (result) => {
+            const stores = makeStores();
+            let current = true;
+            stores.SettingsStore.connect.mockImplementation(async () => {
+                current = false;
+                return result;
+            });
+            expect(await fetchLncData(true, stores, () => current)).toBe(false);
+            expect(backend.checkPerms).not.toHaveBeenCalled();
+            expect(stores.NodeInfoStore.getNodeInfo).not.toHaveBeenCalled();
+            expect(
+                stores.SettingsStore.clearConnectError
+            ).not.toHaveBeenCalled();
+        }
+    );
+
+    it('does not start a connect after a stale connection probe', async () => {
+        const stores = makeStores();
+        let current = true;
+        backend.isConnected.mockImplementationOnce(async () => {
+            current = false;
+            return false;
+        });
+        expect(await fetchLncData(false, stores, () => current)).toBe(false);
+        expect(stores.SettingsStore.connect).not.toHaveBeenCalled();
+    });
+
+    it('stops the remaining refresh after a wallet switch during node info', async () => {
+        const stores = makeStores();
+        let current = true;
+        stores.NodeInfoStore.getNodeInfo.mockImplementation(async () => {
+            current = false;
+            return {};
+        });
+        expect(await fetchLncData(false, stores, () => current)).toBe(false);
+        expect(stores.UTXOsStore.listAccounts).not.toHaveBeenCalled();
+        expect(stores.BalanceStore.getCombinedBalance).not.toHaveBeenCalled();
+        expect(stores.SettingsStore.clearConnectError).not.toHaveBeenCalled();
+    });
+
     it('skips accounts and channels when the backend does not support them', async () => {
         const stores = makeStores();
         backend.supportsAccounts.mockReturnValue(false);

@@ -236,6 +236,26 @@ describe('SettingsStore.connect (LNC)', () => {
         expect(store.loading).toBe(false);
     });
 
+    it.each([true, false])(
+        'does not publish a stale dial result (connected: %s)',
+        async (connected) => {
+            const store = new SettingsStore();
+            store.pairingPhrase = 'phrase-a';
+            const result = store.connect();
+            await settle(0);
+            store.pairingPhrase = 'phrase-b';
+            store.setConnectingStatus(true);
+            store.errorMsg = 'new wallet state';
+            BackendUtilsMock.isConnected.mockResolvedValue(connected);
+            await settle(61000);
+            await result;
+            expect(store.errorMsg).toBe('new wallet state');
+            expect(store.error).toBe(false);
+            expect(store.loading).toBe(true);
+            expect(store.connecting).toBe(true);
+        }
+    );
+
     it('reports a timeout without dialing again', async () => {
         const store = new SettingsStore();
 
@@ -247,6 +267,51 @@ describe('SettingsStore.connect (LNC)', () => {
         expect(store.loading).toBe(false);
         expect(BackendUtilsMock.initLNC).toHaveBeenCalledTimes(1);
         expect(BackendUtilsMock.connect).toHaveBeenCalledTimes(1);
+    });
+
+    it.each(['implementation', 'mailbox', 'selection', 'reconnect'])(
+        'invalidates an LNC owner when %s changes',
+        async (change) => {
+            const store = new SettingsStore();
+            store.implementation = 'lightning-node-connect';
+            const isCurrent = store.getLncConnectionGuard();
+            expect(isCurrent()).toBe(true);
+            if (change === 'implementation') store.implementation = 'lnd';
+            if (change === 'mailbox') store.customMailboxServer = 'other:443';
+            if (change === 'selection') store.settings.selectedNode = 3;
+            if (change === 'reconnect') store.setConnectingStatus(true);
+            expect(isCurrent()).toBe(false);
+        }
+    );
+
+    it('does not connect a new backend after selection changes during initialization', async () => {
+        const store = new SettingsStore();
+        BackendUtilsMock.initLNC.mockImplementation(async () => {
+            store.implementation = 'lnd';
+            store.setConnectingStatus(true);
+        });
+        await store.connect();
+        expect(BackendUtilsMock.connect).not.toHaveBeenCalled();
+        expect(store.loading).toBe(true);
+    });
+
+    it('ignores a connection probe that finishes after selection changes', async () => {
+        const store = new SettingsStore();
+        let finish!: (connected: boolean) => void;
+        BackendUtilsMock.isConnected.mockImplementation(
+            () =>
+                new Promise((resolve) => {
+                    finish = resolve;
+                })
+        );
+        const pending = store.connect();
+        await settle(500);
+        store.setConnectingStatus(true);
+        store.errorMsg = 'new wallet state';
+        finish(true);
+        await pending;
+        expect(store.errorMsg).toBe('new wallet state');
+        expect(store.loading).toBe(true);
     });
 
     it('waits the full minute before giving up', async () => {
