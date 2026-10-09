@@ -3,6 +3,7 @@ import {
     shouldHideMillisatoshiAmounts,
     shouldUseSatsSymbol,
     getSatsUnitLabel,
+    getLocalizedSatsUnitLabel,
     getUnformattedAmount,
     getRawAmountFromSats,
     getAmountFromSats,
@@ -21,7 +22,8 @@ jest.mock('./LocaleUtils', () => ({
             'general.fiatRateNotAvailable':
                 'Rate for selected currency not available',
             'general.errorFetchingFiatRates': 'Error fetching fiat rates',
-            'general.notAvailable': 'N/A'
+            'general.notAvailable': 'N/A',
+            'general.sats': '聪'
         };
         return translations[key] || key;
     }
@@ -305,6 +307,36 @@ describe('AmountUtils', () => {
                 expect(getSatsUnitLabel(true, false)).toBe('sats');
                 expect(getSatsUnitLabel(false, false)).toBe('sat');
             });
+        });
+    });
+
+    describe('getLocalizedSatsUnitLabel', () => {
+        it('returns β in symbol mode regardless of plural', () => {
+            (settingsStore as any).settings = {
+                display: { useSatsSymbol: true }
+            };
+            expect(getLocalizedSatsUnitLabel()).toBe('β');
+            expect(getLocalizedSatsUnitLabel(false)).toBe('β');
+        });
+
+        it('defaults to β when the setting is undefined', () => {
+            (settingsStore as any).settings = { display: {} };
+            expect(getLocalizedSatsUnitLabel()).toBe('β');
+        });
+
+        it('returns the translated general.sats word in word mode', () => {
+            (settingsStore as any).settings = {
+                display: { useSatsSymbol: false }
+            };
+            expect(getLocalizedSatsUnitLabel()).toBe('聪');
+            expect(getLocalizedSatsUnitLabel(true)).toBe('聪');
+        });
+
+        it('returns "sat" for a single sat in word mode', () => {
+            (settingsStore as any).settings = {
+                display: { useSatsSymbol: false }
+            };
+            expect(getLocalizedSatsUnitLabel(false)).toBe('sat');
         });
     });
 
@@ -1280,7 +1312,7 @@ describe('AmountUtils', () => {
 
         it('getAmountFromSats output is display-only and does not round-trip', () => {
             (unitsStore as any).units = 'sats';
-            expect(getAmountFromSats(12618)).toBe('12,618 sats');
+            expect(getAmountFromSats(12618)).toBe('12,618 β');
             // guarded to 0 rather than NaN so amount checks still reject it
             expect(getSatAmount(getAmountFromSats(12618)!)).toBe(0);
         });

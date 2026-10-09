@@ -13,6 +13,7 @@ import InvoicesStore from '../stores/InvoicesStore';
 
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { getLocalizedSatsUnitLabel } from '../utils/AmountUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 interface FeeLimitProps {
@@ -232,7 +233,7 @@ export default class FeeLimit extends React.Component<
                                 }}
                                 keyboardType="numeric"
                                 value={feeLimitSat}
-                                suffix={localeString('general.sats')}
+                                suffix={getLocalizedSatsUnitLabel()}
                                 onChangeText={(text: string) => {
                                     this.setState({
                                         feeLimitSat: text

@@ -11,6 +11,7 @@ import { Row } from '../../components/layout/Row';
 import { lightningAddressStore } from '../../stores/Stores';
 
 import { localeString } from '../../utils/LocaleUtils';
+import { getLocalizedSatsUnitLabel } from '../../utils/AmountUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Receive from '../../assets/images/SVG/Receive.svg';
@@ -63,7 +64,7 @@ export default function ZaplockerPayment(props: any) {
                         {item.fee
                             ? `${localeString('models.Payment.fee')}: ${
                                   item.fee
-                              } ${localeString('general.sats')} | ${date}`
+                              } ${getLocalizedSatsUnitLabel()} | ${date}`
                             : date}
                     </Text>
                 </ListItem.Subtitle>
