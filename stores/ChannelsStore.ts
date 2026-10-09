@@ -82,6 +82,10 @@ export default class ChannelsStore {
     // an open timed out and the channel was not found; it may still have
     // been opened, so OpenChannel does not submit again
     @observable public openOutcomeUnknown = false;
+    // id of the current open; resetOpenChannel() and the next open change
+    // it, so a late result (e.g. a timeout lookup) for an earlier open is
+    // dropped
+    private openChannelSeq = 0;
     @observable public closeChannelErr: string | null;
     @observable public closingChannel = false;
     @observable channelRequest: any;
@@ -187,6 +191,7 @@ export default class ChannelsStore {
 
     @action
     public resetOpenChannel = (silent?: boolean) => {
+        this.openChannelSeq++;
         this.loading = false;
         this.error = false;
         if (!silent) {
@@ -1284,8 +1289,12 @@ export default class ChannelsStore {
                     : undefined;
             if (memo) request.memo = memo;
 
+            const seq = ++this.openChannelSeq;
+            const isCurrent = () => seq === this.openChannelSeq;
+
             const onOpened = (data: any) =>
                 runInAction(() => {
+                    if (!isCurrent()) return;
                     this.output_index = data.output_index;
                     this.funding_txid_str = data.funding_txid_str;
                     this.errorOpenChannel = false;
@@ -1299,7 +1308,10 @@ export default class ChannelsStore {
             BackendUtils.openChannelSync(request)
                 .then(onOpened)
                 .catch(async (error: Error) => {
-                    if (BackendUtils.isLNDBased() && isRequestTimeout(error)) {
+                    // a timed out open may still have gone through on any
+                    // backend (e.g. CLN past the 30s REST timeout); only
+                    // opens that carry a memo can be looked up
+                    if (isRequestTimeout(error)) {
                         const opened = memo
                             ? await findChannelByMemo(
                                   () => BackendUtils.getPendingChannels(),
@@ -1312,6 +1324,7 @@ export default class ChannelsStore {
                             return;
                         }
                         runInAction(() => {
+                            if (!isCurrent()) return;
                             this.errorMsgChannel = localeString(
                                 'stores.ChannelsStore.openOutcomeUnknown'
                             );
@@ -1329,6 +1342,7 @@ export default class ChannelsStore {
                     }
                     const errorMsg = errorToUserFriendly(error);
                     runInAction(() => {
+                        if (!isCurrent()) return;
                         this.errorMsgChannel = errorMsg;
                         this.output_index = null;
                         this.funding_txid_str = null;
