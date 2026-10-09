@@ -186,6 +186,31 @@ describe('RefundSwap refund button', () => {
         });
     });
 
+    it('hands native code the host without its /v2 suffix on the uncooperative retry too', async () => {
+        tipAt(TIMEOUT);
+        nativeRefund
+            .mockRejectedValueOnce(new Error(NOT_COSIGNED))
+            .mockResolvedValueOnce('txid-uncoop');
+
+        await refund();
+
+        expect(nativeRefund.mock.calls.map(([args]) => args.endpoint)).toEqual([
+            'https://provider.test',
+            'https://provider.test'
+        ]);
+    });
+
+    it('shows the host without its /v2 suffix in the raw details', async () => {
+        nativeRefund.mockResolvedValue('txid');
+
+        await refund();
+
+        const endpointRow = screen.container.queryAll(
+            (n) => n.type === 'KeyValue' && n.props.keyValue === 'endpoint'
+        )[0];
+        expect(endpointRow?.props.value).toBe('https://provider.test');
+    });
+
     it.each([TIMEOUT, TIMEOUT + 10])(
         'retries uncooperatively when the host will not co-sign and the tip is %s',
         async (tip) => {
