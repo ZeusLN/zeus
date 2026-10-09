@@ -899,6 +899,10 @@ export default class App extends React.PureComponent {
                                                                 component={
                                                                     SendingOnChain
                                                                 }
+                                                                options={{
+                                                                    gestureEnabled:
+                                                                        false // disables swipe back
+                                                                }}
                                                             />
                                                             <Stack.Screen
                                                                 name="SendingLightning" // @ts-ignore:next-line
