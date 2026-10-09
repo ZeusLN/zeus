@@ -10,6 +10,8 @@ import { themeColor } from './../../utils/ThemeUtils';
 
 import { modalStore } from './../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
+import { BrantaVerification } from '../../stores/BrantaStore';
+import { onchainSendNavigationParams } from '../../utils/BrantaUtils';
 
 import SwipeableRowAction from './SwipeableRowAction';
 import SwipeableRowContainer from './SwipeableRowContainer';
@@ -29,6 +31,7 @@ interface OnchainSwipeableRowProps {
     children?: React.ReactNode;
     disabled?: boolean;
     SyncStore?: SyncStore;
+    brantaVerification?: BrantaVerification | null;
 }
 
 @inject('SyncStore')
@@ -99,13 +102,17 @@ export default class OnchainSwipeableRow extends Component<
     };
 
     private sendToAddress = () => {
-        const { navigation, value, satAmount, feeRate } = this.props;
-        navigation.navigate('Send', {
-            destination: value,
-            satAmount,
-            fee: feeRate,
-            transactionType: 'On-chain'
-        });
+        const { navigation, value, satAmount, feeRate, brantaVerification } =
+            this.props;
+        navigation.navigate(
+            'Send',
+            onchainSendNavigationParams({
+                destination: value,
+                satAmount,
+                fee: feeRate,
+                brantaVerification
+            })
+        );
     };
 
     render() {
