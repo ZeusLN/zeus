@@ -100,13 +100,15 @@ const makeView = ({
     confirmedBlockchainBalance = BALANCE,
     unconfirmedBlockchainBalance = 0,
     routeParams = {},
-    settings = {}
+    settings = {},
+    openOutcomeUnknown = false
 }: {
     implementation?: string;
     confirmedBlockchainBalance?: number;
     unconfirmedBlockchainBalance?: number;
     routeParams?: { node_pubkey_string?: string; host?: string };
     settings?: any;
+    openOutcomeUnknown?: boolean;
 } = {}) => {
     (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(
         implementation === 'lnd'
@@ -125,6 +127,7 @@ const makeView = ({
             channelsView: 'channels',
             aliasesByPubkey: {},
             nodes: {},
+            openOutcomeUnknown,
             resetOpenChannel: jest.fn(),
             connectPeer: jest.fn(() => Promise.resolve())
         },
@@ -160,6 +163,22 @@ const turnFundMaxOn = (view: OpenChannel) => {
 const isOpenDisabled = (view: OpenChannel) =>
     findByType(view.render(), 'Button', 'views.OpenChannel.openChannel').props
         .disabled;
+
+describe('OpenChannel after an open with an unknown outcome', () => {
+    it('allows opening with a valid amount', () => {
+        const view = makeView();
+        amountInputProps(view).onAmountChange('50000', 50000);
+
+        expect(isOpenDisabled(view)).toBe(false);
+    });
+
+    it('does not allow opening again', () => {
+        const view = makeView({ openOutcomeUnknown: true });
+        amountInputProps(view).onAmountChange('50000', 50000);
+
+        expect(isOpenDisabled(view)).toBe(true);
+    });
+});
 
 describe('OpenChannel fund max toggle', () => {
     it('restores the entered amount when fund max is turned off', () => {
