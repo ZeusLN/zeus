@@ -182,6 +182,8 @@ describe('LdkNode payment timeouts', () => {
             expect(result.payment_hash).toEqual('hash');
             expect(result.payment_preimage).toEqual('');
             expect(new Payment(result).getFee).toEqual('0');
+            // SendingLightning would read a route as success
+            expect(result.payment_route).toBeUndefined();
         });
 
         it('reports a pending payment with no hash yet as in flight', async () => {
