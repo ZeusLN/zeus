@@ -13,6 +13,7 @@ import KeyValue from '../../components/KeyValue';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
+import { getSatsUnitLabel } from '../../utils/AmountUtils';
 
 import LightningAddressStore from '../../stores/LightningAddressStore';
 
@@ -113,9 +114,9 @@ export default class ZaplockerInfo extends React.Component<
                                     keyValue={localeString(
                                         'views.Settings.LightningAddressInfo.minimumAmount'
                                     )}
-                                    value={`${minimumSats} ${
-                                        minimumSats === 1 ? 'sat' : 'sats'
-                                    }`}
+                                    value={`${minimumSats} ${getSatsUnitLabel(
+                                        minimumSats !== 1
+                                    )}`}
                                 />
                             )}
 

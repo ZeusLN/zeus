@@ -1430,6 +1430,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         // Process pending graph sync payment after wallet is fully loaded and synced
         this.processPendingGraphSyncPayment();
+
+        // One-time announcements (e.g. β symbol intro). New users never see
+        // these: IntroSplash marks them as seen when onboarding starts.
+        this.props.ModalStore.checkAndTriggerAnnouncements(
+            this.props.navigation
+        );
     }
 
     processPendingShareIntent = () => {

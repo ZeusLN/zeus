@@ -53,7 +53,10 @@ import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { scanNfcTag } from '../utils/NFCUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import { getRawAmountFromSats } from '../utils/AmountUtils';
+import {
+    getRawAmountFromSats,
+    getLocalizedSatsUnitLabel
+} from '../utils/AmountUtils';
 import { clearPendingPaymentData } from '../utils/GraphSyncUtils';
 
 import NFC from '../assets/images/SVG/NFC-alt.svg';
@@ -1601,9 +1604,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             >
                                                 {`${localeString(
                                                     'views.PaymentRequest.maxShardAmt'
-                                                )} (${localeString(
-                                                    'general.sats'
-                                                )}) (${localeString(
+                                                )} (${getLocalizedSatsUnitLabel()}) (${localeString(
                                                     'general.optional'
                                                 )})`}
                                             </Text>

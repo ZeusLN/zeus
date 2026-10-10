@@ -18,6 +18,7 @@ import Screen from '../components/Screen';
 import { ErrorMessage } from '../components/SuccessErrorMessage';
 
 import SettingsStore, { LOCALE_KEYS } from '../stores/SettingsStore';
+import { modalStore } from '../stores/Stores';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -45,6 +46,8 @@ export default class IntroSplash extends React.Component<
     };
 
     componentDidMount() {
+        modalStore.markAnnouncementsSeen();
+
         // triggers when loaded from navigation or back action
         this.props.navigation.addListener('focus', () => {
             this.props.SettingsStore.getSettings();
