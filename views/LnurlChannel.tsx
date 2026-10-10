@@ -1,6 +1,5 @@
 import url from 'url';
 import * as React from 'react';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import querystring from 'querystring-es3';
@@ -19,11 +18,13 @@ import {
 
 import ChannelsStore from '../stores/ChannelsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
+import { settingsStore } from '../stores/Stores';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import NodeUriUtils from '../utils/NodeUriUtils';
 import BackendUtils from '../utils/BackendUtils';
+import { networkFetch } from '../utils/NetworkUtils';
 
 interface LnurlChannelProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -145,7 +146,11 @@ export default class LnurlChannel extends React.Component<
         u.search = querystring.stringify(qs);
         u.query = querystring.stringify(qs);
 
-        ReactNativeBlobUtil.fetch('get', url.format(u))
+        networkFetch({
+            method: 'get',
+            url: url.format(u),
+            enableTor: settingsStore.enableTor
+        })
             .then((response: any) => {
                 try {
                     const data = response.json();
