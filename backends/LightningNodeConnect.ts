@@ -241,7 +241,8 @@ export default class LightningNodeConnect {
     getTransactions = async (data: any) =>
         await this.lnc.lnd.lightning
             .getTransactions({
-                maxTransactions: data?.max_transactions || 500
+                maxTransactions: data?.max_transactions || 500,
+                ...(data?.start_height && { startHeight: data.start_height })
             })
             .then((data: lnrpc.TransactionDetails) => {
                 const formatted = snakeize(data);
@@ -283,7 +284,8 @@ export default class LightningNodeConnect {
                 amount: data.amount,
                 spend_unconfirmed: data.spend_unconfirmed,
                 send_all: data.send_all,
-                outpoints: data.outpoints
+                outpoints: data.outpoints,
+                label: data.label
             })
             .then((data: lnrpc.SendCoinsResponse) => snakeize(data));
     sendCustomMessage = async (data: any) =>

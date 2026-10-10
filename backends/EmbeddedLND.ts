@@ -104,7 +104,8 @@ export default class EmbeddedLND extends LND {
             data.sat_per_vbyte,
             data.spend_unconfirmed,
             data.send_all,
-            data.outpoints
+            data.outpoints,
+            data.label
         );
     sendCustomMessage = async (data: any) =>
         await sendCustomMessage(data.peer, data.type, data.data);

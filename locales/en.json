@@ -1778,6 +1778,7 @@
     "stores.InvoicesStore.errorGeneratingAddress": "Error generating new address",
     "stores.InvoicesStore.zeroAmountLndhub": "LNDHub instance might not support zero-amount invoices",
     "stores.InvoicesStore.errorRedeemingWithdrawalRequest": "Error redeeming withdrawal request",
+    "stores.TransactionsStore.sendOutcomeUnknown": "Your node did not answer in time, so ZEUS cannot tell whether this transaction was sent. Check your on-chain activity before sending again.",
     "stores.SettingsStore.btcPayImplementationSupport": "Sorry, we currently only support BTCPay instances using LND",
     "stores.SettingsStore.btcPayFetchConfigError": "Error fetching BTCPay configuration",
     "stores.SettingsStore.btcPayFetchConfirmMessage": "ZEUS will contact {host} to fetch this BTCPay node configuration. Only continue if you trust this QR code.",
