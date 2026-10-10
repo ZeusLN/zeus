@@ -18,6 +18,7 @@ import { getLnurlParams as getlnurlParams } from './LnurlResolveUtils';
 import { localeString } from './LocaleUtils';
 import NodeUriUtils from './NodeUriUtils';
 import NostrUtils from './NostrUtils';
+import { doTorRequest, RequestMethod } from './TorUtils';
 
 import CashuToken from '../models/CashuToken';
 import Invoice from '../models/Invoice';
@@ -680,15 +681,22 @@ const handleAnything = async (
                 // '?' and '#'. Unencoded, 'a&name=evil.example&z@good.com'
                 // would add a second name parameter, and the resolver would
                 // look up evil.example instead.
-                const res = await fetch(
-                    `${dnsUrl}?name=${encodeURIComponent(name)}&type=TXT`,
-                    {
-                        headers: {
-                            accept: 'application/dns-json'
-                        }
-                    }
-                );
-                const json = await res.json();
+                const dohUrl = `${dnsUrl}?name=${encodeURIComponent(
+                    name
+                )}&type=TXT`;
+                const dohHeaders = { accept: 'application/dns-json' };
+                // With Tor enabled the lookup goes over Tor too, so the
+                // resolver does not see the user's IP next to the recipient
+                const json = settingsStore.enableTor
+                    ? await doTorRequest(
+                          dohUrl,
+                          RequestMethod.GET,
+                          undefined,
+                          dohHeaders
+                      )
+                    : await (
+                          await fetch(dohUrl, { headers: dohHeaders })
+                      ).json();
 
                 // The resolver echoes the name it looked up. Only use the
                 // answer if that is the name we asked for.
