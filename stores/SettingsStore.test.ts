@@ -559,6 +559,97 @@ describe('SettingsStore.updateSelectedNode', () => {
     });
 });
 
+describe('SettingsStore LndHub session token', () => {
+    const hubA = {
+        implementation: 'lndhub',
+        lndhubUrl: 'https://hub-a.example.com',
+        username: 'alice',
+        password: 'a'
+    };
+    const hubB = {
+        implementation: 'lndhub',
+        lndhubUrl: 'https://hub-b.example.com',
+        username: 'bob',
+        password: 'b'
+    };
+
+    const loggedIn = async (settings: any) => {
+        seedSettings(settings);
+        const store = new SettingsStore();
+        await store.getSettings();
+        // What login() stores after a successful /auth
+        store.accessToken = 'token-a';
+        store.refreshToken = 'refresh-a';
+        return store;
+    };
+
+    it('keeps the token across a write that does not change the node', async () => {
+        const store = await loggedIn({ selectedNode: 0, nodes: [hubA, hubB] });
+
+        await store.updateSettings({ fiat: 'EUR' });
+
+        expect(store.accessToken).toBe('token-a');
+        expect(store.refreshToken).toBe('refresh-a');
+    });
+
+    it('keeps the token when the selected node is only reordered', async () => {
+        const store = await loggedIn({ selectedNode: 0, nodes: [hubA, hubB] });
+
+        await store.updateSettings({ selectedNode: 1, nodes: [hubB, hubA] });
+
+        expect(store.accessToken).toBe('token-a');
+    });
+
+    it('clears the token when switching to another wallet', async () => {
+        const store = await loggedIn({ selectedNode: 0, nodes: [hubA, hubB] });
+
+        await store.updateSettings({ selectedNode: 1 });
+
+        expect(store.lndhubUrl).toBe('https://hub-b.example.com');
+        expect(store.accessToken).toBe('');
+        expect(store.refreshToken).toBe('');
+    });
+
+    it('clears the token when switching to a non-lndhub wallet', async () => {
+        const store = await loggedIn({
+            selectedNode: 0,
+            nodes: [hubA, { implementation: 'lnd', host: 'node.example.com' }]
+        });
+
+        await store.updateSettings({ selectedNode: 1 });
+
+        expect(store.accessToken).toBe('');
+    });
+
+    it('clears the token when the active wallet changes server', async () => {
+        const store = await loggedIn({ selectedNode: 0, nodes: [hubA] });
+
+        await store.updateSettings({
+            nodes: [{ ...hubA, lndhubUrl: 'https://hub-c.example.com' }]
+        });
+
+        expect(store.accessToken).toBe('');
+    });
+
+    it('clears the token when the active wallet changes account', async () => {
+        const store = await loggedIn({ selectedNode: 0, nodes: [hubA] });
+
+        await store.updateSettings({
+            nodes: [{ ...hubA, username: 'mallory' }]
+        });
+
+        expect(store.accessToken).toBe('');
+    });
+
+    it('clears the token when no wallet is left', async () => {
+        const store = await loggedIn({ selectedNode: 0, nodes: [hubA] });
+
+        await store.updateSettings({ nodes: [] });
+
+        expect(store.accessToken).toBe('');
+    });
+});
+
 describe('SettingsStore.updateSettingsGroupDebounced', () => {
     const { AppState } = require('react-native');
     let appStateHandler: ((state: string) => void) | undefined;
