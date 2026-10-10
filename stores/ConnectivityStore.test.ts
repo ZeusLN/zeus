@@ -49,6 +49,7 @@ describe('ConnectivityStore', () => {
         store.stop();
         global.fetch = originalFetch;
         jest.useRealTimers();
+        jest.restoreAllMocks();
     });
 
     it('clears the offline state when monitoring stops', () => {
@@ -164,6 +165,54 @@ describe('ConnectivityStore', () => {
         expect(onReconnect).toHaveBeenCalledTimes(1);
     });
 
+    it('runs the remaining reconnect callbacks when one throws', () => {
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        const failing = jest.fn(() => {
+            throw new Error('callback failed');
+        });
+        const next = jest.fn();
+        store.onReconnect(failing);
+        store.onReconnect(next);
+        store.start();
+        emit({ isConnected: false });
+
+        emit({ isConnected: true, isInternetReachable: true });
+
+        expect(failing).toHaveBeenCalledTimes(1);
+        expect(next).toHaveBeenCalledTimes(1);
+        expect(store.isOffline).toBe(false);
+    });
+
+    it('runs the remaining reconnect callbacks when one throws after a probe', async () => {
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        const { settle } = mockPendingProbes();
+        const failing = jest.fn(() => {
+            throw new Error('callback failed');
+        });
+        const next = jest.fn();
+        store.onReconnect(failing);
+        store.onReconnect(next);
+        store.start();
+        emit({ isConnected: false });
+        emit(UNREACHABLE);
+
+        settle(true);
+        await flushPromises();
+
+        expect(next).toHaveBeenCalledTimes(1);
+        expect(store.isOffline).toBe(false);
+    });
+
+    it('does not fire onReconnect when already online', () => {
+        const onReconnect = jest.fn();
+        store.onReconnect(onReconnect);
+        store.start();
+
+        emit({ isConnected: true, isInternetReachable: true });
+
+        expect(onReconnect).not.toHaveBeenCalled();
+    });
+
     it('does not start monitoring when the offline check is disabled', () => {
         jest.useFakeTimers();
         store = new ConnectivityStore({
@@ -186,6 +235,95 @@ describe('ConnectivityStore', () => {
 
         expect(NetInfo.addEventListener).toHaveBeenCalledTimes(1);
         expect(NetInfo.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    describe('checkNow', () => {
+        // Probes that only settle when their abort signal fires
+        const mockHangingProbes = () => {
+            const fetchMock = jest.fn(
+                (_url: string, { signal }: { signal: any }) =>
+                    new Promise((_resolve, reject) =>
+                        signal.addEventListener('abort', () =>
+                            reject(new Error('aborted'))
+                        )
+                    )
+            );
+            global.fetch = fetchMock as any;
+            return fetchMock;
+        };
+
+        it('marks offline when every probe fails', async () => {
+            global.fetch = jest.fn(() =>
+                Promise.reject(new Error('offline'))
+            ) as any;
+
+            await expect(store.checkNow()).resolves.toBe(false);
+
+            expect(store.isOffline).toBe(true);
+        });
+
+        it('marks online and fires onReconnect when a probe succeeds after being offline', async () => {
+            const onReconnect = jest.fn();
+            store.onReconnect(onReconnect);
+            store.start();
+            emit({ isConnected: false });
+            global.fetch = jest.fn(() => Promise.resolve({})) as any;
+
+            await expect(store.checkNow()).resolves.toBe(true);
+
+            expect(store.isOffline).toBe(false);
+            expect(onReconnect).toHaveBeenCalledTimes(1);
+        });
+
+        it('gives up on probes after 1.5s and marks offline', async () => {
+            jest.useFakeTimers();
+            mockHangingProbes();
+
+            const result = store.checkNow();
+            jest.advanceTimersByTime(1499);
+            expect(store.isOffline).toBe(false);
+            jest.advanceTimersByTime(1);
+
+            await expect(result).resolves.toBe(false);
+            expect(store.isOffline).toBe(true);
+        });
+
+        it('does not probe when the offline check is disabled', async () => {
+            const fetchMock = jest.fn();
+            global.fetch = fetchMock as any;
+            store = new ConnectivityStore({
+                settings: { networking: { disableOfflineCheck: true } }
+            } as any);
+
+            await expect(store.checkNow()).resolves.toBe(true);
+
+            expect(fetchMock).not.toHaveBeenCalled();
+            expect(store.isOffline).toBe(false);
+        });
+
+        it('keeps a NetInfo-triggered check from probing while it runs', async () => {
+            const { fetchMock, settle } = mockPendingProbes();
+            store.start();
+
+            const result = store.checkNow();
+            emit(UNREACHABLE);
+            settle(false);
+            await result;
+
+            expect(fetchMock).toHaveBeenCalledTimes(3);
+        });
+
+        it('ignores its result after monitoring stops', async () => {
+            const { settle } = mockPendingProbes();
+            store.start();
+
+            const result = store.checkNow();
+            store.stop();
+            settle(false);
+
+            await expect(result).resolves.toBe(false);
+            expect(store.isOffline).toBe(false);
+        });
     });
 
     it.each([

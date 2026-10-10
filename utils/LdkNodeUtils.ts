@@ -234,7 +234,8 @@ async function initNode({
     lsps1Config,
     trustedPeers0conf,
     vssServerUrl,
-    failOnVssError
+    failOnVssError,
+    skipVss
 }: {
     storagePath: string;
     mnemonic: string;
@@ -252,17 +253,28 @@ async function initNode({
     trustedPeers0conf?: string[];
     vssServerUrl?: string;
     failOnVssError?: boolean;
+    // Build on the local store only; see startLdkNodeWallet
+    skipVss?: boolean;
 }): Promise<{ vssError?: string }> {
     const networkType = getNetworkType(network);
     const esploraUrl = esploraServerUrl || getDefaultEsploraServer(network);
     const rgsUrl = rgsServerUrl || getDefaultRgsServer(network);
-    const vssUrl = vssServerUrl || DEFAULT_VSS_SERVER;
 
-    // Derive VSS signing keypair using native PBKDF2 (avoids ~3s JS PBKDF2).
-    // The seed is derived once and reused for both storeId and auth headers.
-    const seedHex = await LdkNode.crypto.mnemonicToSeed(mnemonic, passphrase);
-    const vssKey = deriveVssSigningKeyFromSeed(Buffer.from(seedHex, 'hex'));
-    const vssStoreId = Buffer.from(vssKey.publicKey).toString('hex');
+    let vssConfig: { url: string; storeId: string } | undefined;
+    let vssKey: { privateKey: Uint8Array; publicKey: Uint8Array } | undefined;
+    if (!skipVss) {
+        // Derive VSS signing keypair using native PBKDF2 (avoids ~3s JS PBKDF2).
+        // The seed is derived once and reused for both storeId and auth headers.
+        const seedHex = await LdkNode.crypto.mnemonicToSeed(
+            mnemonic,
+            passphrase
+        );
+        vssKey = deriveVssSigningKeyFromSeed(Buffer.from(seedHex, 'hex'));
+        vssConfig = {
+            url: vssServerUrl || DEFAULT_VSS_SERVER,
+            storeId: Buffer.from(vssKey.publicKey).toString('hex')
+        };
+    }
 
     return await LdkNode.utils.initializeNode({
         network: networkType,
@@ -275,10 +287,7 @@ async function initNode({
         listeningAddresses,
         lsps1Config,
         trustedPeers0conf,
-        vssConfig: {
-            url: vssUrl,
-            storeId: vssStoreId
-        },
+        vssConfig,
         vssKey,
         failOnVssError
     });
@@ -395,6 +404,7 @@ export async function startLdkNodeWallet({
     trustedPeers0conf,
     vssServerUrl,
     skipInit,
+    offline,
     onSyncStart
 }: {
     nodeDir: string;
@@ -413,6 +423,8 @@ export async function startLdkNodeWallet({
     trustedPeers0conf?: string[];
     vssServerUrl?: string;
     skipInit?: boolean;
+    // ConnectivityStore.isOffline at call time
+    offline?: boolean;
     onSyncStart?: () => void;
 }): Promise<{ vssError?: string; esploraError?: string; rgsError?: string }> {
     // Idempotent repair for wallets created before the backup exclusion
@@ -442,16 +454,19 @@ export async function startLdkNodeWallet({
             lsps1Config,
             trustedPeers0conf,
             vssServerUrl,
-            failOnVssError: !hasLocalDb
+            failOnVssError: !hasLocalDb,
+            // Offline, the VSS build would wait out its 30s timeout and then
+            // fall back to the local store anyway. Only an existing node can
+            // skip it: without a local DB this start is a restore and must
+            // fail rather than build an empty wallet. VSS is used again on
+            // the next start while online.
+            skipVss: offline && hasLocalDb
         });
         vssError = result.vssError;
     }
 
-    // Start the node — start() kicks off background tasks (including fee estimation)
-    // that can reject asynchronously, so we catch those too
     let esploraError: string | undefined;
     let rgsError: string | undefined;
-    let nodeStarted = false;
 
     try {
         await retry({
@@ -463,64 +478,60 @@ export async function startLdkNodeWallet({
                 return errMsg.includes(LDK_NODE_NOT_INITIALIZED);
             }
         });
-        nodeStarted = true;
         console.log('LDK Node: Started successfully');
     } catch (e: any) {
+        // start() fails before the node is marked running, so there is no
+        // node to sync or wait for. This includes FeerateEstimation errors
+        // from binaries that still fail the start on a fee rate update;
+        // treating those as a running node made waitForLdkNodeReady wait
+        // 60s and then report "LDK Node not running yet".
         const errorMsg = e?.message || e?.toString?.() || String(e);
         console.warn('LDK Node: Start error:', errorMsg);
+        throw e;
+    }
+
+    // Offline, syncWallets() would wait out its Esplora and RGS timeouts,
+    // and the RGS check below would report an empty graph that was never
+    // fetched. The node's background sync picks up once we're online.
+    if (offline) {
+        console.log('LDK Node: Offline, skipping wallet sync');
+        return { vssError };
+    }
+
+    onSyncStart?.();
+    try {
+        await LdkNode.node.syncWallets();
+        console.log('LDK Node: Sync complete');
+    } catch (e: any) {
+        const errorMsg = e?.message || e?.toString?.() || String(e);
+        console.warn('LDK Node: Sync error:', errorMsg);
+
         if (
             errorMsg.includes('FeerateEstimation') ||
+            errorMsg.includes('Esplora') ||
             errorMsg.includes('fee rate')
         ) {
             esploraError = errorMsg;
-            // Node may still be running despite fee estimation failure —
-            // attempt sync to detect RGS errors too
-            nodeStarted = true;
-        } else {
-            // Surface non-fee-rate failures to the caller instead of
-            // returning silently — a phantom-success makes the downstream
-            // waitForLdkNodeReady timeout in 60s with a misleading error.
-            throw e;
+        } else if (
+            errorMsg.includes('RapidGossipSync') ||
+            errorMsg.includes('Rgs') ||
+            errorMsg.includes('gossip')
+        ) {
+            rgsError = errorMsg;
+        } else if (!errorMsg.includes('NotRunning')) {
+            esploraError = errorMsg;
         }
     }
 
-    // Only sync if the node actually started
-    if (nodeStarted) {
-        onSyncStart?.();
-        try {
-            await LdkNode.node.syncWallets();
-            console.log('LDK Node: Sync complete');
-        } catch (e: any) {
-            const errorMsg = e?.message || e?.toString?.() || String(e);
-            console.warn('LDK Node: Sync error:', errorMsg);
-
-            if (
-                errorMsg.includes('FeerateEstimation') ||
-                errorMsg.includes('Esplora') ||
-                errorMsg.includes('fee rate')
-            ) {
-                esploraError = errorMsg;
-            } else if (
-                errorMsg.includes('RapidGossipSync') ||
-                errorMsg.includes('Rgs') ||
-                errorMsg.includes('gossip')
-            ) {
-                rgsError = errorMsg;
-            } else if (!errorMsg.includes('NotRunning')) {
-                esploraError = errorMsg;
-            }
+    // Check if RGS actually populated — use the node status timestamp
+    // rather than graph counts, which can race with background RGS sync
+    try {
+        const status = await LdkNode.node.status();
+        if (!status.latestRgsSnapshotTimestamp && !rgsError) {
+            rgsError = localeString('components.AlertModal.rgsEmptyGraph');
         }
-
-        // Check if RGS actually populated — use the node status timestamp
-        // rather than graph counts, which can race with background RGS sync
-        try {
-            const status = await LdkNode.node.status();
-            if (!status.latestRgsSnapshotTimestamp && !rgsError) {
-                rgsError = localeString('components.AlertModal.rgsEmptyGraph');
-            }
-        } catch (e) {
-            console.log('LDK Node: Could not fetch node status:', e);
-        }
+    } catch (e) {
+        console.log('LDK Node: Could not fetch node status:', e);
     }
 
     return { vssError, esploraError, rgsError };
