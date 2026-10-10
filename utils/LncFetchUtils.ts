@@ -12,10 +12,11 @@ interface LncFetchStores {
     ChannelsStore: { getChannels: () => Promise<any> };
 }
 
-// The LNC branch of the Wallet's fetchDataCore. Resolves false when the
-// node calls failed, so the caller stops there. A connect() error resolves
-// true: the error is already on SettingsStore and the rest of the fetch
-// still runs, as before.
+// The LNC branch of the Wallet's fetchDataCore. Resolves false when
+// connect() reported an error or the node calls failed, so the caller
+// stops there. The connect error is already on SettingsStore for the error
+// screen; running the rest of the fetch without node info would send the
+// ZEUS Pay calls an undefined pubkey.
 export const fetchLncData = async (
     connecting: boolean,
     stores: LncFetchStores
@@ -44,7 +45,7 @@ export const fetchLncData = async (
             error = connectError?.message ?? String(connectError);
         }
     }
-    if (error) return true;
+    if (error) return false;
 
     try {
         await BackendUtils.checkPerms();
