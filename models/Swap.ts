@@ -62,6 +62,10 @@ export default class Swap extends BaseModel {
     tree?: any;
     lockupTransaction?: any;
     txid?: string;
+    // a reverse swap's signed claim, stored before it is first broadcast so
+    // a failed broadcast is retried with the same transaction
+    claimTransactionHex?: string;
+    claimTxid?: string;
 
     @computed public get model(): string {
         return localeString('views.Swaps.title');

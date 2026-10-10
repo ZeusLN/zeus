@@ -101,7 +101,9 @@ import {
     // swaps
     createClaimTransaction,
     createReverseClaimTransaction,
-    createRefundTransaction
+    createRefundTransaction,
+    buildReverseClaimTransaction,
+    buildRefundTransaction
 } from './swaps';
 
 import {
@@ -615,6 +617,36 @@ export interface ILndMobileInjections {
             cooperative: boolean;
             isTestnet?: boolean;
         }) => Promise<string>;
+        buildReverseClaimTransaction: (args: {
+            endpoint: string;
+            swapId: string;
+            claimLeaf: string;
+            refundLeaf: string;
+            privateKey: string;
+            servicePubKey: string;
+            preimageHex: string;
+            transactionHex: string;
+            lockupAddress: string;
+            destinationAddress: string;
+            feeRate: number;
+            minerFee: number;
+            network: string;
+        }) => Promise<string>;
+        buildRefundTransaction: (args: {
+            endpoint: string;
+            swapId: string;
+            claimLeaf: string;
+            refundLeaf: string;
+            transactionHex: string;
+            privateKey: string;
+            servicePubKey: string;
+            feeRate: number;
+            timeoutBlockHeight: number;
+            destinationAddress: string;
+            lockupAddress: string;
+            cooperative?: boolean;
+            network: string;
+        }) => Promise<string>;
     };
     wtclient: {
         WatchtowerClientAddTower: (
@@ -756,7 +788,9 @@ export default {
     swaps: {
         createClaimTransaction,
         createReverseClaimTransaction,
-        createRefundTransaction
+        createRefundTransaction,
+        buildReverseClaimTransaction,
+        buildRefundTransaction
     },
     wtclient: {
         WatchtowerClientAddTower,

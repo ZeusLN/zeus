@@ -45,6 +45,8 @@ import {
     deriveSwapPreimage,
     aggregateMusigKeys,
     rescuedLockupFloor,
+    swapNetworkName,
+    isAlreadyBroadcastError,
     buildReverseSwapLeaves,
     deriveReverseSwapOutputKey,
     verifyReverseSwapResponse,
@@ -627,6 +629,41 @@ describe('SwapUtils', () => {
     });
 
     // boltz-client v2.9.0 pkg/boltz/swaptree_test.go, BTC reverse swap
+    describe('swapNetworkName', () => {
+        it.each([
+            [{}, 'mainnet'],
+            [undefined, 'mainnet'],
+            [{ isTestNet: true }, 'testnet'],
+            [{ isSigNet: true }, 'testnet'],
+            [{ isMutinynet: true }, 'testnet'],
+            [{ isRegTest: true }, 'regtest'],
+            [{ isRegTest: true, isTestNet: true }, 'regtest']
+        ])('maps %j to %s', (nodeInfo, name) => {
+            expect(swapNetworkName(nodeInfo as any)).toBe(name);
+        });
+    });
+
+    describe('isAlreadyBroadcastError', () => {
+        it.each([
+            'sendrawtransaction RPC error: {"code":-27,"message":"Transaction already in block chain"}',
+            'txn-already-in-mempool',
+            'txn-already-known',
+            'transaction already exists'
+        ])('treats %s as already broadcast', (message) => {
+            expect(isAlreadyBroadcastError(message)).toBe(true);
+        });
+
+        it.each([
+            'bad-txns-inputs-missingorspent',
+            'non-final',
+            'min relay fee not met',
+            '',
+            undefined
+        ])('treats %s as a failure', (message) => {
+            expect(isAlreadyBroadcastError(message)).toBe(false);
+        });
+    });
+
     describe('rescuedLockupFloor', () => {
         it.each([
             [100000, 90000],

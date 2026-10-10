@@ -506,6 +506,31 @@ export const fetchBlockHeight = async (
     }
 };
 
+/**
+ * The network name the native swap builders take. Signet (mutinynet
+ * included) and testnet4 share testnet3's address encoding; regtest has
+ * its own.
+ */
+export const swapNetworkName = (nodeInfo?: {
+    isRegTest?: boolean;
+    isTestNet?: boolean;
+    isSigNet?: boolean;
+    isMutinynet?: boolean;
+}): 'mainnet' | 'testnet' | 'regtest' => {
+    if (nodeInfo?.isRegTest) return 'regtest';
+    if (nodeInfo?.isTestNet || nodeInfo?.isSigNet || nodeInfo?.isMutinynet)
+        return 'testnet';
+    return 'mainnet';
+};
+
+// What bitcoind and esplora say when the transaction is already in the
+// mempool or a block, so broadcasting it again is not a failure
+const ALREADY_BROADCAST =
+    /txn-already-known|txn-already-in-mempool|already in block ?chain|transaction already exists/i;
+
+export const isAlreadyBroadcastError = (message?: string): boolean =>
+    ALREADY_BROADCAST.test(message || '');
+
 export const SWAPS_KEY = 'swaps';
 export const REVERSE_SWAPS_KEY = 'reverse-swaps';
 export const SWAPS_RESCUE_KEY = 'swaps-rescue-key';
