@@ -11,6 +11,7 @@ import Base64Utils from './../utils/Base64Utils';
 import VersionUtils from './../utils/VersionUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { toLnrpcAddressType } from './../utils/LndUtils';
+import { findPaymentByHash } from './../utils/PaymentLookupUtils';
 import { Hash as sha256Hash } from 'fast-sha256';
 import BigNumber from 'bignumber.js';
 
@@ -23,6 +24,10 @@ interface Headers {
 
 // keep track of all active calls so we can cancel when appropriate
 const calls = new Map<string, Promise<any>>();
+
+// how long lookupPayment holds TrackPaymentV2's stream open waiting for
+// a terminal update before concluding the payment is still in flight
+const TRACK_PAYMENT_TIMEOUT_MS = 10000;
 
 export default class LND {
     torSocksPort?: number = undefined;
@@ -269,8 +274,8 @@ export default class LND {
         );
     };
 
-    getRequest = (route: string, data?: any) =>
-        this.request(route, 'get', null, data);
+    getRequest = (route: string, data?: any, timeout?: number) =>
+        this.request(route, 'get', null, data, timeout);
     postRequest = (route: string, data?: any, timeout?: number) =>
         this.request(route, 'post', data, null, timeout);
     deleteRequest = (route: string) => this.request(route, 'delete', null);
@@ -378,7 +383,11 @@ export default class LND {
             route_hints: data.route_hints
         });
     getPayments = (
-        params: { maxPayments?: number; reversed?: boolean } = {
+        params: {
+            maxPayments?: number;
+            reversed?: boolean;
+            creationDateStart?: number;
+        } = {
             maxPayments: 500,
             reversed: true
         }
@@ -388,6 +397,10 @@ export default class LND {
                 params?.maxPayments ? `&max_payments=${params.maxPayments}` : ''
             }&reversed=${
                 params?.reversed !== undefined ? params.reversed : true
+            }${
+                params?.creationDateStart
+                    ? `&creation_date_start=${params.creationDateStart}`
+                    : ''
             }`
         );
 
@@ -530,11 +543,29 @@ export default class LND {
         if (data.pubkey) delete data.pubkey;
 
         const timeoutSeconds = Number(data.timeout_seconds) || 60;
+        // native transport deadline for the send request, past the
+        // forcedTimeout below
+        const requestTimeoutMs = (timeoutSeconds + 5) * 1000;
+        const dispatchDeadline = Date.now() + requestTimeoutMs;
 
         const forcedTimeout = async (time_ms: number, response: any) => {
             await new Promise((res) => setTimeout(res, time_ms));
             return response;
         };
+
+        // payment_timed_out marks the outcome as unknown on the node (the
+        // client gave up, not the payment), so the caller can track the
+        // payment to its terminal state instead of reporting failure.
+        // dispatch_deadline_ms is when the request is torn down natively;
+        // before then it may still reach the node, so a lookup finding no
+        // record isn't proof the payment was never sent.
+        const timedOutResponse = () => ({
+            payment_error: localeString(
+                'views.SendingLightning.paymentTimedOut'
+            ),
+            payment_timed_out: true,
+            dispatch_deadline_ms: dispatchDeadline
+        });
 
         // The request timeout must exceed the forcedTimeout below, or the
         // generic transport rejection wins the race and the user sees a
@@ -547,20 +578,73 @@ export default class LND {
                     ...data,
                     allow_self_payment: true
                 },
-                (timeoutSeconds + 5) * 1000
-            );
+                requestTimeoutMs
+            ).catch((err: any) => {
+                // safety net if the transport deadline ever fires first:
+                // a client-side timeout is outcome-unknown, not a failure
+                if (err?.message === 'Request timeout')
+                    return timedOutResponse();
+                throw err;
+            });
 
         const result: any = await Promise.race([
-            forcedTimeout((timeoutSeconds + 1) * 1000, {
-                payment_error: localeString(
-                    'views.SendingLightning.paymentTimedOut'
-                )
-            }),
+            forcedTimeout((timeoutSeconds + 1) * 1000, timedOutResponse()),
             call()
         ]);
 
         return result;
     };
+    // lnd's NOT_FOUND (code 5) answer from TrackPaymentV2, surfaced
+    // either as a parsed {error} stream message or a thrown Error
+    protected isPaymentNotFound = (err: any) => {
+        const code = err?.grpc_code ?? err?.code;
+        const message = typeof err === 'string' ? err : err?.message;
+        return code === 5 || !!message?.includes("payment isn't initiated");
+    };
+    // ListPayments fallback; see findPaymentByHash for when a miss counts
+    // as no record
+    protected scanForPayment = (data: {
+        payment_hash: string;
+        creation_date_start?: number;
+    }) =>
+        findPaymentByHash(
+            (request) => this.getPayments(request),
+            data.payment_hash,
+            data.creation_date_start
+        );
+    // LND has no unary per-payment lookup, but TrackPaymentV2's REST
+    // stream closes right after emitting the update for a payment already
+    // in a terminal state, so the buffered transport resolves it like one:
+    // a targeted query for exactly the two states the trackers act on,
+    // with NOT_FOUND as an authoritative no-record answer (no scan-page
+    // eviction caveat). A payment still in flight holds the stream open
+    // instead (no_inflight_updates suppresses its updates and the
+    // transport can't read partial bodies anyway), so a timeout means
+    // "exists, not terminal": resolve it via the scan, which also backs
+    // up any other transport failure before it propagates as unobservable
+    lookupPayment = (data: {
+        payment_hash: string;
+        creation_date_start?: number;
+    }) =>
+        this.getRequest(
+            // base64url with its padding kept: lnd's REST gateway rejects
+            // an unpadded 32-byte hash with "illegal base64 data"
+            `/v2/router/track/${Base64Utils.hexToBase64(data.payment_hash)
+                .replace(/\+/g, '-')
+                .replace(/\//g, '_')}`,
+            { no_inflight_updates: true },
+            TRACK_PAYMENT_TIMEOUT_MS
+        ).then(
+            (response: any) => {
+                if (response?.result) return response.result;
+                if (this.isPaymentNotFound(response?.error)) return null;
+                return this.scanForPayment(data);
+            },
+            (error: any) => {
+                if (this.isPaymentNotFound(error)) return null;
+                return this.scanForPayment(data);
+            }
+        );
     closeChannel = (urlParams?: Array<string>) => {
         let requestString = `/v1/channels/${urlParams && urlParams[0]}/${
             urlParams && urlParams[1]
@@ -1016,6 +1100,7 @@ export default class LND {
     supportsUnconfirmedTransactionOrigin = () => true;
     supportsLightningSends = () => true;
     supportsKeysend = () => true;
+    supportsPaymentLookup = () => true;
     supportsChannelManagement = () => true;
     supportsCircularRebalancing = () => true;
     supportsForceClose = () => true;

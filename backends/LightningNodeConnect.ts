@@ -16,9 +16,14 @@ import Base64Utils from '../utils/Base64Utils';
 import { snakeize } from '../utils/DataFormatUtils';
 import {
     decideLncPayEvent,
+    decideLncTrackEvent,
     deriveExpectedPaymentHash
 } from '../utils/LncPayUtils';
 import { localeString } from '../utils/LocaleUtils';
+import {
+    findPaymentByHash,
+    isPaymentLookupInconclusive
+} from '../utils/PaymentLookupUtils';
 import {
     toLnrpcAddressType,
     toWalletrpcAddressTypeName
@@ -27,6 +32,12 @@ import VersionUtils from '../utils/VersionUtils';
 
 import { Hash as sha256Hash } from 'fast-sha256';
 import BigNumber from 'bignumber.js';
+
+// how long lookupPayment waits for TrackPaymentV2's first update before
+// concluding the transport is wedged; an existing payment answers
+// immediately (no_inflight_updates is false) and an unknown hash errors
+// immediately, so this only fires when the stream isn't answering at all
+const TRACK_PAYMENT_TIMEOUT_MS = 10000;
 
 export default class LightningNodeConnect {
     lnc: any;
@@ -338,6 +349,7 @@ export default class LightningNodeConnect {
         params: {
             maxPayments?: number;
             reversed?: boolean;
+            creationDateStart?: number;
         } = {
             maxPayments: 500,
             reversed: true
@@ -350,9 +362,93 @@ export default class LightningNodeConnect {
                     max_payments: params.maxPayments
                 }),
                 reversed:
-                    params?.reversed !== undefined ? params.reversed : true
+                    params?.reversed !== undefined ? params.reversed : true,
+                ...(params?.creationDateStart && {
+                    creation_date_start: params.creationDateStart
+                })
             })
             .then((data: lnrpc.ListPaymentsResponse) => snakeize(data));
+    // ListPayments fallback; see findPaymentByHash for when a miss counts
+    // as no record
+    private scanForPayment = async (data: {
+        payment_hash: string;
+        creation_date_start?: number;
+    }) =>
+        await findPaymentByHash(
+            (request) => this.getPayments(request),
+            data.payment_hash,
+            data.creation_date_start
+        );
+    // trackPaymentV2 gives a real per-payment query: the first update
+    // matching this hash is the payment's current state
+    // (no_inflight_updates is false, so an in-flight payment answers
+    // immediately) and NOT_FOUND is a no-record answer. Like sendPaymentV2,
+    // results arrive on a channel shared by every concurrent track call
+    // with no request correlation, so updates are matched by hash; error
+    // strings carry no hash and may belong to another lookup's stream, so
+    // absence is confirmed against the dispatch-anchored page scan before
+    // answering null, and any other failure degrades to that scan. The
+    // underlying stream can't be cancelled from JS and stays open
+    // node-side until the payment is terminal; only the listener is
+    // removed after the first matching update.
+    lookupPayment = async (data: {
+        payment_hash: string;
+        creation_date_start?: number;
+    }) => {
+        const expectedHash = data.payment_hash.toLowerCase();
+        try {
+            const decision: any = await new Promise((resolve, reject) => {
+                const streamingCall = this.lnc.lnd.router.trackPaymentV2({
+                    payment_hash: Base64Utils.hexToBase64(data.payment_hash),
+                    no_inflight_updates: false
+                });
+
+                const { LncModule } = NativeModules;
+                const eventEmitter = new NativeEventEmitter(LncModule);
+
+                let settled = false;
+                let subscription: EmitterSubscription;
+                const settle = (fn: () => void) => {
+                    if (settled) return;
+                    settled = true;
+                    clearTimeout(timer);
+                    subscription.remove();
+                    fn();
+                };
+                const timer = setTimeout(
+                    () => settle(() => reject(new Error('Request timeout'))),
+                    TRACK_PAYMENT_TIMEOUT_MS
+                );
+
+                subscription = eventEmitter.addListener(
+                    streamingCall,
+                    (event: any) => {
+                        const trackDecision = decideLncTrackEvent(
+                            event?.result,
+                            expectedHash
+                        );
+                        if (trackDecision.kind === 'payment') {
+                            settle(() => resolve(trackDecision));
+                        } else if (trackDecision.kind === 'not_found') {
+                            settle(() => resolve(trackDecision));
+                        } else if (trackDecision.kind === 'error') {
+                            settle(() => reject(trackDecision.error));
+                        }
+                        // 'ignore': EOF or another payment's update
+                    }
+                );
+            });
+            if (decision.kind === 'payment') return decision.result;
+            // not_found: only answer null when the scan agrees. A full page
+            // that missed can't confirm the absence
+            return await this.scanForPayment(data).catch((e) => {
+                if (isPaymentLookupInconclusive(e)) throw e;
+                return null;
+            });
+        } catch {
+            return await this.scanForPayment(data);
+        }
+    };
     getNewAddress = async (data: any) =>
         await this.lnc.lnd.lightning
             .newAddress({
@@ -520,7 +616,14 @@ export default class LightningNodeConnect {
                         resolve({
                             payment_error: localeString(
                                 'views.SendingLightning.paymentTimedOut'
-                            )
+                            ),
+                            // outcome unknown on the node: lets the caller
+                            // track the payment to a terminal state
+                            // instead of reporting failure. No
+                            // dispatch_deadline_ms: the stream is never
+                            // cancelled, so the request could still reach
+                            // the node through the mailbox.
+                            payment_timed_out: true
                         })
                     ),
                 timeoutMs
@@ -1011,6 +1114,7 @@ export default class LightningNodeConnect {
     supportsUnconfirmedTransactionOrigin = () => true;
     supportsLightningSends = () => this.permSendLN;
     supportsKeysend = () => true;
+    supportsPaymentLookup = () => true;
     supportsChannelManagement = () => this.permOpenChannel;
     supportsCircularRebalancing = () => true;
     supportsForceClose = () => true;
