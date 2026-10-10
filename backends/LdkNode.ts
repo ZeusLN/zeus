@@ -1422,7 +1422,8 @@ export default class LdkNode {
             payment_hash: hash,
             payment_preimage: preimage,
             fee_msat: feeMsat,
-            payment_route: {},
+            // SendingLightning reads any payment_route as success
+            ...(pending ? {} : { payment_route: {} }),
             status: pending ? 'IN_FLIGHT' : 'SUCCEEDED'
         };
     };

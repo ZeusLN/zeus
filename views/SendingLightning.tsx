@@ -291,11 +291,14 @@ export default class SendingLightning extends React.Component<
                 maxPayments: 5,
                 reversed: true
             });
-            const matchingPayment = payments.find(
-                (payment: any) =>
-                    payment.payment_preimage ===
-                    TransactionsStore.payment_preimage
-            );
+            // An empty preimage would match any unsettled payment
+            const { payment_preimage } = TransactionsStore;
+            const matchingPayment = payment_preimage
+                ? payments.find(
+                      (payment: any) =>
+                          payment.payment_preimage === payment_preimage
+                  )
+                : undefined;
             this.setState({ currentPayment: matchingPayment });
         } catch (error) {
             this.setState({ currentPayment: null });
@@ -324,6 +327,7 @@ export default class SendingLightning extends React.Component<
     }
 
     private successfullySent(transactionStore: TransactionsStore): boolean {
+        if (this.inTransit(transactionStore)) return false;
         return (
             transactionStore.payment_route ||
             transactionStore.status === 'complete' ||
