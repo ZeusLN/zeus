@@ -1,4 +1,9 @@
 jest.mock('react-native-blob-util', () => ({ fetch: jest.fn() }));
+// NetworkUtils imports TorUtils, which loads the ESM-only native Tor module
+jest.mock('../utils/TorUtils', () => ({
+    doTorRequestRaw: jest.fn(),
+    RequestMethod: {}
+}));
 jest.mock('react-native-notifications', () => ({ Notifications: {} }));
 jest.mock('socket.io-client', () => ({ io: jest.fn() }));
 jest.mock('nostr-tools', () => ({

@@ -4,6 +4,19 @@ jest.mock('mobx-react', () => ({
 }));
 jest.mock('@rneui/themed', () => ({ LinearProgress: 'LinearProgress' }));
 jest.mock('react-native-blob-util', () => ({}));
+const mockNetworkFetch = jest.fn();
+jest.mock('../../utils/NetworkUtils', () => ({
+    networkFetch: (...args: any[]) => mockNetworkFetch(...args)
+}));
+const mockSwapStatusPoller = jest.fn();
+jest.mock('../../utils/SwapStatusPoller', () => ({
+    __esModule: true,
+    default: class {
+        constructor(...args: any[]) {
+            return mockSwapStatusPoller(...args);
+        }
+    }
+}));
 jest.mock('../../stores/Stores', () => ({}));
 jest.mock('../../utils/handleAnything', () => jest.fn());
 jest.mock('../../utils/BackendUtils', () => ({
@@ -455,5 +468,62 @@ describe('lockup verification retry wiring', () => {
         expect(store.verifyReverseLockup).toHaveBeenCalledTimes(1);
         expect(nativeClaim).not.toHaveBeenCalled();
         view.componentWillUnmount?.();
+    });
+});
+
+describe('swap update transport', () => {
+    const originalWebSocket = global.WebSocket;
+
+    beforeEach(() => {
+        global.WebSocket = jest.fn(() => ({ close: jest.fn() })) as any;
+        mockSwapStatusPoller.mockReset();
+        mockSwapStatusPoller.mockReturnValue({ close: jest.fn() });
+        mockNetworkFetch.mockReset();
+        mockNetworkFetch.mockResolvedValue({ json: () => ({}) });
+    });
+
+    afterEach(() => {
+        global.WebSocket = originalWebSocket;
+    });
+
+    const viewWithTor = (enableTor?: boolean) => {
+        const { store, view } = makeView();
+        Object.assign(store, {
+            settingsStore: { enableTor },
+            getHeaders: { Referral: 'pro' }
+        });
+        return view;
+    };
+
+    it('subscribes over the WebSocket when Tor is disabled', () => {
+        viewWithTor(false).openSwapUpdates('https://provider.test/v2', 'swap');
+
+        expect(global.WebSocket).toHaveBeenCalledWith('wss://swap.test');
+        expect(mockSwapStatusPoller).not.toHaveBeenCalled();
+    });
+
+    it('polls the status over Tor instead when Tor is enabled', () => {
+        viewWithTor(true).openSwapUpdates('https://provider.test/v2', 'swap');
+
+        expect(global.WebSocket).not.toHaveBeenCalled();
+        expect(mockSwapStatusPoller).toHaveBeenCalledWith(
+            'https://provider.test/v2',
+            'swap',
+            { Referral: 'pro' }
+        );
+    });
+
+    it('fetches submarine claim details over Tor when Tor is enabled', async () => {
+        await viewWithTor(true).fetchClaimDetails(
+            'swap',
+            'https://provider.test/v2'
+        );
+
+        expect(mockNetworkFetch).toHaveBeenCalledWith({
+            method: 'GET',
+            url: 'https://provider.test/v2/swap/submarine/swap/claim',
+            headers: { 'Content-Type': 'application/json' },
+            enableTor: true
+        });
     });
 });

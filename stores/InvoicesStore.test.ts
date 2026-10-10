@@ -1,5 +1,9 @@
 jest.mock('../stores/Stores', () => ({}));
 jest.mock('react-native-blob-util', () => ({}));
+const mockNetworkFetch = jest.fn();
+jest.mock('../utils/NetworkUtils', () => ({
+    networkFetch: (...args: any[]) => mockNetworkFetch(...args)
+}));
 jest.mock('../ldknode/LdkNodeInjection', () => ({}));
 jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
@@ -18,6 +22,8 @@ jest.mock('../utils/LocaleUtils', () => ({
 jest.mock('../utils/ErrorUtils', () => ({
     errorToUserFriendly: (error: Error) => error.message
 }));
+
+import { Alert } from 'react-native';
 
 import InvoicesStore from './InvoicesStore';
 import BackendUtils from '../utils/BackendUtils';
@@ -213,5 +219,67 @@ describe('InvoicesStore.createInvoice LSP decision', () => {
         expect(
             (await create(false, { forceLsp: true })).getZeroConfFee
         ).toHaveBeenCalled();
+    });
+});
+
+describe('InvoicesStore.createInvoice LNURL-withdraw callback', () => {
+    const lnurl: any = {
+        tag: 'withdrawRequest',
+        callback: 'https://service.example.com/withdraw',
+        k1: 'k1value',
+        domain: 'service.example.com'
+    };
+
+    const withdraw = async (enableTor?: boolean) => {
+        const store = new InvoicesStore(
+            { settings: {}, enableTor } as any,
+            { resetFee: jest.fn() } as any,
+            {} as any,
+            {} as any
+        );
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            payment_request: paymentRequest
+        });
+        await store.createInvoice({
+            memo: '',
+            value: '123',
+            expirySeconds: '3600',
+            noLsp: true,
+            lnurl
+        });
+        await new Promise((resolve) => setImmediate(resolve));
+    };
+
+    beforeEach(() => {
+        mockNetworkFetch.mockReset();
+        // An error envelope ends the flow right after the request
+        mockNetworkFetch.mockResolvedValue({
+            json: () => ({ status: 'ERROR', reason: 'stop' })
+        });
+        jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
+    it('sends the callback over Tor when Tor is enabled', async () => {
+        await withdraw(true);
+
+        expect(mockNetworkFetch).toHaveBeenCalledTimes(1);
+        const [{ method, url, enableTor }] = mockNetworkFetch.mock.calls[0];
+        expect(method).toBe('get');
+        expect(enableTor).toBe(true);
+        const query = new URL(url).searchParams;
+        expect(query.get('k1')).toBe('k1value');
+        expect(query.get('pr')).toBe(paymentRequest);
+    });
+
+    it('sends the callback directly when Tor is disabled', async () => {
+        await withdraw(false);
+
+        expect(mockNetworkFetch).toHaveBeenCalledWith(
+            expect.objectContaining({ enableTor: false })
+        );
     });
 });

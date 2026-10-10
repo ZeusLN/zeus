@@ -1,5 +1,4 @@
 import { action, observable, runInAction } from 'mobx';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
 
 import SettingsStore from './SettingsStore';
@@ -8,6 +7,7 @@ import NodeInfoStore from './NodeInfoStore';
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
+import { networkFetch } from '../utils/NetworkUtils';
 import UrlUtils from '../utils/UrlUtils';
 import ForwardEvent from '../models/ForwardEvent';
 
@@ -53,12 +53,13 @@ export default class FeeStore {
         this.loading = true;
         this.error = false;
         this.recommendedFees = {};
-        return ReactNativeBlobUtil.fetch(
-            'get',
-            `${UrlUtils.getMempoolApiUrl(
+        return networkFetch({
+            method: 'get',
+            url: `${UrlUtils.getMempoolApiUrl(
                 this.nodeInfoStore.nodeInfo
-            )}/v1/fees/recommended`
-        )
+            )}/v1/fees/recommended`,
+            enableTor: this.settingsStore.enableTor
+        })
             .then((response: any) => {
                 const status = response.info().status;
                 if (status == 200) {

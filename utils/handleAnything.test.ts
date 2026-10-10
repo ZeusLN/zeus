@@ -71,9 +71,11 @@ jest.mock('./AddressUtils', () => ({
     ZEUS_ECASH_GIFT_URL
 }));
 const mockDoTorRequest = jest.fn();
+const mockDoTorRequestRaw = jest.fn();
 jest.mock('./TorUtils', () => ({
     doTorRequest: (...args: any[]) => mockDoTorRequest(...args),
-    RequestMethod: { GET: 'GET' }
+    doTorRequestRaw: (...args: any[]) => mockDoTorRequestRaw(...args),
+    RequestMethod: { GET: 'GET', POST: 'POST', DELETE: 'DELETE' }
 }));
 jest.mock('./BackendUtils', () => ({
     supportsOnchainSends: () => mockSupportsOnchainSends,
@@ -126,8 +128,13 @@ jest.mock('../stores/Stores', () => ({
     invoicesStore: { getPayReq: jest.fn() },
     settingsStore: { settings: { locale: 'en' } }
 }));
+// networkFetch passes headers and body through even when they are undefined;
+// drop trailing undefined args so assertions can name only the method and URL
 jest.mock('react-native-blob-util', () => ({
-    fetch: (...args: any[]) => mockBlobUtilFetch(...args)
+    fetch: (...args: any[]) => {
+        while (args.length && args[args.length - 1] === undefined) args.pop();
+        return mockBlobUtilFetch(...args);
+    }
 }));
 jest.mock('react-native-encrypted-storage', () => ({}));
 jest.mock('react-native-fs', () => ({}));
@@ -529,6 +536,33 @@ describe('handleAnything', () => {
                 ]);
             }
         );
+
+        it('passes the Tor setting to the LNURL params lookup', async () => {
+            const LnurlParamsUtils = require('./LnurlParamsUtils');
+            const spy = jest
+                .spyOn(LnurlParamsUtils, 'getLnurlParams')
+                .mockResolvedValue(mockGetLnurlParams);
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'lnurlp://demo.lnbits.com/api/v1/lnurl/abc'
+            });
+            (settingsStore as any).enableTor = true;
+
+            try {
+                const result = await handleAnything(
+                    'lightning:lnurlp://demo.lnbits.com/api/v1/lnurl/abc'
+                );
+
+                expect(spy).toHaveBeenCalledWith(
+                    'https://demo.lnbits.com/api/v1/lnurl/abc',
+                    true
+                );
+                expect(mockGetLnurlParamsFn).not.toHaveBeenCalled();
+                expect(result[0]).toBe('LnurlPay');
+            } finally {
+                (settingsStore as any).enableTor = undefined;
+                spy.mockRestore();
+            }
+        });
 
         it('should handle LIGHTNING:lnurlp:// with .onion address and convert to http://', async () => {
             const data =
@@ -1670,8 +1704,6 @@ describe('handleAnything', () => {
             });
 
             it('still looks up a clearnet domain with an .onion label', async () => {
-                settingsStore.enableTor = true;
-
                 const result = await handleAnything(
                     'satoshi@pay.onion.example.com'
                 );
@@ -1682,6 +1714,96 @@ describe('handleAnything', () => {
                     'get',
                     'https://pay.onion.example.com/.well-known/lnurlp/satoshi'
                 );
+                expect(result[0]).toBe('ChoosePaymentMethod');
+            });
+        });
+
+        // With Tor enabled, clearnet lookups must not leave the device
+        // directly: the resolver and the recipient would see the user's IP
+        describe('clearnet Lightning addresses with Tor enabled', () => {
+            const LNURLP = 'https://mattcorallo.com/.well-known/lnurlp/matt';
+            let settingsStore: any;
+
+            beforeEach(() => {
+                settingsStore = require('../stores/Stores').settingsStore;
+                settingsStore.enableTor = true;
+                mockDoHResponse({});
+                mockDoTorRequest.mockReset();
+                mockDoTorRequest.mockImplementation(async (url: string) => ({
+                    Status: 0,
+                    AD: true,
+                    Question: [
+                        {
+                            name: new URL(url).searchParams.get('name'),
+                            type: 16
+                        }
+                    ],
+                    Answer: [txt(REAL_TXT)]
+                }));
+                mockDoTorRequestRaw.mockReset();
+                mockDoTorRequestRaw.mockResolvedValue({
+                    status: 200,
+                    body: JSON.stringify({
+                        callback: 'https://example.com/callback'
+                    })
+                });
+            });
+
+            afterEach(() => {
+                delete settingsStore.enableTor;
+            });
+
+            it('sends the DoH lookup over Tor', async () => {
+                const result = await handleAnything(ADDRESS);
+
+                expect(mockDnsFetch).not.toHaveBeenCalled();
+                expect(mockDoTorRequest).toHaveBeenCalledWith(
+                    'https://cloudflare-dns.com/dns-query?name=matt.user._bitcoin-payment.mattcorallo.com&type=TXT',
+                    'GET',
+                    undefined,
+                    { accept: 'application/dns-json' }
+                );
+                expect(result).toEqual([
+                    'ChoosePaymentMethod',
+                    expect.objectContaining({
+                        offer: 'lno1zr5qyugqgskrk70kqmuq'
+                    })
+                ]);
+            });
+
+            it('sends the LNURL lookup over Tor', async () => {
+                mockDoTorRequest.mockRejectedValue(new Error('no record'));
+
+                const result = await handleAnything(ADDRESS);
+
+                expect(mockDoTorRequestRaw).toHaveBeenCalledWith(
+                    LNURLP,
+                    'GET',
+                    undefined,
+                    undefined
+                );
+                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+                expect(result).toEqual([
+                    'LnurlPay',
+                    {
+                        lnurlParams: {
+                            callback: 'https://example.com/callback'
+                        },
+                        satAmount: undefined,
+                        ecash: false,
+                        lightningAddress: ADDRESS
+                    }
+                ]);
+            });
+
+            it('does not retry directly when the Tor LNURL lookup fails', async () => {
+                mockDoTorRequestRaw.mockRejectedValue(new Error('tor failure'));
+
+                const result = await handleAnything(ADDRESS);
+
+                // the BOLT 12 offer from DNS is still offered
+                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+                expect(mockDnsFetch).not.toHaveBeenCalled();
                 expect(result[0]).toBe('ChoosePaymentMethod');
             });
         });

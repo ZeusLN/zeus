@@ -1,15 +1,16 @@
 import React, { Component } from 'react';
 import { Alert, View, I18nManager, TouchableOpacity } from 'react-native';
 import { SharedValue } from 'react-native-reanimated';
-import { getParams as getlnurlParams, LNURLWithdrawParams } from 'js-lnurl';
+import { LNURLWithdrawParams } from 'js-lnurl';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
 
 import BackendUtils from '../../utils/BackendUtils';
+import { getLnurlParams } from '../../utils/LnurlParamsUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
-import { cashuStore } from '../../stores/Stores';
+import { cashuStore, settingsStore } from '../../stores/Stores';
 import SyncStore from '../../stores/SyncStore';
 
 import SwipeableRowAction from './SwipeableRowAction';
@@ -105,13 +106,14 @@ export default class EcashSwipeableRow extends Component<
         lnurlParams?: any,
         navigation?: any
     ): Promise<void> => {
-        const params = lnurlParams || (await getlnurlParams(lightning ?? ''));
+        const params =
+            lnurlParams ||
+            (await getLnurlParams(lightning ?? '', settingsStore.enableTor));
         if (
             params &&
             params.status === 'ERROR' &&
             params.domain?.endsWith('.onion')
         ) {
-            // TODO handle fetching of params with internal Tor
             throw new Error(`${params.domain} says: ${params.reason}`);
         }
 

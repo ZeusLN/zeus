@@ -1,7 +1,6 @@
 import url from 'url';
 import * as React from 'react';
 import BigNumber from 'bignumber.js';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Alert, Image, StyleSheet, Text, View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import querystring from 'querystring-es3';
@@ -22,6 +21,7 @@ import ContactStore from '../../stores/ContactStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
 import UnitsStore from '../../stores/UnitsStore';
+import { settingsStore } from '../../stores/Stores';
 
 import Contact from '../../models/Contact';
 
@@ -30,6 +30,7 @@ import LnurlPayMetadata from './Metadata';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getRawAmountFromSats, getSatAmount } from '../../utils/AmountUtils';
+import { networkFetch } from '../../utils/NetworkUtils';
 import {
     verifyLnurlPayInvoice,
     isLnurlCallbackAllowed
@@ -296,7 +297,11 @@ export default class LnurlPay extends React.Component<
         u.search = querystring.stringify(qs);
         u.query = querystring.stringify(qs);
 
-        ReactNativeBlobUtil.fetch('get', url.format(u))
+        networkFetch({
+            method: 'get',
+            url: url.format(u),
+            enableTor: settingsStore.enableTor
+        })
             .then((response: any) => {
                 try {
                     const data = response.json();

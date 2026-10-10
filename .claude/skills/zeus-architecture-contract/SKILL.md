@@ -293,7 +293,7 @@ campaigns). Cite them; don't silently "clean them up".
 | `readLndLog` stub returns `['']` | `lndmobile/index.ts`, marked `TODO remove` | Open |
 | LNC permissions hard-coded to `true` | `backends/LightningNodeConnect.ts checkPerms`: "ZEUS-3642: we are temporarily returning all perms as true until resolved" (github issue #3642) | Open — perm-derived `supports*` on LNC is untrustworthy; read-only pairings show send UI |
 | WebSocket streams bypass Tor | `backends/LND.ts wsReq` constructs `new WebSocket(url, ...)` directly — no `doTorRequest`/SOCKS path, unlike `restReq` which routes through Tor when enabled | Open privacy gap |
-| LNURL params unfetchable from `.onion` in some flows | `// TODO handle fetching of params with internal Tor` at 3 call sites: `utils/handleAnything.ts`, `components/LayerBalances/LightningSwipeableRow.tsx`, `components/LayerBalances/EcashSwipeableRow.tsx` | Open |
+| LNURL params bypass in-app Tor | js-lnurl `getParams` fetches with cross-fetch (no Tor). `utils/LnurlParamsUtils.ts getLnurlParams` mirrors it over `networkFetch` when `enableTor` is set; all 3 call sites use it | Fixed for Tor-on; with Tor off, `.onion` LNURLs still need a system-wide Tor (Orbot) |
 | `fetchLock` not released on early-return error paths in `fetchData` | `views/Wallet/Wallet.tsx` (§1); only cleared at fetchData end or by `setConnectingStatus(true)` | Open, part of node-lifecycle races — see zeus-node-lifecycle-campaign |
 
 ## Invariants quick card

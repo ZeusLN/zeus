@@ -49,7 +49,8 @@ jest.mock('../utils/MigrationUtils', () => ({
 }));
 jest.mock('../utils/TorUtils', () => ({
     doTorRequest: jest.fn(),
-    RequestMethod: {}
+    doTorRequestRaw: jest.fn(),
+    RequestMethod: { GET: 'GET' }
 }));
 jest.mock('../utils/LdkNodeUtils', () => ({
     DEFAULT_SCORER_URL: '',
@@ -89,6 +90,7 @@ import SwapStore from './SwapStore';
 import BackendUtils from '../utils/BackendUtils';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import Storage from '../storage';
+import { doTorRequestRaw } from '../utils/TorUtils';
 import Swap from '../models/Swap';
 import {
     REVERSE_SWAPS_KEY,
@@ -150,10 +152,10 @@ const VALID = swapDetails();
 // real taproot address the provider could control
 const OTHER_ADDRESS = swapDetails(OTHER_PUBKEY).lockupAddress;
 
-const newStore = () =>
+const newStore = (enableTor = false) =>
     new SwapStore(
         { nodeInfo: { nodeId: 'node-pubkey', isTestNet: false } } as any,
-        { settings: {}, implementation: 'lnd' } as any
+        { settings: {}, implementation: 'lnd', enableTor } as any
     );
 
 beforeEach(() => {
@@ -337,15 +339,57 @@ describe('SwapStore.verifyReverseLockup', () => {
         expect(fetchMock).toHaveBeenCalledTimes(3);
         expect(fetchMock).toHaveBeenCalledWith(
             'GET',
-            `https://mempool.test/api/tx/${LOCKUP_TX.getId()}`
+            `https://mempool.test/api/tx/${LOCKUP_TX.getId()}`,
+            undefined,
+            undefined
         );
         expect(fetchMock).toHaveBeenCalledWith(
             'GET',
-            `https://mempool.test/api/tx/${LOCKUP_TX.getId()}/outspend/0`
+            `https://mempool.test/api/tx/${LOCKUP_TX.getId()}/outspend/0`,
+            undefined,
+            undefined
         );
         expect(fetchMock).toHaveBeenCalledWith(
             'GET',
-            'https://mempool.test/api/blocks/tip/height'
+            'https://mempool.test/api/blocks/tip/height',
+            undefined,
+            undefined
+        );
+    });
+
+    it('routes the lockup lookups through Tor when Tor is enabled', async () => {
+        esplora(200);
+        const direct = fetchMock.getMockImplementation()!;
+        (doTorRequestRaw as jest.Mock).mockImplementation(
+            async (url: string) => {
+                const response = await direct('GET', url);
+                const body = response.json
+                    ? JSON.stringify(response.json())
+                    : response.text();
+                return { status: response.info().status, body };
+            }
+        );
+        await expect(
+            newStore(true).verifyReverseLockup(storedSwap(), LOCKUP_TX.toHex())
+        ).resolves.toEqual({ status: 'ok' });
+        expect(doTorRequestRaw).toHaveBeenCalledTimes(3);
+        expect(doTorRequestRaw).toHaveBeenCalledWith(
+            `https://mempool.test/api/tx/${LOCKUP_TX.getId()}`,
+            'GET',
+            undefined,
+            undefined
+        );
+        expect(doTorRequestRaw).toHaveBeenCalledWith(
+            `https://mempool.test/api/tx/${LOCKUP_TX.getId()}/outspend/0`,
+            'GET',
+            undefined,
+            undefined
+        );
+        expect(doTorRequestRaw).toHaveBeenCalledWith(
+            'https://mempool.test/api/blocks/tip/height',
+            'GET',
+            undefined,
+            undefined
         );
     });
 
@@ -451,7 +495,9 @@ describe('SwapStore.verifyReverseLockup', () => {
         });
         expect(fetchMock).toHaveBeenCalledWith(
             'GET',
-            `https://mempool.test/api/tx/${tx.getId()}/outspend/1`
+            `https://mempool.test/api/tx/${tx.getId()}/outspend/1`,
+            undefined,
+            undefined
         );
     });
 

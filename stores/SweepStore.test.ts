@@ -6,6 +6,18 @@ jest.mock('../utils/UrlUtils', () => ({
 jest.mock('../utils/LocaleUtils', () => ({
     localeString: (key: string) => key
 }));
+// The direct networkFetch path needs react-native-blob-util's native module,
+// so adapt the global fetch mocks below to its response shape instead
+jest.mock('../utils/NetworkUtils', () => ({
+    networkFetch: async ({ url }: { url: string }) => {
+        const res = await (global as any).fetch(url);
+        return {
+            info: () => ({ status: res.ok ? 200 : 500 }),
+            json: () => res.json(),
+            text: () => res.text()
+        };
+    }
+}));
 
 import * as bitcoin from 'bitcoinjs-lib';
 
@@ -23,6 +35,8 @@ afterEach(() => jest.restoreAllMocks());
 // ignored; the node's network decides which addresses are derived.
 const WIF = 'KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn';
 
+const settingsStore = { enableTor: false } as any;
+
 const queriedAddresses = (fetchMock: jest.Mock) =>
     fetchMock.mock.calls.map(
         ([url]: [string]) =>
@@ -34,7 +48,7 @@ const prepare = async (nodeInfo: any) => {
         Promise.resolve({ ok: true, json: () => Promise.resolve([]) })
     );
     (global as any).fetch = fetchMock;
-    const store = new SweepStore({ nodeInfo } as any);
+    const store = new SweepStore({ nodeInfo } as any, settingsStore);
     await store.prepareSweepInputs(WIF);
     return { store, addresses: queriedAddresses(fetchMock) };
 };
@@ -175,9 +189,12 @@ describe('SweepStore end-to-end sweep', () => {
     cases.forEach(({ type, payment }) => {
         it(`sweeps a ${type} UTXO to a regtest destination`, async () => {
             mockMempool(payment.address!, fundingTx(payment.output!));
-            const store = new SweepStore({
-                nodeInfo: { isRegTest: true }
-            } as any);
+            const store = new SweepStore(
+                {
+                    nodeInfo: { isRegTest: true }
+                } as any,
+                settingsStore
+            );
 
             await store.prepareSweepInputs(WIF);
             expect(store.sweepError).toBe(false);
@@ -208,7 +225,10 @@ describe('SweepStore end-to-end sweep', () => {
             network
         });
         mockMempool(payment.address!, fundingTx(payment.output!));
-        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        const store = new SweepStore(
+            { nodeInfo: { isRegTest: true } } as any,
+            settingsStore
+        );
 
         await store.prepareSweepInputs(WIF);
 
@@ -220,7 +240,10 @@ describe('SweepStore end-to-end sweep', () => {
     it('fails when fees exceed the swept amount', async () => {
         const payment = cases[2].payment;
         mockMempool(payment.address!, fundingTx(payment.output!));
-        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        const store = new SweepStore(
+            { nodeInfo: { isRegTest: true } } as any,
+            settingsStore
+        );
         await store.prepareSweepInputs(WIF);
 
         store.destination = DESTINATION;
@@ -236,7 +259,10 @@ describe('SweepStore end-to-end sweep', () => {
     it('fails when the destination is for another network', async () => {
         const payment = cases[2].payment;
         mockMempool(payment.address!, fundingTx(payment.output!));
-        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        const store = new SweepStore(
+            { nodeInfo: { isRegTest: true } } as any,
+            settingsStore
+        );
         await store.prepareSweepInputs(WIF);
 
         store.destination = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
@@ -248,7 +274,7 @@ describe('SweepStore end-to-end sweep', () => {
 
     it('reports a failed UTXO lookup', async () => {
         (global as any).fetch = jest.fn(() => Promise.resolve({ ok: false }));
-        const store = new SweepStore({ nodeInfo: {} } as any);
+        const store = new SweepStore({ nodeInfo: {} } as any, settingsStore);
 
         await store.prepareSweepInputs(WIF);
 
@@ -268,7 +294,10 @@ describe('SweepStore end-to-end sweep', () => {
                 ? Promise.resolve({ ok: false })
                 : utxoLookup(url)
         );
-        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        const store = new SweepStore(
+            { nodeInfo: { isRegTest: true } } as any,
+            settingsStore
+        );
 
         await store.prepareSweepInputs(WIF);
 
