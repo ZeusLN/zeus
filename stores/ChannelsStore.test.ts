@@ -5,6 +5,7 @@ jest.mock('../utils/BackendUtils', () => ({
     getChannels: jest.fn(),
     getPendingChannels: jest.fn(),
     getNodeInfo: jest.fn(() => Promise.resolve(null)),
+    closeChannel: jest.fn(),
     connectPeer: jest.fn(),
     openChannelSync: jest.fn(),
     supportsClosedChannels: () => false,
@@ -194,6 +195,89 @@ describe('ChannelsStore pending close balance', () => {
             [],
             [{ txids: ['commit'], limboBalance: 96860 }]
         );
+    });
+});
+
+describe('ChannelsStore.closeChannel', () => {
+    let store: ChannelsStore;
+    let balanceStore: {
+        setPendingCloseBalance: jest.Mock;
+        getCombinedBalance: jest.Mock;
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.useFakeTimers();
+        balanceStore = {
+            setPendingCloseBalance: jest.fn(),
+            getCombinedBalance: jest.fn(() => Promise.resolve())
+        };
+        store = new ChannelsStore(
+            { implementation: 'cln-rest' } as any,
+            balanceStore as any
+        );
+        jest.mocked(BackendUtils.getChannels).mockResolvedValue({
+            channels: []
+        } as any);
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('reloads channels and balances when the close request succeeds', async () => {
+        jest.mocked(BackendUtils.closeChannel).mockResolvedValue({} as any);
+
+        await store.closeChannel(undefined, 'chan');
+
+        expect(BackendUtils.getChannels).toHaveBeenCalledTimes(1);
+        expect(balanceStore.getCombinedBalance).toHaveBeenCalledTimes(1);
+        expect(store.closeChannelErr).toBeNull();
+    });
+
+    it('reloads channels and balances when the close request fails', async () => {
+        jest.mocked(BackendUtils.closeChannel).mockRejectedValue(
+            new Error('fee proposal exceeds max fee')
+        );
+
+        await store.closeChannel(undefined, 'chan');
+
+        expect(BackendUtils.getChannels).toHaveBeenCalledTimes(1);
+        expect(balanceStore.getCombinedBalance).toHaveBeenCalledTimes(1);
+        expect(store.closeChannelErr).toBeTruthy();
+    });
+
+    it('reloads channels and balances when the close request is still pending after six seconds', async () => {
+        jest.mocked(BackendUtils.closeChannel).mockReturnValue(
+            new Promise(() => {}) as any
+        );
+
+        const close = store.closeChannel(undefined, 'chan');
+        await jest.advanceTimersByTimeAsync(6000);
+        await close;
+
+        expect(BackendUtils.getChannels).toHaveBeenCalledTimes(1);
+        expect(balanceStore.getCombinedBalance).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores a result that arrives after the forced resolution', async () => {
+        let reject: (error: Error) => void = () => {};
+        jest.mocked(BackendUtils.closeChannel).mockReturnValue(
+            new Promise((_, rej) => {
+                reject = rej;
+            }) as any
+        );
+
+        const close = store.closeChannel(undefined, 'chan');
+        await jest.advanceTimersByTimeAsync(6000);
+        await close;
+        // the REST close call stays open until the request times out
+        reject(new Error('Request timeout'));
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(store.closeChannelErr).toBeNull();
+        expect(BackendUtils.getChannels).toHaveBeenCalledTimes(1);
+        expect(balanceStore.getCombinedBalance).toHaveBeenCalledTimes(1);
     });
 });
 
