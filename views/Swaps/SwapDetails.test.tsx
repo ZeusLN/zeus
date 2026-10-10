@@ -62,7 +62,10 @@ jest.mock('../../assets/images/SVG/QR.svg', () => 'QR');
 import { Alert } from 'react-native';
 import SwapDetails from './SwapDetails';
 import lndMobile from '../../lndmobile/LndMobileInjection';
-import { ReverseClaimTransaction } from '../../models/ClaimTransaction';
+import {
+    ReverseClaimTransaction,
+    SubmarineClaimTransaction
+} from '../../models/ClaimTransaction';
 
 const nativeClaim = lndMobile.swaps.createReverseClaimTransaction as jest.Mock;
 
@@ -152,6 +155,19 @@ it('rechecks after a failed native attempt and stops if the output has been spen
     expect(nativeClaim).toHaveBeenCalledTimes(1);
 });
 
+it('builds the submarine claim for the host without its /v2 suffix', async () => {
+    const { view } = makeView();
+    await view.createClaimTransaction(
+        { transactionHash: 'hash', pubNonce: 'nonce' },
+        { id: 'swap' },
+        {},
+        'https://provider.test/v2'
+    );
+    expect(SubmarineClaimTransaction.build).toHaveBeenCalledWith(
+        expect.objectContaining({ endpoint: 'https://provider.test' })
+    );
+});
+
 it('claims a verified lockup and clears a previous waiting notice', async () => {
     const { view, claim } = makeView();
     view.setState({ lockupNotice: 'waiting' });
@@ -217,6 +233,20 @@ describe('lockup verification retry wiring', () => {
             expect.objectContaining({ destinationAddress: undefined })
         );
         expect(nativeClaim).toHaveBeenCalledTimes(1);
+        view.componentWillUnmount?.();
+    });
+
+    it('builds the reverse claim for the route host without its /v2 suffix', async () => {
+        const { view } = makeView({
+            id: 'swap',
+            destinationAddress: 'bc1qpicked'
+        });
+        nativeClaim.mockResolvedValue(undefined);
+        await sendConfirmedLockup(view);
+        expect(
+            (ReverseClaimTransaction.build as jest.Mock).mock.calls[0][0]
+                .endpoint
+        ).toBe('https://provider.test');
         view.componentWillUnmount?.();
     });
 

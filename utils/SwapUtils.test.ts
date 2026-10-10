@@ -36,6 +36,7 @@ import {
     fetchBlockHeight,
     isValidRescueKey,
     refundFailureAction,
+    nativeSwapEndpoint,
     swapWebSocketUrl,
     verifyReverseSwapInvoice,
     purgeLegacyRescueKeyFiles,
@@ -431,6 +432,49 @@ describe('SwapUtils', () => {
         it('returns 0 (unknown) when the backend reports no height', async () => {
             expect(await fetchBlockHeight(async () => undefined)).toBe(0);
             expect(await fetchBlockHeight(async () => 0)).toBe(0);
+        });
+    });
+
+    describe('nativeSwapEndpoint', () => {
+        it.each([
+            ['https://satsrouting.exchange/v2', 'https://satsrouting.exchange'],
+            ['https://swap.coinos.io/v2', 'https://swap.coinos.io'],
+            [
+                'https://api.testnet.boltz.exchange/v2',
+                'https://api.testnet.boltz.exchange'
+            ],
+            [
+                'https://swaps.zeuslsp.com/api/v2',
+                'https://swaps.zeuslsp.com/api'
+            ]
+        ])('strips /v2 from the default host %s', (endpoint, expected) => {
+            expect(nativeSwapEndpoint(endpoint)).toBe(expected);
+        });
+
+        it('leaves a custom host without /v2 unchanged', () => {
+            expect(nativeSwapEndpoint('http://192.168.1.5:9001')).toBe(
+                'http://192.168.1.5:9001'
+            );
+        });
+
+        it('handles a trailing slash', () => {
+            expect(nativeSwapEndpoint('http://192.168.1.5:9001/v2/')).toBe(
+                'http://192.168.1.5:9001'
+            );
+            expect(nativeSwapEndpoint('http://192.168.1.5:9001/')).toBe(
+                'http://192.168.1.5:9001'
+            );
+        });
+
+        it('keeps a /v2 that is not at the end', () => {
+            // replace('/v2', '') removed the first match anywhere, here
+            // breaking the host itself
+            expect(nativeSwapEndpoint('https://v2.swaps.example/v2')).toBe(
+                'https://v2.swaps.example'
+            );
+            expect(nativeSwapEndpoint('https://swaps.example/v2/api')).toBe(
+                'https://swaps.example/v2/api'
+            );
         });
     });
 

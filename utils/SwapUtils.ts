@@ -438,6 +438,15 @@ export const bigFloor = (big: BigNumber): BigNumber => {
 export const swapWebSocketUrl = (endpoint: string): string =>
     endpoint.replace(/^https/, 'wss').replace(/^http/, 'ws') + '/ws';
 
+/**
+ * Strips the trailing `/v2` from a swap host before it is handed to the
+ * native swap functions, which use boltz-client: it adds `/v2` to every
+ * request itself, so passing the stored host as is requested `/v2/v2/...`.
+ * Anchored to the end so a `/v2` elsewhere in a custom host is kept.
+ */
+export const nativeSwapEndpoint = (endpoint: string): string =>
+    endpoint.replace(/\/+$/, '').replace(/\/v2$/, '');
+
 export type RefundFailureAction =
     | { type: 'retry-uncooperative' }
     | { type: 'wait-for-timeout'; blocksRemaining?: number }
