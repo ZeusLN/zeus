@@ -116,6 +116,50 @@ describe('SendingLightning retry', () => {
         ).toHaveLength(1);
     });
 
+    it('does not show the success screen for a pending LDK keysend with a route', () => {
+        // TransactionsStore after an LdkNode keysend still pending at its
+        // timeout, from a build that returned payment_route with the result
+        const { view } = makeView({
+            status: 'IN_FLIGHT',
+            payment_route: {},
+            payment_preimage: ''
+        });
+
+        const tree = view.render();
+
+        expect(
+            findAll(tree, (node) => node.type === 'PaymentSuccessView')
+        ).toHaveLength(0);
+        expect(
+            findAll(
+                tree,
+                (node) =>
+                    node.props?.children === 'views.SendingLightning.inTransit'
+            )
+        ).toHaveLength(1);
+    });
+
+    it('shows the success screen for a completed payment', () => {
+        const { view } = makeView({
+            status: 'SUCCEEDED',
+            payment_route: {},
+            payment_preimage: 'aa'.repeat(32)
+        });
+
+        const tree = view.render();
+
+        expect(
+            findAll(tree, (node) => node.type === 'PaymentSuccessView')
+        ).toHaveLength(1);
+        expect(
+            findAll(
+                tree,
+                (node) =>
+                    node.props?.children === 'views.SendingLightning.inTransit'
+            )
+        ).toHaveLength(0);
+    });
+
     it('offers Try Again, going back to the previous screen, after a failure', () => {
         const { view, navigation } = makeView({
             error: true,
@@ -132,5 +176,33 @@ describe('SendingLightning retry', () => {
         expect(tryAgain).toHaveLength(1);
         tryAgain[0].props.onPress();
         expect(navigation.goBack).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('SendingLightning.fetchPayments', () => {
+    const failedPayment = { payment_preimage: '', getAmount: 3333 };
+    const settledPayment = {
+        payment_preimage: 'aa'.repeat(32),
+        getAmount: 1000
+    };
+
+    const currentPaymentFor = async (payment_preimage: string) => {
+        const { view } = makeView({ payment_preimage });
+        (view as any).props.PaymentsStore = {
+            getPayments: jest.fn(async () => [failedPayment, settledPayment])
+        };
+        view.setState = jest.fn() as any;
+
+        await view.fetchPayments();
+
+        return (view.setState as jest.Mock).mock.calls[0][0].currentPayment;
+    };
+
+    it('matches the sent payment by preimage', async () => {
+        expect(await currentPaymentFor('aa'.repeat(32))).toBe(settledPayment);
+    });
+
+    it('does not match an unsettled payment on an empty preimage', async () => {
+        expect(await currentPaymentFor('')).toBeUndefined();
     });
 });
