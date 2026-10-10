@@ -162,4 +162,29 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
         ).rejects.toThrow('utils.handleAnything.lightningAddressError');
         expect(navigation.navigate).not.toHaveBeenCalled();
     });
+
+    it('passes the Tor setting to the LNURL params lookup', async () => {
+        const LnurlParamsUtils = require('../../utils/LnurlParamsUtils');
+        const spy = jest
+            .spyOn(LnurlParamsUtils, 'getLnurlParams')
+            .mockResolvedValue({ tag: 'payRequest' });
+        mockSettingsStore.enableTor = true;
+
+        try {
+            await row.handleLnurlRequest(
+                'lnurl1abc',
+                undefined,
+                navigation,
+                {}
+            );
+
+            expect(spy).toHaveBeenCalledWith('lnurl1abc', true);
+            expect(navigation.navigate).toHaveBeenCalledWith(
+                'LnurlPay',
+                expect.anything()
+            );
+        } finally {
+            spy.mockRestore();
+        }
+    });
 });

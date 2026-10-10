@@ -1,5 +1,4 @@
 import { Alert, Platform } from 'react-native';
-import { getParams as getlnurlParams } from 'js-lnurl';
 import { findlnurl, decodelnurl } from 'js-lnurl/lib/helpers';
 
 import { nodeInfoStore, invoicesStore, settingsStore } from '../stores/Stores';
@@ -13,6 +12,7 @@ import ContactUtils from './ContactUtils';
 import { localeString } from './LocaleUtils';
 import NodeUriUtils from './NodeUriUtils';
 import NostrUtils from './NostrUtils';
+import { getLnurlParams } from './LnurlParamsUtils';
 import { networkFetch } from './NetworkUtils';
 import { doTorRequest, RequestMethod } from './TorUtils';
 
@@ -936,17 +936,16 @@ const handleAnything = async (
         // The input is already recognized as LNURL-shaped locally (bech32
         // decode, findlnurl, or an lnurl* URL path). That is enough to show
         // the paste badge, so never fetch during a clipboard probe: defer
-        // getlnurlParams (a live HTTP GET of an attacker-controllable target)
+        // getLnurlParams (a live HTTP GET of an attacker-controllable target)
         // to when the user actually acts on the value.
         if (isClipboardValue) return true;
         const raw: string = findlnurl(value) || lnurl || value || '';
-        return getlnurlParams(raw)
+        return getLnurlParams(raw, settingsStore.enableTor)
             .then((params: any) => {
                 if (
                     params.status === 'ERROR' &&
                     params.domain.endsWith('.onion')
                 ) {
-                    // TODO handle fetching of params with internal Tor
                     throw new Error(`${params.domain} says: ${params.reason}`);
                 }
 

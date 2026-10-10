@@ -537,6 +537,33 @@ describe('handleAnything', () => {
             }
         );
 
+        it('passes the Tor setting to the LNURL params lookup', async () => {
+            const LnurlParamsUtils = require('./LnurlParamsUtils');
+            const spy = jest
+                .spyOn(LnurlParamsUtils, 'getLnurlParams')
+                .mockResolvedValue(mockGetLnurlParams);
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'lnurlp://demo.lnbits.com/api/v1/lnurl/abc'
+            });
+            (settingsStore as any).enableTor = true;
+
+            try {
+                const result = await handleAnything(
+                    'lightning:lnurlp://demo.lnbits.com/api/v1/lnurl/abc'
+                );
+
+                expect(spy).toHaveBeenCalledWith(
+                    'https://demo.lnbits.com/api/v1/lnurl/abc',
+                    true
+                );
+                expect(mockGetLnurlParamsFn).not.toHaveBeenCalled();
+                expect(result[0]).toBe('LnurlPay');
+            } finally {
+                (settingsStore as any).enableTor = undefined;
+                spy.mockRestore();
+            }
+        });
+
         it('should handle LIGHTNING:lnurlp:// with .onion address and convert to http://', async () => {
             const data =
                 'LIGHTNING:lnurlp://example.onion/api/v1/lnurl/test123';
