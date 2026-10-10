@@ -1,9 +1,9 @@
 import BigNumber from 'bignumber.js';
 import { observable, computed } from 'mobx';
-const { chanFormat } = require('bolt07');
 
 import BaseModel from './BaseModel';
 import { lnrpc } from '../proto/lightning';
+import { formatScid } from '../utils/ScidUtils';
 
 interface HTLC {
     hash_lock: string;
@@ -244,13 +244,7 @@ export default class Channel extends BaseModel {
     @computed
     public get shortChannelId(): string | undefined {
         if (this.short_channel_id) return this.short_channel_id;
-        if (this.chan_id) {
-            try {
-                return chanFormat({ number: this.chan_id }).channel;
-            } catch (e) {
-                return undefined;
-            }
-        }
+        if (this.chan_id) return formatScid(this.chan_id);
         return undefined;
     }
 
@@ -258,10 +252,8 @@ export default class Channel extends BaseModel {
     public get aliasScids(): Array<string> {
         const scids: Array<string> = [];
         this.alias_scids?.forEach((scid) => {
-            try {
-                const formatted = chanFormat({ number: scid }).channel;
-                if (formatted !== '0x0x0') scids.push(formatted);
-            } catch (e) {}
+            const formatted = formatScid(scid);
+            if (formatted && formatted !== '0x0x0') scids.push(formatted);
         });
         return scids;
     }
@@ -269,14 +261,14 @@ export default class Channel extends BaseModel {
     @computed
     public get peerScidAlias(): string | undefined {
         const scid = this.peer_scid_alias
-            ? chanFormat({ number: this.peer_scid_alias }).channel
+            ? formatScid(this.peer_scid_alias)
             : undefined;
         return scid !== '0x0x0' ? scid : undefined;
     }
 
     @computed get zeroConfConfirmedScid(): string | undefined {
         const scid = this.zero_conf_confirmed_scid
-            ? chanFormat({ number: this.zero_conf_confirmed_scid }).channel
+            ? formatScid(this.zero_conf_confirmed_scid)
             : undefined;
         return scid !== '0x0x0' ? scid : undefined;
     }
