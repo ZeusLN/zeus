@@ -303,9 +303,17 @@ export default class WalletConfiguration extends React.Component<
 
                 const existingAccount = !!username;
 
+                // Clear the REST fields: the backend resolves host ||
+                // lndhubUrl and macaroonHex || accessToken, so anything left
+                // over from a typed or saved REST config would redirect the
+                // lndhub login, hidden from the lndhub form.
                 const stateUpdate: any = {
                     username,
                     password,
+                    host: '',
+                    port: '',
+                    macaroonHex: '',
+                    rune: '',
                     implementation: 'lndhub',
                     suggestImport: '',
                     importError: '',
@@ -533,8 +541,10 @@ export default class WalletConfiguration extends React.Component<
     // a host that is neither loopback nor a Tor onion service. A bare host
     // or an https:// scheme resolves to HTTPS in the backend getURL(), so
     // only an explicit http:// is treated as insecure. Gated per
-    // implementation because state retains fields the active backend never
-    // transmits credentials over (e.g. a stale host on an lndhub config).
+    // implementation because state retains fields some backends never read
+    // (e.g. a stale lndhubUrl on an lnd config). The lndhub case checks
+    // host || lndhubUrl because the LND backend it inherits resolves the
+    // request URL the same way, so a stale host wins.
     private hasInsecureCleartextTransport = (): boolean => {
         const { implementation, host, lndhubUrl } = this.state;
         switch (implementation) {
@@ -542,7 +552,7 @@ export default class WalletConfiguration extends React.Component<
             case 'cln-rest':
                 return UrlUtils.isCleartextHttpTransport(host);
             case 'lndhub':
-                return UrlUtils.isCleartextHttpTransport(lndhubUrl);
+                return UrlUtils.isCleartextHttpTransport(host || lndhubUrl);
             default:
                 return false;
         }
