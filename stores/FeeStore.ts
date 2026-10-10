@@ -8,6 +8,7 @@ import NodeInfoStore from './NodeInfoStore';
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
+import { sanitizeRecommendedFees } from '../utils/FeeUtils';
 import UrlUtils from '../utils/UrlUtils';
 import ForwardEvent from '../models/ForwardEvent';
 
@@ -62,9 +63,27 @@ export default class FeeStore {
             .then((response: any) => {
                 const status = response.info().status;
                 if (status == 200) {
+                    // These rates become defaults the user does not have
+                    // to look at (Sweep sends at one without a confirm
+                    // screen), so an implausible response is rejected
+                    // rather than trusted. Consumers already handle a
+                    // failed fetch by showing an error and asking for a
+                    // rate.
+                    const sanitized = sanitizeRecommendedFees(response.json());
+                    if (!sanitized) {
+                        console.error(
+                            'Rejected implausible recommended fees response'
+                        );
+                        runInAction(() => {
+                            this.recommendedFees = {};
+                            this.loading = false;
+                            this.error = true;
+                        });
+                        return;
+                    }
                     runInAction(() => {
                         this.loading = false;
-                        this.recommendedFees = response.json();
+                        this.recommendedFees = sanitized;
                     });
                     return this.recommendedFees;
                 } else {
