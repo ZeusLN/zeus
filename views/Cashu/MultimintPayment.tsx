@@ -24,14 +24,16 @@ import Screen from '../../components/Screen';
 import { sendingStyles } from '../../components/sendingStyles';
 
 import CashuStore from '../../stores/CashuStore';
-import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import {
     MintPaymentStatus,
     MintProgressInfo,
     MultinutPaymentStep
 } from '../../utils/CashuUtils';
-import { loadDonationLnurl } from '../../utils/DonationUtils';
+import {
+    calculateTotalWithDonation,
+    loadDonationLnurl
+} from '../../utils/DonationUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
@@ -47,11 +49,9 @@ interface MultimintPaymentProps {
         {
             paymentAmount?: string;
             donationAmount?: string;
-            enableDonations?: boolean;
         }
     >;
     CashuStore?: CashuStore;
-    NodeInfoStore?: NodeInfoStore;
 }
 
 interface MultimintPaymentState {
@@ -71,7 +71,7 @@ interface MultimintPaymentState {
     amountDonated: number | null;
 }
 
-@inject('CashuStore', 'NodeInfoStore')
+@inject('CashuStore')
 @observer
 export default class MultimintPayment extends React.Component<
     MultimintPaymentProps,
@@ -79,6 +79,7 @@ export default class MultimintPayment extends React.Component<
 > {
     private focusListener: (() => void) | undefined;
     private paymentAmountSat: number = 0;
+    private donationToSend: number = 0;
     private paymentHash?: string;
 
     constructor(props: MultimintPaymentProps) {
@@ -107,7 +108,16 @@ export default class MultimintPayment extends React.Component<
             CashuStore?.payReq?.getRequestAmount ||
             Number(route.params?.paymentAmount || 0);
         const feeEstimate = Number(CashuStore?.feeEstimate) || 0;
-        const totalNeeded = requestAmount + feeEstimate;
+        // The donation is drawn from the same mints right after the invoice
+        // is paid, so it has to be covered before the payment starts. It is
+        // resolved once here and executePayment sends that same number, so
+        // the coverage check and the send cannot disagree.
+        this.donationToSend = Number(route.params?.donationAmount) || 0;
+        const totalNeeded = calculateTotalWithDonation(
+            requestAmount,
+            feeEstimate,
+            this.donationToSend
+        );
 
         const hasNoMintsSelected = effectiveMints.length === 0;
         const hasInsufficientBalance =
@@ -211,7 +221,7 @@ export default class MultimintPayment extends React.Component<
     };
 
     executePayment = async () => {
-        const { CashuStore, NodeInfoStore, route } = this.props;
+        const { CashuStore, route } = this.props;
 
         try {
             this.setState((prev) => ({
@@ -254,13 +264,12 @@ export default class MultimintPayment extends React.Component<
             this.paymentHash =
                 CashuStore?.payReq?.payment_hash || this.paymentHash;
 
-            const { donationAmount, enableDonations } = route.params || {};
-            if (
-                NodeInfoStore?.nodeInfo?.isMainNet &&
-                enableDonations &&
-                donationAmount
-            ) {
-                void this.handleDonationPayment(donationAmount);
+            // Send exactly what the coverage check in the constructor
+            // counted, rather than deciding again here: re-reading the
+            // store could send a donation the balance was never checked
+            // against.
+            if (this.donationToSend > 0) {
+                void this.handleDonationPayment(this.donationToSend.toString());
             }
         } catch (error: any) {
             this.setState({
