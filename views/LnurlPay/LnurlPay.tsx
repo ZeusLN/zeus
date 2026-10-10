@@ -390,12 +390,6 @@ export default class LnurlPay extends React.Component<
                     tag: 'noop'
                 };
 
-                // Zaplocker data
-                const pmthash_sig = data.pmthash_sig;
-                const user_pubkey = data.user_pubkey;
-                const relays = data.relays;
-                const relays_sig = data.relays_sig;
-
                 if (ecash) {
                     // load up both the payment routes
                     InvoicesStore.getPayReq(pr);
@@ -446,12 +440,6 @@ export default class LnurlPay extends React.Component<
                             lnurl.metadata,
                             description_hash,
                             successAction,
-                            // Zaplocker
-                            pmthash_sig,
-                            user_pubkey,
-                            relays,
-                            relays_sig,
-                            pr,
                             lightningAddress
                         );
 
@@ -497,12 +485,6 @@ export default class LnurlPay extends React.Component<
                             lnurl.metadata,
                             description_hash,
                             successAction,
-                            // Zaplocker
-                            pmthash_sig,
-                            user_pubkey,
-                            relays,
-                            relays_sig,
-                            pr,
                             lightningAddress
                         );
                         navigation.navigate('PaymentRequest');

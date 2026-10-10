@@ -142,17 +142,11 @@ import NWCConnectionActivity from './views/Settings/NostrWalletConnect/NWCConnec
 import NWCConnectionActivityFilter from './views/Settings/NostrWalletConnect/NWCConnectionActivityFilter';
 // Lightning address
 import LightningAddress from './views/LightningAddress';
-import CreateZaplockerLightningAddress from './views/LightningAddress/CreateZaplockerLightningAddress';
 import CreateNWCLightningAddress from './views/LightningAddress/CreateNWCLightningAddress';
-import ZaplockerInfo from './views/LightningAddress/ZaplockerInfo';
 import NWCAddressInfo from './views/LightningAddress/NWCAddressInfo';
 import LightningAddressSettings from './views/LightningAddress/LightningAddressSettings';
 import LightningAddressQR from './views/LightningAddress/LightningAddressQR';
 import NWCAddressSettings from './views/LightningAddress/NWCAddressSettings';
-import Attestation from './views/LightningAddress/Attestation';
-import Attestations from './views/LightningAddress/Attestations';
-import NostrKeys from './views/LightningAddress/NostrKeys';
-import NostrRelays from './views/LightningAddress/NostrRelays';
 import ChangeAddress from './views/LightningAddress/ChangeAddress';
 import EditProfile from './views/LightningAddress/EditProfile';
 import ZeusPayPlus from './views/LightningAddress/ZeusPayPlus';
@@ -1305,21 +1299,9 @@ export default class App extends React.PureComponent {
                                                                 }
                                                             />
                                                             <Stack.Screen
-                                                                name="ZaplockerInfo" // @ts-ignore:next-line
-                                                                component={
-                                                                    ZaplockerInfo
-                                                                }
-                                                            />
-                                                            <Stack.Screen
                                                                 name="LightningAddressSettings" // @ts-ignore:next-line
                                                                 component={
                                                                     LightningAddressSettings
-                                                                }
-                                                            />
-                                                            <Stack.Screen
-                                                                name="CreateZaplockerLightningAddress" // @ts-ignore:next-line
-                                                                component={
-                                                                    CreateZaplockerLightningAddress
                                                                 }
                                                             />
                                                             <Stack.Screen
@@ -1341,18 +1323,6 @@ export default class App extends React.PureComponent {
                                                                 }
                                                             />
                                                             <Stack.Screen
-                                                                name="Attestations" // @ts-ignore:next-line
-                                                                component={
-                                                                    Attestations
-                                                                }
-                                                            />
-                                                            <Stack.Screen
-                                                                name="Attestation" // @ts-ignore:next-line
-                                                                component={
-                                                                    Attestation
-                                                                }
-                                                            />
-                                                            <Stack.Screen
                                                                 name="Contacts" // @ts-ignore:next-line
                                                                 component={
                                                                     Contacts
@@ -1368,18 +1338,6 @@ export default class App extends React.PureComponent {
                                                                 name="ContactDetails" // @ts-ignore:next-line
                                                                 component={
                                                                     ContactDetails
-                                                                }
-                                                            />
-                                                            <Stack.Screen
-                                                                name="NostrKeys" // @ts-ignore:next-line
-                                                                component={
-                                                                    NostrKeys
-                                                                }
-                                                            />
-                                                            <Stack.Screen
-                                                                name="NostrRelays" // @ts-ignore:next-line
-                                                                component={
-                                                                    NostrRelays
                                                                 }
                                                             />
                                                             <Stack.Screen

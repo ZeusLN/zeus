@@ -17,7 +17,6 @@ import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-import ZaplockerPayment from './ZaplockerPayment';
 import CashuPayment from './CashuPayment';
 
 import { showCopiedToast } from '../../components/CopiedToast';
@@ -54,10 +53,7 @@ interface LightningAddressProps {
     navigation: NativeStackNavigationProp<any, any>;
     LightningAddressStore: LightningAddressStore;
     SettingsStore: SettingsStore;
-    route: Route<
-        'LightningAddress',
-        { skipStatus: boolean; relays: string[]; nostrPrivateKey: string }
-    >;
+    route: Route<'LightningAddress', { skipStatus: boolean }>;
 }
 
 @inject('LightningAddressStore', 'SettingsStore')
@@ -142,37 +138,23 @@ export default class LightningAddress extends React.Component<
         const { navigation, LightningAddressStore, SettingsStore } = this.props;
         const {
             status,
-            redeemAllOpenPaymentsZaplocker,
             redeemAllOpenPaymentsCashu,
-            deleteLocalHashes,
             lightningAddressHandle,
             lightningAddressDomain,
             lightningAddressType,
             noffer,
             zeusPlusExpiresAt,
-            availableHashes,
-            localHashes,
             paid,
-            fees,
             error_msg,
             loading,
             redeeming,
-            redeemingAll,
-            readyToAutomaticallyAccept,
-            prepareToAutomaticallyAcceptStart,
-            deleteAndGenerateNewPreimages
+            redeemingAll
         } = LightningAddressStore;
 
         const { fontScale } = Dimensions.get('window');
 
-        const automaticallyAccept =
-            SettingsStore.settings?.lightningAddress?.automaticallyAccept;
         const notEmbedded = !BackendUtils.isLocalWallet();
-        const isReady =
-            notEmbedded ||
-            !prepareToAutomaticallyAcceptStart ||
-            !automaticallyAccept ||
-            readyToAutomaticallyAccept;
+        const isZaplocker = lightningAddressType === 'zaplocker';
         const cashuEnabled = SettingsStore.settings?.ecash?.enableCashu;
 
         const InfoButton = () => (
@@ -180,9 +162,7 @@ export default class LightningAddress extends React.Component<
                 <Icon
                     name="info"
                     onPress={() => {
-                        if (lightningAddressType === 'zaplocker') {
-                            navigation.navigate('ZaplockerInfo');
-                        } else if (lightningAddressType === 'cashu') {
+                        if (lightningAddressType === 'cashu') {
                             navigation.navigate('CashuLightningAddressInfo');
                         } else if (lightningAddressType === 'nwc') {
                             navigation.navigate('NWCAddressInfo');
@@ -198,7 +178,7 @@ export default class LightningAddress extends React.Component<
         const SettingsButton = () => (
             <TouchableOpacity
                 onPress={() => {
-                    if (lightningAddressType === 'zaplocker') {
+                    if (isZaplocker) {
                         navigation.navigate('LightningAddressSettings');
                     } else if (lightningAddressType === 'cashu') {
                         navigation.navigate('CashuLightningAddressSettings');
@@ -265,8 +245,6 @@ export default class LightningAddress extends React.Component<
             );
         };
 
-        const statusGood = availableHashes > 50;
-
         const zeusPlus = zeusPlusExpiresAt || false;
 
         return (
@@ -284,7 +262,7 @@ export default class LightningAddress extends React.Component<
                         rightComponent={
                             !loading && !redeeming && !redeemingAll ? (
                                 <Row>
-                                    {lightningAddressHandle && fees && (
+                                    {lightningAddressHandle && !isZaplocker && (
                                         <InfoButton />
                                     )}
                                     {lightningAddressHandle && (
@@ -322,23 +300,6 @@ export default class LightningAddress extends React.Component<
                         {!loading && !redeeming && !!error_msg && (
                             <ErrorMessage message={error_msg} dismissable />
                         )}
-                        {!loading &&
-                            !redeeming &&
-                            error_msg ===
-                                localeString(
-                                    'stores.LightningAddressStore.preimageNotFound'
-                                ) && (
-                                <Button
-                                    title={localeString(
-                                        'views.Settings.LightningAddress.generateNew'
-                                    )}
-                                    onPress={() =>
-                                        deleteAndGenerateNewPreimages().catch(
-                                            this.handleStoreError
-                                        )
-                                    }
-                                />
-                            )}
                         {!loading &&
                             !redeemingAll &&
                             !redeeming &&
@@ -420,72 +381,7 @@ export default class LightningAddress extends React.Component<
                                             </TouchableOpacity>
                                         )}
                                     </Row>
-                                    {lightningAddressType === 'zaplocker' && (
-                                        <Row
-                                            style={{
-                                                alignSelf: 'center',
-                                                marginTop: 10
-                                            }}
-                                        >
-                                            <Text
-                                                style={{
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book',
-
-                                                    color: themeColor('text'),
-                                                    textAlign: 'center'
-                                                }}
-                                            >
-                                                {`${localeString(
-                                                    'general.status'
-                                                )}: `}
-                                            </Text>
-                                            <Text
-                                                style={{
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book',
-                                                    color: statusGood
-                                                        ? themeColor('success')
-                                                        : themeColor('error'),
-                                                    textAlign: 'center'
-                                                }}
-                                            >
-                                                {statusGood
-                                                    ? localeString(
-                                                          'general.good'
-                                                      )
-                                                    : localeString(
-                                                          'general.bad'
-                                                      )}
-                                            </Text>
-                                            <Text
-                                                style={{
-                                                    fontFamily:
-                                                        'PPNeueMontreal-Book',
-                                                    fontSize: 11,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    ),
-                                                    left: 4
-                                                }}
-                                                infoModalText={[
-                                                    localeString(
-                                                        'views.Settings.LightningAddress.statusExplainer1'
-                                                    ),
-                                                    localeString(
-                                                        'views.Settings.LightningAddress.statusExplainer2'
-                                                    )
-                                                ]}
-                                            >
-                                                {` (${
-                                                    __DEV__
-                                                        ? `${localHashes}|`
-                                                        : ''
-                                                }${availableHashes})`}
-                                            </Text>
-                                        </Row>
-                                    )}
-                                    {lightningAddressType === 'zaplocker' && (
+                                    {isZaplocker && (
                                         <View
                                             style={{
                                                 marginTop: 20,
@@ -494,24 +390,20 @@ export default class LightningAddress extends React.Component<
                                         >
                                             <WarningMessage
                                                 message={localeString(
-                                                    paid && paid.length > 0
-                                                        ? 'zeuspay.zaplocker.retirement.redeemFirst'
-                                                        : 'zeuspay.zaplocker.retirement'
+                                                    'zeuspay.zaplocker.retired'
                                                 )}
                                             />
-                                            {(!paid || paid.length === 0) && (
-                                                <Button
-                                                    title={localeString(
-                                                        'zeuspay.zaplocker.retirement.switch'
-                                                    )}
-                                                    onPress={() =>
-                                                        navigation.navigate(
-                                                            'LightningAddressSettings'
-                                                        )
-                                                    }
-                                                    secondary
-                                                />
-                                            )}
+                                            <Button
+                                                title={localeString(
+                                                    'zeuspay.zaplocker.retirement.switch'
+                                                )}
+                                                onPress={() =>
+                                                    navigation.navigate(
+                                                        'LightningAddressSettings'
+                                                    )
+                                                }
+                                                secondary
+                                            />
                                         </View>
                                     )}
                                     <Row
@@ -956,40 +848,6 @@ export default class LightningAddress extends React.Component<
                             )}
                         {lightningAddressHandle && (
                             <>
-                                {lightningAddressType === 'zaplocker' &&
-                                    !isReady &&
-                                    !loading &&
-                                    !redeeming &&
-                                    !redeemingAll &&
-                                    paid &&
-                                    paid.length > 0 && (
-                                        <>
-                                            <View
-                                                style={{
-                                                    alignSelf: 'center'
-                                                }}
-                                            >
-                                                <Text
-                                                    style={{
-                                                        fontFamily:
-                                                            'PPNeueMontreal-Medium',
-                                                        color: themeColor(
-                                                            'highlight'
-                                                        ),
-                                                        margin: 5,
-                                                        alignSelf: 'center',
-                                                        marginTop: 10,
-                                                        marginBottom: 10
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'views.PaymentRequest.lndGettingReadyReceive'
-                                                    )}
-                                                </Text>
-                                                <LoadingIndicator size={30} />
-                                            </View>
-                                        </>
-                                    )}
                                 {!loading &&
                                     !redeeming &&
                                     !redeemingAll &&
@@ -1036,20 +894,6 @@ export default class LightningAddress extends React.Component<
                                             }) => {
                                                 if (
                                                     lightningAddressType ===
-                                                    'zaplocker'
-                                                ) {
-                                                    return (
-                                                        <ZaplockerPayment
-                                                            index={index}
-                                                            item={item}
-                                                            navigation={
-                                                                navigation
-                                                            }
-                                                            isReady={isReady}
-                                                        />
-                                                    );
-                                                } else if (
-                                                    lightningAddressType ===
                                                     'cashu'
                                                 ) {
                                                     return (
@@ -1082,26 +926,11 @@ export default class LightningAddress extends React.Component<
                                                 title={localeString(
                                                     'views.Settings.LightningAddress.redeemAll'
                                                 )}
-                                                onPress={() => {
-                                                    if (
-                                                        lightningAddressType ===
-                                                        'zaplocker'
-                                                    ) {
-                                                        redeemAllOpenPaymentsZaplocker().catch(
-                                                            this
-                                                                .handleStoreError
-                                                        );
-                                                    } else if (
-                                                        lightningAddressType ===
-                                                        'cashu'
-                                                    ) {
-                                                        redeemAllOpenPaymentsCashu().catch(
-                                                            this
-                                                                .handleStoreError
-                                                        );
-                                                    }
-                                                }}
-                                                disabled={!isReady}
+                                                onPress={() =>
+                                                    redeemAllOpenPaymentsCashu().catch(
+                                                        this.handleStoreError
+                                                    )
+                                                }
                                             />
                                         )}
                                         {lightningAddressType === 'nwc' && (
@@ -1148,24 +977,6 @@ export default class LightningAddress extends React.Component<
                                                 </TouchableOpacity>
                                             </Animated.View>
                                         )}
-                                        {__DEV__ &&
-                                            lightningAddressType ===
-                                                'zaplocker' && (
-                                                <View style={{ marginTop: 10 }}>
-                                                    <Button
-                                                        title={
-                                                            'Clear local hashes'
-                                                        }
-                                                        onPress={() =>
-                                                            deleteLocalHashes().catch(
-                                                                this
-                                                                    .handleStoreError
-                                                            )
-                                                        }
-                                                        secondary
-                                                    />
-                                                </View>
-                                            )}
                                     </>
                                 )}
                             </>
