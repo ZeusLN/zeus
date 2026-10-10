@@ -83,6 +83,8 @@ import {
 } from '../lndmobile/wallet';
 
 import {
+    LndInvoiceListParams,
+    LndPaymentListParams,
     toLnrpcAddressTypeNum,
     toWalletrpcAddressTypeNum
 } from '../utils/LndUtils';
@@ -112,7 +114,8 @@ export default class EmbeddedLND extends LND {
     getMyNodeInfo = async () => await getInfo();
     getNetworkInfo = async () => await getNetworkInfo();
     getRecoveryInfo = async () => await getRecoveryInfo();
-    getInvoices = async () => await listInvoices();
+    getInvoices = async (params?: LndInvoiceListParams) =>
+        await listInvoices(params);
     createInvoice = async (data: any) =>
         await addInvoice({
             amount: data.value ? Number(data.value) : undefined,
@@ -125,10 +128,8 @@ export default class EmbeddedLND extends LND {
             preimage: data.preimage,
             route_hints: data.route_hints
         });
-    getPayments = async (params?: {
-        maxPayments?: number;
-        reversed?: boolean;
-    }) => await listPayments(params);
+    getPayments = async (params?: LndPaymentListParams) =>
+        await listPayments(params);
     getNewAddress = async (data: any) =>
         await newAddress(
             toLnrpcAddressTypeNum(data?.type) as any,
