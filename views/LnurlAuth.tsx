@@ -1,6 +1,5 @@
 import url from 'url';
 import * as React from 'react';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import { inject, observer } from 'mobx-react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import querystring from 'querystring-es3';
@@ -22,6 +21,7 @@ import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { verifyLnurlAuthCallback } from '../utils/LnurlPayUtils';
+import { networkFetch } from '../utils/NetworkUtils';
 import {
     ecdsaSignDERHex,
     getCompressedPublicKeyHex
@@ -218,7 +218,11 @@ export default class LnurlAuth extends React.Component<
         u.search = querystring.stringify(qs);
         u.query = querystring.stringify(qs);
 
-        ReactNativeBlobUtil.fetch('get', url.format(u))
+        networkFetch({
+            method: 'get',
+            url: url.format(u),
+            enableTor: this.props.SettingsStore.enableTor
+        })
             .then((response: any) => {
                 try {
                     const data = response.json();

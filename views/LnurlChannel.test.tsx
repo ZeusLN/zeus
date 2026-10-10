@@ -31,11 +31,15 @@ jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/BackendUtils', () => ({
     connectPeer: jest.fn(() => Promise.resolve())
 }));
-jest.mock('react-native-blob-util', () => ({
-    fetch: jest.fn(() => Promise.resolve({ json: () => ({ status: 'OK' }) }))
+jest.mock('../utils/NetworkUtils', () => ({
+    networkFetch: jest.fn(() =>
+        Promise.resolve({ json: () => ({ status: 'OK' }) })
+    )
 }));
+jest.mock('../stores/Stores');
 
-import ReactNativeBlobUtil from 'react-native-blob-util';
+import { settingsStore } from '../stores/Stores';
+import { networkFetch } from '../utils/NetworkUtils';
 import BackendUtils from '../utils/BackendUtils';
 import LnurlChannel from './LnurlChannel';
 
@@ -60,13 +64,14 @@ const connectButton = () =>
     screen.getByRole('button', { name: 'views.LnurlChannel.connect' });
 
 const callbackQuery = () => {
-    const [, url] = (ReactNativeBlobUtil.fetch as jest.Mock).mock.calls[0];
+    const [{ url }] = (networkFetch as jest.Mock).mock.calls[0];
     return new URL(url).searchParams;
 };
 
 describe('LnurlChannel', () => {
     beforeEach(() => {
-        (ReactNativeBlobUtil.fetch as jest.Mock).mockClear();
+        (networkFetch as jest.Mock).mockClear();
+        delete (settingsStore as any).enableTor;
         (BackendUtils.connectPeer as jest.Mock).mockClear();
     });
 
@@ -92,12 +97,12 @@ describe('LnurlChannel', () => {
 
         expect(connectButton()).toBeDisabled();
         await fireEvent.press(connectButton());
-        expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+        expect(networkFetch).not.toHaveBeenCalled();
 
         await act(async () => connected());
         expect(connectButton()).toBeEnabled();
         await fireEvent.press(connectButton());
-        expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledTimes(1);
+        expect(networkFetch).toHaveBeenCalledTimes(1);
     });
 
     it('keeps Connect disabled when the peer connection fails', async () => {
@@ -138,5 +143,22 @@ describe('LnurlChannel', () => {
 
         await fireEvent.press(connectButton());
         expect(callbackQuery().get('private')).toBe('0');
+    });
+
+    it('sends the callback over Tor when Tor is enabled', async () => {
+        (settingsStore as any).enableTor = true;
+        await renderView();
+        await fireEvent.press(connectButton());
+        expect(networkFetch).toHaveBeenCalledWith(
+            expect.objectContaining({ method: 'get', enableTor: true })
+        );
+    });
+
+    it('sends the callback directly when Tor is disabled', async () => {
+        await renderView();
+        await fireEvent.press(connectButton());
+        expect(networkFetch).toHaveBeenCalledWith(
+            expect.objectContaining({ method: 'get', enableTor: undefined })
+        );
     });
 });

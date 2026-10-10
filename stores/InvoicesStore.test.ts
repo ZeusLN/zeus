@@ -1,5 +1,9 @@
 jest.mock('../stores/Stores');
-jest.mock('react-native-blob-util', () => ({ fetch: jest.fn() }));
+jest.mock('react-native-blob-util', () => ({}));
+const mockNetworkFetch = jest.fn();
+jest.mock('../utils/NetworkUtils', () => ({
+    networkFetch: (...args: any[]) => mockNetworkFetch(...args)
+}));
 jest.mock('../ldknode/LdkNodeInjection', () => ({}));
 jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
@@ -17,7 +21,7 @@ jest.mock('../utils/BackendUtils', () => ({
 }));
 jest.mock('../utils/LocaleUtils');
 
-import ReactNativeBlobUtil from 'react-native-blob-util';
+import { Alert } from 'react-native';
 
 import InvoicesStore from './InvoicesStore';
 import BackendUtils from '../utils/BackendUtils';
@@ -530,8 +534,8 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
             payment_request: 'lnbc-inner',
             r_hash: 'hash'
         });
-        (ReactNativeBlobUtil.fetch as jest.Mock).mockReset();
-        (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValue({
+        mockNetworkFetch.mockReset();
+        mockNetworkFetch.mockResolvedValue({
             json: () => ({ status: 'OK' })
         });
         return { store, lspStore };
@@ -543,9 +547,9 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
         ).mock.calls[0][0].value.toString();
 
     const submittedInvoice = () => {
-        const calls = (ReactNativeBlobUtil.fetch as jest.Mock).mock.calls;
+        const calls = mockNetworkFetch.mock.calls;
         if (!calls.length) return undefined;
-        return new URL(calls[0][1]).searchParams.get('pr');
+        return new URL(calls[0][0].url).searchParams.get('pr');
     };
 
     afterEach(() => {
@@ -776,7 +780,7 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
 
             expect(result).toBeUndefined();
             expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
-            expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+            expect(mockNetworkFetch).not.toHaveBeenCalled();
             expect(lspStore.resetFee).toHaveBeenCalled();
             expect(store.creatingInvoice).toBe(false);
         });
@@ -792,7 +796,7 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
             });
 
             expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
-            expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+            expect(mockNetworkFetch).not.toHaveBeenCalled();
         });
 
         it('shows a fee of all but 1 sat to the caller and stops when declined', async () => {
@@ -811,7 +815,7 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
 
             expect(confirmLspFee).toHaveBeenCalledWith(49999, '50000');
             expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
-            expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+            expect(mockNetworkFetch).not.toHaveBeenCalled();
         });
 
         it.each([
@@ -862,7 +866,7 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
             expect(result).toBeUndefined();
             expect(confirmLspFee).not.toHaveBeenCalled();
             expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
-            expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+            expect(mockNetworkFetch).not.toHaveBeenCalled();
             expect(lspStore.flow_error).toBe(true);
             expect(lspStore.flow_error_msg).toBe(
                 'stores.InvoicesStore.lspFeeAboveMaxWithdrawable'
@@ -1029,7 +1033,7 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
                 expect(confirmLspFee).toHaveBeenNthCalledWith(1, 2000, '50000');
                 expect(confirmLspFee).toHaveBeenNthCalledWith(2, 2500, '50000');
                 expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
-                expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+                expect(mockNetworkFetch).not.toHaveBeenCalled();
             });
 
             it('does not ask again when the new fee is zero', async () => {
@@ -1363,8 +1367,8 @@ describe('InvoicesStore superseded invoice requests', () => {
         } as any);
 
     const submittedK1s = () =>
-        (ReactNativeBlobUtil.fetch as jest.Mock).mock.calls.map((call) =>
-            new URL(call[1]).searchParams.get('k1')
+        mockNetworkFetch.mock.calls.map((call) =>
+            new URL(call[0].url).searchParams.get('k1')
         );
 
     const newStore = (lspStore: any = {}) =>
@@ -1407,8 +1411,8 @@ describe('InvoicesStore superseded invoice requests', () => {
     beforeEach(() => {
         (BackendUtils.createInvoice as jest.Mock).mockReset();
         (BackendUtils.getNewAddress as jest.Mock).mockReset();
-        (ReactNativeBlobUtil.fetch as jest.Mock).mockReset();
-        (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValue({
+        mockNetworkFetch.mockReset();
+        mockNetworkFetch.mockResolvedValue({
             json: () => ({ status: 'OK' })
         });
     });
@@ -1443,7 +1447,7 @@ describe('InvoicesStore superseded invoice requests', () => {
         });
         await flush();
         expectNextScreenKept(store);
-        expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+        expect(mockNetworkFetch).not.toHaveBeenCalled();
     });
 
     it('shows a stored invoice in one step and keeps it from a request still running', async () => {
@@ -1473,7 +1477,7 @@ describe('InvoicesStore superseded invoice requests', () => {
         expect(store.payment_request).toBe('lnbc-stored');
         expect(store.payment_request_amt).toBe('1000');
         expect(store.payment_request_lsp_fee).toBe(10000);
-        expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+        expect(mockNetworkFetch).not.toHaveBeenCalled();
     });
 
     it('keeps the newer invoice and withdraw when an older request finishes last', async () => {
@@ -1743,7 +1747,7 @@ describe('InvoicesStore superseded invoice requests', () => {
 
             await expect(pending).rejects.toThrow();
             expect(confirmLspFee).not.toHaveBeenCalled();
-            expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+            expect(mockNetworkFetch).not.toHaveBeenCalled();
         });
 
         it('leaves the fee state alone when a superseded request is declined', async () => {
@@ -1793,7 +1797,7 @@ describe('InvoicesStore superseded invoice requests', () => {
             ).mock.calls[0][2];
             expect(proposalIsCurrent()).toBe(false);
             expectNextScreenKept(store);
-            expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+            expect(mockNetworkFetch).not.toHaveBeenCalled();
         });
 
         it('keeps the fee shown when a superseded proposal fails', async () => {
@@ -1818,5 +1822,67 @@ describe('InvoicesStore superseded invoice requests', () => {
             expect(store.lspStore.feeId).toBe('next-quote');
             expectNextScreenKept(store);
         });
+    });
+});
+
+describe('InvoicesStore.createInvoice LNURL-withdraw callback', () => {
+    const lnurl: any = {
+        tag: 'withdrawRequest',
+        callback: 'https://service.example.com/withdraw',
+        k1: 'k1value',
+        domain: 'service.example.com'
+    };
+
+    const withdraw = async (enableTor?: boolean) => {
+        const store = new InvoicesStore(
+            { settings: {}, enableTor } as any,
+            { resetFee: jest.fn(), clearFee: jest.fn() } as any,
+            {} as any,
+            {} as any
+        );
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            payment_request: paymentRequest
+        });
+        await store.createInvoice({
+            memo: '',
+            value: '123',
+            expirySeconds: '3600',
+            noLsp: true,
+            lnurl
+        });
+        await new Promise((resolve) => setImmediate(resolve));
+    };
+
+    beforeEach(() => {
+        mockNetworkFetch.mockReset();
+        // An error envelope ends the flow right after the request
+        mockNetworkFetch.mockResolvedValue({
+            json: () => ({ status: 'ERROR', reason: 'stop' })
+        });
+        jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
+    it('sends the callback over Tor when Tor is enabled', async () => {
+        await withdraw(true);
+
+        expect(mockNetworkFetch).toHaveBeenCalledTimes(1);
+        const [{ method, url, enableTor }] = mockNetworkFetch.mock.calls[0];
+        expect(method).toBe('get');
+        expect(enableTor).toBe(true);
+        const query = new URL(url).searchParams;
+        expect(query.get('k1')).toBe('k1value');
+        expect(query.get('pr')).toBe(paymentRequest);
+    });
+
+    it('sends the callback directly when Tor is disabled', async () => {
+        await withdraw(false);
+
+        expect(mockNetworkFetch).toHaveBeenCalledWith(
+            expect.objectContaining({ enableTor: false })
+        );
     });
 });
