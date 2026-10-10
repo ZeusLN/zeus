@@ -187,7 +187,7 @@ type MultimintSkipReason =
 export default class CashuStore {
     private getPayReqRequestId = 0;
 
-    @observable public mintUrls: Array<string>;
+    @observable public mintUrls: Array<string> = [];
     @observable public selectedMintUrl: string;
     @observable public randomizeMintSelection: boolean = false;
     @observable public selectedMintUrls: string[] = [];

@@ -30,6 +30,7 @@ import CashuStore from './CashuStore';
 import Storage, { getRawItem } from '../storage';
 import CashuDevKit from '../cashu-cdk';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
+import * as SchedulingUtils from '../utils/SchedulingUtils';
 
 // BIP-39 zero-entropy test vector, never a real wallet.
 const mnemonic = `${'abandon '.repeat(11)}about`;
@@ -163,6 +164,45 @@ describe('CashuStore synchronizable seed recovery', () => {
         expect(await newStore().initializeCDK()).toBe(true);
         expect(getRawItem).not.toHaveBeenCalled();
         expect(CashuDevKit.initializeWallet).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('CashuStore pending item checks before init', () => {
+    // Activity and Activity Export call checkPendingItems before Cashu has
+    // initialized, e.g. with no node running
+    afterEach(() => jest.restoreAllMocks());
+
+    it('starts with no mints', () => {
+        expect(newStore().mintUrls).toEqual([]);
+    });
+
+    it('checkPendingItems runs its sweep on a fresh store', async () => {
+        let task: (() => unknown) | undefined;
+        jest.spyOn(SchedulingUtils, 'runWhenIdle').mockImplementation((t) => {
+            task = t;
+            return () => {};
+        });
+        const store = newStore();
+        const checkInvoicePaid = jest.spyOn(store, 'checkInvoicePaid');
+        const checkTokenSpent = jest.spyOn(store, 'checkTokenSpent');
+
+        await store.checkPendingItems();
+        await expect(task!()).resolves.toBeUndefined();
+
+        expect(checkInvoicePaid).not.toHaveBeenCalled();
+        expect(checkTokenSpent).not.toHaveBeenCalled();
+    });
+
+    it('checkSentTokensSpentStatus reports no updates on a fresh store', async () => {
+        const store = newStore();
+        store.sentTokens = [
+            { spent: false, mint: 'https://mint.example.com' }
+        ] as any;
+        const checkTokenSpent = jest.spyOn(store, 'checkTokenSpent');
+
+        await expect(store.checkSentTokensSpentStatus()).resolves.toBe(false);
+        // No mints are configured yet, so the token's mint is not polled
+        expect(checkTokenSpent).not.toHaveBeenCalled();
     });
 });
 
