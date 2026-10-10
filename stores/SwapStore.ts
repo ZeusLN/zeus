@@ -1,5 +1,4 @@
 import { action, observable, computed, runInAction, reaction } from 'mobx';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
 import { ECPairAPI, ECPairFactory } from 'ecpair';
 import ecc from '@bitcoinerlab/secp256k1';
@@ -757,10 +756,11 @@ export default class SwapStore {
         apiUrl: string
     ): Promise<ReverseLockupCheck> => {
         try {
-            const response = await ReactNativeBlobUtil.fetch(
-                'GET',
-                `${apiUrl}/blocks/tip/height`
-            );
+            const response = await networkFetch({
+                method: 'GET',
+                url: `${apiUrl}/blocks/tip/height`,
+                enableTor: this.settingsStore.enableTor
+            });
             if (response.info().status !== 200) {
                 return { status: 'unavailable', reason: 'tip-unavailable' };
             }
@@ -837,10 +837,11 @@ export default class SwapStore {
         const apiUrl = UrlUtils.getMempoolApiUrl(this.nodeInfoStore.nodeInfo);
         let tx: any;
         try {
-            const response = await ReactNativeBlobUtil.fetch(
-                'GET',
-                `${apiUrl}/tx/${txid}`
-            );
+            const response = await networkFetch({
+                method: 'GET',
+                url: `${apiUrl}/tx/${txid}`,
+                enableTor: this.settingsStore.enableTor
+            });
             const httpStatus = response.info().status;
             // not seen yet is retryable: an honest lockup may not have
             // reached this instance, and one that never appears is
@@ -912,10 +913,11 @@ export default class SwapStore {
             return { status: 'invalid', reason: 'missing-output' };
         }
         try {
-            const response = await ReactNativeBlobUtil.fetch(
-                'GET',
-                `${apiUrl}/tx/${txid}/outspend/${vout}`
-            );
+            const response = await networkFetch({
+                method: 'GET',
+                url: `${apiUrl}/tx/${txid}/outspend/${vout}`,
+                enableTor: this.settingsStore.enableTor
+            });
             if (response.info().status !== 200) {
                 return {
                     status: 'unavailable',
