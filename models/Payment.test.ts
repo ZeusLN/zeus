@@ -150,3 +150,191 @@ describe('Payment.resolvedPaymentHash', () => {
         expect(payment.resolvedPaymentHash).toBeUndefined();
     });
 });
+
+describe('Payment.isFailed', () => {
+    it('flags Core Lightning failed payments via sendpays status', () => {
+        // shaped like a canceled hold-invoice payment from the CLNRest
+        // sql getPayments query: no htlcs, no failure_reason
+        const payment = new Payment({
+            payment_hash: 'abc123',
+            status: 'failed',
+            destination: '03abcdef',
+            created_at: 1724688000,
+            amount_sent_msat: null,
+            amount_msat: 0,
+            preimage: null
+        });
+
+        expect(payment.isFailed).toBe(true);
+    });
+
+    it('does not flag completed Core Lightning payments', () => {
+        const payment = new Payment({
+            payment_hash: 'abc123',
+            status: 'complete',
+            amount_sent_msat: 100500,
+            amount_msat: 100000,
+            preimage:
+                'a44ef01c2a2c11c9209232f6cc8e2bd25733fbc99b1b1e0d90b465c1b2c95a92'
+        });
+
+        expect(payment.isFailed).toBe(false);
+    });
+
+    it('does not flag pending Core Lightning payments', () => {
+        const payment = new Payment({
+            payment_hash: 'abc123',
+            status: 'pending',
+            amount_msat: 0,
+            preimage: null
+        });
+
+        expect(payment.isFailed).toBe(false);
+    });
+
+    it('still flags LND payments via failure_reason', () => {
+        const payment = new Payment({
+            payment_hash: 'abc123',
+            status: 'FAILED',
+            failure_reason: 'FAILURE_REASON_INCORRECT_PAYMENT_DETAILS',
+            value_sat: 50000,
+            htlcs: [{ status: 'FAILED', route: { total_amt: 50000 } }]
+        });
+
+        expect(payment.isFailed).toBe(true);
+    });
+});
+
+describe('Payment status from backends without htlcs', () => {
+    const preimage =
+        'a44ef01c2a2c11c9209232f6cc8e2bd25733fbc99b1b1e0d90b465c1b2c95a92';
+
+    // shapes below match what each backend's getPayments mapping returns
+
+    it('flags a pending Core Lightning payment as in transit', () => {
+        const payment = new Payment({
+            payment_hash: 'abc123',
+            status: 'pending',
+            amount_sent_msat: null,
+            amount_msat: 0,
+            preimage: null
+        });
+
+        expect(payment.isInTransit).toBe(true);
+        expect(payment.isFailed).toBe(false);
+    });
+
+    it('flags a pending LDK Node payment as in transit', () => {
+        const payment = new Payment({
+            payment_hash: 'abc123',
+            value_sat: '1000',
+            payment_preimage: '',
+            status: 'IN_FLIGHT',
+            failure_reason: ''
+        });
+
+        expect(payment.isInTransit).toBe(true);
+        expect(payment.isFailed).toBe(false);
+    });
+
+    it('flags a failed LDK Node payment as failed', () => {
+        const payment = new Payment({
+            payment_hash: 'abc123',
+            value_sat: '1000',
+            payment_preimage: '',
+            status: 'FAILED',
+            failure_reason: 'FAILURE_REASON_ERROR'
+        });
+
+        expect(payment.isFailed).toBe(true);
+        expect(payment.isInTransit).toBe(false);
+    });
+
+    it('does not flag a succeeded LDK Node payment', () => {
+        const payment = new Payment({
+            payment_hash: 'abc123',
+            value_sat: '1000',
+            payment_preimage: preimage,
+            status: 'SUCCEEDED',
+            failure_reason: ''
+        });
+
+        expect(payment.isFailed).toBe(false);
+        expect(payment.isInTransit).toBe(false);
+    });
+
+    it('flags a pending NWC payment as in transit', () => {
+        const payment = new Payment({
+            type: 'outgoing',
+            state: 'pending',
+            payment_hash: 'abc123',
+            amount: 1000000,
+            preimage: ''
+        });
+
+        expect(payment.isInTransit).toBe(true);
+        expect(payment.isFailed).toBe(false);
+    });
+
+    it('flags a failed NWC payment as failed', () => {
+        const payment = new Payment({
+            type: 'outgoing',
+            state: 'failed',
+            payment_hash: 'abc123',
+            amount: 1000000,
+            preimage: ''
+        });
+
+        expect(payment.isFailed).toBe(true);
+        expect(payment.isInTransit).toBe(false);
+    });
+
+    it('does not flag a settled NWC payment', () => {
+        const payment = new Payment({
+            type: 'outgoing',
+            state: 'settled',
+            payment_hash: 'abc123',
+            amount: 1000000,
+            preimage
+        });
+
+        expect(payment.isFailed).toBe(false);
+        expect(payment.isInTransit).toBe(false);
+    });
+
+    it('ignores a pending status once a preimage is known', () => {
+        const payment = new Payment({
+            payment_hash: 'abc123',
+            status: 'pending',
+            preimage
+        });
+
+        expect(payment.isInTransit).toBe(false);
+    });
+
+    it('still flags LND in-flight payments via htlcs', () => {
+        const payment = new Payment({
+            payment_hash: 'abc123',
+            status: 'IN_FLIGHT',
+            value_sat: 50000,
+            htlcs: [{ status: 'IN_FLIGHT', route: { total_amt: 50000 } }]
+        });
+
+        expect(payment.isInTransit).toBe(true);
+        expect(payment.isFailed).toBe(false);
+    });
+
+    it('does not flag a settled LND payment', () => {
+        const payment = new Payment({
+            payment_hash: 'abc123',
+            status: 'SUCCEEDED',
+            value_sat: 50000,
+            payment_preimage: preimage,
+            failure_reason: 'FAILURE_REASON_NONE',
+            htlcs: [{ status: 'SUCCEEDED', route: { total_amt: 50000 } }]
+        });
+
+        expect(payment.isInTransit).toBe(false);
+        expect(payment.isFailed).toBe(false);
+    });
+});

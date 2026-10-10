@@ -32,6 +32,7 @@ export default class Payment extends BaseModel {
     path: Array<string>;
     bolt: string;
     status: string;
+    state?: string; // NWC (NIP-47): settled, pending, failed
     payment_request: string;
     failure_reason?: string | number;
     // c-lightning
@@ -178,6 +179,14 @@ export default class Payment extends BaseModel {
 
     @computed public get isInTransit(): boolean {
         if (!this.isIncomplete) return false;
+        // CLN ('pending'), LDK Node ('IN_FLIGHT') and NWC (state) report
+        // in-flight payments by status only, without htlcs
+        if (
+            this.status === 'pending' ||
+            this.status === 'IN_FLIGHT' ||
+            this.state === 'pending'
+        )
+            return true;
         if (!this.htlcs) return false;
         let inTransit = false;
         for (const htlc of this.htlcs) {
@@ -211,6 +220,14 @@ export default class Payment extends BaseModel {
             this.failure_reason !== 'FAILURE_REASON_NONE' &&
             this.failure_reason !==
                 lnrpc.PaymentFailureReason.FAILURE_REASON_NONE
+        )
+            isFailed = true;
+        // CLN sendpays status and NWC state; these backends carry no
+        // htlcs or failure_reason for the checks above
+        if (
+            this.status === 'failed' ||
+            this.status === 'FAILED' ||
+            this.state === 'failed'
         )
             isFailed = true;
         return isFailed;
