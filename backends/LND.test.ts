@@ -114,3 +114,51 @@ describe('LND.getURL', () => {
         });
     });
 });
+
+describe('LND.sendCoins', () => {
+    it('passes the send label to lnd', () => {
+        const lnd = new LND();
+        const postRequest = jest
+            .spyOn(lnd, 'postRequest')
+            .mockResolvedValue({ txid: 'abc' });
+
+        lnd.sendCoins({
+            addr: 'bc1qrecipient',
+            amount: '100000',
+            sat_per_vbyte: '2',
+            label: 'ZEUS send 0011223344556677'
+        });
+
+        expect(postRequest).toHaveBeenCalledWith(
+            '/v1/transactions',
+            expect.objectContaining({
+                addr: 'bc1qrecipient',
+                amount: '100000',
+                label: 'ZEUS send 0011223344556677'
+            })
+        );
+    });
+});
+
+describe('LND.openChannelSync', () => {
+    it('passes the channel memo to lnd', () => {
+        const lnd = new LND();
+        const postRequest = jest
+            .spyOn(lnd, 'postRequest')
+            .mockResolvedValue({});
+
+        lnd.openChannelSync({
+            node_pubkey_string: '02peer',
+            local_funding_amount: '100000',
+            memo: 'ZEUS open 0011223344556677'
+        } as any);
+
+        expect(postRequest).toHaveBeenCalledWith(
+            '/v1/channels',
+            expect.objectContaining({
+                node_pubkey_string: '02peer',
+                memo: 'ZEUS open 0011223344556677'
+            })
+        );
+    });
+});

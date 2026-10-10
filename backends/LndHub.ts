@@ -235,6 +235,7 @@ export default class LndHub extends LND {
     supportsCustomPreimages = () => false;
     supportsSweep = () => false;
     supportsOnchainSendMax = () => false;
+    supportsChannelMemo = () => false;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => true;
     supportsLSPScustomMessage = () => false;

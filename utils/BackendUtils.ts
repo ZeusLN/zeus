@@ -257,6 +257,7 @@ class BackendUtils {
     supportsCustomPreimages = () => this.call('supportsCustomPreimages');
     supportsSweep = () => this.call('supportsSweep');
     supportsOnchainSendMax = () => this.call('supportsOnchainSendMax');
+    supportsChannelMemo = () => this.call('supportsChannelMemo');
     supportsWithdrawalRequests = () => this.call('supportsWithdrawalRequests');
     supportsOnchainBatching = () => this.call('supportsOnchainBatching');
     supportsChannelBatching = () => this.call('supportsChannelBatching');

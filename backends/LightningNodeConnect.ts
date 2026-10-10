@@ -241,7 +241,8 @@ export default class LightningNodeConnect {
     getTransactions = async (data: any) =>
         await this.lnc.lnd.lightning
             .getTransactions({
-                maxTransactions: data?.max_transactions || 500
+                maxTransactions: data?.max_transactions || 500,
+                ...(data?.start_height && { startHeight: data.start_height })
             })
             .then((data: lnrpc.TransactionDetails) => {
                 const formatted = snakeize(data);
@@ -283,7 +284,8 @@ export default class LightningNodeConnect {
                 amount: data.amount,
                 spend_unconfirmed: data.spend_unconfirmed,
                 send_all: data.send_all,
-                outpoints: data.outpoints
+                outpoints: data.outpoints,
+                label: data.label
             })
             .then((data: lnrpc.SendCoinsResponse) => snakeize(data));
     sendCustomMessage = async (data: any) =>
@@ -379,7 +381,8 @@ export default class LightningNodeConnect {
             node_pubkey_string: data.node_pubkey_string,
             sat_per_vbyte: data.sat_per_vbyte,
             spend_unconfirmed: data.spend_unconfirmed,
-            close_address: data.close_address
+            close_address: data.close_address,
+            memo: data.memo
         };
 
         if (data.fundMax) {
@@ -1041,6 +1044,7 @@ export default class LightningNodeConnect {
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
     supportsOnchainSendMax = () => this.supports('v0.18.3');
+    supportsChannelMemo = () => this.supports('v0.17.0');
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
     supportsChannelFundMax = () => true;

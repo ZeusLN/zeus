@@ -20,6 +20,8 @@ import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { getCooperativeCloses, getForceCloses } from '../utils/BalanceUtils';
+import { findChannelByMemo, makeOpenMemo } from '../utils/ChannelOpenUtils';
+import { isRequestTimeout } from '../utils/OnchainSendUtils';
 
 interface ChannelInfoIndex {
     [key: string]: ChannelInfo;
@@ -77,6 +79,13 @@ export default class ChannelsStore {
     @observable public errorOpenChannel = false;
     @observable public peerSuccess = false;
     @observable public channelSuccess = false;
+    // an open timed out and the channel was not found; it may still have
+    // been opened, so OpenChannel does not submit again
+    @observable public openOutcomeUnknown = false;
+    // id of the current open; resetOpenChannel() and the next open change
+    // it, so a late result (e.g. a timeout lookup) for an earlier open is
+    // dropped
+    private openChannelSeq = 0;
     @observable public closeChannelErr: string | null;
     @observable public closingChannel = false;
     @observable channelRequest: any;
@@ -182,6 +191,7 @@ export default class ChannelsStore {
 
     @action
     public resetOpenChannel = (silent?: boolean) => {
+        this.openChannelSeq++;
         this.loading = false;
         this.error = false;
         if (!silent) {
@@ -195,6 +205,7 @@ export default class ChannelsStore {
         this.funding_txid_str = null;
         this.openingChannel = false;
         this.errorOpenChannel = false;
+        this.openOutcomeUnknown = false;
         this.channelSuccess = false;
         this.channelRequest = null;
         this.funded_psbt = '';
@@ -1144,6 +1155,7 @@ export default class ChannelsStore {
 
         this.peerSuccess = false;
         this.channelSuccess = false;
+        this.openOutcomeUnknown = false;
         this.openingChannel = true;
 
         if (request?.account !== 'default' || multipleChans) {
@@ -1270,22 +1282,67 @@ export default class ChannelsStore {
                     });
             }
         } else {
+            // lets a timed out open be found among the node's channels
+            const memo =
+                BackendUtils.isLNDBased() && BackendUtils.supportsChannelMemo()
+                    ? makeOpenMemo()
+                    : undefined;
+            if (memo) request.memo = memo;
+
+            const seq = ++this.openChannelSeq;
+            const isCurrent = () => seq === this.openChannelSeq;
+
+            const onOpened = (data: any) =>
+                runInAction(() => {
+                    if (!isCurrent()) return;
+                    this.output_index = data.output_index;
+                    this.funding_txid_str = data.funding_txid_str;
+                    this.errorOpenChannel = false;
+                    this.openingChannel = false;
+                    this.errorMsgChannel = null;
+                    this.channelRequest = null;
+                    this.channelSuccess = true;
+                    this.connectingToPeer = false;
+                });
+
             BackendUtils.openChannelSync(request)
-                .then((data: any) =>
-                    runInAction(() => {
-                        this.output_index = data.output_index;
-                        this.funding_txid_str = data.funding_txid_str;
-                        this.errorOpenChannel = false;
-                        this.openingChannel = false;
-                        this.errorMsgChannel = null;
-                        this.channelRequest = null;
-                        this.channelSuccess = true;
-                        this.connectingToPeer = false;
-                    })
-                )
-                .catch((error: Error) => {
+                .then(onOpened)
+                .catch(async (error: Error) => {
+                    // a timed out open may still have gone through on any
+                    // backend (e.g. CLN past the 30s REST timeout); only
+                    // opens that carry a memo can be looked up
+                    if (isRequestTimeout(error)) {
+                        const opened = memo
+                            ? await findChannelByMemo(
+                                  () => BackendUtils.getPendingChannels(),
+                                  () => BackendUtils.getChannels(),
+                                  memo
+                              )
+                            : undefined;
+                        if (opened) {
+                            onOpened(opened);
+                            return;
+                        }
+                        runInAction(() => {
+                            if (!isCurrent()) return;
+                            this.errorMsgChannel = localeString(
+                                'stores.ChannelsStore.openOutcomeUnknown'
+                            );
+                            this.output_index = null;
+                            this.funding_txid_str = null;
+                            this.errorOpenChannel = true;
+                            this.openOutcomeUnknown = true;
+                            this.openingChannel = false;
+                            this.connectingToPeer = false;
+                            this.channelRequest = null;
+                            this.peerSuccess = false;
+                            this.channelSuccess = false;
+                        });
+                        return;
+                    }
                     const errorMsg = errorToUserFriendly(error);
                     runInAction(() => {
+                        if (!isCurrent()) return;
                         this.errorMsgChannel = errorMsg;
                         this.output_index = null;
                         this.funding_txid_str = null;

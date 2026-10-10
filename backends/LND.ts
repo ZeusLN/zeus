@@ -298,7 +298,8 @@ export default class LND {
             amount: data.amount,
             spend_unconfirmed: data.spend_unconfirmed,
             send_all: data.send_all,
-            outpoints: data.outpoints
+            outpoints: data.outpoints,
+            label: data.label
         });
     sendCustomMessage = (data: any) =>
         this.postRequest('/v1/custommessage', {
@@ -410,7 +411,8 @@ export default class LND {
             node_pubkey_string: data.node_pubkey_string,
             sat_per_vbyte: data.sat_per_vbyte,
             spend_unconfirmed: data.spend_unconfirmed,
-            close_address: data.close_address
+            close_address: data.close_address,
+            memo: data.memo
         };
 
         if (data.fundMax) {
@@ -1047,6 +1049,7 @@ export default class LND {
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
     supportsOnchainSendMax = () => this.supports('v0.18.3');
+    supportsChannelMemo = () => this.supports('v0.17.0');
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
     supportsChannelFundMax = () => true;
