@@ -1074,10 +1074,11 @@ export default class SwapStore {
         | { status: 'unavailable'; reason: string }
     > => {
         try {
-            const response = await ReactNativeBlobUtil.fetch(
-                'GET',
-                `${apiUrl}/blocks/tip/height`
-            );
+            const response = await networkFetch({
+                method: 'GET',
+                url: `${apiUrl}/blocks/tip/height`,
+                enableTor: this.settingsStore.enableTor
+            });
             if (response.info().status !== 200) {
                 return { status: 'unavailable', reason: 'tip-unavailable' };
             }
@@ -1180,7 +1181,11 @@ export default class SwapStore {
         const url = `${apiUrl}/tx/${txid}`;
         let tx: any;
         try {
-            const response = await ReactNativeBlobUtil.fetch('GET', url);
+            const response = await networkFetch({
+                method: 'GET',
+                url,
+                enableTor: this.settingsStore.enableTor
+            });
             const httpStatus = response.info().status;
             if (httpStatus === 404) {
                 // A 404 here is normal (tx not seen yet) and can also mean a
@@ -1274,10 +1279,11 @@ export default class SwapStore {
             return { status: 'invalid', reason: 'missing-output' };
         }
         try {
-            const response = await ReactNativeBlobUtil.fetch(
-                'GET',
-                `${apiUrl}/tx/${txid}/outspend/${vout}`
-            );
+            const response = await networkFetch({
+                method: 'GET',
+                url: `${apiUrl}/tx/${txid}/outspend/${vout}`,
+                enableTor: this.settingsStore.enableTor
+            });
             if (response.info().status !== 200) {
                 return {
                     status: 'unavailable',
