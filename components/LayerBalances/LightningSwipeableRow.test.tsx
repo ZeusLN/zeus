@@ -165,6 +165,41 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
     // pinned through the row until the error is handled (#5060).
     it.todo('tells the user when the Lightning address lookup fails');
 
+    it('passes the Tor setting to the LNURL params lookup', async () => {
+        const LnurlParamsUtils = require('../../utils/LnurlParamsUtils');
+        const spy = jest
+            .spyOn(LnurlParamsUtils, 'getLnurlParams')
+            .mockResolvedValue({ tag: 'payRequest' });
+        mockSettingsStore.enableTor = true;
+
+        try {
+            // a locked row with an LNURL resolves it when tapped
+            const navigation = { navigate: jest.fn() };
+            await render(
+                <LightningSwipeableRow
+                    {...({
+                        lightning: 'lnurl1abc',
+                        locked: true,
+                        navigation,
+                        SyncStore: { isSyncing: false }
+                    } as any)}
+                >
+                    <Text>Pay</Text>
+                </LightningSwipeableRow>
+            );
+            await fireEvent.press(screen.getByText('Pay'));
+            await new Promise(setImmediate);
+
+            expect(spy).toHaveBeenCalledWith('lnurl1abc', true);
+            expect(navigation.navigate).toHaveBeenCalledWith(
+                'LnurlPay',
+                expect.anything()
+            );
+        } finally {
+            spy.mockRestore();
+        }
+    });
+
     describe('handler validation', () => {
         // Until #5060 lands, call the handler on a mounted row directly
         const lookUp = async (lightningAddress: string) => {
