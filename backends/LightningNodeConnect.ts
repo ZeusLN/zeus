@@ -338,6 +338,7 @@ export default class LightningNodeConnect {
         params: {
             maxPayments?: number;
             reversed?: boolean;
+            creationDateStart?: number;
         } = {
             maxPayments: 500,
             reversed: true
@@ -350,7 +351,10 @@ export default class LightningNodeConnect {
                     max_payments: params.maxPayments
                 }),
                 reversed:
-                    params?.reversed !== undefined ? params.reversed : true
+                    params?.reversed !== undefined ? params.reversed : true,
+                ...(params?.creationDateStart && {
+                    creation_date_start: params.creationDateStart
+                })
             })
             .then((data: lnrpc.ListPaymentsResponse) => snakeize(data));
     getNewAddress = async (data: any) =>
@@ -1058,4 +1062,5 @@ export default class LightningNodeConnect {
     supportsCashuWallet = () => false;
     supportsSettingInvoiceExpiration = () => true;
     supportsNostrWalletConnectService = () => true;
+    supportsPaymentsCreationDateFilter = () => this.supports('v0.15.1');
 }
