@@ -1986,6 +1986,25 @@ export default class SettingsStore {
         const node: any =
             settings?.nodes?.length &&
             settings?.nodes[settings.selectedNode || 0];
+
+        // The LndHub session token belongs to the server and account it was
+        // issued by. The backend sends it as a Bearer header (and LND sends
+        // macaroonHex || accessToken), so a token left over from another
+        // wallet would go to the next server. This runs after every settings
+        // write, so only clear it when the connection target changes.
+        if (
+            !node ||
+            (node.implementation || 'lnd') !== this.implementation ||
+            node.host !== this.host ||
+            node.port !== this.port ||
+            node.lndhubUrl !== this.lndhubUrl ||
+            node.username !== this.username ||
+            node.password !== this.password
+        ) {
+            this.accessToken = '';
+            this.refreshToken = '';
+        }
+
         if (node) {
             this.host = node.host;
             this.port = node.port;
