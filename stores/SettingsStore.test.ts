@@ -32,7 +32,10 @@ jest.mock('../utils/BackendUtils', () => ({
     }
 }));
 jest.mock('../utils/BiometricUtils', () => ({
-    getSupportedBiometryType: jest.fn().mockResolvedValue(undefined)
+    getSupportedBiometryType: jest.fn().mockResolvedValue(undefined),
+    createBiometryKey: jest.fn(),
+    deleteBiometryKey: jest.fn(),
+    verifyBiometry: jest.fn()
 }));
 jest.mock('../utils/LocaleUtils', () => ({
     localeString: (s: string) => s
@@ -116,6 +119,7 @@ import SettingsStore, {
 import { themeColor } from '../utils/ThemeUtils';
 
 const StorageMock: any = jest.requireMock('../storage');
+const BiometricMock: any = jest.requireMock('../utils/BiometricUtils');
 
 const seedSettings = (settings: any) => {
     StorageMock._backing[STORAGE_KEY] = JSON.stringify(settings);
@@ -1247,5 +1251,197 @@ describe('THEME_KEYS', () => {
         for (const theme of RETIRED_THEMES) {
             expect(offered).not.toContain(theme);
         }
+    });
+});
+
+// Biometric unlock is bound to a key the OS invalidates when the enrolled
+// biometrics change, so a fingerprint or face added by someone who knows the
+// device passcode cannot unlock the wallet.
+describe('SettingsStore biometrics', () => {
+    const enabled = {
+        pin: '1234',
+        isBiometryEnabled: true,
+        biometryKeyBound: true,
+        supportedBiometryType: 'Biometrics'
+    };
+
+    const loadStore = async (settings: any) => {
+        seedSettings(settings);
+        const store = new SettingsStore();
+        await store.getSettings();
+        return store;
+    };
+
+    beforeEach(() => {
+        BiometricMock.createBiometryKey.mockReset().mockResolvedValue(true);
+        BiometricMock.deleteBiometryKey
+            .mockReset()
+            .mockResolvedValue(undefined);
+        BiometricMock.verifyBiometry.mockReset().mockResolvedValue('success');
+    });
+
+    describe('isBiometryConfigured', () => {
+        it('is true when enabled with a bound key', async () => {
+            const store = await loadStore(enabled);
+            expect(store.isBiometryConfigured()).toBe(true);
+        });
+
+        it('is false for biometrics enabled before keys were bound', async () => {
+            const store = await loadStore({
+                ...enabled,
+                biometryKeyBound: undefined
+            });
+            expect(store.isBiometryConfigured()).toBe(false);
+            // the PIN still gates the wallet
+            expect(store.loginMethodConfigured()).toBeTruthy();
+        });
+    });
+
+    describe('enableBiometry', () => {
+        it('creates a key, verifies it, and enables biometrics', async () => {
+            const store = await loadStore({ pin: '1234' });
+
+            await expect(store.enableBiometry('Unlock')).resolves.toBe(
+                'success'
+            );
+
+            expect(BiometricMock.createBiometryKey).toHaveBeenCalled();
+            expect(BiometricMock.verifyBiometry).toHaveBeenCalledWith('Unlock');
+            expect(persistedSettings()).toMatchObject({
+                isBiometryEnabled: true,
+                biometryKeyBound: true
+            });
+        });
+
+        it.each(['cancelled', 'failed', 'invalidated'])(
+            'deletes the key, stays disabled, and returns %s',
+            async (result) => {
+                BiometricMock.verifyBiometry.mockResolvedValue(result);
+                const store = await loadStore({ pin: '1234' });
+
+                await expect(store.enableBiometry('Unlock')).resolves.toBe(
+                    result
+                );
+
+                expect(BiometricMock.deleteBiometryKey).toHaveBeenCalled();
+                expect(persistedSettings().isBiometryEnabled).toBeFalsy();
+                expect(persistedSettings().biometryKeyBound).toBeFalsy();
+            }
+        );
+
+        it('does not prompt when the key cannot be created', async () => {
+            BiometricMock.createBiometryKey.mockResolvedValue(false);
+            const store = await loadStore({ pin: '1234' });
+
+            await expect(store.enableBiometry('Unlock')).resolves.toBe(
+                'failed'
+            );
+
+            expect(BiometricMock.verifyBiometry).not.toHaveBeenCalled();
+            expect(persistedSettings().isBiometryEnabled).toBeFalsy();
+        });
+    });
+
+    describe('authenticateWithBiometry', () => {
+        it('returns success and keeps biometrics enabled', async () => {
+            const store = await loadStore(enabled);
+
+            await expect(
+                store.authenticateWithBiometry('Unlock')
+            ).resolves.toBe('success');
+
+            expect(BiometricMock.deleteBiometryKey).not.toHaveBeenCalled();
+            expect(persistedSettings().isBiometryEnabled).toBe(true);
+        });
+
+        it('disables biometrics and deletes the key when enrollment changed', async () => {
+            BiometricMock.verifyBiometry.mockResolvedValue('invalidated');
+            const store = await loadStore(enabled);
+
+            await expect(
+                store.authenticateWithBiometry('Unlock')
+            ).resolves.toBe('invalidated');
+
+            expect(BiometricMock.deleteBiometryKey).toHaveBeenCalled();
+            expect(persistedSettings()).toMatchObject({
+                isBiometryEnabled: false,
+                biometryKeyBound: false
+            });
+            expect(store.isBiometryConfigured()).toBe(false);
+        });
+
+        it.each(['cancelled', 'failed'])(
+            'keeps biometrics enabled when the prompt is %s',
+            async (result) => {
+                BiometricMock.verifyBiometry.mockResolvedValue(result);
+                const store = await loadStore(enabled);
+
+                await expect(
+                    store.authenticateWithBiometry('Unlock')
+                ).resolves.toBe(result);
+
+                expect(BiometricMock.deleteBiometryKey).not.toHaveBeenCalled();
+                expect(persistedSettings().isBiometryEnabled).toBe(true);
+            }
+        );
+    });
+
+    describe('disableBiometry', () => {
+        it('deletes the key and clears both flags', async () => {
+            const store = await loadStore(enabled);
+
+            await store.disableBiometry();
+
+            expect(BiometricMock.deleteBiometryKey).toHaveBeenCalled();
+            expect(persistedSettings()).toMatchObject({
+                isBiometryEnabled: false,
+                biometryKeyBound: false
+            });
+        });
+    });
+
+    describe('bindLegacyBiometryKey', () => {
+        it('binds a key for biometrics enabled before keys were bound', async () => {
+            const store = await loadStore({
+                ...enabled,
+                biometryKeyBound: undefined
+            });
+
+            await store.bindLegacyBiometryKey();
+
+            expect(BiometricMock.createBiometryKey).toHaveBeenCalled();
+            expect(persistedSettings().biometryKeyBound).toBe(true);
+            expect(store.isBiometryConfigured()).toBe(true);
+        });
+
+        it('does not replace an existing bound key', async () => {
+            const store = await loadStore(enabled);
+
+            await store.bindLegacyBiometryKey();
+
+            expect(BiometricMock.createBiometryKey).not.toHaveBeenCalled();
+        });
+
+        it('does nothing when biometrics are disabled', async () => {
+            const store = await loadStore({ pin: '1234' });
+
+            await store.bindLegacyBiometryKey();
+
+            expect(BiometricMock.createBiometryKey).not.toHaveBeenCalled();
+            expect(persistedSettings().biometryKeyBound).toBeFalsy();
+        });
+
+        it('stays unbound when the key cannot be created', async () => {
+            BiometricMock.createBiometryKey.mockResolvedValue(false);
+            const store = await loadStore({
+                ...enabled,
+                biometryKeyBound: undefined
+            });
+
+            await store.bindLegacyBiometryKey();
+
+            expect(persistedSettings().biometryKeyBound).toBeFalsy();
+            expect(store.isBiometryConfigured()).toBe(false);
+        });
     });
 });
