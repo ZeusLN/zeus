@@ -23,6 +23,8 @@ import Base64Utils from '../utils/Base64Utils';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
 import { sleep } from '../utils/SleepUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { cashuErrorForDisplay } from '../utils/ErrorUtils';
+import { CDKErrorType } from '../cashu-cdk/types';
 
 import Storage from '../storage';
 
@@ -863,6 +865,12 @@ export default class LightningAddressStore {
             }
         };
 
+        // Which step failed decides the message. Before the ZEUS Pay /redeem
+        // call the payment is still claimable at the mint, so a connectivity
+        // failure there is retryable rather than terminal.
+        let step: 'claim' | 'redeem' | 'receive' = 'claim';
+        let notify = false;
+
         try {
             const response = await this.cashuStore.checkInvoicePaid(
                 quote_id,
@@ -875,49 +883,25 @@ export default class LightningAddressStore {
                 response?.isPaid ||
                 response?.updatedInvoice?.state === 'ISSUED'
             ) {
-                try {
-                    const redeemData = await this.callRedeemEndpoint(quote_id);
+                step = 'redeem';
+                const redeemData = await this.callRedeemEndpoint(quote_id);
 
-                    // If server returns a token, receive it
-                    if (redeemData.token) {
-                        console.log(
-                            'Receiving token from server for quote:',
-                            quote_id
-                        );
-                        // Provide our Cashu secret key; CDK will only use it if the token is P2PK-locked.
-                        const signingKey =
-                            this.cashuStore.deriveCashuSecretKey();
-                        await this.cashuStore.receiveTokenCDK(
-                            redeemData.token,
-                            signingKey || undefined
-                        );
-                    }
-
-                    this.redeeming = false;
-
-                    if (localNotification && response.isPaid) {
-                        fireLocalNotification();
-                    }
-
-                    if (!skipStatus) {
-                        this.status(true).catch((e) =>
-                            console.log(
-                                'Error fetching Lightning address status',
-                                e
-                            )
-                        );
-                    }
-
-                    return true;
-                } catch (error) {
-                    const error_msg = error?.toString();
-                    runInAction(() => {
-                        this.redeeming = false;
-                        this.error = true;
-                        this.error_msg = error_msg;
-                    });
-                    throw error;
+                // If server returns a token, receive it
+                if (redeemData.token) {
+                    step = 'receive';
+                    console.log(
+                        'Receiving token from server for quote:',
+                        quote_id
+                    );
+                    // Provide our Cashu secret key; CDK will only use it if the token is P2PK-locked.
+                    const signingKey = this.cashuStore.deriveCashuSecretKey();
+                    await this.cashuStore.receiveTokenCDK(
+                        redeemData.token,
+                        signingKey || undefined
+                    );
                 }
+
+                notify = !!(localNotification && response.isPaid);
             } else {
                 runInAction(() => {
                     this.redeeming = false;
@@ -928,16 +912,51 @@ export default class LightningAddressStore {
                 });
                 return true;
             }
-        } catch (e) {
+        } catch (e: any) {
+            let prefix: string;
+            if (step === 'redeem') {
+                prefix = localeString(
+                    'stores.LightningAddressStore.Cashu.redeemErr'
+                );
+            } else if (step === 'claim' && e?.type === CDKErrorType.Network) {
+                prefix = localeString(
+                    'stores.LightningAddressStore.Cashu.mintUnreachable'
+                );
+            } else {
+                prefix = localeString(
+                    'stores.LightningAddressStore.Cashu.quotePaymentErr'
+                );
+            }
+            const reason = cashuErrorForDisplay(e);
             runInAction(() => {
                 this.redeeming = false;
                 this.error = true;
-                this.error_msg = localeString(
-                    'stores.LightningAddressStore.Cashu.quotePaymentErr'
-                );
+                this.error_msg = reason ? `${prefix}: ${reason}` : prefix;
             });
             return true;
         }
+
+        // The payment is redeemed at this point; nothing below may report it
+        // as a redeem failure
+        runInAction(() => {
+            this.redeeming = false;
+        });
+
+        if (notify) {
+            try {
+                fireLocalNotification();
+            } catch (e) {
+                console.log('Error posting payment notification', e);
+            }
+        }
+
+        if (!skipStatus) {
+            this.status(true).catch((e) =>
+                console.log('Error fetching Lightning address status', e)
+            );
+        }
+
+        return true;
     };
 
     @action
