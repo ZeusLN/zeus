@@ -1,7 +1,6 @@
 import { Alert, Platform } from 'react-native';
 import { getParams as getlnurlParams } from 'js-lnurl';
 import { findlnurl, decodelnurl } from 'js-lnurl/lib/helpers';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { nodeInfoStore, invoicesStore, settingsStore } from '../stores/Stores';
 
@@ -14,6 +13,7 @@ import ContactUtils from './ContactUtils';
 import { localeString } from './LocaleUtils';
 import NodeUriUtils from './NodeUriUtils';
 import NostrUtils from './NostrUtils';
+import { networkFetch } from './NetworkUtils';
 import { doTorRequest, RequestMethod } from './TorUtils';
 
 import CashuToken from '../models/CashuToken';
@@ -642,15 +642,22 @@ const handleAnything = async (
                 // '?' and '#'. Unencoded, 'a&name=evil.example&z@good.com'
                 // would add a second name parameter, and the resolver would
                 // look up evil.example instead.
-                const res = await fetch(
-                    `${dnsUrl}?name=${encodeURIComponent(name)}&type=TXT`,
-                    {
-                        headers: {
-                            accept: 'application/dns-json'
-                        }
-                    }
-                );
-                const json = await res.json();
+                const dohUrl = `${dnsUrl}?name=${encodeURIComponent(
+                    name
+                )}&type=TXT`;
+                const dohHeaders = { accept: 'application/dns-json' };
+                // With Tor enabled the lookup goes over Tor too, so the
+                // resolver does not see the user's IP next to the recipient
+                const json = settingsStore.enableTor
+                    ? await doTorRequest(
+                          dohUrl,
+                          RequestMethod.GET,
+                          undefined,
+                          dohHeaders
+                      )
+                    : await (
+                          await fetch(dohUrl, { headers: dohHeaders })
+                      ).json();
 
                 // The resolver echoes the name it looked up. Only use the
                 // answer if that is the name we asked for.
@@ -741,7 +748,13 @@ const handleAnything = async (
                 }
             );
         } else {
-            return ReactNativeBlobUtil.fetch('get', url)
+            // Clearnet domains also go over Tor when it is enabled, so the
+            // recipient's server does not learn the user's IP
+            return networkFetch({
+                method: 'get',
+                url,
+                enableTor: settingsStore.enableTor
+            })
                 .then((response: any) => {
                     const status = response.info().status;
                     if (status == 200) {
