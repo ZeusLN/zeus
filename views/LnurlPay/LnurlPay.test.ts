@@ -36,6 +36,10 @@ jest.mock('../../utils/LnurlPayUtils', () => ({
     isLnurlCallbackAllowed: jest.fn()
 }));
 jest.mock('react-native-blob-util', () => ({}));
+const mockNetworkFetch = jest.fn();
+jest.mock('../../utils/NetworkUtils', () => ({
+    networkFetch: (...args: any[]) => mockNetworkFetch(...args)
+}));
 jest.mock('react-native-gesture-handler', () => ({ ScrollView: 'ScrollView' }));
 jest.mock('../../components/Amount', () => 'Amount');
 jest.mock('../../components/AmountInput', () => 'AmountInput');
@@ -53,7 +57,8 @@ import { Alert } from 'react-native';
 import LnurlPay from './LnurlPay';
 import Amount from '../../components/Amount';
 import AmountInput from '../../components/AmountInput';
-import { unitsStore } from '../../stores/Stores';
+import { settingsStore, unitsStore } from '../../stores/Stores';
+import { isLnurlCallbackAllowed } from '../../utils/LnurlPayUtils';
 
 const FIXED_SATS = 12618;
 
@@ -375,5 +380,49 @@ describe('LnurlPay with invalid lnurlParams', () => {
         buttons[0].onPress();
 
         expect(view.props.navigation.goBack).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('LnurlPay callback transport', () => {
+    beforeEach(() => {
+        (isLnurlCallbackAllowed as jest.Mock).mockReturnValue({ ok: true });
+        // An error envelope stops the flow right after the request
+        mockNetworkFetch.mockReset();
+        mockNetworkFetch.mockResolvedValue({
+            json: () => ({ status: 'ERROR', reason: 'stop' })
+        });
+        jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        delete (settingsStore as any).enableTor;
+        jest.restoreAllMocks();
+    });
+
+    const send = async () => {
+        const view = makeView({ lnurlParams: lnurlParams(1, 1000) });
+        view.setState = jest.fn();
+        view.sendValues(100);
+        await new Promise((resolve) => setImmediate(resolve));
+    };
+
+    it('sends the callback over Tor when Tor is enabled', async () => {
+        (settingsStore as any).enableTor = true;
+
+        await send();
+
+        expect(mockNetworkFetch).toHaveBeenCalledTimes(1);
+        const [{ method, url, enableTor }] = mockNetworkFetch.mock.calls[0];
+        expect(method).toBe('get');
+        expect(enableTor).toBe(true);
+        expect(new URL(url).searchParams.get('amount')).toBe('100000');
+    });
+
+    it('sends the callback directly when Tor is disabled', async () => {
+        await send();
+
+        expect(mockNetworkFetch).toHaveBeenCalledWith(
+            expect.objectContaining({ enableTor: undefined })
+        );
     });
 });

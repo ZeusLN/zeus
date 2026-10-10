@@ -27,11 +27,15 @@ jest.mock('../utils/LocaleUtils', () => ({
 jest.mock('../utils/BackendUtils', () => ({
     connectPeer: jest.fn(() => Promise.resolve())
 }));
-jest.mock('react-native-blob-util', () => ({
-    fetch: jest.fn(() => Promise.resolve({ json: () => ({ status: 'OK' }) }))
+jest.mock('../utils/NetworkUtils', () => ({
+    networkFetch: jest.fn(() =>
+        Promise.resolve({ json: () => ({ status: 'OK' }) })
+    )
 }));
+jest.mock('../stores/Stores', () => ({ settingsStore: {} }));
 
-import ReactNativeBlobUtil from 'react-native-blob-util';
+import { settingsStore } from '../stores/Stores';
+import { networkFetch } from '../utils/NetworkUtils';
 import Switch from '../components/Switch';
 import LnurlChannel from './LnurlChannel';
 
@@ -60,13 +64,14 @@ const renderView = async () => {
 };
 
 const callbackQuery = () => {
-    const [, url] = (ReactNativeBlobUtil.fetch as jest.Mock).mock.calls[0];
+    const [{ url }] = (networkFetch as jest.Mock).mock.calls[0];
     return new URL(url).searchParams;
 };
 
 describe('LnurlChannel', () => {
     beforeEach(() => {
-        (ReactNativeBlobUtil.fetch as jest.Mock).mockClear();
+        (networkFetch as jest.Mock).mockClear();
+        delete (settingsStore as any).enableTor;
     });
 
     it('renders the themed Switch for the announced toggle', async () => {
@@ -106,5 +111,26 @@ describe('LnurlChannel', () => {
             tree.root.findByType(LnurlChannel).instance.sendValues();
         });
         expect(callbackQuery().get('private')).toBe('0');
+    });
+
+    it('sends the callback over Tor when Tor is enabled', async () => {
+        (settingsStore as any).enableTor = true;
+        const tree = await renderView();
+        await act(async () => {
+            tree.root.findByType(LnurlChannel).instance.sendValues();
+        });
+        expect(networkFetch).toHaveBeenCalledWith(
+            expect.objectContaining({ method: 'get', enableTor: true })
+        );
+    });
+
+    it('sends the callback directly when Tor is disabled', async () => {
+        const tree = await renderView();
+        await act(async () => {
+            tree.root.findByType(LnurlChannel).instance.sendValues();
+        });
+        expect(networkFetch).toHaveBeenCalledWith(
+            expect.objectContaining({ method: 'get', enableTor: undefined })
+        );
     });
 });
