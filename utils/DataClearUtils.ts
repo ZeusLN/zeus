@@ -222,6 +222,34 @@ export function blockNavigationDuringWipe(navigation: any): () => void {
 }
 
 /**
+ * Collects the per-note keys from the current note index (NOTES_KEY in the
+ * keychain) and the legacy one (LEGACY_NOTES_KEY in EncryptedStorage, which
+ * storageMigrationV2 copied the notes from under the same key names). A
+ * failed or malformed read of one index does not drop the other.
+ */
+async function readNoteKeys(): Promise<string[]> {
+    const noteKeys = new Set<string>();
+    const indexes: Array<[string, () => Promise<string | false | null>]> = [
+        [NOTES_KEY, () => Storage.getItem(NOTES_KEY)],
+        [LEGACY_NOTES_KEY, () => EncryptedStorage.getItem(LEGACY_NOTES_KEY)]
+    ];
+    for (const [name, read] of indexes) {
+        try {
+            const json = await read();
+            const keys = json ? JSON.parse(json) : null;
+            if (Array.isArray(keys)) {
+                for (const key of keys) {
+                    if (typeof key === 'string' && key) noteKeys.add(key);
+                }
+            }
+        } catch (e) {
+            console.warn(`[ClearData] Error reading note index ${name}:`, e);
+        }
+    }
+    return [...noteKeys];
+}
+
+/**
  * Clears a key from all possible locations:
  * - New Storage namespace (zeus:key)
  * - Old keychain (key) - both local and cloud
@@ -937,6 +965,10 @@ export async function clearAllData(): Promise<void> {
         console.warn('[ClearData] Could not read settings:', e);
     }
 
+    // 1b. Read the per-note keys now: step 3 deletes both note indexes
+    // before step 4 clears the notes they list
+    const noteKeys = await readNoteKeys();
+
     // 2. Clear node-namespaced keychain material (Cashu keys for both LND and
     // LDK node dirs, plus LNC pairing credentials) for every known node.
     if (settings?.nodes && Array.isArray(settings.nodes)) {
@@ -1000,14 +1032,8 @@ export async function clearAllData(): Promise<void> {
 
     // 4. Clear notes (dynamic keys)
     try {
-        const notesListJson = await Storage.getItem(NOTES_KEY);
-        if (notesListJson) {
-            const noteKeys = JSON.parse(notesListJson);
-            if (Array.isArray(noteKeys)) {
-                for (const noteKey of noteKeys) {
-                    await clearKey(noteKey);
-                }
-            }
+        for (const noteKey of noteKeys) {
+            await clearKey(noteKey);
         }
     } catch (e) {
         console.warn('[ClearData] Error clearing notes:', e);
