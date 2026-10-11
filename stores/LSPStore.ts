@@ -123,14 +123,33 @@ export default class LSPStore {
         if (!errorsOnly) {
             this.info = {};
             this.resetFee();
+            // close before dropping the references: a remote LND socket
+            // left open keeps answering for the node it was opened on, and
+            // an embedded listener left attached doubles every event once
+            // the next connect adds its own
+            const { channelAcceptor, customMessagesSubscriber } = this;
             this.channelAcceptor = undefined;
             this.customMessagesSubscriber = undefined;
+            this.closeSubscription(channelAcceptor);
+            this.closeSubscription(customMessagesSubscriber);
         }
         this.error = false;
         this.error_msg = '';
         this.flow_error = false;
         this.flow_error_msg = '';
         this.showLspSettings = false;
+    };
+
+    private closeSubscription = (subscription: any) => {
+        try {
+            if (typeof subscription?.close === 'function') {
+                subscription.close();
+            } else if (typeof subscription?.remove === 'function') {
+                subscription.remove();
+            }
+        } catch (error: any) {
+            console.log('LSPStore: could not close subscription', error);
+        }
     };
 
     @action
@@ -371,6 +390,49 @@ export default class LSPStore {
         });
     };
 
+    // Flow LSP setup run by the wallet on every fetch. The LSP info request
+    // isn't awaited: a host that drops packets holds it until the 60s
+    // HTTP timeout, and the fetch lock and deep link handling would wait
+    // on it. The channel acceptor reads the LSP pubkey per request, so it
+    // doesn't need the reply first. getLSPInfo rejects when the LSP can't
+    // be reached, answers with an error (including the geoblock reply) or
+    // returns a non-JSON body, and records the error in flow_error for
+    // the UI. Remote LND over Tor skips the request: it goes over
+    // clearnet and would send the device IP to the Flow host on every
+    // startup (#4372)
+    public initFlowLSP = () => {
+        if (!BackendUtils.supportsFlowLSP()) return;
+
+        const { implementation, settings, enableTor } = this.settingsStore;
+        if (
+            settings.enableLSP &&
+            (implementation !== 'lnd' ||
+                (!enableTor &&
+                    !this.nodeInfoStore.flowLspNotConfigured()
+                        .flowLspNotConfigured))
+        ) {
+            this.getLSPInfo().catch(() => {
+                // getLSPInfo rejects without a reason; the message is in
+                // flow_error_msg
+                console.warn(
+                    'Failed to fetch Flow LSP info:',
+                    this.flow_error_msg
+                );
+            });
+        }
+        if (BackendUtils.supportsLSPScustomMessage()) {
+            this.subscribeCustomMessages().catch((error: any) =>
+                console.error(
+                    'Failed to subscribe to custom messages:',
+                    error?.message
+                )
+            );
+        }
+        this.initChannelAcceptor().catch((error: any) =>
+            console.error('Failed to start channel acceptor:', error?.message)
+        );
+    };
+
     @action
     public getZeroConfFee = (amount_msat: number) => {
         const { settings } = this.settingsStore;
@@ -498,14 +560,52 @@ export default class LSPStore {
                 }
             );
 
-            await channel.channelAcceptor();
+            await this.startEmbeddedStream(
+                () => channel.channelAcceptor(),
+                'channelAcceptor'
+            );
         } else {
             // Only allow 0-conf chans from LSP or whitelisted peers
-
-            BackendUtils.initChanAcceptor({
-                zeroConfPeers: this.settingsStore?.settings?.zeroConfPeers,
-                lspPubkey: this.info?.pubkey
+            const ws = BackendUtils.initChanAcceptor({
+                getZeroConfPeers: () =>
+                    this.settingsStore?.settings?.zeroConfPeers,
+                getLspPubkey: () => this.info?.pubkey
             });
+            this.keepSocket(ws, 'channelAcceptor');
+        }
+    };
+
+    // Remote LND opens a WebSocket per subscription. lnd asks every open
+    // channel acceptor and rejects the channel if any of them does, and
+    // each custom message subscription delivers every message, so keep one
+    // of each and open a new one on the next fetch after it closes
+    private keepSocket = (
+        ws: any,
+        key: 'channelAcceptor' | 'customMessagesSubscriber'
+    ) => {
+        if (!ws?.addEventListener) return;
+        this[key] = ws;
+        const release = () => {
+            if (this[key] === ws) this[key] = null;
+        };
+        ws.addEventListener('error', release);
+        ws.addEventListener('close', release);
+    };
+
+    // Embedded LND sets the listener before starting the native stream. If
+    // the start fails, remove the listener so the guard doesn't block the
+    // retry on the next fetch
+    private startEmbeddedStream = async (
+        start: () => Promise<any>,
+        key: 'channelAcceptor' | 'customMessagesSubscriber'
+    ) => {
+        const listener = this[key];
+        try {
+            await start();
+        } catch (error) {
+            listener?.remove();
+            if (this[key] === listener) this[key] = null;
+            throw error;
         }
     };
 
@@ -774,9 +874,12 @@ export default class LSPStore {
                 }
             );
 
-            await index.subscribeCustomMessages();
+            await this.startEmbeddedStream(
+                () => index.subscribeCustomMessages(),
+                'customMessagesSubscriber'
+            );
         } else {
-            BackendUtils.subscribeCustomMessages(
+            const ws = BackendUtils.subscribeCustomMessages(
                 (response: any) => {
                     const decoded = response.result;
                     runInAction(() => this.handleCustomMessages(decoded));
@@ -787,6 +890,7 @@ export default class LSPStore {
                     );
                 }
             );
+            this.keepSocket(ws, 'customMessagesSubscriber');
         }
     };
 

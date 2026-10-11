@@ -17,6 +17,7 @@ jest.mock('../utils/TorUtils', () => ({
 }));
 
 import LND from './LND';
+import { settingsStore } from '../stores/Stores';
 
 describe('LND.getURL', () => {
     const lnd = new LND();
@@ -112,5 +113,163 @@ describe('LND.getURL', () => {
                 lnd.getURL('https://node.example.com/', '', '/v1/route', true)
             ).toBe('wss://node.example.com/v1/route');
         });
+    });
+});
+
+describe('LND.initChanAcceptor', () => {
+    const LSP = '02' + 'aa'.repeat(32);
+    const PEER = '03' + 'bb'.repeat(32);
+    const OTHER = '03' + 'cc'.repeat(32);
+
+    let sockets: any[];
+    const realWebSocket = global.WebSocket;
+
+    class FakeWebSocket {
+        listeners: { [event: string]: Array<(e: any) => void> } = {};
+        sent: any[] = [];
+        constructor() {
+            sockets.push(this);
+        }
+        addEventListener(event: string, fn: (e: any) => void) {
+            (this.listeners[event] ||= []).push(fn);
+        }
+        send(data: string) {
+            this.sent.push(JSON.parse(data));
+        }
+        emit(event: string, e: any = {}) {
+            (this.listeners[event] || []).forEach((fn) => fn(e));
+        }
+    }
+
+    const request = (ws: FakeWebSocket, pubkey: string, wantsZeroConf = true) =>
+        ws.emit('message', {
+            data: JSON.stringify({
+                result: {
+                    node_pubkey: Buffer.from(pubkey, 'hex').toString('base64'),
+                    pending_chan_id: 'chan',
+                    wants_zero_conf: wantsZeroConf
+                }
+            })
+        });
+
+    beforeEach(() => {
+        sockets = [];
+        (global as any).WebSocket = FakeWebSocket;
+        Object.assign(settingsStore as any, {
+            host: 'https://node.example.com',
+            port: 8080,
+            macaroonHex: 'mac'
+        });
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        (global as any).WebSocket = realWebSocket;
+        jest.mocked(console.log).mockRestore();
+    });
+
+    it('returns the socket it opened', () => {
+        const ws = new LND().initChanAcceptor({
+            getZeroConfPeers: () => [],
+            getLspPubkey: () => undefined
+        });
+        expect(sockets).toHaveLength(1);
+        expect(ws).toBe(sockets[0]);
+    });
+
+    it('reads the LSP pubkey when a request arrives, not when it opens', () => {
+        let lspPubkey: string | undefined;
+        new LND().initChanAcceptor({
+            getZeroConfPeers: () => undefined,
+            getLspPubkey: () => lspPubkey
+        });
+        const ws = sockets[0];
+
+        // accept is left out (undefined), which lnd reads as false
+        request(ws, LSP);
+        expect(ws.sent.pop().accept).toBeFalsy();
+
+        // the Flow info reply lands after the socket was opened
+        lspPubkey = LSP;
+        request(ws, LSP);
+        expect(ws.sent.pop()).toEqual({
+            accept: true,
+            zero_conf: true,
+            pending_chan_id: 'chan'
+        });
+
+        request(ws, OTHER);
+        expect(ws.sent.pop().accept).toBeFalsy();
+    });
+
+    it('reads zeroConfPeers when a request arrives', () => {
+        let zeroConfPeers: string[] = [];
+        new LND().initChanAcceptor({
+            getZeroConfPeers: () => zeroConfPeers,
+            getLspPubkey: () => LSP
+        });
+        const ws = sockets[0];
+
+        request(ws, PEER);
+        expect(ws.sent.pop()).toMatchObject({ accept: false });
+
+        zeroConfPeers = [PEER];
+        request(ws, PEER);
+        expect(ws.sent.pop()).toMatchObject({
+            accept: true,
+            zero_conf: true
+        });
+    });
+
+    it('does not mark a normal open from the LSP as zero-conf', () => {
+        new LND().initChanAcceptor({
+            getZeroConfPeers: () => [PEER],
+            getLspPubkey: () => LSP
+        });
+        const ws = sockets[0];
+
+        request(ws, LSP, false);
+        const fromLsp = ws.sent.pop();
+        expect(fromLsp.accept).toBe(true);
+        expect(fromLsp.zero_conf).toBeFalsy();
+
+        request(ws, PEER, false);
+        const fromPeer = ws.sent.pop();
+        expect(fromPeer.accept).toBe(true);
+        expect(fromPeer.zero_conf).toBeFalsy();
+    });
+});
+
+describe('LND.subscribeCustomMessages', () => {
+    const realWebSocket = global.WebSocket;
+    let sockets: any[];
+
+    class FakeWebSocket {
+        constructor() {
+            sockets.push(this);
+        }
+        addEventListener() {}
+    }
+
+    beforeEach(() => {
+        sockets = [];
+        (global as any).WebSocket = FakeWebSocket;
+        Object.assign(settingsStore as any, {
+            host: 'https://node.example.com',
+            port: 8080,
+            macaroonHex: 'mac'
+        });
+    });
+
+    afterEach(() => {
+        (global as any).WebSocket = realWebSocket;
+    });
+
+    // LSPStore keeps this socket to avoid opening one per fetch and to
+    // close it on reset
+    it('returns the socket it opened', () => {
+        const ws = new LND().subscribeCustomMessages(jest.fn(), jest.fn());
+        expect(sockets).toHaveLength(1);
+        expect(ws).toBe(sockets[0]);
     });
 });
