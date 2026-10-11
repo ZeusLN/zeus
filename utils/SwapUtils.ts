@@ -533,9 +533,10 @@ export const swapNetworkName = (nodeInfo?: {
 };
 
 // What bitcoind and esplora say when the transaction is already in the
-// mempool or a block, so broadcasting it again is not a failure
+// mempool or a block, so broadcasting it again is not a failure. Bitcoin
+// Core 28 changed "already in block chain" to "outputs already in utxo set".
 const ALREADY_BROADCAST =
-    /txn-already-known|txn-already-in-mempool|already in block ?chain|transaction already exists/i;
+    /txn-already-known|txn-already-in-mempool|already in block ?chain|already in utxo set|transaction already exists/i;
 
 export const isAlreadyBroadcastError = (message?: string): boolean =>
     ALREADY_BROADCAST.test(message || '');

@@ -197,7 +197,53 @@ describe('SwapStore.broadcastSwapTransaction', () => {
         await expect(
             newStore().broadcastSwapTransaction(CLAIM_HEX)
         ).rejects.toThrow('mempool.test');
-        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(fetchMock).not.toHaveBeenCalledWith(
+            'POST',
+            HOST_TX,
+            expect.anything(),
+            expect.anything()
+        );
+    });
+
+    describe('when both reject it', () => {
+        const LOOKUP = `https://mempool.test/api/tx/${CLAIM_TXID}`;
+        const rejected = {
+            [MEMPOOL_TX]: respond(400, 'bad-txns-inputs-missingorspent'),
+            [HOST_TX]: respond(400, 'bad-txns-inputs-missingorspent')
+        };
+
+        it('returns the txid of a claim the mempool instance already has', async () => {
+            // a confirmed claim whose output the wallet has since spent
+            routes({
+                ...rejected,
+                [LOOKUP]: respond(
+                    200,
+                    JSON.stringify({
+                        txid: CLAIM_TXID,
+                        status: { confirmed: true }
+                    })
+                )
+            });
+
+            await expect(
+                newStore().broadcastSwapTransaction(CLAIM_HEX, HOST)
+            ).resolves.toBe(CLAIM_TXID);
+            expect(fetchMock).toHaveBeenLastCalledWith('GET', LOOKUP);
+        });
+
+        it.each([
+            ['is not found', respond(404, 'Transaction not found')],
+            ['returns another txid', respond(200, '{"txid":"other"}')],
+            ['returns something other than JSON', respond(200, '<html>')],
+            ['fails', new Error('network down')]
+        ])('throws when the lookup %s', async (_case, lookup) => {
+            routes({ ...rejected, [LOOKUP]: lookup });
+
+            await expect(
+                newStore().broadcastSwapTransaction(CLAIM_HEX, HOST)
+            ).rejects.toThrow(/mempool\.test.*swaps\.test/);
+            expect(fetchMock).toHaveBeenLastCalledWith('GET', LOOKUP);
+        });
     });
 
     it('rejects a transaction it cannot decode without sending it', async () => {

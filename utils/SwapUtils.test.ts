@@ -685,6 +685,7 @@ describe('SwapUtils', () => {
     describe('isAlreadyBroadcastError', () => {
         it.each([
             'sendrawtransaction RPC error: {"code":-27,"message":"Transaction already in block chain"}',
+            'sendrawtransaction RPC error: {"code":-27,"message":"Transaction outputs already in utxo set"}',
             'txn-already-in-mempool',
             'txn-already-known',
             'transaction already exists'
