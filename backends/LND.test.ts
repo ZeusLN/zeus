@@ -192,6 +192,16 @@ describe('LND.watchInvoicePaid', () => {
         expect(onPaid).not.toHaveBeenCalled();
     });
 
+    it('does not treat a NaN value as amountless', async () => {
+        lookupInvoice.mockResolvedValue(settled(500));
+        const onPaid = jest.fn();
+        lnd.watchInvoicePaid({ rHash: 'AQID', value: NaN }, onPaid);
+
+        await tick();
+
+        expect(onPaid).not.toHaveBeenCalled();
+    });
+
     it('stops polling once unsubscribed', async () => {
         lookupInvoice.mockResolvedValue(open());
         const unsubscribe = lnd.watchInvoicePaid(
@@ -286,6 +296,20 @@ describe('LND.watchOnchainReceived', () => {
                 value: '7100',
                 numConfPreference: 0
             },
+            onReceived
+        );
+
+        await tick();
+
+        expect(onReceived).not.toHaveBeenCalled();
+    });
+
+    it('does not treat a NaN value as amountless', async () => {
+        const lnd = new LND();
+        jest.spyOn(lnd, 'getTransactions').mockResolvedValue(tx('500'));
+        const onReceived = jest.fn();
+        lnd.watchOnchainReceived(
+            { address: 'bc1qwatched', value: NaN, numConfPreference: 0 },
             onReceived
         );
 

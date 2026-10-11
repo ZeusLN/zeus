@@ -1032,7 +1032,7 @@ export default class LightningNodeConnect {
                     if (
                         result.dest_addresses.includes(address) &&
                         result.num_confirmations >= numConfPreference &&
-                        Number(result.amount) >= Number(value || 0)
+                        Number(result.amount) >= Number(value ?? 0)
                     ) {
                         listener.remove();
                         onReceived({

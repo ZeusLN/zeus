@@ -777,7 +777,7 @@ export default class LND {
                     const amountPaid = invoice.getAmount;
                     if (
                         invoice.isPaid &&
-                        Number(amountPaid) >= Number(value || 0) &&
+                        Number(amountPaid) >= Number(value ?? 0) &&
                         Number(amountPaid) !== 0
                     ) {
                         clearInterval(interval);
@@ -827,7 +827,7 @@ export default class LND {
                                 const output = output_details[j];
                                 if (
                                     Number(output.amount) >=
-                                        Number(value || 0) &&
+                                        Number(value ?? 0) &&
                                     output.address === address
                                 ) {
                                     clearInterval(interval);
