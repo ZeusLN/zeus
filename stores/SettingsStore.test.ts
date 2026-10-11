@@ -274,7 +274,7 @@ describe('SettingsStore.connect (LNC)', () => {
         async (change) => {
             const store = new SettingsStore();
             store.implementation = 'lightning-node-connect';
-            const isCurrent = store.getLncConnectionGuard();
+            const isCurrent = store.getConnectionGuard();
             expect(isCurrent()).toBe(true);
             if (change === 'implementation') store.implementation = 'lnd';
             if (change === 'mailbox') store.customMailboxServer = 'other:443';

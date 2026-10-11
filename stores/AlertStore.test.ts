@@ -21,15 +21,22 @@ const pingPeerMock = pingPeer as jest.Mock;
 
 const TIMED_OUT = 'views.Settings.EmbeddedNode.NeutrinoPeers.timedOut';
 
-const makeSettingsStore = (embeddedLndNetwork = 'Mainnet') =>
-    ({
+const makeSettingsStore = (embeddedLndNetwork = 'Mainnet') => {
+    const store: any = {
         implementation: 'embedded-lnd',
         embeddedLndNetwork,
+        connectionSeq: 0,
         settings: {
             neutrinoPeersMainnet: ['fast.mainnet', 'slow.mainnet'],
             neutrinoPeersTestnet: ['fast.testnet']
         }
-    } as any);
+    };
+    store.getConnectionGuard = () => {
+        const seq = store.connectionSeq;
+        return () => store.connectionSeq === seq;
+    };
+    return store;
+};
 
 const pingTimes: { [peer: string]: number } = {
     'fast.mainnet': 120,
@@ -98,6 +105,23 @@ describe('AlertStore', () => {
 
             expect(pingPeerMock).toHaveBeenCalledTimes(1);
             expect(pingPeerMock).toHaveBeenCalledWith('fast.testnet');
+            expect(store.problematicNeutrinoPeers).toEqual([]);
+            expect(store.neutrinoPeerError).toBe(false);
+            expect(store.hasError).toBe(false);
+        });
+
+        it('drops the result when the wallet changes during the pings', async () => {
+            const settingsStore = makeSettingsStore();
+            pingPeerMock.mockImplementation(async (peer: string) => {
+                // a wallet switch lands while the old wallet's peers are
+                // still being pinged
+                if (peer === 'slow.mainnet') settingsStore.connectionSeq++;
+                return { ms: pingTimes[peer], reachable: true };
+            });
+            const store = new AlertStore(settingsStore);
+
+            await store.checkNeutrinoPeers();
+
             expect(store.problematicNeutrinoPeers).toEqual([]);
             expect(store.neutrinoPeerError).toBe(false);
             expect(store.hasError).toBe(false);

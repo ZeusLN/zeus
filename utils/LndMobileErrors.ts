@@ -196,6 +196,8 @@ export const TRANSIENT_RPC_RETRY_BASE_MS = 2000;
  * @param retryCount    - How many retries have already been attempted
  * @param setConnecting - Callback to toggle the connecting UI state
  * @param onRetry       - Callback invoked after the delay to schedule the next attempt
+ * @param isCurrent     - False once another wallet or reconnect took over; the
+ *                        retry then stops without touching `connecting`
  */
 export async function retryOnTransientError(
     error: unknown,
@@ -203,7 +205,8 @@ export async function retryOnTransientError(
     context: string,
     retryCount: number,
     setConnecting: (v: boolean) => void,
-    onRetry: () => void | Promise<void>
+    onRetry: () => void | Promise<void>,
+    isCurrent: () => boolean = () => true
 ): Promise<void> {
     if (retryCount >= MAX_TRANSIENT_RPC_RETRIES) {
         console.error(
@@ -222,6 +225,7 @@ export async function retryOnTransientError(
     );
     setConnecting(false);
     await sleep(delayMs);
+    if (!isCurrent()) return;
     setConnecting(true);
     await onRetry();
 }

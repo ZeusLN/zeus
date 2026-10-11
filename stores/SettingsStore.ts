@@ -2469,6 +2469,7 @@ export default class SettingsStore {
     // LNDHub
     @action
     public login = (request: LoginRequest) => {
+        const isCurrent = this.getConnectionGuard();
         this.error = false;
         this.errorMsg = '';
         this.createAccountSuccess = '';
@@ -2482,6 +2483,9 @@ export default class SettingsStore {
                 .then((data: any) => {
                     runInAction(() => {
                         this.loading = false;
+                        // The old account's tokens must not replace the
+                        // newly selected wallet's
+                        if (!isCurrent()) return;
                         this.accessToken = data.access_token;
                         this.refreshToken = data.refresh_token;
                     });
@@ -2490,6 +2494,7 @@ export default class SettingsStore {
                 .catch((error: any) => {
                     runInAction(() => {
                         this.loading = false;
+                        if (!isCurrent()) return;
                         this.error = true;
                         if (
                             typeof error.message === 'string' &&
@@ -2509,19 +2514,10 @@ export default class SettingsStore {
         });
     };
 
-    // LNC
-    //
-    // ConnectServer dials in a detached goroutine that retries until it
-    // connects (grpc.WithBlock on a background context) and cannot be
-    // cancelled. So a timeout here is reported but not retried: dialing or
-    // re-initializing again would put a second client on the same mailbox
-    // session, and the two evict each other. initLNC and connect() reuse a
-    // dial that is still in progress, so calling connect() again after an
-    // error goes back to waiting on it. The old 10s budget was routinely
-    // shorter than a mailbox handshake on a cold radio (ZEUS-4278).
-    // Snapshot both selection and reconnect generation. A late result must
-    // not clear a newer wallet's loading/error/connecting state.
-    public getLncConnectionGuard = () => {
+    // Snapshot both selection and reconnect generation. A connect or refresh
+    // that outlives a wallet switch (or a reconnect of the same wallet) must
+    // not write the newer connection's loading/error/connecting state.
+    public getConnectionGuard = () => {
         const {
             implementation,
             pairingPhrase,
@@ -2539,6 +2535,16 @@ export default class SettingsStore {
             this.customMailboxServer === customMailboxServer;
     };
 
+    // LNC
+    //
+    // ConnectServer dials in a detached goroutine that retries until it
+    // connects (grpc.WithBlock on a background context) and cannot be
+    // cancelled. So a timeout here is reported but not retried: dialing or
+    // re-initializing again would put a second client on the same mailbox
+    // session, and the two evict each other. initLNC and connect() reuse a
+    // dial that is still in progress, so calling connect() again after an
+    // error goes back to waiting on it. The old 10s budget was routinely
+    // shorter than a mailbox handshake on a cold radio (ZEUS-4278).
     private waitForLncConnection = (isCurrent: () => boolean) =>
         new Promise<boolean>((resolve) => {
             let counter = 0;
@@ -2564,7 +2570,7 @@ export default class SettingsStore {
         });
 
     public connect = async () => {
-        const isCurrent = this.getLncConnectionGuard();
+        const isCurrent = this.getConnectionGuard();
         this.loading = true;
 
         let error;
@@ -2627,11 +2633,13 @@ export default class SettingsStore {
     // NWC
     @action
     public connectNWC = async () => {
+        const isCurrent = this.getConnectionGuard();
         this.loading = true;
 
         await BackendUtils.initNWC();
 
         const error = await BackendUtils.connect();
+        if (!isCurrent()) return;
         if (error) {
             this.error = true;
             this.errorMsg = error;

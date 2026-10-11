@@ -115,7 +115,7 @@ function setup() {
         'SettingsStore',
         [
             'connect',
-            'getLncConnectionGuard',
+            'getConnectionGuard',
             'waitForLncConnection',
             'clearConnectError',
             'setConnectingStatus',
