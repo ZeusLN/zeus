@@ -29,8 +29,37 @@ import { Hash as sha256Hash } from 'fast-sha256';
 import BigNumber from 'bignumber.js';
 
 export default class LightningNodeConnect {
-    lnc: any;
+    private client: any;
     listener: any;
+
+    // Lifecycle code may close an old client, but RPCs must only use the
+    // selected wallet's session. A pending native dial can outlive a switch.
+    get lnc(): any {
+        if (!this.isSelectedSession(this.client)) {
+            throw new Error(
+                localeString('stores.SettingsStore.lncConnectError')
+            );
+        }
+        return this.client;
+    }
+
+    private isSelectedSession = (client: any) => {
+        const {
+            implementation,
+            pairingPhrase,
+            mailboxServer,
+            customMailboxServer
+        } = settingsStore;
+        return (
+            !!client &&
+            implementation === 'lightning-node-connect' &&
+            client._namespace === hash(pairingPhrase || '') &&
+            client.credentials?.serverHost ===
+                (mailboxServer === 'custom-defined'
+                    ? customMailboxServer
+                    : mailboxServer)
+        );
+    };
 
     // Default true: checkPerms currently forces all perms true (ZEUS-3642),
     // and it only runs after a successful connect, so uninitialized perms
@@ -68,17 +97,17 @@ export default class LightningNodeConnect {
         // still dialing: keep it. The native client redials on its own, and
         // InitLNC would replace it without stopping it, leaving two clients
         // on one mailbox session.
-        if (await this.isReusable(this.lnc, namespace, serverHost)) return;
+        if (await this.isReusable(this.client, namespace, serverHost)) return;
 
         // Upstream's InitLNC replaces the namespace's mobile client outright
         // (m[nameSpace] = newMobileClient()) without closing the connection
         // already on it. Tear the previous session down first; a dial still
         // in progress cannot be torn down, so park it instead.
         await this.disconnect();
-        if (this.lnc && (await this.isDialing(this.lnc))) {
-            this.parked.set(this.lnc._namespace, this.lnc);
+        if (this.client && (await this.isDialing(this.client))) {
+            this.parked.set(this.client._namespace, this.client);
         }
-        this.lnc = undefined;
+        this.client = undefined;
 
         await this.releaseLandedDials(namespace);
 
@@ -86,7 +115,7 @@ export default class LightningNodeConnect {
         if (parked) {
             this.parked.delete(namespace);
             if (await this.isReusable(parked, namespace, serverHost)) {
-                this.lnc = parked;
+                this.client = parked;
                 return;
             }
             // The mailbox changed. The old dial keeps running against the
@@ -105,7 +134,7 @@ export default class LightningNodeConnect {
         credentialStore.pairingPhrase = pairingPhrase;
         credentialStore.serverHost = serverHost;
 
-        this.lnc = new LNC({ namespace, credentialStore });
+        this.client = new LNC({ namespace, credentialStore });
     };
 
     private isDialing = async (lnc: any) => {
@@ -201,9 +230,10 @@ export default class LightningNodeConnect {
     // was established once (lndConn != nil); it stays true after the
     // mailbox session dies. The mailbox status is what tracks the session.
     isConnected = async () => {
-        if (!this.lnc) return false;
+        const client = this.client;
+        if (!this.isSelectedSession(client)) return false;
         try {
-            if (!(await this.lnc.isConnected())) return false;
+            if (!(await client.isConnected())) return false;
         } catch (e) {
             // rejects with 'unknown namespace' when the native client was
             // never initialized, which is just another way of saying no
@@ -211,16 +241,20 @@ export default class LightningNodeConnect {
             return false;
         }
         try {
-            const status = await this.lnc.status();
-            return !status || status === 'Connected';
+            const status = await client.status();
+            return (
+                this.client === client &&
+                this.isSelectedSession(client) &&
+                (!status || status === 'Connected')
+            );
         } catch (e) {
             console.log('LNC: status check failed', e);
-            return true;
+            return this.client === client && this.isSelectedSession(client);
         }
     };
     disconnect = async () => {
-        if (!this.lnc) return;
-        await this.closeSession(this.lnc);
+        if (!this.client) return;
+        await this.closeSession(this.client);
     };
     private closeSession = async (lnc: any) => {
         // Let queued credential writes land before the session goes away. An

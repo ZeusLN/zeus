@@ -623,6 +623,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             ldkVssServer,
             updateSettings
         } = SettingsStore;
+        const isCurrentLncConnection = SettingsStore.getLncConnectionGuard();
         const { isSyncing } = SyncStore;
         const {
             fiatEnabled,
@@ -1233,14 +1234,18 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 BalanceStore.getLightningBalance(true);
             }
         } else if (implementation === 'lightning-node-connect') {
-            const fetched = await fetchLncData(connecting, {
-                SettingsStore,
-                NodeInfoStore,
-                UTXOsStore,
-                BalanceStore,
-                ChannelsStore
-            });
-            if (!fetched) return;
+            const fetched = await fetchLncData(
+                connecting,
+                {
+                    SettingsStore,
+                    NodeInfoStore,
+                    UTXOsStore,
+                    BalanceStore,
+                    ChannelsStore
+                },
+                isCurrentLncConnection
+            );
+            if (!fetched || !isCurrentLncConnection()) return;
         } else if (implementation === 'nostr-wallet-connect') {
             let error;
             if (connecting) {
@@ -1365,6 +1370,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         // check for swaps after node info is fetched
         // NOTE: swap rates are only fetched from the Swaps view
+        if (
+            implementation === 'lightning-node-connect' &&
+            !isCurrentLncConnection()
+        )
+            return;
         if (connecting) {
             SwapStore.fetchAndUpdateSwaps();
         }

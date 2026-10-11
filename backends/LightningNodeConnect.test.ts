@@ -21,6 +21,8 @@ jest.mock('../zeus_modules/@lightninglabs/lnc-core', () => ({
     walletrpc: {}
 }));
 
+jest.mock('../utils/LocaleUtils', () => ({ localeString: (s: string) => s }));
+
 jest.mock('./LNC/credentialStore', () => {
     class MockCredentialStore {
         pairingPhrase = '';
@@ -97,6 +99,7 @@ describe('LightningNodeConnect', () => {
     beforeEach(() => {
         mockInstances.length = 0;
         mockSettings.pairingPhrase = 'phrase-a';
+        mockSettings.implementation = 'lightning-node-connect';
         mockSettings.mailboxServer = 'mailbox.example.com:443';
         mockSettings.customMailboxServer = '';
     });
@@ -203,6 +206,27 @@ describe('LightningNodeConnect', () => {
     });
 
     describe('isConnected', () => {
+        it.each(['phrase', 'mailbox', 'implementation'])(
+            'rejects a connected client after the selected %s changes',
+            async (changed) => {
+                const backend = new LightningNodeConnect();
+                const lnc = await openWallet(backend, 'phrase-a');
+                lnc.connected = true;
+                if (changed === 'phrase')
+                    mockSettings.pairingPhrase = 'phrase-b';
+                if (changed === 'mailbox')
+                    mockSettings.mailboxServer = 'other:443';
+                if (changed === 'implementation')
+                    mockSettings.implementation = 'lnd';
+
+                expect(await backend.isConnected()).toBe(false);
+                await expect(backend.getMyNodeInfo()).rejects.toThrow(
+                    'stores.SettingsStore.lncConnectError'
+                );
+                expect(lnc.lnd.lightning.getInfo).not.toHaveBeenCalled();
+            }
+        );
+
         it('is false without a client', async () => {
             expect(await new LightningNodeConnect().isConnected()).toBe(false);
         });
@@ -221,6 +245,21 @@ describe('LightningNodeConnect', () => {
 
             expect(await backend.isConnected()).toBe(true);
         });
+
+        it.each([true, false])(
+            'rechecks ownership after a status probe (rejects: %s)',
+            async (rejects) => {
+                const backend = new LightningNodeConnect();
+                const lnc = await openWallet(backend, 'phrase-a');
+                lnc.connected = true;
+                lnc.status.mockImplementation(async () => {
+                    mockSettings.pairingPhrase = 'phrase-b';
+                    if (rejects) throw new Error('bridge error');
+                    return 'Connected';
+                });
+                expect(await backend.isConnected()).toBe(false);
+            }
+        );
 
         it('is false when the mailbox session has died', async () => {
             // native IsConnected is lndConn != nil and stays true after the
