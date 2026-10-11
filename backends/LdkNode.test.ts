@@ -2,10 +2,19 @@ const mockListPayments = jest.fn();
 const mockSendBolt11 = jest.fn();
 const mockSendSpontaneousPayment = jest.fn();
 const mockBolt12SendUsingAmount = jest.fn();
+const mockListChannels = jest.fn();
+const mockCloseChannel = jest.fn();
+const mockForceCloseChannel = jest.fn();
 
 jest.mock('../ldknode/LdkNodeInjection', () => ({
     __esModule: true,
     default: {
+        channel: {
+            listChannels: (...args: any[]) => mockListChannels(...args),
+            closeChannel: (...args: any[]) => mockCloseChannel(...args),
+            forceCloseChannel: (...args: any[]) =>
+                mockForceCloseChannel(...args)
+        },
         payments: {
             listPayments: (...args: any[]) => mockListPayments(...args)
         },
@@ -237,5 +246,158 @@ describe('LdkNode.formatChannel', () => {
         // LDK leaves forceCloseSpendDelay unset on an outbound channel
         // until the counterparty accepts it
         expect(formatChannel().csv_delay).toBe(0);
+    });
+});
+
+describe('LdkNode.closeChannel', () => {
+    let ldk: LdkNode;
+    let emitEvent: (event: any) => void;
+    let unsubscribed: boolean;
+
+    const CHANNEL = {
+        fundingTxo_txid: 'txid',
+        userChannelId: 'user-channel-id',
+        counterpartyNodeId: '02peer'
+    };
+
+    // Tracks the close without awaiting it, so tests can check that it is
+    // still waiting
+    const track = (close: Promise<any>) => {
+        const state: { settled: boolean; error?: any } = { settled: false };
+        close.then(
+            () => (state.settled = true),
+            (error) => {
+                state.settled = true;
+                state.error = error;
+            }
+        );
+        return state;
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.useFakeTimers();
+        unsubscribed = false;
+        ldk = new LdkNode();
+        ldk.subscribeToEvents = (callback: any) => {
+            emitEvent = callback;
+            unsubscribed = false;
+            return () => {
+                unsubscribed = true;
+            };
+        };
+        mockListChannels.mockResolvedValue([CHANNEL]);
+        mockCloseChannel.mockResolvedValue(undefined);
+        mockForceCloseChannel.mockResolvedValue(undefined);
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    describe.each([
+        ['cooperative', false, mockCloseChannel, mockForceCloseChannel],
+        ['force', true, mockForceCloseChannel, mockCloseChannel]
+    ])('%s close', (_name, force, called, notCalled) => {
+        it('resolves once LDK reports the channel closed', async () => {
+            const close = track(
+                ldk.closeChannel(['txid', '0', force ? 'true' : ''])
+            );
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(called).toHaveBeenCalledWith({
+                userChannelId: 'user-channel-id',
+                counterpartyNodeId: '02peer'
+            });
+            expect(notCalled).not.toHaveBeenCalled();
+            expect(close.settled).toBe(false);
+
+            emitEvent({
+                type: 'channelClosed',
+                userChannelId: 'user-channel-id'
+            });
+            await jest.advanceTimersByTimeAsync(0);
+
+            expect(close.settled).toBe(true);
+            expect(close.error).toBeUndefined();
+            expect(unsubscribed).toBe(true);
+        });
+    });
+
+    it('rejects an unknown channel without subscribing', async () => {
+        let subscribed = false;
+        ldk.subscribeToEvents = () => {
+            subscribed = true;
+            return () => {};
+        };
+
+        await expect(
+            ldk.closeChannel(['unknown-txid', '0', ''])
+        ).rejects.toThrow('error.channelNotFound');
+
+        expect(subscribed).toBe(false);
+        expect(mockCloseChannel).not.toHaveBeenCalled();
+        expect(mockForceCloseChannel).not.toHaveBeenCalled();
+    });
+
+    it('resolves when channelClosed arrives before the close call returns', async () => {
+        let returnClose: () => void = () => {};
+        mockCloseChannel.mockReturnValue(
+            new Promise<void>((resolve) => {
+                returnClose = resolve;
+            })
+        );
+
+        const close = track(ldk.closeChannel(['txid', '0', '']));
+        await jest.advanceTimersByTimeAsync(0);
+        emitEvent({
+            type: 'channelClosed',
+            userChannelId: 'user-channel-id'
+        });
+        await jest.advanceTimersByTimeAsync(0);
+
+        // still waiting on the close call itself
+        expect(close.settled).toBe(false);
+        expect(unsubscribed).toBe(true);
+
+        returnClose();
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(close.settled).toBe(true);
+        expect(close.error).toBeUndefined();
+    });
+
+    it('ignores other channels and other events', async () => {
+        const close = track(ldk.closeChannel(['txid', '0', '']));
+        await jest.advanceTimersByTimeAsync(0);
+
+        emitEvent({ type: 'channelClosed', userChannelId: 'other-channel' });
+        emitEvent({ type: 'channelReady', userChannelId: 'user-channel-id' });
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(close.settled).toBe(false);
+        expect(unsubscribed).toBe(false);
+    });
+
+    it('rejects and stops listening when LDK rejects the close', async () => {
+        mockCloseChannel.mockRejectedValue(new Error('peer disconnected'));
+
+        const close = track(ldk.closeChannel(['txid', '0', '']));
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(close.error?.message).toEqual('peer disconnected');
+        expect(unsubscribed).toBe(true);
+    });
+
+    it('resolves after a minute without the event', async () => {
+        const close = track(ldk.closeChannel(['txid', '0', '']));
+
+        await jest.advanceTimersByTimeAsync(59_999);
+        expect(close.settled).toBe(false);
+
+        await jest.advanceTimersByTimeAsync(1);
+        expect(close.settled).toBe(true);
+        expect(close.error).toBeUndefined();
+        expect(unsubscribed).toBe(true);
     });
 });
