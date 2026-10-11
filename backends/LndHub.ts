@@ -81,7 +81,7 @@ export default class LndHub extends LND {
                         if (
                             result.getFormattedRhash === rHash &&
                             result.ispaid &&
-                            Number(result.amt) >= Number(value) &&
+                            Number(result.amt) >= Number(value || 0) &&
                             Number(result.amt) !== 0
                         ) {
                             clearInterval(interval);
