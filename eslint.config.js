@@ -2,6 +2,7 @@ const reactNativeConfig = require('@react-native/eslint-config/flat');
 const importPlugin = require('eslint-plugin-import');
 const prettierPlugin = require('eslint-plugin-prettier');
 const noNegativeLayoutOffset = require('./eslint-rules/no-negative-layout-offset');
+const noThemeColorInStaticStyleSheet = require('./eslint-rules/no-themecolor-in-static-stylesheet');
 
 module.exports = [
     // Ignore patterns (must be first for ESLint 9 global ignores)
@@ -157,12 +158,15 @@ module.exports = [
         plugins: {
             zeus: {
                 rules: {
-                    'no-negative-layout-offset': noNegativeLayoutOffset
+                    'no-negative-layout-offset': noNegativeLayoutOffset,
+                    'no-themecolor-in-static-stylesheet':
+                        noThemeColorInStaticStyleSheet
                 }
             }
         },
         rules: {
-            'zeus/no-negative-layout-offset': 'error'
+            'zeus/no-negative-layout-offset': 'error',
+            'zeus/no-themecolor-in-static-stylesheet': 'error'
         }
     }
 ];

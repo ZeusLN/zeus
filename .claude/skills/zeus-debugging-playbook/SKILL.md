@@ -56,7 +56,7 @@ Also remember: test coverage outside `utils/` is thin. `stores/`, `views/`, `com
 | 2 | `TypeError: ... .then is not a function` / `.then of false` | Same as #1 | Same root cause: code awaited/`.then`ed the `false` that `call()` returns for a missing method | Same as #1; log `typeof result` at the call site to confirm |
 | 3 | User settings vanished after an update | The `updateSettings({...})` call that shipped in the update | `SettingsStore.updateSettings` is a **shallow top-level merge**: passing a partial nested group replaces the whole group | Use `updateSettingsGroup('payments', { newField })`, which merges inside the write queue (zeus-config-and-flags for the axes) |
 | 4 | App stuck on "connecting" / infinite loading | `fetchLock` and `connecting` values in `views/Wallet/Wallet.tsx` | Re-entrancy guard never released, or a lifecycle refactor changed when `getSettingsAndNavigate()` runs | Ensure every exit path releases `fetchLock`; incident `fdad118ed` → fixed by `93227029e` |
-| 5 | CI **Lint** job fails though `eslint .` passes locally | `yarn lint` locally (not bare eslint) | `yarn lint` = `eslint . && yarn run test check-styles.test.ts --testPathIgnorePatterns=` — the second half bans `themeColor()` inside static `StyleSheet.create` in any `.tsx` | Move the themed color out of the static stylesheet (inline style or style function) |
+| 5 | CI **Lint** job fails though `eslint .` passes locally | `yarn lint` locally (not bare eslint) | `yarn lint` = `eslint .`; the local rule `zeus/no-themecolor-in-static-stylesheet` bans `themeColor()` inside a module-level `StyleSheet.create` in any `.ts`/`.tsx` | Move the themed color out of the static stylesheet (inline style or style function) |
 | 6 | Prettier check fails with a reformat that looks wrong | `npx prettier --version` → must print `2.4.1` | You formatted with a global/modern prettier; repo pins `prettier@2.4.1` (tabWidth 4, singleQuote, trailingComma none) | Re-format with the repo-local binary: `yarn prettier --write <file>` |
 | 7 | Jest: `SyntaxError: Unexpected token` on a new dependency | `transformIgnorePatterns` in `package.json` (jest block) | New ESM dep isn't in the transform whitelist, so Babel skips it | Add the package name inside the `node_modules/(?!(...))` group |
 | 8 | Crash in Animated/layout code after an RN upgrade | Was the pattern written pre-New-Architecture? | Fabric (ON since `d13ebc2cd`, RN 0.83.1) rejects patterns the old renderer tolerated | Restructure per `f08bfc7c5` (WalletHeader Animated) and `2c55e4f89` (keypad baseline layout) |
@@ -108,7 +108,7 @@ and `SettingsStore.connecting` initializes `true`. `getSettingsAndNavigate()` ru
 
 Green PR = 4 checks (Test, Lint, Prettier, Typescript Check) = `yarn verify`. Anatomy and jest traps are owned by zeus-validation-and-qa; the three that masquerade as something else:
 
-- **Lint** runs a jest test: `check-styles.test.ts` (repo root) is excluded from `yarn test` via `testPathIgnorePatterns` and re-included by `yarn lint` with `--testPathIgnorePatterns=`. Failure text lists the offending `.tsx` files.
+- **Lint** includes local rules from `eslint-rules/`: `zeus/no-themecolor-in-static-stylesheet` fails on `themeColor()` inside a module-level `StyleSheet.create`, `zeus/no-negative-layout-offset` on negative margin/position values.
 - **Prettier/Lint double failure**: prettier violations also fail ESLint (`prettier/prettier` is an `error` rule in `eslint.config.js`). Fix formatting once, both clear.
 - **Test** on a new dep: extend the `transformIgnorePatterns` whitelist in `package.json`; current members include `react-native`, `@react-native`, `react-native-blob-util`, `nostr-tools`, `@noble`, `@scure`, `uuid`, etc.
 
@@ -173,7 +173,7 @@ Re-verification one-liners for volatile facts:
 | `payLightningInvoiceStreaming` still unimplemented | `grep -rn payLightningInvoiceStreaming backends/` (expect no hits) |
 | `updateSettings` still shallow merge | `grep -n -A6 'public updateSettings' stores/SettingsStore.ts` |
 | `fetchLock` guard in Wallet.tsx | `grep -n 'fetchLock' views/Wallet/Wallet.tsx` |
-| `yarn lint` includes check-styles | `grep -n '"lint"' package.json` |
+| `yarn lint` includes the themeColor style-sheet rule | `grep -n 'no-themecolor-in-static-stylesheet' eslint.config.js` |
 | Prettier pin 2.4.1 | `grep -n '"prettier"' package.json` |
 | Jest transform whitelist members | `grep -n -A2 transformIgnorePatterns package.json` |
 | Merchant-QR 500-char cap | `grep -n MERCHANT_QR_MAX_LEN utils/handleAnything.ts` |

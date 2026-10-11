@@ -24,7 +24,7 @@ Do NOT use this skill for — go to the sibling instead:
 | Need | Sibling skill |
 |---|---|
 | HOW to write a storage migration, keychain contract details | zeus-storage-and-migrations |
-| yarn verify internals, jest traps, check-styles.test.ts trick, how to add tests | zeus-validation-and-qa |
+| yarn verify internals, jest traps, themeColor style-sheet lint rule, how to add tests | zeus-validation-and-qa |
 | zeus_modules vendoring mechanics, postinstall chain, native builds | zeus-build-and-env |
 | Full incident narratives with evidence chains | zeus-failure-archaeology |
 | Backend capability matrix, adding an RPC | zeus-backends-and-capabilities |
@@ -148,7 +148,7 @@ Verified in `.github/workflows/` at `c5fd094fb`: exactly four workflows trigger 
 | Prettier | `prettier.yml` | `yarn run prettier` (format check) |
 | Typescript Check | `tsc.yml` | `yarn run tsc` |
 
-All four = `yarn verify` locally (`package.json`: `concurrently "yarn test" "yarn prettier" "yarn tsc" "yarn lint"`). Run `yarn verify` before every push. Details of each job's traps (check-styles trick, Prettier pinned at 2.4.1, jest transform whitelist): **zeus-validation-and-qa**.
+All four = `yarn verify` locally (`package.json`: `concurrently "yarn test" "yarn prettier" "yarn tsc" "yarn lint"`). Run `yarn verify` before every push. Details of each job's traps (themeColor style-sheet lint rule, Prettier pinned at 2.4.1, jest transform whitelist): **zeus-validation-and-qa**.
 
 What PR CI does **NOT** do: no mobile build, no dependency scan — `build-android.yml` and `dependency-scan.yml` are `workflow_dispatch`-only (manually triggered); `telegram.yml` is a push/release notifier, not a check. This is exactly why Rule 4 (manual two-platform testing) exists.
 
