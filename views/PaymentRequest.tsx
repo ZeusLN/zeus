@@ -151,8 +151,12 @@ export default class PaymentRequest extends React.Component<
 
     async componentDidMount() {
         this.isComponentMounted = true;
-        const { SettingsStore, InvoicesStore, route } = this.props;
+        const { SettingsStore, InvoicesStore, BalanceStore, route } =
+            this.props;
         const { getSettings, implementation } = SettingsStore;
+        // balance is not refreshed elsewhere after channel changes, so
+        // the no-balance warning could otherwise be stale
+        BalanceStore.getLightningBalance(true);
         const settings = await getSettings();
 
         if (route?.params?.fromGraphSync) {
@@ -282,18 +286,21 @@ export default class PaymentRequest extends React.Component<
 
     checkIfLndReady = async () => {
         const { BalanceStore, NodeInfoStore } = this.props;
-        const noBalance = BalanceStore.lightningBalance === 0;
         const { isLightningReadyToSend } = NodeInfoStore;
-        while (
-            !this.state.lightningReadyToSend &&
-            this.isComponentMounted &&
-            !noBalance
-        ) {
-            const isReady = await isLightningReadyToSend();
-            if (isReady) {
-                this.setState({
-                    lightningReadyToSend: true
-                });
+        while (!this.state.lightningReadyToSend && this.isComponentMounted) {
+            // re-read each pass: the balance refresh started on mount may
+            // land after this loop begins
+            if (BalanceStore.lightningBalance !== 0) {
+                try {
+                    const isReady = await isLightningReadyToSend();
+                    if (isReady) {
+                        this.setState({
+                            lightningReadyToSend: true
+                        });
+                    }
+                } catch (e) {
+                    // RPC can fail while LND is still starting; keep polling
+                }
             }
             await sleep(3000);
         }
