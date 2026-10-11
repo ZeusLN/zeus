@@ -24,7 +24,6 @@ import {
     NavigationIndependentTree
 } from '@react-navigation/native';
 import { inject, observer } from 'mobx-react';
-import RNRestart from 'react-native-restart';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import SystemNavigationBar from 'react-native-system-navigation-bar';
 
@@ -1617,18 +1616,14 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 }}
                             />
                             <Button
-                                title={localeString('views.Wallet.restart')}
+                                title={localeString('general.retry')}
                                 icon={{
                                     name: 'sync',
                                     size: 25
                                 }}
                                 onPress={() => {
-                                    if (Platform.OS === 'android') {
-                                        RNRestart.Restart();
-                                    } else {
-                                        setConnectingStatus(true);
-                                        this.getSettingsAndNavigate();
-                                    }
+                                    setConnectingStatus(true);
+                                    this.getSettingsAndNavigate();
                                 }}
                             />
                         </View>
