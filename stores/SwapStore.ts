@@ -1275,8 +1275,9 @@ export default class SwapStore {
     /**
      * Broadcasts a swap claim or refund: first to the user's mempool
      * instance, then to the swap host if that fails. A transaction that is
-     * already in the mempool or a block counts as broadcast. Returns the
-     * txid, or throws with both errors.
+     * already in the mempool or a block counts as broadcast, including one
+     * whose outputs are spent, which bitcoind rejects as missing inputs.
+     * Returns the txid, or throws with both errors.
      */
     public broadcastSwapTransaction = async (
         txHex: string,
@@ -1326,7 +1327,27 @@ export default class SwapStore {
             }
         }
 
+        if (await this.isTransactionKnown(apiUrl, txid)) return txid;
+
         throw new Error(errors.join('; '));
+    };
+
+    // Whether the mempool instance has the transaction in its mempool or
+    // a block. Lookup errors count as unknown.
+    private isTransactionKnown = async (
+        apiUrl: string,
+        txid: string
+    ): Promise<boolean> => {
+        try {
+            const response = await ReactNativeBlobUtil.fetch(
+                'GET',
+                `${apiUrl}/tx/${txid}`
+            );
+            if (response.info().status !== 200) return false;
+            return JSON.parse(String(await response.text()))?.txid === txid;
+        } catch (e) {
+            return false;
+        }
     };
 
     /**
