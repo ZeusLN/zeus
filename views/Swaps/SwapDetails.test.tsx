@@ -204,21 +204,25 @@ describe('lockup verification retry wiring', () => {
         (ReverseClaimTransaction.build as jest.Mock).mock.calls[0][0].swap
             .destinationAddress;
 
-    it('claims a rescued swap to a wallet address, not one stored from the host', async () => {
-        const { store, view } = makeView({
-            id: 'swap',
-            imported: true,
-            destinationAddress: 'bc1qhost'
-        });
-        nativeClaim.mockResolvedValue(undefined);
-        await sendConfirmedLockup(view);
-        expect(claimedTo()).toBe('bc1qwallet');
-        expect(store.resolveClaimAddress).toHaveBeenCalledWith(
-            expect.objectContaining({ destinationAddress: undefined })
-        );
-        expect(nativeClaim).toHaveBeenCalledTimes(1);
-        view.componentWillUnmount?.();
-    });
+    it.each([undefined, true])(
+        'claims a rescued swap to a wallet address despite stored marker %s',
+        async (claimAddressFromWallet) => {
+            const { store, view } = makeView({
+                id: 'swap',
+                imported: true,
+                claimAddressFromWallet,
+                destinationAddress: 'bc1qhost'
+            });
+            nativeClaim.mockResolvedValue(undefined);
+            await sendConfirmedLockup(view);
+            expect(claimedTo()).toBe('bc1qwallet');
+            expect(store.resolveClaimAddress).toHaveBeenCalledWith(
+                expect.objectContaining({ destinationAddress: undefined })
+            );
+            expect(nativeClaim).toHaveBeenCalledTimes(1);
+            view.componentWillUnmount?.();
+        }
+    );
 
     it('claims a swap created on this device to the address picked for it', async () => {
         const { view } = makeView({
