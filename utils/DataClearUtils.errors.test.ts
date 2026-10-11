@@ -1,0 +1,660 @@
+// Per-step failure coverage for the wipe paths in DataClearUtils (#4913).
+//
+// clearAllData() runs on the duress and lockout paths, so one failing step
+// must not stop the steps after it. These tests run the real Storage wrapper
+// against in-memory fakes of the keychain (local and iCloud partitions),
+// EncryptedStorage, AsyncStorage and the filesystem, make one step reject at
+// a time, and assert what is actually left behind afterward.
+
+jest.mock('react-native-keychain', () => ({
+    resetInternetCredentials: jest.fn(
+        async (opts: { server: string; cloudSync?: boolean }) => {
+            const cloud = !!opts.cloudSync;
+            if (mockKeychain.failReset(opts.server, cloud)) {
+                throw new Error(`reset failed: ${opts.server}`);
+            }
+            (cloud ? mockKeychain.cloud : mockKeychain.local).delete(
+                opts.server
+            );
+            return true;
+        }
+    ),
+    getInternetCredentials: jest.fn(
+        async (server: string, opts?: { cloudSync?: boolean }) => {
+            const cloud = !!opts?.cloudSync;
+            if (mockKeychain.failGet(server, cloud)) {
+                throw new Error(`get failed: ${server}`);
+            }
+            const value = (cloud ? mockKeychain.cloud : mockKeychain.local).get(
+                server
+            );
+            return value === undefined
+                ? false
+                : { username: server, password: value };
+        }
+    ),
+    setInternetCredentials: jest.fn(async () => true)
+}));
+jest.mock('@react-native-async-storage/async-storage', () => ({
+    clear: jest.fn(async () => {
+        if (mockAsyncStorage.failClear) throw new Error('clear failed');
+        mockAsyncStorage.items.clear();
+    })
+}));
+jest.mock('react-native-encrypted-storage', () => ({
+    removeItem: jest.fn(async (key: string) => {
+        if (mockEncryptedStorage.failRemove) throw new Error('remove failed');
+        mockEncryptedStorage.items.delete(key);
+    }),
+    clear: jest.fn(async () => {
+        if (mockEncryptedStorage.failClear) throw new Error('clear failed');
+        mockEncryptedStorage.items.clear();
+    })
+}));
+jest.mock('react-native-blob-util', () => ({
+    fs: {
+        dirs: { LibraryDir: '/lib', DocumentDir: '/docs' },
+        exists: jest.fn(async (path: string) => {
+            if (mockFs.failExists(path)) throw new Error('exists failed');
+            return mockFs.files.has(path);
+        }),
+        unlink: jest.fn(async (path: string) => {
+            if (mockFs.failUnlink(path)) throw new Error('unlink failed');
+            mockFs.files.delete(path);
+        }),
+        ls: jest.fn(async (dir: string) => {
+            if (mockFs.failLs) throw new Error('ls failed');
+            return [...mockFs.files]
+                .filter((f) => f.startsWith(`${dir}/`))
+                .map((f) => f.slice(dir.length + 1));
+        })
+    }
+}));
+
+jest.mock('../cashu-cdk', () => ({
+    __esModule: true,
+    default: {
+        isAvailable: jest.fn().mockReturnValue(true),
+        deleteWalletDatabase: jest.fn().mockResolvedValue(true),
+        closeWalletDatabase: jest.fn().mockResolvedValue(true)
+    }
+}));
+jest.mock('./LndMobileUtils', () => ({
+    deleteLndWallet: jest.fn().mockResolvedValue(true)
+}));
+jest.mock('./LdkNodeUtils', () => ({
+    deleteLdkNodeWallet: jest.fn().mockResolvedValue(undefined),
+    stopLdkNode: jest.fn().mockResolvedValue(undefined)
+}));
+jest.mock('./SleepUtils', () => ({
+    sleep: jest.fn().mockResolvedValue(undefined)
+}));
+jest.mock('./AezeedUtils', () => ({
+    deriveEmbeddedNodeId: jest.fn().mockResolvedValue('02nodeid')
+}));
+
+// Store modules are imported only for their key constants
+jest.mock('../stores/SettingsStore', () => ({
+    STORAGE_KEY: 'zeus-settings-v2',
+    CURRENCY_CODES_KEY: 'zeus-currency-codes',
+    LEGACY_CURRENCY_CODES_KEY: 'currency-codes',
+    FAVORITE_CURRENCIES_KEY: 'favorite-currencies'
+}));
+jest.mock('../stores/NotesStore', () => ({
+    NOTES_KEY: 'zeus-notes-v2',
+    LEGACY_NOTES_KEY: 'note-Keys'
+}));
+jest.mock('../stores/ContactStore', () => ({
+    CONTACTS_KEY: 'zeus-contacts',
+    LEGACY_CONTACTS_KEY: 'contacts'
+}));
+jest.mock('../stores/ChannelBackupStore', () => ({
+    LAST_CHANNEL_BACKUP_STATUS: 'last-channel-backup-status',
+    LAST_CHANNEL_BACKUP_TIME: 'last-channel-backup-time',
+    LEGACY_LAST_CHANNEL_BACKUP_STATUS: 'lastChannelBackupStatus',
+    LEGACY_LAST_CHANNEL_BACKUP_TIME: 'lastChannelBackupTime'
+}));
+jest.mock('../stores/LightningAddressStore', () => ({
+    ADDRESS_ACTIVATED_STRING: 'address-activated',
+    HASHES_STORAGE_STRING: 'hashes',
+    LEGACY_ADDRESS_ACTIVATED_STRING: 'addressActivated',
+    LEGACY_HASHES_STORAGE_STRING: 'hashesStorage'
+}));
+jest.mock('../stores/PosStore', () => ({
+    POS_HIDDEN_KEY: 'pos-hidden',
+    POS_STANDALONE_KEY: 'pos-standalone',
+    LEGACY_POS_HIDDEN_KEY: 'posHidden',
+    LEGACY_POS_STANDALONE_KEY: 'posStandalone'
+}));
+jest.mock('../stores/InventoryStore', () => ({
+    CATEGORY_KEY: 'category',
+    PRODUCT_KEY: 'product',
+    LEGACY_CATEGORY_KEY: 'categoryLegacy',
+    LEGACY_PRODUCT_KEY: 'productLegacy'
+}));
+jest.mock('../stores/UnitsStore', () => ({
+    UNIT_KEY: 'unit',
+    LEGACY_UNIT_KEY: 'unitLegacy'
+}));
+jest.mock('../stores/UTXOsStore', () => ({
+    HIDDEN_ACCOUNTS_KEY: 'hidden-accounts',
+    LEGACY_HIDDEN_ACCOUNTS_KEY: 'hiddenAccounts'
+}));
+jest.mock('../stores/LSPStore', () => ({
+    LSPS_ORDERS_KEY: 'lsps-orders',
+    LEGACY_LSPS1_ORDERS_KEY: 'lsps1Orders'
+}));
+jest.mock('../stores/ActivityStore', () => ({
+    ACTIVITY_FILTERS_KEY: 'activity-filters',
+    LEGACY_ACTIVITY_FILTERS_KEY: 'activityFilters'
+}));
+jest.mock('../utils/MigrationUtils', () => ({
+    __esModule: true,
+    IS_BACKED_UP_KEY: 'is-backed-up',
+    default: { clearConfirmedFlags: jest.fn() }
+}));
+jest.mock('../utils/SwapUtils', () => ({
+    SWAPS_KEY: 'swaps',
+    REVERSE_SWAPS_KEY: 'reverse-swaps',
+    SWAPS_RESCUE_KEY: 'swaps-rescue-key',
+    SWAPS_LAST_USED_KEY: 'swaps-last-used-key',
+    purgeLegacyRescueKeyFiles: jest.fn().mockResolvedValue(undefined),
+    unlinkRescueKeyStagingFile: jest.fn().mockResolvedValue(undefined)
+}));
+jest.mock('../stores/NostrWalletConnectStore', () => ({
+    NWC_CONNECTIONS_KEY: 'zeus-nwc-connections',
+    NWC_CLIENT_KEYS: 'zeus-nwc-client-keys',
+    NWC_SERVICE_KEYS: 'zeus-nwc-service-keys',
+    NWC_CASHU_ENABLED: 'zeus-nwc-cashu-enabled',
+    NWC_LUD16_ENABLED: 'zeus-nwc-lud16-enabled',
+    NWC_PERSISTENT_SERVICE_ENABLED: 'persistentNWCServicesEnabled'
+}));
+jest.mock('../utils/RatingUtils', () => ({
+    PAYMENT_COUNT_KEY: 'successfulPaymentCount',
+    RATING_DISMISSED_KEY: 'ratingDismissedPermanently'
+}));
+
+import hashjs from 'hash.js';
+import { Platform } from 'react-native';
+
+import Storage from '../storage';
+import MigrationUtils from './MigrationUtils';
+import {
+    clearAllData,
+    clearCDKDatabase,
+    clearCDKDatabaseForNode,
+    clearNodeKeychainData,
+    deleteNodeDataDirectoryWithRetry,
+    CASHU_KEY_SUFFIXES
+} from './DataClearUtils';
+import { deleteLndWallet } from './LndMobileUtils';
+import { deleteLdkNodeWallet } from './LdkNodeUtils';
+
+type Partition = 'local' | 'cloud';
+type FailFn = (server: string, cloud: boolean) => boolean;
+
+const never = () => false;
+
+const mockKeychain = {
+    local: new Map<string, string>(),
+    cloud: new Map<string, string>(),
+    failReset: never as FailFn,
+    failGet: never as FailFn
+};
+const mockEncryptedStorage = {
+    items: new Map<string, string>(),
+    failRemove: false,
+    failClear: false
+};
+const mockAsyncStorage = {
+    items: new Map<string, string>(),
+    failClear: false
+};
+const mockFs = {
+    files: new Set<string>(),
+    failExists: never as (path: string) => boolean,
+    failUnlink: never as (path: string) => boolean,
+    failLs: false
+};
+
+const mockedDeleteLndWallet = deleteLndWallet as jest.Mock;
+const mockedDeleteLdkNodeWallet = deleteLdkNodeWallet as jest.Mock;
+const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
+jest.spyOn(console, 'log').mockImplementation(() => {});
+
+let replacedPlatformOS: { restore: () => void } | undefined;
+const setPlatformOS = (os: typeof Platform.OS) => {
+    replacedPlatformOS = jest.replaceProperty(Platform, 'OS', os);
+};
+
+// Every location clearKey() targets: zeus:<key> and <key>, each in the
+// local and iCloud partitions
+const seedEverywhere = (key: string, value: string) => {
+    for (const server of [`zeus:${key}`, key]) {
+        mockKeychain.local.set(server, value);
+        mockKeychain.cloud.set(server, value);
+    }
+};
+const remainingEntries = (): string[] => [
+    ...[...mockKeychain.local.keys()].map((s) => `local:${s}`),
+    ...[...mockKeychain.cloud.keys()].map((s) => `cloud:${s}`)
+];
+const failOn =
+    (server: string, partition: Partition): FailFn =>
+    (s, cloud) =>
+        s === server && cloud === (partition === 'cloud');
+const warnedAbout = (text: string) =>
+    warnSpy.mock.calls.some((call) => String(call[0]).includes(text));
+
+const NODES = [
+    {
+        implementation: 'embedded-lnd',
+        lndDir: 'lnd-uuid',
+        seedPhrase: ['abandon'],
+        macaroonHex: 'secret-macaroon'
+    },
+    { implementation: 'ldk-node', ldkNodeDir: 'ldk-uuid' }
+];
+
+// A representative populated install: the settings blob with node secrets,
+// a static key, per-node Cashu seed keys, the legacy EncryptedStorage blob,
+// migration flags, AsyncStorage data and the Android keychain files
+const seedInstall = () => {
+    seedEverywhere('zeus-settings-v2', JSON.stringify({ nodes: NODES }));
+    seedEverywhere('zeus-contacts', '[{"name":"alice"}]');
+    seedEverywhere('swaps-rescue-key', 'rescue mnemonic');
+    seedEverywhere('lnd-uuid-cashu-seed-phrase', '["lnd","seed"]');
+    seedEverywhere('ldk-uuid-cashu-seed-phrase', '["ldk","seed"]');
+    seedEverywhere('lnc-rn', 'lnc');
+    mockEncryptedStorage.items.set('zeus-settings', '{"nodes":["legacy"]}');
+    mockEncryptedStorage.items.set('lsp-taproot-mod', 'true');
+    mockAsyncStorage.items.set('install-uuid', 'abc');
+};
+
+const ANDROID_DATASTORE = '/docs/../files/datastore/RN_KEYCHAIN.preferences_pb';
+const ANDROID_LEGACY_PREFS = '/docs/../shared_prefs/RN_KEYCHAIN.xml';
+
+beforeEach(() => {
+    jest.clearAllMocks();
+    mockKeychain.local.clear();
+    mockKeychain.cloud.clear();
+    mockKeychain.failReset = never;
+    mockKeychain.failGet = never;
+    mockEncryptedStorage.items.clear();
+    mockEncryptedStorage.failRemove = false;
+    mockEncryptedStorage.failClear = false;
+    mockAsyncStorage.items.clear();
+    mockAsyncStorage.failClear = false;
+    mockFs.files.clear();
+    mockFs.failExists = never;
+    mockFs.failUnlink = never;
+    mockFs.failLs = false;
+    mockedDeleteLndWallet.mockResolvedValue(true);
+    mockedDeleteLdkNodeWallet.mockResolvedValue(undefined);
+});
+
+afterEach(() => {
+    replacedPlatformOS?.restore();
+    replacedPlatformOS = undefined;
+});
+
+describe('clearAllData baseline (no failures)', () => {
+    it('leaves no keychain, EncryptedStorage or AsyncStorage data behind', async () => {
+        seedInstall();
+
+        await clearAllData();
+
+        expect(remainingEntries()).toEqual([]);
+        expect([...mockEncryptedStorage.items.keys()]).toEqual([]);
+        expect([...mockAsyncStorage.items.keys()]).toEqual([]);
+        expect(mockedDeleteLndWallet).toHaveBeenCalledWith('lnd-uuid');
+        expect(mockedDeleteLdkNodeWallet).toHaveBeenCalledWith('ldk-uuid');
+        expect(MigrationUtils.clearConfirmedFlags).toHaveBeenCalled();
+    });
+
+    // Step 3 clears NOTES_KEY (it is in STORAGE_KEYS), then step 4 reads
+    // NOTES_KEY to find the per-note keys, so it always reads a miss
+    it.todo(
+        'clears individual note entries (step 4 reads the note index after step 3 deleted it)'
+    );
+});
+
+describe('clearKey: one location rejects, the others are still cleared', () => {
+    it('falls back to the direct keychain reset when Storage.removeItem rejects', async () => {
+        seedInstall();
+        const removeSpy = jest
+            .spyOn(Storage, 'removeItem')
+            .mockRejectedValue(new Error('storage remove failed'));
+
+        try {
+            await expect(clearAllData()).resolves.toBeUndefined();
+        } finally {
+            removeSpy.mockRestore();
+        }
+
+        // The direct zeus: local reset right after it covers the same entry
+        expect(remainingEntries()).toEqual([]);
+        expect(warnedAbout('Error clearing Storage key zeus-settings-v2')).toBe(
+            true
+        );
+    });
+
+    it.each([
+        ['zeus:zeus-settings-v2', 'local', 'Error clearing Storage key'],
+        [
+            'zeus:zeus-settings-v2',
+            'cloud',
+            'Error clearing prefixed cloud keychain'
+        ],
+        ['zeus-settings-v2', 'local', 'Error clearing local keychain'],
+        ['zeus-settings-v2', 'cloud', 'Error clearing cloud keychain']
+    ] as Array<[string, Partition, string]>)(
+        'logs and skips a persistent reset failure on %s (%s), leaving only that entry',
+        async (server, partition, warning) => {
+            seedInstall();
+            mockKeychain.failReset = failOn(server, partition);
+
+            await expect(clearAllData()).resolves.toBeUndefined();
+
+            // Nothing retries the failed location; every other location of
+            // the same key and every other key is gone
+            expect(remainingEntries()).toEqual([`${partition}:${server}`]);
+            expect(warnedAbout(warning)).toBe(true);
+            // Later wipe stages still ran
+            expect([...mockEncryptedStorage.items.keys()]).toEqual([]);
+            expect([...mockAsyncStorage.items.keys()]).toEqual([]);
+        }
+    );
+
+    it('still completes when every keychain reset rejects', async () => {
+        seedInstall();
+        mockKeychain.failReset = () => true;
+
+        await expect(clearAllData()).resolves.toBeUndefined();
+
+        expect(mockedDeleteLndWallet).toHaveBeenCalledWith('lnd-uuid');
+        expect([...mockEncryptedStorage.items.keys()]).toEqual([]);
+        expect([...mockAsyncStorage.items.keys()]).toEqual([]);
+    });
+});
+
+describe('clearAllData: a failing step does not stop later steps', () => {
+    it('continues past an unreadable settings blob', async () => {
+        seedInstall();
+        mockKeychain.failGet = failOn('zeus:zeus-settings-v2', 'local');
+
+        await expect(clearAllData()).resolves.toBeUndefined();
+
+        expect(warnedAbout('Could not read settings')).toBe(true);
+        // The blob itself and the static keys are still cleared
+        expect(remainingEntries()).not.toContain('local:zeus:zeus-settings-v2');
+        expect(remainingEntries()).not.toContain('local:zeus:zeus-contacts');
+        expect([...mockEncryptedStorage.items.keys()]).toEqual([]);
+    });
+
+    // With no settings, clearNodeDataDirectories and clearNodeKeychainData
+    // have no node list, so UUID-named LND/LDK dirs and their
+    // <uuid>-cashu-* keys survive, and the blob that names them is deleted
+    it.todo(
+        'deletes node data directories and per-node keys when the settings blob read fails'
+    );
+
+    it('continues past a failed per-node Cashu key reset', async () => {
+        seedInstall();
+        mockKeychain.failReset = failOn(
+            'zeus:lnd-uuid-cashu-seed-phrase',
+            'cloud'
+        );
+
+        await expect(clearAllData()).resolves.toBeUndefined();
+
+        expect(remainingEntries()).toEqual([
+            'cloud:zeus:lnd-uuid-cashu-seed-phrase'
+        ]);
+        expect(mockedDeleteLndWallet).toHaveBeenCalledWith('lnd-uuid');
+        expect(mockedDeleteLdkNodeWallet).toHaveBeenCalledWith('ldk-uuid');
+    });
+
+    it('continues past a CDK database sweep whose directory listing rejects', async () => {
+        seedInstall();
+        mockFs.files.add('/lib/Application Support/cashu_wallet.db');
+        mockFs.failLs = true;
+
+        await expect(clearAllData()).resolves.toBeUndefined();
+
+        expect(warnedAbout('Error sweeping CDK database files')).toBe(true);
+        expect(
+            mockFs.files.has('/lib/Application Support/cashu_wallet.db')
+        ).toBe(true);
+        expect(mockedDeleteLndWallet).toHaveBeenCalledWith('lnd-uuid');
+        expect(remainingEntries()).toEqual([]);
+    });
+
+    it('retries a rejecting LND directory deletion, then moves on to the next node and the keychain', async () => {
+        seedInstall();
+        mockedDeleteLndWallet.mockRejectedValue(new Error('busy'));
+
+        await expect(clearAllData()).resolves.toBeUndefined();
+
+        expect(mockedDeleteLndWallet).toHaveBeenCalledTimes(3);
+        expect(mockedDeleteLdkNodeWallet).toHaveBeenCalledWith('ldk-uuid');
+        expect(warnedAbout('Gave up deleting node data directory')).toBe(true);
+        expect(remainingEntries()).toEqual([]);
+        expect([...mockEncryptedStorage.items.keys()]).toEqual([]);
+    });
+
+    it('continues past AsyncStorage.clear rejecting', async () => {
+        seedInstall();
+        mockAsyncStorage.failClear = true;
+
+        await expect(clearAllData()).resolves.toBeUndefined();
+
+        expect(warnedAbout('Error clearing AsyncStorage')).toBe(true);
+        expect([...mockAsyncStorage.items.keys()]).toEqual(['install-uuid']);
+        // EncryptedStorage (step 6) and the step 7 keychain keys still go
+        expect([...mockEncryptedStorage.items.keys()]).toEqual([]);
+        expect(remainingEntries()).toEqual([]);
+    });
+
+    it('removes the legacy settings blob even when EncryptedStorage.clear rejects', async () => {
+        seedInstall();
+        mockEncryptedStorage.failClear = true;
+
+        await expect(clearAllData()).resolves.toBeUndefined();
+
+        expect(warnedAbout('Error clearing EncryptedStorage')).toBe(true);
+        expect(mockEncryptedStorage.items.has('zeus-settings')).toBe(false);
+        // Migration flags stay (the clear failed) and the in-memory flag
+        // cache is not reset, since both share one try block
+        expect(mockEncryptedStorage.items.has('lsp-taproot-mod')).toBe(true);
+        expect(MigrationUtils.clearConfirmedFlags).not.toHaveBeenCalled();
+        // Step 7 still runs after the failed step 6
+        expect(remainingEntries()).toEqual([]);
+    });
+
+    it('still runs step 7 and the backing-store deletion when EncryptedStorage.removeItem rejects', async () => {
+        setPlatformOS('android');
+        seedInstall();
+        mockFs.files.add(ANDROID_DATASTORE);
+        mockEncryptedStorage.failRemove = true;
+
+        await expect(clearAllData()).resolves.toBeUndefined();
+
+        expect(warnedAbout('Error clearing EncryptedStorage')).toBe(true);
+        expect(remainingEntries()).toEqual([]);
+        expect(mockFs.files.has(ANDROID_DATASTORE)).toBe(false);
+    });
+
+    // removeItem('zeus-settings') and clear() share one try block, so a
+    // rejected removeItem skips clear() and leaves the legacy settings blob
+    // (node configs with seeds and macaroons) in EncryptedStorage
+    it.todo(
+        'clears EncryptedStorage, including the legacy zeus-settings blob, when removeItem rejects'
+    );
+
+    it('deletes the second Android keychain file when checking the first rejects', async () => {
+        setPlatformOS('android');
+        mockFs.files.add(ANDROID_DATASTORE);
+        mockFs.files.add(ANDROID_LEGACY_PREFS);
+        mockFs.failExists = (path) => path === ANDROID_DATASTORE;
+
+        await expect(clearAllData()).resolves.toBeUndefined();
+
+        expect(mockFs.files.has(ANDROID_DATASTORE)).toBe(true);
+        expect(mockFs.files.has(ANDROID_LEGACY_PREFS)).toBe(false);
+        expect(warnedAbout('Error deleting keychain backing store')).toBe(true);
+    });
+
+    it('resolves when every storage layer and the filesystem reject', async () => {
+        setPlatformOS('android');
+        seedInstall();
+        mockKeychain.failReset = () => true;
+        mockKeychain.failGet = () => true;
+        mockEncryptedStorage.failRemove = true;
+        mockEncryptedStorage.failClear = true;
+        mockAsyncStorage.failClear = true;
+        mockFs.failExists = () => true;
+        mockFs.failUnlink = () => true;
+        mockFs.failLs = true;
+
+        // The wipe UI must never see an error (it would reveal the duress
+        // path), so the contract is: log and resolve
+        await expect(clearAllData()).resolves.toBeUndefined();
+    });
+});
+
+describe('clearNodeKeychainData step failures', () => {
+    const node = {
+        implementation: 'embedded-lnd',
+        lndDir: 'lnd-uuid',
+        pairingPhrase: 'pair words'
+    };
+    const lncKey = `lnc-rn:${hashjs
+        .sha256()
+        .update('pair words')
+        .digest('hex')}`;
+
+    it('clears the remaining Cashu suffixes and LNC credentials after one key reset rejects', async () => {
+        for (const suffix of CASHU_KEY_SUFFIXES) {
+            seedEverywhere(`lnd-uuid-cashu-${suffix}`, 'x');
+        }
+        seedEverywhere(lncKey, 'lnc');
+        seedEverywhere(`${lncKey}:host`, 'host');
+        mockKeychain.failReset = failOn('lnd-uuid-cashu-seed-phrase', 'local');
+
+        await expect(clearNodeKeychainData(node)).resolves.toBeUndefined();
+
+        expect(remainingEntries()).toEqual([
+            'local:lnd-uuid-cashu-seed-phrase'
+        ]);
+    });
+
+    it('still clears the suffix keys when reading the legacy mint list rejects', async () => {
+        for (const suffix of CASHU_KEY_SUFFIXES) {
+            seedEverywhere(`lnd-uuid-cashu-${suffix}`, 'x');
+        }
+        mockKeychain.failGet = failOn('zeus:lnd-uuid-cashu-mintUrls', 'local');
+
+        await expect(clearNodeKeychainData(node)).resolves.toBeUndefined();
+
+        expect(warnedAbout('Error reading Cashu mint list for lnd-uuid')).toBe(
+            true
+        );
+        expect(remainingEntries()).toEqual([]);
+    });
+
+    it('still clears the per-mint keys after one of them fails to reset', async () => {
+        const mint = 'https://mint.example';
+        seedEverywhere('lnd-uuid-cashu-mintUrls', JSON.stringify([mint]));
+        const walletKeys = ['mintInfo', 'counter', 'proofs', 'balance'].map(
+            (k) => `lnd-uuid==${mint}-${k}`
+        );
+        walletKeys.forEach((k) => seedEverywhere(k, 'x'));
+        mockKeychain.failReset = failOn(`zeus:${walletKeys[0]}`, 'cloud');
+
+        await expect(clearNodeKeychainData(node)).resolves.toBeUndefined();
+
+        expect(remainingEntries()).toEqual([`cloud:zeus:${walletKeys[0]}`]);
+    });
+});
+
+describe('clearCDKDatabase / clearCDKDatabaseForNode step failures', () => {
+    const dir = '/lib/Application Support';
+
+    it('clearCDKDatabase resolves without deleting anything when listing rejects', async () => {
+        mockFs.files.add(`${dir}/cashu_wallet.db`);
+        mockFs.failLs = true;
+
+        await expect(clearCDKDatabase()).resolves.toBeUndefined();
+
+        expect(mockFs.files.has(`${dir}/cashu_wallet.db`)).toBe(true);
+        expect(warnedAbout('Error sweeping CDK database files')).toBe(true);
+    });
+
+    it('clearCDKDatabaseForNode resolves and deletes nothing when the seed read rejects', async () => {
+        mockFs.files.add(`${dir}/cashu_wallet_0123.db`);
+        mockKeychain.failGet = () => true;
+
+        await expect(
+            clearCDKDatabaseForNode({
+                implementation: 'embedded-lnd',
+                lndDir: 'lnd-uuid'
+            })
+        ).resolves.toBeUndefined();
+
+        expect(mockFs.files.size).toBe(1);
+        expect(warnedAbout('Error clearing CDK database for node')).toBe(true);
+    });
+
+    it('clearCDKDatabaseForNode still deletes the WAL and SHM sidecars when the main file check rejects', async () => {
+        const words = ['one', 'two'];
+        seedEverywhere('lnd-uuid-cashu-seed-phrase', JSON.stringify(words));
+        const hash = hashjs
+            .sha256()
+            .update(words.join(' '))
+            .digest('hex')
+            .slice(0, 16);
+        const base = `${dir}/cashu_wallet_${hash}.db`;
+        [base, `${base}-wal`, `${base}-shm`].forEach((f) =>
+            mockFs.files.add(f)
+        );
+        mockFs.failExists = (path) => path === base;
+
+        await expect(
+            clearCDKDatabaseForNode({
+                implementation: 'embedded-lnd',
+                lndDir: 'lnd-uuid'
+            })
+        ).resolves.toBeUndefined();
+
+        expect([...mockFs.files]).toEqual([base]);
+    });
+});
+
+describe('deleteNodeDataDirectoryWithRetry rejections', () => {
+    it('recovers when deleteLndWallet rejects once and then succeeds', async () => {
+        mockedDeleteLndWallet
+            .mockRejectedValueOnce(new Error('busy'))
+            .mockResolvedValueOnce(true);
+
+        await expect(
+            deleteNodeDataDirectoryWithRetry({
+                implementation: 'embedded-lnd',
+                lndDir: 'lnd-uuid'
+            })
+        ).resolves.toBe(true);
+        expect(mockedDeleteLndWallet).toHaveBeenCalledTimes(2);
+    });
+
+    it('returns false instead of throwing when every attempt rejects', async () => {
+        mockedDeleteLdkNodeWallet.mockRejectedValue(new Error('busy'));
+
+        await expect(
+            deleteNodeDataDirectoryWithRetry({
+                implementation: 'ldk-node',
+                ldkNodeDir: 'ldk-uuid'
+            })
+        ).resolves.toBe(false);
+        expect(mockedDeleteLdkNodeWallet).toHaveBeenCalledTimes(3);
+    });
+});
