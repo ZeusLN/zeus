@@ -137,7 +137,7 @@ Verified flag-by-flag against the six backend files at c5fd094fb (2026-07-06). "
 | Pending channels (`supportsPendingChannels`) | Y | Y | Y | N | Y | N | N |
 | Channel open min confs (`supportsChannelOpenMinConfs`) | Y | Y (inherited) | Y | Y | N (open calls take no min confs) | N | N |
 | Channel open fee rate (`supportsChannelOpenFeeRate`) | Y | Y (inherited) | Y | Y | N | N | N |
-| Channel fund max (`supportsChannelFundMax`) | Y | Y | Y | Y | Y | Y (inherited gap, see section 4) | N |
+| Channel fund max (`supportsChannelFundMax`) | Y | Y | Y | Y | Y | N | N |
 | On-chain send fee rate (`supportsOnchainSendFeeRate`) | Y | Y (inherited) | Y | Y | N | N | N |
 | Coin control (`supportsCoinControl`) | v0.12 | v0.12 | perm | Y | Y | N | N |
 | Watchtower client (`supportsWatchtowerClient`) | Y | Y | Y | N (by omission) | N | N | N |
@@ -210,7 +210,8 @@ grep -n "supportsOffers" backends/*.ts
 
 **LndHub**
 - Thin custodial API; everything channel/on-chain is flagged off (with the URL-dependent exceptions in the matrix footnote). Inherits LND's REST plumbing: `request()` uses `host || lndhubUrl` and `macaroonHex || accessToken`, with `getHeaders` overridden to Bearer auth.
-- Known inheritance gaps (unfixed, re-checked 2026-10-07): `supportsChannelFundMax` and `supportsAddressMessageSigning` are NOT overridden and inherit `true` from LND. This is the canonical example of the extends-LND hazard.
+- Former inheritance gaps (fixed October 2026): `supportsChannelFundMax` and `supportsAddressMessageSigning` were not overridden and inherited `true` from LND, and `supportsChannelBatching` was explicitly `true`. All three are now `false`, and `backends/LndHub.test.ts` asserts golden values for every LndHub flag and fails when LND gains a flag LndHub does not list. This is the canonical example of the extends-LND hazard.
+- Open: `utils/handleAnything.ts` routes a scanned `pubkey@host` node URI to OpenChannel without a `supportsChannelManagement` check, so LndHub users can still reach the OpenChannel screen (#4918).
 - `lnurlAuth` signs differently per `lndHubLnAuthMode` setting ('Alby' default vs 'BlueWallet').
 
 **NostrWalletConnect**
@@ -252,7 +253,7 @@ Checklist (do every step; the dispatch design gives you zero compile-time safety
 Whenever you add a method OR flag to `backends/LND.ts`, `EmbeddedLND` and `LndHub` inherit it silently. For each addition ask:
 
 - **EmbeddedLND**: the inherited implementation is a REST/WebSocket call against `settingsStore.host` — meaningless for an on-device node. Override with an `lndmobile` implementation, or ensure the corresponding flag is `false` on EmbeddedLND so nothing reaches it. (Existing debt: `getFees`/`setFees`/subscriptions fall through today.)
-- **LndHub**: the inherited implementation would hit `lndhubUrl` with LND REST routes that don't exist there, and inherited `true` flags advertise features a custodial account lacks. Override the flag to `false` explicitly. (Existing bugs of this class: `supportsChannelFundMax` and `supportsAddressMessageSigning` inherit `true`.)
+- **LndHub**: the inherited implementation would hit `lndhubUrl` with LND REST routes that don't exist there, and inherited `true` flags advertise features a custodial account lacks. Override the flag to `false` explicitly. (Past bugs of this class: `supportsChannelFundMax` and `supportsAddressMessageSigning` inherited `true` until October 2026. Add any new flag to the golden table in `backends/LndHub.test.ts`.)
 
 Quick audit command — flags defined on LND but missing from a subclass:
 
@@ -261,7 +262,7 @@ comm -23 <(grep -o "supports\w*" backends/LND.ts | sort -u) \
          <(grep -o "supports\w*" backends/LndHub.ts | sort -u)
 ```
 
-(The bare `supports` line in the output is LND's version-gate helper, not a flag; ignore it. Run 2026-10-07 at 03a8b1b71, this prints `supportsAccountImportRescan`, `supportsAddressMessageSigning` and `supportsChannelFundMax`. `supportsAccountImportRescan` is `false` on LND, so LndHub inherits `false` and it is not a gap. The other two are the open gaps above.)
+(The bare `supports` line in the output is LND's version-gate helper, not a flag; ignore it. Run 2026-10-08, this prints only `supportsAccountImportRescan`, which is `false` on LND, so LndHub inherits `false` and it is not a gap.)
 
 ## 6) Testing each backend cheaply
 
