@@ -1,5 +1,7 @@
 // Import-time scaffolding for the native modules EmbeddedLND.ts and its LND
-// base class pull in. listPeers only touches lndMobile.index.listPeers.
+// base class pull in. listPeers only touches lndMobile.index.listPeers;
+// closeChannel only uses the injected close call, the stream decoder and
+// the event emitter mocked below.
 jest.mock('react-native-blob-util', () => ({
     __esModule: true,
     default: { fetch: jest.fn(), config: jest.fn() }
@@ -13,11 +15,17 @@ jest.mock('../utils/TorUtils', () => ({
     isOnionHttpsUrl: jest.fn(),
     RequestMethod: {}
 }));
+
+const mockCloseChannel = jest.fn();
 jest.mock('../lndmobile/LndMobileInjection', () => ({
     __esModule: true,
     default: {
         index: { listPeers: jest.fn() },
-        channel: {},
+        channel: {
+            closeChannel: (...args: any[]) => mockCloseChannel(...args),
+            // test events carry the decoded update as JSON
+            decodeCloseStatusUpdate: (data: string) => JSON.parse(data)
+        },
         wallet: {},
         onchain: {},
         wtclient: {}
@@ -30,9 +38,30 @@ jest.mock('../lndmobile/wallet', () => ({
     signMessageWithAddr: jest.fn(),
     verifyMessageWithAddr: jest.fn()
 }));
+
+const mockListeners: Array<{
+    name: string;
+    handler: (event: any) => void;
+    removed: boolean;
+}> = [];
 jest.mock('../utils/LndMobileUtils', () => ({
-    checkLndStreamErrorResponse: jest.fn(),
-    LndMobileEventEmitter: { addListener: jest.fn() }
+    LndMobileEventEmitter: {
+        addListener: (name: string, handler: (event: any) => void) => {
+            const listener = { name, handler, removed: false };
+            mockListeners.push(listener);
+            return {
+                remove: () => {
+                    listener.removed = true;
+                }
+            };
+        }
+    },
+    // reduced to the two outcomes closeChannel distinguishes: end of stream
+    // and an error
+    checkLndStreamErrorResponse: (_name: string, event: any) => {
+        if (!event.error_code) return null;
+        return event.error_desc === 'EOF' ? 'EOF' : new Error(event.error_desc);
+    }
 }));
 
 import Long from 'long';
@@ -109,5 +138,135 @@ describe('EmbeddedLND.listPeers', () => {
 
         expect(peer.sat_sent).toBe('0');
         expect(peer.sat_recv).toBe('0');
+    });
+});
+
+describe('EmbeddedLND.closeChannel', () => {
+    let lnd: EmbeddedLND;
+
+    const emit = (event: any) =>
+        mockListeners
+            .filter((l) => l.name === 'CloseChannel' && !l.removed)
+            .forEach((l) => l.handler(event));
+    const update = (data: any) => ({ data: JSON.stringify(data) });
+    const listening = () =>
+        mockListeners.some((l) => l.name === 'CloseChannel' && !l.removed);
+
+    // Tracks the close without awaiting it, so tests can check that it is
+    // still waiting
+    const track = (close: Promise<any>) => {
+        const state: { settled: boolean; error?: any } = { settled: false };
+        close.then(
+            () => (state.settled = true),
+            (error) => {
+                state.settled = true;
+                state.error = error;
+            }
+        );
+        return state;
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.useFakeTimers();
+        mockListeners.length = 0;
+        lnd = new EmbeddedLND();
+        // the native module resolves as soon as the request is handed over
+        mockCloseChannel.mockResolvedValue('done');
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('resolves once LND reports the close as pending', async () => {
+        const close = track(lnd.closeChannel(['txid', '1', '']));
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(close.settled).toBe(false);
+
+        emit(update({ close_pending: { txid: 'closing-txid' } }));
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(close.settled).toBe(true);
+        expect(close.error).toBeUndefined();
+        expect(listening()).toBe(false);
+    });
+
+    it('passes the fee rate and delivery address for a cooperative close', async () => {
+        track(lnd.closeChannel(['txid', '1', '', '10', 'tb1qdelivery']));
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(mockCloseChannel).toHaveBeenCalledWith(
+            'txid',
+            1,
+            false,
+            10,
+            'tb1qdelivery'
+        );
+    });
+
+    it('drops the fee rate for a force close', async () => {
+        track(lnd.closeChannel(['txid', '1', 'true', '10']));
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(mockCloseChannel).toHaveBeenCalledWith(
+            'txid',
+            1,
+            true,
+            undefined,
+            undefined
+        );
+    });
+
+    it('rejects with the error LND reports on the stream', async () => {
+        const close = track(lnd.closeChannel(['txid', '1', '']));
+        await jest.advanceTimersByTimeAsync(0);
+
+        emit({
+            error_code: 'Error',
+            error_desc:
+                'unable to gracefully close channel while peer is offline (try force closing it instead): channel link not found'
+        });
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(close.error?.message).toContain(
+            'unable to gracefully close channel while peer is offline'
+        );
+        expect(listening()).toBe(false);
+    });
+
+    it('keeps waiting on EOF and on chan_close from an earlier close', async () => {
+        const close = track(lnd.closeChannel(['txid', '1', '']));
+        await jest.advanceTimersByTimeAsync(0);
+
+        emit({ error_code: 'Error', error_desc: 'EOF' });
+        emit(update({ chan_close: { closing_txid: 'earlier-close' } }));
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(close.settled).toBe(false);
+        expect(listening()).toBe(true);
+    });
+
+    it('rejects and stops listening when the native call fails', async () => {
+        mockCloseChannel.mockRejectedValue(new Error('LND not running'));
+
+        const close = track(lnd.closeChannel(['txid', '1', '']));
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(close.error?.message).toEqual('LND not running');
+        expect(listening()).toBe(false);
+    });
+
+    it('resolves after six seconds without a reply', async () => {
+        const close = track(lnd.closeChannel(['txid', '1', '']));
+
+        await jest.advanceTimersByTimeAsync(5_999);
+        expect(close.settled).toBe(false);
+
+        await jest.advanceTimersByTimeAsync(1);
+        expect(close.settled).toBe(true);
+        expect(close.error).toBeUndefined();
+        expect(listening()).toBe(false);
     });
 });
