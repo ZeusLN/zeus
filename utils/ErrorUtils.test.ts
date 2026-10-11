@@ -189,6 +189,33 @@ describe('ErrorUtils', () => {
             );
         });
 
+        it('Gives the same result for a CLN JSON-RPC body and its extracted message', () => {
+            // CLNRest.restReq used to reject with the raw body and now
+            // rejects with the message inside it
+            const cases = [
+                [
+                    '{"error":{"code":210,"message":"Destination unknown"}}',
+                    'Destination unknown'
+                ],
+                ['{"code":-32602,"message":"bad param"}', 'bad param'],
+                [
+                    '{"code":204,"message":"Payment details incorrect"}',
+                    'Payment details incorrect'
+                ]
+            ];
+            cases.forEach(([body, message]) => {
+                expect(errorToUserFriendly(new Error(message))).toEqual(
+                    errorToUserFriendly(new Error(body))
+                );
+                expect(errorToUserFriendly(message as any)).toEqual(
+                    errorToUserFriendly(body as any)
+                );
+            });
+            expect(errorToUserFriendly(new Error('bad param'))).toEqual(
+                'bad param'
+            );
+        });
+
         it('Handles PascalCased LSP error messages', () => {
             expect(
                 errorToUserFriendly(
