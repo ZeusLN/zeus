@@ -1321,18 +1321,20 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         customRouteHintUserChannelIds: ReadableArray?
     ): RouteHints {
         return when (mode?.lowercase()) {
+            null, "automatic" -> RouteHints.Automatic
             "none" -> RouteHints.None
             "custom" -> {
-                val ids = if (customRouteHintUserChannelIds == null || customRouteHintUserChannelIds.size() == 0) {
-                    emptyList()
-                } else {
-                    (0 until customRouteHintUserChannelIds.size()).mapNotNull { i ->
-                        customRouteHintUserChannelIds.getString(i)
-                    }
+                val size = customRouteHintUserChannelIds?.size() ?: 0
+                if (customRouteHintUserChannelIds == null || size == 0) {
+                    throw IllegalArgumentException("Custom route hints require at least one user channel id")
+                }
+                val ids = (0 until size).map { i ->
+                    customRouteHintUserChannelIds.getString(i)
+                        ?: throw IllegalArgumentException("Invalid user channel id in custom route hints")
                 }
                 RouteHints.Custom(ids)
             }
-            else -> RouteHints.Automatic
+            else -> throw IllegalArgumentException("Unknown route hints mode: $mode")
         }
     }
 

@@ -339,16 +339,24 @@ export default class InvoicesStore {
                     const userChannelIds = routeHintChannels
                         .filter((channel) => channel.canBeRouteHint)
                         .map((channel) => channel.user_channel_id as string);
+                    const maxHints = maxRouteHints();
                     if (
                         userChannelIds.length !== routeHintChannels.length ||
-                        userChannelIds.length > maxRouteHints()
+                        userChannelIds.length > maxHints
                     ) {
+                        const unavailable =
+                            userChannelIds.length !== routeHintChannels.length;
                         runInAction(() => {
                             this.creatingInvoiceError = true;
                             this.creatingInvoice = false;
-                            this.error_msg = localeString(
-                                'stores.InvoicesStore.errorCreatingInvoice'
-                            );
+                            this.error_msg = unavailable
+                                ? localeString(
+                                      'stores.InvoicesStore.routeHintChannelUnavailable'
+                                  )
+                                : localeString(
+                                      'stores.InvoicesStore.routeHintsLimitExceeded',
+                                      { count: maxHints }
+                                  );
                         });
                         return;
                     }

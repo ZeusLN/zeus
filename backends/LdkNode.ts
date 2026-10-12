@@ -2126,6 +2126,7 @@ export default class LdkNode {
                 channel.unspendablePunishmentReserve?.toString(),
             remote_chan_reserve_sat:
                 channel.counterpartyUnspendablePunishmentReserve?.toString(),
+            // LDK Node specific
             user_channel_id: channel.userChannelId,
             is_channel_ready: channel.isChannelReady,
             is_usable: channel.isUsable,
