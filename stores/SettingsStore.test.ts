@@ -621,25 +621,28 @@ describe('SettingsStore LndHub session token', () => {
         expect(store.accessToken).toBe('');
     });
 
-    it('clears the token when the active wallet changes server', async () => {
-        const store = await loggedIn({ selectedNode: 0, nodes: [hubA] });
+    // One field at a time, so each comparison in the clear condition is
+    // pinned on its own
+    it.each([
+        ['implementation', 'lnd'],
+        ['host', 'https://node.example.com'],
+        ['port', '8080'],
+        ['lndhubUrl', 'https://hub-c.example.com'],
+        ['username', 'mallory'],
+        ['password', 'changed']
+    ])(
+        'clears the token when the active wallet changes %s',
+        async (field, value) => {
+            const store = await loggedIn({ selectedNode: 0, nodes: [hubA] });
 
-        await store.updateSettings({
-            nodes: [{ ...hubA, lndhubUrl: 'https://hub-c.example.com' }]
-        });
+            await store.updateSettings({
+                nodes: [{ ...hubA, [field]: value }]
+            });
 
-        expect(store.accessToken).toBe('');
-    });
-
-    it('clears the token when the active wallet changes account', async () => {
-        const store = await loggedIn({ selectedNode: 0, nodes: [hubA] });
-
-        await store.updateSettings({
-            nodes: [{ ...hubA, username: 'mallory' }]
-        });
-
-        expect(store.accessToken).toBe('');
-    });
+            expect(store.accessToken).toBe('');
+            expect(store.refreshToken).toBe('');
+        }
+    );
 
     it('clears the token when no wallet is left', async () => {
         const store = await loggedIn({ selectedNode: 0, nodes: [hubA] });
