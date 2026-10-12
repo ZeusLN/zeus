@@ -17,7 +17,7 @@ const userFriendlyErrors: any = {
         'error.torBootstrap',
     'Error: Failed to connect to': 'error.nodeConnectError',
     'Error: Unable to resolve host': 'error.nodeConnectError',
-    'Error: {"code":2,"message":"verification failed: signature mismatch after caveat verification","details":[]}':
+    'verification failed: signature mismatch after caveat verification':
         'error.invalidMacaroon',
     'ReactNativeBlobUtil failed to encode response data to BASE64 string.':
         'error.invalidResponse',

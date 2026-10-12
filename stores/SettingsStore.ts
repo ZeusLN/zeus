@@ -2517,7 +2517,7 @@ export default class SettingsStore {
                         this.error = true;
                         if (
                             typeof error.message === 'string' &&
-                            error.message.includes('"bad auth"')
+                            error.message.includes('bad auth')
                         ) {
                             this.errorMsg = localeString(
                                 'stores.SettingsStore.lndhubLoginError'

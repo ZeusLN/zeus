@@ -104,26 +104,30 @@ export default class LND {
                         }
                         return response.json();
                     } else {
+                        let message;
                         try {
                             const errorInfo = response.json();
-                            throw new Error(
-                                (errorInfo.error && errorInfo.error.message) ||
-                                    errorInfo.message ||
-                                    errorInfo.error
-                            );
+                            message =
+                                errorInfo.error?.message ||
+                                errorInfo.message ||
+                                (typeof errorInfo.error === 'string' &&
+                                    errorInfo.error);
                         } catch (e) {
-                            if (
-                                response.data &&
-                                typeof response.data === 'string'
-                            ) {
-                                throw new Error(response.data);
-                            } else {
-                                throw new Error(
-                                    localeString(
-                                        'backends.LND.restReq.connectionError'
-                                    )
-                                );
-                            }
+                            // body is not JSON, fall back below
+                        }
+                        if (message && typeof message === 'string') {
+                            throw new Error(message);
+                        } else if (
+                            response.data &&
+                            typeof response.data === 'string'
+                        ) {
+                            throw new Error(response.data);
+                        } else {
+                            throw new Error(
+                                localeString(
+                                    'backends.LND.restReq.connectionError'
+                                )
+                            );
                         }
                     }
                 });
