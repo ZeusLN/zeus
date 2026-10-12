@@ -112,6 +112,11 @@ const ecc: TinySecp256k1InterfaceExtended & TinySecp256k1Interface & TinySecp256
 
   privateAdd: (d: Uint8Array, tweak: Uint8Array): Uint8Array | null =>
     throwToNull(() => {
+      // noble rejects a zero tweak as an invalid key; tiny-secp256k1 (and ecpair's self-test) expect d back
+      if (tweak.length === 32 && tweak.every(b => b === 0)) {
+        if (!necc.utils.isValidPrivateKey(d)) return null;
+        return Uint8Array.from(d);
+      }
       // console.log({ d, tweak });
       const ret = necc.utils.privateAdd(d, tweak);
       // console.log(ret);
