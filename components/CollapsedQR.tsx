@@ -2,6 +2,7 @@ import * as React from 'react';
 import type { TextLayoutEvent } from 'react-native';
 import {
     Dimensions,
+    EmitterSubscription,
     Image,
     Platform,
     StyleSheet,
@@ -26,6 +27,7 @@ import { themeColor } from './../utils/ThemeUtils';
 import Touchable from './Touchable';
 import Conversion from './Conversion';
 import { QRAnimationSpeed } from '../utils/QRAnimationUtils';
+import { getContentWidth } from '../utils/LayoutUtils';
 
 import Turtle from '../assets/images/SVG/Turtle.svg';
 import Rabbit from '../assets/images/SVG/Rabbit.svg';
@@ -158,6 +160,14 @@ export default class CollapsedQR extends React.Component<
     };
 
     private unmounted = false;
+    private dimensionsSubscription?: EmitterSubscription;
+
+    componentDidMount() {
+        this.dimensionsSubscription = Dimensions.addEventListener(
+            'change',
+            () => this.forceUpdate()
+        );
+    }
 
     componentDidUpdate(prevProps: CollapsedQRProps) {
         if (prevProps.value !== this.props.value && this.state.qrError) {
@@ -167,6 +177,7 @@ export default class CollapsedQR extends React.Component<
 
     componentWillUnmount() {
         this.unmounted = true;
+        this.dimensionsSubscription?.remove();
     }
 
     // react-native-qrcode-svg calls onError during its own render (the QR
@@ -214,7 +225,8 @@ export default class CollapsedQR extends React.Component<
         } = this.props;
 
         const { width, height } = Dimensions.get('window');
-        const qrSize = height > width ? width * 0.75 : height * 0.6;
+        const qrSize =
+            height > width ? getContentWidth(width) * 0.75 : height * 0.6;
 
         const QR_ANIMATION_SPEED_OPTIONS = [
             {

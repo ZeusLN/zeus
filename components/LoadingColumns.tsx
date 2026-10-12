@@ -1,11 +1,13 @@
 import * as React from 'react';
-import { Dimensions } from 'react-native';
+import { useWindowDimensions } from 'react-native';
 import Lottie from 'lottie-react-native';
 import { themeColor } from '../utils/ThemeUtils';
 
 const loader = require('../assets/images/Lottie/columns.json');
 
 function LoadingColumns() {
+    const windowSize = useWindowDimensions();
+
     return (
         <Lottie
             source={loader}
@@ -74,8 +76,8 @@ function LoadingColumns() {
             style={{
                 position: 'absolute',
                 alignSelf: 'center',
-                height: Dimensions.get('window').height * 2,
-                width: Dimensions.get('window').width * 2.3
+                height: windowSize.height * 2,
+                width: windowSize.width * 2.3
             }}
         />
     );

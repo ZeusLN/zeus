@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Dimensions } from 'react-native';
+import { useWindowDimensions } from 'react-native';
 import Lottie from 'lottie-react-native';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -10,6 +10,7 @@ interface LightningLoadingPatternProps {
 }
 
 function LightningLoadingPattern(props: LightningLoadingPatternProps) {
+    const windowSize = useWindowDimensions();
     const { color } = props;
     const animationRef = React.useRef<Lottie>(null);
 
@@ -553,8 +554,8 @@ function LightningLoadingPattern(props: LightningLoadingPatternProps) {
             style={{
                 position: 'absolute',
                 alignSelf: 'center',
-                height: Dimensions.get('window').height,
-                width: Dimensions.get('window').width
+                height: windowSize.height,
+                width: windowSize.width
             }}
         />
     );

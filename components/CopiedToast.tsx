@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Icon } from '@rneui/themed';
 
 import { localeString } from '../utils/LocaleUtils';
@@ -21,6 +21,7 @@ export function showCopiedToast() {
 
 export default function CopiedToastHost() {
     const [visible, setVisible] = React.useState(false);
+    const { height: windowHeight } = useWindowDimensions();
     React.useEffect(() => {
         listeners.push(setVisible);
         return () => {
@@ -30,7 +31,12 @@ export default function CopiedToastHost() {
 
     if (!visible) return null;
     return (
-        <View style={styles.container}>
+        <View
+            style={[
+                styles.container,
+                { bottom: Math.max(windowHeight * 0.15, 160) }
+            ]}
+        >
             <View
                 style={[styles.toast, { backgroundColor: themeColor('text') }]}
             >
@@ -59,7 +65,6 @@ const styles = StyleSheet.create({
         position: 'absolute',
         left: 0,
         right: 0,
-        bottom: Math.max(Dimensions.get('window').height * 0.15, 160),
         alignItems: 'center'
     },
     toast: {

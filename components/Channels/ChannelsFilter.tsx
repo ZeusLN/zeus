@@ -1,5 +1,5 @@
 import React from 'react';
-import { Dimensions, View } from 'react-native';
+import { View } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { SearchBar } from '@rneui/themed';
 
@@ -7,6 +7,7 @@ import { Row } from '../../components/layout/Row';
 import { FilterOptions } from '../../components/Channels/FilterOptions';
 import SortButton from '../../components/Channels/SortButton';
 
+import { getWindowDimensions } from '../../utils/LayoutUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { placeholderColor, themeColor } from '../../utils/ThemeUtils';
 
@@ -146,7 +147,7 @@ class ChannelsFilter extends React.PureComponent<ChannelsFilterProps> {
     render() {
         const { ChannelsStore } = this.props;
         const { search, setSort, channelsType, channelsView } = ChannelsStore!;
-        const windowWidth = Dimensions.get('window').width;
+        const windowWidth = getWindowDimensions().width;
 
         return (
             <View

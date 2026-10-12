@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Dimensions, View } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import Screen from '../components/Screen';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -29,6 +29,7 @@ interface MultiQRProps {
 }
 
 const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
+    const { width: screenWidth } = useWindowDimensions();
     const [addressData, setAddressData] = useState(['']);
     const [contactLabel, setContactLabel] = useState('');
 
@@ -78,8 +79,6 @@ const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
             setAddressData(addressData ?? []);
         }
     }, [route]);
-
-    const screenWidth = Dimensions.get('window').width;
 
     const onPressPagination = (index: number) => {
         ref.current?.scrollTo({

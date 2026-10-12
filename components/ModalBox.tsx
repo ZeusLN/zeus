@@ -22,8 +22,7 @@ import {
 import { inject, observer } from 'mobx-react';
 
 import SettingsStore from '../stores/SettingsStore';
-
-const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } = Dimensions.get('window');
+import { getContentWidth, getWindowDimensions } from '../utils/LayoutUtils';
 
 const styles = StyleSheet.create({
     wrapper: {
@@ -167,6 +166,10 @@ export default class ModalBox extends React.PureComponent<
         this.open = this.open.bind(this);
         this.close = this.close.bind(this);
 
+        // Starting values only; onContainerLayout replaces them with the
+        // measured size.
+        const { height: SCREEN_HEIGHT, width: SCREEN_WIDTH } =
+            Dimensions.get('window');
         const position = props.startOpen
             ? new Animated.Value(0)
             : new Animated.Value(
@@ -628,9 +631,11 @@ export default class ModalBox extends React.PureComponent<
 
     renderContent() {
         const { style }: { style?: StyleProp<ViewStyle> } = this.props;
+        // On wide windows the sheet keeps a readable width and is centered
+        // by offsetX below. A width in the style prop still takes precedence.
         const size = {
             height: this.state.containerHeight,
-            width: this.state.containerWidth
+            width: getContentWidth(this.state.containerWidth)
         };
         const offsetX = (this.state.containerWidth - this.state.width) / 2;
 
@@ -638,7 +643,7 @@ export default class ModalBox extends React.PureComponent<
         // changing the system text size does not reload the JS bundle (Android
         // recreates the Activity but reuses the JS context, iOS does not restart
         // at all), so a cached value stays stale until the app is force-quit.
-        const { fontScale } = Dimensions.get('window');
+        const { fontScale } = getWindowDimensions();
 
         // Scaling the requested height by fontScale gives larger text more room,
         // but the result must never exceed the container: calculateModalPosition

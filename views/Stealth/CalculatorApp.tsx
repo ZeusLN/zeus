@@ -5,13 +5,11 @@ import {
     TouchableOpacity,
     View,
     StatusBar,
-    Dimensions
+    useWindowDimensions
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStealthTapDetector } from './StealthTapDetector';
-
-const { width } = Dimensions.get('window');
-const BUTTON_SIZE = (width - 50) / 4;
+import { getContentWidth } from '../../utils/LayoutUtils';
 
 interface CalculatorAppProps {
     onUnlock: () => void;
@@ -31,6 +29,15 @@ const CalculatorApp: React.FC<CalculatorAppProps> = ({
     const [operation, setOperation] = React.useState<Operation>(null);
     const [waitingForOperand, setWaitingForOperand] = React.useState(false);
     const insets = useSafeAreaInsets();
+    const { width: windowWidth } = useWindowDimensions();
+    const gridWidth = getContentWidth(windowWidth);
+    // four buttons, three 10pt gaps and 10pt padding on each side
+    const buttonSize = (gridWidth - 50) / 4;
+    const buttonSizeStyle = {
+        width: buttonSize,
+        height: buttonSize,
+        borderRadius: buttonSize / 2
+    };
 
     // Secret unlock: tap "=" requiredTaps times within 4 seconds
     const { handleTap: handleSecretTap } = useStealthTapDetector({
@@ -136,7 +143,7 @@ const CalculatorApp: React.FC<CalculatorAppProps> = ({
         textStyle?: object
     ) => (
         <TouchableOpacity
-            style={[styles.button, style]}
+            style={[styles.button, buttonSizeStyle, style]}
             onPress={onPress}
             activeOpacity={0.7}
         >
@@ -170,7 +177,11 @@ const CalculatorApp: React.FC<CalculatorAppProps> = ({
             <View
                 style={[
                     styles.buttonsContainer,
-                    { paddingBottom: 20 + insets.bottom }
+                    {
+                        width: gridWidth,
+                        alignSelf: 'center',
+                        paddingBottom: 20 + insets.bottom
+                    }
                 ]}
             >
                 {/* Row 1 */}
@@ -250,11 +261,10 @@ const CalculatorApp: React.FC<CalculatorAppProps> = ({
 
                 {/* Row 5 */}
                 <View style={styles.row}>
-                    {renderButton(
-                        '0',
-                        () => handleNumber('0'),
-                        styles.zeroButton
-                    )}
+                    {renderButton('0', () => handleNumber('0'), [
+                        styles.zeroButton,
+                        { width: buttonSize * 2 + 10 }
+                    ])}
                     {renderButton('.', handleDecimal)}
                     {renderButton(
                         '=',
@@ -294,9 +304,6 @@ const styles = StyleSheet.create({
         marginBottom: 10
     },
     button: {
-        width: BUTTON_SIZE,
-        height: BUTTON_SIZE,
-        borderRadius: BUTTON_SIZE / 2,
         backgroundColor: '#333',
         justifyContent: 'center',
         alignItems: 'center'
@@ -323,7 +330,6 @@ const styles = StyleSheet.create({
         fontSize: 38
     },
     zeroButton: {
-        width: BUTTON_SIZE * 2 + 10,
         alignItems: 'flex-start',
         paddingLeft: 35
     }

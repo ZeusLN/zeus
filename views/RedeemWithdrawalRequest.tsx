@@ -1,7 +1,6 @@
 import * as React from 'react';
 import {
     BackHandler,
-    Dimensions,
     NativeEventSubscription,
     StyleSheet,
     Text,
@@ -20,6 +19,7 @@ import { Row } from '../components/layout/Row';
 
 import Storage from '../storage';
 
+import { getContentWidth, getWindowDimensions } from '../utils/LayoutUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -144,7 +144,8 @@ export default class RedeemWithdrawalRequest extends React.Component<
 
     render() {
         const { error, loading, redemptionResult, storedNotes } = this.state;
-        const windowSize = Dimensions.get('window');
+        const windowSize = getWindowDimensions();
+        const contentWidth = getContentWidth(windowSize.width);
         const { navigation } = this.props;
         const noteKey = redemptionResult?.getNoteKey;
 
@@ -166,7 +167,7 @@ export default class RedeemWithdrawalRequest extends React.Component<
                                 fontFamily: 'PPNeueMontreal-Book',
                                 paddingBottom: windowSize.height / 10,
                                 fontSize:
-                                    windowSize.width * windowSize.scale * 0.014
+                                    contentWidth * windowSize.scale * 0.014
                             }}
                         >
                             {localeString(
@@ -186,8 +187,8 @@ export default class RedeemWithdrawalRequest extends React.Component<
                         {!!redemptionResult && !error && (
                             <>
                                 <Wordmark
-                                    height={windowSize.width * 0.25}
-                                    width={windowSize.width}
+                                    height={contentWidth * 0.25}
+                                    width={contentWidth}
                                     fill={themeColor('highlight')}
                                 />
                                 <PaidIndicator />
@@ -200,7 +201,7 @@ export default class RedeemWithdrawalRequest extends React.Component<
                                                 windowSize.height * 0.03,
                                             fontFamily: 'PPNeueMontreal-Book',
                                             fontSize:
-                                                windowSize.width *
+                                                contentWidth *
                                                 windowSize.scale *
                                                 0.017
                                         }}
@@ -247,7 +248,7 @@ export default class RedeemWithdrawalRequest extends React.Component<
                                         color: themeColor('text'),
                                         fontFamily: 'PPNeueMontreal-Book',
                                         fontSize:
-                                            windowSize.width *
+                                            contentWidth *
                                             windowSize.scale *
                                             0.014,
                                         textAlign: 'center',

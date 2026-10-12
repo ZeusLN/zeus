@@ -1,7 +1,6 @@
 import * as React from 'react';
 import {
     Animated,
-    Dimensions,
     FlatList,
     PanResponder,
     PanResponderInstance,
@@ -39,6 +38,7 @@ import Accordion from '../../components/Accordion';
 import LightningAddressStore from '../../stores/LightningAddressStore';
 import SettingsStore from '../../stores/SettingsStore';
 
+import { getWindowDimensions } from '../../utils/LayoutUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -151,7 +151,7 @@ export default class LightningAddress extends React.Component<
             redeemingAll
         } = LightningAddressStore;
 
-        const { fontScale } = Dimensions.get('window');
+        const { fontScale } = getWindowDimensions();
 
         const notEmbedded = !BackendUtils.isLocalWallet();
         const isZaplocker = lightningAddressType === 'zaplocker';

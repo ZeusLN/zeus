@@ -1,8 +1,9 @@
 import React from 'react';
-import { Dimensions, Text, View } from 'react-native';
+import { Text, View, useWindowDimensions } from 'react-native';
 import CircularProgress from 'react-native-circular-progress-indicator';
 
 import { formatProgressPercentage } from '../utils/FormatUtils';
+import { getContentWidth } from '../utils/LayoutUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 interface SyncCircularProgressProps {
@@ -12,7 +13,7 @@ interface SyncCircularProgressProps {
 export default function SyncCircularProgress({
     value
 }: SyncCircularProgressProps) {
-    const { width } = Dimensions.get('window');
+    const width = getContentWidth(useWindowDimensions().width);
     const ringRadius = width / 3;
     const ringSize = ringRadius * 2;
     const progressFontSize = ringRadius / 2;

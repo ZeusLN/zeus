@@ -1608,7 +1608,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         const BalanceScreen = () => {
             return (
-                <Screen>
+                <Screen limitWidth>
                     <BalancePane
                         navigation={navigation}
                         NodeInfoStore={NodeInfoStore}
@@ -1764,7 +1764,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         const KeypadScreen = () => {
             return (
-                <Screen>
+                <Screen limitWidth>
                     <KeypadPane navigation={navigation} loading={loading} />
                 </Screen>
             );

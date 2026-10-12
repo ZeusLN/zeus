@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Dimensions, Vibration } from 'react-native';
+import { Vibration, useWindowDimensions } from 'react-native';
 import Lottie from 'lottie-react-native';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -14,7 +14,7 @@ function PaidIndicator() {
     const [randomIndex] = useState(() =>
         Math.floor(Math.random() * lightning.length)
     );
-    const indicatorSize = Dimensions.get('window').height * 0.4;
+    const indicatorSize = useWindowDimensions().height * 0.4;
 
     const animationRef = useRef<Lottie>(null);
 
