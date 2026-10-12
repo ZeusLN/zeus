@@ -556,6 +556,22 @@ export default class WalletConfiguration extends React.Component<
         }
     };
 
+    // A different interface means a different server, so drop the previous
+    // server's address and credentials. The lndhub form hides host, port,
+    // macaroonHex and rune, but they would still be saved with the node.
+    selectImplementation = (value: Implementations) => {
+        this.setState({
+            implementation: value,
+            saved: false,
+            certVerification: value === 'lndhub' ? true : false,
+            host: '',
+            port: '',
+            macaroonHex: '',
+            rune: '',
+            lndhubUrl: ''
+        });
+    };
+
     saveWalletConfiguration = (
         recoveryCipherSeed?: string,
         newEmbeddedLndWallet?: boolean
@@ -1504,15 +1520,7 @@ export default class WalletConfiguration extends React.Component<
                     'views.Settings.WalletConfiguration.walletInterface'
                 )}
                 selectedValue={implementation}
-                onValueChange={(value: Implementations) => {
-                    this.setState({
-                        implementation: value,
-                        saved: false,
-                        certVerification: value === 'lndhub' ? true : false,
-                        host: '',
-                        lndhubUrl: ''
-                    });
-                }}
+                onValueChange={this.selectImplementation}
                 values={interfaceKeys}
             />
         );

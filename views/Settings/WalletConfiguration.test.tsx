@@ -116,6 +116,29 @@ describe('WalletConfiguration', () => {
         });
     });
 
+    describe('implementation dropdown', () => {
+        it('clears the previous server address and credentials', () => {
+            const view = makeView({
+                implementation: 'lnd',
+                host: 'https://node.example.com',
+                port: '8080',
+                macaroonHex: 'deadbeef',
+                rune: 'rune',
+                lndhubUrl: 'https://lndhub.example.com'
+            });
+
+            view.selectImplementation('lndhub');
+
+            expect(view.state.implementation).toBe('lndhub');
+            expect(view.state.certVerification).toBe(true);
+            expect(view.state.host).toBe('');
+            expect(view.state.port).toBe('');
+            expect(view.state.macaroonHex).toBe('');
+            expect(view.state.rune).toBe('');
+            expect(view.state.lndhubUrl).toBe('');
+        });
+    });
+
     describe('cleartext HTTP gate', () => {
         const save = (state: any) => {
             const view = makeView(state);
