@@ -622,8 +622,10 @@ export default class LightningNodeConnect {
         // and updates arrive on a channel shared by every concurrent close.
         // CloseStatusUpdate carries no request identifiers, so events cannot
         // be correlated to a specific close; ZEUS only drives one close at a
-        // time from the UI. Resolve on the first terminal update so callers
-        // get the same promise contract as the other backends.
+        // time from the UI. Resolve on close_pending, the first update of a
+        // new close, so callers get the same promise contract as the other
+        // backends. chan_close only arrives once a close has confirmed, so
+        // it belongs to an earlier close and is skipped.
         const streamingCall = this.lnc.lnd.lightning.closeChannel(params);
 
         const { LncModule } = NativeModules;
@@ -639,8 +641,9 @@ export default class LightningNodeConnect {
                     } catch (e) {
                         result = event.result;
                     }
+                    if (result?.chan_close) return;
                     listener.remove();
-                    if (result?.chan_close?.success || result?.close_pending) {
+                    if (result?.close_pending) {
                         resolve(result);
                     } else {
                         reject(
