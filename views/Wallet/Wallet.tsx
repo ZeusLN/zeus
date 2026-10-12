@@ -1608,7 +1608,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         const BalanceScreen = () => {
             return (
-                <Screen limitWidth>
+                // The error state paints the whole tab, as the tab bar does,
+                // so it is not limited to the content column.
+                <Screen limitWidth={!error}>
                     <BalancePane
                         navigation={navigation}
                         NodeInfoStore={NodeInfoStore}
