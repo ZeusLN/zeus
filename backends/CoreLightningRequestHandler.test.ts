@@ -89,13 +89,15 @@ describe('CoreLightningRequestHandler.getBalance', () => {
         const result = getBalance(
             listfunds([
                 output(100_000_000, 'confirmed', false),
-                output(50_000_000, 'unconfirmed', false)
+                output(50_000_000, 'unconfirmed', false),
+                // older nodes may leave out the reserved key
+                { amount_msat: 20_000_000, status: 'confirmed' }
             ])
         );
 
         expect(result).toEqual({
-            total_balance: 150_000,
-            confirmed_balance: 100_000,
+            total_balance: 170_000,
+            confirmed_balance: 120_000,
             unconfirmed_balance: 50_000
         });
     });
