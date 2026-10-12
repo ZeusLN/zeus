@@ -2,6 +2,8 @@ const mockListPayments = jest.fn();
 const mockSendBolt11 = jest.fn();
 const mockSendSpontaneousPayment = jest.fn();
 const mockBolt12SendUsingAmount = jest.fn();
+const mockReceiveBolt11 = jest.fn();
+const mockReceiveVariableAmountBolt11 = jest.fn();
 
 jest.mock('../ldknode/LdkNodeInjection', () => ({
     __esModule: true,
@@ -10,7 +12,10 @@ jest.mock('../ldknode/LdkNodeInjection', () => ({
             listPayments: (...args: any[]) => mockListPayments(...args)
         },
         bolt11: {
-            sendBolt11: (...args: any[]) => mockSendBolt11(...args)
+            sendBolt11: (...args: any[]) => mockSendBolt11(...args),
+            receiveBolt11: (...args: any[]) => mockReceiveBolt11(...args),
+            receiveVariableAmountBolt11: (...args: any[]) =>
+                mockReceiveVariableAmountBolt11(...args)
         },
         spontaneous: {
             sendSpontaneousPayment: (...args: any[]) =>
@@ -208,5 +213,63 @@ describe('LdkNode payment timeouts', () => {
         );
 
         expect(error.message).toEqual('error.paymentTimedOut');
+    });
+});
+
+describe('LdkNode.createInvoice route hints', () => {
+    let ldk: LdkNode;
+    let consoleError: jest.SpyInstance;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        ldk = new LdkNode();
+        mockReceiveBolt11.mockResolvedValue('lnbcrt1fake');
+        mockReceiveVariableAmountBolt11.mockResolvedValue('lnbcrt1fake');
+        // the fake invoice cannot be decoded; that path only logs
+        consoleError = jest.spyOn(console, 'error').mockImplementation();
+    });
+
+    afterEach(() => consoleError.mockRestore());
+
+    it('uses automatic hints when no channels are selected', async () => {
+        await ldk.createInvoice({ memo: 'm', value: '10' });
+
+        expect(mockReceiveBolt11).toHaveBeenCalledWith({
+            amountMsat: 10000,
+            description: 'm',
+            expirySecs: 3600,
+            routeHintsMode: 'automatic',
+            customRouteHintUserChannelIds: undefined
+        });
+    });
+
+    it('uses custom hints with the selected user channel ids', async () => {
+        await ldk.createInvoice({
+            memo: '',
+            value: '10',
+            route_hint_user_channel_ids: ['a', 'b']
+        });
+
+        expect(mockReceiveBolt11).toHaveBeenCalledWith(
+            expect.objectContaining({
+                routeHintsMode: 'custom',
+                customRouteHintUserChannelIds: ['a', 'b']
+            })
+        );
+    });
+
+    it('passes the hints through for amountless invoices', async () => {
+        await ldk.createInvoice({
+            memo: '',
+            route_hint_user_channel_ids: ['a']
+        });
+
+        expect(mockReceiveBolt11).not.toHaveBeenCalled();
+        expect(mockReceiveVariableAmountBolt11).toHaveBeenCalledWith(
+            expect.objectContaining({
+                routeHintsMode: 'custom',
+                customRouteHintUserChannelIds: ['a']
+            })
+        );
     });
 });
