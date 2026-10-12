@@ -2,9 +2,10 @@
 # NWCWidget) use PBXFileSystemSynchronizedRootGroup, which Xcode creates by
 # default since Xcode 16. Xcodeproj only learned that ISA in 1.26.0; older
 # versions abort with "attempted to initialize an object with unknown ISA".
-# 1.28.0 added the objectVersion for Xcode 26 and 1.28.1 fixed the Ruby 3.4
-# crashes, so anything current wants 1.28.1. Fail loudly here rather than in a
-# backtrace from the project parser.
+# 1.28.0 added the objectVersion for Xcode 26, and 1.28.1 declares nkf and
+# base64 as dependencies, which Bundler needs on Ruby 3.4+ (outside Bundler
+# Ruby still ships both as bundled gems). Fail loudly below 1.26.0 rather than
+# in a backtrace from the project parser, and warn below 1.28.1.
 MIN_XCODEPROJ_VERSION = '1.26.0'
 RECOMMENDED_XCODEPROJ_VERSION = '1.28.1'
 
