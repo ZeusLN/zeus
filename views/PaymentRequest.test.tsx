@@ -53,6 +53,24 @@ const newView = (BalanceStore: any, isLightningReadyToSend: jest.Mock) => {
     return view;
 };
 
+describe('PaymentRequest mount', () => {
+    it('refreshes the lightning balance on mount without awaiting settings', () => {
+        const getLightningBalance = jest.fn();
+        const view: any = new (PaymentRequest as any)({
+            BalanceStore: { getLightningBalance },
+            // never resolves: the refresh must start before settings load
+            SettingsStore: {
+                getSettings: jest.fn(() => new Promise(() => {}))
+            },
+            InvoicesStore: {}
+        });
+
+        view.componentDidMount();
+
+        expect(getLightningBalance).toHaveBeenCalledWith(true);
+    });
+});
+
 describe('PaymentRequest.checkIfLndReady', () => {
     it('becomes ready once a stale zero balance is refreshed while mounted', async () => {
         const BalanceStore = { lightningBalance: 0 };
