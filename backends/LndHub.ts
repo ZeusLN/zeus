@@ -24,6 +24,39 @@ export default class LndHub extends LND {
         };
     };
 
+    // LND's request resolves host || lndhubUrl, port and
+    // macaroonHex || accessToken. An lndhub account only has lndhubUrl and
+    // the session token, but REST fields can be left on its config (the
+    // implementation dropdown keeps port and macaroonHex, older clipboard
+    // imports kept host), which redirected requests and sent the LND
+    // macaroon as the Bearer token.
+    request = (
+        route: string,
+        method: string,
+        data?: any,
+        params?: any,
+        timeout?: number
+    ) => {
+        const { lndhubUrl, accessToken, certVerification, enableTor } =
+            settingsStore;
+
+        if (params) {
+            route = `${route}?${Object.keys(params)
+                .map((key: string) => key + '=' + params[key])
+                .join('&')}`;
+        }
+
+        return this.restReq(
+            this.getHeaders(accessToken),
+            this.getURL(lndhubUrl, '', route),
+            method,
+            data,
+            certVerification,
+            enableTor,
+            timeout
+        );
+    };
+
     login = (data: LoginRequest) =>
         this.postRequest('/auth?type=auth', {
             login: data.login,

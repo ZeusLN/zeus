@@ -303,9 +303,16 @@ export default class WalletConfiguration extends React.Component<
 
                 const existingAccount = !!username;
 
+                // Clear the REST fields left over from a typed or saved
+                // config: the lndhub form hides them, but they are saved
+                // with the node.
                 const stateUpdate: any = {
                     username,
                     password,
+                    host: '',
+                    port: '',
+                    macaroonHex: '',
+                    rune: '',
                     implementation: 'lndhub',
                     suggestImport: '',
                     importError: '',
@@ -533,8 +540,9 @@ export default class WalletConfiguration extends React.Component<
     // a host that is neither loopback nor a Tor onion service. A bare host
     // or an https:// scheme resolves to HTTPS in the backend getURL(), so
     // only an explicit http:// is treated as insecure. Gated per
-    // implementation because state retains fields the active backend never
-    // transmits credentials over (e.g. a stale host on an lndhub config).
+    // implementation because state retains fields some backends never read
+    // (e.g. a stale lndhubUrl on an lnd config, or a stale host on an
+    // lndhub config).
     private hasInsecureCleartextTransport = (): boolean => {
         const { implementation, host, lndhubUrl } = this.state;
         switch (implementation) {
@@ -546,6 +554,22 @@ export default class WalletConfiguration extends React.Component<
             default:
                 return false;
         }
+    };
+
+    // A different interface means a different server, so drop the previous
+    // server's address and credentials. The lndhub form hides host, port,
+    // macaroonHex and rune, but they would still be saved with the node.
+    selectImplementation = (value: Implementations) => {
+        this.setState({
+            implementation: value,
+            saved: false,
+            certVerification: value === 'lndhub' ? true : false,
+            host: '',
+            port: '',
+            macaroonHex: '',
+            rune: '',
+            lndhubUrl: ''
+        });
     };
 
     saveWalletConfiguration = (
@@ -1496,15 +1520,7 @@ export default class WalletConfiguration extends React.Component<
                     'views.Settings.WalletConfiguration.walletInterface'
                 )}
                 selectedValue={implementation}
-                onValueChange={(value: Implementations) => {
-                    this.setState({
-                        implementation: value,
-                        saved: false,
-                        certVerification: value === 'lndhub' ? true : false,
-                        host: '',
-                        lndhubUrl: ''
-                    });
-                }}
+                onValueChange={this.selectImplementation}
                 values={interfaceKeys}
             />
         );
