@@ -112,6 +112,8 @@ class BackendUtils {
         this.call('payLightningInvoiceStreaming', args);
     sendKeysend = (...args: any[]) => this.call('sendKeysend', args);
     closeChannel = (...args: any[]) => this.call('closeChannel', args);
+    spliceIn = (...args: any[]) => this.call('spliceIn', args);
+    spliceOut = (...args: any[]) => this.call('spliceOut', args);
     getNodeInfo = (...args: any[]) => this.call('getNodeInfo', args);
     getFees = (...args: any[]) => this.call('getFees', args);
     setFees = (...args: any[]) => this.call('setFees', args);
