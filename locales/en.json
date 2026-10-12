@@ -242,6 +242,7 @@
     "components.HopPicker.defaultTitle": "Channel to use",
     "components.HopPicker.selectChannel": "Select channel to use",
     "components.HopPicker.routeHintsMax": "route hints max",
+    "components.HopPicker.noRouteHintChannels": "No channels are ready to be used as route hints yet. Pull down to refresh.",
     "components.HopPicker.routeHintsLimitReached": "You can select at most {{count}} route hints.",
     "components.SetFeesForm.setNew": "Set New Fees",
     "components.SetFeesForm.hide": "Hide Set New Fees Form",

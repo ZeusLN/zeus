@@ -300,6 +300,25 @@ export default class ChannelPicker extends React.Component<
                                             contentContainerStyle={
                                                 styles.listContent
                                             }
+                                            ListEmptyComponent={
+                                                backendUtils.supportsRouteHintUserChannelIds() ? (
+                                                    <Text
+                                                        style={[
+                                                            styles.text,
+                                                            styles.emptyText,
+                                                            {
+                                                                color: themeColor(
+                                                                    'secondaryText'
+                                                                )
+                                                            }
+                                                        ]}
+                                                    >
+                                                        {localeString(
+                                                            'components.HopPicker.noRouteHintChannels'
+                                                        )}
+                                                    </Text>
+                                                ) : null
+                                            }
                                             onEndReachedThreshold={50}
                                             refreshing={loading}
                                             onRefresh={() =>
@@ -472,6 +491,11 @@ const styles = StyleSheet.create({
     },
     listContent: {
         paddingBottom: 16
+    },
+    emptyText: {
+        padding: 16,
+        fontSize: 16,
+        textAlign: 'center'
     },
     loadingContainer: {
         flex: 1,
