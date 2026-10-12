@@ -2475,6 +2475,9 @@ describe('InvoicesStore.createInvoice route hints', () => {
         } as any);
         expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
         expect(store.creatingInvoiceError).toBe(true);
+        expect(store.error_msg).toBe(
+            'stores.InvoicesStore.routeHintChannelUnavailable'
+        );
     });
 
     it('errors when more than the LDK hint limit is selected', async () => {
@@ -2487,5 +2490,8 @@ describe('InvoicesStore.createInvoice route hints', () => {
         } as any);
         expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
         expect(store.creatingInvoiceError).toBe(true);
+        expect(store.error_msg).toBe(
+            'stores.InvoicesStore.routeHintsLimitExceeded'
+        );
     });
 });
