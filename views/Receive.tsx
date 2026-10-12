@@ -1019,7 +1019,7 @@ export default class Receive extends React.Component<
             expirySeconds,
             customPreimage,
             ampInvoice,
-            routeHints,
+            routeHints: routeHintsSwitch,
             account,
             needInbound,
             enableLSP,
@@ -1032,6 +1032,12 @@ export default class Receive extends React.Component<
             nfcSupported,
             showAdvanced
         } = this.state;
+
+        // LDK Node always attaches automatic hints, so an on/off switch
+        // would be a no-op: it is hidden there and only the mode and
+        // channel picker are offered
+        const routeHints =
+            routeHintsSwitch || BackendUtils.supportsRouteHintUserChannelIds();
 
         const { zeroConfFee, showLspSettings } = LSPStore;
         const requiresChannelSetup =
@@ -2621,7 +2627,8 @@ export default class Receive extends React.Component<
                                                             )}
 
                                                         {BackendUtils.supportsRouteHints() &&
-                                                            !lspIsActive && (
+                                                            !lspIsActive &&
+                                                            !BackendUtils.supportsRouteHintUserChannelIds() && (
                                                                 <View
                                                                     style={{
                                                                         flexDirection:

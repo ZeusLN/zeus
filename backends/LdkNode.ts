@@ -2129,6 +2129,11 @@ export default class LdkNode {
             // LDK Node specific
             user_channel_id: channel.userChannelId,
             is_channel_ready: channel.isChannelReady,
+            has_counterparty_forwarding_info:
+                channel.counterpartyForwardingInfoFeeBaseMsat != null &&
+                channel.counterpartyForwardingInfoFeeProportionalMillionths !=
+                    null &&
+                channel.counterpartyForwardingInfoCltvExpiryDelta != null,
             is_usable: channel.isUsable,
             confirmations: channel.confirmations,
             confirmations_required: channel.confirmationsRequired

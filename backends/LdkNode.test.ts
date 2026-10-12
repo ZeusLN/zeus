@@ -653,3 +653,30 @@ describe('LdkNode.createInvoice route hints', () => {
         );
     });
 });
+
+describe('LdkNode.formatChannel forwarding info', () => {
+    const format = (overrides: any = {}) =>
+        (new LdkNode() as any).formatChannel({
+            channelId: 'abc',
+            counterpartyNodeId: 'peer-1',
+            channelValueSats: 100000,
+            outboundCapacityMsat: 40000000,
+            inboundCapacityMsat: 59000000,
+            isChannelReady: true,
+            userChannelId: '1',
+            ...overrides
+        });
+
+    it('flags channels whose peer has sent forwarding info', () => {
+        const channel = format({
+            counterpartyForwardingInfoFeeBaseMsat: 1000,
+            counterpartyForwardingInfoFeeProportionalMillionths: 1,
+            counterpartyForwardingInfoCltvExpiryDelta: 144
+        });
+        expect(channel.has_counterparty_forwarding_info).toBe(true);
+    });
+
+    it('does not flag channels without forwarding info', () => {
+        expect(format().has_counterparty_forwarding_info).toBe(false);
+    });
+});
