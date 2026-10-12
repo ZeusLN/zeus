@@ -12,6 +12,8 @@ const mockListChannels = jest.fn();
 const mockCloseChannel = jest.fn();
 const mockForceCloseChannel = jest.fn();
 const mockLsps1RequestChannel = jest.fn();
+const mockSendToOnchainAddress = jest.fn();
+const mockSendAllToOnchainAddress = jest.fn();
 
 jest.mock('../ldknode/LdkNodeInjection', () => ({
     __esModule: true,
@@ -49,6 +51,12 @@ jest.mock('../ldknode/LdkNodeInjection', () => ({
                 mockBolt12DecodeOffer(...args),
             bolt12RequestRefundPayment: (...args: any[]) =>
                 mockBolt12RequestRefundPayment(...args)
+        },
+        onchain: {
+            sendToOnchainAddress: (...args: any[]) =>
+                mockSendToOnchainAddress(...args),
+            sendAllToOnchainAddress: (...args: any[]) =>
+                mockSendAllToOnchainAddress(...args)
         }
     }
 }));
@@ -1162,6 +1170,49 @@ describe('LdkNode.requestLsps1Liquidity', () => {
         await ldk.requestLsps1Liquidity({ amount_sat: 1000000 });
         expect(mockLsps1RequestChannel).toHaveBeenCalledWith(
             expect.objectContaining({ channelExpiryBlocks: 52560 })
+        );
+    });
+});
+
+describe('LdkNode on-chain fee rate', () => {
+    let ldk: LdkNode;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        ldk = new LdkNode();
+        mockSendToOnchainAddress.mockResolvedValue('txid');
+        mockSendAllToOnchainAddress.mockResolvedValue('txid');
+    });
+
+    it('lets the user set a fee rate for on-chain sends', () => {
+        expect(ldk.supportsOnchainSendFeeRate()).toBe(true);
+    });
+
+    it('keeps the channel open fee rate hidden until channel opens apply it', () => {
+        expect(ldk.supportsChannelOpenFeeRate()).toBe(false);
+    });
+
+    it('passes the user fee rate to sendToOnchainAddress', async () => {
+        await ldk.sendCoins({
+            addr: 'bcrt1q...',
+            amount: '1000',
+            sat_per_vbyte: '7'
+        });
+        expect(mockSendToOnchainAddress).toHaveBeenCalledWith(
+            expect.objectContaining({ satPerVbyte: 7 })
+        );
+    });
+
+    it('passes the user fee rate to sendAllToOnchainAddress', async () => {
+        await ldk.sendCoins({
+            addr: 'bcrt1q...',
+            send_all: true,
+            sat_per_vbyte: '3'
+        });
+        expect(mockSendAllToOnchainAddress).toHaveBeenCalledWith(
+            'bcrt1q...',
+            false,
+            3
         );
     });
 });
