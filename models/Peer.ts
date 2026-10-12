@@ -26,8 +26,8 @@ export default class Peer extends BaseModel {
         this.connected = data.connected;
         this.num_channels = data.num_channels;
         this.inbound = data.inbound;
-        this.bytesSent = data.bytesSent;
-        this.bytesRecv = data.bytesRecv;
+        this.bytesSent = data.bytesSent ?? data.bytes_sent;
+        this.bytesRecv = data.bytesRecv ?? data.bytes_recv;
     }
 
     @computed public get model(): string {
