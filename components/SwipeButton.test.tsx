@@ -3,6 +3,7 @@ import {
     Dimensions,
     PanResponder,
     PanResponderCallbacks,
+    StyleSheet,
     View
 } from 'react-native';
 import renderer, { act } from 'react-test-renderer';
@@ -49,6 +50,16 @@ const swipe = (dx: number) =>
     });
 
 describe('SwipeButton', () => {
+    // Send wraps the button in alignItems: 'center'. Without stretching, the
+    // track shrinks to its label and a few points of drag would pay.
+    it('stretches its track across a centering parent', () => {
+        const tree = render(jest.fn());
+        const style = StyleSheet.flatten(
+            tree.root.findAllByType(View)[0].props.style
+        );
+        expect(style.alignSelf).toBe('stretch');
+    });
+
     // A 300pt track leaves 250pt of travel for the 50pt knob, so a swipe
     // completes past 237.5pt.
     it('completes a swipe to the end of a track narrower than the window', () => {

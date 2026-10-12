@@ -158,6 +158,9 @@ const styles = StyleSheet.create({
         height: 50,
         backgroundColor: '#ccc',
         borderRadius: 5,
+        // Span the parent even when it centers its children (Send does), so
+        // the knob always has the full track to travel.
+        alignSelf: 'stretch',
         marginHorizontal: 20,
         justifyContent: 'center',
         alignItems: 'center',
