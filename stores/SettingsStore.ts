@@ -1748,6 +1748,7 @@ export default class SettingsStore {
     // Monotonic token identifying the fetchData invocation that currently
     // owns fetchLock; releaseFetchLock is a no-op for stale owners
     private fetchLockSeq = 0;
+    private connectionSeq = 0;
     @observable public lurkerExposed = false;
     private lurkerTimeout: ReturnType<typeof setTimeout> | null = null;
     // LNDHub
@@ -2468,6 +2469,7 @@ export default class SettingsStore {
     // LNDHub
     @action
     public login = (request: LoginRequest) => {
+        const isCurrent = this.getConnectionGuard();
         this.error = false;
         this.errorMsg = '';
         this.createAccountSuccess = '';
@@ -2481,6 +2483,9 @@ export default class SettingsStore {
                 .then((data: any) => {
                     runInAction(() => {
                         this.loading = false;
+                        // The old account's tokens must not replace the
+                        // newly selected wallet's
+                        if (!isCurrent()) return;
                         this.accessToken = data.access_token;
                         this.refreshToken = data.refresh_token;
                     });
@@ -2489,6 +2494,7 @@ export default class SettingsStore {
                 .catch((error: any) => {
                     runInAction(() => {
                         this.loading = false;
+                        if (!isCurrent()) return;
                         this.error = true;
                         if (
                             typeof error.message === 'string' &&
@@ -2508,6 +2514,27 @@ export default class SettingsStore {
         });
     };
 
+    // Snapshot both selection and reconnect generation. A connect or refresh
+    // that outlives a wallet switch (or a reconnect of the same wallet) must
+    // not write the newer connection's loading/error/connecting state.
+    public getConnectionGuard = () => {
+        const {
+            implementation,
+            pairingPhrase,
+            mailboxServer,
+            customMailboxServer,
+            connectionSeq
+        } = this;
+        const selectedNode = this.settings.selectedNode;
+        return () =>
+            this.connectionSeq === connectionSeq &&
+            this.settings.selectedNode === selectedNode &&
+            this.implementation === implementation &&
+            this.pairingPhrase === pairingPhrase &&
+            this.mailboxServer === mailboxServer &&
+            this.customMailboxServer === customMailboxServer;
+    };
+
     // LNC
     //
     // ConnectServer dials in a detached goroutine that retries until it
@@ -2518,13 +2545,21 @@ export default class SettingsStore {
     // dial that is still in progress, so calling connect() again after an
     // error goes back to waiting on it. The old 10s budget was routinely
     // shorter than a mailbox handshake on a cold radio (ZEUS-4278).
-    private waitForLncConnection = () =>
+    private waitForLncConnection = (isCurrent: () => boolean) =>
         new Promise<boolean>((resolve) => {
             let counter = 0;
             const interval = setInterval(async () => {
+                if (!isCurrent()) {
+                    clearInterval(interval);
+                    resolve(false);
+                    return;
+                }
                 counter++;
                 const connected = await BackendUtils.isConnected();
-                if (connected) {
+                if (!isCurrent()) {
+                    clearInterval(interval);
+                    resolve(false);
+                } else if (connected) {
                     clearInterval(interval);
                     resolve(true);
                 } else if (counter >= LNC_CONNECT_MAX_POLLS) {
@@ -2535,11 +2570,13 @@ export default class SettingsStore {
         });
 
     public connect = async () => {
+        const isCurrent = this.getConnectionGuard();
         this.loading = true;
 
         let error;
         try {
             await BackendUtils.initLNC();
+            if (!isCurrent()) return;
             error = await BackendUtils.connect();
         } catch (e: any) {
             // a throw means the native client could not be set up at all
@@ -2549,6 +2586,7 @@ export default class SettingsStore {
             error = e?.message ?? String(e);
         }
 
+        if (!isCurrent()) return;
         if (error) {
             // rejected before the handshake even started (bad mailbox
             // address, malformed keys)
@@ -2560,7 +2598,9 @@ export default class SettingsStore {
             return error;
         }
 
-        if (await this.waitForLncConnection()) {
+        const connected = await this.waitForLncConnection(isCurrent);
+        if (!isCurrent()) return;
+        if (connected) {
             runInAction(() => {
                 this.error = false;
                 this.errorMsg = '';
@@ -2593,11 +2633,13 @@ export default class SettingsStore {
     // NWC
     @action
     public connectNWC = async () => {
+        const isCurrent = this.getConnectionGuard();
         this.loading = true;
 
         await BackendUtils.initNWC();
 
         const error = await BackendUtils.connect();
+        if (!isCurrent()) return;
         if (error) {
             this.error = true;
             this.errorMsg = error;
@@ -2672,6 +2714,7 @@ export default class SettingsStore {
     public setConnectingStatus = (status = false) => {
         // reset error on reconnect
         if (status) {
+            this.connectionSeq++;
             this.error = false;
             this.errorMsg = '';
             this.lndFolderMissing = false;

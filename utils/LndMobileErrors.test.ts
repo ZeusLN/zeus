@@ -4,7 +4,9 @@ import {
     isTransientRpcError,
     matchRawErrorToCode,
     matchesLndErrorCode,
-    normalizeForMatch
+    normalizeForMatch,
+    retryOnTransientError,
+    MAX_TRANSIENT_RPC_RETRIES
 } from './LndMobileErrors';
 
 describe('normalizeForMatch', () => {
@@ -137,5 +139,61 @@ describe('LndMobileErrors classification', () => {
         expect(
             matchRawErrorToCode('some totally unrelated native failure')
         ).toBeNull();
+    });
+});
+
+describe('retryOnTransientError', () => {
+    beforeEach(() => {
+        jest.useFakeTimers();
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+    });
+    afterEach(() => {
+        jest.useRealTimers();
+        jest.restoreAllMocks();
+    });
+
+    const retry = (retryCount: number, isCurrent?: () => boolean) => {
+        const setConnecting = jest.fn();
+        const onRetry = jest.fn();
+        const done = retryOnTransientError(
+            new Error('transient'),
+            'transient',
+            'test',
+            retryCount,
+            setConnecting,
+            onRetry,
+            isCurrent
+        );
+        return { setConnecting, onRetry, done };
+    };
+
+    it('reconnects and retries after the backoff', async () => {
+        const { setConnecting, onRetry, done } = retry(1);
+        await jest.advanceTimersByTimeAsync(4000);
+        await done;
+        expect(setConnecting.mock.calls).toEqual([[false], [true]]);
+        expect(onRetry).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops without reconnecting when the wallet changed during the backoff', async () => {
+        let current = true;
+        const { setConnecting, onRetry, done } = retry(0, () => current);
+        expect(setConnecting.mock.calls).toEqual([[false]]);
+        // a wallet switch lands while the retry sleeps
+        current = false;
+        await jest.advanceTimersByTimeAsync(2000);
+        await done;
+        expect(setConnecting.mock.calls).toEqual([[false]]);
+        expect(onRetry).not.toHaveBeenCalled();
+    });
+
+    it('gives up after the retry cap', async () => {
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        const { setConnecting, onRetry, done } = retry(
+            MAX_TRANSIENT_RPC_RETRIES
+        );
+        await expect(done).rejects.toThrow('transient');
+        expect(setConnecting.mock.calls).toEqual([[false]]);
+        expect(onRetry).not.toHaveBeenCalled();
     });
 });

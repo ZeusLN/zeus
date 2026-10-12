@@ -53,6 +53,9 @@ export default class AlertStore {
 
     @action
     public checkNeutrinoPeers = async () => {
+        // Pinging every peer can outlast a wallet switch, and nothing awaits
+        // this, so the result must not land on the next wallet's alerts
+        const isCurrent = this.settingsStore.getConnectionGuard();
         const peers =
             this.settingsStore.embeddedLndNetwork === 'Testnet'
                 ? this.settingsStore.settings.neutrinoPeersTestnet
@@ -98,6 +101,7 @@ export default class AlertStore {
             );
         });
 
+        if (!isCurrent()) return;
         this.problematicNeutrinoPeers = filteredResults;
         if (this.problematicNeutrinoPeers.length > 0) {
             this.hasError = true;

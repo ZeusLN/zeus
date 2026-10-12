@@ -563,8 +563,16 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         const seq = SettingsStore.acquireFetchLock();
         if (seq === null) return;
 
+        // A wallet switch or reconnect while this run is in flight hands the
+        // connection to a newer run (WalletRefreshRunner's follow-up). From
+        // then on this run must stop without writing state, including
+        // setConnectingStatus(false), which would end the newer connect.
+        const isCurrent = SettingsStore.getConnectionGuard();
         try {
-            await this.fetchDataCore(transientRetryCount);
+            await this.fetchDataCore(transientRetryCount, isCurrent);
+        } catch (error) {
+            if (isCurrent()) throw error;
+            console.log('[Wallet] superseded refresh failed:', error);
         } finally {
             // Single release point: every exit from fetchDataCore (success,
             // early return, or throw) must free the lock, otherwise
@@ -575,7 +583,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         }
     }
 
-    private async fetchDataCore(transientRetryCount = 0) {
+    private async fetchDataCore(
+        transientRetryCount: number,
+        isCurrent: () => boolean
+    ) {
         const {
             AlertStore,
             NodeInfoStore,
@@ -681,6 +692,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 console.log('[LDK startup] stopping previous instance');
                 await stopLdkNode();
                 console.log('[LDK startup] stopped');
+                if (!isCurrent()) return;
             } else {
                 console.log(
                     '[LDK startup] node already built, skipping stop + init'
@@ -750,6 +762,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     // surface the error and let the user retry
                     const errMsg = e?.message || e.toString();
                     console.warn('[LDK startup] failed:', errMsg);
+                    SettingsStore.ldkNodeSyncing = false;
+                    if (!isCurrent()) return;
                     const isVssError =
                         e?.code === 'vss_error' || errMsg.includes('VSS');
                     SettingsStore.error = true;
@@ -758,13 +772,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                               'views.Settings.SeedRecovery.vssRestoreFailed'
                           )}\n\n${errMsg}`
                         : errMsg;
-                    SettingsStore.ldkNodeSyncing = false;
                     SettingsStore.setConnectingStatus(false);
                     return;
                 }
 
                 console.log('[LDK startup] startLdkNodeWallet returned');
                 SettingsStore.ldkNodeSyncing = false;
+                if (!isCurrent()) return;
                 if (ldkResult?.vssError) {
                     AlertStore.setVssError(ldkResult.vssError);
                 }
@@ -777,6 +791,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
                 if (settings?.ecash?.enableCashu)
                     await CashuStore.initializeWallets();
+                if (!isCurrent()) return;
             } else {
                 console.error(
                     'LDK Node configuration missing mnemonic or nodeDir'
@@ -836,6 +851,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             } catch (e) {
                                 console.log('stopLnd in migration mode:', e);
                             }
+                            if (!isCurrent()) return;
                             console.log(
                                 'Wallet is in migration lock mode - skipping LND startup'
                             );
@@ -847,10 +863,12 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         // Skip stopLnd when wallet is already closed (e.g. after delete)
                         if (!recovery && SettingsStore.embeddedLndStarted) {
                             await stopLnd();
+                            if (!isCurrent()) return;
                         }
 
                         if (settings?.ecash?.enableCashu)
                             await CashuStore.initializeWallets();
+                        if (!isCurrent()) return;
 
                         console.log('lndDir', lndDir);
 
@@ -880,6 +898,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             error?.message,
                             error
                         );
+                        if (!isCurrent()) return;
                         if (
                             !recovery &&
                             matchesLndErrorCode(
@@ -892,6 +911,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         }
                         throw error;
                     }
+                    if (!isCurrent()) return;
 
                     // on initial load, do not run EGS
                     if (initialLoad) {
@@ -929,6 +949,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             );
                         }
                     }
+                    if (!isCurrent()) return;
 
                     try {
                         await startLnd({
@@ -941,6 +962,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     } catch (error: any) {
                         const errorMessage = error?.message ?? '';
                         console.log('startLnd error:', errorMessage);
+                        if (!isCurrent()) return;
 
                         // Handle folder missing error
                         if (
@@ -980,7 +1002,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                     this.getSettingsAndNavigate(
                                         undefined,
                                         transientRetryCount + 1
-                                    )
+                                    ),
+                                isCurrent
                             );
                             return;
                         }
@@ -990,6 +1013,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                         setConnectingStatus(false);
                         throw error;
                     }
+                    if (!isCurrent()) return;
                 } else {
                     try {
                         // LND was just created and is already running — skip stop→init→start
@@ -998,8 +1022,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
                         if (settings?.ecash?.enableCashu)
                             await CashuStore.initializeWallets();
+                        if (!isCurrent()) return;
 
                         await waitForRpcReady();
+                        if (!isCurrent()) return;
                         if (!SyncStore.isSyncing) {
                             SyncStore.startSyncing();
                         }
@@ -1008,6 +1034,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             'Fatal error during post-wallet creation setup:',
                             error
                         );
+                        if (!isCurrent()) return;
                         setConnectingStatus(false);
                         throw error;
                     }
@@ -1015,6 +1042,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
                 try {
                     const batterySaverEnabled = await isBatterySaverEnabled();
+                    if (!isCurrent()) return;
                     if (batterySaverEnabled) {
                         if (Platform.OS === 'ios') {
                             // The delay is what actually lets the navigation
@@ -1110,12 +1138,17 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
             try {
                 await waitForRpcReady();
+                if (!isCurrent()) return;
                 SyncStore.checkRecoveryStatus();
                 await NodeInfoStore.getNodeInfo();
+                if (!isCurrent()) return;
                 NodeInfoStore.getNetworkInfo();
                 await UTXOsStore.listAccounts();
+                if (!isCurrent()) return;
                 await BalanceStore.getCombinedBalance(false);
+                if (!isCurrent()) return;
                 ChannelsStore.getChannelsWithPolling().then(() => {
+                    if (!isCurrent()) return;
                     // Resetting or rebuilding the SQLite graph database
                     // drops our own channel edges, so recreate any that
                     // are missing. This is a no-op after the first clean
@@ -1145,18 +1178,21 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     await updateSettings({
                         rescan: false
                     });
+                    if (!isCurrent()) return;
                 }
                 if (recovery) {
                     const isBackedUp = await Storage.getItem(IS_BACKED_UP_KEY);
                     if (!isBackedUp) {
                         await Storage.setItem(IS_BACKED_UP_KEY, true);
                     }
-                    if (isSyncing) return;
+                    if (isSyncing || !isCurrent()) return;
                     try {
                         await ChannelBackupStore.recoverStaticChannelBackup();
+                        if (!isCurrent()) return;
                         await updateSettings({
                             recovery: false
                         });
+                        if (!isCurrent()) return;
                         if (
                             SettingsStore.settings
                                 .automaticDisasterRecoveryBackup
@@ -1172,6 +1208,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             } catch (rpcError: any) {
                 const errorMessage = rpcError?.message ?? '';
                 console.error('RPC/Data fetching error:', errorMessage);
+                if (!isCurrent()) return;
 
                 // Handle wallet directory not found (deleted wallet)
                 if (
@@ -1210,7 +1247,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                             this.getSettingsAndNavigate(
                                 undefined,
                                 transientRetryCount + 1
-                            )
+                            ),
+                        isCurrent
                     );
                     return;
                 }
@@ -1224,27 +1262,34 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             if (connecting) {
                 try {
                     await login({ login: username, password });
+                    if (!isCurrent()) return;
                     await BalanceStore.getLightningBalance(true);
                 } catch (connectionError) {
                     console.log('LNDHub connection failed:', connectionError);
                     return;
                 }
+                if (!isCurrent()) return;
             } else {
                 BalanceStore.getLightningBalance(true);
             }
         } else if (implementation === 'lightning-node-connect') {
-            const fetched = await fetchLncData(connecting, {
-                SettingsStore,
-                NodeInfoStore,
-                UTXOsStore,
-                BalanceStore,
-                ChannelsStore
-            });
-            if (!fetched) return;
+            const fetched = await fetchLncData(
+                connecting,
+                {
+                    SettingsStore,
+                    NodeInfoStore,
+                    UTXOsStore,
+                    BalanceStore,
+                    ChannelsStore
+                },
+                isCurrent
+            );
+            if (!fetched || !isCurrent()) return;
         } else if (implementation === 'nostr-wallet-connect') {
             let error;
             if (connecting) {
                 error = await connectNWC();
+                if (!isCurrent()) return;
             }
             if (!error) {
                 try {
@@ -1253,17 +1298,22 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     console.log('NWC connection failed:', connectionError);
                     return;
                 }
+                if (!isCurrent()) return;
             }
         } else if (implementation === 'ldk-node') {
             try {
                 console.log('[LDK startup] waiting for node to be ready');
                 await waitForLdkNodeReady();
+                if (!isCurrent()) return;
                 console.log('[LDK startup] fetching node info');
                 await NodeInfoStore.getNodeInfo();
+                if (!isCurrent()) return;
                 console.log('[LDK startup] fetching balance');
                 await BalanceStore.getCombinedBalance();
+                if (!isCurrent()) return;
                 console.log('[LDK startup] polling channels');
                 ChannelsStore.getChannelsWithPolling().then(() => {
+                    if (!isCurrent()) return;
                     // Check for sweep to self-custody threshold after channels are online
                     if (settings?.ecash?.enableCashu) {
                         CashuStore.checkAndSweepMints();
@@ -1278,9 +1328,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     await updateSettings({
                         recovery: false
                     });
+                    if (!isCurrent()) return;
                 }
             } catch (connectionError) {
                 console.log('LDK Node connection failed:', connectionError);
+                if (!isCurrent()) return;
                 NodeInfoStore.handleGetNodeInfoError();
                 setConnectingStatus(false);
                 return;
@@ -1288,13 +1340,18 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         } else {
             try {
                 await NodeInfoStore.getNodeInfo();
+                if (!isCurrent()) return;
                 if (BackendUtils.supportsAccounts()) {
                     await UTXOsStore.listAccounts();
+                    if (!isCurrent()) return;
                 }
                 await BalanceStore.getCombinedBalance();
+                if (!isCurrent()) return;
                 await ChannelsStore.getChannels();
+                if (!isCurrent()) return;
             } catch (connectionError) {
                 console.log('Node connection failed:', connectionError);
+                if (!isCurrent()) return;
                 NodeInfoStore.handleGetNodeInfoError();
                 setConnectingStatus(false);
                 return;
@@ -1309,6 +1366,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             if (connecting) {
                 try {
                     await LightningAddressStore.status();
+                    if (!isCurrent()) return;
 
                     if (settings?.lightningAddress?.automaticallyAccept) {
                         if (
@@ -1357,6 +1415,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             try {
                 const mintUrl = settings.ecash.initialMintUrls![0];
                 await LightningAddressStore.createCashu(mintUrl);
+                if (!isCurrent()) return;
                 LightningAddressStore.prepareToAutomaticallyAcceptCashu();
             } catch (e) {
                 console.error('Auto Lightning address creation failed', e);
@@ -1365,6 +1424,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         // check for swaps after node info is fetched
         // NOTE: swap rates are only fetched from the Swaps view
+        if (!isCurrent()) return;
         if (connecting) {
             SwapStore.fetchAndUpdateSwaps();
         }
@@ -1391,6 +1451,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     !this.props.NodeInfoStore.flowLspNotConfigured)
             ) {
                 await LSPStore.getLSPInfo();
+                if (!isCurrent()) return;
             }
             if (BackendUtils.supportsLSPScustomMessage()) {
                 LSPStore.subscribeCustomMessages();

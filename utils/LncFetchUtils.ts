@@ -18,7 +18,8 @@ interface LncFetchStores {
 // still runs, as before.
 export const fetchLncData = async (
     connecting: boolean,
-    stores: LncFetchStores
+    stores: LncFetchStores,
+    isCurrent: () => boolean = () => true
 ): Promise<boolean> => {
     const {
         SettingsStore,
@@ -36,6 +37,7 @@ export const fetchLncData = async (
     // redial (or starts a dial if there is none) and reports an
     // error after its budget instead of every call below timing out.
     const reconnectNeeded = connecting || !(await BackendUtils.isConnected());
+    if (!isCurrent()) return false;
     if (reconnectNeeded) {
         try {
             error = await SettingsStore.connect();
@@ -44,15 +46,21 @@ export const fetchLncData = async (
             error = connectError?.message ?? String(connectError);
         }
     }
+    if (!isCurrent()) return false;
     if (error) return true;
 
     try {
         await BackendUtils.checkPerms();
+        if (!isCurrent()) return false;
         await NodeInfoStore.getNodeInfo();
+        if (!isCurrent()) return false;
         if (BackendUtils.supportsAccounts()) await UTXOsStore.listAccounts();
+        if (!isCurrent()) return false;
         await BalanceStore.getCombinedBalance();
+        if (!isCurrent()) return false;
         if (BackendUtils.supportsChannelManagement())
             await ChannelsStore.getChannels();
+        if (!isCurrent()) return false;
         // The session may have come up in the background after an
         // earlier connect() timed out and left its error set
         if (SettingsStore.error) {
