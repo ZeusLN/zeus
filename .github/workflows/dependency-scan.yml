@@ -36,14 +36,16 @@ jobs:
       - name: Install GuardDog
         run: pip install guarddog==3.2.0
 
-      # GuardDog downloads each direct dependency from the registry and
-      # scans it; nothing from node_modules is installed or executed here.
+      # GuardDog downloads each direct dependency (devDependencies
+      # included) from the registry and scans it; nothing from
+      # node_modules is installed or executed here.
       # capability-* rules describe what a package can do (spawn, network,
       # filesystem) and fire on most of our dependencies, so they are
       # dropped from the upload. Findings are triaged in the Security tab.
       - name: Run GuardDog scan
         run: |
           guarddog npm verify package.json \
+            --include-dev-dependencies \
             --exclude-rules potentially_compromised_email_domain \
             --exclude-rules unclaimed_maintainer_email_domain \
             --output-format sarif > guarddog-raw.sarif
