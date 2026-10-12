@@ -151,7 +151,16 @@ class MigrationsUtils {
             if (existingData) return existingData;
 
             // 2. Read from old keychain (local first, then cloud)
-            const credentials = await this.readFromOldKeychain(key);
+            let credentials;
+            try {
+                credentials = await this.readFromOldKeychain(key);
+            } catch (readError: any) {
+                const error: any = new Error(
+                    `Read failed for ${key}: ${readError?.message ?? readError}`
+                );
+                error.isKeychainReadError = true;
+                throw error;
+            }
             if (!credentials) return null;
 
             console.log(`[Migration] Moving ${key} to Local Storage...`);
@@ -219,11 +228,14 @@ class MigrationsUtils {
     }
 
     /**
-     * migrateKey for the keychain cloud sync passes: a failure is recorded
-     * in `failed` instead of thrown, so one bad key does not stop the
-     * remaining keys from copying. Callers set their flag only when nothing
-     * failed; on the retry, keys that already landed are skipped by
-     * migrateKey's copy-if-missing check.
+     * migrateKey for the keychain cloud sync passes: a read failure is
+     * recorded in `failed` instead of thrown, so one unreadable key does not
+     * stop the remaining keys from copying. Callers set their flag only when
+     * nothing failed; on the retry, keys that already landed are skipped by
+     * migrateKey's copy-if-missing check. Write and verify failures still
+     * abort the pass: each copy waits 500 ms on iOS and the migration runs
+     * on every settings load, so carrying on after a storage that keeps
+     * rejecting writes would add that wait for every remaining key.
      */
     private async migrateKeyOrRecord(
         key: string,
@@ -231,7 +243,8 @@ class MigrationsUtils {
     ): Promise<string | null> {
         try {
             return await this.migrateKey(key);
-        } catch (e) {
+        } catch (e: any) {
+            if (!e?.isKeychainReadError) throw e;
             failed.push(key);
             return null;
         }

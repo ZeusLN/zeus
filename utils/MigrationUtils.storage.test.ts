@@ -706,9 +706,9 @@ describe('keychainCloudSyncMigration', () => {
         expect(local('zeus-contacts-v2')).toBe(CONTACTS);
     });
 
-    it('a failed key does not stop later keys from copying', async () => {
+    it('an unreadable key does not stop later keys from copying', async () => {
         seedLegacy();
-        failWritesTo(SETTINGS_KEY, 'throw');
+        failLegacyReadsOf(SETTINGS_KEY, 'local');
 
         await MigrationUtils.keychainCloudSyncMigration();
 
@@ -717,6 +717,31 @@ describe('keychainCloudSyncMigration', () => {
         expect(local('zeus-units-v2')).toBe(UNITS);
         expect(local('note-a')).toBe(NOTE_A);
         expect(flagsSet().main).toBeUndefined();
+        expectSourcesIntact();
+    });
+
+    it('a persistent write failure stops the pass at the first key on every run', async () => {
+        // Each copy waits 500 ms on iOS and the migration runs on every
+        // settings load, so a storage that keeps rejecting writes must not
+        // add that wait for every remaining key
+        seedLegacy();
+        failWritesTo(SETTINGS_KEY, 'throw');
+        const { sleep } = require('./SleepUtils');
+
+        for (let boot = 0; boot < 2; boot++) {
+            (sleep as jest.Mock).mockClear();
+            MigrationUtils.clearConfirmedFlags();
+            await expect(
+                MigrationUtils.keychainCloudSyncMigration()
+            ).resolves.toBeUndefined();
+            expect((sleep as jest.Mock).mock.calls.length).toBeLessThanOrEqual(
+                1
+            );
+            expect(local(SETTINGS_KEY)).toBeUndefined();
+            expect(local('zeus-contacts-v2')).toBeUndefined();
+            expect(flagsSet().main).toBeUndefined();
+            expect(flagsSet().cashu).toBeUndefined();
+        }
         expectSourcesIntact();
     });
 
