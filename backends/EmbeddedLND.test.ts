@@ -78,6 +78,9 @@ describe('EmbeddedLND.listPeers', () => {
 
         expect(peer.sat_sent).toBe('12345');
         expect(peer.sat_recv).toBe('67890');
+        expect(peer.bytes_sent).toBe('1000');
+        expect(peer.bytes_recv).toBe('2000');
+        expect(peer.ping_time).toBe('150');
         expect(peer.pub_key).toBe(PUBKEY);
         expect(peer.flap_count).toBe(3);
 

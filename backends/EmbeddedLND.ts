@@ -202,9 +202,9 @@ export default class EmbeddedLND extends LND {
                 const formattedPeer = {
                     pub_key: peer.pub_key || '',
                     address: peer.address || '',
-                    bytes_sent: peer.bytes_sent || '0',
-                    bytes_recv: peer.bytes_recv || '0',
-                    ping_time: peer.ping_time || '0',
+                    bytes_sent: peer.bytes_sent?.toString() || '0',
+                    bytes_recv: peer.bytes_recv?.toString() || '0',
+                    ping_time: peer.ping_time?.toString() || '0',
                     sync_type: peer.sync_type || '',
                     sat_sent: peer.sat_sent?.toString() || '0',
                     sat_recv: peer.sat_recv?.toString() || '0',
