@@ -125,15 +125,27 @@ describe('WalletConfiguration', () => {
             return perform;
         };
 
-        it('warns on lndhub when a stale http:// host would be used', () => {
+        // LndHub requests go to lndhubUrl only, so a stale host on an
+        // lndhub config decides nothing
+        it('warns on lndhub with an http:// lndhubUrl behind a stale https:// host', () => {
             const perform = save({
+                implementation: 'lndhub',
+                host: 'https://node.example.com',
+                lndhubUrl: 'http://lndhub.example.com'
+            });
+
+            expect(confirmAction).toHaveBeenCalledTimes(1);
+            expect(perform).not.toHaveBeenCalled();
+        });
+
+        it('ignores a stale http:// host on an lndhub config', () => {
+            save({
                 implementation: 'lndhub',
                 host: 'http://192.168.1.50',
                 lndhubUrl: 'https://lndhub.example.com'
             });
 
-            expect(confirmAction).toHaveBeenCalledTimes(1);
-            expect(perform).not.toHaveBeenCalled();
+            expect(confirmAction).not.toHaveBeenCalled();
         });
 
         it('warns on lndhub with an http:// lndhubUrl and no host', () => {

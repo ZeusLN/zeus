@@ -303,10 +303,9 @@ export default class WalletConfiguration extends React.Component<
 
                 const existingAccount = !!username;
 
-                // Clear the REST fields: the backend resolves host ||
-                // lndhubUrl and macaroonHex || accessToken, so anything left
-                // over from a typed or saved REST config would redirect the
-                // lndhub login, hidden from the lndhub form.
+                // Clear the REST fields left over from a typed or saved
+                // config: the lndhub form hides them, but they are saved
+                // with the node.
                 const stateUpdate: any = {
                     username,
                     password,
@@ -542,9 +541,8 @@ export default class WalletConfiguration extends React.Component<
     // or an https:// scheme resolves to HTTPS in the backend getURL(), so
     // only an explicit http:// is treated as insecure. Gated per
     // implementation because state retains fields some backends never read
-    // (e.g. a stale lndhubUrl on an lnd config). The lndhub case checks
-    // host || lndhubUrl because the LND backend it inherits resolves the
-    // request URL the same way, so a stale host wins.
+    // (e.g. a stale lndhubUrl on an lnd config, or a stale host on an
+    // lndhub config).
     private hasInsecureCleartextTransport = (): boolean => {
         const { implementation, host, lndhubUrl } = this.state;
         switch (implementation) {
@@ -552,7 +550,7 @@ export default class WalletConfiguration extends React.Component<
             case 'cln-rest':
                 return UrlUtils.isCleartextHttpTransport(host);
             case 'lndhub':
-                return UrlUtils.isCleartextHttpTransport(host || lndhubUrl);
+                return UrlUtils.isCleartextHttpTransport(lndhubUrl);
             default:
                 return false;
         }
