@@ -19,3 +19,5 @@ jobs:
         with:
           bot_token: '${{ secrets.BOT_TOKEN }}'
           chat_id: '${{ secrets.CHAT_ID }}'
+          # GitHub Notifications topic in the group
+          topic_id: '122549'
