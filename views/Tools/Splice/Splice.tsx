@@ -8,6 +8,8 @@ import {
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { ButtonGroup } from '@rneui/themed';
+import Clipboard from '@react-native-clipboard/clipboard';
 
 import Amount from '../../../components/Amount';
 import AmountInput from '../../../components/AmountInput';
@@ -18,12 +20,19 @@ import HopPicker from '../../../components/HopPicker';
 import LoadingIndicator from '../../../components/LoadingIndicator';
 import Screen from '../../../components/Screen';
 import Text from '../../../components/Text';
+import TextInput from '../../../components/TextInput';
 import { Row } from '../../../components/layout/Row';
 
 import Channel from '../../../models/Channel';
 
+import AddressUtils from '../../../utils/AddressUtils';
+import { getButtonGroupStyles } from '../../../utils/buttonGroupStyles';
 import { localeString } from '../../../utils/LocaleUtils';
-import { getSpliceAmountError } from '../../../utils/SpliceUtils';
+import {
+    SpliceDirection,
+    getSpliceAmountError,
+    getSpliceOutAvailableSats
+} from '../../../utils/SpliceUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
 import ChannelsStore from '../../../stores/ChannelsStore';
@@ -42,10 +51,15 @@ interface SpliceProps {
 }
 
 interface SpliceState {
+    direction: SpliceDirection;
     channel: Channel | null;
     amount: string;
     satAmount: number;
+    // Splice-out destination; empty means our own wallet
+    address: string;
 }
+
+const DIRECTIONS: SpliceDirection[] = ['in', 'out'];
 
 @inject('ChannelsStore', 'SpliceStore', 'UnitsStore')
 @observer
@@ -53,9 +67,11 @@ export default class Splice extends React.Component<SpliceProps, SpliceState> {
     private focusListener: (() => void) | undefined;
 
     state: SpliceState = {
+        direction: 'in',
         channel: null,
         amount: '',
-        satAmount: 0
+        satAmount: 0,
+        address: ''
     };
 
     componentDidMount() {
@@ -88,29 +104,148 @@ export default class Splice extends React.Component<SpliceProps, SpliceState> {
         return true;
     };
 
-    private getAvailableSats = (): number | null =>
-        this.props.SpliceStore.spliceInAvailableSats;
+    private getAvailableSats = (): number | null => {
+        const { direction, channel } = this.state;
+        if (direction === 'in') {
+            return this.props.SpliceStore.spliceInAvailableSats;
+        }
+        return channel
+            ? getSpliceOutAvailableSats(channel.sendingCapacity)
+            : null;
+    };
 
     private getAmountError = (): string | null => {
-        const { amount, satAmount } = this.state;
+        const { direction, amount, satAmount } = this.state;
         const availableSats = this.getAvailableSats();
         if (!amount || availableSats === null) return null;
-        return getSpliceAmountError('in', satAmount, availableSats);
+        return getSpliceAmountError(direction, satAmount, availableSats);
+    };
+
+    private getAddressError = (): string | null => {
+        const { direction, address } = this.state;
+        if (direction !== 'out' || !address) return null;
+        return AddressUtils.isValidBitcoinAddressForNode(address)
+            ? null
+            : localeString('views.Splice.error.invalidAddress');
+    };
+
+    private onPaste = async () => {
+        const text = await Clipboard.getString();
+        this.setState({ address: text.trim() });
     };
 
     private onReview = () => {
         const { navigation } = this.props;
-        const { channel, satAmount } = this.state;
+        const { direction, channel, satAmount, address } = this.state;
         if (!channel) return;
 
         const params: SpliceReviewParams = {
-            direction: 'in',
+            direction,
             fundingTxid: channel.channel_point.split(':')[0],
             channelName: channel.displayName || '',
             capacitySats: Number(channel.capacity),
-            amountSats: satAmount
+            amountSats: satAmount,
+            address: direction === 'out' && address ? address : undefined
         };
         navigation.navigate('SpliceReview', params);
+    };
+
+    private renderDirectionToggle = () => {
+        const { direction } = this.state;
+        const selectedIndex = DIRECTIONS.indexOf(direction);
+        const groupStyles = getButtonGroupStyles();
+
+        const buttonElement = (title: string, index: number) => (
+            <Text
+                style={{
+                    fontFamily: 'PPNeueMontreal-Book',
+                    color:
+                        selectedIndex === index
+                            ? themeColor('background')
+                            : themeColor('text')
+                }}
+            >
+                {title}
+            </Text>
+        );
+
+        return (
+            <ButtonGroup
+                onPress={(index: number) =>
+                    this.setState({ direction: DIRECTIONS[index] })
+                }
+                selectedIndex={selectedIndex}
+                buttons={[
+                    {
+                        element: () =>
+                            buttonElement(
+                                localeString('views.Splice.confirmIn'),
+                                0
+                            )
+                    },
+                    {
+                        element: () =>
+                            buttonElement(
+                                localeString('views.Splice.confirmOut'),
+                                1
+                            )
+                    }
+                ]}
+                selectedButtonStyle={groupStyles.selectedButtonStyle}
+                containerStyle={groupStyles.containerStyle}
+                innerBorderStyle={groupStyles.innerBorderStyle}
+            />
+        );
+    };
+
+    private renderDestinationSection = () => {
+        const { address } = this.state;
+        const addressError = this.getAddressError();
+
+        return (
+            <View style={styles.section}>
+                <Text style={styles.sectionTitle}>
+                    {localeString('general.destination')}
+                </Text>
+                <TextInput
+                    value={address}
+                    onChangeText={(text: string) =>
+                        this.setState({ address: text.trim() })
+                    }
+                    placeholder="bc1..."
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                />
+                {addressError ? (
+                    <Text
+                        style={{
+                            ...styles.message,
+                            color: themeColor('warning')
+                        }}
+                    >
+                        {addressError}
+                    </Text>
+                ) : (
+                    <Text
+                        style={{
+                            ...styles.message,
+                            color: themeColor('secondaryText')
+                        }}
+                    >
+                        {address
+                            ? localeString('views.Splice.destinationExternal')
+                            : localeString('views.Splice.destinationOwnWallet')}
+                    </Text>
+                )}
+                <View style={styles.pasteButton}>
+                    <Button
+                        title={localeString('general.paste')}
+                        onPress={this.onPaste}
+                        secondary
+                    />
+                </View>
+            </View>
+        );
     };
 
     private renderChannelSection = () => {
@@ -178,13 +313,14 @@ export default class Splice extends React.Component<SpliceProps, SpliceState> {
     private renderAvailable = () => {
         const { loadingSpliceInAvailable, spliceInAvailableError } =
             this.props.SpliceStore;
+        const isIn = this.state.direction === 'in';
         const availableSats = this.getAvailableSats();
 
-        if (loadingSpliceInAvailable && availableSats === null) {
+        if (isIn && loadingSpliceInAvailable && availableSats === null) {
             return <LoadingIndicator size={20} />;
         }
 
-        if (spliceInAvailableError) {
+        if (isIn && spliceInAvailableError) {
             return (
                 <Text
                     style={{
@@ -219,14 +355,16 @@ export default class Splice extends React.Component<SpliceProps, SpliceState> {
 
     render() {
         const { navigation } = this.props;
-        const { channel, amount } = this.state;
+        const { direction, channel, amount } = this.state;
+        const isOut = direction === 'out';
         const amountError = this.getAmountError();
 
         const canReview =
             !!channel &&
             !!amount &&
             this.getAvailableSats() !== null &&
-            !amountError;
+            !amountError &&
+            !this.getAddressError();
 
         return (
             <Screen>
@@ -242,7 +380,12 @@ export default class Splice extends React.Component<SpliceProps, SpliceState> {
                     navigation={navigation}
                 />
 
-                <ScrollView contentContainerStyle={styles.content}>
+                <ScrollView
+                    contentContainerStyle={styles.content}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    {this.renderDirectionToggle()}
+
                     <Text
                         style={{
                             ...styles.message,
@@ -250,7 +393,9 @@ export default class Splice extends React.Component<SpliceProps, SpliceState> {
                             color: themeColor('secondaryText')
                         }}
                     >
-                        {localeString('views.Splice.inExplainer')}
+                        {isOut
+                            ? localeString('views.Splice.outExplainer')
+                            : localeString('views.Splice.inExplainer')}
                     </Text>
 
                     {this.renderChannelSection()}
@@ -282,6 +427,8 @@ export default class Splice extends React.Component<SpliceProps, SpliceState> {
                             </Text>
                         )}
                     </View>
+
+                    {isOut && this.renderDestinationSection()}
                 </ScrollView>
 
                 <View style={styles.button}>
@@ -325,6 +472,9 @@ const styles = StyleSheet.create({
         right: 8,
         padding: 8,
         zIndex: 1
+    },
+    pasteButton: {
+        marginTop: 10
     },
     message: {
         fontFamily: 'PPNeueMontreal-Book',
