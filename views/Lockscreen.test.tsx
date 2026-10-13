@@ -84,6 +84,7 @@ import {
     markWipePending
 } from '../utils/DataClearUtils';
 import { restartApp } from '../utils/RestartUtils';
+import * as LockVerifierUtils from '../utils/LockVerifierUtils';
 import { deriveVerifier, VerifierRecord } from '../utils/LockVerifierUtils';
 import Lockscreen from './Lockscreen';
 
@@ -232,11 +233,21 @@ describe('Lockscreen login', () => {
             isReset(patch) ? reset.promise : Promise.resolve()
         );
         const { navigation } = await renderLockscreen(updateSettings);
+        const verify = jest.spyOn(LockVerifierUtils, 'verifySecret');
         await submitPin();
         await untilCalled(updateSettings);
+        const verificationsPerAttempt = verify.mock.calls.length;
+
+        // the second submit must not start another verification; checking
+        // the count is what makes this deterministic, since a second scrypt
+        // run would otherwise finish after the assertions below
         await submitPin();
+        await act(async () => {});
+        expect(verify).toHaveBeenCalledTimes(verificationsPerAttempt);
+
         await act(async () => reset.resolve());
         await untilCalled(navigation.pop);
+        verify.mockRestore();
 
         // the first entry's attempt and its reset; the second entry is
         // dropped
