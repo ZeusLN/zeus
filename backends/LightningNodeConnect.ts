@@ -630,7 +630,19 @@ export default class LightningNodeConnect {
 
         const { LncModule } = NativeModules;
         const eventEmitter = new NativeEventEmitter(LncModule);
+        const CHANNEL_CLOSE_TIMEOUT_MS = 60000;
         return new Promise((resolve, reject) => {
+            const finish = () => {
+                clearTimeout(timeout);
+                listener.remove();
+            };
+            // Timeout: resolve optimistically. If the peer disconnects during
+            // a cooperative close, LND keeps the stream open without sending
+            // close_pending or an error.
+            const timeout = setTimeout(() => {
+                finish();
+                resolve({});
+            }, CHANNEL_CLOSE_TIMEOUT_MS);
             const listener = eventEmitter.addListener(
                 streamingCall,
                 (event: any) => {
@@ -642,7 +654,7 @@ export default class LightningNodeConnect {
                         result = event.result;
                     }
                     if (result?.chan_close) return;
-                    listener.remove();
+                    finish();
                     if (result?.close_pending) {
                         resolve(result);
                     } else {

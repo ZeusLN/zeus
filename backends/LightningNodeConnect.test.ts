@@ -377,7 +377,7 @@ describe('LightningNodeConnect', () => {
             );
             return state;
         };
-        const flush = () => new Promise((resolve) => setImmediate(resolve));
+        const flush = () => jest.advanceTimersByTimeAsync(0);
 
         let backend: LightningNodeConnect;
         let lnc: any;
@@ -402,9 +402,11 @@ describe('LightningNodeConnect', () => {
             });
             backend = new LightningNodeConnect();
             lnc = await openWallet(backend, 'phrase-a');
+            jest.useFakeTimers();
         });
 
         afterEach(() => {
+            jest.useRealTimers();
             jest.restoreAllMocks();
         });
 
@@ -446,6 +448,18 @@ describe('LightningNodeConnect', () => {
 
             expect(close.settled).toBe(false);
             expect(listening()).toBe(true);
+        });
+
+        it('resolves after a minute without a reply', async () => {
+            const close = track(backend.closeChannel(['txid', '1', '']));
+
+            await jest.advanceTimersByTimeAsync(59_999);
+            expect(close.settled).toBe(false);
+
+            await jest.advanceTimersByTimeAsync(1);
+            expect(close.settled).toBe(true);
+            expect(close.error).toBeUndefined();
+            expect(listening()).toBe(false);
         });
 
         it('passes the fee rate and delivery address for a cooperative close', async () => {
