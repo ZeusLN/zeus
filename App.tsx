@@ -292,6 +292,7 @@ import CurrencyConverter from './views/Tools/CurrencyConverter';
 import DeveloperTools from './views/Tools/DeveloperTools';
 import Rebalance from './views/Tools/Rebalance';
 import RebalancingChannels from './views/Tools/RebalancingChannels';
+import Splicing from './views/Tools/Splice/Splicing';
 import SignVerifyMessage from './views/Tools/SignVerifyMessage';
 import Sweep from './views/Tools/Sweep';
 import Accounts from './views/Tools/Accounts/Accounts';
@@ -327,6 +328,7 @@ export default class App extends React.PureComponent {
         'SendingOnChain',
         'CashuSendingLightning',
         'MultimintPayment',
+        'Splicing',
         'IntroSplash',
         'NostrContacts'
     ];
@@ -966,6 +968,17 @@ export default class App extends React.PureComponent {
                                                                 component={
                                                                     RebalancingChannels
                                                                 }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="Splicing"
+                                                                // @ts-ignore:next-line
+                                                                component={
+                                                                    Splicing
+                                                                }
+                                                                options={{
+                                                                    gestureEnabled:
+                                                                        false // disables swipe back
+                                                                }}
                                                             />
                                                             <Stack.Screen
                                                                 name="Activity" // @ts-ignore:next-line
