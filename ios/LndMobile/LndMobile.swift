@@ -193,8 +193,20 @@ class LndMobile: RCTEventEmitter {
     }
   }
 
-  @objc(sendStreamCommand:payload:streamOnlyOnce:resolver:rejecter:)
-  func sendStreamCommand(_ method: String, payload: String, streamOnlyOnce: Bool, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+  // Every stream of a method emits under the method name, so the caller's
+  // request id is echoed in the body for JS to tell concurrent streams apart.
+  // Shared subscriptions pass an empty id and get no field.
+  func streamEventBody(_ body: [String: Any?], requestId: String) -> [String: Any?] {
+    if requestId.isEmpty {
+      return body
+    }
+    var tagged = body
+    tagged["request_id"] = requestId
+    return tagged
+  }
+
+  @objc(sendStreamCommand:payload:streamOnlyOnce:requestId:resolver:rejecter:)
+  func sendStreamCommand(_ method: String, payload: String, streamOnlyOnce: Bool, requestId: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
     Lnd.shared.sendStreamCommand(
       method,
       payload: payload,
@@ -215,20 +227,20 @@ class LndMobile: RCTEventEmitter {
 
         self.sendEvent(
           withName: method,
-          body: ["error_code": errorCode, "error_desc": errorDesc]
+          body: self.streamEventBody(["error_code": errorCode, "error_desc": errorDesc], requestId: requestId)
         )
       } else {
         self.sendEvent(
           withName: method,
-          body: ["data": data?.base64EncodedString()]
+          body: self.streamEventBody(["data": data?.base64EncodedString()], requestId: requestId)
         )
       }
     }
     resolve("done")
   }
 
-  @objc(sendBidiStreamCommand:streamOnlyOnce:resolver:rejecter:)
-  func sendBidiStreamCommand(_ method: String, streamOnlyOnce: Bool, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+  @objc(sendBidiStreamCommand:streamOnlyOnce:requestId:resolver:rejecter:)
+  func sendBidiStreamCommand(_ method: String, streamOnlyOnce: Bool, requestId: String, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
     Lnd.shared.sendBidiStreamCommand(
       method,
       streamOnlyOnce: streamOnlyOnce
@@ -248,12 +260,12 @@ class LndMobile: RCTEventEmitter {
 
         self.sendEvent(
           withName: method,
-          body: ["error_code": errorCode, "error_desc": errorDesc]
+          body: self.streamEventBody(["error_code": errorCode, "error_desc": errorDesc], requestId: requestId)
         )
       } else {
         self.sendEvent(
           withName: method,
-          body: ["data": data?.base64EncodedString()]
+          body: self.streamEventBody(["data": data?.base64EncodedString()], requestId: requestId)
         )
       }
     }

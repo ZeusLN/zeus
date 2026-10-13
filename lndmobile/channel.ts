@@ -137,7 +137,8 @@ export const openChannel = async (
     simpleTaprootChannel?: boolean,
     fund_max?: boolean,
     utxos?: Array<string>,
-    funding_shim?: any
+    funding_shim?: any,
+    requestId?: string
 ): Promise<string> => {
     let options: any = {
         node_pubkey: Base64Utils.hexToBase64(pubkey),
@@ -168,7 +169,8 @@ export const openChannel = async (
     >({
         request: lnrpc.OpenChannelRequest,
         method: 'OpenChannel',
-        options
+        options,
+        requestId
     });
     return response;
 };
@@ -181,7 +183,8 @@ export const closeChannel = async (
     output_index: number,
     force?: boolean,
     sat_per_vbyte?: number,
-    delivery_address?: string
+    delivery_address?: string,
+    requestId?: string
 ): Promise<string> => {
     const response = await sendStreamCommand<
         lnrpc.ICloseChannelRequest,
@@ -200,7 +203,8 @@ export const closeChannel = async (
                     : undefined,
                 delivery_address,
                 force
-            }
+            },
+            requestId
         },
         false
     );

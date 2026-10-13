@@ -24,6 +24,10 @@ import {
     toLnrpcAddressType,
     toWalletrpcAddressTypeName
 } from '../utils/LndUtils';
+import {
+    isEventForRequest,
+    newStreamRequestId
+} from '../utils/StreamRequestUtils';
 import VersionUtils from '../utils/VersionUtils';
 import {
     DEFAULT_MAX_TRANSACTIONS,
@@ -537,7 +541,14 @@ export default class LightningNodeConnect {
             delete request.sat_per_vbyte;
         }
 
-        const streamingCall = this.lnc.lnd.lightning.openChannel(request);
+        // Streaming RPCs are started through subscribe() rather than the
+        // typed lnd proxy so the request id reaches the native module
+        const requestId = newStreamRequestId();
+        const streamingCall = this.lnc.subscribe(
+            'lnrpc.Lightning.OpenChannel',
+            request,
+            requestId
+        );
 
         const { LncModule } = NativeModules;
         const eventEmitter = new NativeEventEmitter(LncModule);
@@ -545,6 +556,7 @@ export default class LightningNodeConnect {
             this.listener = eventEmitter.addListener(
                 streamingCall,
                 (event: any) => {
+                    if (!isEventForRequest(event, requestId)) return;
                     if (event.result && event.result !== 'EOF') {
                         let result;
                         try {
@@ -578,17 +590,24 @@ export default class LightningNodeConnect {
     payLightningInvoice = (data: any) => {
         // sendPaymentV2 is a streaming RPC: the call returns the event name
         // ('routerrpc.Router.SendPaymentV2') and results arrive on a channel
-        // shared by every concurrent payment, with no request correlation.
-        // Resolve with this payment's terminal result so callers get the
-        // same promise contract as every other backend. The expected hash
-        // must be derived before pubkey is stripped.
+        // shared by every concurrent payment. The request id tells this
+        // payment's events (including errors) apart; the payment hash check
+        // in decideLncPayEvent stays as a second guard. Resolve with this
+        // payment's terminal result so callers get the same promise
+        // contract as every other backend. The expected hash must be
+        // derived before pubkey is stripped.
         const expectedHash = deriveExpectedPaymentHash(data);
         if (data.pubkey) delete data.pubkey;
 
-        const streamingCall = this.lnc.lnd.router.sendPaymentV2({
-            ...data,
-            allow_self_payment: true
-        });
+        const requestId = newStreamRequestId();
+        const streamingCall = this.lnc.subscribe(
+            'routerrpc.Router.SendPaymentV2',
+            {
+                ...data,
+                allow_self_payment: true
+            },
+            requestId
+        );
 
         const { LncModule } = NativeModules;
         const eventEmitter = new NativeEventEmitter(LncModule);
@@ -633,6 +652,7 @@ export default class LightningNodeConnect {
             subscription = eventEmitter.addListener(
                 streamingCall,
                 (event: any) => {
+                    if (!isEventForRequest(event, requestId)) return;
                     const decision = decideLncPayEvent(
                         event?.result,
                         expectedHash
@@ -666,13 +686,16 @@ export default class LightningNodeConnect {
 
         // closeChannel is a streaming RPC: the call returns the event name
         // and updates arrive on a channel shared by every concurrent close.
-        // CloseStatusUpdate carries no request identifiers, so events cannot
-        // be correlated to a specific close; ZEUS only drives one close at a
-        // time from the UI. Resolve on close_pending, the first update of a
-        // new close, so callers get the same promise contract as the other
-        // backends. chan_close only arrives once a close has confirmed, so
-        // it belongs to an earlier close and is skipped.
-        const streamingCall = this.lnc.lnd.lightning.closeChannel(params);
+        // The request id tells this close's updates apart. Resolve on
+        // close_pending, the first update of a close, so callers get the
+        // same promise contract as the other backends. chan_close only
+        // arrives once the close has confirmed, so it is skipped.
+        const requestId = newStreamRequestId();
+        const streamingCall = this.lnc.subscribe(
+            'lnrpc.Lightning.CloseChannel',
+            params,
+            requestId
+        );
 
         const { LncModule } = NativeModules;
         const eventEmitter = new NativeEventEmitter(LncModule);
@@ -692,6 +715,7 @@ export default class LightningNodeConnect {
             const listener = eventEmitter.addListener(
                 streamingCall,
                 (event: any) => {
+                    if (!isEventForRequest(event, requestId)) return;
                     if (!event.result || event.result === 'EOF') return;
                     let result;
                     try {

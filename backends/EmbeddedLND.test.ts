@@ -226,10 +226,18 @@ describe('EmbeddedLND.getTransactions', () => {
 describe('EmbeddedLND.closeChannel', () => {
     let lnd: EmbeddedLND;
 
-    const emit = (event: any) =>
+    // the request id the backend passed for its nth close
+    const requestIdOf = (n = -1) => mockCloseChannel.mock.calls.at(n)[5];
+    // the native module tags each event with its stream's request id; null
+    // sends an untagged event, as from a stream started without one
+    const emit = (event: any, request_id: string | null = requestIdOf()) =>
         mockListeners
             .filter((l) => l.name === 'CloseChannel' && !l.removed)
-            .forEach((l) => l.handler(event));
+            .forEach((l) =>
+                l.handler(
+                    request_id === null ? event : { ...event, request_id }
+                )
+            );
     const update = (data: any) => ({ data: JSON.stringify(data) });
     const listening = () =>
         mockListeners.some((l) => l.name === 'CloseChannel' && !l.removed);
@@ -284,7 +292,8 @@ describe('EmbeddedLND.closeChannel', () => {
             1,
             false,
             10,
-            'tb1qdelivery'
+            'tb1qdelivery',
+            expect.any(String)
         );
     });
 
@@ -297,7 +306,8 @@ describe('EmbeddedLND.closeChannel', () => {
             1,
             true,
             undefined,
-            undefined
+            undefined,
+            expect.any(String)
         );
     });
 
@@ -328,6 +338,30 @@ describe('EmbeddedLND.closeChannel', () => {
 
         expect(close.settled).toBe(false);
         expect(listening()).toBe(true);
+    });
+
+    it("ignores another close's updates and errors", async () => {
+        const first = track(lnd.closeChannel(['txid', '1', '']));
+        const second = track(lnd.closeChannel(['txid', '2', '']));
+        await jest.advanceTimersByTimeAsync(0);
+        const firstId = requestIdOf(0);
+        const secondId = requestIdOf(1);
+        expect(secondId).not.toEqual(firstId);
+
+        emit({ error_code: 'Error', error_desc: 'peer offline' }, secondId);
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(second.error?.message).toEqual('peer offline');
+        expect(first.settled).toBe(false);
+
+        emit(update({ close_pending: { txid: 'other' } }), null);
+        await jest.advanceTimersByTimeAsync(0);
+        expect(first.settled).toBe(false);
+
+        emit(update({ close_pending: { txid: 'first' } }), firstId);
+        await jest.advanceTimersByTimeAsync(0);
+        expect(first.settled).toBe(true);
+        expect(first.error).toBeUndefined();
     });
 
     it('rejects and stops listening when the native call fails', async () => {
