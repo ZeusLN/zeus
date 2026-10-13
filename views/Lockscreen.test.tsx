@@ -1,5 +1,5 @@
 import React from 'react';
-import renderer, { act } from 'react-test-renderer';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 // mobx-react's main entry needs react-dom; the stores arrive as props here
 jest.mock('mobx-react', () => ({
@@ -13,7 +13,15 @@ jest.mock('../components/Screen', () => {
 jest.mock('../components/Button', () => () => null);
 jest.mock('../components/Header', () => () => null);
 jest.mock('../components/LoadingIndicator', () => () => null);
-jest.mock('../components/Pin', () => () => null);
+// Stands in for the keypad: one press submits the stored PIN
+jest.mock('../components/Pin', () => {
+    const { Pressable, Text } = require('react-native');
+    return ({ onSubmit }: any) => (
+        <Pressable role="button" onPress={() => onSubmit('1234')}>
+            <Text>Submit PIN</Text>
+        </Pressable>
+    );
+});
 jest.mock('../components/ShowHideToggle', () => () => null);
 jest.mock('../components/TextInput', () => () => null);
 jest.mock('../components/SuccessErrorMessage', () => ({
@@ -79,24 +87,18 @@ const renderLockscreen = async (
         popTo: jest.fn(),
         replace: jest.fn()
     };
-    let tree: renderer.ReactTestRenderer;
-    await act(async () => {
-        tree = renderer.create(
-            <Lockscreen
-                SettingsStore={SettingsStore as any}
-                navigation={navigation as any}
-                route={{ params: {} } as any}
-            />
-        );
-    });
-    const instance = tree!.root.findByType(Lockscreen).instance as Lockscreen;
-    return { SettingsStore, navigation, instance };
+    await render(
+        <Lockscreen
+            SettingsStore={SettingsStore as any}
+            navigation={navigation as any}
+            route={{ params: {} } as any}
+        />
+    );
+    return { SettingsStore, navigation };
 };
 
-const enterCorrectPin = (instance: Lockscreen) =>
-    act(async () => {
-        instance.setState({ pinAttempt: PIN });
-    });
+const submitPin = () =>
+    fireEvent.press(screen.getByRole('button', { name: 'Submit PIN' }));
 
 let errorSpy: jest.SpyInstance;
 
@@ -115,23 +117,15 @@ describe('Lockscreen login', () => {
     it('navigates only once the attempt reset has resolved', async () => {
         const reset = deferred();
         const updateSettings = jest.fn(() => reset.promise);
-        const { navigation, instance } = await renderLockscreen(updateSettings);
-        await enterCorrectPin(instance);
-
-        let login: Promise<void>;
-        await act(async () => {
-            login = instance.onAttemptLogIn();
-        });
+        const { navigation } = await renderLockscreen(updateSettings);
+        await submitPin();
 
         expect(updateSettings).toHaveBeenCalledWith({
             authenticationAttempts: 0
         });
         expect(navigation.pop).not.toHaveBeenCalled();
 
-        await act(async () => {
-            reset.resolve();
-            await login;
-        });
+        await act(async () => reset.resolve());
 
         expect(navigation.pop).toHaveBeenCalledTimes(1);
     });
@@ -139,14 +133,10 @@ describe('Lockscreen login', () => {
     it('still unlocks when the attempt reset fails', async () => {
         const error = new Error('keychain unavailable');
         const updateSettings = jest.fn(() => Promise.reject(error));
-        const { SettingsStore, navigation, instance } = await renderLockscreen(
+        const { SettingsStore, navigation } = await renderLockscreen(
             updateSettings
         );
-        await enterCorrectPin(instance);
-
-        await act(async () => {
-            await expect(instance.onAttemptLogIn()).resolves.toBeUndefined();
-        });
+        await submitPin();
 
         expect(SettingsStore.setLoginStatus).toHaveBeenCalledWith(true);
         expect(navigation.pop).toHaveBeenCalledTimes(1);
@@ -159,19 +149,10 @@ describe('Lockscreen login', () => {
     it('navigates once when a second submit arrives while the reset is pending', async () => {
         const reset = deferred();
         const updateSettings = jest.fn(() => reset.promise);
-        const { navigation, instance } = await renderLockscreen(updateSettings);
-        await enterCorrectPin(instance);
-
-        let first: Promise<void>;
-        let second: Promise<void>;
-        await act(async () => {
-            first = instance.onAttemptLogIn();
-            second = instance.onAttemptLogIn();
-        });
-        await act(async () => {
-            reset.resolve();
-            await Promise.all([first, second]);
-        });
+        const { navigation } = await renderLockscreen(updateSettings);
+        await submitPin();
+        await submitPin();
+        await act(async () => reset.resolve());
 
         expect(updateSettings).toHaveBeenCalledTimes(1);
         expect(navigation.pop).toHaveBeenCalledTimes(1);

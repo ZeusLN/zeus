@@ -1,6 +1,5 @@
 import React from 'react';
-import { Switch as RNSwitch } from 'react-native';
-import renderer, { act } from 'react-test-renderer';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 
 jest.mock('../utils/ThemeUtils', () => ({
     themeColor: jest.fn((key: string) => `theme:${key}`)
@@ -8,54 +7,60 @@ jest.mock('../utils/ThemeUtils', () => ({
 
 import Switch from './Switch';
 
-const renderSwitch = (props: any) => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-        tree = renderer.create(<Switch {...props} />);
-    });
-    return tree!.root.findByType(RNSwitch).props;
+// The native switch (iOS in Jest) takes thumbColor as thumbTintColor and the
+// two track colors as onTintColor (on) and tintColor (off)
+const renderSwitch = async (props: any) => {
+    await render(<Switch {...props} />);
+    return screen.getByRole('switch');
 };
 
 describe('Switch', () => {
-    it('uses the highlight color for the thumb and track when on', () => {
-        const props = renderSwitch({ value: true });
-        expect(props.thumbColor).toBe('theme:highlight');
-        expect(props.trackColor).toEqual({
-            false: 'theme:disabled',
-            true: 'theme:highlight'
-        });
+    it('uses the highlight color for the thumb and track when on', async () => {
+        const sw = await renderSwitch({ value: true });
+        expect(sw).toHaveProp('thumbTintColor', 'theme:highlight');
+        expect(sw).toHaveProp('onTintColor', 'theme:highlight');
+        expect(sw).toHaveProp('tintColor', 'theme:disabled');
     });
 
-    it('uses the disabled color for the thumb when off', () => {
-        const props = renderSwitch({ value: false });
-        expect(props.thumbColor).toBe('theme:disabled');
-        expect(props.trackColor.false).toBe('theme:disabled');
+    it('uses the disabled color for the thumb when off', async () => {
+        const sw = await renderSwitch({ value: false });
+        expect(sw).toHaveProp('thumbTintColor', 'theme:disabled');
+        expect(sw).toHaveProp('tintColor', 'theme:disabled');
     });
 
-    it('uses trackEnabledColor for the on track when given', () => {
-        const props = renderSwitch({
+    it('uses trackEnabledColor for the on track when given', async () => {
+        const sw = await renderSwitch({
             value: true,
             trackEnabledColor: '#123456'
         });
-        expect(props.trackColor.true).toBe('#123456');
-        expect(props.thumbColor).toBe('theme:highlight');
+        expect(sw).toHaveProp('onTintColor', '#123456');
+        expect(sw).toHaveProp('thumbTintColor', 'theme:highlight');
     });
 
-    it('aligns itself to the end of its row', () => {
-        const props = renderSwitch({ value: false });
-        expect(props.style).toEqual({ alignSelf: 'flex-end' });
+    it('aligns itself to the end of its row', async () => {
+        const sw = await renderSwitch({ value: false });
+        expect(sw).toHaveStyle({ alignSelf: 'flex-end' });
     });
 
-    it('passes value, onValueChange and disabled through', () => {
+    it('passes value and onValueChange through', async () => {
         const onValueChange = jest.fn();
-        const props = renderSwitch({
-            value: true,
-            onValueChange,
-            disabled: true
-        });
-        expect(props.value).toBe(true);
-        expect(props.disabled).toBe(true);
-        props.onValueChange(false);
+        const sw = await renderSwitch({ value: true, onValueChange });
+        expect(sw).toBeChecked();
+        // Fire the native switch's own change event. A 'valueChange' event
+        // would reach Switch's onValueChange prop directly and pass even
+        // if Switch never forwarded it to the native switch.
+        await fireEvent(sw, 'change', { nativeEvent: { value: false } });
         expect(onValueChange).toHaveBeenCalledWith(false);
+    });
+
+    it('passes disabled through', async () => {
+        const sw = await renderSwitch({ value: true, disabled: true });
+        expect(sw).toHaveProp('disabled', true);
+    });
+
+    it('is unchecked and enabled by default when off', async () => {
+        const sw = await renderSwitch({ value: false });
+        expect(sw).not.toBeChecked();
+        expect(sw).not.toHaveProp('disabled', true);
     });
 });

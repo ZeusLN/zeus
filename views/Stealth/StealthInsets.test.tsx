@@ -1,6 +1,12 @@
 import React from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
-import renderer, { act } from 'react-test-renderer';
+import { StyleSheet } from 'react-native';
+import {
+    fireEvent,
+    render,
+    screen,
+    within
+} from '@testing-library/react-native';
+import type { TestInstance } from 'test-renderer';
 
 const BOTTOM_INSET = 48;
 
@@ -30,101 +36,71 @@ import NotepadApp from './NotepadApp';
 import QRScannerApp from './QRScannerApp';
 import VPNApp from './VPNApp';
 
-const mounted: renderer.ReactTestRenderer[] = [];
-
-const render = async (element: React.ReactElement) => {
-    let tree: renderer.ReactTestRenderer;
-    await act(async () => {
-        tree = renderer.create(element);
-    });
-    mounted.push(tree!);
-    return tree!;
-};
-
-const textsIn = (node: renderer.ReactTestInstance) =>
-    node
-        .findAllByType(Text)
-        .map((t) => [t.props.children].flat().join(''))
-        .map((s) => s.trim());
-
 // Host Views whose flattened paddingBottom equals `value`
-const viewsWithPaddingBottom = (
-    tree: renderer.ReactTestRenderer,
-    value: number
-) =>
-    tree.root.findAll(
+const viewsWithPaddingBottom = (value: number) =>
+    screen.container.queryAll(
         (n) =>
-            n.type === View &&
+            n.type === 'View' &&
             StyleSheet.flatten(n.props.style)?.paddingBottom === value
     );
 
-const pressText = async (tree: renderer.ReactTestRenderer, label: string) => {
-    const text = tree.root
-        .findAllByType(Text)
-        .find((t) => [t.props.children].flat().join('').trim() === label);
-    let node = text?.parent;
-    while (node && typeof node.props.onPress !== 'function') {
-        node = node.parent;
-    }
-    await act(async () => {
-        node!.props.onPress();
-    });
-};
+const contains = (node: TestInstance, text: string) =>
+    within(node).queryAllByText(text).length > 0;
 
 describe('Stealth decoys respect the bottom safe-area inset', () => {
     afterEach(() => {
-        // Unmount so the scan-line animation and list timers stop
-        mounted.splice(0).forEach((tree) => act(() => tree.unmount()));
         Object.keys(mockStorage).forEach((k) => delete mockStorage[k]);
     });
 
     it('Calculator pads the keypad, including the "=" unlock key', async () => {
-        const tree = await render(<CalculatorApp onUnlock={jest.fn()} />);
-        const [keypad] = viewsWithPaddingBottom(tree, 20 + BOTTOM_INSET);
+        await render(<CalculatorApp onUnlock={jest.fn()} />);
+        const [keypad] = viewsWithPaddingBottom(20 + BOTTOM_INSET);
         expect(keypad).toBeDefined();
-        expect(textsIn(keypad)).toEqual(expect.arrayContaining(['=', '0']));
+        expect(within(keypad).getByText('=')).toBeOnTheScreen();
+        expect(within(keypad).getByText('0')).toBeOnTheScreen();
     });
 
     it('QR Scanner pads the bottom bar holding the unlock title', async () => {
-        const tree = await render(<QRScannerApp onUnlock={jest.fn()} />);
-        const [bar] = viewsWithPaddingBottom(tree, 30 + BOTTOM_INSET);
+        await render(<QRScannerApp onUnlock={jest.fn()} />);
+        const [bar] = viewsWithPaddingBottom(30 + BOTTOM_INSET);
         expect(bar).toBeDefined();
-        expect(textsIn(bar)).toEqual(
-            expect.arrayContaining(['QR Scanner', 'History'])
-        );
+        expect(within(bar).getByText('QR Scanner')).toBeOnTheScreen();
+        expect(within(bar).getByText('History')).toBeOnTheScreen();
     });
 
     it('QR Scanner pads the history sheet', async () => {
-        const tree = await render(<QRScannerApp onUnlock={jest.fn()} />);
-        await pressText(tree, 'History');
-        const sheets = viewsWithPaddingBottom(tree, BOTTOM_INSET);
-        expect(sheets.some((s) => textsIn(s).includes('Scan History'))).toBe(
-            true
-        );
+        await render(<QRScannerApp onUnlock={jest.fn()} />);
+        await fireEvent.press(screen.getByText('History'));
+        const sheets = viewsWithPaddingBottom(BOTTOM_INSET);
+        expect(sheets.some((s) => contains(s, 'Scan History'))).toBe(true);
     });
 
     it('VPN pads the location picker sheet', async () => {
-        const tree = await render(<VPNApp onUnlock={jest.fn()} />);
-        expect(viewsWithPaddingBottom(tree, BOTTOM_INSET)).toHaveLength(0);
-        await pressText(tree, 'Select Location');
-        const sheets = viewsWithPaddingBottom(tree, BOTTOM_INSET);
+        await render(<VPNApp onUnlock={jest.fn()} />);
+        expect(viewsWithPaddingBottom(BOTTOM_INSET)).toHaveLength(0);
+        await fireEvent.press(screen.getByText('Select Location'));
+        const sheets = viewsWithPaddingBottom(BOTTOM_INSET);
         expect(sheets).toHaveLength(1);
-        expect(textsIn(sheets[0])).toContain('Switzerland');
+        expect(within(sheets[0]).getByText('Switzerland')).toBeOnTheScreen();
     });
 
     it('Notepad pads the editor and the notes list', async () => {
         mockStorage['@stealth_notepad_notes'] = JSON.stringify([
             { id: '1', title: 'Groceries', content: 'milk', updatedAt: 1 }
         ]);
-        const tree = await render(<NotepadApp onUnlock={jest.fn()} />);
+        await render(<NotepadApp onUnlock={jest.fn()} />);
 
-        const list = tree.root.findByType(FlatList);
+        // the FlatList's host scroll view keeps contentContainerStyle
+        const [list] = screen.container.queryAll(
+            (n) => n.type === 'RCTScrollView'
+        );
+        expect(within(list).getByText('Groceries')).toBeOnTheScreen();
         expect(
             StyleSheet.flatten(list.props.contentContainerStyle).paddingBottom
         ).toBe(10 + BOTTOM_INSET);
 
-        await pressText(tree, '+');
-        const editors = viewsWithPaddingBottom(tree, BOTTOM_INSET);
-        expect(editors.some((e) => textsIn(e).includes('New Note'))).toBe(true);
+        await fireEvent.press(screen.getByText('+'));
+        const editors = viewsWithPaddingBottom(BOTTOM_INSET);
+        expect(editors.some((e) => contains(e, 'New Note'))).toBe(true);
     });
 });

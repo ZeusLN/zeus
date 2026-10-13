@@ -1,6 +1,5 @@
 import React from 'react';
-import { Switch as RNSwitch } from 'react-native';
-import renderer, { act } from 'react-test-renderer';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 // mobx-react's main entry needs react-dom; the stores arrive as props here
 jest.mock('mobx-react', () => ({
@@ -12,7 +11,14 @@ jest.mock('../components/Screen', () => {
     return ({ children }: any) => <View>{children}</View>;
 });
 jest.mock('../components/Header', () => () => null);
-jest.mock('../components/Button', () => () => null);
+jest.mock('../components/Button', () => {
+    const { Pressable, Text } = require('react-native');
+    return ({ title, onPress, disabled }: any) => (
+        <Pressable role="button" onPress={onPress} disabled={disabled}>
+            <Text>{title}</Text>
+        </Pressable>
+    );
+});
 jest.mock('../components/LoadingIndicator', () => () => null);
 jest.mock('../components/SuccessErrorMessage', () => ({
     SuccessMessage: () => null,
@@ -30,7 +36,7 @@ jest.mock('react-native-blob-util', () => ({
 }));
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import Switch from '../components/Switch';
+import BackendUtils from '../utils/BackendUtils';
 import LnurlChannel from './LnurlChannel';
 
 const lnurlParams = {
@@ -40,22 +46,18 @@ const lnurlParams = {
     uri: '03864ef025fde8fb587d989186ce6a4a186895ee44a926bfc370e2c366597a3f8f@3.33.236.230:9735'
 };
 
-const renderView = async () => {
-    let tree: renderer.ReactTestRenderer;
-    await act(async () => {
-        tree = renderer.create(
-            <LnurlChannel
-                navigation={{} as any}
-                route={{ params: { lnurlParams } } as any}
-                ChannelsStore={{} as any}
-                NodeInfoStore={
-                    { nodeInfo: { getPubkey: 'localpubkey' } } as any
-                }
-            />
-        );
-    });
-    return tree!;
-};
+const renderView = () =>
+    render(
+        <LnurlChannel
+            navigation={{} as any}
+            route={{ params: { lnurlParams } } as any}
+            ChannelsStore={{} as any}
+            NodeInfoStore={{ nodeInfo: { getPubkey: 'localpubkey' } } as any}
+        />
+    );
+
+const connectButton = () =>
+    screen.getByRole('button', { name: 'views.LnurlChannel.connect' });
 
 const callbackQuery = () => {
     const [, url] = (ReactNativeBlobUtil.fetch as jest.Mock).mock.calls[0];
@@ -65,44 +67,76 @@ const callbackQuery = () => {
 describe('LnurlChannel', () => {
     beforeEach(() => {
         (ReactNativeBlobUtil.fetch as jest.Mock).mockClear();
+        (BackendUtils.connectPeer as jest.Mock).mockClear();
     });
 
-    it('renders the themed Switch for the announced toggle', async () => {
-        const tree = await renderView();
-        const toggle = tree.root.findByType(Switch);
-        expect(toggle.props.value).toBe(false);
-
-        const native = tree.root.findByType(RNSwitch);
-        expect(native.props.thumbColor).toBe('theme:disabled');
-        expect(native.props.trackColor).toEqual({
-            false: 'theme:disabled',
-            true: 'theme:highlight'
+    it('connects to the peer on mount and then enables Connect', async () => {
+        await renderView();
+        expect(BackendUtils.connectPeer).toHaveBeenCalledWith({
+            addr: {
+                pubkey: '03864ef025fde8fb587d989186ce6a4a186895ee44a926bfc370e2c366597a3f8f',
+                host: '3.33.236.230:9735'
+            }
         });
+        expect(connectButton()).toBeEnabled();
+    });
+
+    it('keeps Connect disabled until the peer connection resolves', async () => {
+        let connected!: () => void;
+        (BackendUtils.connectPeer as jest.Mock).mockReturnValueOnce(
+            new Promise<void>((resolve) => {
+                connected = resolve;
+            })
+        );
+        await renderView();
+
+        expect(connectButton()).toBeDisabled();
+        await fireEvent.press(connectButton());
+        expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+
+        await act(async () => connected());
+        expect(connectButton()).toBeEnabled();
+        await fireEvent.press(connectButton());
+        expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps Connect disabled when the peer connection fails', async () => {
+        (BackendUtils.connectPeer as jest.Mock).mockRejectedValueOnce(
+            new Error('peer unreachable')
+        );
+        await renderView();
+        expect(connectButton()).toBeDisabled();
+    });
+
+    it('renders the themed Switch for the announced toggle, off', async () => {
+        await renderView();
+        const toggle = screen.getByRole('switch');
+        expect(toggle).not.toBeChecked();
+        expect(toggle).toHaveProp('thumbTintColor', 'theme:disabled');
+        expect(toggle).toHaveProp('tintColor', 'theme:disabled');
+        expect(toggle).toHaveProp('onTintColor', 'theme:highlight');
     });
 
     it('requests a private channel by default', async () => {
-        const tree = await renderView();
-        await act(async () => {
-            tree.root.findByType(LnurlChannel).instance.sendValues();
-        });
+        await renderView();
+        await fireEvent.press(connectButton());
         expect(callbackQuery().get('private')).toBe('1');
         expect(callbackQuery().get('k1')).toBe('abc123');
         expect(callbackQuery().get('remoteid')).toBe('localpubkey');
     });
 
     it('requests an announced channel after the toggle is switched on', async () => {
-        const tree = await renderView();
-        await act(async () => {
-            tree.root.findByType(Switch).props.onValueChange(true);
+        await renderView();
+        await fireEvent(screen.getByRole('switch'), 'change', {
+            nativeEvent: { value: true }
         });
-        expect(tree.root.findByType(Switch).props.value).toBe(true);
-        expect(tree.root.findByType(RNSwitch).props.thumbColor).toBe(
+        expect(screen.getByRole('switch')).toBeChecked();
+        expect(screen.getByRole('switch')).toHaveProp(
+            'thumbTintColor',
             'theme:highlight'
         );
 
-        await act(async () => {
-            tree.root.findByType(LnurlChannel).instance.sendValues();
-        });
+        await fireEvent.press(connectButton());
         expect(callbackQuery().get('private')).toBe('0');
     });
 });
