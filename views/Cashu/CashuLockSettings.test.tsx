@@ -15,41 +15,78 @@ jest.mock('../../utils/AddressUtils', () => ({
 }));
 jest.mock('../../utils/LocaleUtils');
 jest.mock('../../utils/ThemeUtils', () => ({
-    themeColor: () => '#000000'
+    themeColor: (key: string) => `theme:${key}`
 }));
 jest.mock('../../components/Header', () => 'Header');
-jest.mock('../../components/Screen', () => 'Screen');
-jest.mock('../../components/Text', () => 'Text');
-jest.mock('../../components/TextInput', () => 'TextInput');
-jest.mock('../../components/Button', () => 'Button');
-jest.mock('../../components/SuccessErrorMessage', () => ({
-    ErrorMessage: 'ErrorMessage'
-}));
+jest.mock('../../components/Screen', () => {
+    const { View } = require('react-native');
+    return ({ children }: any) => <View>{children}</View>;
+});
+jest.mock('../../components/Text', () => {
+    const { Text } = require('react-native');
+    return ({ children }: any) => <Text>{children}</Text>;
+});
+jest.mock('../../components/TextInput', () => {
+    const { TextInput } = require('react-native');
+    return (props: any) => <TextInput {...props} />;
+});
+jest.mock('../../components/Button', () => {
+    const { Pressable, Text } = require('react-native');
+    return ({ title, onPress }: any) => (
+        <Pressable role="button" onPress={onPress}>
+            <Text>{title}</Text>
+        </Pressable>
+    );
+});
+jest.mock('../../components/SuccessErrorMessage', () => {
+    const { Text } = require('react-native');
+    return {
+        ErrorMessage: ({ message }: any) => <Text>{message}</Text>
+    };
+});
 jest.mock('../../components/DropdownSetting', () => 'DropdownSetting');
 jest.mock('../../assets/images/SVG/Scan.svg', () => 'Scan');
 jest.mock('../../assets/images/SVG/PeersContact.svg', () => 'ContactIcon');
 jest.mock('./SendEcash', () => ({}));
 
+import * as React from 'react';
 import Clipboard from '@react-native-clipboard/clipboard';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import CashuLockSettings from './CashuLockSettings';
 
 const PUBKEY =
     '02aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
-const makeView = (clipboard: boolean) => {
-    const view = new CashuLockSettings({
-        navigation: { navigate: jest.fn() },
-        route: { params: {} },
-        ContactStore: {},
-        SettingsStore: { settings: { privacy: { clipboard } } }
-    } as any);
-    // setState on a class that was never mounted does nothing, so apply it
-    // directly
-    jest.spyOn(view, 'setState').mockImplementation((update: any) => {
-        view.state = { ...view.state, ...update };
-    });
-    return view;
-};
+const renderView = (clipboard: boolean) =>
+    render(
+        <CashuLockSettings
+            navigation={
+                {
+                    navigate: jest.fn(),
+                    addListener: jest.fn(),
+                    removeListener: jest.fn(),
+                    replaceParams: jest.fn()
+                } as any
+            }
+            route={{ params: {} } as any}
+            ContactStore={{} as any}
+            SettingsStore={{ settings: { privacy: { clipboard } } } as any}
+        />
+    );
+
+const pubkeyInput = () => screen.getByPlaceholderText('02abc...');
+const pasteButton = () => screen.getByRole('button', { name: 'general.paste' });
+const queryPasteButton = () =>
+    screen.queryByRole('button', { name: 'general.paste' });
+
+// the field turns red when the pubkey is invalid
+const expectPubkeyMarked = (valid: boolean) =>
+    expect(pubkeyInput()).toHaveProp(
+        'textColor',
+        valid ? 'theme:text' : 'theme:delete'
+    );
+
+const focusPubkey = () => fireEvent(pubkeyInput(), 'focus');
 
 describe('CashuLockSettings clipboard', () => {
     beforeEach(() => {
@@ -59,95 +96,123 @@ describe('CashuLockSettings clipboard', () => {
 
     describe('with clipboard reading off', () => {
         it('shows the paste button on focus without reading the clipboard', async () => {
-            const view = makeView(false);
+            await renderView(false);
+            expect(queryPasteButton()).not.toBeOnTheScreen();
 
-            await view.checkClipboardContent();
+            await focusPubkey();
 
             expect(Clipboard.getString).not.toHaveBeenCalled();
-            expect(view.state.hasClipboardContent).toBe(true);
+            expect(pasteButton()).toBeOnTheScreen();
         });
 
-        it('shows the paste button when the field is cleared without reading the clipboard', () => {
-            const view = makeView(false);
+        it('shows the paste button when the field is cleared without reading the clipboard', async () => {
+            await renderView(false);
 
-            view.handlePubkeyChange('');
+            await fireEvent.changeText(pubkeyInput(), 'x');
+            await fireEvent.changeText(pubkeyInput(), '');
 
             expect(Clipboard.getString).not.toHaveBeenCalled();
-            expect(view.state.hasClipboardContent).toBe(true);
+            expect(pasteButton()).toBeOnTheScreen();
         });
 
         it('reads the clipboard when the paste button is pressed', async () => {
-            const view = makeView(false);
+            await renderView(false);
+            await focusPubkey();
 
-            await view.handlePaste();
+            await fireEvent.press(pasteButton());
 
             expect(Clipboard.getString).toHaveBeenCalledTimes(1);
-            expect(view.state.pubkey).toBe(PUBKEY);
-            expect(view.state.isPubkeyValid).toBe(true);
+            expect(pubkeyInput()).toHaveDisplayValue(PUBKEY);
+            expectPubkeyMarked(true);
+            expect(queryPasteButton()).not.toBeOnTheScreen();
         });
 
         it('says the clipboard is empty when paste is pressed with nothing copied', async () => {
             (Clipboard.getString as jest.Mock).mockResolvedValue('');
-            const view = makeView(false);
+            await renderView(false);
+            await focusPubkey();
 
-            await view.handlePaste();
+            await fireEvent.press(pasteButton());
 
-            expect(view.state.error).toBe('general.clipboardEmpty');
-            expect(view.state.pubkey).toBe('');
+            expect(
+                screen.getByText('general.clipboardEmpty')
+            ).toBeOnTheScreen();
+            expect(pubkeyInput()).toHaveDisplayValue('');
             // the field was not touched, so it is not marked invalid
-            expect(view.state.isPubkeyValid).toBe(true);
+            expectPubkeyMarked(true);
         });
 
         it('treats whitespace-only clipboard text as empty', async () => {
             (Clipboard.getString as jest.Mock).mockResolvedValue('  \n ');
-            const view = makeView(false);
+            await renderView(false);
+            await focusPubkey();
 
-            await view.handlePaste();
+            await fireEvent.press(pasteButton());
 
-            expect(view.state.error).toBe('general.clipboardEmpty');
-            expect(view.state.pubkey).toBe('');
+            expect(
+                screen.getByText('general.clipboardEmpty')
+            ).toBeOnTheScreen();
+            expect(pubkeyInput()).toHaveDisplayValue('');
         });
 
         it('shows the pubkey error when the clipboard holds something else', async () => {
             (Clipboard.getString as jest.Mock).mockResolvedValue('not a key');
-            const view = makeView(false);
+            await renderView(false);
+            await focusPubkey();
 
-            await view.handlePaste();
+            await fireEvent.press(pasteButton());
 
-            expect(view.state.error).toBe('cashu.invalidCashuPubkey');
-            expect(view.state.pubkey).toBe('');
-            expect(view.state.isPubkeyValid).toBe(false);
+            expect(
+                screen.getByText('cashu.invalidCashuPubkey')
+            ).toBeOnTheScreen();
+            expect(pubkeyInput()).toHaveDisplayValue('');
+            expectPubkeyMarked(false);
+        });
+
+        it('reports a clipboard read failure', async () => {
+            (Clipboard.getString as jest.Mock).mockRejectedValue(
+                new Error('denied')
+            );
+            await renderView(false);
+            await focusPubkey();
+
+            await fireEvent.press(pasteButton());
+
+            expect(
+                screen.getByText('general.clipboardError')
+            ).toBeOnTheScreen();
+            expect(queryPasteButton()).not.toBeOnTheScreen();
         });
     });
 
     describe('with clipboard reading on', () => {
         it('shows the paste button when the clipboard has text', async () => {
-            const view = makeView(true);
+            await renderView(true);
 
-            await view.checkClipboardContent();
+            await focusPubkey();
 
             expect(Clipboard.getString).toHaveBeenCalledTimes(1);
-            expect(view.state.hasClipboardContent).toBe(true);
+            expect(pasteButton()).toBeOnTheScreen();
         });
 
         it('hides the paste button when the clipboard is empty', async () => {
             (Clipboard.getString as jest.Mock).mockResolvedValue('');
-            const view = makeView(true);
+            await renderView(true);
 
-            await view.checkClipboardContent();
+            await focusPubkey();
 
-            expect(view.state.hasClipboardContent).toBe(false);
+            expect(queryPasteButton()).not.toBeOnTheScreen();
         });
 
         it('hides the paste button when the clipboard read fails', async () => {
             (Clipboard.getString as jest.Mock).mockRejectedValue(
                 new Error('denied')
             );
-            const view = makeView(true);
+            await renderView(true);
 
-            await view.checkClipboardContent();
+            await focusPubkey();
 
-            expect(view.state.hasClipboardContent).toBe(false);
+            expect(queryPasteButton()).not.toBeOnTheScreen();
         });
     });
 });
