@@ -1769,6 +1769,7 @@
     "utils.handleAnything.lightningAddressError": "Errore che recupera i dati dell'indirizzo Lightning",
     "utils.handleAnything.notValid": "Il valore fornito non era un indirizzo Bitcoin valido o una fattura Lightning",
     "utils.handleAnything.lnurlAuthNotSupported": "Lnurl Auth non supportata dall'implementazione del tuo nodo",
+    "utils.handleAnything.channelsNotSupported": "Opening channels is not supported by this wallet",
     "utils.handleAnything.unsupportedLnurlType": "Tipo LNURL non supportato",
     "utils.handleAnything.invalidLnurlParams": "Impossibile analizzare i parametri di lnurl",
     "utils.handleAnything.nostrProfileError": "Errore durante il recupero del profilo Nostr",
