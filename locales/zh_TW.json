@@ -1769,6 +1769,7 @@
     "utils.handleAnything.lightningAddressError": "取得閃電網位址時發生錯誤",
     "utils.handleAnything.notValid": "輸入值不是合法的比特幣位址或閃電網帳單",
     "utils.handleAnything.lnurlAuthNotSupported": "這個站點的軟體版本不支援 LnurlAuth",
+    "utils.handleAnything.channelsNotSupported": "Opening channels is not supported by this wallet",
     "utils.handleAnything.unsupportedLnurlType": "不支援這種類型的 lnurl",
     "utils.handleAnything.invalidLnurlParams": "無法解析 lnurl 參數",
     "utils.handleAnything.nostrProfileError": "取得 Nostr 個人檔案時發生錯誤",
