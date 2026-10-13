@@ -1769,6 +1769,7 @@
     "utils.handleAnything.lightningAddressError": "라이트닝 주소 데이터 가져오기 오류",
     "utils.handleAnything.notValid": "입력한 값이 유효한 비트코인 주소 또는 라이트닝 인보이스가 아닙니다.",
     "utils.handleAnything.lnurlAuthNotSupported": "노드 구현에서 지원되지 않는 LnurlAuth",
+    "utils.handleAnything.channelsNotSupported": "Opening channels is not supported by this wallet",
     "utils.handleAnything.unsupportedLnurlType": "지원되지 않는 lnurl 유형",
     "utils.handleAnything.invalidLnurlParams": "lnurl 파라미터 값을 제대로 읽어올 수 없음",
     "utils.handleAnything.nostrProfileError": "Nostr 프로필 가져오기 오류",
