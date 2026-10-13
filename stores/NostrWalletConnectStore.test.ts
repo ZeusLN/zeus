@@ -1171,7 +1171,7 @@ describe('NostrWalletConnectStore relay release', () => {
         return { inFlight };
     }
 
-    it('closes the old relay a grace period after a relay change leaves it unused', async () => {
+    it('closes the old relay a grace period after a relay change leaves it unused, and reopens it on the way back', async () => {
         const {
             store,
             connections: [connection]
@@ -1187,6 +1187,24 @@ describe('NostrWalletConnectStore relay release', () => {
         await jest.advanceTimersByTimeAsync(RELAY_RELEASE_GRACE_MS);
         expect(oldRelay.close).toHaveBeenCalled();
         expect(relayFor(NEW_RELAY).close).not.toHaveBeenCalled();
+
+        // Releasing the relay must also forget its service and published
+        // state, or rotating back would reuse the closed service and skip
+        // publishing wallet service info.
+        jest.clearAllMocks();
+        const result = await settle(
+            store.updateConnection(connection.id, { relayUrl: OLD_RELAY })
+        );
+
+        expect(result.success).toBe(true);
+        expect(NWCWalletService).toHaveBeenCalledWith({
+            relayUrls: [OLD_RELAY]
+        });
+        const reopened = relays.get(OLD_RELAY)!;
+        expect(reopened).not.toBe(oldRelay);
+        expect(reopened.publishWalletServiceInfoEvent).toHaveBeenCalled();
+        expect(oldRelay.publishWalletServiceInfoEvent).not.toHaveBeenCalled();
+        expect(reopened.handlers.has(connection.pubkey)).toBe(true);
     });
 
     it('keeps the old relay open when another connection still uses it', async () => {
