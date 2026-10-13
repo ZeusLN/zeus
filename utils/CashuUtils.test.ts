@@ -16,6 +16,7 @@ import CashuUtils, {
     isMeltPaid,
     isMeltSettledUnpaid,
     meltOutcome,
+    meltQuoteOutcome,
     normalizeMeltState,
     resolveLockTarget
 } from './CashuUtils';
@@ -574,6 +575,41 @@ describe('melt state', () => {
             expect(meltOutcome('Issued')).toBe('inFlight');
             expect(meltOutcome(undefined)).toBe('inFlight');
             expect(meltOutcome('')).toBe('inFlight');
+        });
+    });
+
+    describe('meltQuoteOutcome', () => {
+        // CDK returns its local copy of a quote while a melt saga holds it,
+        // and that copy stays Unpaid until the saga finishes
+        it('reads an Unpaid quote a saga still holds as in flight', () => {
+            expect(
+                meltQuoteOutcome({
+                    state: 'Unpaid',
+                    used_by_operation: 'op-1'
+                })
+            ).toBe('inFlight');
+        });
+
+        it('reads an Unpaid quote no saga holds as unpaid', () => {
+            expect(meltQuoteOutcome({ state: 'Unpaid' })).toBe('unpaid');
+            expect(
+                meltQuoteOutcome({ state: 'Unpaid', used_by_operation: null })
+            ).toBe('unpaid');
+        });
+
+        it('reads a Paid quote as paid', () => {
+            expect(
+                meltQuoteOutcome({ state: 'Paid', used_by_operation: 'op-1' })
+            ).toBe('paid');
+            expect(meltQuoteOutcome({ state: 'Paid' })).toBe('paid');
+        });
+
+        it('reads a Pending quote as in flight', () => {
+            expect(meltQuoteOutcome({ state: 'Pending' })).toBe('inFlight');
+        });
+
+        it('reads a missing quote as in flight', () => {
+            expect(meltQuoteOutcome(undefined)).toBe('inFlight');
         });
     });
 });

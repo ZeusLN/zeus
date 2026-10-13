@@ -99,6 +99,9 @@ export interface CDKMeltQuote {
     state: CDKQuoteState;
     expiry: number;
     payment_preimage?: string;
+    // ID of the melt saga holding the quote. CDK keeps the quote Unpaid
+    // until the saga finishes, so Unpaid with this set is still in flight.
+    used_by_operation?: string;
 }
 
 export interface CDKMelted {

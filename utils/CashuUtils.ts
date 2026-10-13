@@ -136,12 +136,12 @@ export const normalizeMeltState = (
 /**
  * Whether the mint has actually paid the invoice a melt was executed for.
  *
- * CDK reports a melt the mint has not settled by resolving with a non-Paid
- * state instead of throwing: a mint that accepts the payment asynchronously
- * (NUT-05) or is still settling the Lightning leg returns Pending, and a melt
- * recovered mid-flight can come back Unpaid. Treating a resolved melt as a
- * completed payment therefore shows the user a successful payment, and
- * records one with an empty preimage, for an invoice nobody has paid.
+ * The melt result carries a state, and the bridge types allow any of them.
+ * CDK 0.18 only resolves a melt once the mint reports it Paid (it waits out
+ * Pending and throws otherwise), but nothing in the bridge contract promises
+ * that. Treating a resolved melt as a completed payment without checking would
+ * show the user a successful payment, and record one with an empty preimage,
+ * for an invoice nobody has paid.
  */
 export const isMeltPaid = (
     ...candidates: Array<string | undefined | null>
@@ -179,6 +179,23 @@ export const meltOutcome = (
     if (isMeltPaid(...candidates)) return 'paid';
     if (isMeltSettledUnpaid(...candidates)) return 'unpaid';
     return 'inFlight';
+};
+
+/**
+ * Classifies a melt quote as CDK's checkMeltQuote returns it.
+ *
+ * The state alone is not enough. While a melt saga still holds the quote
+ * (the mint is still paying, or could not be asked), CDK returns its local
+ * copy of the quote, which stays Unpaid until the saga finishes. The saga
+ * releases the quote when it finishes either way, so Unpaid only means unpaid
+ * once `used_by_operation` is gone.
+ */
+export const meltQuoteOutcome = (
+    quote?: { state?: string | null; used_by_operation?: string | null } | null
+): MeltOutcome => {
+    const outcome = meltOutcome(quote?.state);
+    if (outcome === 'unpaid' && quote?.used_by_operation) return 'inFlight';
+    return outcome;
 };
 
 /**
