@@ -71,7 +71,16 @@ class Bolt11Utils {
         if (paymentRequest.slice(0, 2).toLowerCase() !== 'ln')
             throw new Error('Not a proper lightning payment request');
 
+        // Check case before the cache, which is keyed on the lowercase form
+        // and would otherwise return a hit for a mixed-case string that bech32
+        // rejects.
         const cacheKey = paymentRequest.toLowerCase();
+        if (
+            paymentRequest !== cacheKey &&
+            paymentRequest !== paymentRequest.toUpperCase()
+        )
+            throw new Error('Mixed-case string');
+
         const cached = this.cache.get(cacheKey);
         if (cached) {
             // Move to MRU position by re-inserting.
@@ -136,16 +145,20 @@ class Bolt11Utils {
         let satoshis: number | null = null;
         let millisatoshis: string | null = null;
         if (amountValue) {
+            // An invalid multiplier or an amount the spec rejects fails the
+            // decode. Treating it as no amount would let the user enter one.
+            millisatoshis = this.hrpToMillisat(amountValue + amountDivisor);
             try {
                 satoshis = this.hrpToSat(amountValue + amountDivisor);
             } catch (e) {
+                // a valid amount that is not a whole number of satoshis
                 satoshis = null;
             }
-            try {
-                millisatoshis = this.hrpToMillisat(amountValue + amountDivisor);
-            } catch (e) {
-                millisatoshis = null;
-            }
+        }
+
+        // 7 words of timestamp plus the 104-word signature
+        if (decoded.words.length < 7 + 104) {
+            throw new Error('Invoice is too short to hold a signature');
         }
 
         sections.push({

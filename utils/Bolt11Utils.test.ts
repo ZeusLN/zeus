@@ -168,10 +168,11 @@ const SPEC_INVALID = {
         'lnbc25m1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5vdhkven9v5sxyetpdeessp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygs9q4psqqqqqqqqqqqqqqqqsgqtqyx5vggfcsll4wu246hz02kp85x4katwsk9639we5n5yngc3yhqkm35jnjw4len8vrnqnf5ejh0mzj9n3vz2px97evektfm2l6wqccp3y7372'
 };
 
-// A bech32 string with the given human-readable part and zeroed data. Enough
-// to reach the prefix and amount checks, which run before any tag parsing.
+// A bech32 string with the given human-readable part and zeroed data: a
+// timestamp and a signature and nothing else, the shortest data part decode()
+// accepts. Enough to reach the prefix and amount checks.
 const withPrefix = (hrp: string) =>
-    bech32.encode(hrp, new Array(110).fill(0), Infinity);
+    bech32.encode(hrp, new Array(7 + 104).fill(0), Infinity);
 
 describe('decode input validation', () => {
     beforeEach(() => {
@@ -234,29 +235,49 @@ describe('decode input validation', () => {
         );
     });
 
-    // Characterising, not endorsing. The cache is keyed on the lowercased
-    // input and checked before bech32 validation, so a mixed-case string
-    // returns the cached result of its lowercase form instead of throwing.
-    it('currently returns a cached result for a mixed-case string', () => {
-        const lower = Bolt11Utils.decode(SPEC_INVALID.mixedCase.toLowerCase());
+    // The cache is keyed on the lowercase form, so the case check has to run
+    // before the cache lookup.
+    it('rejects a mixed-case string whose lowercase form is cached', () => {
+        Bolt11Utils.decode(SPEC_INVALID.mixedCase.toLowerCase());
 
-        expect(Bolt11Utils.decode(SPEC_INVALID.mixedCase)).toBe(lower);
+        expect(() => Bolt11Utils.decode(SPEC_INVALID.mixedCase)).toThrow(
+            'Mixed-case string'
+        );
     });
 
-    // Characterising, not endorsing. decode() catches amount parsing errors
-    // and nulls the amount, so these spec vectors decode as if they carried
-    // no amount. The node still rejects them when paying.
+    // QR codes carry invoices in uppercase
     it.each([
-        ['an invalid multiplier', SPEC_INVALID.invalidMultiplier],
-        ['sub-millisatoshi precision', SPEC_INVALID.subMillisatoshi]
-    ])('currently decodes %s as a no-amount invoice', (_label, invoice) => {
-        const decoded = Bolt11Utils.decode(invoice);
+        ['uncached', false],
+        ['cached', true]
+    ])('decodes an all-uppercase invoice (%s)', (_label, cached) => {
+        if (cached) Bolt11Utils.decode(BOLT11_SPEC_FIXTURE);
 
-        expect(decoded.satoshis).toBeNull();
-        expect(decoded.millisatoshis).toBeNull();
-        expect(decoded.num_satoshis).toBe('0');
-        expect(decoded.num_msat).toBe('0');
-        expect(decoded.payment_hash).toMatch(/^[0-9a-f]{64}$/);
+        const decoded = Bolt11Utils.decode(BOLT11_SPEC_FIXTURE.toUpperCase());
+
+        expect(decoded.satoshis).toBe(250000);
+        expect(decoded.paymentRequest).toBe(BOLT11_SPEC_FIXTURE);
+    });
+
+    // Decoding these as no-amount invoices would let the user type an amount
+    // for an invoice the node will reject.
+    it.each([
+        [
+            'an invalid multiplier',
+            SPEC_INVALID.invalidMultiplier,
+            'Not a valid multiplier for the amount'
+        ],
+        [
+            'sub-millisatoshi precision',
+            SPEC_INVALID.subMillisatoshi,
+            'Amount is outside of valid range'
+        ],
+        [
+            'an amount above 21 million BTC',
+            withPrefix('lnbc21000001'),
+            'Amount is outside of valid range'
+        ]
+    ])('rejects %s', (_label, invoice, message) => {
+        expect(() => Bolt11Utils.decode(invoice)).toThrow(message);
     });
 
     // Characterising, not endorsing. Recovery is lazy and swallows its own
@@ -272,19 +293,18 @@ describe('decode input validation', () => {
         expect(decoded.recoveryFlag).toBeUndefined();
     });
 
-    // Characterising, not endorsing. decode() never checks the length, so a
-    // string too short to hold a signature yields an invoice with no tags.
-    it('currently decodes a string too short to hold a signature', () => {
-        const decoded = Bolt11Utils.decode(SPEC_INVALID.tooShort);
+    it('rejects the spec vector too short to hold a signature', () => {
+        expect(() => Bolt11Utils.decode(SPEC_INVALID.tooShort)).toThrow(
+            'Invoice is too short to hold a signature'
+        );
+    });
 
-        expect(decoded.payment_hash).toBeUndefined();
-        expect(decoded.destination).toBeUndefined();
-        expect(decoded.sections.map((s) => s.name)).toEqual([
-            'lightning_network',
-            'coin_network',
-            'separator',
-            'timestamp'
-        ]);
+    it('rejects a data part one word short of a timestamp and signature', () => {
+        expect(() =>
+            Bolt11Utils.decode(
+                bech32.encode('lnbcrt', new Array(110).fill(0), Infinity)
+            )
+        ).toThrow('Invoice is too short to hold a signature');
     });
 
     // Characterising, not endorsing. decode() does not require the `s`
