@@ -15,6 +15,7 @@ jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
     default: {
         getMyNodeInfo: jest.fn(),
+        getNetworkInfo: jest.fn(),
         supportsOffers: jest.fn(() => false),
         supportsListingOffers: jest.fn(() => false)
     }
@@ -34,6 +35,7 @@ jest.mock('../storage', () => ({
 }));
 
 const getMyNodeInfoMock = BackendUtils.getMyNodeInfo as jest.Mock;
+const getNetworkInfoMock = BackendUtils.getNetworkInfo as jest.Mock;
 
 // Resolves to { settled: true } if the promise settles within `ms`,
 // { settled: false } otherwise. Used to detect orphaned promises
@@ -109,7 +111,7 @@ describe('NodeInfoStore.getNodeInfo', () => {
         const supersededSettled = settlesWithin(superseded, 200);
         const currentSettled = settlesWithin(current, 200);
 
-        rejectBackend(new Error('connection refused'));
+        rejectBackend(new Error('SOCKS: Connection refused'));
         await jest.advanceTimersByTimeAsync(200);
 
         const supersededResult = await supersededSettled;
@@ -118,6 +120,26 @@ describe('NodeInfoStore.getNodeInfo', () => {
         const currentResult = await currentSettled;
         expect(currentResult.settled).toBe(true);
         expect((currentResult as any).error).toBeDefined();
-        expect(store.errorMsg).toBe('Error: connection refused');
+        expect(store.errorMsg).toBe('error.connectionRefused');
+    });
+});
+
+describe('NodeInfoStore.getNetworkInfo', () => {
+    beforeEach(() => {
+        getNetworkInfoMock.mockReset();
+    });
+
+    it('maps the error and resets state when the request fails', async () => {
+        getNetworkInfoMock.mockRejectedValue(
+            new Error('SOCKS: Host unreachable')
+        );
+
+        const store = new NodeInfoStore({} as any, {} as any);
+
+        await expect(store.getNetworkInfo()).resolves.toBeUndefined();
+        expect(store.errorMsg).toBe('error.hostUnreachable');
+        expect(store.error).toBe(true);
+        expect(store.loading).toBe(false);
+        expect(store.networkInfo).toEqual({});
     });
 });
