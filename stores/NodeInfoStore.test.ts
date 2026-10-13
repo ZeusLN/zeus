@@ -135,6 +135,8 @@ describe('NodeInfoStore.getNetworkInfo', () => {
         );
 
         const store = new NodeInfoStore({} as any, {} as any);
+        // Seed stale data so the assertion below proves the reset runs.
+        store.networkInfo = { num_nodes: 1 };
 
         await expect(store.getNetworkInfo()).resolves.toBeUndefined();
         expect(store.errorMsg).toBe('error.hostUnreachable');
