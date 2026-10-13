@@ -622,13 +622,27 @@ export default class LightningNodeConnect {
         // and updates arrive on a channel shared by every concurrent close.
         // CloseStatusUpdate carries no request identifiers, so events cannot
         // be correlated to a specific close; ZEUS only drives one close at a
-        // time from the UI. Resolve on the first terminal update so callers
-        // get the same promise contract as the other backends.
+        // time from the UI. Resolve on close_pending, the first update of a
+        // new close, so callers get the same promise contract as the other
+        // backends. chan_close only arrives once a close has confirmed, so
+        // it belongs to an earlier close and is skipped.
         const streamingCall = this.lnc.lnd.lightning.closeChannel(params);
 
         const { LncModule } = NativeModules;
         const eventEmitter = new NativeEventEmitter(LncModule);
+        const CHANNEL_CLOSE_TIMEOUT_MS = 60000;
         return new Promise((resolve, reject) => {
+            const finish = () => {
+                clearTimeout(timeout);
+                listener.remove();
+            };
+            // Timeout: resolve optimistically. If the peer disconnects during
+            // a cooperative close, LND keeps the stream open without sending
+            // close_pending or an error.
+            const timeout = setTimeout(() => {
+                finish();
+                resolve({});
+            }, CHANNEL_CLOSE_TIMEOUT_MS);
             const listener = eventEmitter.addListener(
                 streamingCall,
                 (event: any) => {
@@ -639,8 +653,9 @@ export default class LightningNodeConnect {
                     } catch (e) {
                         result = event.result;
                     }
-                    listener.remove();
-                    if (result?.chan_close?.success || result?.close_pending) {
+                    if (result?.chan_close) return;
+                    finish();
+                    if (result?.close_pending) {
                         resolve(result);
                     } else {
                         reject(

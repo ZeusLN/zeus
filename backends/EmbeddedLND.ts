@@ -42,6 +42,7 @@ const {
     openChannel,
     openChannelSync,
     decodeOpenStatusUpdate,
+    decodeCloseStatusUpdate,
     updateChannelPolicy
 } = lndMobile.channel;
 const {
@@ -269,6 +270,9 @@ export default class EmbeddedLND extends LND {
             cltv_limit: data.cltv_limit,
             amp: data.amp
         });
+    // The native call returns once the request is handed to LND, before LND
+    // has processed it. The outcome arrives on the CloseChannel stream: an
+    // error, or close_pending once the closing transaction is published.
     closeChannel = async (urlParams?: Array<string>) => {
         const fundingTxId = (urlParams && urlParams[0]) || '';
         const outputIndex =
@@ -281,13 +285,63 @@ export default class EmbeddedLND extends LND {
         const delivery_address =
             urlParams && urlParams[4] ? urlParams[4] : undefined;
 
-        return await closeChannel(
-            fundingTxId,
-            outputIndex,
-            force,
-            sat_per_vbyte,
-            delivery_address
-        );
+        // ChannelsStore stops waiting after 6 s and ignores any later result,
+        // so stop listening then as well. Every close stream reports under
+        // the same CloseChannel event, so a close started later can still
+        // receive this close's late updates: they carry nothing to tell the
+        // requests apart.
+        const CHANNEL_CLOSE_TIMEOUT_MS = 6000;
+        return await new Promise((resolve, reject) => {
+            const finish = () => {
+                clearTimeout(timeout);
+                listener.remove();
+            };
+            // Timeout: resolve optimistically since LND accepted the request
+            const timeout = setTimeout(() => {
+                finish();
+                resolve({});
+            }, CHANNEL_CLOSE_TIMEOUT_MS);
+            const listener = LndMobileEventEmitter.addListener(
+                'CloseChannel',
+                (e: any) => {
+                    try {
+                        const error = checkLndStreamErrorResponse(
+                            'CloseChannel',
+                            e
+                        );
+                        if (error === 'EOF') {
+                            return;
+                        } else if (error) {
+                            finish();
+                            reject(error);
+                            return;
+                        }
+
+                        // chan_close is not a reply to this request: every
+                        // close stream reports under the same event name,
+                        // and a new close always reports close_pending first
+                        const update = decodeCloseStatusUpdate(e.data);
+                        if (update?.close_pending) {
+                            finish();
+                            resolve(update);
+                        }
+                    } catch (error) {
+                        console.error(error);
+                    }
+                }
+            );
+
+            closeChannel(
+                fundingTxId,
+                outputIndex,
+                force,
+                sat_per_vbyte,
+                delivery_address
+            ).catch((error: any) => {
+                finish();
+                reject(error);
+            });
+        });
     };
     abandonChannel = async (
         urlParams?: Array<string | boolean | undefined>

@@ -1078,6 +1078,11 @@ export default class LdkNode {
      * [funding_txid_str, output_index, forceClose, satPerVbyte, deliveryAddress]
      * We look up the channel by funding txid to get the userChannelId
      * and counterpartyNodeId that LDK Node's close API requires.
+     *
+     * LDK Node's close call only starts the close: during a cooperative
+     * close the channel stays listed, no longer ready, until the shutdown
+     * negotiation ends. Resolve on the channelClosed event instead, so
+     * callers that refresh afterwards see the channel as closing.
      */
     closeChannel = async (urlParams?: Array<string>): Promise<any> => {
         const fundingTxid = (urlParams && urlParams[0]) || '';
@@ -1092,17 +1097,50 @@ export default class LdkNode {
             );
         }
 
-        if (forceClose) {
-            await LdkNodeInjection.channel.forceCloseChannel({
-                userChannelId: channel.userChannelId,
-                counterpartyNodeId: channel.counterpartyNodeId
-            });
-        } else {
-            await LdkNodeInjection.channel.closeChannel({
-                userChannelId: channel.userChannelId,
-                counterpartyNodeId: channel.counterpartyNodeId
-            });
+        const CHANNEL_CLOSE_TIMEOUT_MS = 60000;
+        let stopWaiting = () => {};
+        const closed = new Promise<void>((resolve) => {
+            // Timeout: resolve optimistically since the local node
+            // accepted the close request
+            const timeout = setTimeout(
+                () => stopWaiting(),
+                CHANNEL_CLOSE_TIMEOUT_MS
+            );
+            const unsubscribe = this.subscribeToEvents(
+                (event: LdkNodeEvent) => {
+                    if (
+                        event.type === 'channelClosed' &&
+                        event.userChannelId === channel.userChannelId
+                    ) {
+                        stopWaiting();
+                    }
+                }
+            );
+            stopWaiting = () => {
+                clearTimeout(timeout);
+                unsubscribe();
+                resolve();
+            };
+        });
+
+        try {
+            if (forceClose) {
+                await LdkNodeInjection.channel.forceCloseChannel({
+                    userChannelId: channel.userChannelId,
+                    counterpartyNodeId: channel.counterpartyNodeId
+                });
+            } else {
+                await LdkNodeInjection.channel.closeChannel({
+                    userChannelId: channel.userChannelId,
+                    counterpartyNodeId: channel.counterpartyNodeId
+                });
+            }
+        } catch (error) {
+            stopWaiting();
+            throw error;
         }
+
+        await closed;
 
         return { success: true };
     };

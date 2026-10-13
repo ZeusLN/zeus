@@ -727,8 +727,8 @@ export default class ChannelsStore {
         }
 
         if (implementation === 'lightning-node-connect') {
-            // the LNC backend resolves once the close stream reports
-            // close_pending or success, so no forced timeout is needed
+            // the LNC backend settles on close_pending, on an error, or after
+            // its own timeout, so no forced resolution is needed here
             return await BackendUtils.closeChannel(urlParams)
                 .then(() => {
                     this.handleChannelClose();
@@ -779,14 +779,28 @@ export default class ChannelsStore {
         this.closeChannelErr = null;
         this.error = false;
         this.closingChannel = false;
+        this.refreshAfterCloseAttempt();
     };
 
     @action
     public handleChannelCloseError = (error: Error) => {
         this.closeChannelErr = errorToUserFriendly(error);
-        // a failed close request doesn't invalidate the channel list,
-        // so don't call getChannelsError here - it would wipe channels
         this.closingChannel = false;
+        // The node can still close the channel after reporting an error,
+        // e.g. when it negotiates the closing fee with the peer itself.
+        // A failed close request says nothing about the channel list, so
+        // it isn't cleared here. If the node is unreachable, the refresh
+        // fails as well and clears it, like any failed channel fetch
+        this.refreshAfterCloseAttempt();
+    };
+
+    // A close moves the channel from the open to the pending channels and
+    // its funds from the lightning balance to the pending close balance.
+    // Reloading only the channels would show those funds under both until
+    // the next balance refresh.
+    private refreshAfterCloseAttempt = () => {
+        this.getChannels();
+        this.balanceStore.getCombinedBalance();
     };
 
     @action

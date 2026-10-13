@@ -51,7 +51,9 @@ jest.mock('../zeus_modules/@lightninglabs/lnc-rn', () => {
         disposed = false;
         lnd = {
             lightning: {
-                getInfo: jest.fn(() => Promise.reject(new Error('gbn exited')))
+                getInfo: jest.fn(() => Promise.reject(new Error('gbn exited'))),
+                // lnc-rn's subscribe returns the RPC method as event name
+                closeChannel: jest.fn(() => 'lnrpc.Lightning.CloseChannel')
             }
         };
         constructor(config: any) {
@@ -81,6 +83,8 @@ jest.mock('../zeus_modules/@lightninglabs/lnc-rn', () => {
     }
     return { __esModule: true, default: MockLNC };
 });
+
+import { NativeEventEmitter, NativeModules } from 'react-native';
 
 import LightningNodeConnect from './LightningNodeConnect';
 import { settingsStore } from '../stores/Stores';
@@ -338,6 +342,144 @@ describe('LightningNodeConnect', () => {
 
             expect(lnc.lnd.lightning.getInfo).not.toHaveBeenCalled();
             expect(lnc.connect).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('closeChannel', () => {
+        const EVENT = 'lnrpc.Lightning.CloseChannel';
+        let listeners: Array<{
+            name: string;
+            handler: (event: any) => void;
+            removed: boolean;
+        }>;
+
+        // the native module reports every update as a JSON string, and
+        // errors as plain text
+        const emit = (result: string) =>
+            listeners
+                .filter((l) => l.name === EVENT && !l.removed)
+                .forEach((l) => l.handler({ result }));
+        const listening = () =>
+            listeners.some((l) => l.name === EVENT && !l.removed);
+
+        // Tracks the close without awaiting it, so tests can check that it
+        // is still waiting
+        const track = (close: Promise<any>) => {
+            const state: { settled: boolean; error?: any } = {
+                settled: false
+            };
+            close.then(
+                () => (state.settled = true),
+                (error) => {
+                    state.settled = true;
+                    state.error = error;
+                }
+            );
+            return state;
+        };
+        const flush = () => jest.advanceTimersByTimeAsync(0);
+
+        let backend: LightningNodeConnect;
+        let lnc: any;
+
+        beforeEach(async () => {
+            listeners = [];
+            NativeModules.LncModule = {
+                addListener: jest.fn(),
+                removeListeners: jest.fn()
+            };
+            jest.spyOn(
+                NativeEventEmitter.prototype,
+                'addListener'
+            ).mockImplementation((name: string, handler: any) => {
+                const listener = { name, handler, removed: false };
+                listeners.push(listener);
+                return {
+                    remove: () => {
+                        listener.removed = true;
+                    }
+                } as any;
+            });
+            backend = new LightningNodeConnect();
+            lnc = await openWallet(backend, 'phrase-a');
+            jest.useFakeTimers();
+        });
+
+        afterEach(() => {
+            jest.useRealTimers();
+            jest.restoreAllMocks();
+        });
+
+        it('resolves once the stream reports close_pending', async () => {
+            const close = track(backend.closeChannel(['txid', '1', '']));
+
+            emit(JSON.stringify({ close_pending: { txid: 'closing-txid' } }));
+            await flush();
+
+            expect(close.settled).toBe(true);
+            expect(close.error).toBeUndefined();
+            expect(listening()).toBe(false);
+        });
+
+        it('rejects with the error text the stream reports', async () => {
+            const close = track(backend.closeChannel(['txid', '1', '']));
+
+            emit(
+                'rpc error: code = Unknown desc = unable to gracefully close channel while peer is offline'
+            );
+            await flush();
+
+            expect(close.error?.message).toContain(
+                'unable to gracefully close channel while peer is offline'
+            );
+            expect(listening()).toBe(false);
+        });
+
+        it('keeps waiting on EOF and on chan_close from an earlier close', async () => {
+            const close = track(backend.closeChannel(['txid', '1', '']));
+
+            emit('EOF');
+            emit(
+                JSON.stringify({
+                    chan_close: { closing_txid: 'earlier-close', success: true }
+                })
+            );
+            await flush();
+
+            expect(close.settled).toBe(false);
+            expect(listening()).toBe(true);
+        });
+
+        it('resolves after a minute without a reply', async () => {
+            const close = track(backend.closeChannel(['txid', '1', '']));
+
+            await jest.advanceTimersByTimeAsync(59_999);
+            expect(close.settled).toBe(false);
+
+            await jest.advanceTimersByTimeAsync(1);
+            expect(close.settled).toBe(true);
+            expect(close.error).toBeUndefined();
+            expect(listening()).toBe(false);
+        });
+
+        it('passes the fee rate and delivery address for a cooperative close', async () => {
+            track(backend.closeChannel(['txid', '1', '', '10', 'bcrt1qdest']));
+
+            expect(lnc.lnd.lightning.closeChannel).toHaveBeenCalledWith({
+                channel_point: { funding_txid_str: 'txid', output_index: 1 },
+                force: '',
+                sat_per_vbyte: 10,
+                delivery_address: 'bcrt1qdest'
+            });
+        });
+
+        it('drops the fee rate for a force close', async () => {
+            track(backend.closeChannel(['txid', '1', 'true', '10']));
+
+            expect(lnc.lnd.lightning.closeChannel).toHaveBeenCalledWith({
+                channel_point: { funding_txid_str: 'txid', output_index: 1 },
+                force: 'true'
+            });
         });
     });
 });

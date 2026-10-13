@@ -56,6 +56,7 @@ import {
     decodeChannelAcceptRequest,
     decodeChannelEvent,
     decodeOpenStatusUpdate,
+    decodeCloseStatusUpdate,
     exportAllChannelBackups,
     restoreChannelBackups,
     abandonChannel,
@@ -347,6 +348,7 @@ export interface ILndMobileInjections {
         subscribeChannelEvents: () => Promise<string>;
         decodeChannelEvent: (data: string) => lnrpc.ChannelEventUpdate;
         decodeOpenStatusUpdate: (data: string) => lnrpc.OpenStatusUpdate;
+        decodeCloseStatusUpdate: (data: string) => lnrpc.CloseStatusUpdate;
         exportAllChannelBackups: () => Promise<lnrpc.ChanBackupSnapshot>;
         restoreChannelBackups: (
             data: Uint8Array
@@ -700,6 +702,7 @@ export default {
         subscribeChannelEvents,
         decodeChannelEvent,
         decodeOpenStatusUpdate,
+        decodeCloseStatusUpdate,
         exportAllChannelBackups,
         restoreChannelBackups,
         abandonChannel,

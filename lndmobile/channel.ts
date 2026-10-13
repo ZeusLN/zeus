@@ -532,3 +532,12 @@ export const decodeOpenStatusUpdate = (
         base64Result: data
     });
 };
+
+export const decodeCloseStatusUpdate = (
+    data: string
+): lnrpc.CloseStatusUpdate => {
+    return decodeStreamResult<lnrpc.CloseStatusUpdate>({
+        response: lnrpc.CloseStatusUpdate,
+        base64Result: data
+    });
+};
