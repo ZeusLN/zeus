@@ -14,30 +14,62 @@ jest.mock('../utils/handleAnything', () => ({
     default: jest.fn(),
     isClipboardValue: jest.fn()
 }));
-jest.mock('../utils/BackendUtils', () => ({}));
+jest.mock('../utils/BackendUtils', () => ({
+    supportsLightningAddress: () => false,
+    supportsLightningSends: () => true
+}));
 jest.mock('../utils/PhotoUtils', () => ({ getPhoto: jest.fn() }));
 jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/NavigationUtils', () => ({
     protectedNavigation: jest.fn()
 }));
-jest.mock('../utils/PrivacyUtils', () => ({}));
+jest.mock('../utils/PrivacyUtils', () => ({
+    sensitiveValue: ({ input }: any) => input
+}));
 jest.mock('../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
 }));
 jest.mock('../stores/ChannelsStore', () => ({ ChannelsView: {} }));
 jest.mock('../stores/SettingsStore', () => ({ PosEnabled: {} }));
-jest.mock('./Header', () => 'Header');
+// Renders the side slots, where the clipboard badge lives
+jest.mock('./Header', () => {
+    const { View } = require('react-native');
+    return ({ leftComponent, centerComponent, rightComponent }: any) => (
+        <View>
+            {leftComponent}
+            {centerComponent}
+            {rightComponent}
+        </View>
+    );
+});
+// SVGs are not transformed under jest, so each renders as a named host
+jest.mock('../assets/images/SVG/Clipboard.svg', () => 'ClipboardIcon');
+jest.mock('../assets/images/SVG/Add.svg', () => 'AddIcon');
+jest.mock('../assets/images/SVG/Alert.svg', () => 'AlertIcon');
+jest.mock('../assets/images/SVG/Caret Up.svg', () => 'CaretUpIcon');
+jest.mock('../assets/images/SVG/nwc-logo.svg', () => 'NWCLogoIcon');
+jest.mock('../assets/images/SVG/Ecash.svg', () => 'EcashIcon');
+jest.mock('../assets/images/SVG/Menu.svg', () => 'MenuIcon');
+jest.mock('../assets/images/SVG/Hourglass.svg', () => 'HourglassIcon');
+jest.mock('../assets/images/SVG/POS.svg', () => 'POSIcon');
+jest.mock('../assets/images/SVG/Search.svg', () => 'SearchIcon');
+jest.mock('../assets/images/SVG/Temple.svg', () => 'TempleIcon');
+jest.mock('../assets/images/SVG/Sync.svg', () => 'SyncIcon');
+jest.mock('../assets/images/SVG/zeus-pay.svg', () => 'ZeusPaySVGIcon');
 jest.mock('../components/LoadingIndicator', () => 'LoadingIndicator');
 jest.mock('../components/NodeIdenticon', () => 'NodeIdenticon');
 jest.mock('./ToggleButton', () => 'ToggleButton');
 
+import * as React from 'react';
+import { AppState } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import WalletHeader from './WalletHeader';
-import { isClipboardValue } from '../utils/handleAnything';
+import handleAnything, { isClipboardValue } from '../utils/handleAnything';
 
 const INVOICE = 'lnbcrt1pexample';
 
-const makeHeader = ({
+const renderHeader = async ({
     clipboard,
     connecting,
     settingsLoaded = true
@@ -46,23 +78,43 @@ const makeHeader = ({
     connecting?: boolean;
     settingsLoaded?: boolean;
 }) => {
-    const header = new WalletHeader({
-        navigation: { addListener: jest.fn() },
-        connecting,
-        SettingsStore: {
-            settings: { privacy: { clipboard } },
-            settingsLoaded
-        }
-    } as any);
-    // setState on a class that was never mounted does nothing, so apply it
-    // directly
-    jest.spyOn(header, 'setState').mockImplementation((update: any) => {
-        header.state = { ...header.state, ...update };
-    });
-    return header;
+    const listeners: { [event: string]: () => void } = {};
+    const navigation = {
+        addListener: jest.fn((event: string, listener: () => void) => {
+            listeners[event] = listener;
+            return jest.fn();
+        }),
+        navigate: jest.fn()
+    };
+    const result = await render(
+        <WalletHeader
+            {...({
+                navigation,
+                connecting,
+                SettingsStore: {
+                    settings: { privacy: { clipboard } },
+                    settingsLoaded
+                },
+                CashuStore: { sentTokens: [] },
+                ChannelsStore: { pendingHTLCs: [] },
+                NostrWalletConnectStore: { loading: false },
+                LightningAddressStore: { paid: [] },
+                SyncStore: { isSyncing: false },
+                PosStore: { getOrders: jest.fn() },
+                NodeInfoStore: { nodeInfo: {} },
+                ModalStore: {},
+                AlertStore: {},
+                ConnectivityStore: { isOffline: false }
+            } as any)}
+        />
+    );
+    return { navigation, listeners, ...result };
 };
 
-describe('WalletHeader.readClipboard', () => {
+const clipboardBadge = () =>
+    screen.container.queryAll((n) => n.type === 'ClipboardIcon')[0];
+
+describe('WalletHeader clipboard badge', () => {
     beforeEach(() => {
         jest.clearAllMocks();
         (Clipboard.getString as jest.Mock).mockResolvedValue(INVOICE);
@@ -72,50 +124,82 @@ describe('WalletHeader.readClipboard', () => {
     it('does not read the clipboard while connecting', async () => {
         // on cold start the connecting header mounts while settings still
         // hold the in-memory defaults (clipboard: true)
-        const header = makeHeader({ clipboard: true, connecting: true });
-
-        await header.readClipboard();
+        await renderHeader({ clipboard: true, connecting: true });
 
         expect(Clipboard.getString).not.toHaveBeenCalled();
-        expect(header.state.clipboard).toBe('');
+        expect(clipboardBadge()).toBeUndefined();
     });
 
     it('does not read the clipboard before settings load', async () => {
         // getSettings failed: the wallet opens (connecting false) with the
         // in-memory defaults, which say clipboard: true
-        const header = makeHeader({ clipboard: true, settingsLoaded: false });
-
-        await header.readClipboard();
+        await renderHeader({ clipboard: true, settingsLoaded: false });
 
         expect(Clipboard.getString).not.toHaveBeenCalled();
-        expect(header.state.clipboard).toBe('');
+        expect(clipboardBadge()).toBeUndefined();
     });
 
-    it('reads the clipboard once connected with clipboard reading on', async () => {
-        const header = makeHeader({ clipboard: true });
-
-        await header.readClipboard();
+    it('reads the clipboard on mount once connected with clipboard reading on', async () => {
+        await renderHeader({ clipboard: true });
 
         expect(Clipboard.getString).toHaveBeenCalledTimes(1);
-        expect(header.state.clipboard).toBe(INVOICE);
+        expect(clipboardBadge()).toBeDefined();
     });
 
     it('does not read the clipboard with clipboard reading off', async () => {
-        const header = makeHeader({ clipboard: false });
-
-        await header.readClipboard();
+        await renderHeader({ clipboard: false });
 
         expect(Clipboard.getString).not.toHaveBeenCalled();
-        expect(header.state.clipboard).toBe('');
+        expect(clipboardBadge()).toBeUndefined();
     });
 
     it('ignores clipboard text that is not a payable value', async () => {
         (isClipboardValue as jest.Mock).mockResolvedValue(false);
-        const header = makeHeader({ clipboard: true });
-
-        await header.readClipboard();
+        await renderHeader({ clipboard: true });
 
         expect(Clipboard.getString).toHaveBeenCalledTimes(1);
-        expect(header.state.clipboard).toBe('');
+        expect(clipboardBadge()).toBeUndefined();
+    });
+
+    it('opens the copied value when the badge is pressed', async () => {
+        (handleAnything as unknown as jest.Mock).mockResolvedValue([
+            'PaymentRequest',
+            { invoice: INVOICE }
+        ]);
+        const { navigation } = await renderHeader({ clipboard: true });
+
+        await fireEvent.press(clipboardBadge());
+
+        expect(handleAnything).toHaveBeenCalledWith(INVOICE);
+        expect(navigation.navigate).toHaveBeenCalledWith('PaymentRequest', {
+            invoice: INVOICE
+        });
+    });
+
+    it('reads the clipboard again when the screen regains focus', async () => {
+        (Clipboard.getString as jest.Mock).mockResolvedValueOnce('');
+        const { listeners } = await renderHeader({ clipboard: true });
+        expect(clipboardBadge()).toBeUndefined();
+
+        await act(async () => listeners.focus());
+
+        expect(Clipboard.getString).toHaveBeenCalledTimes(2);
+        expect(clipboardBadge()).toBeDefined();
+    });
+
+    it('reads the clipboard again when the app comes back to the foreground', async () => {
+        let onChange!: (state: string) => void;
+        jest.spyOn(AppState, 'addEventListener').mockImplementation(
+            (_event: any, listener: any) => {
+                onChange = listener;
+                return { remove: jest.fn() } as any;
+            }
+        );
+        await renderHeader({ clipboard: true });
+
+        await act(async () => onChange('background'));
+        expect(Clipboard.getString).toHaveBeenCalledTimes(1);
+        await act(async () => onChange('active'));
+        expect(Clipboard.getString).toHaveBeenCalledTimes(2);
     });
 });

@@ -27,17 +27,41 @@ jest.mock('../../stores/SyncStore', () => ({}));
 jest.mock('./SwipeableRowAction', () => 'SwipeableRowAction');
 jest.mock('./SwipeableRowContainer', () => 'SwipeableRowContainer');
 
+import * as React from 'react';
+import { Text } from 'react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { settingsStore } from '../../stores/Stores';
 import LightningSwipeableRow from './LightningSwipeableRow';
 
-const mockSettingsStore = settingsStore as { enableTor?: boolean };
+const mockSettingsStore = settingsStore as {
+    enableTor?: boolean;
+    settings?: any;
+};
 
 const ONION = 'zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion';
 
-describe('LightningSwipeableRow Lightning Address lookup', () => {
-    let navigation: { navigate: jest.Mock };
-    let row: any;
+// A locked row pays its destination when tapped
+const tapRow = async (lightningAddress: string) => {
+    const navigation = { navigate: jest.fn() };
+    await render(
+        <LightningSwipeableRow
+            {...({
+                lightningAddress,
+                locked: true,
+                navigation,
+                SyncStore: { isSyncing: false }
+            } as any)}
+        >
+            <Text>Pay</Text>
+        </LightningSwipeableRow>
+    );
+    await fireEvent.press(screen.getByText('Pay'));
+    // the lookup is started but not awaited by the press handler
+    await new Promise(setImmediate);
+    return navigation;
+};
 
+describe('LightningSwipeableRow Lightning Address lookup', () => {
     beforeEach(() => {
         mockBlobUtilFetch.mockReset();
         mockBlobUtilFetch.mockResolvedValue({
@@ -49,12 +73,11 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
             callback: `http://${ONION}/callback`
         });
         mockSettingsStore.enableTor = false;
-        navigation = { navigate: jest.fn() };
-        row = new LightningSwipeableRow({} as any);
+        mockSettingsStore.settings = {};
     });
 
     it('lowercases an uppercase domain and username', async () => {
-        await row.handleLightningAddress('SATOSHI@BLINK.SV', navigation, {});
+        const navigation = await tapRow('SATOSHI@BLINK.SV');
 
         expect(mockBlobUtilFetch).toHaveBeenCalledWith(
             'get',
@@ -69,11 +92,7 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
     it('keeps the username casing for cryptoqr.net', async () => {
         const username = 'https%3A%2F%2Fpay.cryptoqr.net%2F3458967';
 
-        await row.handleLightningAddress(
-            `${username}@cryptoqr.net`,
-            navigation,
-            {}
-        );
+        await tapRow(`${username}@cryptoqr.net`);
 
         expect(mockBlobUtilFetch).toHaveBeenCalledWith(
             'get',
@@ -84,11 +103,7 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
     it('routes an uppercase .onion address through Tor', async () => {
         mockSettingsStore.enableTor = true;
 
-        await row.handleLightningAddress(
-            `SATOSHI@${ONION.toUpperCase()}`,
-            navigation,
-            {}
-        );
+        const navigation = await tapRow(`SATOSHI@${ONION.toUpperCase()}`);
 
         expect(mockDoTorRequest).toHaveBeenCalledWith(
             `http://${ONION}/.well-known/lnurlp/satoshi`,
@@ -101,14 +116,20 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
         );
     });
 
+    it('does not use Tor for an .onion address while Tor is off', async () => {
+        await tapRow(`satoshi@${ONION}`);
+
+        expect(mockDoTorRequest).not.toHaveBeenCalled();
+        expect(mockBlobUtilFetch).toHaveBeenCalledWith(
+            'get',
+            `http://${ONION}/.well-known/lnurlp/satoshi`
+        );
+    });
+
     it('fetches a clearnet domain with an .onion label over https', async () => {
         mockSettingsStore.enableTor = true;
 
-        await row.handleLightningAddress(
-            'satoshi@pay.onion.example.com',
-            navigation,
-            {}
-        );
+        await tapRow('satoshi@pay.onion.example.com');
 
         expect(mockDoTorRequest).not.toHaveBeenCalled();
         expect(mockBlobUtilFetch).toHaveBeenCalledWith(
@@ -117,15 +138,9 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
         );
     });
 
-    it('rejects a response without a callback', async () => {
-        mockBlobUtilFetch.mockResolvedValue({
-            info: () => ({ status: 200 }),
-            json: () => ({})
-        });
-
-        await expect(
-            row.handleLightningAddress('satoshi@domain.com', navigation, {})
-        ).rejects.toThrow('utils.handleAnything.lightningAddressError');
-        expect(navigation.navigate).not.toHaveBeenCalled();
-    });
+    // fetchLnInvoice neither awaits nor catches the lookup, so a server
+    // without a callback ends up as an unhandled rejection and the user sees
+    // nothing. Jest fails a test on an unhandled rejection, so this cannot be
+    // pinned through the row until the error is handled (#5060).
+    it.todo('tells the user when the Lightning address lookup fails');
 });
