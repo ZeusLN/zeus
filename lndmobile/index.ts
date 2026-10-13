@@ -5,6 +5,7 @@ import Long from 'long';
 
 import Base64Utils from '../utils/Base64Utils';
 import { localeString } from '../utils/LocaleUtils';
+import { LndInvoiceListParams, LndPaymentListParams } from '../utils/LndUtils';
 import {
     checkLndStreamErrorResponse,
     LndMobileEventEmitter
@@ -625,10 +626,9 @@ export const listPeers = async (): Promise<lnrpc.ListPeersResponse> => {
 /**
  * @throws
  */
-export const listPayments = async (params?: {
-    maxPayments?: number;
-    reversed?: boolean;
-}): Promise<lnrpc.ListPaymentsResponse> => {
+export const listPayments = async (
+    params?: LndPaymentListParams
+): Promise<lnrpc.ListPaymentsResponse> => {
     const response = await sendCommand<
         lnrpc.IListPaymentsRequest,
         lnrpc.ListPaymentsRequest,
@@ -640,7 +640,13 @@ export const listPayments = async (params?: {
         options: {
             include_incomplete: true,
             max_payments: Long.fromValue(params?.maxPayments ?? 1000),
-            ...(params?.reversed && { reversed: params.reversed })
+            ...(params?.reversed && { reversed: params.reversed }),
+            ...(params?.creationDateStart !== undefined && {
+                creation_date_start: Long.fromValue(params.creationDateStart)
+            }),
+            ...(params?.creationDateEnd !== undefined && {
+                creation_date_end: Long.fromValue(params.creationDateEnd)
+            })
         }
     });
     return response;
@@ -786,7 +792,9 @@ export const getNetworkInfo = async (): Promise<lnrpc.NetworkInfo> => {
 /**
  * @throws
  */
-export const listInvoices = async (): Promise<lnrpc.ListInvoiceResponse> => {
+export const listInvoices = async (
+    params?: LndInvoiceListParams
+): Promise<lnrpc.ListInvoiceResponse> => {
     const response = await sendCommand<
         lnrpc.IListInvoiceRequest,
         lnrpc.ListInvoiceRequest,
@@ -796,8 +804,14 @@ export const listInvoices = async (): Promise<lnrpc.ListInvoiceResponse> => {
         response: lnrpc.ListInvoiceResponse,
         method: 'ListInvoices',
         options: {
-            reversed: true,
-            num_max_invoices: Long.fromValue(1000)
+            reversed: params?.reversed ?? true,
+            num_max_invoices: Long.fromValue(params?.limit ?? 1000),
+            ...(params?.creationDateStart !== undefined && {
+                creation_date_start: Long.fromValue(params.creationDateStart)
+            }),
+            ...(params?.creationDateEnd !== undefined && {
+                creation_date_end: Long.fromValue(params.creationDateEnd)
+            })
         }
     });
     return response;

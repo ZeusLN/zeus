@@ -12,7 +12,10 @@ import ChannelInfo from '../models/ChannelInfo';
 import SettingsStore from './SettingsStore';
 import LSPStore from './LSPStore';
 import BackendUtils from '../utils/BackendUtils';
-import { toWalletrpcAddressTypeName } from '../utils/LndUtils';
+import {
+    LndInvoiceListParams,
+    toWalletrpcAddressTypeName
+} from '../utils/LndUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import LdkNodeInjection from '../ldknode/LdkNodeInjection';
@@ -114,21 +117,32 @@ export default class InvoicesStore {
     };
 
     @action
-    public getInvoices = async () => {
+    public getInvoices = async (params?: LndInvoiceListParams) => {
         this.loading = true;
-        await BackendUtils.getInvoices()
-            .then((data: any) => {
-                runInAction(() => {
-                    this.invoices = data.invoices
-                        .map((invoice: any) => new Invoice(invoice))
-                        .slice()
-                        .reverse();
-                    this.invoicesCount =
-                        data.last_index_offset || this.invoices.length;
-                    this.loading = false;
-                });
-            })
-            .catch(() => this.resetInvoices());
+        try {
+            const { invoices, count } = await this.fetchInvoices(params);
+            runInAction(() => {
+                this.invoices = invoices;
+                this.invoicesCount = count;
+                this.loading = false;
+            });
+            return this.invoices;
+        } catch {
+            this.resetInvoices();
+        }
+    };
+
+    public fetchInvoices = async (params?: LndInvoiceListParams) => {
+        const data = await BackendUtils.getInvoices(params);
+        const invoices = data.invoices
+            .map((invoice: any) => new Invoice(invoice))
+            .slice()
+            .reverse();
+
+        return {
+            invoices,
+            count: data.last_index_offset || invoices.length
+        };
     };
 
     @action
