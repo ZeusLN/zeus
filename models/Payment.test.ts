@@ -324,6 +324,35 @@ describe('Payment status from backends without htlcs', () => {
         expect(payment.isFailed).toBe(false);
     });
 
+    it('flags an LND payment with no htlcs yet as in transit', () => {
+        const payment = new Payment({
+            payment_hash: 'abc123',
+            status: 'IN_FLIGHT',
+            value_sat: 50000,
+            failure_reason: 'FAILURE_REASON_NONE',
+            htlcs: []
+        });
+
+        expect(payment.isInTransit).toBe(true);
+        expect(payment.isFailed).toBe(false);
+        expect(payment.getAmount).toBe(50000);
+    });
+
+    it('leaves an LND payment between retries to its htlcs', () => {
+        // status stays IN_FLIGHT while lnd retries after every attempt failed
+        const payment = new Payment({
+            payment_hash: 'abc123',
+            status: 'IN_FLIGHT',
+            value_sat: 50000,
+            failure_reason: 'FAILURE_REASON_NONE',
+            htlcs: [{ status: 'FAILED', route: { total_amt: 50000 } }]
+        });
+
+        expect(payment.isInTransit).toBe(false);
+        expect(payment.isFailed).toBe(true);
+        expect(payment.getAmount).toBe(0);
+    });
+
     it('does not flag a settled LND payment', () => {
         const payment = new Payment({
             payment_hash: 'abc123',

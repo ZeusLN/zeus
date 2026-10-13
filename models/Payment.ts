@@ -180,11 +180,14 @@ export default class Payment extends BaseModel {
     @computed public get isInTransit(): boolean {
         if (!this.isIncomplete) return false;
         // CLN ('pending'), LDK Node ('IN_FLIGHT') and NWC (state) report
-        // in-flight payments by status only, without htlcs
+        // in-flight payments by status only, without htlcs. LND keeps
+        // status IN_FLIGHT between retries, so payments with htlcs are
+        // judged by their htlcs below.
         if (
-            this.status === 'pending' ||
-            this.status === 'IN_FLIGHT' ||
-            this.state === 'pending'
+            !this.htlcs?.length &&
+            (this.status === 'pending' ||
+                this.status === 'IN_FLIGHT' ||
+                this.state === 'pending')
         )
             return true;
         if (!this.htlcs) return false;
