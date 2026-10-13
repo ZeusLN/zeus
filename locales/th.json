@@ -1769,6 +1769,7 @@
     "utils.handleAnything.lightningAddressError": "เกิดข้อผิดพลาดในการโหลดที่อยู่ lightning",
     "utils.handleAnything.notValid": "ข้อมูลดังกล่าวไม่ใช่ที่อยู่ Bitcoin หรือใบแจ้งหนี้ Lightning",
     "utils.handleAnything.lnurlAuthNotSupported": "โหนดของคุณไม่รองรับ LnurlAuth",
+    "utils.handleAnything.channelsNotSupported": "Opening channels is not supported by this wallet",
     "utils.handleAnything.unsupportedLnurlType": "ไม่รองรับ lnurl นี้",
     "utils.handleAnything.invalidLnurlParams": "ไม่สามารถอ่านข้อมูลของ lnurl ได้",
     "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",
