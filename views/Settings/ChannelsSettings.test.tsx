@@ -4,126 +4,133 @@ jest.mock('mobx-react', () => ({
 }));
 jest.mock('../../stores/SettingsStore', () => ({}));
 jest.mock('../../utils/BackendUtils', () => ({
-    isLNDBased: () => false,
-    supportsSimpleTaprootChannels: () => false,
+    isLNDBased: jest.fn(() => true),
+    supportsSimpleTaprootChannels: jest.fn(() => true),
     supportsChannelOpenMinConfs: jest.fn(() => true)
 }));
 jest.mock('../../utils/LocaleUtils');
 jest.mock('../../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
 }));
-jest.mock('../../components/Header', () => 'Header');
-jest.mock('../../components/Screen', () => 'Screen');
-jest.mock('../../components/Switch', () => 'Switch');
-jest.mock('../../components/Text', () => 'Text');
-jest.mock('../../components/TextInput', () => 'TextInput');
+jest.mock('../../components/Header', () => () => null);
+jest.mock('../../components/Screen', () => {
+    const { View } = require('react-native');
+    return ({ children }: any) => <View>{children}</View>;
+});
+jest.mock('../../components/Text', () => {
+    const { Text } = require('react-native');
+    return ({ children }: any) => <Text>{children}</Text>;
+});
+jest.mock('../../components/TextInput', () => {
+    const { TextInput } = require('react-native');
+    return (props: any) => <TextInput {...props} />;
+});
 
 import * as React from 'react';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import ChannelsSettings from './ChannelsSettings';
 import BackendUtils from '../../utils/BackendUtils';
 
-const childrenOf = (element: any): any[] =>
-    React.Children.toArray(element?.props?.children);
+const supportsMinConfs = BackendUtils.supportsChannelOpenMinConfs as jest.Mock;
 
-// first element in the tree, depth first, that matches
-const findElement = (node: any, match: (element: any) => boolean): any => {
-    if (!React.isValidElement(node)) return undefined;
-    if (match(node)) return node;
-    for (const child of childrenOf(node)) {
-        const found = findElement(child, match);
-        if (found) return found;
-    }
-    return undefined;
-};
-
-const makeView = (supportsMinConfs: boolean, settings: any = {}) => {
-    (BackendUtils.supportsChannelOpenMinConfs as jest.Mock).mockReturnValue(
-        supportsMinConfs
-    );
+// getSettings resolves to `reloaded`, or never when it is left out, so a
+// test can look at the first render before settings reload
+const renderView = async (settings: any = {}, reloaded?: any) => {
     const updateSettings = jest.fn();
-    const view = new ChannelsSettings({
-        navigation: {},
-        SettingsStore: {
-            settings,
-            getSettings: jest.fn(async () => settings),
-            updateSettings,
-            // same merge as SettingsStore.updateSettingsGroup, recorded
-            // as the functional update it hands to updateSettings
-            updateSettingsGroup: jest.fn((group: string, patch: any) =>
-                updateSettings((current: any) => ({
-                    [group]: {
-                        ...current?.[group],
-                        ...(typeof patch === 'function'
-                            ? patch(current?.[group])
-                            : patch)
-                    }
-                }))
-            )
-        }
-    } as unknown as React.ComponentProps<typeof ChannelsSettings>);
-    // setState on a class that was never mounted does nothing, so apply it
-    // directly
-    jest.spyOn(view, 'setState').mockImplementation((update: any) => {
-        view.state = { ...view.state, ...update };
-    });
-    return view;
+    const SettingsStore = {
+        settings,
+        getSettings: jest.fn(() =>
+            reloaded === undefined
+                ? new Promise(() => {})
+                : Promise.resolve(reloaded)
+        ),
+        updateSettings,
+        // same merge as SettingsStore.updateSettingsGroup, recorded as the
+        // functional update it hands to updateSettings
+        updateSettingsGroup: jest.fn((group: string, patch: any) =>
+            updateSettings((current: any) => ({
+                [group]: {
+                    ...current?.[group],
+                    ...(typeof patch === 'function'
+                        ? patch(current?.[group])
+                        : patch)
+                }
+            }))
+        )
+    };
+    await render(
+        <ChannelsSettings
+            navigation={{} as any}
+            SettingsStore={SettingsStore as any}
+        />
+    );
+    return updateSettings;
 };
 
-const updateSettingsOf = (view: ChannelsSettings) =>
-    view.props.SettingsStore.updateSettings as jest.Mock;
-
-// the settings the last updateSettings call would write, given the
-// settings current when the store applies it
-const lastUpdateAgainst = (view: ChannelsSettings, current: any) => {
-    const calls = updateSettingsOf(view).mock.calls;
+// the settings the last updateSettings call would write, given the settings
+// current when the store applies it
+const lastUpdateAgainst = (updateSettings: jest.Mock, current: any) => {
+    const calls = updateSettings.mock.calls;
     const update = calls[calls.length - 1][0];
     return typeof update === 'function' ? update(current) : update;
 };
 
-const findAnnounceSwitch = (view: ChannelsSettings) =>
-    findElement(view.render(), (element) => element.type === 'Switch');
+const minConfsInput = () => screen.getByPlaceholderText('1');
 
-const findMinConfsInput = (view: ChannelsSettings) =>
-    findElement(
-        view.render(),
-        (element) =>
-            element.type === 'TextInput' && element.props.placeholder === '1'
-    );
+// With every row shown, the switches appear in this order
+const switches = () => {
+    for (const label of [
+        'views.OpenChannel.announceChannel',
+        'views.OpenChannel.scidAlias',
+        'views.OpenChannel.simpleTaprootChannel'
+    ]) {
+        expect(screen.getByText(label)).toBeOnTheScreen();
+    }
+    const [announce, scidAlias, taproot] = screen.getAllByRole('switch');
+    return { announce, scidAlias, taproot };
+};
+
+const flip = (sw: any, value: boolean) =>
+    fireEvent(sw, 'change', { nativeEvent: { value } });
+
+beforeEach(() => {
+    supportsMinConfs.mockReturnValue(true);
+});
 
 describe('ChannelsSettings min confs field', () => {
-    it('is shown when the backend uses min confs', () => {
-        expect(findMinConfsInput(makeView(true))).toBeDefined();
+    it('is shown when the backend uses min confs', async () => {
+        await renderView();
+        expect(minConfsInput()).toBeOnTheScreen();
     });
 
-    it('is hidden when the backend ignores min confs', () => {
-        expect(findMinConfsInput(makeView(false))).toBeUndefined();
+    it('is hidden when the backend ignores min confs', async () => {
+        supportsMinConfs.mockReturnValue(false);
+        await renderView();
+        expect(screen.queryByPlaceholderText('1')).not.toBeOnTheScreen();
     });
 });
 
-describe('ChannelsSettings min confs default', () => {
+describe('ChannelsSettings after settings reload', () => {
     it.each([
         [0, '0'],
         [3, '3'],
         [undefined, '1']
     ])('a saved min confs of %s shows %s', async (saved, shown) => {
-        const view = makeView(true, { channels: { min_confs: saved } });
-        await view.componentDidMount();
+        const settings = { channels: { min_confs: saved } };
+        await renderView({}, settings);
 
-        expect(findMinConfsInput(view).props.value).toBe(shown);
+        expect(minConfsInput()).toHaveDisplayValue(shown);
     });
-});
 
-describe('ChannelsSettings toggle defaults', () => {
     it('uses the default for each toggle missing from saved settings', async () => {
-        const view = makeView(true, { channels: { min_confs: 3 } });
-        await view.componentDidMount();
+        await renderView({}, { channels: { min_confs: 3 } });
 
-        expect(view.state).toEqual({
-            min_confs: 3,
-            privateChannel: true,
-            scidAlias: true,
-            simpleTaprootChannel: false
-        });
+        const { announce, scidAlias, taproot } = switches();
+        expect(minConfsInput()).toHaveDisplayValue('3');
+        // private by default, so announce is off
+        expect(announce).not.toBeChecked();
+        expect(scidAlias).toBeChecked();
+        expect(taproot).not.toBeChecked();
     });
 });
 
@@ -134,15 +141,15 @@ describe('ChannelsSettings first render', () => {
         [undefined, '1']
     ])(
         'a saved min confs of %s shows %s before settings reload',
-        (saved, shown) => {
-            const view = makeView(true, { channels: { min_confs: saved } });
+        async (saved, shown) => {
+            await renderView({ channels: { min_confs: saved } });
 
-            expect(findMinConfsInput(view).props.value).toBe(shown);
+            expect(minConfsInput()).toHaveDisplayValue(shown);
         }
     );
 
-    it('shows the saved toggles before settings reload', () => {
-        const view = makeView(true, {
+    it('shows the saved toggles before settings reload', async () => {
+        await renderView({
             channels: {
                 privateChannel: false,
                 scidAlias: false,
@@ -150,85 +157,116 @@ describe('ChannelsSettings first render', () => {
             }
         });
 
-        expect(view.state).toEqual({
-            min_confs: 1,
-            privateChannel: false,
-            scidAlias: false,
-            simpleTaprootChannel: true
-        });
+        const { announce, scidAlias, taproot } = switches();
+        expect(minConfsInput()).toHaveDisplayValue('1');
+        expect(announce).toBeChecked();
+        expect(scidAlias).not.toBeChecked();
+        expect(taproot).toBeChecked();
     });
 
-    it('uses the default for each toggle missing from saved settings', () => {
-        expect(makeView(true, { channels: { min_confs: 3 } }).state).toEqual({
-            min_confs: 3,
-            privateChannel: true,
-            scidAlias: true,
-            simpleTaprootChannel: false
-        });
-    });
+    it('uses the defaults when no channel settings are saved', async () => {
+        await renderView();
 
-    it('uses the defaults when no channel settings are saved', () => {
-        expect(makeView(true).state).toEqual({
-            min_confs: 1,
-            privateChannel: true,
-            scidAlias: true,
-            simpleTaprootChannel: false
-        });
+        const { announce, scidAlias, taproot } = switches();
+        expect(minConfsInput()).toHaveDisplayValue('1');
+        expect(announce).not.toBeChecked();
+        expect(scidAlias).toBeChecked();
+        expect(taproot).not.toBeChecked();
     });
 });
 
 describe('ChannelsSettings min confs input', () => {
     it('saves a typed 0', async () => {
-        const view = makeView(true, { channels: { min_confs: 1 } });
-        await findMinConfsInput(view).props.onChangeText('0');
+        const updateSettings = await renderView({
+            channels: { min_confs: 1 }
+        });
+        await fireEvent.changeText(minConfsInput(), '0');
 
-        expect(view.state.min_confs).toBe(0);
-        expect(lastUpdateAgainst(view, { channels: { min_confs: 1 } })).toEqual(
-            { channels: { min_confs: 0 } }
-        );
+        expect(minConfsInput()).toHaveDisplayValue('0');
+        expect(
+            lastUpdateAgainst(updateSettings, { channels: { min_confs: 1 } })
+        ).toEqual({ channels: { min_confs: 0 } });
     });
 
     it('saves a cleared field as unset, not 0', async () => {
-        const view = makeView(true, { channels: { min_confs: 3 } });
-        await findMinConfsInput(view).props.onChangeText('');
+        const updateSettings = await renderView({
+            channels: { min_confs: 3 }
+        });
+        await fireEvent.changeText(minConfsInput(), '');
 
-        expect(view.state.min_confs).toBeUndefined();
-        expect(findMinConfsInput(view).props.value).toBe('');
-        expect(lastUpdateAgainst(view, { channels: { min_confs: 3 } })).toEqual(
-            { channels: { min_confs: undefined } }
-        );
+        expect(minConfsInput()).toHaveDisplayValue('');
+        expect(
+            lastUpdateAgainst(updateSettings, { channels: { min_confs: 3 } })
+        ).toEqual({ channels: { min_confs: undefined } });
     });
 });
 
 describe('ChannelsSettings writes merge into current settings', () => {
-    // a toggle saved after this render but before the next write lands
-    // must survive that write
-    const current = { channels: { min_confs: 1, privateChannel: false } };
-
     it('keeps a toggle saved since render when min confs changes', async () => {
-        const view = makeView(true, {
+        // a toggle saved after this render but before the next write lands
+        // must survive that write
+        const updateSettings = await renderView({
             channels: { min_confs: 1, privateChannel: true }
         });
-        await findMinConfsInput(view).props.onChangeText('2');
+        await fireEvent.changeText(minConfsInput(), '2');
 
-        expect(lastUpdateAgainst(view, current)).toEqual({
+        expect(
+            lastUpdateAgainst(updateSettings, {
+                channels: { min_confs: 1, privateChannel: false }
+            })
+        ).toEqual({
             channels: { min_confs: 2, privateChannel: false }
         });
     });
 
     it('keeps min confs saved since render when a toggle changes', async () => {
-        const view = makeView(true, {
+        const updateSettings = await renderView({
             channels: { min_confs: 1, scidAlias: true }
         });
         // announce on, so the channel is not private
-        await findAnnounceSwitch(view).props.onValueChange(true);
+        await flip(switches().announce, true);
 
+        expect(switches().announce).toBeChecked();
         expect(
-            lastUpdateAgainst(view, {
+            lastUpdateAgainst(updateSettings, {
                 channels: { min_confs: 4, scidAlias: false }
             })
         ).toEqual({
             channels: { min_confs: 4, scidAlias: false, privateChannel: false }
+        });
+    });
+
+    it('saves the scidAlias toggle into the channels group', async () => {
+        const updateSettings = await renderView({
+            channels: { min_confs: 2 }
+        });
+        await flip(switches().scidAlias, false);
+
+        expect(switches().scidAlias).not.toBeChecked();
+        expect(
+            lastUpdateAgainst(updateSettings, { channels: { min_confs: 2 } })
+        ).toEqual({ channels: { min_confs: 2, scidAlias: false } });
+    });
+
+    it('makes the channel private when taproot is turned on', async () => {
+        const updateSettings = await renderView({
+            channels: { min_confs: 2, privateChannel: false }
+        });
+        expect(switches().announce).toBeChecked();
+
+        await flip(switches().taproot, true);
+
+        // Taproot channels must be private
+        expect(switches().taproot).toBeChecked();
+        expect(switches().announce).not.toBeChecked();
+        expect(
+            lastUpdateAgainst(updateSettings, { channels: { min_confs: 2 } })
+        ).toEqual({
+            channels: {
+                min_confs: 2,
+                privateChannel: true,
+                simpleTaprootChannel: true
+            }
         });
     });
 });

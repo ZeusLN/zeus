@@ -17,51 +17,57 @@ jest.mock('../../assets/images/SVG/Hidden.svg', () => 'StealthIcon');
 jest.mock('../../assets/images/SVG/Caret Right-3.svg', () => 'ForwardIcon');
 jest.mock('../../components/DropdownSetting', () => 'DropdownSetting');
 jest.mock('../../components/Header', () => 'Header');
-jest.mock('../../components/Screen', () => 'Screen');
+jest.mock('../../components/Screen', () => {
+    const { View } = require('react-native');
+    return ({ children }: any) => <View>{children}</View>;
+});
 jest.mock('../../components/Switch', () => 'Switch');
 jest.mock('../../components/Text', () => 'Text');
 jest.mock('../../components/TextInput', () => 'TextInput');
 
 import * as React from 'react';
+import { render } from '@testing-library/react-native';
 import Privacy from './Privacy';
 
-const makeView = (state: any) => {
-    const view = new Privacy({
-        navigation: {},
-        SettingsStore: {
-            flushPendingSettings: jest.fn(),
-            updateSettingsGroup: jest.fn()
-        }
-    } as unknown as React.ComponentProps<typeof Privacy>);
-    view.state = { ...view.state, ...state };
-    return view;
+// Mounts the view with these saved privacy settings, lets componentDidMount
+// load them, then leaves the screen
+const mountAndLeave = async (privacy: any) => {
+    const SettingsStore = {
+        settings: {},
+        getSettings: jest.fn(async () => ({ privacy })),
+        flushPendingSettings: jest.fn(),
+        updateSettingsGroup: jest.fn(),
+        updateSettingsGroupDebounced: jest.fn()
+    };
+    const { unmount } = await render(
+        <Privacy navigation={{} as any} SettingsStore={SettingsStore as any} />
+    );
+    expect(SettingsStore.getSettings).toHaveBeenCalled();
+    await unmount();
+    return SettingsStore;
 };
 
-const store = (view: Privacy) => view.props.SettingsStore as any;
-
 describe('Privacy unmount', () => {
-    it('writes nothing when neither dropdown is on Custom', () => {
-        const view = makeView({
+    it('writes nothing when neither dropdown is on Custom', async () => {
+        const store = await mountAndLeave({
             defaultBlockExplorer: 'mempool.space',
             mempoolInstance: 'https://mempool.space'
         });
-        view.componentWillUnmount();
 
-        expect(store(view).flushPendingSettings).toHaveBeenCalled();
-        expect(store(view).updateSettingsGroup).not.toHaveBeenCalled();
+        expect(store.flushPendingSettings).toHaveBeenCalled();
+        expect(store.updateSettingsGroup).not.toHaveBeenCalled();
     });
 
-    it('writes nothing when each Custom dropdown has a valid URL', () => {
-        const view = makeView({
+    it('writes nothing when each Custom dropdown has a valid URL', async () => {
+        const store = await mountAndLeave({
             defaultBlockExplorer: 'Custom',
             customBlockExplorer: 'https://explorer.example.com',
             mempoolInstance: 'Custom',
             customMempoolInstance: 'https://mempool.example.com'
         });
-        view.componentWillUnmount();
 
-        expect(store(view).flushPendingSettings).toHaveBeenCalled();
-        expect(store(view).updateSettingsGroup).not.toHaveBeenCalled();
+        expect(store.flushPendingSettings).toHaveBeenCalled();
+        expect(store.updateSettingsGroup).not.toHaveBeenCalled();
     });
 
     it.each([
@@ -69,19 +75,28 @@ describe('Privacy unmount', () => {
         ['blank', '   '],
         // never written, so the stored URL may still be empty
         ['invalid', 'not a url']
-    ])('checks the queued group when a Custom URL is %s', (_label, url) => {
-        const view = makeView({
-            defaultBlockExplorer: 'mempool.space',
-            mempoolInstance: 'Custom',
-            customMempoolInstance: url
-        });
-        view.componentWillUnmount();
+    ])(
+        'checks the queued group when a Custom URL is %s',
+        async (_label, url) => {
+            const store = await mountAndLeave({
+                defaultBlockExplorer: 'mempool.space',
+                mempoolInstance: 'Custom',
+                customMempoolInstance: url
+            });
 
-        expect(store(view).updateSettingsGroup).toHaveBeenCalledWith(
-            'privacy',
-            expect.any(Function)
-        );
-    });
+            expect(store.flushPendingSettings).toHaveBeenCalled();
+            expect(store.updateSettingsGroup).toHaveBeenCalledWith(
+                'privacy',
+                expect.any(Function)
+            );
+            // the update reverts the dropdown only when the stored URL is
+            // still empty
+            const [, update] = store.updateSettingsGroup.mock.calls[0];
+            expect(
+                update({ mempoolInstance: 'Custom', customMempoolInstance: '' })
+            ).toEqual({ mempoolInstance: 'https://mempool.space' });
+        }
+    );
 
     it('applies the fallback for the dropdown without a stored URL', () => {
         expect(
@@ -92,5 +107,16 @@ describe('Privacy unmount', () => {
                 customMempoolInstance: ''
             })
         ).toEqual({ mempoolInstance: 'https://mempool.space' });
+    });
+
+    it('applies no fallback when the stored URLs are set', () => {
+        expect(
+            Privacy.customFallbacks({
+                defaultBlockExplorer: 'Custom',
+                customBlockExplorer: 'https://explorer.example.com',
+                mempoolInstance: 'Custom',
+                customMempoolInstance: 'https://mempool.example.com'
+            })
+        ).toEqual({});
     });
 });
