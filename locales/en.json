@@ -2597,6 +2597,7 @@
     "androidNotification.nodeRunningBackground": "Lightning node is running in the background",
     "androidNotification.shutdown": "Shutdown",
     "backends.NWC.permissionDenied": "Permission denied for this operation",
+    "backends.NWC.payLightningInvoice.wrongPreimage": "The wallet reported this payment as sent, but the preimage it returned does not match the invoice",
     "androidNotification.nwcRunningBackground": "Nostr Wallet Connect is running in the background",
     "androidNotification.nwcShutdown": "Stop Service"
 }
