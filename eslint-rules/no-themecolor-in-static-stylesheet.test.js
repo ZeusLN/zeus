@@ -26,7 +26,14 @@ ruleTester.run('no-themecolor-in-static-stylesheet', rule, {
         'const styles = StyleSheet.flatten({ color: themeColor("text") });',
         'function C() { return StyleSheet.create({ a: keys.map((k) => themeColor(k)) }); }',
         'const getStyles = () => StyleSheet.create({ a: { color: placeholderColor() } });',
-        'const styles = StyleSheet.create({ a: { color: otherColor() } });'
+        'const styles = StyleSheet.create({ a: { color: otherColor() } });',
+        'const getStyles = () => StyleSheet.create({ a: { color: ThemeUtils.themeColor("text") } });',
+        'const C = () => <View style={{ color: ThemeUtils.themeColor("text") }} />;',
+        'const styles = StyleSheet.create({ a: { color: ThemeUtils.otherColor() } });',
+        'const getStyles = memoize(() => StyleSheet.create({ a: { color: themeColor("text") } }));',
+        'const getAll = () => keys.map((k) => StyleSheet.create({ a: { color: themeColor(k) } }));',
+        'const getStyles = (() => () => StyleSheet.create({ a: { color: themeColor("text") } }))();',
+        'function C() { return (() => StyleSheet.create({ a: { color: themeColor("text") } }))(); }'
     ],
     invalid: [
         {
@@ -77,6 +84,34 @@ ruleTester.run('no-themecolor-in-static-stylesheet', rule, {
         },
         {
             code: 'const styles = StyleSheet.create({ a: { color: (() => themeColor("text"))() } });',
+            errors: [error]
+        },
+        {
+            code: 'const styles = (() => StyleSheet.create({ a: { color: themeColor("text") } }))();',
+            errors: [error]
+        },
+        {
+            code: 'const styles = (function () { return StyleSheet.create({ a: { color: themeColor("text") } }); })();',
+            errors: [error]
+        },
+        {
+            code: 'const styles = (function () { return StyleSheet.create({ a: { color: themeColor("text") } }); }).call(this);',
+            errors: [error]
+        },
+        {
+            code: 'const sheets = keys.map((k) => StyleSheet.create({ a: { color: themeColor(k) } }));',
+            errors: [error]
+        },
+        {
+            code: 'const sheets = Array.from(keys, (k) => StyleSheet.create({ a: { color: themeColor(k) } }));',
+            errors: [error]
+        },
+        {
+            code: 'const styles = StyleSheet.create({ a: { color: ThemeUtils.themeColor("text") } });',
+            errors: [{ ...error, data: { name: 'themeColor' } }]
+        },
+        {
+            code: 'const styles = StyleSheet.create({ a: { color: ThemeUtils.placeholderColor() } });',
             errors: [error]
         },
         {

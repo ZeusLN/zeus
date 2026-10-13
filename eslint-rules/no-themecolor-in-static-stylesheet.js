@@ -39,6 +39,58 @@ const isStyleSheetCreate = (node) => {
     );
 };
 
+// Array methods that call their callback before returning
+const ITERATION_METHODS = new Set([
+    'map',
+    'flatMap',
+    'forEach',
+    'filter',
+    'reduce',
+    'reduceRight',
+    'find',
+    'findIndex',
+    'some',
+    'every'
+]);
+
+const memberName = (node) =>
+    node.type === 'MemberExpression' &&
+    !node.computed &&
+    node.property.type === 'Identifier'
+        ? node.property.name
+        : null;
+
+// themeColor(...) or a namespace call such as ThemeUtils.themeColor(...)
+const themeFunctionName = (callee) => {
+    const name =
+        callee.type === 'Identifier' ? callee.name : memberName(callee);
+    return THEME_FUNCTIONS.includes(name) ? name : null;
+};
+
+// A function runs where it is defined when it is called in place, e.g.
+// (() => ...)(), (function () {}).call(this) or keys.map((k) => ...)
+const runsImmediately = (fn) => {
+    const parent = fn.parent;
+    if (parent.type === 'CallExpression') {
+        if (parent.callee === fn) return true;
+        if (!parent.arguments.includes(fn)) return false;
+        const method = memberName(parent.callee);
+        if (ITERATION_METHODS.has(method)) return true;
+        return (
+            method === 'from' &&
+            parent.callee.object.type === 'Identifier' &&
+            parent.callee.object.name === 'Array'
+        );
+    }
+    const method = memberName(parent);
+    return (
+        parent.object === fn &&
+        (method === 'call' || method === 'apply') &&
+        parent.parent.type === 'CallExpression' &&
+        parent.parent.callee === parent
+    );
+};
+
 // Class instance fields are evaluated per instance, like a constructor body
 const isInstanceField = (node) =>
     (node.type === 'PropertyDefinition' || node.type === 'ClassProperty') &&
@@ -59,9 +111,9 @@ module.exports = {
     },
     create(context) {
         return {
-            [`CallExpression[callee.type='Identifier'][callee.name=/^(${THEME_FUNCTIONS.join(
-                '|'
-            )})$/]`](node) {
+            CallExpression(node) {
+                const name = themeFunctionName(node.callee);
+                if (!name) return;
                 let child = node;
                 let parent = node.parent;
                 let inStyleSheet = false;
@@ -69,8 +121,15 @@ module.exports = {
                     // A function or instance field only defers the call when
                     // it wraps the StyleSheet.create() call. One inside the
                     // create() arguments (a map callback or an IIFE) runs
-                    // while the sheet is built.
-                    if (inStyleSheet && FUNCTION_TYPES.has(parent.type)) return;
+                    // while the sheet is built, and so does a wrapper that is
+                    // called in place.
+                    if (
+                        inStyleSheet &&
+                        FUNCTION_TYPES.has(parent.type) &&
+                        !runsImmediately(parent)
+                    ) {
+                        return;
+                    }
                     if (
                         inStyleSheet &&
                         isInstanceField(parent) &&
@@ -91,7 +150,7 @@ module.exports = {
                     context.report({
                         node,
                         messageId: 'themeColorInStaticStyleSheet',
-                        data: { name: node.callee.name }
+                        data: { name }
                     });
                 }
             }
