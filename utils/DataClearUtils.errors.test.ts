@@ -492,18 +492,36 @@ describe('clearAllData: a failing step does not stop later steps', () => {
         'clears EncryptedStorage, including the legacy zeus-settings blob, when removeItem rejects'
     );
 
-    it('deletes the second Android keychain file when checking the first rejects', async () => {
-        setPlatformOS('android');
-        mockFs.files.add(ANDROID_DATASTORE);
-        mockFs.files.add(ANDROID_LEGACY_PREFS);
-        mockFs.failExists = (path) => path === ANDROID_DATASTORE;
+    it.each([
+        [
+            'checking',
+            (path: string) => {
+                mockFs.failExists = (p) => p === path;
+            }
+        ],
+        [
+            'deleting',
+            (path: string) => {
+                mockFs.failUnlink = (p) => p === path;
+            }
+        ]
+    ] as Array<[string, (path: string) => void]>)(
+        'deletes the second Android keychain file when %s the first rejects',
+        async (_step, failOnPath) => {
+            setPlatformOS('android');
+            mockFs.files.add(ANDROID_DATASTORE);
+            mockFs.files.add(ANDROID_LEGACY_PREFS);
+            failOnPath(ANDROID_DATASTORE);
 
-        await expect(clearAllData()).resolves.toBeUndefined();
+            await expect(clearAllData()).resolves.toBeUndefined();
 
-        expect(mockFs.files.has(ANDROID_DATASTORE)).toBe(true);
-        expect(mockFs.files.has(ANDROID_LEGACY_PREFS)).toBe(false);
-        expect(warnedAbout('Error deleting keychain backing store')).toBe(true);
-    });
+            expect(mockFs.files.has(ANDROID_DATASTORE)).toBe(true);
+            expect(mockFs.files.has(ANDROID_LEGACY_PREFS)).toBe(false);
+            expect(warnedAbout('Error deleting keychain backing store')).toBe(
+                true
+            );
+        }
+    );
 
     it('resolves when every storage layer and the filesystem reject', async () => {
         setPlatformOS('android');
@@ -591,6 +609,19 @@ describe('clearCDKDatabase / clearCDKDatabaseForNode step failures', () => {
         expect(warnedAbout('Error sweeping CDK database files')).toBe(true);
     });
 
+    it('clearCDKDatabase still deletes the other database files when one unlink rejects', async () => {
+        const db = `${dir}/cashu_wallet.db`;
+        [db, `${db}-wal`, `${db}-shm`].forEach((f) => mockFs.files.add(f));
+        mockFs.failUnlink = (path) => path === db;
+
+        await expect(clearCDKDatabase()).resolves.toBeUndefined();
+
+        expect([...mockFs.files]).toEqual([db]);
+        expect(
+            warnedAbout('Error deleting CDK database file cashu_wallet.db')
+        ).toBe(true);
+    });
+
     it('clearCDKDatabaseForNode resolves and deletes nothing when the seed read rejects', async () => {
         mockFs.files.add(`${dir}/cashu_wallet_0123.db`);
         mockKeychain.failGet = () => true;
@@ -606,29 +637,48 @@ describe('clearCDKDatabase / clearCDKDatabaseForNode step failures', () => {
         expect(warnedAbout('Error clearing CDK database for node')).toBe(true);
     });
 
-    it('clearCDKDatabaseForNode still deletes the WAL and SHM sidecars when the main file check rejects', async () => {
-        const words = ['one', 'two'];
-        seedEverywhere('lnd-uuid-cashu-seed-phrase', JSON.stringify(words));
-        const hash = hashjs
-            .sha256()
-            .update(words.join(' '))
-            .digest('hex')
-            .slice(0, 16);
-        const base = `${dir}/cashu_wallet_${hash}.db`;
-        [base, `${base}-wal`, `${base}-shm`].forEach((f) =>
-            mockFs.files.add(f)
-        );
-        mockFs.failExists = (path) => path === base;
+    it.each([
+        [
+            'check',
+            (path: string) => {
+                mockFs.failExists = (p) => p === path;
+            }
+        ],
+        [
+            'unlink',
+            (path: string) => {
+                mockFs.failUnlink = (p) => p === path;
+            }
+        ]
+    ] as Array<[string, (path: string) => void]>)(
+        'clearCDKDatabaseForNode still deletes the WAL and SHM sidecars when the main file %s rejects',
+        async (_step, failOnPath) => {
+            const words = ['one', 'two'];
+            seedEverywhere('lnd-uuid-cashu-seed-phrase', JSON.stringify(words));
+            const hash = hashjs
+                .sha256()
+                .update(words.join(' '))
+                .digest('hex')
+                .slice(0, 16);
+            const base = `${dir}/cashu_wallet_${hash}.db`;
+            [base, `${base}-wal`, `${base}-shm`].forEach((f) =>
+                mockFs.files.add(f)
+            );
+            failOnPath(base);
 
-        await expect(
-            clearCDKDatabaseForNode({
-                implementation: 'embedded-lnd',
-                lndDir: 'lnd-uuid'
-            })
-        ).resolves.toBeUndefined();
+            await expect(
+                clearCDKDatabaseForNode({
+                    implementation: 'embedded-lnd',
+                    lndDir: 'lnd-uuid'
+                })
+            ).resolves.toBeUndefined();
 
-        expect([...mockFs.files]).toEqual([base]);
-    });
+            expect([...mockFs.files]).toEqual([base]);
+            expect(
+                warnedAbout(`Error deleting CDK wallet database ${base}`)
+            ).toBe(true);
+        }
+    );
 });
 
 describe('deleteNodeDataDirectoryWithRetry rejections', () => {
