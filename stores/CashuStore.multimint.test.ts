@@ -827,19 +827,26 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         expect(store.paymentErrorMsg).toBeUndefined();
     });
 
-    it('currently sets the payment error when every part of a donation fails', async () => {
+    it('leaves the payment result alone when every part of a donation fails', async () => {
         const store = await plannedStore();
         // the main payment already succeeded on this screen
         store.paymentSuccess = true;
+        store.paymentError = false;
+        store.paymentErrorMsg = '';
         cdk.meltPartial.mockRejectedValue(new Error('refused'));
+        const onProgress = jest.fn();
 
-        await store.payLnInvoiceFromEcash({ isDonationPayment: true });
+        await store.payLnInvoiceFromEcash({
+            isDonationPayment: true,
+            onProgress
+        });
 
-        // The other failure branches skip the store error for donations;
-        // this one does not, so the store reports success and an error
         expect(store.paymentSuccess).toBe(true);
-        expect(store.paymentError).toBe(true);
-        expect(store.paymentErrorMsg).toBe('refused');
+        expect(store.paymentError).toBe(false);
+        expect(store.paymentErrorMsg).toBe('');
+        expect(onProgress).toHaveBeenLastCalledWith(
+            expect.objectContaining({ step: MultinutPaymentStep.FAILED })
+        );
     });
 
     it('currently treats a part with no melt state as paid', async () => {

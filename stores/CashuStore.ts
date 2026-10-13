@@ -4854,13 +4854,15 @@ export default class CashuStore {
         if (segmentPayments.length === 0) {
             const firstFailure = failedMints[0]?.reason;
 
-            runInAction(() => {
-                this.paymentError = true;
-                this.paymentErrorMsg = firstFailure
-                    ? cashuErrorForDisplay(firstFailure)
-                    : localeString('stores.CashuStore.errorPayingInvoice');
-                this.loading = false;
-            });
+            if (!isDonationPayment) {
+                runInAction(() => {
+                    this.paymentError = true;
+                    this.paymentErrorMsg = firstFailure
+                        ? cashuErrorForDisplay(firstFailure)
+                        : localeString('stores.CashuStore.errorPayingInvoice');
+                    this.loading = false;
+                });
+            }
 
             onProgress?.({
                 step: MultinutPaymentStep.FAILED,
