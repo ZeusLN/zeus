@@ -1,28 +1,32 @@
 import React from 'react';
-import renderer, { act } from 'react-test-renderer';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 
 // mobx-react's main entry needs react-dom; the stores arrive as props here
 jest.mock('mobx-react', () => ({
     inject: () => (component: any) => component,
     observer: (component: any) => component
 }));
-jest.mock('@rneui/themed', () => ({
-    Icon: () => null,
-    ListItem: Object.assign(() => null, {
-        Content: () => null,
-        Title: () => null
-    })
-}));
+jest.mock('@rneui/themed', () => {
+    const { Text, View } = require('react-native');
+    const Passthrough = ({ children }: any) => <View>{children}</View>;
+    return {
+        Icon: () => null,
+        ListItem: Object.assign(Passthrough, {
+            Content: Passthrough,
+            Title: ({ children }: any) => <Text>{children}</Text>
+        })
+    };
+});
 jest.mock('../../components/Header', () => () => null);
-jest.mock('../../components/Screen', () => () => null);
-jest.mock('../../components/Switch', () => () => null);
+jest.mock('../../components/Screen', () => {
+    const { View } = require('react-native');
+    return ({ children }: any) => <View>{children}</View>;
+});
 jest.mock('../../stores/SettingsStore', () => ({}));
 jest.mock('../../utils/BiometricUtils', () => ({
     verifyBiometry: jest.fn()
 }));
-jest.mock('../../utils/LocaleUtils', () => ({
-    localeString: jest.fn((key: string) => key)
-}));
+jest.mock('../../utils/LocaleUtils');
 jest.mock('../../utils/ThemeUtils', () => ({
     themeColor: jest.fn(() => '#000')
 }));
@@ -37,26 +41,38 @@ const renderSecurity = async ({
     isBiometryEnabled = false
 }: { enableResult?: string; isBiometryEnabled?: boolean } = {}) => {
     const SettingsStore = {
-        settings: { pin: '1234', isBiometryEnabled },
+        settings: {
+            pin: '1234',
+            isBiometryEnabled,
+            supportedBiometryType: 'FaceID'
+        },
         enableBiometry: jest.fn(async () => enableResult),
         disableBiometry: jest.fn(() => Promise.resolve())
     };
     const ModalStore = { toggleInfoModal: jest.fn() };
     const navigation = { addListener: jest.fn(), navigate: jest.fn() };
-    let tree: renderer.ReactTestRenderer;
-    await act(async () => {
-        tree = renderer.create(
-            <Security
-                SettingsStore={SettingsStore as any}
-                ModalStore={ModalStore as any}
-                navigation={navigation as any}
-                route={{ params: {} } as any}
-            />
-        );
-    });
-    const instance = tree!.root.findByType(Security).instance as Security;
-    return { SettingsStore, ModalStore, instance };
+    await render(
+        <Security
+            SettingsStore={SettingsStore as any}
+            ModalStore={ModalStore as any}
+            navigation={navigation as any}
+            route={{ params: {} } as any}
+        />
+    );
+    return { SettingsStore, ModalStore };
 };
+
+// The biometrics row is rendered before the scramble-PIN row, so its switch
+// is the first one on screen
+const biometricsSwitch = () => {
+    expect(
+        screen.getByText('views.Settings.Security.FaceID.title')
+    ).toBeOnTheScreen();
+    return screen.getAllByRole('switch')[0];
+};
+
+const toggleBiometrics = (value: boolean) =>
+    fireEvent(biometricsSwitch(), 'change', { nativeEvent: { value } });
 
 describe('Security biometrics toggle', () => {
     beforeEach(() => {
@@ -64,41 +80,37 @@ describe('Security biometrics toggle', () => {
     });
 
     it('turns biometrics on without a message when enabling succeeds', async () => {
-        const { ModalStore, instance } = await renderSecurity();
+        const { SettingsStore, ModalStore } = await renderSecurity();
+        expect(biometricsSwitch()).not.toBeChecked();
 
-        await act(async () => {
-            await instance.handleBiometricsSwitchChange(true);
-        });
+        await toggleBiometrics(true);
 
-        expect(instance.state.isBiometryEnabled).toBe(true);
+        expect(SettingsStore.enableBiometry).toHaveBeenCalledWith(
+            'views.Settings.Security.Biometrics.prompt'
+        );
+        expect(biometricsSwitch()).toBeChecked();
         expect(ModalStore.toggleInfoModal).not.toHaveBeenCalled();
     });
 
     it('stays off without a message when the user cancels the prompt', async () => {
-        const { ModalStore, instance } = await renderSecurity({
+        const { ModalStore } = await renderSecurity({
             enableResult: 'cancelled'
         });
 
-        await act(async () => {
-            await instance.handleBiometricsSwitchChange(true);
-        });
+        await toggleBiometrics(true);
 
-        expect(instance.state.isBiometryEnabled).toBe(false);
+        expect(biometricsSwitch()).not.toBeChecked();
         expect(ModalStore.toggleInfoModal).not.toHaveBeenCalled();
     });
 
     it.each(['failed', 'invalidated'])(
         'stays off and explains why when enabling is %s',
         async (enableResult) => {
-            const { ModalStore, instance } = await renderSecurity({
-                enableResult
-            });
+            const { ModalStore } = await renderSecurity({ enableResult });
 
-            await act(async () => {
-                await instance.handleBiometricsSwitchChange(true);
-            });
+            await toggleBiometrics(true);
 
-            expect(instance.state.isBiometryEnabled).toBe(false);
+            expect(biometricsSwitch()).not.toBeChecked();
             expect(ModalStore.toggleInfoModal).toHaveBeenCalledWith({
                 text: 'views.Settings.Security.Biometrics.enableFailed'
             });
@@ -109,31 +121,29 @@ describe('Security biometrics toggle', () => {
         'turns biometrics off when verification is %s',
         async (result) => {
             mockedVerifyBiometry.mockResolvedValue(result);
-            const { SettingsStore, ModalStore, instance } =
-                await renderSecurity({ isBiometryEnabled: true });
-
-            await act(async () => {
-                await instance.handleBiometricsSwitchChange(false);
+            const { SettingsStore, ModalStore } = await renderSecurity({
+                isBiometryEnabled: true
             });
+            expect(biometricsSwitch()).toBeChecked();
+
+            await toggleBiometrics(false);
 
             expect(SettingsStore.disableBiometry).toHaveBeenCalled();
-            expect(instance.state.isBiometryEnabled).toBe(false);
+            expect(biometricsSwitch()).not.toBeChecked();
             expect(ModalStore.toggleInfoModal).not.toHaveBeenCalled();
         }
     );
 
     it('stays on and explains why when verification fails while disabling', async () => {
         mockedVerifyBiometry.mockResolvedValue('failed');
-        const { SettingsStore, ModalStore, instance } = await renderSecurity({
+        const { SettingsStore, ModalStore } = await renderSecurity({
             isBiometryEnabled: true
         });
 
-        await act(async () => {
-            await instance.handleBiometricsSwitchChange(false);
-        });
+        await toggleBiometrics(false);
 
         expect(SettingsStore.disableBiometry).not.toHaveBeenCalled();
-        expect(instance.state.isBiometryEnabled).toBe(true);
+        expect(biometricsSwitch()).toBeChecked();
         expect(ModalStore.toggleInfoModal).toHaveBeenCalledWith({
             text: 'views.Settings.Security.Biometrics.disableFailed'
         });
@@ -141,15 +151,14 @@ describe('Security biometrics toggle', () => {
 
     it('stays on without a message when the user cancels disabling', async () => {
         mockedVerifyBiometry.mockResolvedValue('cancelled');
-        const { SettingsStore, ModalStore, instance } = await renderSecurity({
+        const { SettingsStore, ModalStore } = await renderSecurity({
             isBiometryEnabled: true
         });
 
-        await act(async () => {
-            await instance.handleBiometricsSwitchChange(false);
-        });
+        await toggleBiometrics(false);
 
         expect(SettingsStore.disableBiometry).not.toHaveBeenCalled();
+        expect(biometricsSwitch()).toBeChecked();
         expect(ModalStore.toggleInfoModal).not.toHaveBeenCalled();
     });
 });
