@@ -298,6 +298,66 @@ describe('decode input validation', () => {
         expect(decoded.payment_hash).toMatch(/^[0-9a-f]{64}$/);
         expect(decoded.destination).toMatch(/^0[23][0-9a-f]{64}$/);
     });
+
+    // 15010p is 1501 msat. hrpToSat rejects it, so satoshis is null and
+    // num_satoshis is the msat amount rounded down.
+    it('rounds a sub-satoshi amount down in num_satoshis', () => {
+        const decoded = Bolt11Utils.decode(withPrefix('lnbcrt15010p'));
+
+        expect(decoded.satoshis).toBeNull();
+        expect(decoded.millisatoshis).toBe('1501');
+        expect(decoded.num_satoshis).toBe('1');
+        expect(decoded.num_msat).toBe('1501');
+    });
+});
+
+// An invoice with a zero timestamp, the given raw tag data and a zeroed
+// signature. Recovery is lazy, so decode() never checks the signature.
+const withTag = (tagCode: number, data: number[]) =>
+    bech32.encode(
+        'lnbcrt',
+        [
+            ...new Array(7).fill(0),
+            tagCode,
+            0,
+            data.length,
+            ...data,
+            ...new Array(104).fill(0)
+        ],
+        Infinity
+    );
+
+describe('decode cache', () => {
+    const cache: Map<string, unknown> = (Bolt11Utils as any).cache;
+    const limit: number = (Bolt11Utils as any).CACHE_LIMIT;
+    // Distinct lowercase invoices that differ only by amount.
+    const invoice = (i: number) => withPrefix(`lnbcrt${i + 1}u`);
+
+    beforeEach(() => {
+        cache.clear();
+    });
+
+    it('evicts the oldest entry once the cache is full', () => {
+        for (let i = 0; i < limit; i++) Bolt11Utils.decode(invoice(i));
+        expect(cache.size).toBe(limit);
+
+        Bolt11Utils.decode(invoice(limit));
+
+        expect(cache.size).toBe(limit);
+        expect(cache.has(invoice(0))).toBe(false);
+        expect(cache.has(invoice(1))).toBe(true);
+        expect(cache.has(invoice(limit))).toBe(true);
+    });
+
+    it('moves a cache hit to the most recently used position', () => {
+        for (let i = 0; i < limit; i++) Bolt11Utils.decode(invoice(i));
+        Bolt11Utils.decode(invoice(0));
+
+        Bolt11Utils.decode(invoice(limit));
+
+        expect(cache.has(invoice(0))).toBe(true);
+        expect(cache.has(invoice(1))).toBe(false);
+    });
 });
 
 describe('decode tag fields', () => {
@@ -325,6 +385,27 @@ describe('decode tag fields', () => {
         expect(descriptor?.get).toBeUndefined();
         expect(decoded.payeeNodeKey).toBe(BOLT11_SPEC_PAYEE);
     });
+    // A single 5-bit word cannot hold a byte (excess padding), and two words
+    // leave 2 bits that must be zero (non-zero padding). bech32 rejects both,
+    // so the field decodes as undefined instead of throwing.
+    it.each([
+        ['payment_hash', 1, [0]],
+        ['payment_hash', 1, [31, 31]],
+        ['description', 13, [0]],
+        ['description', 13, [31, 31]]
+    ])(
+        'leaves %s undefined when its data has invalid padding (%#)',
+        (field, tagCode, data) => {
+            const decoded: any = Bolt11Utils.decode(
+                withTag(tagCode as number, data as number[])
+            );
+
+            expect(decoded[field as string]).toBeUndefined();
+            expect(decoded.sections).toContainEqual(
+                expect.objectContaining({ name: field, value: undefined })
+            );
+        }
+    );
 });
 
 describe('amount parsing', () => {
