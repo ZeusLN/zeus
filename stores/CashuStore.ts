@@ -55,7 +55,7 @@ import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
 import CashuUtils, {
     isMeltPaid,
     isMeltSettledUnpaid,
-    meltOutcome,
+    meltQuoteOutcome,
     MintPaymentStatus,
     MintProgressInfo,
     MultimintProgressCallback,
@@ -209,6 +209,9 @@ export default class CashuStore {
     // Melts the mint has taken ecash for but has not settled, re-checked by
     // reconcilePendingMelts
     @observable public pendingMelts: Array<PendingMelt> = [];
+    // Quotes whose melt call has not returned yet. CDK is still waiting on
+    // the mint for these, so reconcilePendingMelts leaves them to the caller.
+    private meltsInProgress = new Set<string>();
     // CDK transactions loaded from history (CashuInvoice for incoming, CashuPayment for outgoing)
     @observable public cdkInvoices: Array<CashuInvoice> = [];
     @observable public seedVersion?: string;
@@ -1078,7 +1081,7 @@ export default class CashuStore {
             expiry: quote.expiry,
             createdAt: Date.now()
         });
-        const result = await CashuDevKit.melt(mintUrl, quote.id);
+        const result = await this.executeMelt(mintUrl, quote.id);
         await this.syncCDKBalances();
 
         // A resolved melt is not a paid one. Callers treat a returned result
@@ -3246,6 +3249,15 @@ export default class CashuStore {
         await this.persistPendingMelts();
     };
 
+    private executeMelt = async (mintUrl: string, quote: string) => {
+        this.meltsInProgress.add(quote);
+        try {
+            return await CashuDevKit.melt(mintUrl, quote);
+        } finally {
+            this.meltsInProgress.delete(quote);
+        }
+    };
+
     /**
      * Records the payment a tracked melt turned out to be once the mint
      * reports it paid.
@@ -3316,21 +3328,23 @@ export default class CashuStore {
      * vanishing. No preimage and no fee: neither exists until the mint
      * settles, and reconcilePendingMelts fills in what it learns.
      */
-    private recordInFlightPayment = async (
-        mintUrl: string,
-        meltQuote: { quote: string; amount: number; fee_reserve: number }
-    ) => {
+    private recordInFlightPayment = async (melt: PendingMelt, payReq?: any) => {
         const payment = new CashuPayment({
-            ...this.payReq,
-            bolt11: this.paymentRequest,
+            ...(payReq || {}),
+            bolt11: melt.request,
             meltResponse: {
-                quote: meltQuote
+                quote: {
+                    quote: melt.quote,
+                    amount: melt.amount,
+                    fee_reserve: melt.feeReserve,
+                    expiry: melt.expiry || 0
+                }
             },
-            amount: meltQuote.amount,
+            amount: melt.amount,
             fee: 0,
             status: 'IN_FLIGHT',
             payment_preimage: '',
-            mintUrl
+            mintUrl: melt.mintUrl
         });
 
         runInAction(() => {
@@ -3380,6 +3394,7 @@ export default class CashuStore {
 
         for (const melt of [...this.pendingMelts]) {
             if (!knownMints.has(this.normalizeMintUrl(melt.mintUrl))) continue;
+            if (this.meltsInProgress.has(melt.quote)) continue;
 
             let quote;
             try {
@@ -3392,17 +3407,39 @@ export default class CashuStore {
                     `CashuStore: Error checking melt quote ${melt.quote}:`,
                     e
                 );
-                // A quote the mint will not answer for past its expiry cannot
-                // settle any more, so stop asking. An unexpired one is kept:
-                // the mint being unreachable says nothing about the payment.
+                // CDK only asks the mint, and so only fails here, once no
+                // melt saga holds the quote. Past its expiry such a quote
+                // cannot settle any more, so stop asking and drop the
+                // in-flight entry with it. An unexpired one is kept: the mint
+                // being unreachable says nothing about the payment.
                 if (melt.expiry && melt.expiry < nowSeconds) {
+                    if (melt.source === 'payment') {
+                        activityChanged =
+                            (await this.dropInFlightPayment(melt.quote)) ||
+                            activityChanged;
+                    }
                     await this.untrackPendingMelt(melt.quote);
                 }
                 continue;
             }
 
-            const outcome = meltOutcome(quote?.state);
-            if (outcome === 'inFlight') continue;
+            const outcome = meltQuoteOutcome(quote);
+            if (outcome === 'inFlight') {
+                // A melt interrupted by a crash or kill has no entry yet.
+                // Show it as in flight rather than leave the balance
+                // dropping with nothing in the activity list to explain it.
+                if (
+                    melt.source === 'payment' &&
+                    !(this.payments || []).some(
+                        (payment) =>
+                            payment.meltResponse?.quote?.quote === melt.quote
+                    )
+                ) {
+                    await this.recordInFlightPayment(melt);
+                    activityChanged = true;
+                }
+                continue;
+            }
 
             if (outcome === 'paid') {
                 activityChanged =
@@ -4824,7 +4861,7 @@ export default class CashuStore {
             }
 
             // Use existing melt quote directly instead of meltCDK
-            await this.trackPendingMelt({
+            const pendingMelt: PendingMelt = {
                 quote: meltQuote.quote,
                 mintUrl,
                 source: 'payment',
@@ -4833,8 +4870,44 @@ export default class CashuStore {
                 request: bolt11,
                 expiry: meltQuote.expiry,
                 createdAt: Date.now()
-            });
-            const meltResult = await CashuDevKit.melt(mintUrl, meltQuote.quote);
+            };
+            await this.trackPendingMelt(pendingMelt);
+
+            let meltResult;
+            try {
+                meltResult = await this.executeMelt(mintUrl, meltQuote.quote);
+            } catch (meltError) {
+                // CDK waits while the mint reports the melt Pending, and
+                // when it stops waiting (connection lost, mint unreachable)
+                // it throws while its saga still holds the quote and the
+                // proofs. Ask CDK which it is before calling it a failure.
+                let outcome;
+                try {
+                    outcome = meltQuoteOutcome(
+                        await CashuDevKit.checkMeltQuote(
+                            mintUrl,
+                            meltQuote.quote
+                        )
+                    );
+                } catch (checkError) {
+                    console.error(
+                        'CDK payLnInvoiceFromEcash: Failed to check melt quote after error:',
+                        checkError
+                    );
+                }
+
+                if (outcome === 'unpaid') {
+                    await this.untrackPendingMelt(meltQuote.quote);
+                } else if (outcome) {
+                    // In flight, or paid since: record it as in flight and
+                    // let reconcilePendingMelts settle it
+                    await this.recordInFlightPayment(pendingMelt, payReq);
+                    throw new Error(
+                        localeString('stores.CashuStore.paymentInFlight')
+                    );
+                }
+                throw meltError;
+            }
 
             // Only a Paid melt means the mint settled the invoice. Anything
             // else is surfaced as an error rather than recorded as a payment,
@@ -4853,7 +4926,7 @@ export default class CashuStore {
                 // payment as in flight so it is visible and so
                 // reconcilePendingMelts can settle it either way, rather
                 // than leaving a payment that may complete with no trace.
-                await this.recordInFlightPayment(mintUrl, meltQuote);
+                await this.recordInFlightPayment(pendingMelt, payReq);
                 throw new Error(
                     localeString('stores.CashuStore.paymentInFlight')
                 );
@@ -5918,7 +5991,7 @@ export default class CashuStore {
                 expiry: finalMeltQuote.expiry,
                 createdAt: Date.now()
             });
-            const meltResponse = await CashuDevKit.melt(
+            const meltResponse = await this.executeMelt(
                 mintUrl,
                 finalMeltQuote.id
             );

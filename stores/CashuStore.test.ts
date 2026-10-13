@@ -601,11 +601,10 @@ describe('CashuStore single-mint melt state', () => {
         jest.restoreAllMocks();
     });
 
-    // CDK resolves an unsettled melt with a non-Paid state instead of
-    // throwing, and the single-mint path used to report that as a paid
-    // invoice: payment success with an empty preimage for an invoice the
-    // mint had not paid
-    it('reports a Pending melt as in flight, not as a successful payment', async () => {
+    // CDK 0.18 waits out Pending and only resolves Paid, but the bridge
+    // types allow any state. The single-mint path used to report any
+    // resolved melt as a paid invoice, with an empty preimage.
+    it('does not report a resolved Pending melt as a successful payment', async () => {
         const store = payingStore();
         (CashuDevKit.melt as jest.Mock).mockResolvedValue({
             state: 'Pending',
@@ -687,9 +686,68 @@ describe('CashuStore single-mint melt state', () => {
         expect(store.pendingMelts).toEqual([]);
     });
 
-    it('keeps tracking a melt whose execution never returned', async () => {
+    // What CDK does with a melt the mint has not settled: it waits, and if
+    // it stops waiting it throws while its saga still holds the quote. The
+    // quote CDK then returns is its local copy, still Unpaid.
+    it('reports a melt that threw while CDK still holds it as in flight', async () => {
         const store = payingStore();
         (CashuDevKit.melt as jest.Mock).mockRejectedValue(
+            new Error('Subscription closed')
+        );
+        (CashuDevKit.checkMeltQuote as jest.Mock).mockResolvedValue({
+            id: 'quote-1',
+            state: 'Unpaid',
+            used_by_operation: 'op-1'
+        });
+
+        await store.payLnInvoiceFromEcash({
+            amount: '1000',
+            paymentRequest: 'lnbc10n1ptestinvoice'
+        });
+
+        expect(CashuDevKit.checkMeltQuote).toHaveBeenCalledWith(
+            'https://mint.example.com',
+            'quote-1'
+        );
+        expect(store.paymentSuccess).toBe(false);
+        expect(store.paymentErrorMsg).toBe('stores.CashuStore.paymentInFlight');
+        expect(store.payments).toHaveLength(1);
+        expect(store.payments[0].isInTransit).toBe(true);
+        expect(store.payments[0].bolt11).toBe('lnbc10n1ptestinvoice');
+        expect(store.pendingMelts).toHaveLength(1);
+    });
+
+    // CDK released the quote: the saga compensated and the proofs are back
+    it('stops tracking a melt that threw once CDK has released the quote', async () => {
+        const store = payingStore();
+        (CashuDevKit.melt as jest.Mock).mockRejectedValue(
+            new Error('Payment failed')
+        );
+        (CashuDevKit.checkMeltQuote as jest.Mock).mockResolvedValue({
+            id: 'quote-1',
+            state: 'Unpaid'
+        });
+
+        await store.payLnInvoiceFromEcash({
+            amount: '1000',
+            paymentRequest: 'lnbc10n1ptestinvoice'
+        });
+
+        expect(store.paymentSuccess).toBe(false);
+        expect(store.paymentError).toBe(true);
+        expect(store.paymentErrorMsg).not.toBe(
+            'stores.CashuStore.paymentInFlight'
+        );
+        expect(store.payments).toEqual([]);
+        expect(store.pendingMelts).toEqual([]);
+    });
+
+    it('keeps tracking a melt whose state cannot be checked', async () => {
+        const store = payingStore();
+        (CashuDevKit.melt as jest.Mock).mockRejectedValue(
+            new Error('network request failed')
+        );
+        (CashuDevKit.checkMeltQuote as jest.Mock).mockRejectedValue(
             new Error('network request failed')
         );
 
@@ -699,6 +757,7 @@ describe('CashuStore single-mint melt state', () => {
         });
 
         expect(store.paymentSuccess).toBe(false);
+        expect(store.payments).toEqual([]);
         // the mint may have taken the ecash and be paying: reconciliation
         // decides, not the failed round trip
         expect(store.pendingMelts).toHaveLength(1);
@@ -896,17 +955,70 @@ describe('CashuStore reconcilePendingMelts', () => {
         expect(store.pendingMelts).toEqual([]);
     });
 
-    it('leaves a still-pending melt alone', async () => {
+    // CDK returns Pending when the mint says so for a quote no saga holds,
+    // and its local Unpaid copy while a saga still holds the quote
+    it.each([
+        ['Pending', { state: 'Pending' }],
+        [
+            'Unpaid held by a saga',
+            { state: 'Unpaid', used_by_operation: 'op-1' }
+        ]
+    ])('leaves a still-pending melt alone (%s)', async (_, quote) => {
         const store = reconcilingStore(pendingMelt(), [inFlightPayment()]);
         (CashuDevKit.checkMeltQuote as jest.Mock).mockResolvedValue({
             id: 'quote-1',
-            state: 'Pending'
+            ...quote
         });
 
         await store.reconcilePendingMelts();
 
         expect(store.payments).toHaveLength(1);
         expect(store.payments[0].isInTransit).toBe(true);
+        expect(store.pendingMelts).toHaveLength(1);
+        expect(store.syncCDKBalances).not.toHaveBeenCalled();
+    });
+
+    // A kill mid-melt leaves the melt tracked with no payment entry
+    it('records an in-flight payment for a pending melt that has none', async () => {
+        const store = reconcilingStore(pendingMelt());
+        (CashuDevKit.checkMeltQuote as jest.Mock).mockResolvedValue({
+            id: 'quote-1',
+            state: 'Unpaid',
+            used_by_operation: 'op-1'
+        });
+
+        await store.reconcilePendingMelts();
+        await store.reconcilePendingMelts();
+
+        expect(store.payments).toHaveLength(1);
+        expect(store.payments[0].isInTransit).toBe(true);
+        expect(store.payments[0].bolt11).toBe('lnbc10n1ptestinvoice');
+        expect(store.payments[0].getAmount).toBe(1000);
+        expect(store.pendingMelts).toHaveLength(1);
+    });
+
+    it('records no ecash payment for a pending sweep', async () => {
+        const store = reconcilingStore(pendingMelt('sweep'));
+        (CashuDevKit.checkMeltQuote as jest.Mock).mockResolvedValue({
+            id: 'quote-1',
+            state: 'Unpaid',
+            used_by_operation: 'op-1'
+        });
+
+        await store.reconcilePendingMelts();
+
+        expect(store.payments).toEqual([]);
+        expect(store.pendingMelts).toHaveLength(1);
+    });
+
+    // The melt call is still waiting on the mint and settles the melt itself
+    it('skips a melt whose melt call has not returned', async () => {
+        const store = reconcilingStore(pendingMelt());
+        store.meltsInProgress.add('quote-1');
+
+        await store.reconcilePendingMelts();
+
+        expect(CashuDevKit.checkMeltQuote).not.toHaveBeenCalled();
         expect(store.pendingMelts).toHaveLength(1);
     });
 
@@ -925,7 +1037,9 @@ describe('CashuStore reconcilePendingMelts', () => {
     // Past its expiry the quote can no longer settle, so an unanswerable one
     // is not retried forever
     it('stops tracking an expired melt the mint will not answer for', async () => {
-        const store = reconcilingStore({ ...pendingMelt(), expiry: 1 });
+        const store = reconcilingStore({ ...pendingMelt(), expiry: 1 }, [
+            inFlightPayment()
+        ]);
         (CashuDevKit.checkMeltQuote as jest.Mock).mockRejectedValue(
             new Error('unknown quote')
         );
@@ -933,6 +1047,9 @@ describe('CashuStore reconcilePendingMelts', () => {
         await store.reconcilePendingMelts();
 
         expect(store.pendingMelts).toEqual([]);
+        // the in-flight entry goes with it rather than staying in flight
+        // with nothing left to settle it
+        expect(store.payments).toEqual([]);
     });
 
     // Sweeps and self-custody claims pay an invoice from the user's own node,

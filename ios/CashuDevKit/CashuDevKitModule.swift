@@ -462,6 +462,11 @@ class CashuDevKitModule: RCTEventEmitter {
         if let preimage = quote.paymentProof {
             result["payment_preimage"] = preimage
         }
+        // Set while a melt saga still holds the quote, which is when CDK
+        // reports a melt the mint has not settled as Unpaid
+        if let operation = quote.usedByOperation {
+            result["used_by_operation"] = operation
+        }
         return result
     }
 
