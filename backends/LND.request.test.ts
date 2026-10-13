@@ -388,6 +388,22 @@ describe('LND request core', () => {
             expect(mockFetch).toHaveBeenCalledTimes(2);
         });
 
+        it.each([
+            ['single-line', '<html>bad gateway</html>'],
+            ['multi-line', '<html>\n<body>bad gateway</body>\n</html>\n']
+        ])(
+            'rejects a 2xx with a %s non-JSON body and lets a retry through',
+            async (_label, body) => {
+                mockFetch
+                    .mockResolvedValueOnce(response(200, body))
+                    .mockResolvedValueOnce(response(200, '{"n":2}'));
+
+                await expect(lnd.getChannels()).rejects.toThrow(SyntaxError);
+                await expect(lnd.getChannels()).resolves.toEqual({ n: 2 });
+                expect(mockFetch).toHaveBeenCalledTimes(2);
+            }
+        );
+
         it('evicts a timed-out request so a retry hits the network', async () => {
             mockFetch
                 .mockReturnValueOnce(new Promise(() => {}))
@@ -456,6 +472,16 @@ describe('LND request core', () => {
             const args = mockTorRequest.mock.calls[0];
             expect(args[4]).toBe(false);
             expect(args[5]).toBeUndefined();
+        });
+
+        it('issues a fresh Tor request once the previous one resolved', async () => {
+            mockTorRequest
+                .mockResolvedValueOnce({ n: 1 })
+                .mockResolvedValueOnce({ n: 2 });
+
+            await expect(lnd.getChannels()).resolves.toEqual({ n: 1 });
+            await expect(lnd.getChannels()).resolves.toEqual({ n: 2 });
+            expect(mockTorRequest).toHaveBeenCalledTimes(2);
         });
 
         it('evicts a rejected Tor request so a retry hits the network', async () => {
