@@ -32,6 +32,12 @@ const SPEC_INVOICE =
     'lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpquwpc4curk03c9wlrswe78q4eyqc7d8d0xqzpu9qrsgqhtjpauu9ur7fw2thcl4y9vfvh4m9wlfyz2gem29g5ghe2aak2pm3ps8fdhtceqsaagty2vph7utlgj48u0ged6a337aewvraedendscp573dxr';
 const SPEC_PAYMENT_HASH =
     '0001020304050607080900010203040506070809000102030405060708090102';
+// signet invoice (56,778 sat) from utils/Bolt11Utils.test.ts; its payment
+// hash differs from the spec vector's
+const SIGNET_INVOICE =
+    'lntbs567780n1pnqr26ypp5c0wcrpzwxwqnwu2nld5q36dfc9yjrfdp87nn9d5y093jjncvqresdq0w3jhxar8v3n8xeccqzpuxqrrsssp5r94e3nwnw63gjaxc8wex38ufv2m6442vnrw49m7dad9jdum3tdsq9qyyssqk4dvvuk7zhhju8ztf7nfc2hzqq9gqtzuyc0ljz8nl93laxwv4869lt9fsxkxacje6eh4ur5ymg83hvakn4tfpzdu6fq49705sar7fxspga8qjp';
+const SIGNET_PAYMENT_HASH =
+    'c3dd81844e3381377153fb6808e9a9c14921a5a13fa732b6847963294f0c00f3';
 const PREIMAGE = 'c'.repeat(64);
 
 // NIP-47 transaction as a wallet service returns it (amounts in msat)
@@ -257,12 +263,15 @@ describe('NostrWalletConnect.getPayments', () => {
         expect(client.listTransactions).toHaveBeenCalledWith({ limit: 500 });
     });
 
-    it('sends no limit when maxPayments is missing', async () => {
+    it.each([
+        ['missing', {}],
+        ['zero', { maxPayments: 0 }]
+    ])('sends no limit when maxPayments is %s', async (_, params) => {
         // the 500 default only applies when the argument itself is omitted
         const { backend, client } = await setup();
         client.listTransactions.mockResolvedValue({ transactions: [] });
 
-        await backend.getPayments({});
+        await backend.getPayments(params);
 
         expect(client.listTransactions).toHaveBeenCalledWith({});
     });
@@ -497,6 +506,19 @@ describe('NostrWalletConnect.decodePaymentRequest', () => {
         expect(decoded.payment_hash).toBe(SPEC_PAYMENT_HASH);
         expect(decoded.num_satoshis).toBe('250000');
         expect(decoded.paymentRequest).toBe(SPEC_INVOICE);
+    });
+
+    it('decodes only the first of several parameters', async () => {
+        const backend = new NostrWalletConnect();
+
+        const decoded = await backend.decodePaymentRequest([
+            SIGNET_INVOICE,
+            SPEC_INVOICE
+        ]);
+
+        expect(decoded.payment_hash).toBe(SIGNET_PAYMENT_HASH);
+        expect(decoded.num_satoshis).toBe('56778');
+        expect(decoded.paymentRequest).toBe(SIGNET_INVOICE);
     });
 
     it.each([
