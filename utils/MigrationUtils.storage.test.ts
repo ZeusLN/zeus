@@ -491,6 +491,21 @@ describe('storageMigrationV2', () => {
             ).toHaveLength(1);
         });
 
+        it('clears the marker when the settings have no nodes', async () => {
+            // A fresh install's default settings have no nodes key
+            const { nodes: _nodes, ...noNodes } = SETTINGS;
+            seedLegacy();
+            failWritesTo('zeus-contacts-v2', 'throw');
+            await MigrationUtils.storageMigrationV2(noNodes);
+            expect(enc(PENDING_FLAG)).toBe('true');
+
+            mockKeychain.fault = null;
+            await MigrationUtils.retryLegacySiblingMigration(noNodes);
+
+            expect(local('zeus-contacts-v2')).toBe('[{"name":"alice"}]');
+            expect(enc(PENDING_FLAG)).toBeUndefined();
+        });
+
         it('skips the retry when the marker cannot be read', async () => {
             seedLegacy();
             mockEncrypted.data.set(PENDING_FLAG, 'true');

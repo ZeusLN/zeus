@@ -1408,7 +1408,7 @@ class MigrationsUtils {
         const lncMigration = (async () => {
             try {
                 const migrationPromises =
-                    settings?.nodes.map(async (node: any) => {
+                    settings?.nodes?.map(async (node: any) => {
                         if (node.implementation === 'lightning-node-connect') {
                             const baseKey = `${LNC_STORAGE_KEY}:${hash(
                                 node.pairingPhrase
