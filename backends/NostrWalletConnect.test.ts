@@ -22,6 +22,8 @@ jest.mock('../stores/Stores', () => ({
     }
 }));
 
+import Payment from '../models/Payment';
+
 import Base64Utils from '../utils/Base64Utils';
 import Bolt11Utils from '../utils/Bolt11Utils';
 
@@ -72,7 +74,7 @@ const setup = async () => {
     const backend = new NostrWalletConnect();
     await backend.initNWC();
     await backend.connect();
-    const client = backend.nwc.client;
+    const client: any = backend.nwc.client;
     client.getBalance = jest.fn();
     client.payInvoice = jest.fn();
     client.makeInvoice = jest.fn();
@@ -505,46 +507,155 @@ describe('NostrWalletConnect.payLightningInvoice', () => {
         });
     });
 
-    it('sends only the invoice, dropping amount and fee limit', async () => {
-        // TransactionsStore.sendPayment sets amt for zero-amount invoices
-        // and fee_limit_sat; NIP-47 pay_invoice has an amount (msat) field
-        // but this backend does not forward it
-        const { backend, client } = await setup();
-        client.payInvoice.mockResolvedValue({ preimage: PAY_PREIMAGE });
+    describe('amount', () => {
+        // decode stub for a zero-amount invoice, keeping the bound hash
+        const decodeWithoutAmount = () => {
+            const decode = (
+                Bolt11Utils.decode as jest.Mock
+            ).getMockImplementation()!;
+            (Bolt11Utils.decode as jest.Mock).mockImplementation(
+                (invoice: string) => ({
+                    ...decode(invoice),
+                    num_satoshis: '0',
+                    num_msat: '0'
+                })
+            );
+        };
 
-        await backend.payLightningInvoice({
-            payment_request: SPEC_INVOICE,
-            amt: 1234,
-            fee_limit_sat: 10,
-            max_parts: '1',
-            timeout_seconds: 60
+        it('forwards the amount in msat when paying a zero-amount invoice', async () => {
+            decodeWithoutAmount();
+            const { backend, client } = await setup();
+            client.payInvoice.mockResolvedValue({ preimage: PAY_PREIMAGE });
+
+            await expect(
+                backend.payLightningInvoice({
+                    payment_request: SPEC_INVOICE,
+                    amt: 1234
+                })
+            ).resolves.toMatchObject({ status: 'SUCCEEDED' });
+
+            expect(client.payInvoice).toHaveBeenCalledTimes(1);
+            expect(client.payInvoice).toHaveBeenCalledWith({
+                invoice: SPEC_INVOICE,
+                amount: 1_234_000
+            });
         });
 
-        expect(client.payInvoice).toHaveBeenCalledWith({
-            invoice: SPEC_INVOICE
+        it('sends no amount when the invoice does not decode', async () => {
+            // the invoice may carry an amount, and wallets reject an amount
+            // sent with one
+            (Bolt11Utils.decode as jest.Mock).mockImplementation(() => {
+                throw new Error('bad invoice');
+            });
+            const { backend, client } = await setup();
+            client.payInvoice.mockResolvedValue({ preimage: PREIMAGE });
+
+            await backend.payLightningInvoice({
+                payment_request: SPEC_INVOICE,
+                amt: '21'
+            });
+
+            expect(client.payInvoice).toHaveBeenCalledWith({
+                invoice: SPEC_INVOICE
+            });
+        });
+
+        it('sends no amount for an invoice that carries one', async () => {
+            // the spec invoice is for 250,000 sat
+            const { backend, client } = await setup();
+            client.payInvoice.mockResolvedValue({ preimage: PAY_PREIMAGE });
+
+            await backend.payLightningInvoice({
+                payment_request: SPEC_INVOICE,
+                amt: 1234
+            });
+
+            expect(client.payInvoice).toHaveBeenCalledWith({
+                invoice: SPEC_INVOICE
+            });
+        });
+
+        it('sends no amount when none was entered', async () => {
+            decodeWithoutAmount();
+            const { backend, client } = await setup();
+            client.payInvoice.mockResolvedValue({ preimage: PAY_PREIMAGE });
+
+            await backend.payLightningInvoice({
+                payment_request: SPEC_INVOICE
+            });
+
+            expect(client.payInvoice).toHaveBeenCalledWith({
+                invoice: SPEC_INVOICE
+            });
+        });
+
+        it('drops the fee limit, MPP and timeout options', async () => {
+            // NIP-47 pay_invoice has no fields for them
+            const { backend, client } = await setup();
+            client.payInvoice.mockResolvedValue({ preimage: PAY_PREIMAGE });
+
+            await backend.payLightningInvoice({
+                payment_request: SPEC_INVOICE,
+                fee_limit_sat: 10,
+                max_parts: '1',
+                timeout_seconds: 60
+            });
+
+            expect(client.payInvoice).toHaveBeenCalledWith({
+                invoice: SPEC_INVOICE
+            });
         });
     });
 
-    it.todo('forwards the amount in msat when paying a zero-amount invoice');
+    describe('fee', () => {
+        it('returns the fee the wallet reports, in msat', async () => {
+            const { backend, client } = await setup();
+            client.payInvoice.mockResolvedValue({
+                preimage: PAY_PREIMAGE,
+                fees_paid: 5500
+            });
 
-    it('drops the fee the wallet reports', async () => {
-        // pins current behavior: the provider keeps only the preimage, so
-        // the routing fee never reaches the payment result
-        const { backend, client } = await setup();
-        client.payInvoice.mockResolvedValue({
-            preimage: PAY_PREIMAGE,
-            fees_paid: 5000
+            const result = await backend.payLightningInvoice({
+                payment_request: SPEC_INVOICE
+            });
+
+            expect(result).toEqual({
+                status: 'SUCCEEDED',
+                payment_hash: PAY_HASH,
+                preimage: PAY_PREIMAGE,
+                fee_msat: '5500'
+            });
+            // the send screen reads the fee through the Payment model
+            expect(new Payment(result).getFee).toBe('5.5');
         });
 
-        const result = await backend.payLightningInvoice({
-            payment_request: SPEC_INVOICE
+        it('reports a zero fee as zero', async () => {
+            const { backend, client } = await setup();
+            client.payInvoice.mockResolvedValue({
+                preimage: PAY_PREIMAGE,
+                fees_paid: 0
+            });
+
+            const result = await backend.payLightningInvoice({
+                payment_request: SPEC_INVOICE
+            });
+
+            expect(result).toMatchObject({ fee_msat: '0' });
+            expect(new Payment(result).getFee).toBe('0');
         });
 
-        expect(result).not.toHaveProperty('fees_paid');
-        expect(result).not.toHaveProperty('fee_msat');
+        it('omits the fee when the wallet does not report one', async () => {
+            const { backend, client } = await setup();
+            client.payInvoice.mockResolvedValue({ preimage: PAY_PREIMAGE });
+
+            const result = await backend.payLightningInvoice({
+                payment_request: SPEC_INVOICE
+            });
+
+            expect(result).not.toHaveProperty('fee_msat');
+            expect(new Payment(result).getFee).toBe('0');
+        });
     });
-
-    it.todo('returns the fee the wallet reports, in sats');
 
     it.each([
         ['no preimage', {}],

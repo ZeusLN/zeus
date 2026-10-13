@@ -14,7 +14,7 @@ import Bolt11Utils from '../utils/Bolt11Utils';
 import { localeString } from '../utils/LocaleUtils';
 
 export default class NostrWalletConnect {
-    nwc: any;
+    nwc: NostrWebLNProvider;
 
     initNWC = async () => {
         const { nostrWalletConnectUrl } = settingsStore;
@@ -88,18 +88,34 @@ export default class NostrWalletConnect {
     };
     payLightningInvoice = async (data: any) => {
         let payment_hash: string | undefined;
+        let isZeroAmount = false;
         try {
-            payment_hash = Bolt11Utils.decode(
-                data.payment_request
-            ).payment_hash;
+            const decoded = Bolt11Utils.decode(data.payment_request);
+            payment_hash = decoded.payment_hash;
+            isZeroAmount = !Number(decoded.num_msat);
         } catch (e) {
             // decoding is best-effort; the wallet service validates the
             // invoice itself
         }
 
+        // amt is the sat amount the user entered; NIP-47 pay_invoice takes
+        // it in msat. Send it only for an invoice known to have no amount:
+        // wallets reject an amount sent with an invoice that carries one.
+        const amountMsat =
+            data.amt && isZeroAmount
+                ? Math.round(Number(data.amt) * 1000)
+                : undefined;
+
+        // Call the NIP-47 client directly: the provider's sendPayment takes
+        // only the invoice and drops fees_paid from the reply
         let preimage: string | undefined;
+        let fees_paid: number | undefined;
         try {
-            ({ preimage } = await this.nwc.sendPayment(data.payment_request));
+            const { client } = this.nwc;
+            ({ preimage, fees_paid } = await client.payInvoice({
+                invoice: data.payment_request,
+                ...(amountMsat && { amount: amountMsat })
+            }));
         } catch (error) {
             // These errors leave the outcome unknown, so the payment may
             // still complete:
@@ -145,7 +161,11 @@ export default class NostrWalletConnect {
         return {
             status: 'SUCCEEDED',
             payment_hash,
-            preimage: normalizedPreimage
+            preimage: normalizedPreimage,
+            // NIP-47 reports fees_paid in msat
+            ...(typeof fees_paid === 'number' && {
+                fee_msat: String(fees_paid)
+            })
         };
     };
     decodePaymentRequest = (urlParams?: Array<string>) =>
