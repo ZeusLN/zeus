@@ -42,7 +42,11 @@ jest.mock('../stores/NodeInfoStore', () => ({}));
 jest.mock('../utils/Base64Utils', () => ({}));
 jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
-    default: { isLocalWallet: () => false }
+    default: {
+        isLocalWallet: () => false,
+        isLNDBased: () => false,
+        supportsChannelManagement: () => false
+    }
 }));
 jest.mock('../utils/ContactUtils', () => ({
     __esModule: true,
@@ -59,7 +63,7 @@ jest.mock('../utils/AmountUtils', () => ({ getFeePercentage: jest.fn() }));
 
 import * as React from 'react';
 import { BackHandler } from 'react-native';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import SendingLightning from './SendingLightning';
 
 const TRY_AGAIN = 'views.SendingLightning.tryAgain';
@@ -164,5 +168,105 @@ describe('SendingLightning hardware back', () => {
         expect(onBack()).toBe(false);
 
         expect(navigation.popTo).not.toHaveBeenCalled();
+    });
+});
+
+describe('SendingLightning donation', () => {
+    const { loadDonationLnurl } = jest.requireMock('../utils/DonationUtils');
+
+    // Opens the sending screen with a donation selected, then lets the
+    // payment succeed, which is when the screen sends the donation
+    const donate = async (result: any) => {
+        // Only the first lookup answers. Without #5029 a failed donation
+        // is tried again on every update, and a lookup that never settles
+        // stops that retry from looping through the test.
+        loadDonationLnurl
+            .mockReset()
+            .mockResolvedValueOnce('lnbc1donation')
+            .mockReturnValue(new Promise(() => {}));
+        const sendPaymentSilently = jest.fn().mockResolvedValue(result);
+        const getPayments = jest.fn().mockResolvedValue([]);
+        const TransactionsStore: any = {
+            loading: true,
+            error: false,
+            status: null,
+            donationIsPaid: false,
+            sendPaymentSilently
+        };
+        const props: any = {
+            navigation: {
+                goBack: jest.fn(),
+                popTo: jest.fn(),
+                addListener: jest.fn(() => jest.fn())
+            },
+            route: {
+                key: 'SendingLightning',
+                name: 'SendingLightning',
+                params: { donationAmount: '100', enableDonations: true }
+            },
+            TransactionsStore,
+            ContactStore: { contacts: [] },
+            LnurlPayStore: {},
+            NodeInfoStore: { nodeInfo: { isMainNet: true } },
+            PaymentsStore: { getPayments },
+            BalanceStore: { getCombinedBalance: jest.fn() },
+            ChannelsStore: { getChannels: jest.fn() }
+        };
+        const { rerender } = await render(<SendingLightning {...props} />);
+
+        Object.assign(TransactionsStore, {
+            loading: false,
+            status: 'SUCCEEDED',
+            payment_preimage: 'cd'.repeat(32)
+        });
+        await rerender(<SendingLightning {...props} />);
+        await act(async () => {
+            await new Promise((resolve) => setImmediate(resolve));
+        });
+
+        return { TransactionsStore, getPayments, sendPaymentSilently };
+    };
+
+    const hostProps = (type: string) =>
+        screen.container.queryAll((n) => n.type === type)[0]?.props;
+
+    // the donation lookup asks for the last payment only; the main
+    // payment's lookup asks for five
+    const donationLookups = (getPayments: jest.Mock) =>
+        getPayments.mock.calls.filter(([args]) => args.maxPayments === 1);
+
+    it('marks an in-flight donation paid so it is not sent again, without reporting it as donated', async () => {
+        // what the NWC backend returns on a wallet reply timeout
+        const { TransactionsStore, getPayments, sendPaymentSilently } =
+            await donate({
+                status: 'IN_FLIGHT',
+                payment_hash: 'ab'.repeat(32)
+            });
+
+        expect(sendPaymentSilently).toHaveBeenCalledWith({
+            payment_request: 'lnbc1donation'
+        });
+        expect(TransactionsStore.donationIsPaid).toBe(true);
+        expect(hostProps('DonationGiftIcon')).toMatchObject({
+            payingDonation: false,
+            donationHandled: false
+        });
+        expect(hostProps('DonationInfoModal').donationPreimage).toBe('');
+        expect(donationLookups(getPayments)).toHaveLength(0);
+    });
+
+    it('reports a failed donation as unpaid', async () => {
+        const { TransactionsStore, sendPaymentSilently } = await donate({
+            status: 'FAILED'
+        });
+
+        expect(sendPaymentSilently).toHaveBeenCalledTimes(1);
+        expect(TransactionsStore.donationIsPaid).toBe(false);
+        expect(hostProps('DonationGiftIcon').donationHandled).toBe(false);
+        // Currently the failure clears payingDonation, which re-runs the
+        // donation check on the next update and starts another attempt
+        // (held here at the lookup). #5029 stops that retry.
+        expect(loadDonationLnurl).toHaveBeenCalledTimes(2);
+        expect(hostProps('DonationGiftIcon').payingDonation).toBe(true);
     });
 });

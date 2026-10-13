@@ -3,12 +3,15 @@
 // assertions cover the request that would be sent to the wallet service
 // (field names, msat units) and the decoded result Zeus gets back.
 import {
+    Nip47PublishTimeoutError,
     Nip47ReplyTimeoutError,
     Nip47WalletError,
     NostrWebLNProvider
 } from '@getalby/sdk';
+import { sha256 } from 'js-sha256';
 
-const mockSettingsStore: any = {};
+// settings.locale is read by localeString for user-facing errors
+const mockSettingsStore: any = { settings: { locale: 'en' } };
 // getter: the factory runs when the backend is imported, which is hoisted
 // above the const declaration
 jest.mock('../stores/Stores', () => ({
@@ -16,6 +19,9 @@ jest.mock('../stores/Stores', () => ({
         return mockSettingsStore;
     }
 }));
+
+import Base64Utils from '../utils/Base64Utils';
+import Bolt11Utils from '../utils/Bolt11Utils';
 
 import NostrWalletConnect from './NostrWalletConnect';
 
@@ -368,16 +374,108 @@ describe('NostrWalletConnect.createInvoice', () => {
 });
 
 describe('NostrWalletConnect.payLightningInvoice', () => {
-    it('sends pay_invoice with the payment request and returns the preimage', async () => {
+    // The spec invoice's preimage is unknown, so bind its decoded payment
+    // hash to a preimage the tests control
+    const PAY_PREIMAGE = 'd'.repeat(64);
+    const PAY_HASH = sha256(Base64Utils.hexToBytes(PAY_PREIMAGE));
+
+    beforeEach(() => {
+        const decode = Bolt11Utils.decode;
+        jest.spyOn(Bolt11Utils, 'decode').mockImplementation(
+            (invoice: string) => ({
+                ...decode(invoice),
+                payment_hash: PAY_HASH
+            })
+        );
+    });
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
+    it('sends pay_invoice with the payment request and reports success with a matching preimage', async () => {
+        const { backend, client } = await setup();
+        client.payInvoice.mockResolvedValue({ preimage: PAY_PREIMAGE });
+
+        await expect(
+            backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
+        ).resolves.toEqual({
+            status: 'SUCCEEDED',
+            payment_hash: PAY_HASH,
+            preimage: PAY_PREIMAGE
+        });
+        expect(client.payInvoice).toHaveBeenCalledTimes(1);
+        expect(client.payInvoice).toHaveBeenCalledWith({
+            invoice: SPEC_INVOICE
+        });
+    });
+
+    it('accepts an uppercase hex preimage and returns it lowercased', async () => {
+        const { backend, client } = await setup();
+        client.payInvoice.mockResolvedValue({
+            preimage: PAY_PREIMAGE.toUpperCase()
+        });
+
+        await expect(
+            backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
+        ).resolves.toEqual({
+            status: 'SUCCEEDED',
+            payment_hash: PAY_HASH,
+            preimage: PAY_PREIMAGE
+        });
+    });
+
+    it.each([
+        ['a preimage for another hash', PREIMAGE],
+        ['a short preimage', 'dd'],
+        ['a non-hex preimage', 'z'.repeat(64)]
+    ])('rejects %s', async (_, preimage) => {
+        const { backend, client } = await setup();
+        client.payInvoice.mockResolvedValue({ preimage });
+
+        await expect(
+            backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
+        ).rejects.toThrow(
+            'The wallet reported this payment as sent, but the preimage it returned does not match the invoice'
+        );
+    });
+
+    it('rejects a non-hex preimage even when it parses to the right bytes', async () => {
+        // parseInt('dz', 16) is 0x0d, so 'dz' repeated hashes like '0d'
+        // repeated; only the hex check catches it
+        const realPreimage = '0d'.repeat(32);
+        const decode = (
+            Bolt11Utils.decode as jest.Mock
+        ).getMockImplementation()!;
+        (Bolt11Utils.decode as jest.Mock).mockImplementation(
+            (invoice: string) => ({
+                ...decode(invoice),
+                payment_hash: sha256(Base64Utils.hexToBytes(realPreimage))
+            })
+        );
+        const { backend, client } = await setup();
+        client.payInvoice.mockResolvedValue({ preimage: 'dz'.repeat(32) });
+
+        await expect(
+            backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
+        ).rejects.toThrow(
+            'The wallet reported this payment as sent, but the preimage it returned does not match the invoice'
+        );
+    });
+
+    it('reports success without checking when the invoice does not decode', async () => {
+        // decoding is best-effort; with no hash there is nothing to check
+        jest.spyOn(Bolt11Utils, 'decode').mockImplementation(() => {
+            throw new Error('bad invoice');
+        });
         const { backend, client } = await setup();
         client.payInvoice.mockResolvedValue({ preimage: PREIMAGE });
 
         await expect(
             backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
-        ).resolves.toEqual({ preimage: PREIMAGE });
-        expect(client.payInvoice).toHaveBeenCalledTimes(1);
-        expect(client.payInvoice).toHaveBeenCalledWith({
-            invoice: SPEC_INVOICE
+        ).resolves.toEqual({
+            status: 'SUCCEEDED',
+            payment_hash: undefined,
+            preimage: PREIMAGE
         });
     });
 
@@ -386,7 +484,7 @@ describe('NostrWalletConnect.payLightningInvoice', () => {
         // and fee_limit_sat; NIP-47 pay_invoice has an amount (msat) field
         // but this backend does not forward it
         const { backend, client } = await setup();
-        client.payInvoice.mockResolvedValue({ preimage: PREIMAGE });
+        client.payInvoice.mockResolvedValue({ preimage: PAY_PREIMAGE });
 
         await backend.payLightningInvoice({
             payment_request: SPEC_INVOICE,
@@ -408,7 +506,7 @@ describe('NostrWalletConnect.payLightningInvoice', () => {
         // the routing fee never reaches the payment result
         const { backend, client } = await setup();
         client.payInvoice.mockResolvedValue({
-            preimage: PREIMAGE,
+            preimage: PAY_PREIMAGE,
             fees_paid: 5000
         });
 
@@ -416,23 +514,31 @@ describe('NostrWalletConnect.payLightningInvoice', () => {
             payment_request: SPEC_INVOICE
         });
 
-        expect(result).toEqual({ preimage: PREIMAGE });
         expect(result).not.toHaveProperty('fees_paid');
+        expect(result).not.toHaveProperty('fee_msat');
     });
 
     it.todo('returns the fee the wallet reports, in sats');
 
-    it('resolves without a preimage when the reply has none', async () => {
-        // pins current behavior: the SDK accepts any non-empty result for
-        // pay_invoice, and TransactionsStore.handlePayment marks a result
-        // without a status as complete
-        const { backend, client } = await setup();
-        client.payInvoice.mockResolvedValue({});
+    it.each([
+        ['no preimage', {}],
+        ['an empty preimage', { preimage: '' }]
+    ])(
+        'reports a reply with %s as in flight, not complete',
+        async (_, reply) => {
+            // Zeus's own NWC service answers with an empty preimage while
+            // the HTLC is still out
+            const { backend, client } = await setup();
+            client.payInvoice.mockResolvedValue(reply);
 
-        await expect(
-            backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
-        ).resolves.toEqual({ preimage: undefined });
-    });
+            await expect(
+                backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
+            ).resolves.toEqual({
+                status: 'IN_FLIGHT',
+                payment_hash: PAY_HASH
+            });
+        }
+    );
 
     it('rejects with the wallet error when the payment fails', async () => {
         const { backend, client } = await setup();
@@ -465,23 +571,47 @@ describe('NostrWalletConnect.payLightningInvoice', () => {
         ).rejects.toMatchObject({ message, code });
     });
 
-    it('rejects on a reply timeout the same way as on a failure', async () => {
-        // pins current behavior: the payment may still complete at the
-        // wallet after the 60 s reply timeout, but the rejection carries
-        // no in-flight marker, so the send screen reports a failure
+    it('reports a reply timeout as in flight, since the wallet may still pay', async () => {
         const { backend, client } = await setup();
-        const error = new Nip47ReplyTimeoutError(
+        client.payInvoice.mockRejectedValue(
+            new Nip47ReplyTimeoutError('reply timeout: event abc', 'INTERNAL')
+        );
+
+        await expect(
+            backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
+        ).resolves.toEqual({
+            status: 'IN_FLIGHT',
+            payment_hash: PAY_HASH
+        });
+        expect(client.payInvoice).toHaveBeenCalledTimes(1);
+    });
+
+    it('still rejects on a publish timeout, since the wallet never got the request', async () => {
+        const { backend, client } = await setup();
+        const error = new Nip47PublishTimeoutError(
+            'publish timeout: abc',
+            'INTERNAL'
+        );
+        client.payInvoice.mockRejectedValue(error);
+
+        await expect(
+            backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
+        ).rejects.toBe(error);
+    });
+
+    it('does not treat another error with the same code as a reply timeout', async () => {
+        // reply and publish timeouts share the INTERNAL code, so only the
+        // error class tells them apart
+        const { backend, client } = await setup();
+        const error = new Nip47WalletError(
             'reply timeout: event abc',
             'INTERNAL'
         );
         client.payInvoice.mockRejectedValue(error);
 
-        const promise = backend.payLightningInvoice({
-            payment_request: SPEC_INVOICE
-        });
-
-        await expect(promise).rejects.toBe(error);
-        await expect(promise).rejects.toBeInstanceOf(Nip47ReplyTimeoutError);
+        await expect(
+            backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
+        ).rejects.toBe(error);
     });
 
     it('does not retry a failed payment', async () => {
