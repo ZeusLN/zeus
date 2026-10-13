@@ -127,7 +127,9 @@ jest.mock('../stores/ActivityStore', () => ({
     LEGACY_ACTIVITY_FILTERS_KEY: 'activityFilters'
 }));
 jest.mock('../utils/MigrationUtils', () => ({
-    IS_BACKED_UP_KEY: 'is-backed-up'
+    __esModule: true,
+    IS_BACKED_UP_KEY: 'is-backed-up',
+    default: { clearConfirmedFlags: jest.fn() }
 }));
 jest.mock('../utils/SwapUtils', () => ({
     SWAPS_KEY: 'swaps',
@@ -152,6 +154,7 @@ jest.mock('../utils/RatingUtils', () => ({
 
 import hashjs from 'hash.js';
 import { BackHandler, Platform } from 'react-native';
+import EncryptedStorage from 'react-native-encrypted-storage';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import fs from 'fs';
@@ -172,6 +175,7 @@ import {
 import { deleteLndWallet } from './LndMobileUtils';
 import { deleteLdkNodeWallet, stopLdkNode } from './LdkNodeUtils';
 import { sleep } from './SleepUtils';
+import MigrationUtils from './MigrationUtils';
 
 const mockedDeleteLndWallet = deleteLndWallet as jest.Mock;
 const mockedDeleteLdkNodeWallet = deleteLdkNodeWallet as jest.Mock;
@@ -711,6 +715,22 @@ describe('clearAllData write latch (settings resurrection regression)', () => {
         expect(mockedBlockWrites).toHaveBeenCalled();
         expect(mockedBlockWrites.mock.invocationCallOrder[0]).toBeLessThan(
             mockedStorageRemoveItem.mock.invocationCallOrder[0]
+        );
+    });
+
+    // MigrationUtils caches one-shot flags that have read 'true'. Clearing
+    // EncryptedStorage deletes the flags, so the cache must be dropped after
+    // it, or the next getSettings would skip migrations for the empty store
+    it('drops the cached migration flags after clearing EncryptedStorage', async () => {
+        const mockedClear = EncryptedStorage.clear as jest.Mock;
+        const mockedClearFlags =
+            MigrationUtils.clearConfirmedFlags as jest.Mock;
+
+        await clearAllData();
+
+        expect(mockedClearFlags).toHaveBeenCalledTimes(1);
+        expect(mockedClear.mock.invocationCallOrder[0]).toBeLessThan(
+            mockedClearFlags.mock.invocationCallOrder[0]
         );
     });
 });
