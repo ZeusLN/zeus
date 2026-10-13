@@ -101,6 +101,12 @@ export default class SendingLightning extends React.Component<
 
     private focusListener: (() => void) | undefined;
 
+    // set on the first attempt and never cleared: the failure branches of
+    // handleDonationPayment call setState, which re-runs componentDidUpdate
+    // with the same conditions, so without this a failing donation retries
+    // for as long as the screen is open
+    private donationAttempted = false;
+
     constructor(props: SendingLightningProps) {
         super(props);
         this.state = {
@@ -178,7 +184,8 @@ export default class SendingLightning extends React.Component<
             donationAmount &&
             !donationIsPaid &&
             !this.state.payingDonation &&
-            !this.state.donationHandled
+            !this.state.donationHandled &&
+            !this.donationAttempted
         ) {
             this.handleDonationPayment(donationAmount);
         }
@@ -187,6 +194,7 @@ export default class SendingLightning extends React.Component<
     handleDonationPayment = async (donationAmount: string) => {
         const { TransactionsStore, PaymentsStore } = this.props;
 
+        this.donationAttempted = true;
         this.setState({ payingDonation: true, paymentType: 'donation' });
 
         try {
