@@ -409,6 +409,8 @@ export default class ChannelsPane extends React.PureComponent<
         }
 
         const glass = isGlassEffectEnabled();
+        const isChannelsView =
+            ChannelsStore?.channelsView === ChannelsView.Channels;
 
         const getTabScreenOptions = ({ route }: { route: any }) => {
             let label: string;
@@ -426,15 +428,19 @@ export default class ChannelsPane extends React.PureComponent<
                 tabBarShowLabel: true,
                 ...(glass
                     ? {
-                          tabBarBackground: () => (
-                              <LiquidGlassView
-                                  style={{ flex: 1, borderRadius: 25 }}
-                                  effect="regular"
-                                  colorScheme={
-                                      isLightTheme() ? 'light' : 'dark'
-                                  }
-                              />
-                          ),
+                          // The glass effect stops drawing once the hidden
+                          // container (opacity 0) is shown again, so mount a
+                          // fresh glass view each time Channels is shown.
+                          tabBarBackground: () =>
+                              isChannelsView ? (
+                                  <LiquidGlassView
+                                      style={{ flex: 1, borderRadius: 25 }}
+                                      effect="regular"
+                                      colorScheme={
+                                          isLightTheme() ? 'light' : 'dark'
+                                      }
+                                  />
+                              ) : null,
                           tabBarStyle: {
                               backgroundColor: 'transparent',
                               borderTopWidth: 0,
@@ -507,9 +513,6 @@ export default class ChannelsPane extends React.PureComponent<
                 animation: 'shift' as const
             };
         };
-
-        const isChannelsView =
-            ChannelsStore?.channelsView === ChannelsView.Channels;
 
         const viewContainerStyle = (visible: boolean) =>
             visible ? { flex: 1 } : HIDDEN_VIEW_STYLE;
