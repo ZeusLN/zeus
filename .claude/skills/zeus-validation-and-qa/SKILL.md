@@ -1,6 +1,6 @@
 ---
 name: zeus-validation-and-qa
-description: Load when validating changes to Zeus — running or fixing `yarn verify` / CI checks (Test, Lint, Prettier, Typescript Check), writing or extending Jest unit tests, deciding what evidence a PR needs (manual testing matrix, screenshots, which backends to test), or debugging CI-only failures. Symptoms/keywords - "yarn verify fails", "check-styles.test.ts", "themeColor StyleSheet lint error", "Cannot use import statement outside a module" in jest, "prettier check fails in CI but not locally", "how do I run one test", "where are the tests", "do stores have tests", "what do I need to test before opening a PR", transformIgnorePatterns, moduleNameMapper, test coverage.
+description: Load when validating changes to Zeus: running or fixing `yarn verify` / CI checks (Test, Lint, Prettier, Typescript Check), writing or extending Jest unit tests, deciding what evidence a PR needs (manual testing matrix, screenshots, which backends to test), or debugging CI-only failures. Symptoms/keywords - "yarn verify fails", "themeColor StyleSheet lint error", "no-themecolor-in-static-stylesheet", "Cannot use import statement outside a module" in jest, "prettier check fails in CI but not locally", "how do I run one test", "where are the tests", "do stores have tests", "what do I need to test before opening a PR", transformIgnorePatterns, moduleNameMapper, test coverage.
 ---
 
 # Zeus Validation and QA
@@ -15,7 +15,7 @@ Use this skill when you are:
 - Running or debugging `yarn verify` or any of the four PR CI checks
 - Writing, extending, or running Jest tests
 - Deciding what manual testing / screenshots / backend coverage a change needs before PR
-- Hit by the `check-styles.test.ts` lint failure or a jest transform error
+- Hit by the `zeus/no-themecolor-in-static-stylesheet` lint failure or a jest transform error
 
 Use a sibling skill instead when you need:
 - PR/commit/review/locales rules, dependency policy, the storage-change gate → **zeus-change-control**
@@ -51,10 +51,10 @@ These SAME four checks are the ENTIRE PR CI gate. `.github/workflows/` contains 
 
 | CI check name | Exact local command | What it runs | Common failure modes |
 |---|---|---|---|
-| Test | `yarn test` | `jest`, all suites (about 122 as of 2026-10-08; breakdown in section 4) including `check-locales.test.ts`, which fails if a literal `localeString('key')` is missing from `locales/en.json` (#4674); `check-styles.test.ts` and `zeus_modules` excluded via `testPathIgnorePatterns`. CI runs it as `yarn run test:coverage --coverageReporters=json-summary` | New ESM dependency not in `transformIgnorePatterns` ("Cannot use import statement outside a module"); un-mocked native module; importing `stores/Stores` without mocking it drags in the whole app graph |
+| Test | `yarn test` | `jest`, all suites (about 123 as of 2026-10-08; breakdown in section 4) including `check-locales.test.ts`, which fails if a literal `localeString('key')` is missing from `locales/en.json` (#4674); `zeus_modules` excluded via `testPathIgnorePatterns`. CI runs it as `yarn run test:coverage --coverageReporters=json-summary` | New ESM dependency not in `transformIgnorePatterns` ("Cannot use import statement outside a module"); un-mocked native module; importing `stores/Stores` without mocking it drags in the whole app graph |
 | Prettier | `yarn prettier` | `prettier --check "**/*.ts*"` (ignores only `zeus_modules`, per `.prettierignore`) | Formatting with a global/newer Prettier — the repo pins **prettier 2.4.1** (devDependency) with `.prettierrc`: tabWidth 4, singleQuote, semi, trailingComma "none". Newer Prettier majors format differently and fail CI. Fix: `yarn prettier-write` (uses the pinned version) |
 | Typescript Check | `yarn tsc` | `tsc` check-only; tsconfig has `strict: true`, `noUnusedLocals: true`, `noUnusedParameters: true`, but `strictPropertyInitialization: false` (MobX store fields) | Unused variables/params fail the build; excludes are `node_modules`, `zeus_modules`, `android`, `ios`. Type errors are suppressed with `@ts-ignore` (ban-ts-comment is off). `eslint-disable` comments are only used for `zeus/no-negative-layout-offset`, always with a reason — see the Lint row |
-| Lint | `yarn lint` | `eslint . && yarn run test check-styles.test.ts --testPathIgnorePatterns=` | ESLint 9 flat config (`eslint.config.js`) includes `prettier/prettier` as an **error** rule — so a formatting mistake fails BOTH the Prettier and Lint checks. The local rule `zeus/no-negative-layout-offset` (`eslint-rules/`) fails on negative margin/position values unless disabled inline with `-- TODO #2794` or `-- intentional: <reason>`; `reportUnusedDisableDirectives: 'error'` also fails on a directive that no longer suppresses anything (e.g. after fixing the offset). Second half is the style-sheet ban, see section 2. ESLint ignores `zeus_modules/`, `android/`, `ios/`, `proto/`, `shim.js`, config JS files |
+| Lint | `yarn lint` | `eslint .` | ESLint 9 flat config (`eslint.config.js`) includes `prettier/prettier` as an **error** rule, so a formatting mistake fails BOTH the Prettier and Lint checks. The local rule `zeus/no-negative-layout-offset` (`eslint-rules/`) fails on negative margin/position values unless disabled inline with `-- TODO #2794` or `-- intentional: <reason>`; `reportUnusedDisableDirectives: 'error'` also fails on a directive that no longer suppresses anything (e.g. after fixing the offset). The local rule `zeus/no-themecolor-in-static-stylesheet` is the style-sheet ban, see section 2. ESLint ignores `zeus_modules/`, `android/`, `ios/`, `proto/`, `shim.js`, config JS files |
 
 Run the full gate before every PR. Node engines requirement is `>= 22.11.0` (package.json); CI uses 24.x; there is no `.nvmrc`.
 
@@ -63,21 +63,13 @@ Checklist before opening a PR:
 - [ ] If you touched a utility: unit tests added/updated (the PR template asks this explicitly)
 - [ ] Manual test evidence collected (section 5)
 
-## 2) The `check-styles.test.ts` mechanism, precisely
+## 2) The themeColor style-sheet ban, precisely
 
-`check-styles.test.ts` sits at the repo root. It is a Jest test, but it is NOT part of `yarn test`:
+The local ESLint rule `zeus/no-themecolor-in-static-stylesheet` (`eslint-rules/no-themecolor-in-static-stylesheet.js`, tests next to it) runs as part of `yarn lint`, so a violation fails the **Lint** CI check.
 
-- package.json jest config: `"testPathIgnorePatterns": ["check-styles.test.ts"]` → excluded from the Test check.
-- `yarn lint` re-includes it by passing an EMPTY ignore list: `yarn run test check-styles.test.ts --testPathIgnorePatterns=` → so a styling violation fails the **Lint** CI check, not Test. This surprises everyone once.
+**What it bans:** calling `themeColor()` inside the arguments of a `StyleSheet.create(...)` call that runs at module scope (top-level `const`, `export const`, `export default`, static class fields) in any `.ts` or `.tsx` file. Calls inside a function, component or class instance field are allowed, so `getStyles()` helpers and inline styles are fine.
 
-**What it bans:** calling `themeColor()` inside a static `StyleSheet.create({...})` block in any `.tsx` file.
-
-**Why:** `StyleSheet.create` at module scope executes ONCE, at import time. `themeColor('key')` reads the user's *currently selected* theme (Zeus ships 23 themes). A theme color baked into a static sheet freezes at whatever theme was active at first import and silently ignores theme switches — a real correctness bug, not a style nit. The test's own error message says exactly this.
-
-**How it detects:** a dot-all regex — `/\n[^\s][^\n]+StyleSheet\.create\(\{.*themeColor\(/s` — flags any `.tsx` file where a **non-indented (top-level) line containing `StyleSheet.create({`** is followed *anywhere later in the file* by `themeColor(`. Two practical consequences:
-
-1. Keep `const styles = StyleSheet.create({...})` as the LAST thing in the file (the repo-wide convention, e.g. `components/WalletHeader.tsx`) and keep it free of `themeColor()`.
-2. Because the `.*` spans newlines, a `themeColor(` call in ordinary component code placed BELOW the styles block will also trip the check even if the sheet itself is clean. Styles-at-bottom avoids this entirely.
+**Why:** `StyleSheet.create` at module scope executes ONCE, at import time. `themeColor('key')` reads the user's *currently selected* theme (Zeus ships 23 themes). A theme color baked into a static sheet freezes at whatever theme was active at first import and silently ignores theme switches. That is a real correctness bug, not a style nit. The rule's error message says exactly this.
 
 **How to fix a violation** — move the themed color out of the static sheet:
 
@@ -96,7 +88,7 @@ const styles = StyleSheet.create({
 // or compute the style object inside render/a function, as components/Button.tsx does
 ```
 
-Run just this check locally: `yarn run test check-styles.test.ts --testPathIgnorePatterns=`
+Run just this check locally: `npx eslint --rule 'zeus/no-themecolor-in-static-stylesheet: error' <files>` (or `yarn lint`)
 
 ## 3) Jest traps
 
@@ -125,7 +117,7 @@ yarn jest --listTests                        # enumerate all suites jest will ru
 
 ## 4) Coverage reality — where automation actually protects you
 
-About **122 test suites** run by `yarn test` as of 2026-10-08 (upstream `6acd84a84`): `utils/` 71, `stores/` 17, `views/` 15, `backends/` 7, `models/` 5, `components/` 3, `lndmobile/` 2, `eslint-rules/` 1, and the root `check-locales.test.ts`. The repo has 127 `.test.*` files; the other 5 are excluded by `testPathIgnorePatterns`: the lint-only `check-styles.test.ts` and 4 vendored suites under `zeus_modules/`. The count grows with most PRs, so recount on your checkout instead of trusting this number: `git ls-files | grep -E '\.test\.(ts|tsx|js)$' | grep -v -e check-styles -e '^zeus_modules/' | wc -l`. Don't use `yarn jest --listTests` for this: `testPathIgnorePatterns` doesn't exclude `.claude/worktrees/`, so in a checkout with agent worktrees it lists every worktree's suites too.
+About **123 test suites** run by `yarn test` as of 2026-10-08 (upstream `ed63f2560` plus #4929): `utils/` 71, `stores/` 17, `views/` 15, `backends/` 7, `models/` 5, `components/` 3, `lndmobile/` 2, `eslint-rules/` 2, and the root `check-locales.test.ts`. The repo has 127 `.test.*` files; the other 4 are vendored suites under `zeus_modules/`, excluded by `testPathIgnorePatterns`. The count grows with most PRs, so recount on your checkout instead of trusting this number: `git ls-files | grep -E '\.test\.(ts|tsx|js)$' | grep -v '^zeus_modules/' | wc -l`. Don't use `yarn jest --listTests` for this: `testPathIgnorePatterns` doesn't exclude `.claude/worktrees/`, so in a checkout with agent worktrees it lists every worktree's suites too.
 
 **Coverage outside `utils/` is thin.** `stores/`, `views/`, `components/`, and `backends/` now have tests, but they cover specific regressions rather than whole modules: most stores (including the 5000+-line CashuStore), most screens, and most backend methods still have no automated safety net. Consequences you must act on:
 
@@ -196,10 +188,10 @@ Re-verify volatile facts:
 | CI = exactly these 4 PR checks | `ls .github/workflows/` and `grep -A3 '^on:' .github/workflows/*.yml` (`build-android.yml`/`dependency-scan.yml` must still say `workflow_dispatch`; note a bare `grep -l 'pull_request'` also matches build-android.yml via a concurrency-group expression, not a trigger) |
 | CI Node version / engines | `grep node-version .github/workflows/test.yml`; `grep -A2 '"engines"' package.json` |
 | jest `testPathIgnorePatterns`, `transformIgnorePatterns`, `moduleNameMapper` | `python3 -c "import json;print(json.load(open('package.json'))['jest'])"` |
-| check-styles ban + regex | `cat check-styles.test.ts` |
+| themeColor style-sheet ban | `cat eslint-rules/no-themecolor-in-static-stylesheet.js` |
 | Prettier pin + config | `grep '"prettier"' package.json` (expect `2.4.1` in devDependencies); `cat .prettierrc .prettierignore` |
 | tsconfig strictness | `grep 'strict\|noUnused\|exclude' tsconfig.json` |
-| Test-file census by directory (section 4) | `git ls-files \| grep -E '\.test\.(ts\|tsx\|js)$' \| grep -v -e check-styles -e '^zeus_modules/' \| awk -F/ '{print (NF==1 ? "(root)" : $1)}' \| sort \| uniq -c` |
+| Test-file census by directory (section 4) | `git ls-files \| grep -E '\.test\.(ts\|tsx\|js)$' \| grep -v '^zeus_modules/' \| awk -F/ '{print (NF==1 ? "(root)" : $1)}' \| sort \| uniq -c` |
 | Suite line counts (golden inventory) | `wc -l utils/*.test.ts models/*.test.ts lndmobile/*.test.ts \| sort -rn \| head` |
 | PR template backend matrix | `cat .github/PULL_REQUEST_TEMPLATE.md` |
 | CONTRIBUTING testing rules | `grep -n -A5 'Test Coverage\|Manual Testing' CONTRIBUTING.md` |
