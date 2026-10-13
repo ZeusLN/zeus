@@ -105,7 +105,12 @@ const findSwitchNextTo = (tree: any, text: string) => {
 };
 
 const makeView = (
-    overrides: { TransactionsStore?: any; InvoicesStore?: any } = {}
+    overrides: {
+        TransactionsStore?: any;
+        InvoicesStore?: any;
+        BalanceStore?: any;
+        SettingsStore?: any;
+    } = {}
 ) => {
     const view = new Send({
         navigation: { navigate: jest.fn() },
@@ -119,13 +124,18 @@ const makeView = (
         BalanceStore: {
             confirmedBlockchainBalance: BALANCE,
             totalBlockchainBalanceAccounts: BALANCE,
-            lightningBalance: 0
+            lightningBalance: 0,
+            ...overrides.BalanceStore
         },
         ContactStore: { contacts: [] },
         InvoicesStore: overrides.InvoicesStore ?? {},
         ModalStore: {},
         NodeInfoStore: {},
-        SettingsStore: { implementation: 'lnd', settings: {} },
+        SettingsStore: {
+            implementation: 'lnd',
+            settings: {},
+            ...overrides.SettingsStore
+        },
         TransactionsStore: overrides.TransactionsStore ?? {},
         UTXOsStore: {}
     } as unknown as React.ComponentProps<typeof Send>);
@@ -284,5 +294,21 @@ describe('Send BOLT 12 Proceed', () => {
             'PaymentRequest'
         );
         expect(TransactionsStore.sendPayment).not.toHaveBeenCalled();
+    });
+});
+
+describe('Send mount', () => {
+    it('refreshes the lightning balance on mount without awaiting settings', () => {
+        const getLightningBalance = jest.fn();
+        // never resolves: the refresh must be kicked off before settings load
+        const getSettings = jest.fn(() => new Promise(() => {}));
+        const view = makeView({
+            BalanceStore: { getLightningBalance },
+            SettingsStore: { getSettings }
+        });
+
+        view.componentDidMount();
+
+        expect(getLightningBalance).toHaveBeenCalledWith(true);
     });
 });

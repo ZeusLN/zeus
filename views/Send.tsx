@@ -246,7 +246,10 @@ export default class Send extends React.Component<SendProps, SendState> {
     }
 
     async componentDidMount() {
-        const { SettingsStore, route } = this.props;
+        const { SettingsStore, BalanceStore, route } = this.props;
+        // balance is not refreshed elsewhere after channel changes, so
+        // the no-lightning-balance warning could otherwise be stale
+        BalanceStore.getLightningBalance(true);
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
 
