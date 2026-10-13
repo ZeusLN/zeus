@@ -1823,6 +1823,34 @@ describe('handleAnything', () => {
             ]);
         });
 
+        it('leaves lndhubUrl unset for an lndhub:// URL without a host', async () => {
+            const lndhubUrl = 'lndhub://admin:password';
+            mockProcessBIP21Uri.mockReturnValue({ value: lndhubUrl });
+            mockIsValidLNDHubAddress = true;
+            mockProcessLNDHubAddress.mockReturnValue({
+                username: 'admin',
+                password: 'password'
+            });
+
+            const result = await handleAnything(lndhubUrl);
+
+            expect(result).toEqual([
+                'WalletConfiguration',
+                {
+                    node: {
+                        implementation: 'lndhub',
+                        username: 'admin',
+                        password: 'password',
+                        certVerification: true,
+                        existingAccount: true
+                    },
+                    newEntry: true,
+                    isValid: true
+                }
+            ]);
+            expect(result[1].node).not.toHaveProperty('lndhubUrl');
+        });
+
         it('should handle lndconnect URLs', async () => {
             const lndconnectUrl =
                 'lndconnect://mynode.local:10009?cert=abc&macaroon=xyz';

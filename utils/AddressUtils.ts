@@ -82,8 +82,6 @@ const snakeCase = /^[a-zA-Z]+(?:_[a-zA-Z]+)*$/;
 const withdrawalRequest = /^lnr1qqg[a-z0-9]+$/;
 
 export const CUSTODIAL_LNDHUBS = [
-    'https://lndhub.io',
-    'https://lndhub.herokuapp.com',
     'https://legend.lnbits.com/wallet',
     'https://infinity.lnbits.com/wallet',
     'https://ln.getalby.com'
@@ -201,13 +199,15 @@ class AddressUtils {
             let value;
             let host;
 
+            // An account without @host was created on BlueWallet's hosted
+            // lndhub.io, which shut down in 2023. Return no host so the user
+            // enters one, rather than sending the credentials to that domain.
             if (input.indexOf('@') !== -1) {
                 const [namepass, serverURL] = input.split('@');
                 value = namepass;
                 host = serverURL;
             } else {
                 value = input;
-                host = CUSTODIAL_LNDHUBS[0];
             }
 
             const [username, password] = value.split(':');
