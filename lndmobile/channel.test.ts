@@ -153,7 +153,10 @@ describe('openChannelSync', () => {
             false,
             1,
             false,
-            true
+            true,
+            false,
+            [`${UTXO_TXID}:0`, `${TXID}:9`],
+            'bc1ptaprootclose'
         );
 
         const req = sentRequest(
@@ -166,36 +169,49 @@ describe('openChannelSync', () => {
         expect(str(req.local_funding_amount)).toBe('250000');
         expect(req.private).toBe(false);
         expect(req.min_confs).toBe(1);
-        expect(req.outpoints).toEqual([]);
-        expect(req.close_address).toBe('');
+        expect(req.fund_max).toBe(false);
+        // Taproot builds its outpoints with a separate mapping.
+        expect(req.outpoints.map((o) => [o.txid_str, o.output_index])).toEqual([
+            [UTXO_TXID, 0],
+            [TXID, 9]
+        ]);
+        expect(req.close_address).toBe('bc1ptaprootclose');
 
         expect(result.funding_txid).toBe('funding_txid_str');
         expect(result.funding_txid_str).toBe(TXID);
         expect(result.output_index).toBe(0);
     });
 
-    it('omits the funding amount when fund_max is set', async () => {
-        respondWith(lnrpc.ChannelPoint, {});
+    it.each([
+        [false, lnrpc.CommitmentType.UNKNOWN_COMMITMENT_TYPE],
+        [true, lnrpc.CommitmentType.SIMPLE_TAPROOT]
+    ])(
+        'omits the funding amount when fund_max is set (taproot: %s)',
+        async (simpleTaprootChannel, commitmentType) => {
+            respondWith(lnrpc.ChannelPoint, {});
 
-        await openChannelSync(
-            PUBKEY,
-            100000,
-            false,
-            undefined,
-            undefined,
-            undefined,
-            undefined,
-            true,
-            true
-        );
+            await openChannelSync(
+                PUBKEY,
+                100000,
+                false,
+                undefined,
+                undefined,
+                undefined,
+                undefined,
+                simpleTaprootChannel,
+                true
+            );
 
-        const req = sentRequest(
-            LndMobile.sendCommand,
-            lnrpc.OpenChannelRequest
-        );
-        expect(req.fund_max).toBe(true);
-        expect(req.local_funding_amount.isZero()).toBe(true);
-    });
+            const req = sentRequest(
+                LndMobile.sendCommand,
+                lnrpc.OpenChannelRequest
+            );
+            expect(req.commitment_type).toBe(commitmentType);
+            expect(req.fund_max).toBe(true);
+            expect(req.local_funding_amount.isZero()).toBe(true);
+            expect(req.outpoints).toEqual([]);
+        }
+    );
 
     it('decodes an empty native response to a default ChannelPoint', async () => {
         LndMobile.sendCommand.mockResolvedValueOnce({});
