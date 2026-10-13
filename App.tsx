@@ -291,6 +291,7 @@ import CurrencyConverter from './views/Tools/CurrencyConverter';
 import DeveloperTools from './views/Tools/DeveloperTools';
 import Rebalance from './views/Tools/Rebalance';
 import RebalancingChannels from './views/Tools/RebalancingChannels';
+import SpliceReview from './views/Tools/Splice/SpliceReview';
 import Splicing from './views/Tools/Splice/Splicing';
 import SignVerifyMessage from './views/Tools/SignVerifyMessage';
 import Sweep from './views/Tools/Sweep';
@@ -939,6 +940,17 @@ export default class App extends React.PureComponent {
                                                                 component={
                                                                     RebalancingChannels
                                                                 }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="SpliceReview"
+                                                                // @ts-ignore:next-line
+                                                                component={
+                                                                    SpliceReview
+                                                                }
+                                                                options={{
+                                                                    gestureEnabled:
+                                                                        false // disables swipe back
+                                                                }}
                                                             />
                                                             <Stack.Screen
                                                                 name="Splicing"
