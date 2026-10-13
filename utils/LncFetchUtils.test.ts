@@ -80,14 +80,14 @@ describe('fetchLncData', () => {
         expect(stores.SettingsStore.clearConnectError).not.toHaveBeenCalled();
     });
 
-    it('connects and skips the RPCs when connect() reports an error', async () => {
+    it('stops without the RPCs when connect() reports an error', async () => {
         const stores = makeStores();
         backend.isConnected.mockResolvedValue(false);
         stores.SettingsStore.connect.mockResolvedValue(
             'stores.SettingsStore.lncConnectError'
         );
 
-        expect(await fetchLncData(false, stores)).toBe(true);
+        expect(await fetchLncData(false, stores)).toBe(false);
 
         expect(stores.SettingsStore.connect).toHaveBeenCalledTimes(1);
         expect(stores.NodeInfoStore.getNodeInfo).not.toHaveBeenCalled();
@@ -100,7 +100,7 @@ describe('fetchLncData', () => {
             new Error('keychain read failed')
         );
 
-        expect(await fetchLncData(false, stores)).toBe(true);
+        expect(await fetchLncData(false, stores)).toBe(false);
 
         expect(stores.NodeInfoStore.getNodeInfo).not.toHaveBeenCalled();
     });
