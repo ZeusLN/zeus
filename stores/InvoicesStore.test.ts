@@ -195,8 +195,9 @@ describe('InvoicesStore.getNewAddress', () => {
         expectAddressShown(store, result, 'bcrt1qaddress');
     });
 
-    it('leaves onChainAddress and creatingInvoice to createInvoice for unified requests', async () => {
+    it('clears onChainAddress but leaves creatingInvoice and error_msg to createInvoice for unified requests', async () => {
         const store = newStore();
+        store.onChainAddress = 'bcrt1qold';
         store.creatingInvoice = true;
         store.error_msg = 'createInvoice owns this';
 
@@ -225,6 +226,8 @@ describe('InvoicesStore.getNewAddress', () => {
         );
 
         const store = dirtyStore();
+        store.error = true;
+        store.loading = true;
         const result = await store.getNewAddress({ account: 'SeedSigner' });
 
         expect(result).toBeUndefined();
@@ -232,8 +235,8 @@ describe('InvoicesStore.getNewAddress', () => {
         expect(store.error_msg).toBe('Error: account not found');
         expect(store.creatingInvoice).toBe(false);
         // getNewAddress reports through error_msg only
-        expect(store.error).toBe(false);
-        expect(store.loading).toBe(false);
+        expect(store.error).toBe(true);
+        expect(store.loading).toBe(true);
     });
 
     it('falls back to the generic message when the rejection stringifies to nothing', async () => {
