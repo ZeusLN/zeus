@@ -832,3 +832,43 @@ describe('CashuStore.mintToken online', () => {
         ]);
     });
 });
+
+describe('CashuStore.loadTransactions', () => {
+    const tx = (amount: number, direction: string, state?: string) => ({
+        id: `tx-${amount}`,
+        direction,
+        amount,
+        fee: 0,
+        mint_url: A,
+        timestamp: 1700000000,
+        ...(state ? { state } : {})
+    });
+
+    it('keeps the CDK status of incoming transactions', async () => {
+        const store = newStore();
+        cdk.listTransactions.mockResolvedValue([
+            tx(100, 'incoming', 'Completed'),
+            tx(200, 'incoming', 'Pending'),
+            tx(300, 'incoming', 'Failed'),
+            tx(400, 'incoming'),
+            tx(500, 'outgoing', 'Failed')
+        ]);
+
+        await store.loadTransactions();
+
+        expect(
+            store.cdkInvoices.map((i) => [
+                i.getAmount,
+                i.state,
+                i.isPaid,
+                i.isExpired
+            ])
+        ).toEqual([
+            [100, 'PAID', true, false],
+            [200, 'UNPAID', false, false],
+            [300, 'FAILED', false, true],
+            // bridges built before the status was passed through
+            [400, 'PAID', true, false]
+        ]);
+    });
+});

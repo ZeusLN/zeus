@@ -364,6 +364,14 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
         }
     }
 
+    private fun transactionStatusToString(status: TransactionStatus): String {
+        return when (status) {
+            TransactionStatus.PENDING -> "Pending"
+            TransactionStatus.COMPLETED -> "Completed"
+            TransactionStatus.FAILED -> "Failed"
+        }
+    }
+
     /**
      * Map the CDK FFI exception to the legacy bridge error codes that JS
      * consumers were written against. CDK 0.15+ collapsed the previous
@@ -1859,6 +1867,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                         put("timestamp", tx.timestamp)
                         tx.fee?.let { put("fee", it.value.toLong()) }
                         tx.memo?.let { put("memo", it) }
+                        put("state", transactionStatusToString(tx.status))
                     }
                     result.put(txJson)
                 }
