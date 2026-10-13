@@ -49,6 +49,14 @@ let mockProcessLNDHubAddress = jest.fn();
 let mockSupportsOnchainSends = true;
 let mockSupportsChannelManagement = true;
 let mockSupportsPeers = true;
+let mockSupportsAccounts = false;
+let mockSupportsCashuWallet = false;
+let mockSupportsWithdrawalRequests = false;
+let mockSupportsLnurlAuth = false;
+let mockIsPsbt = false;
+let mockIsValidTxHex = false;
+let mockIsValidXpub = false;
+let mockIsValidWithdrawalRequest = false;
 let mockGetLnurlParams = {};
 let mockBlobUtilFetch = jest.fn();
 const mockSimplePool = jest.fn();
@@ -68,8 +76,15 @@ jest.mock('./AddressUtils', () => ({
     isValidLNDHubAddress: () => mockIsValidLNDHubAddress,
     processLNDHubAddress: (...args: any[]) => mockProcessLNDHubAddress(...args),
     isValidNpub: () => mockIsValidNpub,
-    isPsbt: () => false,
-    isValidTxHex: () => false,
+    isPsbt: () => mockIsPsbt,
+    isValidTxHex: () => mockIsValidTxHex,
+    isKeystoreWalletExport: () => false,
+    isJsonWalletExport: () => false,
+    isStringWalletExport: () => false,
+    isWpkhDescriptor: () => false,
+    isNestedWpkhDescriptor: () => false,
+    isValidXpub: () => mockIsValidXpub,
+    isValidWithdrawalRequest: () => mockIsValidWithdrawalRequest,
     ZEUS_ECASH_GIFT_URL
 }));
 const mockDoTorRequest = jest.fn();
@@ -79,10 +94,10 @@ jest.mock('./TorUtils', () => ({
 }));
 jest.mock('./BackendUtils', () => ({
     supportsOnchainSends: () => mockSupportsOnchainSends,
-    supportsAccounts: () => false,
-    supportsCashuWallet: () => false,
-    supportsWithdrawalRequests: () => false,
-    supportsLnurlAuth: () => false,
+    supportsAccounts: () => mockSupportsAccounts,
+    supportsCashuWallet: () => mockSupportsCashuWallet,
+    supportsWithdrawalRequests: () => mockSupportsWithdrawalRequests,
+    supportsLnurlAuth: () => mockSupportsLnurlAuth,
     supportsChannelManagement: () => mockSupportsChannelManagement,
     supportsPeers: () => mockSupportsPeers
 }));
@@ -186,6 +201,15 @@ describe('handleAnything', () => {
         mockSupportsPeers = true;
         mockIsValidCashuToken = false;
         mockDecodedCashuToken = {};
+        mockSupportsOnchainSends = true;
+        mockSupportsAccounts = false;
+        mockSupportsCashuWallet = false;
+        mockSupportsWithdrawalRequests = false;
+        mockSupportsLnurlAuth = false;
+        mockIsPsbt = false;
+        mockIsValidTxHex = false;
+        mockIsValidXpub = false;
+        mockIsValidWithdrawalRequest = false;
     });
 
     describe('input sanitization', () => {
@@ -525,16 +549,36 @@ describe('handleAnything', () => {
                 expect(mockGetLnurlParamsFn).toHaveBeenCalledWith(
                     'https://demo.lnbits.com/bitcoinswitch/api/v1/lnurl/bD34dEpKaanBiabk7mEo2D?pin=13'
                 );
-                expect(result).toEqual([
+                expect(result).toStrictEqual([
                     'LnurlPay',
                     {
                         lnurlParams: mockGetLnurlParams,
-                        amount: undefined,
+                        satAmount: undefined,
                         ecash: false
                     }
                 ]);
             }
         );
+
+        it('should pass a provided amount through as satAmount', async () => {
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'lnurlp://demo.lnbits.com/bitcoinswitch/api/v1/lnurl/bD34dEpKaanBiabk7mEo2D?pin=13'
+            });
+
+            const result = await handleAnything(
+                'LIGHTNING:lnurlp://demo.lnbits.com/bitcoinswitch/api/v1/lnurl/bD34dEpKaanBiabk7mEo2D?pin=13',
+                '2100'
+            );
+
+            expect(result).toStrictEqual([
+                'LnurlPay',
+                {
+                    lnurlParams: mockGetLnurlParams,
+                    satAmount: '2100',
+                    ecash: false
+                }
+            ]);
+        });
 
         it('should handle LIGHTNING:lnurlp:// with .onion address and convert to http://', async () => {
             const data =
@@ -557,11 +601,11 @@ describe('handleAnything', () => {
             expect(mockGetLnurlParamsFn).toHaveBeenCalledWith(
                 'http://example.onion/api/v1/lnurl/test123'
             );
-            expect(result).toEqual([
+            expect(result).toStrictEqual([
                 'LnurlPay',
                 {
                     lnurlParams: onionParams,
-                    amount: undefined,
+                    satAmount: undefined,
                     ecash: false
                 }
             ]);
@@ -2794,6 +2838,156 @@ describe('handleAnything', () => {
             const result = await handleAnything(url, undefined, true);
 
             expect(result).toBe(true);
+        });
+    });
+
+    describe('capability-gated routes', () => {
+        afterEach(() => {
+            delete (settingsStore.settings as any).ecash;
+        });
+
+        it('should route an LNURL-withdraw to ChoosePaymentMethod in ecash mode', async () => {
+            mockSupportsCashuWallet = true;
+            (settingsStore.settings as any).ecash = { enableCashu: true };
+            const url = 'https://example.com/api/v1/lnurl/withdraw';
+            mockProcessBIP21Uri.mockReturnValue({ value: url });
+            const params = {
+                tag: 'withdrawRequest',
+                domain: 'example.com',
+                k1: 'k1',
+                minWithdrawable: 1000,
+                maxWithdrawable: 100000
+            };
+            mockGetLnurlParamsFn.mockResolvedValue(params);
+
+            const result = await handleAnything(url);
+
+            expect(result).toStrictEqual([
+                'ChoosePaymentMethod',
+                { lnurlParams: params, lightning: url }
+            ]);
+        });
+
+        it('should route an LNURL-auth login to LnurlAuth when supported', async () => {
+            mockSupportsLnurlAuth = true;
+            const url = 'https://example.com/lnurlauth?tag=login&k1=abc';
+            mockProcessBIP21Uri.mockReturnValue({ value: url });
+            const params = {
+                tag: 'login',
+                domain: 'example.com',
+                k1: 'abc'
+            };
+            mockGetLnurlParamsFn.mockResolvedValue(params);
+
+            const result = await handleAnything(url);
+
+            expect(result).toStrictEqual([
+                'LnurlAuth',
+                { lnurlParams: params }
+            ]);
+        });
+
+        it('should route a PSBT to the PSBT screen', async () => {
+            mockIsPsbt = true;
+            const psbt = 'cHNidP8BAHECAAAAAQ==';
+            mockProcessBIP21Uri.mockReturnValue({ value: psbt });
+
+            const result = await handleAnything(psbt);
+
+            expect(result).toStrictEqual(['PSBT', { psbt }]);
+        });
+
+        it('should route a raw transaction hex to the TxHex screen', async () => {
+            mockIsValidTxHex = true;
+            const txHex = '0200000001abcdef';
+            mockProcessBIP21Uri.mockReturnValue({ value: txHex });
+
+            const result = await handleAnything(txHex);
+
+            expect(result).toStrictEqual(['TxHex', { txHex }]);
+        });
+
+        it('should route an xpub to ImportAccount when accounts are supported', async () => {
+            mockSupportsAccounts = true;
+            mockIsValidXpub = true;
+            const xpub =
+                'xpub6CUGRUonZSQ4TWtTMmzXdrXDtypWKiKrhko4egpiMZbpiaQL2jkwSB1icqYh2cfDfVxdx4df189oLKnC5fSwqPfgyP3hooxujYzAu3fDVmz';
+            mockProcessBIP21Uri.mockReturnValue({ value: xpub });
+
+            const result = await handleAnything(xpub);
+
+            expect(result).toStrictEqual([
+                'ImportAccount',
+                { extended_public_key: xpub }
+            ]);
+        });
+
+        it('should route a BOLT 12 withdrawal request to WithdrawalRequestInfo when supported', async () => {
+            mockSupportsWithdrawalRequests = true;
+            mockIsValidWithdrawalRequest = true;
+            const request = 'lnr1qqtestwithdrawalrequest';
+            mockProcessBIP21Uri.mockReturnValue({ value: request });
+
+            const result = await handleAnything(request);
+
+            expect(result).toStrictEqual([
+                'WithdrawalRequestInfo',
+                { bolt12: request }
+            ]);
+        });
+        it('should route an LNURL-withdraw to Receive when Cashu is supported but disabled', async () => {
+            mockSupportsCashuWallet = true;
+            (settingsStore.settings as any).ecash = { enableCashu: false };
+            const url = 'https://example.com/api/v1/lnurl/withdraw';
+            mockProcessBIP21Uri.mockReturnValue({ value: url });
+            const params = {
+                tag: 'withdrawRequest',
+                domain: 'example.com',
+                k1: 'k1',
+                minWithdrawable: 1000,
+                maxWithdrawable: 100000
+            };
+            mockGetLnurlParamsFn.mockResolvedValue(params);
+
+            const result = await handleAnything(url);
+
+            expect(result).toStrictEqual(['Receive', { lnurlParams: params }]);
+        });
+
+        it('should alert instead of routing an LNURL-auth login when unsupported', async () => {
+            const alertSpy = jest
+                .spyOn(Alert, 'alert')
+                .mockImplementation(() => void 0);
+            const url = 'https://example.com/lnurlauth?tag=login&k1=abc';
+            mockProcessBIP21Uri.mockReturnValue({ value: url });
+            mockGetLnurlParamsFn.mockResolvedValue({
+                tag: 'login',
+                domain: 'example.com',
+                k1: 'abc'
+            });
+
+            const result = await handleAnything(url);
+
+            expect(result).toBeUndefined();
+            expect(alertSpy).toHaveBeenCalledTimes(1);
+            alertSpy.mockRestore();
+        });
+
+        it('should not route an xpub to ImportAccount when accounts are unsupported', async () => {
+            mockIsValidXpub = true;
+            const xpub =
+                'xpub6CUGRUonZSQ4TWtTMmzXdrXDtypWKiKrhko4egpiMZbpiaQL2jkwSB1icqYh2cfDfVxdx4df189oLKnC5fSwqPfgyP3hooxujYzAu3fDVmz';
+            mockProcessBIP21Uri.mockReturnValue({ value: xpub });
+
+            await expect(handleAnything(xpub)).rejects.toThrow();
+        });
+
+        it('should not route a BOLT 12 withdrawal request when unsupported', async () => {
+            mockIsValidWithdrawalRequest = true;
+            const request = 'lnr1qqtestwithdrawalrequest';
+            mockProcessBIP21Uri.mockReturnValue({ value: request });
+
+            await expect(handleAnything(request)).rejects.toThrow();
         });
     });
 });
