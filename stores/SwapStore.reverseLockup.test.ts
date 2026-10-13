@@ -209,6 +209,7 @@ describe('SwapStore.createReverseSwap response verification', () => {
 
         expect(store.apiError).toBe('');
         expect(stored).toHaveLength(1);
+        expect(stored[0].onchainAmountVerified).toBe(true);
         expect(navigation.navigate).toHaveBeenCalledWith(
             'SwapDetails',
             expect.anything()
@@ -788,6 +789,80 @@ describe('SwapStore.verifyReverseLockup', () => {
             esplora(200);
             await expect(verify()).resolves.toEqual({ status: 'ok' });
             expect(getPayments).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('a swap created before the creation-time amount check', () => {
+        const getPayments = BackendUtils.getPayments as jest.Mock;
+        let decode: jest.SpyInstance;
+
+        // v13.2.2 stored the host's onchainAmount unchecked; here the host
+        // set it as low as the lockup it means to send
+        const legacySwap = (overrides: any = {}) =>
+            storedSwap({
+                onchainAmountVerified: undefined,
+                onchainAmount: 1000,
+                invoice: 'lnbc-legacy',
+                ...overrides
+            });
+
+        const lockedUp = (value: number) =>
+            esplora(200, {
+                vout: [
+                    {
+                        scriptpubkey: VALID.outputScript.toString('hex'),
+                        value
+                    }
+                ],
+                status: { confirmed: true }
+            });
+
+        beforeEach(() => {
+            decode = jest
+                .spyOn(Bolt11Utils, 'decode')
+                .mockReturnValue({ satoshis: 100000 } as any);
+        });
+
+        afterEach(() => decode.mockRestore());
+
+        it('asks before claiming a lockup that matches the low stored amount', async () => {
+            lockedUp(1000);
+            await expect(verify(legacySwap())).resolves.toEqual({
+                status: 'confirm-amount',
+                amount: 1000,
+                paidAmount: 100000
+            });
+            expect(decode).toHaveBeenCalledWith('lnbc-legacy');
+            expect(getPayments).not.toHaveBeenCalled();
+        });
+
+        it('claims without asking when the lockup is at least 90% of the invoice', async () => {
+            lockedUp(99100);
+            await expect(verify(legacySwap())).resolves.toEqual({
+                status: 'ok'
+            });
+            expect(getPayments).not.toHaveBeenCalled();
+        });
+
+        it('falls back to the payment lookup when the invoice cannot be read', async () => {
+            decode.mockImplementation(() => {
+                throw new Error('bad invoice');
+            });
+            getPayments.mockResolvedValue({ payments: [] });
+            lockedUp(1000);
+            await expect(verify(legacySwap())).resolves.toEqual({
+                status: 'confirm-amount',
+                amount: 1000
+            });
+            expect(getPayments).toHaveBeenCalled();
+        });
+
+        it('keeps the stored amount as the floor once the swap was checked at creation', async () => {
+            lockedUp(1000);
+            await expect(
+                verify(legacySwap({ onchainAmountVerified: true }))
+            ).resolves.toEqual({ status: 'ok' });
+            expect(decode).not.toHaveBeenCalled();
         });
     });
 });
