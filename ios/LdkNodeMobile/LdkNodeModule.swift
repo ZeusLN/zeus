@@ -1195,6 +1195,25 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
+    // Invoice committing to a description hash instead of a plain
+    // description (LUD-06 metadata / NIP-57 zap request commitments).
+    @objc(receiveBolt11WithDescriptionHash:descriptionHash:expirySecs:resolver:rejecter:)
+    func receiveBolt11WithDescriptionHash(_ amountMsat: Double, descriptionHash: String, expirySecs: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        do {
+            let bolt11 = node.bolt11Payment()
+            let descriptionObj = Bolt11InvoiceDescription.hash(hash: descriptionHash)
+            let invoice = try bolt11.receive(amountMsat: UInt64(amountMsat), description: descriptionObj, expirySecs: UInt32(expirySecs))
+            resolve(["invoice": invoice.description])
+        } catch {
+            reject("error", self.errorMessage(error), error)
+        }
+    }
+
     @objc(receiveVariableAmountBolt11:expirySecs:resolver:rejecter:)
     func receiveVariableAmountBolt11(_ invoiceDescription: String, expirySecs: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let node = self.getNode() else {
