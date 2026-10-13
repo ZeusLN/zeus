@@ -29,9 +29,6 @@ jest.mock('../utils/BackendUtils', () => ({
 jest.mock('../utils/LocaleUtils', () => ({
     localeString: (key: string) => key
 }));
-jest.mock('../utils/ErrorUtils', () => ({
-    errorToUserFriendly: (e: any) => String(e)
-}));
 jest.mock('./SettingsStore', () => ({
     __esModule: true,
     default: class {},

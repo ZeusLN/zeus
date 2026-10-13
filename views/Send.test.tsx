@@ -28,7 +28,6 @@ jest.mock('../utils/AddressUtils', () => ({
     extractBolt12Offer: (value: string) =>
         value.startsWith('lno1') ? value : undefined
 }));
-jest.mock('../utils/ErrorUtils', () => ({ errorToUserFriendly: jest.fn() }));
 jest.mock('../utils/NFCUtils', () => ({ scanNfcTag: jest.fn() }));
 jest.mock('../utils/AmountUtils', () => ({ getRawAmountFromSats: jest.fn() }));
 jest.mock('../utils/GraphSyncUtils', () => ({
@@ -68,7 +67,6 @@ jest.mock('../stores/SettingsStore', () => ({
 import * as React from 'react';
 import Send from './Send';
 import BackendUtils from '../utils/BackendUtils';
-import { errorToUserFriendly } from '../utils/ErrorUtils';
 
 const BALANCE = 500000;
 
@@ -251,9 +249,9 @@ describe('Send BOLT 12 Proceed', () => {
 
     it('shows the decode error and stays on Send when the offer cannot be decoded', async () => {
         supportsOffersDirectPay.mockReturnValue(true);
-        const error = new Error('bad offer');
-        decodeOffer.mockRejectedValue(error);
-        (errorToUserFriendly as jest.Mock).mockReturnValue('bad offer');
+        // a PascalCase code, so the assertion below shows the message went
+        // through errorToUserFriendly rather than being shown raw
+        decodeOffer.mockRejectedValue(new Error('InvalidBech32'));
         const { view, TransactionsStore } = makeOfferView();
 
         await view.payBolt12();
@@ -261,8 +259,7 @@ describe('Send BOLT 12 Proceed', () => {
         expect(TransactionsStore.sendPayment).not.toHaveBeenCalled();
         expect(view.props.navigation.navigate).not.toHaveBeenCalled();
         expect(view.state.loading).toBe(false);
-        expect(errorToUserFriendly).toHaveBeenCalledWith(error);
-        expect(view.state.error_msg).toBe('bad offer');
+        expect(view.state.error_msg).toBe('Invalid bech32');
     });
 
     it('does nothing while another payment is in flight', async () => {

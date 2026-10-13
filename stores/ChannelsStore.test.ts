@@ -15,9 +15,6 @@ jest.mock('../utils/BackendUtils', () => ({
 jest.mock('../utils/LocaleUtils', () => ({
     localeString: (key: string) => key
 }));
-jest.mock('../utils/ErrorUtils', () => ({
-    errorToUserFriendly: (e: any) => String(e)
-}));
 
 import { autorun } from 'mobx';
 
@@ -270,7 +267,7 @@ describe('ChannelsStore.closeChannel', () => {
         await jest.advanceTimersByTimeAsync(0);
 
         expectOneRefresh();
-        expect(store.closeChannelErr).toBe('Error: offline');
+        expect(store.closeChannelErr).toBe('offline');
         expect(store.channels).toEqual([]);
         expect(store.hasChannelData).toBe(false);
         expect(store.error).toBe(true);
@@ -359,7 +356,7 @@ describe('ChannelsStore.closeChannel', () => {
             await store.closeChannel(CHANNEL_POINT);
 
             expectOneRefresh();
-            expect(store.closeChannelErr).toBe('Error: peer is offline');
+            expect(store.closeChannelErr).toBe('peer is offline');
         });
 
         it('waits for the close stream instead of resolving after six seconds', async () => {
@@ -556,7 +553,7 @@ describe('ChannelsStore.connectPeer', () => {
 
         expect(store.channelRequest).toBeFalsy();
         expect(store.errorPeerConnect).toBe(true);
-        expect(store.errorMsgPeer).toBe('Error: already connected to peer');
+        expect(store.errorMsgPeer).toBe('already connected to peer');
         expect(BackendUtils.openChannelSync).not.toHaveBeenCalled();
     });
 

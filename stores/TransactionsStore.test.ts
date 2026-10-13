@@ -23,10 +23,6 @@ jest.mock('../utils/GraphSyncUtils', () => ({
 jest.mock('../utils/LocaleUtils', () => ({
     localeString: (s: string) => s
 }));
-jest.mock('../utils/ErrorUtils', () => ({
-    errorToUserFriendly: (error: any) =>
-        typeof error === 'string' ? error : error?.message
-}));
 jest.mock('../utils/UrlUtils', () => ({
     __esModule: true,
     default: {}
@@ -151,7 +147,8 @@ describe('TransactionsStore.sendPayment with an offer', () => {
         expect(store.loading).toBe(false);
         expect(store.paymentInFlight).toBe(false);
         expect(store.error).toBe(true);
-        expect(store.error_msg).toBe('RouteNotFound');
+        // errorToUserFriendly splits PascalCase error codes into words
+        expect(store.error_msg).toBe('Route not found');
         expect(store.status).toBeNull();
     });
 
