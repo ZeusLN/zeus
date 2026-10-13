@@ -15,6 +15,7 @@ import {
     CDKMintQuote,
     CDKMeltQuote,
     CDKMelted,
+    CDKPartialMelted,
     CDKSpendingConditions,
     CDKSendKind,
     CDKSendOptions,
@@ -455,6 +456,7 @@ class CashuDevKit {
      * Execute a partial melt from a specific mint.
      * Creates its own MPP melt quote with the mint to get the actual fee,
      * then lets CDK select proofs for the partial amount plus fee reserve.
+     * The result carries that quote's id as quote_id.
      * @param mintUrl - The mint to melt from
      * @param bolt11 - The BOLT11 invoice to pay
      * @param mppAmountMsat - Partial amount in millisats for this mint
@@ -463,7 +465,7 @@ class CashuDevKit {
         mintUrl: string,
         bolt11: string,
         mppAmountMsat: number
-    ): Promise<CDKMelted> {
+    ): Promise<CDKPartialMelted> {
         try {
             const json = await CashuDevKitModule.meltPartial(
                 mintUrl,

@@ -10,6 +10,7 @@ import CashuDevKit, {
     CDKMintQuote,
     CDKMeltQuote,
     CDKMelted,
+    CDKPartialMelted,
     CDKToken,
     CDKSendKind,
     CDKSpendingConditions,
@@ -5243,6 +5244,13 @@ export default class CashuStore {
                                   partialAmount * 1000
                               );
 
+                        // Record the quote this part was paid with. For MPP
+                        // parts that is the quote meltPartial created, not
+                        // the planner's probe quote, which was never paid.
+                        const paidQuoteId = useRegularMelt
+                            ? meltQuote.id
+                            : (meltResult as CDKPartialMelted).quote_id;
+
                         const normalizedMeltState = normalizeMeltState(
                             meltResult.state,
                             meltQuote.state
@@ -5266,7 +5274,7 @@ export default class CashuStore {
                             bolt11: paymentRequest,
                             meltResponse: {
                                 quote: {
-                                    quote: meltQuote.id,
+                                    quote: paidQuoteId,
                                     amount: meltQuote.amount,
                                     fee_reserve: meltQuote.fee_reserve,
                                     state: normalizedMeltState,

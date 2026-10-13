@@ -881,7 +881,28 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         expect(store.payments).toEqual([]);
     });
 
-    it('currently records MPP parts without their quote id', async () => {
+    it('records each MPP part with the quote meltPartial paid', async () => {
+        const store = await plannedStore();
+        cdk.meltPartial.mockImplementation(
+            async (mintUrl: string, _i: string, msat: number) => ({
+                ...paid(msat / 1000, 0),
+                quote_id: `paid-${mintUrl}`
+            })
+        );
+
+        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
+
+        // meltPartial creates its own MPP quote, so its id wins over the
+        // planner's probe quote
+        expect(store.meltQuotes[0].meltQuote).toMatchObject({
+            quote: `mpp-${A}-546`
+        });
+        expect(store.payments!.map((p) => p.meltResponse.quote!.quote)).toEqual(
+            [`paid-${A}`, `paid-${B}`]
+        );
+    });
+
+    it('records no quote id for an MPP part when the bridge returns none', async () => {
         const store = await plannedStore();
         cdk.meltPartial.mockImplementation(
             async (_m: string, _i: string, msat: number) => paid(msat / 1000, 0)
@@ -889,11 +910,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
 
         await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
 
-        // The planner keeps the mint's JSON reply, which names the quote
-        // `quote` (NUT-05), while the executor reads `id`.
-        expect(store.meltQuotes[0].meltQuote).toMatchObject({
-            quote: `mpp-${A}-546`
-        });
+        // The planner's probe quote was never paid, so it is not recorded
         expect(store.payments!.map((p) => p.meltResponse.quote!.quote)).toEqual(
             [undefined, undefined]
         );
