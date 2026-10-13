@@ -126,6 +126,27 @@ const BlackedOut: { [key: string]: any } = {
     separator: '#141414'
 };
 
+const Monochrome: { [key: string]: any } = {
+    generalStyle: 'dark',
+    background: '#000',
+    gradientBackground: ['#141414', '#000000'],
+    secondary: '#1F1F1F',
+    modalBackground: '#1F1F1F',
+    separator: '#1F1F1F',
+    highlight: '#FFFFFF',
+    outbound: '#FFFFFF',
+    inbound: '#8A8A8A',
+    bolt: '#FFFFFF',
+    chain: '#FFFFFF',
+    buttonBackground: '#FFFFFF',
+    buttonText: '#000000',
+    qr: '#000000',
+    qrBackground: '#FFFFFF',
+    qrLogoBackground: '#FFFFFF',
+    qrFrame: '#FFFFFF',
+    action: '#FFFFFF'
+};
+
 const Scarlet: { [key: string]: any } = {
     generalStyle: 'dark',
     background: '#56042c',
@@ -337,6 +358,8 @@ export function themeColor(themeString: string): any {
             return Spooky[themeString] || Light[themeString];
         case 'blacked-out':
             return BlackedOut[themeString] || Dark[themeString];
+        case 'monochrome':
+            return Monochrome[themeString] || Dark[themeString];
         case 'scarlet':
             return Scarlet[themeString] || Dark[themeString];
         case 'purple':
