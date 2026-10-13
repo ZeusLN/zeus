@@ -309,26 +309,30 @@ class MigrationsUtils {
             failed
         );
 
-        if (mintUrlsJson) {
-            try {
-                const mintUrls = JSON.parse(mintUrlsJson);
-                if (Array.isArray(mintUrls)) {
-                    for (const mintUrl of mintUrls) {
-                        const walletId = `${lndDir}==${mintUrl}`;
-                        const walletKeys = [
-                            `${walletId}-mintInfo`,
-                            `${walletId}-counter`,
-                            `${walletId}-proofs`,
-                            `${walletId}-balance`,
-                            `${walletId}-pubkey`
-                        ];
-                        for (const wKey of walletKeys) {
-                            await this.migrateKeyOrRecord(wKey, failed);
-                        }
-                    }
-                }
-            } catch (e) {
-                console.warn(`Failed to parse mintUrls for ${lndDir}`, e);
+        if (!mintUrlsJson) return;
+
+        // Only the parse is guarded: a per-mint write failure must reach
+        // keychainCloudSyncMigration so the Cashu flag stays unset
+        let mintUrls;
+        try {
+            mintUrls = JSON.parse(mintUrlsJson);
+        } catch (e) {
+            console.warn(`Failed to parse mintUrls for ${lndDir}`, e);
+            return;
+        }
+        if (!Array.isArray(mintUrls)) return;
+
+        for (const mintUrl of mintUrls) {
+            const walletId = `${lndDir}==${mintUrl}`;
+            const walletKeys = [
+                `${walletId}-mintInfo`,
+                `${walletId}-counter`,
+                `${walletId}-proofs`,
+                `${walletId}-balance`,
+                `${walletId}-pubkey`
+            ];
+            for (const wKey of walletKeys) {
+                await this.migrateKeyOrRecord(wKey, failed);
             }
         }
     }

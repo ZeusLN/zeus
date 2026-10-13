@@ -573,7 +573,7 @@ describe('keychainCloudSyncMigration', () => {
         expect(flagsSet()).toEqual({ main: undefined, cashu: undefined });
     });
 
-    it('keeps the proofs source when a per-mint write fails', async () => {
+    it('leaves the Cashu flag unset when a per-mint write fails, then finishes on the next run', async () => {
         seedLegacy();
         failWritesTo(`lnd2==${MINT_B}-proofs`, 'throw');
 
@@ -585,11 +585,31 @@ describe('keychainCloudSyncMigration', () => {
             MINT_KEYS[`lnd==${MINT_A}-proofs`]
         );
         expectSourcesIntact();
+        // Before the fix this was caught as a mintUrls parse error and the
+        // Cashu flag was set
+        expect(flagsSet()).toEqual({ main: 'true', cashu: undefined });
+
+        mockKeychain.fault = null;
+        await MigrationUtils.keychainCloudSyncMigration();
+
+        expectAllMigrated();
+        expectSourcesIntact();
+        expect(flagsSet()).toEqual({ main: 'true', cashu: 'true' });
     });
 
-    it.todo(
-        'BUG: a per-mint write failure is caught as a mintUrls parse error, so the rest of that mint list is skipped and the Cashu flag is set'
-    );
+    it('skips a node whose mintUrls does not parse and still migrates the other node', async () => {
+        seedLegacy();
+        mockKeychain.local.set('lnd-cashu-mintUrls', 'not json');
+
+        await MigrationUtils.keychainCloudSyncMigration();
+
+        expect(local('lnd-cashu-mintUrls')).toBe('not json');
+        expect(local(`lnd==${MINT_A}-proofs`)).toBeUndefined();
+        expect(local(`lnd2==${MINT_B}-proofs`)).toBe(
+            MINT_KEYS[`lnd2==${MINT_B}-proofs`]
+        );
+        expect(flagsSet()).toEqual({ main: 'true', cashu: 'true' });
+    });
 
     it.todo(
         'verify read-back returning a different value than written: master only checks truthiness and sets the flag (fixed by #4736)'
