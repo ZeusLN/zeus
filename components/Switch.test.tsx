@@ -42,17 +42,17 @@ describe('Switch', () => {
         expect(sw).toHaveStyle({ alignSelf: 'flex-end' });
     });
 
-    it('passes value, onValueChange and disabled through', async () => {
+    it('passes value and onValueChange through', async () => {
         const onValueChange = jest.fn();
-        const sw = await renderSwitch({
-            value: true,
-            onValueChange,
-            disabled: true
-        });
+        const sw = await renderSwitch({ value: true, onValueChange });
         expect(sw).toBeChecked();
-        expect(sw).toHaveProp('disabled', true);
         await fireEvent(sw, 'valueChange', false);
         expect(onValueChange).toHaveBeenCalledWith(false);
+    });
+
+    it('passes disabled through', async () => {
+        const sw = await renderSwitch({ value: true, disabled: true });
+        expect(sw).toHaveProp('disabled', true);
     });
 
     it('is unchecked and enabled by default when off', async () => {
