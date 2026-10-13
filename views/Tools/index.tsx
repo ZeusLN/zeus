@@ -19,6 +19,7 @@ import SignIcon from '../../assets/images/SVG/Pen.svg';
 import SpeedometerIcon from '../../assets/images/SVG/Speedometer.svg';
 import SweepIcon from '../../assets/images/SVG/Sweep.svg';
 import RebalanceIcon from '../../assets/images/SVG/RebalanceIcon.svg';
+import SpliceIcon from '../../assets/images/SVG/Channels.svg';
 import ExportImportIcon from '../../assets/images/SVG/ExportImport.svg';
 import WatchtowerIcon from '../../assets/images/SVG/Watchtower.svg';
 import NWCIcon from '../../assets/images/SVG/nwc-logo.svg';
@@ -524,6 +525,49 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
                                             {localeString(
                                                 'views.Rebalance.title'
                                             )}
+                                        </Text>
+                                        <View style={styles.ForwardArrow}>
+                                            <ForwardIcon
+                                                stroke={forwardArrowColor}
+                                            />
+                                        </View>
+                                    </View>
+                                </TouchableOpacity>
+                            </View>
+                        )}
+
+                    {selectedNode &&
+                        BackendUtils.supportsSplicing() &&
+                        !isChannelMigrating && (
+                            <View
+                                style={{
+                                    backgroundColor: themeColor('secondary'),
+                                    width: '90%',
+                                    borderRadius: 10,
+                                    alignSelf: 'center',
+                                    marginVertical: 5
+                                }}
+                            >
+                                <TouchableOpacity
+                                    onPress={() =>
+                                        navigation.navigate('Splice')
+                                    }
+                                >
+                                    <View style={styles.columnField}>
+                                        <View style={styles.icon}>
+                                            <SpliceIcon
+                                                fill={themeColor('text')}
+                                                width={18}
+                                                height={18}
+                                            />
+                                        </View>
+                                        <Text
+                                            style={{
+                                                ...styles.columnText,
+                                                color: themeColor('text')
+                                            }}
+                                        >
+                                            {localeString('views.Splice.title')}
                                         </Text>
                                         <View style={styles.ForwardArrow}>
                                             <ForwardIcon
