@@ -197,6 +197,15 @@ export default class NWCConnectionsList extends React.Component<
         index: number;
     }) => {
         const hasPaymentPermissions = connection.hasPaymentPermissions();
+        // Custom connections that can create invoices but aren't the preset
+        // are neither "Read Only" nor "Invoice Only", so they get no tag.
+        const restrictedStatus = hasPaymentPermissions
+            ? undefined
+            : connection.isInvoiceOnly()
+            ? Status.InvoiceOnly
+            : connection.hasPermission('make_invoice')
+            ? undefined
+            : Status.ReadOnly;
         return (
             <View style={{ paddingTop: index === 0 ? 10 : 0 }}>
                 <TouchableOpacity
@@ -225,8 +234,8 @@ export default class NWCConnectionsList extends React.Component<
                                 {connection.name}
                             </Text>
                             <View style={{ flexDirection: 'row', gap: 4 }}>
-                                {!hasPaymentPermissions && (
-                                    <Tag status={Status.ReadOnly} />
+                                {restrictedStatus && (
+                                    <Tag status={restrictedStatus} />
                                 )}
                                 {connection.hasWarnings && (
                                     <Tag
@@ -382,22 +391,72 @@ export default class NWCConnectionsList extends React.Component<
                         </View>
                     )}
                     {!hasPaymentPermissions && (
-                        <Text
-                            style={[
-                                styles.budgetDetailText,
-                                { color: themeColor('secondaryText') }
-                            ]}
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                            }}
                         >
-                            {connection.lastUsed
-                                ? `${localeString(
-                                      'views.Settings.NostrWalletConnect.lastUsed'
-                                  )} ${DateTimeUtils.listFormattedDateShort(
-                                      connection.lastUsed.getTime() / 1000
-                                  )}`
-                                : localeString(
-                                      'views.Settings.NostrWalletConnect.neverUsed'
-                                  )}
-                        </Text>
+                            <Text
+                                style={[
+                                    styles.budgetDetailText,
+                                    { color: themeColor('secondaryText') }
+                                ]}
+                            >
+                                {connection.lastUsed
+                                    ? `${localeString(
+                                          'views.Settings.NostrWalletConnect.lastUsed'
+                                      )} ${DateTimeUtils.listFormattedDateShort(
+                                          connection.lastUsed.getTime() / 1000
+                                      )}`
+                                    : localeString(
+                                          'views.Settings.NostrWalletConnect.neverUsed'
+                                      )}
+                            </Text>
+                            {connection.lastReceivedActivitySats > 0 && (
+                                <View
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        gap: 4
+                                    }}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.budgetDetailText,
+                                            {
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }
+                                        ]}
+                                    >
+                                        {`${localeString(
+                                            'views.Settings.NostrWalletConnect.recentlyReceived'
+                                        )}:`}
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.budgetDetailText,
+                                            {
+                                                color: themeColor('success')
+                                            }
+                                        ]}
+                                    >
+                                        +
+                                    </Text>
+                                    <Amount
+                                        sats={
+                                            connection.lastReceivedActivitySats
+                                        }
+                                        credit
+                                        toggleable
+                                        fontSize={14}
+                                    />
+                                </View>
+                            )}
+                        </View>
                     )}
                 </TouchableOpacity>
             </View>
