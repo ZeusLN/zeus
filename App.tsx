@@ -292,6 +292,7 @@ import CurrencyConverter from './views/Tools/CurrencyConverter';
 import DeveloperTools from './views/Tools/DeveloperTools';
 import Rebalance from './views/Tools/Rebalance';
 import RebalancingChannels from './views/Tools/RebalancingChannels';
+import Splice from './views/Tools/Splice/Splice';
 import SpliceReview from './views/Tools/Splice/SpliceReview';
 import Splicing from './views/Tools/Splice/Splicing';
 import SignVerifyMessage from './views/Tools/SignVerifyMessage';
@@ -950,6 +951,13 @@ export default class App extends React.PureComponent {
                                                                 // @ts-ignore:next-line
                                                                 component={
                                                                     RebalancingChannels
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="Splice"
+                                                                // @ts-ignore:next-line
+                                                                component={
+                                                                    Splice
                                                                 }
                                                             />
                                                             <Stack.Screen
