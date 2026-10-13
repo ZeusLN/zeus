@@ -1769,6 +1769,7 @@
     "utils.handleAnything.lightningAddressError": "Lỗi khi tìm nạp dữ liệu Địa chỉ Lightning ",
     "utils.handleAnything.notValid": "Giá trị được cung cấp không phải là địa chỉ Bitcoin hợp lệ hoặc Hóa đơn Lightning ",
     "utils.handleAnything.lnurlAuthNotSupported": "Cách triển khai nút của bạn không hỗ trợ LnurlAuth",
+    "utils.handleAnything.channelsNotSupported": "Opening channels is not supported by this wallet",
     "utils.handleAnything.unsupportedLnurlType": "Loại lnurl không được hỗ trợ",
     "utils.handleAnything.invalidLnurlParams": "Không thể phân tích tham số lnurl",
     "utils.handleAnything.nostrProfileError": "Lỗi trong lúc tải hồ sơ Nostr",
