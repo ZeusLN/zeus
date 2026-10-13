@@ -113,6 +113,7 @@ module.exports = [
             'no-control-regex': 'off',
             'no-undef': 'error',
             'no-unused-vars': 'off',
+            'no-const-assign': 'error',
             'object-shorthand': ['error', 'always'],
             'prefer-spread': 'off',
 
@@ -128,7 +129,6 @@ module.exports = [
             'dot-notation': 'off',
             eqeqeq: 'off',
             'no-bitwise': 'off',
-            'no-const-assign': 'off',
             'no-div-regex': 'off',
             'no-lone-blocks': 'off',
             'no-void': 'off',
@@ -140,6 +140,21 @@ module.exports = [
         },
         plugins: {
             prettier: prettierPlugin
+        }
+    },
+
+    // Test files: fail on focused or disabled tests so an accidental
+    // it.only or xit cannot silently shrink the suite. The jest plugin is
+    // registered globally by @react-native/eslint-config, which sets these
+    // rules to 'warn'; registering the root eslint-plugin-jest copy under
+    // the same name would be a redefinition error, so only rules are set.
+    {
+        files: ['**/*.test.js', '**/*.test.ts', '**/*.test.tsx'],
+        rules: {
+            'jest/no-focused-tests': 'error',
+            'jest/no-disabled-tests': 'error',
+            'jest/no-identical-title': 'error',
+            'jest/valid-expect': 'error'
         }
     },
 
