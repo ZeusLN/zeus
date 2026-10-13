@@ -116,6 +116,41 @@ describe('TransactionsStore.sendPayment on Nostr Wallet Connect', () => {
         expect(store.isIncomplete).toBe(false);
     });
 
+    it('records the fee the wallet reports', async () => {
+        const { store, payInvoice } = await setup();
+        payInvoice.mockResolvedValue({ preimage: PREIMAGE, fees_paid: 3000 });
+
+        store.sendPayment({ payment_request: SPEC_INVOICE });
+        await flushPromises();
+
+        expect(store.status).toBe('SUCCEEDED');
+        expect(store.payment_fee).toBe('3');
+    });
+
+    it('sends the amount entered for a zero-amount invoice in msat', async () => {
+        const decode = (
+            Bolt11Utils.decode as jest.Mock
+        ).getMockImplementation()!;
+        (Bolt11Utils.decode as jest.Mock).mockImplementation(
+            (invoice: string) => ({
+                ...decode(invoice),
+                num_satoshis: '0',
+                num_msat: '0'
+            })
+        );
+        const { store, payInvoice } = await setup();
+        payInvoice.mockResolvedValue({ preimage: PREIMAGE });
+
+        store.sendPayment({ payment_request: SPEC_INVOICE, amount: '500' });
+        await flushPromises();
+
+        expect(payInvoice).toHaveBeenCalledWith({
+            invoice: SPEC_INVOICE,
+            amount: 500_000
+        });
+        expect(store.status).toBe('SUCCEEDED');
+    });
+
     it('records a reply without a preimage as in transit, not complete', async () => {
         const { store, payInvoice } = await setup();
         payInvoice.mockResolvedValue({});
