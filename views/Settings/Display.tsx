@@ -345,7 +345,7 @@ export default class Display extends React.Component<
                             }}
                         >
                             <ClockIcon
-                                color={themeColor('text')}
+                                color={themeColor('secondaryText')}
                                 width={24}
                                 height={24}
                                 style={{ marginRight: 10 }}
