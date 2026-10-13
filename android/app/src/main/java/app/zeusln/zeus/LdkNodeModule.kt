@@ -1329,6 +1329,22 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         }
     }
 
+    // Invoice committing to a description hash instead of a plain
+    // description (LUD-06 metadata / NIP-57 zap request commitments).
+    @ReactMethod
+    fun receiveBolt11WithDescriptionHash(amountMsat: Double, descriptionHash: String, expirySecs: Double, promise: Promise) {
+        try {
+            val node = this.node ?: throw Exception("Node not initialized")
+            val bolt11 = node.bolt11Payment()
+            val invoiceDescription = Bolt11InvoiceDescription.Hash(descriptionHash)
+            val invoice = bolt11.receive(amountMsat.toLong().toULong(), invoiceDescription, expirySecs.toInt().toUInt())
+            val result = Arguments.createMap().apply { putString("invoice", invoice.toString()) }
+            promise.resolve(result)
+        } catch (e: Exception) {
+            promise.reject("error", errorMessage(e))
+        }
+    }
+
     @ReactMethod
     fun receiveVariableAmountBolt11(description: String, expirySecs: Double, promise: Promise) {
         try {
