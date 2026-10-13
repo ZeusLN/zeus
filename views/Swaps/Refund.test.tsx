@@ -165,6 +165,9 @@ describe('RefundSwap refund button', () => {
         expect(errorShown()).toBeUndefined();
         // the destination is cleared, so the button waits for a new one
         expect(hostOfType('AddressInput').props.value).toBe('');
+        // a new destination enables it again, so loading was reset
+        await fireEvent.changeText(hostOfType('AddressInput'), 'bc1qnext');
+        refundEnabled();
     });
 
     it('hands native code the host without its /v2 suffix', async () => {
