@@ -349,7 +349,7 @@ public class LndMobileService extends Service {
   class LndStreamCallback implements lndmobile.RecvStream {
     private final Messenger recipient;
     private final String method;
-    // Set by the caller to correlate this stream's events; null for shared
+    // Set by the caller to correlate this stream's events; empty for shared
     // subscriptions
     private final String requestId;
 

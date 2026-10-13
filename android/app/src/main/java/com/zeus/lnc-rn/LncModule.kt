@@ -179,11 +179,11 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
 
   // Every stream of a method emits under the method name, so a non-empty
   // requestId is echoed in each event for JS to tell concurrent streams
-  // apart.
-  private fun sendStreamEvent(event: String, requestId: String, data: String) {
+  // apart. Nullable so a stray null from JS counts as no id.
+  private fun sendStreamEvent(event: String, requestId: String?, data: String) {
       val params = Arguments.createMap().apply {
         putString("result", data)
-        if (requestId.isNotEmpty()) putString("request_id", requestId)
+        if (!requestId.isNullOrEmpty()) putString("request_id", requestId)
       }
       getReactApplicationContext()
         .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
@@ -191,7 +191,7 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
   }
 
   @ReactMethod
-  fun initListener(namespace: String, method: String, request: String, requestId: String) {
+  fun initListener(namespace: String, method: String, request: String, requestId: String?) {
      val gocb = AndroidStreamingCallback()
      gocb.setEventName(method)
      gocb.setCallback { event, data -> sendStreamEvent(event, requestId, data) }
