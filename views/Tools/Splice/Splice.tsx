@@ -7,10 +7,12 @@ import {
     View
 } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { ButtonGroup } from '@rneui/themed';
 import Clipboard from '@react-native-clipboard/clipboard';
 
+import AddressInput from '../../../components/AddressInput';
 import Amount from '../../../components/Amount';
 import AmountInput from '../../../components/AmountInput';
 import Button from '../../../components/Button';
@@ -20,7 +22,6 @@ import HopPicker from '../../../components/HopPicker';
 import LoadingIndicator from '../../../components/LoadingIndicator';
 import Screen from '../../../components/Screen';
 import Text from '../../../components/Text';
-import TextInput from '../../../components/TextInput';
 import { Row } from '../../../components/layout/Row';
 
 import Channel from '../../../models/Channel';
@@ -45,6 +46,7 @@ import CloseIcon from '../../../assets/images/SVG/Close.svg';
 
 interface SpliceProps {
     navigation: NativeStackNavigationProp<any, any>;
+    route: Route<'Splice', { scannedAddress?: string }>;
     ChannelsStore: ChannelsStore;
     SpliceStore: SpliceStore;
     UnitsStore: UnitsStore;
@@ -85,6 +87,19 @@ export default class Splice extends React.Component<SpliceProps, SpliceState> {
             this.props.ChannelsStore.getChannels();
             this.props.SpliceStore.loadSpliceInAvailable();
         });
+    }
+
+    componentDidUpdate(prevProps: Readonly<SpliceProps>) {
+        const { route, navigation } = this.props;
+        const scannedAddress = route.params?.scannedAddress;
+
+        if (
+            scannedAddress &&
+            scannedAddress !== prevProps.route.params?.scannedAddress
+        ) {
+            this.setState({ address: scannedAddress });
+            navigation.setParams({ scannedAddress: undefined });
+        }
     }
 
     componentWillUnmount() {
@@ -131,7 +146,8 @@ export default class Splice extends React.Component<SpliceProps, SpliceState> {
 
     private onPaste = async () => {
         const text = await Clipboard.getString();
-        this.setState({ address: text.trim() });
+        const { value } = AddressUtils.processBIP21Uri(text.trim());
+        this.setState({ address: value || '' });
     };
 
     private onReview = () => {
@@ -207,14 +223,15 @@ export default class Splice extends React.Component<SpliceProps, SpliceState> {
                 <Text style={styles.sectionTitle}>
                     {localeString('general.destination')}
                 </Text>
-                <TextInput
+                <AddressInput
                     value={address}
                     onChangeText={(text: string) =>
                         this.setState({ address: text.trim() })
                     }
+                    onScan={() =>
+                        this.props.navigation.navigate('SpliceQRScanner')
+                    }
                     placeholder="bc1..."
-                    autoCapitalize="none"
-                    autoCorrect={false}
                 />
                 {addressError ? (
                     <Text
