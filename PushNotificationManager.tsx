@@ -6,6 +6,10 @@ import DeviceInfo from 'react-native-device-info';
 import { lightningAddressStore, settingsStore } from './stores/Stores';
 import NavigationService from './NavigationService';
 import { parseNwcActivityNotif } from './utils/NostrConnectUtils';
+import {
+    handleInvoiceRequest,
+    isSelfInvoiceRequestPayload
+} from './utils/SelfPayUtils';
 
 export default class PushNotificationManager extends React.Component<any, any> {
     async componentDidMount() {
@@ -57,6 +61,19 @@ export default class PushNotificationManager extends React.Component<any, any> {
                         'Notification Received - Foreground',
                         notification
                     );
+                // ZEUS Pay 'self': a data-only invoice request — fulfill
+                // silently, never alert
+                if (isSelfInvoiceRequestPayload(notification.payload)) {
+                    handleInvoiceRequest(notification.payload);
+                    if (Platform.OS === 'ios') {
+                        completion({
+                            alert: false,
+                            sound: false,
+                            badge: false
+                        });
+                    }
+                    return;
+                }
                 // Don't display redeem notification if auto-redeem is on
                 if (
                     settingsStore.settings?.lightningAddress
@@ -101,12 +118,33 @@ export default class PushNotificationManager extends React.Component<any, any> {
         );
 
         Notifications.events().registerNotificationReceivedBackground(
-            (notification, completion: any) => {
+            async (notification, completion: any) => {
                 if (__DEV__)
                     console.log(
                         'Notification Received - Background',
                         notification
                     );
+                // ZEUS Pay 'self': fulfill the invoice request in the
+                // background, then complete without presenting anything.
+                // On iOS this event also fires for the silent-push relaunch
+                // of a killed (not force-quit) app, where nothing else will
+                // start the node — manage the lifecycle here and hold a
+                // short settlement window within the ~30s budget.
+                if (isSelfInvoiceRequestPayload(notification.payload)) {
+                    try {
+                        const {
+                            fulfillInvoiceRequest
+                        } = require('./utils/SelfPayUtils');
+                        await fulfillInvoiceRequest(notification.payload, {
+                            manageNodeLifecycle: true,
+                            settlementWaitMs: 10000
+                        });
+                    } catch (e) {
+                        console.log('SelfPay: background fulfillment error', e);
+                    }
+                    completion({ alert: false, sound: false, badge: false });
+                    return;
+                }
                 // Calling completion on iOS with `alert: true` will present the native iOS inApp notification.
                 completion({ alert: true, sound: true, badge: false });
             }

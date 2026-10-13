@@ -234,7 +234,9 @@ async function initNode({
     lsps1Config,
     trustedPeers0conf,
     vssServerUrl,
-    failOnVssError
+    failOnVssError,
+    skipRgs,
+    skipScorer
 }: {
     storagePath: string;
     mnemonic: string;
@@ -252,10 +254,18 @@ async function initNode({
     trustedPeers0conf?: string[];
     vssServerUrl?: string;
     failOnVssError?: boolean;
+    // Receive-only boot profile: receiving needs neither gossip nor
+    // pathfinding scores, and skipping them keeps a background wake within
+    // the iOS silent-push budget. Explicit flags because an omitted
+    // rgsServerUrl falls back to the network default.
+    skipRgs?: boolean;
+    skipScorer?: boolean;
 }): Promise<{ vssError?: string }> {
     const networkType = getNetworkType(network);
     const esploraUrl = esploraServerUrl || getDefaultEsploraServer(network);
-    const rgsUrl = rgsServerUrl || getDefaultRgsServer(network);
+    const rgsUrl = skipRgs
+        ? undefined
+        : rgsServerUrl || getDefaultRgsServer(network);
     const vssUrl = vssServerUrl || DEFAULT_VSS_SERVER;
 
     // Derive VSS signing keypair using native PBKDF2 (avoids ~3s JS PBKDF2).
@@ -271,7 +281,7 @@ async function initNode({
         mnemonic,
         passphrase: passphrase || null,
         rgsServerUrl: rgsUrl,
-        scorerUrl,
+        scorerUrl: skipScorer ? undefined : scorerUrl,
         listeningAddresses,
         lsps1Config,
         trustedPeers0conf,
@@ -395,7 +405,10 @@ export async function startLdkNodeWallet({
     trustedPeers0conf,
     vssServerUrl,
     skipInit,
-    onSyncStart
+    onSyncStart,
+    skipRgs,
+    skipScorer,
+    skipSync
 }: {
     nodeDir: string;
     seedMnemonic: string;
@@ -414,6 +427,13 @@ export async function startLdkNodeWallet({
     vssServerUrl?: string;
     skipInit?: boolean;
     onSyncStart?: () => void;
+    // Receive-only boot profile (background invoice generation): skip
+    // gossip, pathfinding scores, and the inline chain sync to answer
+    // within the push-wake budget. Receiving a payment needs peer
+    // connectivity, not a synced graph.
+    skipRgs?: boolean;
+    skipScorer?: boolean;
+    skipSync?: boolean;
 }): Promise<{ vssError?: string; esploraError?: string; rgsError?: string }> {
     // Idempotent repair for wallets created before the backup exclusion
     // existed; never throws, so it cannot block node start
@@ -442,7 +462,9 @@ export async function startLdkNodeWallet({
             lsps1Config,
             trustedPeers0conf,
             vssServerUrl,
-            failOnVssError: !hasLocalDb
+            failOnVssError: !hasLocalDb,
+            skipRgs,
+            skipScorer
         });
         vssError = result.vssError;
     }
@@ -485,7 +507,7 @@ export async function startLdkNodeWallet({
     }
 
     // Only sync if the node actually started
-    if (nodeStarted) {
+    if (nodeStarted && !skipSync) {
         onSyncStart?.();
         try {
             await LdkNode.node.syncWallets();
