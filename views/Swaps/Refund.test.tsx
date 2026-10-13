@@ -5,7 +5,10 @@ jest.mock('mobx-react', () => ({
 jest.mock('../../lndmobile/LndMobileInjection', () => ({
     swaps: { createRefundTransaction: jest.fn() }
 }));
-jest.mock('../../utils/BackendUtils', () => ({ getMyNodeInfo: jest.fn() }));
+jest.mock('../../utils/BackendUtils', () => ({
+    getMyNodeInfo: jest.fn(),
+    supportsOnchainSends: () => false
+}));
 jest.mock('../../models/NodeInfo', () => ({
     __esModule: true,
     default: class {
@@ -37,7 +40,14 @@ jest.mock('../../utils/UnitsUtils', () => ({
 jest.mock('@react-native-documents/picker', () => ({
     saveDocuments: jest.fn()
 }));
-jest.mock('../../components/Button', () => 'Button');
+jest.mock('../../components/Button', () => {
+    const { Pressable, Text } = require('react-native');
+    return ({ title, onPress, disabled }: any) => (
+        <Pressable role="button" onPress={onPress} disabled={disabled}>
+            <Text>{title}</Text>
+        </Pressable>
+    );
+});
 jest.mock('../../components/Header', () => 'Header');
 jest.mock('../../components/KeyValue', () => 'KeyValue');
 jest.mock('../../components/LoadingIndicator', () => 'LoadingIndicator');
@@ -47,12 +57,21 @@ jest.mock('../../components/Switch', () => 'Switch');
 jest.mock('../../components/Text', () => 'Text');
 jest.mock('../../components/Accordion', () => 'Accordion');
 jest.mock('../../components/AddressInput', () => 'AddressInput');
-jest.mock('../../components/SuccessErrorMessage', () => ({
-    ErrorMessage: 'ErrorMessage',
-    SuccessMessage: 'SuccessMessage'
-}));
+jest.mock('../../components/SuccessErrorMessage', () => {
+    const { Text } = require('react-native');
+    return {
+        ErrorMessage: ({ message }: any) => (
+            <Text testID="error">{message}</Text>
+        ),
+        SuccessMessage: ({ message }: any) => (
+            <Text testID="success">{message}</Text>
+        )
+    };
+});
 jest.mock('../../components/layout/Row', () => ({ Row: 'Row' }));
 
+import * as React from 'react';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import RefundSwap from './Refund';
 import lndMobile from '../../lndmobile/LndMobileInjection';
 import BackendUtils from '../../utils/BackendUtils';
@@ -78,22 +97,42 @@ const SWAP = {
     effectiveLockupAddress: 'bc1plockup'
 };
 
-const makeView = ({ uncooperative = false } = {}) => {
+const hostOfType = (type: string) =>
+    screen.container.queryAll((n) => n.type === type)[0];
+
+// Opens the refund screen, enters the destination and a 3 sat/vB fee, turns
+// the uncooperative switch on if asked, and presses Initiate refund
+const refund = async ({ uncooperative = false } = {}) => {
     const store = { updateSwapOnRefund: jest.fn().mockResolvedValue(true) };
-    const view = new RefundSwap({
-        navigation: {},
-        route: { params: { swapData: SWAP } },
-        SwapStore: store,
-        NodeInfoStore: { nodeInfo: { isTestNet: false } }
-    } as any);
-    jest.spyOn(view, 'setState').mockImplementation((update: any) => {
-        view.state = { ...view.state, ...update };
-    });
-    view.state = { ...view.state, uncooperative };
-    const refund = () =>
-        view.createRefundTransaction(SWAP as any, '3', 'bc1qdestination');
-    return { store, view, refund };
+    await render(
+        <RefundSwap
+            {...({
+                navigation: { navigate: jest.fn(), setParams: jest.fn() },
+                route: { params: { swapData: { ...SWAP } } },
+                SwapStore: store,
+                NodeInfoStore: { nodeInfo: { isTestNet: false } },
+                InvoicesStore: {}
+            } as any)}
+        />
+    );
+    await fireEvent.changeText(hostOfType('AddressInput'), 'bc1qdestination');
+    await fireEvent(hostOfType('OnchainFeeInput'), 'changeFee', '3');
+    if (uncooperative) {
+        await fireEvent(hostOfType('Switch'), 'valueChange', true);
+    }
+    await fireEvent.press(
+        screen.getByRole('button', { name: 'views.Swaps.initiateRefund' })
+    );
+    return store;
 };
+
+const errorShown = () => screen.queryByTestId('error')?.props.children;
+const successShown = () => screen.queryByTestId('success')?.props.children;
+const uncooperativeOn = () => hostOfType('Switch').props.value;
+const refundEnabled = () =>
+    expect(
+        screen.getByRole('button', { name: 'views.Swaps.initiateRefund' })
+    ).toBeEnabled();
 
 const tipAt = (height: number) =>
     getMyNodeInfo.mockResolvedValue({ block_height: height });
@@ -104,14 +143,17 @@ const cooperativeFlags = () =>
 beforeEach(() => {
     nativeRefund.mockReset();
     getMyNodeInfo.mockReset();
+    jest.spyOn(console, 'log').mockImplementation(() => {});
+    jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
-describe('RefundSwap.createRefundTransaction', () => {
+afterEach(() => jest.restoreAllMocks());
+
+describe('RefundSwap refund button', () => {
     it('records a cooperative refund without looking up the tip', async () => {
-        const { store, view, refund } = makeView();
         nativeRefund.mockResolvedValue('txid-coop');
 
-        await refund();
+        const store = await refund();
 
         expect(cooperativeFlags()).toEqual([true]);
         expect(getMyNodeInfo).not.toHaveBeenCalled();
@@ -119,13 +161,16 @@ describe('RefundSwap.createRefundTransaction', () => {
             'swap',
             'txid-coop'
         );
-        expect(view.state.refundStatus).toContain('txid-coop');
-        expect(view.state.error).toBe('');
-        expect(view.state.loading).toBe(false);
+        expect(successShown()).toContain('txid-coop');
+        expect(errorShown()).toBeUndefined();
+        // the destination is cleared, so the button waits for a new one
+        expect(hostOfType('AddressInput').props.value).toBe('');
+        // a new destination enables it again, so loading was reset
+        await fireEvent.changeText(hostOfType('AddressInput'), 'bc1qnext');
+        refundEnabled();
     });
 
     it('hands native code the host without its /v2 suffix', async () => {
-        const { refund } = makeView();
         nativeRefund.mockResolvedValue('txid');
 
         await refund();
@@ -144,38 +189,36 @@ describe('RefundSwap.createRefundTransaction', () => {
     it.each([TIMEOUT, TIMEOUT + 10])(
         'retries uncooperatively when the host will not co-sign and the tip is %s',
         async (tip) => {
-            const { store, view, refund } = makeView();
             tipAt(tip);
             nativeRefund
                 .mockRejectedValueOnce(new Error(NOT_COSIGNED))
                 .mockResolvedValueOnce('txid-uncoop');
 
-            await refund();
+            const store = await refund();
 
             expect(cooperativeFlags()).toEqual([true, false]);
-            expect(view.state.uncooperative).toBe(true);
+            expect(uncooperativeOn()).toBe(true);
             expect(store.updateSwapOnRefund).toHaveBeenCalledWith(
                 'swap',
                 'txid-uncoop'
             );
-            expect(view.state.refundStatus).toContain('txid-uncoop');
-            expect(view.state.error).toBe('');
+            expect(successShown()).toContain('txid-uncoop');
+            expect(errorShown()).toBeUndefined();
         }
     );
 
     it('says when an uncooperative refund becomes possible if the timeout is ahead', async () => {
-        const { store, view, refund } = makeView();
         tipAt(TIMEOUT - 1234);
         nativeRefund.mockRejectedValue(new Error(NOT_COSIGNED));
 
-        await expect(refund()).rejects.toThrow(NOT_COSIGNED);
+        const store = await refund();
 
         expect(cooperativeFlags()).toEqual([true]);
-        expect(view.state.uncooperative).toBe(false);
-        expect(view.state.error).toBe(
+        expect(uncooperativeOn()).toBe(false);
+        expect(errorShown()).toBe(
             'views.Swaps.refundNotCosigned after block 900,000 (1,234 to go). views.Swaps.turnOnUncooperativeRefund'
         );
-        expect(view.state.loading).toBe(false);
+        refundEnabled();
         expect(store.updateSwapOnRefund).not.toHaveBeenCalled();
     });
 
@@ -191,65 +234,78 @@ describe('RefundSwap.createRefundTransaction', () => {
     ])(
         'leaves out the block count, and does not retry, when %s',
         async (_, setUpTip) => {
-            const { view, refund } = makeView();
             setUpTip();
             nativeRefund.mockRejectedValue(new Error(NOT_COSIGNED));
 
-            await expect(refund()).rejects.toThrow(NOT_COSIGNED);
+            await refund();
 
             expect(cooperativeFlags()).toEqual([true]);
-            expect(view.state.error).toBe(
+            expect(errorShown()).toBe(
                 'views.Swaps.refundNotCosigned after block 900,000. views.Swaps.turnOnUncooperativeRefund'
             );
         }
     );
 
     it('shows any other cooperative failure as is', async () => {
-        const { view, refund } = makeView();
         tipAt(TIMEOUT + 10);
         nativeRefund.mockRejectedValue(new Error('fee too low'));
 
-        await expect(refund()).rejects.toThrow('fee too low');
+        await refund();
 
         expect(cooperativeFlags()).toEqual([true]);
-        expect(view.state.uncooperative).toBe(false);
-        expect(view.state.error).toBe('fee too low');
+        expect(uncooperativeOn()).toBe(false);
+        expect(errorShown()).toBe('fee too low');
     });
 
     it('shows only the block message when an uncooperative refund is rejected as non-final', async () => {
-        const { view, refund } = makeView({ uncooperative: true });
         tipAt(TIMEOUT - 3);
         nativeRefund.mockRejectedValue(new Error(NON_FINAL));
 
-        await expect(refund()).rejects.toThrow(NON_FINAL);
+        await refund({ uncooperative: true });
 
         expect(cooperativeFlags()).toEqual([false]);
-        expect(view.state.error).toBe('after block 900,000 (3 to go).');
+        expect(errorShown()).toBe('after block 900,000 (3 to go).');
     });
 
     it('shows any other uncooperative failure as is', async () => {
-        const { view, refund } = makeView({ uncooperative: true });
         tipAt(TIMEOUT + 10);
         nativeRefund.mockRejectedValue(new Error('invalid address'));
 
-        await expect(refund()).rejects.toThrow('invalid address');
+        await refund({ uncooperative: true });
 
-        expect(view.state.error).toBe('invalid address');
+        expect(errorShown()).toBe('invalid address');
     });
 
     it('shows the retry error, and records nothing, when the uncooperative retry fails', async () => {
-        const { store, view, refund } = makeView();
         tipAt(TIMEOUT);
         nativeRefund
             .mockRejectedValueOnce(new Error(NOT_COSIGNED))
             .mockRejectedValueOnce(new Error('broadcast failed'));
 
-        await expect(refund()).rejects.toThrow('broadcast failed');
+        const store = await refund();
 
         expect(cooperativeFlags()).toEqual([true, false]);
-        expect(view.state.uncooperative).toBe(true);
-        expect(view.state.error).toBe('broadcast failed');
-        expect(view.state.loading).toBe(false);
+        expect(uncooperativeOn()).toBe(true);
+        expect(errorShown()).toBe('broadcast failed');
+        refundEnabled();
         expect(store.updateSwapOnRefund).not.toHaveBeenCalled();
+    });
+
+    it('keeps the button disabled until a destination is entered', async () => {
+        await render(
+            <RefundSwap
+                {...({
+                    navigation: { navigate: jest.fn(), setParams: jest.fn() },
+                    route: { params: { swapData: { ...SWAP } } },
+                    SwapStore: {},
+                    NodeInfoStore: { nodeInfo: { isTestNet: false } },
+                    InvoicesStore: {}
+                } as any)}
+            />
+        );
+
+        expect(
+            screen.getByRole('button', { name: 'views.Swaps.initiateRefund' })
+        ).toBeDisabled();
     });
 });
