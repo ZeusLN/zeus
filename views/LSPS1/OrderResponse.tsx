@@ -1,7 +1,6 @@
 import * as React from 'react';
 import { inject, observer } from 'mobx-react';
 import { View } from 'react-native';
-import moment from 'moment';
 import BigNumber from 'bignumber.js';
 
 import KeyValue from '../../components/KeyValue';
@@ -20,6 +19,7 @@ import {
     LSPService
 } from '../../models/LSP';
 
+import DateTimeUtils from '../../utils/DateTimeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
@@ -141,16 +141,16 @@ export default class LSPS1OrderResponse extends React.Component<
                 {orderResponse?.created_at && (
                     <KeyValue
                         keyValue={localeString('general.createdAt')}
-                        value={moment(orderResponse?.created_at).format(
-                            'MMM Do YYYY, h:mm:ss a'
+                        value={DateTimeUtils.formatDateTime(
+                            orderResponse?.created_at
                         )}
                     />
                 )}
                 {orderResponse?.expires_at && (
                     <KeyValue
                         keyValue={localeString('general.expiresAt')}
-                        value={moment(orderResponse?.expires_at).format(
-                            'MMM Do YYYY, h:mm:ss a'
+                        value={DateTimeUtils.formatDateTime(
+                            orderResponse?.expires_at
                         )}
                     />
                 )}
@@ -291,9 +291,9 @@ export default class LSPS1OrderResponse extends React.Component<
                         {payment?.bolt11.expires_at && (
                             <KeyValue
                                 keyValue={localeString('general.expiresAt')}
-                                value={moment(
+                                value={DateTimeUtils.formatDateTime(
                                     payment?.bolt11.expires_at
-                                ).format('MMM Do YYYY, h:mm:ss a')}
+                                )}
                             />
                         )}
                         {payment?.bolt11.invoice && (
@@ -344,9 +344,9 @@ export default class LSPS1OrderResponse extends React.Component<
                         {payment?.onchain.expires_at && (
                             <KeyValue
                                 keyValue={localeString('general.expiresAt')}
-                                value={moment(
+                                value={DateTimeUtils.formatDateTime(
                                     payment?.onchain.expires_at
-                                ).format('MMM Do YYYY, h:mm:ss a')}
+                                )}
                             />
                         )}
                         {payment?.onchain.address && (
@@ -399,14 +399,14 @@ export default class LSPS1OrderResponse extends React.Component<
                         />
                         <KeyValue
                             keyValue={localeString('views.LSPS1.fundedAt')}
-                            value={moment(channel?.funded_at).format(
-                                'MMM Do YYYY, h:mm:ss a'
+                            value={DateTimeUtils.formatDateTime(
+                                channel?.funded_at
                             )}
                         />
                         <KeyValue
                             keyValue={localeString('general.expiresAt')}
-                            value={moment(channel?.expires_at).format(
-                                'MMM Do YYYY, h:mm:ss a'
+                            value={DateTimeUtils.formatDateTime(
+                                channel?.expires_at
                             )}
                         />
                     </>

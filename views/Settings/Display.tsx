@@ -5,8 +5,10 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import SystemNavigationBar from 'react-native-system-navigation-bar';
 
 import SettingsStore, {
+    DATE_FORMAT_KEYS,
     DEFAULT_VIEW_KEYS,
-    THEME_KEYS
+    THEME_KEYS,
+    TIME_FORMAT_KEYS
 } from '../../stores/SettingsStore';
 import { localeString } from '../../utils/LocaleUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
@@ -30,6 +32,9 @@ interface DisplayState {
     showAllDecimalPlaces: boolean;
     removeDecimalSpaces: boolean;
     showMillisatoshiAmounts: boolean;
+    dateFormat: string;
+    timeFormat: string;
+    showSeconds: boolean;
     selectNodeOnStartup: boolean;
 }
 
@@ -47,6 +52,9 @@ export default class Display extends React.Component<
         showAllDecimalPlaces: false,
         removeDecimalSpaces: false,
         showMillisatoshiAmounts: false,
+        dateFormat: 'default',
+        timeFormat: '24h',
+        showSeconds: false,
         selectNodeOnStartup: false
     };
 
@@ -74,6 +82,9 @@ export default class Display extends React.Component<
                 (settings.display &&
                     settings.display.showMillisatoshiAmounts) ||
                 false,
+            dateFormat: settings.display?.dateFormat || 'default',
+            timeFormat: settings.display?.timeFormat || '24h',
+            showSeconds: settings.display?.showSeconds || false,
             selectNodeOnStartup: settings.selectNodeOnStartup || false
         });
     }
@@ -97,6 +108,9 @@ export default class Display extends React.Component<
             showAllDecimalPlaces,
             removeDecimalSpaces,
             showMillisatoshiAmounts,
+            dateFormat,
+            timeFormat,
+            showSeconds,
             selectNodeOnStartup
         } = this.state;
         const { updateSettings, updateSettingsGroup } = SettingsStore;
@@ -155,6 +169,61 @@ export default class Display extends React.Component<
                         }}
                         values={DEFAULT_VIEW_KEYS}
                     />
+
+                    <DropdownSetting
+                        title={localeString(
+                            'views.Settings.Display.dateFormat'
+                        )}
+                        selectedValue={dateFormat}
+                        onValueChange={async (value: string) => {
+                            this.setState({ dateFormat: value });
+                            await updateSettingsGroup('display', {
+                                dateFormat: value
+                            });
+                        }}
+                        values={DATE_FORMAT_KEYS}
+                    />
+
+                    <DropdownSetting
+                        title={localeString(
+                            'views.Settings.Display.timeFormat'
+                        )}
+                        selectedValue={timeFormat}
+                        onValueChange={async (value: string) => {
+                            this.setState({ timeFormat: value });
+                            await updateSettingsGroup('display', {
+                                timeFormat: value
+                            });
+                        }}
+                        values={TIME_FORMAT_KEYS}
+                    />
+
+                    <View style={{ flexDirection: 'row', marginTop: 20 }}>
+                        <View style={{ flex: 1 }}>
+                            <Text
+                                style={{
+                                    color: themeColor('secondaryText'),
+                                    fontSize: 17,
+                                    fontFamily: 'PPNeueMontreal-Book'
+                                }}
+                            >
+                                {localeString(
+                                    'views.Settings.Display.showSeconds'
+                                )}
+                            </Text>
+                        </View>
+                        <View style={{ alignSelf: 'center', marginLeft: 5 }}>
+                            <Switch
+                                value={showSeconds}
+                                onValueChange={async (value: boolean) => {
+                                    this.setState({ showSeconds: value });
+                                    await updateSettingsGroup('display', {
+                                        showSeconds: value
+                                    });
+                                }}
+                            />
+                        </View>
+                    </View>
 
                     <View style={{ flexDirection: 'row', marginTop: 20 }}>
                         <View style={{ flex: 1 }}>

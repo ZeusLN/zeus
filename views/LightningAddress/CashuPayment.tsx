@@ -8,7 +8,6 @@ import Animated, {
 } from 'react-native-reanimated';
 import ReanimatedSwipeable from 'react-native-gesture-handler/ReanimatedSwipeable';
 import { ListItem } from '@rneui/themed';
-import moment from 'moment';
 
 import Amount from '../../components/Amount';
 import Button from '../../components/Button';
@@ -17,6 +16,7 @@ import { Row } from '../../components/layout/Row';
 
 import { cashuStore, lightningAddressStore } from '../../stores/Stores';
 
+import DateTimeUtils from '../../utils/DateTimeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -26,7 +26,7 @@ export default function CashuPayment(props: any) {
     const { item, index } = props;
     const { redeemCashu, deletePayment } = lightningAddressStore;
 
-    const date = moment(item.updated_at).format('ddd, MMM DD, hh:mm a');
+    const date = DateTimeUtils.formatDateTimeShort(item.updated_at);
 
     const confirmDelete = () => {
         Alert.alert(

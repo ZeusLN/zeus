@@ -1,18 +1,54 @@
 import dateFormat from 'dateformat';
 
+import { settingsStore } from '../stores/Stores';
 import { localeString } from './LocaleUtils';
 
+// dateformat masks per DATE_FORMAT_KEYS value. 'mm' is the month and
+// 'MM' the minutes. The default format omits the year in short and order
+// dates for the current year; the numeric formats always include it.
+const NUMERIC_DATE_MASKS: { [key: string]: string } = {
+    iso: 'yyyy-mm-dd',
+    dmy: 'dd/mm/yyyy',
+    mdy: 'mm/dd/yyyy'
+};
+
 class DateTimeUtils {
+    private displaySettings = () => settingsStore?.settings?.display;
+
+    private numericDateMask = (): string | undefined =>
+        NUMERIC_DATE_MASKS[this.displaySettings()?.dateFormat || ''];
+
+    private timeMask = (): string => {
+        const display = this.displaySettings();
+        const seconds = display?.showSeconds ? ':ss' : '';
+        return display?.timeFormat === '12h'
+            ? `hh:MM${seconds} tt`
+            : `HH:MM${seconds}`;
+    };
+
+    private isCurrentYear = (date: Date) =>
+        date.getFullYear() === new Date().getFullYear();
+
+    private fullMask = () =>
+        `${this.numericDateMask() || "ddd, mmm d 'yy"}, ${this.timeMask()} Z`;
+
+    private shortMask = (date: Date) => {
+        const dateMask =
+            this.numericDateMask() ||
+            (this.isCurrentYear(date) ? 'mmm d' : "mmm d, 'yy");
+        return `${dateMask}, ${this.timeMask()}`;
+    };
+
     listDate = (timestamp: number | string | undefined) =>
         new Date(Number(timestamp) * 1000);
 
     listFormattedDate = (
         timestamp: number | string | undefined,
-        format = "ddd, mmm d 'yy, HH:MM Z"
+        format?: string
     ) => {
         try {
             const date = this.listDate(timestamp);
-            return dateFormat(date, format).toString();
+            return dateFormat(date, format || this.fullMask()).toString();
         } catch (error) {
             return (
                 timestamp?.toString() || localeString('general.notAvailable')
@@ -20,27 +56,49 @@ class DateTimeUtils {
         }
     };
 
-    listFormattedDateShort = (timestamp: number | string) => {
-        const date = new Date(Number(timestamp) * 1000);
-        const currentYear = new Date().getFullYear();
-        const dateYear = date.getFullYear();
-
-        const format =
-            dateYear !== currentYear ? "mmm d, 'yy, HH:MM" : 'mmm d, HH:MM';
-
-        return this.listFormattedDate(timestamp, format);
-    };
+    listFormattedDateShort = (timestamp: number | string) =>
+        this.listFormattedDate(
+            timestamp,
+            this.shortMask(this.listDate(timestamp))
+        );
 
     listFormattedDateOrder = (timestamp: Date) => {
-        const currentYear = new Date().getFullYear();
-        const dateYear = timestamp.getFullYear();
+        const time = dateFormat(timestamp, this.timeMask());
+        const numericDateMask = this.numericDateMask();
+        if (numericDateMask) {
+            return `${time} | ${dateFormat(timestamp, numericDateMask)}`;
+        }
 
-        const time = dateFormat(timestamp, 'HH:MM tt');
         const monthAndDay = dateFormat(timestamp, 'ddd, mmm dd');
-        const year =
-            dateYear !== currentYear ? `, '${dateFormat(timestamp, 'yy')}` : '';
+        const year = this.isCurrentYear(timestamp)
+            ? ''
+            : `, '${dateFormat(timestamp, 'yy')}`;
 
         return `${time} | ${monthAndDay}${year}`;
+    };
+
+    // For Dates, ISO strings and millisecond timestamps, the inputs moment()
+    // accepts. The list* methods above take Unix seconds.
+    formatDateTime = (date: Date | string | number | undefined) =>
+        this.formatDateObject(date, () => this.fullMask());
+
+    formatDateTimeShort = (date: Date | string | number | undefined) =>
+        this.formatDateObject(date, (d) => this.shortMask(d));
+
+    private formatDateObject = (
+        date: Date | string | number | undefined,
+        mask: (date: Date) => string
+    ) => {
+        const parsed =
+            date instanceof Date
+                ? date
+                : date === undefined
+                ? new Date(NaN)
+                : new Date(date);
+        if (isNaN(parsed.getTime())) {
+            return localeString('general.notAvailable');
+        }
+        return dateFormat(parsed, mask(parsed));
     };
 
     formatDate = (date: Date) => {
