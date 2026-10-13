@@ -28,6 +28,7 @@ import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 
 import { themeColor } from '../../../utils/ThemeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
+import { getLocalizedSatsUnitLabel } from '../../../utils/AmountUtils';
 import NostrConnectUtils, {
     PermissionOption,
     IndividualPermissionOption
@@ -1094,7 +1095,9 @@ export default class AddOrEditNWCConnection extends React.Component<
                             <View style={{ marginTop: 10 }}>
                                 <View style={styles.sectionTitleContainer}>
                                     <Body bold>
-                                        {localeString('views.BumpFee.budget')}
+                                        {`${localeString(
+                                            'views.Settings.NostrWalletConnect.budget'
+                                        )} (${getLocalizedSatsUnitLabel()})`}
                                     </Body>
                                 </View>
                                 <View
@@ -1187,9 +1190,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                                         }}
                                                     >
                                                         {'0'}{' '}
-                                                        {localeString(
-                                                            'general.sats'
-                                                        )}
+                                                        {getLocalizedSatsUnitLabel()}
                                                     </Text>
                                                     <Text
                                                         style={{
@@ -1204,9 +1205,7 @@ export default class AddOrEditNWCConnection extends React.Component<
                                                         {numberWithCommas(
                                                             maxBudgetLimit.toString()
                                                         )}{' '}
-                                                        {localeString(
-                                                            'general.sats'
-                                                        )}
+                                                        {getLocalizedSatsUnitLabel()}
                                                     </Text>
                                                 </View>
                                             </View>

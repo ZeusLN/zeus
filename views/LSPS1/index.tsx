@@ -31,6 +31,7 @@ import {
 } from '../../models/LSP';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { getLocalizedSatsUnitLabel } from '../../utils/AmountUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
 
 import LSPStore from '../../stores/LSPStore';
@@ -604,9 +605,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                                             info?.min_channel_balance_sat
                                                                         )} - ${numberWithCommas(
                                                                             info?.max_channel_balance_sat
-                                                                        )} ${localeString(
-                                                                            'general.sats'
-                                                                        )}`}
+                                                                        )} ${getLocalizedSatsUnitLabel()}`}
                                                                     />
                                                                 )}
                                                             {info?.max_initial_lsp_balance_sat &&
@@ -619,9 +618,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                                             info?.min_initial_lsp_balance_sat
                                                                         )} - ${numberWithCommas(
                                                                             info?.max_initial_lsp_balance_sat
-                                                                        )} ${localeString(
-                                                                            'general.sats'
-                                                                        )}`}
+                                                                        )} ${getLocalizedSatsUnitLabel()}`}
                                                                     />
                                                                 )}
                                                             {info?.max_initial_client_balance_sat &&
@@ -635,16 +632,12 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                                             info?.min_initial_client_balance_sat
                                                                                 ? `${
                                                                                       info?.min_initial_client_balance_sat
-                                                                                  } ${localeString(
-                                                                                      'general.sats'
-                                                                                  )}`
+                                                                                  } ${getLocalizedSatsUnitLabel()}`
                                                                                 : `${
                                                                                       info?.min_initial_client_balance_sat
                                                                                   } - ${
                                                                                       info?.max_initial_client_balance_sat
-                                                                                  } ${localeString(
-                                                                                      'general.sats'
-                                                                                  )}`
+                                                                                  } ${getLocalizedSatsUnitLabel()}`
                                                                         }
                                                                     />
                                                                 )}
@@ -682,9 +675,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                                 <KeyValue
                                                                     keyValue={`${localeString(
                                                                         'views.LSPS1.minOnchainPaymentSize'
-                                                                    )} (${localeString(
-                                                                        'general.sats'
-                                                                    )})`}
+                                                                    )} (${getLocalizedSatsUnitLabel()})`}
                                                                     value={
                                                                         info?.min_onchain_payment_size_sat
                                                                     }
@@ -746,12 +737,12 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                     >
                                         {`${localeString(
                                             'views.LSPS1.initialLSPBalance'
-                                        )} (${localeString('general.sats')})`}
+                                        )} (${getLocalizedSatsUnitLabel()})`}
                                     </Text>
                                     <TextInput
                                         placeholder={`${localeString(
                                             'views.LSPS1.initialLSPBalance'
-                                        )} (${localeString('general.sats')})`}
+                                        )} (${getLocalizedSatsUnitLabel()})`}
                                         value={
                                             lspBalanceSat === ''
                                                 ? ''
@@ -926,16 +917,12 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                     >
                                                         {`${localeString(
                                                             'views.LSPS1.initialClientBalance'
-                                                        )} (${localeString(
-                                                            'general.sats'
-                                                        )})`}
+                                                        )} (${getLocalizedSatsUnitLabel()})`}
                                                     </Text>
                                                     <TextInput
                                                         placeholder={`${localeString(
                                                             'views.LSPS1.clientBalance'
-                                                        )} (${localeString(
-                                                            'general.sats'
-                                                        )})`}
+                                                        )} (${getLocalizedSatsUnitLabel()})`}
                                                         value={
                                                             clientBalanceSat ===
                                                             ''

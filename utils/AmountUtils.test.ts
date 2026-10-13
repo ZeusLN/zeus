@@ -1,6 +1,9 @@
 import {
     processSatsAmount,
     shouldHideMillisatoshiAmounts,
+    shouldUseSatsSymbol,
+    getSatsUnitLabel,
+    getLocalizedSatsUnitLabel,
     getUnformattedAmount,
     getRawAmountFromSats,
     getAmountFromSats,
@@ -19,7 +22,8 @@ jest.mock('./LocaleUtils', () => ({
             'general.fiatRateNotAvailable':
                 'Rate for selected currency not available',
             'general.errorFetchingFiatRates': 'Error fetching fiat rates',
-            'general.notAvailable': 'N/A'
+            'general.notAvailable': 'N/A',
+            'general.sats': '聪'
         };
         return translations[key] || key;
     }
@@ -226,6 +230,113 @@ describe('AmountUtils', () => {
         it('should return true when display settings are missing', () => {
             (settingsStore as any).settings = {};
             expect(shouldHideMillisatoshiAmounts()).toBe(true);
+        });
+    });
+
+    describe('shouldUseSatsSymbol', () => {
+        it('returns true when useSatsSymbol is true', () => {
+            (settingsStore as any).settings = {
+                display: { useSatsSymbol: true }
+            };
+            expect(shouldUseSatsSymbol()).toBe(true);
+        });
+
+        it('returns false when useSatsSymbol is false', () => {
+            (settingsStore as any).settings = {
+                display: { useSatsSymbol: false }
+            };
+            expect(shouldUseSatsSymbol()).toBe(false);
+        });
+
+        it('defaults to true when the setting is undefined', () => {
+            (settingsStore as any).settings = { display: {} };
+            expect(shouldUseSatsSymbol()).toBe(true);
+        });
+
+        it('defaults to true when settings are undefined', () => {
+            (settingsStore as any).settings = undefined;
+            expect(shouldUseSatsSymbol()).toBe(true);
+        });
+    });
+
+    describe('getSatsUnitLabel', () => {
+        describe('symbol mode (default)', () => {
+            beforeEach(() => {
+                (settingsStore as any).settings = {
+                    display: { useSatsSymbol: true }
+                };
+            });
+
+            it('returns β for singular amounts', () => {
+                expect(getSatsUnitLabel(false)).toBe('β');
+            });
+
+            it('returns β for plural amounts', () => {
+                expect(getSatsUnitLabel(true)).toBe('β');
+            });
+        });
+
+        describe('word mode', () => {
+            beforeEach(() => {
+                (settingsStore as any).settings = {
+                    display: { useSatsSymbol: false }
+                };
+            });
+
+            it('returns "sat" for singular amounts', () => {
+                expect(getSatsUnitLabel(false)).toBe('sat');
+            });
+
+            it('returns "sats" for plural amounts', () => {
+                expect(getSatsUnitLabel(true)).toBe('sats');
+            });
+        });
+
+        describe('useSymbol override', () => {
+            it('forces symbol mode even when setting is false', () => {
+                (settingsStore as any).settings = {
+                    display: { useSatsSymbol: false }
+                };
+                expect(getSatsUnitLabel(true, true)).toBe('β');
+            });
+
+            it('forces word mode even when setting is true', () => {
+                (settingsStore as any).settings = {
+                    display: { useSatsSymbol: true }
+                };
+                expect(getSatsUnitLabel(true, false)).toBe('sats');
+                expect(getSatsUnitLabel(false, false)).toBe('sat');
+            });
+        });
+    });
+
+    describe('getLocalizedSatsUnitLabel', () => {
+        it('returns β in symbol mode regardless of plural', () => {
+            (settingsStore as any).settings = {
+                display: { useSatsSymbol: true }
+            };
+            expect(getLocalizedSatsUnitLabel()).toBe('β');
+            expect(getLocalizedSatsUnitLabel(false)).toBe('β');
+        });
+
+        it('defaults to β when the setting is undefined', () => {
+            (settingsStore as any).settings = { display: {} };
+            expect(getLocalizedSatsUnitLabel()).toBe('β');
+        });
+
+        it('returns the translated general.sats word in word mode', () => {
+            (settingsStore as any).settings = {
+                display: { useSatsSymbol: false }
+            };
+            expect(getLocalizedSatsUnitLabel()).toBe('聪');
+            expect(getLocalizedSatsUnitLabel(true)).toBe('聪');
+        });
+
+        it('returns "sat" for a single sat in word mode', () => {
+            (settingsStore as any).settings = {
+                display: { useSatsSymbol: false }
+            };
+            expect(getLocalizedSatsUnitLabel(false)).toBe('sat');
         });
     });
 
@@ -537,7 +648,8 @@ describe('AmountUtils', () => {
                 fiat: 'USD',
                 display: {
                     removeDecimalSpaces: false,
-                    showAllDecimalPlaces: false
+                    showAllDecimalPlaces: false,
+                    useSatsSymbol: false
                 }
             };
             (fiatStore as any).fiatRates = [
@@ -625,6 +737,14 @@ describe('AmountUtils', () => {
                 const result = getAmountFromSats(1000000);
                 expect(result).toBe('1,000,000 sats');
             });
+
+            it('uses β symbol when useSatsSymbol is enabled', () => {
+                (unitsStore as any).units = 'sats';
+                (settingsStore as any).settings.display.useSatsSymbol = true;
+                expect(getAmountFromSats(1)).toBe('1 β');
+                expect(getAmountFromSats(2)).toBe('2 β');
+                expect(getAmountFromSats(-1000)).toBe('-1,000 β');
+            });
         });
 
         describe('fiat unit', () => {
@@ -672,7 +792,8 @@ describe('AmountUtils', () => {
                 fiat: 'USD',
                 display: {
                     removeDecimalSpaces: false,
-                    showAllDecimalPlaces: false
+                    showAllDecimalPlaces: false,
+                    useSatsSymbol: false
                 }
             };
             (fiatStore as any).fiatRates = [
@@ -747,6 +868,14 @@ describe('AmountUtils', () => {
                 (unitsStore as any).units = 'sats';
                 const result = getFormattedAmount(-1000);
                 expect(result).toBe('-1,000 sats');
+            });
+
+            it('uses β symbol when useSatsSymbol is enabled', () => {
+                (unitsStore as any).units = 'sats';
+                (settingsStore as any).settings.display.useSatsSymbol = true;
+                expect(getFormattedAmount(1)).toBe('1 β');
+                expect(getFormattedAmount(2)).toBe('2 β');
+                expect(getFormattedAmount(-1000)).toBe('-1,000 β');
             });
         });
 
@@ -1183,7 +1312,7 @@ describe('AmountUtils', () => {
 
         it('getAmountFromSats output is display-only and does not round-trip', () => {
             (unitsStore as any).units = 'sats';
-            expect(getAmountFromSats(12618)).toBe('12,618 sats');
+            expect(getAmountFromSats(12618)).toBe('12,618 β');
             // guarded to 0 rather than NaN so amount checks still reject it
             expect(getSatAmount(getAmountFromSats(12618)!)).toBe(0);
         });
