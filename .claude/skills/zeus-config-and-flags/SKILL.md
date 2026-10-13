@@ -136,7 +136,7 @@ All defaults below are `DEFAULT_SETTINGS` in `stores/SettingsStore.ts` (search `
 
 | Axis | Options | Default |
 |---|---|---|
-| `theme` | 18 themes in `THEME_KEYS`; `RETIRED_THEMES` are moved to the default by the `SETTINGS_VERSION` 3 migration | `'kyriaki'` (`DEFAULT_THEME`) |
+| `theme` | 21 themes in `THEME_KEYS`; `RETIRED_THEMES` are moved to the default by the `SETTINGS_VERSION` 3 migration | `'kyriaki'` (`DEFAULT_THEME`) |
 | `defaultView` | `'Keypad' \| 'Balance'` (`DEFAULT_VIEW_KEYS`) | `'Keypad'` |
 | `displayNickname` | bool | `false` |
 | `bigKeypadButtons` | bool | `false` |
