@@ -1769,7 +1769,7 @@
     "utils.handleAnything.lightningAddressError": "Chyba při načítání dat Lightning adresy",
     "utils.handleAnything.notValid": "Zadaná hodnota nebyla platná Bitcoinová adresa nebo Lightning faktura",
     "utils.handleAnything.lnurlAuthNotSupported": "LnurlAuth není podporován vaší implementací uzlu",
-    "utils.handleAnything.channelsNotSupported": "Opening channels is not supported by this wallet",
+    "utils.handleAnything.channelsNotSupported": "Otevírání kanálů tato peněženka nepodporuje",
     "utils.handleAnything.unsupportedLnurlType": "Nepodporovaný typ lnurl",
     "utils.handleAnything.invalidLnurlParams": "Nelze analyzovat lnurl parametry",
     "utils.handleAnything.nostrProfileError": "Chyba při načítání Nostr profilu",
