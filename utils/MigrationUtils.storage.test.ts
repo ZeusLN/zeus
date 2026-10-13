@@ -389,14 +389,37 @@ describe('storageMigrationV2', () => {
 });
 
 describe('keychainCloudSyncMigration', () => {
+    const LNC_PAIRING = 'echo foxtrot golf hotel';
+    const LNC_BASE = `lnc-rn:${hash(LNC_PAIRING)}`;
+    const LNC_HOST = `${LNC_BASE}:host`;
+    const MINT_A = 'https://mint.a';
+    const MINT_B = 'https://mint.b';
+    // Two embedded nodes: the first has no lndDir, so it falls back to 'lnd'
     const SETTINGS = JSON.stringify({
-        nodes: [{ implementation: 'embedded-lnd', lndDir: 'lnd' }]
+        nodes: [
+            { implementation: 'embedded-lnd' },
+            { implementation: 'embedded-lnd', lndDir: 'lnd2' },
+            {
+                implementation: 'lightning-node-connect',
+                pairingPhrase: LNC_PAIRING
+            }
+        ]
     });
     const CONTACTS = '[{"name":"alice"}]';
     const UNITS = 'sats';
     const NOTES = '["note-a"]';
     const NOTE_A = 'first note';
     const CASHU_SEED = 'cashu seed words';
+    const CASHU_SEED_2 = 'second cashu seed words';
+    // Per-mint wallet keys, enumerated from each node's own mintUrls
+    const MINT_KEYS: Record<string, string> = {
+        [`lnd==${MINT_A}-proofs`]: '[{"amount":8}]',
+        [`lnd==${MINT_A}-counter`]: '3',
+        [`lnd2==${MINT_B}-proofs`]: '[{"amount":16}]',
+        [`lnd2==${MINT_B}-counter`]: '5'
+    };
+    // Not in lnd's mintUrls, so the migration must leave it alone
+    const ORPHAN_MINT_KEY = `lnd==${MINT_B}-proofs`;
 
     // Pre-2026 unprefixed entries. Notes live only in the synchronizable
     // partition to exercise migrateKey's cloud fallback.
@@ -404,7 +427,14 @@ describe('keychainCloudSyncMigration', () => {
         [SETTINGS_KEY]: SETTINGS,
         'zeus-contacts-v2': CONTACTS,
         'zeus-units-v2': UNITS,
-        'lnd-cashu-seed-phrase': CASHU_SEED
+        'lnd-cashu-seed-phrase': CASHU_SEED,
+        'lnd-cashu-mintUrls': JSON.stringify([MINT_A]),
+        'lnd2-cashu-seed-phrase': CASHU_SEED_2,
+        'lnd2-cashu-mintUrls': JSON.stringify([MINT_B]),
+        ...MINT_KEYS,
+        [ORPHAN_MINT_KEY]: '[{"amount":32}]',
+        [LNC_BASE]: '{"localKey":"lk"}',
+        [LNC_HOST]: 'mailbox.example:443'
     };
     const LEGACY_SYNC: Record<string, string> = {
         'zeus-notes-v2': NOTES,
@@ -436,6 +466,14 @@ describe('keychainCloudSyncMigration', () => {
         expect(local('zeus-notes-v2')).toBe(NOTES);
         expect(local('note-a')).toBe(NOTE_A);
         expect(local('lnd-cashu-seed-phrase')).toBe(CASHU_SEED);
+        expect(local('lnd-cashu-mintUrls')).toBe(JSON.stringify([MINT_A]));
+        expect(local('lnd2-cashu-seed-phrase')).toBe(CASHU_SEED_2);
+        expect(local('lnd2-cashu-mintUrls')).toBe(JSON.stringify([MINT_B]));
+        for (const [k, v] of Object.entries(MINT_KEYS)) {
+            expect(local(k)).toBe(v);
+        }
+        expect(local(LNC_BASE)).toBe('{"localKey":"lk"}');
+        expect(local(LNC_HOST)).toBe('mailbox.example:443');
     };
 
     const flagsSet = () => ({
@@ -461,6 +499,7 @@ describe('keychainCloudSyncMigration', () => {
         await MigrationUtils.keychainCloudSyncMigration();
 
         expectAllMigrated();
+        expect(local(ORPHAN_MINT_KEY)).toBeUndefined();
         expectSourcesIntact();
         expect(flagsSet()).toEqual({ main: 'true', cashu: 'true' });
         expect(mockSettingsStore.isMigrating).toBe(true);
@@ -533,6 +572,24 @@ describe('keychainCloudSyncMigration', () => {
         expectSourcesIntact();
         expect(flagsSet()).toEqual({ main: undefined, cashu: undefined });
     });
+
+    it('keeps the proofs source when a per-mint write fails', async () => {
+        seedLegacy();
+        failWritesTo(`lnd2==${MINT_B}-proofs`, 'throw');
+
+        await MigrationUtils.keychainCloudSyncMigration();
+
+        expect(local(`lnd2==${MINT_B}-proofs`)).toBeUndefined();
+        // Keys from the first node directory were already copied
+        expect(local(`lnd==${MINT_A}-proofs`)).toBe(
+            MINT_KEYS[`lnd==${MINT_A}-proofs`]
+        );
+        expectSourcesIntact();
+    });
+
+    it.todo(
+        'BUG: a per-mint write failure is caught as a mintUrls parse error, so the rest of that mint list is skipped and the Cashu flag is set'
+    );
 
     it.todo(
         'verify read-back returning a different value than written: master only checks truthiness and sets the flag (fixed by #4736)'
