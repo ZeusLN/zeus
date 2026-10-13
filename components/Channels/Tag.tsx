@@ -37,6 +37,7 @@ export function Tag({
             colors.dot = '#E5E5E5';
             break;
         case Status.ReadOnly:
+        case Status.InvoiceOnly:
             colors.background = themeColor('highlight');
             colors.text = themeColor('background');
             break;

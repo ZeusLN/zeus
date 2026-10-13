@@ -1244,8 +1244,52 @@ describe('NostrConnectUtils', () => {
                 ])
             ).toBe(PermissionType.ReadOnly);
             expect(
+                NostrConnectUtils.determinePermissionType(
+                    NostrConnectUtils.getInvoiceOnlyPermissions()
+                )
+            ).toBe(PermissionType.InvoiceOnly);
+            expect(
                 NostrConnectUtils.determinePermissionType(['sign_message'])
             ).toBe(PermissionType.Custom);
+        });
+
+        it('classifies Invoice Only with sign_message, but not with get_balance', () => {
+            expect(
+                NostrConnectUtils.determinePermissionType([
+                    ...NostrConnectUtils.getInvoiceOnlyPermissions(),
+                    'sign_message'
+                ])
+            ).toBe(PermissionType.InvoiceOnly);
+            expect(
+                NostrConnectUtils.determinePermissionType([
+                    ...NostrConnectUtils.getInvoiceOnlyPermissions(),
+                    'get_balance'
+                ])
+            ).toBe(PermissionType.Custom);
+            expect(
+                NostrConnectUtils.determinePermissionType([
+                    'make_invoice',
+                    'lookup_invoice'
+                ])
+            ).toBe(PermissionType.Custom);
+        });
+
+        it('keeps make_invoice out of Read Only and get_balance out of Invoice Only', () => {
+            expect(NostrConnectUtils.getReadOnlyPermissions()).not.toContain(
+                'make_invoice'
+            );
+            expect(NostrConnectUtils.getInvoiceOnlyPermissions()).not.toContain(
+                'get_balance'
+            );
+            expect(NostrConnectUtils.getInvoiceOnlyPermissions()).not.toContain(
+                'pay_invoice'
+            );
+            expect(
+                NostrConnectUtils.getPermissionsForType(
+                    PermissionType.InvoiceOnly,
+                    []
+                ).permissions
+            ).toEqual(NostrConnectUtils.getInvoiceOnlyPermissions());
         });
 
         it('preserves sign_message when clearing a wallet-access preset', () => {
