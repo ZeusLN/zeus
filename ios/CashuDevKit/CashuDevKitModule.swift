@@ -785,9 +785,10 @@ class CashuDevKitModule: RCTEventEmitter {
 
         Task {
             do {
-                // Cached keysets from the database; the pre-0.18
-                // Wallet.getMintKeysets(filter: .all) was also a local-store
-                // read (network refresh was a separate call)
+                // Cached keysets from the database only. The pre-0.18
+                // Wallet.getMintKeysets(filter: .all) fell back to fetching
+                // from the mint when none were stored; this read returns an
+                // empty list instead and never contacts the mint
                 let keysets = try await db.getMintKeysets(
                     mintUrl: MintUrl(url: normalizeMintUrl(mintUrl))) ?? []
                 let encoded = keysets.map { encodeKeyset($0) }

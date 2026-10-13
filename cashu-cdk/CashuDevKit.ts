@@ -224,7 +224,9 @@ class CashuDevKit {
     }
 
     /**
-     * Get keysets for a mint
+     * Get the keysets stored locally for a mint. Does not contact the mint:
+     * an empty array means no keysets are stored (e.g. the mint was never
+     * added), not that the mint has no keysets.
      * @param mintUrl - The mint's URL
      */
     async getMintKeysets(mintUrl: string): Promise<CDKKeyset[]> {

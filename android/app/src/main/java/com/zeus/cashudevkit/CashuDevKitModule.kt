@@ -818,9 +818,10 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
         scope.launch {
             try {
-                // Cached keysets from the database; the pre-0.18
-                // Wallet.getMintKeysets(KeysetFilter.ALL) was also a
-                // local-store read (network refresh was a separate call)
+                // Cached keysets from the database only. The pre-0.18
+                // Wallet.getMintKeysets(KeysetFilter.ALL) fell back to
+                // fetching from the mint when none were stored; this read
+                // returns an empty list instead and never contacts the mint
                 val keysets =
                     currentDb.getMintKeysets(MintUrl(normalizeMintUrl(mintUrl)))
                         ?: emptyList()
