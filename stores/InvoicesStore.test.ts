@@ -75,9 +75,30 @@ describe('InvoicesStore.getNewAddress', () => {
         });
     });
 
-    it('honors an account-derived walletrpc address type for non-default accounts', async () => {
+    // what Receive reads: onChainAddress for the QR, creatingInvoice for the
+    // spinner, error_msg for the error banner
+    const expectAddressShown = (
+        store: InvoicesStore,
+        result: string | undefined,
+        address = 'bcrt1qtest'
+    ) => {
+        expect(result).toBe(address);
+        expect(store.onChainAddress).toBe(address);
+        expect(store.creatingInvoice).toBe(false);
+        expect(store.error_msg).toBeNull();
+    };
+
+    // a store that is mid-request with a leftover address and error
+    const dirtyStore = () => {
         const store = newStore();
-        await store.getNewAddress({
+        store.onChainAddress = 'bcrt1qold';
+        store.error_msg = 'old error';
+        return store;
+    };
+
+    it('honors an account-derived walletrpc address type for non-default accounts', async () => {
+        const store = dirtyStore();
+        const result = await store.getNewAddress({
             account: 'SeedSigner',
             type: 'TAPROOT_PUBKEY'
         });
@@ -86,35 +107,109 @@ describe('InvoicesStore.getNewAddress', () => {
             account: 'SeedSigner',
             type: 'TAPROOT_PUBKEY'
         });
+        expectAddressShown(store, result);
     });
 
     it('normalizes walletrpc numeric address types from the embedded proto decode', async () => {
-        const store = newStore();
-        await store.getNewAddress({ account: 'SeedSigner', type: 4 });
+        const store = dirtyStore();
+        const result = await store.getNewAddress({
+            account: 'SeedSigner',
+            type: 4
+        });
 
         expect(BackendUtils.getNewAddress).toHaveBeenCalledWith({
             account: 'SeedSigner',
             type: 'TAPROOT_PUBKEY'
         });
+        expectAddressShown(store, result);
     });
 
     it('drops non-account address types (like the settings preference) for non-default accounts', async () => {
-        const store = newStore();
-        await store.getNewAddress({ account: 'SeedSigner', type: '0' });
+        const store = dirtyStore();
+        const result = await store.getNewAddress({
+            account: 'SeedSigner',
+            type: '0'
+        });
 
         expect(BackendUtils.getNewAddress).toHaveBeenCalledWith({
             account: 'SeedSigner'
         });
+        expectAddressShown(store, result);
     });
 
     it('leaves the requested type untouched for the default account', async () => {
-        const store = newStore();
-        await store.getNewAddress({ account: 'default', type: '0' });
+        const store = dirtyStore();
+        const result = await store.getNewAddress({
+            account: 'default',
+            type: '0'
+        });
 
         expect(BackendUtils.getNewAddress).toHaveBeenCalledWith({
             account: 'default',
             type: '0'
         });
+        expectAddressShown(store, result);
+    });
+
+    it('marks the request in flight and hides the old address until the backend answers', async () => {
+        let resolve: (value: any) => void = () => {};
+        (BackendUtils.getNewAddress as jest.Mock).mockReturnValue(
+            new Promise((res) => (resolve = res))
+        );
+
+        const store = dirtyStore();
+        const pending = store.getNewAddress({ account: 'default' });
+
+        expect(store.creatingInvoice).toBe(true);
+        expect(store.onChainAddress).toBeNull();
+        expect(store.error_msg).toBeNull();
+
+        resolve({ address: 'bcrt1qtest' });
+        expectAddressShown(store, await pending);
+    });
+
+    it.each([
+        ['LND / LDK Node / LNC (address)', { address: 'bcrt1qtest' }],
+        ['CLN bech32', { bech32: 'bcrt1qtest' }],
+        ['CLN p2tr', { p2tr: 'bcrt1qtest' }],
+        ['LndHub /getbtc array', [{ address: 'bcrt1qtest' }]]
+    ])('reads the address from the %s response shape', async (_, data) => {
+        (BackendUtils.getNewAddress as jest.Mock).mockResolvedValue(data);
+
+        const store = newStore();
+        const result = await store.getNewAddress({ account: 'default' });
+
+        expectAddressShown(store, result);
+    });
+
+    it('prefers address over bech32 and p2tr when a response carries several', async () => {
+        (BackendUtils.getNewAddress as jest.Mock).mockResolvedValue({
+            address: 'bcrt1qaddress',
+            bech32: 'bcrt1qbech32',
+            p2tr: 'bcrt1pp2tr'
+        });
+
+        const store = newStore();
+        const result = await store.getNewAddress({ account: 'default' });
+
+        expectAddressShown(store, result, 'bcrt1qaddress');
+    });
+
+    it('clears onChainAddress but leaves creatingInvoice and error_msg to createInvoice for unified requests', async () => {
+        const store = newStore();
+        store.onChainAddress = 'bcrt1qold';
+        store.creatingInvoice = true;
+        store.error_msg = 'createInvoice owns this';
+
+        const result = await store.getNewAddress({
+            account: 'default',
+            unified: true
+        });
+
+        expect(result).toBe('bcrt1qtest');
+        expect(store.onChainAddress).toBeNull();
+        expect(store.creatingInvoice).toBe(true);
+        expect(store.error_msg).toBe('createInvoice owns this');
     });
 
     it('leaves the caller-supplied request object untouched', async () => {
@@ -130,12 +225,75 @@ describe('InvoicesStore.getNewAddress', () => {
             new Error('account not found')
         );
 
-        const store = newStore();
-        await store.getNewAddress({ account: 'SeedSigner' });
+        const store = dirtyStore();
+        store.error = true;
+        store.loading = true;
+        const result = await store.getNewAddress({ account: 'SeedSigner' });
 
+        expect(result).toBeUndefined();
         expect(store.onChainAddress).toBeNull();
-        expect(store.error_msg).toContain('account not found');
+        expect(store.error_msg).toBe('Error: account not found');
+        expect(store.creatingInvoice).toBe(false);
+        // getNewAddress reports through error_msg only
+        expect(store.error).toBe(true);
+        expect(store.loading).toBe(true);
     });
+
+    it('falls back to the generic message when the rejection stringifies to nothing', async () => {
+        (BackendUtils.getNewAddress as jest.Mock).mockRejectedValue('');
+
+        const store = newStore();
+        await store.getNewAddress({ account: 'default' });
+
+        expect(store.error_msg).toBe(
+            'stores.InvoicesStore.errorGeneratingAddress'
+        );
+        expect(store.creatingInvoice).toBe(false);
+        expect(store.onChainAddress).toBeNull();
+    });
+
+    it('clears the previous error and shows the new address when a retry succeeds', async () => {
+        (BackendUtils.getNewAddress as jest.Mock)
+            .mockRejectedValueOnce(new Error('timeout'))
+            .mockResolvedValueOnce({ address: 'bcrt1qtest' });
+
+        const store = newStore();
+        await store.getNewAddress({ account: 'default' });
+        expect(store.error_msg).toBe('Error: timeout');
+
+        const result = await store.getNewAddress({ account: 'default' });
+        expectAddressShown(store, result);
+    });
+
+    it('drops the previous address when a later call fails', async () => {
+        (BackendUtils.getNewAddress as jest.Mock)
+            .mockResolvedValueOnce({ address: 'bcrt1qfirst' })
+            .mockRejectedValueOnce(new Error('node offline'));
+
+        const store = newStore();
+        await store.getNewAddress({ account: 'default' });
+        expect(store.onChainAddress).toBe('bcrt1qfirst');
+
+        await store.getNewAddress({ account: 'default' });
+        expect(store.onChainAddress).toBeNull();
+        expect(store.error_msg).toBe('Error: node offline');
+        expect(store.creatingInvoice).toBe(false);
+    });
+
+    // A backend rejecting with undefined/null makes the catch handler throw
+    // on error.toString() (getNewChangeAddress uses error?.toString()), so
+    // creatingInvoice stays true and error_msg stays null: Receive spins
+    // forever with no error shown.
+    it.todo(
+        'clears creatingInvoice and sets error_msg when the backend rejects with undefined'
+    );
+
+    // A response with none of address / bech32 / p2tr / [0].address resolves
+    // with undefined and leaves error_msg null, so Receive shows neither an
+    // address nor an error.
+    it.todo(
+        'sets error_msg when the backend response carries no recognizable address'
+    );
 });
 
 describe('InvoicesStore.getNewChangeAddress', () => {
