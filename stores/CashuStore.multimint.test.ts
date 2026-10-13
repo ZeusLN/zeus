@@ -46,6 +46,7 @@ import CashuDevKit from '../cashu-cdk';
 import Storage from '../storage';
 import Bolt11Utils from '../utils/Bolt11Utils';
 import { MintPaymentStatus, MultinutPaymentStep } from '../utils/CashuUtils';
+import * as LocaleUtils from '../utils/LocaleUtils';
 
 const cdk = CashuDevKit as unknown as Record<string, jest.Mock>;
 const storage = Storage as unknown as Record<string, jest.Mock>;
@@ -172,8 +173,13 @@ const planOf = (store: CashuStore) =>
 
 const flush = () => new Promise((resolve) => setImmediate(resolve));
 
+// The shared LocaleUtils mock drops interpolation arguments, so spy on it
+// to check the mint names and amounts passed to the error messages
+let localeString: jest.SpyInstance;
+
 beforeEach(() => {
     jest.clearAllMocks();
+    localeString = jest.spyOn(LocaleUtils, 'localeString');
     jest.spyOn(console, 'log').mockImplementation(() => {});
     jest.spyOn(console, 'warn').mockImplementation(() => {});
     jest.spyOn(console, 'error').mockImplementation(() => {});
@@ -396,6 +402,10 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
         expect(store.getPayReqError).toBe(
             'stores.CashuStore.notEnoughFundsSelfSend'
         );
+        expect(localeString).toHaveBeenCalledWith(
+            'stores.CashuStore.notEnoughFundsSelfSend',
+            { mintName: 'Mint A' }
+        );
         expect(cdk.createMeltQuote).not.toHaveBeenCalled();
     });
 
@@ -589,7 +599,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
             async (mintUrl: string, _inv: string, amountMsat: number) =>
                 mintUrl === A
                     ? paid(amountMsat / 1000, 1)
-                    : paid(amountMsat / 1000, 0, '')
+                    : paid(amountMsat / 1000, 2, '')
         );
         const onProgress = jest.fn();
 
@@ -601,14 +611,14 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         expect(store.paymentSuccess).toBe(true);
         expect(store.paymentError).toBe(false);
         expect(store.paymentPreimage).toBe(PREIMAGE);
-        expect(store.paymentFee).toBe(1);
+        expect(store.paymentFee).toBe(3);
         expect(store.noteKey).toBe(`note-${PAYMENT_HASH}`);
         // one payment entry per mint, each with its own share
         expect(
             store.payments!.map((p) => [p.mintUrl, p.amount, p.fee])
         ).toEqual([
             [A, 546, 1],
-            [B, 454, 0]
+            [B, 454, 2]
         ]);
         expect(result).toBe(store.payments![0]);
         expect(storage.setItem).toHaveBeenCalledWith(
@@ -632,6 +642,19 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         expect(cdk.restore).toHaveBeenCalledWith(B);
         expect(cdk.getBalances).toHaveBeenCalled();
         expect(cdk.listTransactions).toHaveBeenCalled();
+    });
+
+    it('counts a part that paid no fee', async () => {
+        const store = await plannedStore();
+        cdk.meltPartial.mockImplementation(
+            async (mintUrl: string, _inv: string, amountMsat: number) =>
+                paid(amountMsat / 1000, mintUrl === A ? 0 : 2)
+        );
+
+        await store.payLnInvoiceFromEcash({});
+
+        expect(store.paymentFee).toBe(2);
+        expect(store.payments!.map((p) => p.fee)).toEqual([0, 2]);
     });
 
     it('melts a regular-quote plan with its quote id instead of meltPartial', async () => {
@@ -726,19 +749,25 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
 
     it('turns a melt fee mismatch into a message naming the mint', async () => {
         const store = await plannedStore();
-        cdk.meltPartial.mockRejectedValue(
-            new Error(
-                'Not enough inputs provided for melt. Provided: 546, needed: 550'
-            )
-        );
+        cdk.meltPartial.mockImplementation(async (mintUrl: string) => {
+            throw new Error(
+                mintUrl === A
+                    ? 'Not enough inputs provided for melt. Provided: 546, needed: 550'
+                    : 'mint B refused'
+            );
+        });
         const onProgress = jest.fn();
 
         await store.payLnInvoiceFromEcash({ onProgress });
 
         expect(store.paymentErrorMsg).toBe('stores.CashuStore.meltFeeMismatch');
-        expect(onProgress.mock.calls.at(-1)[0].mints[0].error).toBe(
-            'stores.CashuStore.meltFeeMismatch'
+        expect(localeString).toHaveBeenCalledWith(
+            'stores.CashuStore.meltFeeMismatch',
+            { mintName: 'Mint A', provided: '546', needed: '550' }
         );
+        expect(
+            onProgress.mock.calls.at(-1)[0].mints.map((m: any) => m.error)
+        ).toEqual(['stores.CashuStore.meltFeeMismatch', 'mint B refused']);
     });
 
     it('refuses to melt when the plan does not cover the invoice', async () => {
@@ -774,6 +803,10 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         expect(cdk.meltPartial).not.toHaveBeenCalled();
         expect(store.paymentErrorMsg).toBe(
             'stores.CashuStore.notEnoughFundsSelfSend'
+        );
+        expect(localeString).toHaveBeenCalledWith(
+            'stores.CashuStore.notEnoughFundsSelfSend',
+            { mintName: 'Mint A' }
         );
     });
 
