@@ -19,6 +19,13 @@
     "testPathIgnorePatterns": [
       "zeus_modules"
     ],
+    "collectCoverageFrom": [
+      "*.{ts,tsx}",
+      "{backends,cashu-cdk,components,hooks,ldknode,lndmobile,models,storage,stores,utils,views}/**/*.{ts,tsx}",
+      "!**/*.test.{ts,tsx}",
+      "!**/*.d.ts",
+      "!backends/lncTestUtils.ts"
+    ],
     "coveragePathIgnorePatterns": [
       "/node_modules/",
       "/proto/",

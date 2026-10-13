@@ -85,10 +85,57 @@ jobs:
                 return;
             }
 
+            // Per-folder breakdown. The per-file keys are absolute paths on
+            // the Test runner. Both workflows run on ubuntu-latest in the
+            // same repo, so this job's GITHUB_WORKSPACE is the same root.
+            // Folder names end up in the comment, so only plain names are
+            // used; anything else is counted under (other).
+            const ROOT = `${process.env.GITHUB_WORKSPACE}/`;
+            const MAX_FOLDERS = 30;
+            const folderOf = (file) => {
+                if (!file.startsWith(ROOT)) return '(other)';
+                const parts = file.slice(ROOT.length).split('/');
+                if (parts.length === 1) return '(root)';
+                return /^[A-Za-z0-9._-]{1,40}$/.test(parts[0])
+                    ? parts[0]
+                    : '(other)';
+            };
+            // Returns a Map of folder -> summed counts, or null if any
+            // per-file entry fails validation.
+            const byFolder = (data) => {
+                const folders = new Map();
+                for (const [file, metrics] of Object.entries(data)) {
+                    if (file === 'total') continue;
+                    if (!isValidTotal(metrics)) return null;
+                    const name = folderOf(file);
+                    if (!folders.has(name)) {
+                        folders.set(name, { files: 0 });
+                        for (const key of METRICS) {
+                            folders.get(name)[key] = { covered: 0, total: 0 };
+                        }
+                    }
+                    const folder = folders.get(name);
+                    folder.files += 1;
+                    for (const key of METRICS) {
+                        folder[key].covered += metrics[key].covered;
+                        folder[key].total += metrics[key].total;
+                    }
+                }
+                return folders.size > MAX_FOLDERS ? null : folders;
+            };
+            const folders = byFolder(summary);
+            if (!folders) {
+                core.setFailed(
+                    'coverage-summary.json per-file entries failed validation; not commenting'
+                );
+                return;
+            }
+
             // Baseline: the most recent successful master-push Test run
             // that uploaded a coverage-baseline artifact. Absent until the
             // first master push after this workflow lands.
             let baseline = null;
+            let baselineFolders = null;
             let baselineSha = null;
             const { data: masterRuns } =
                 await github.rest.actions.listWorkflowRuns({
@@ -119,16 +166,19 @@ jobs:
                 });
                 fs.writeFileSync('baseline.zip', Buffer.from(dl.data));
                 await exec.exec('unzip', ['-o', 'baseline.zip', '-d', 'baseline']);
-                const candidateTotal = JSON.parse(
+                const candidateSummary = JSON.parse(
                     fs.readFileSync('baseline/coverage-summary.json', 'utf8')
-                ).total;
-                if (!isValidTotal(candidateTotal)) {
+                );
+                if (!isValidTotal(candidateSummary.total)) {
                     core.info(
                         `Baseline from run ${candidate.id} failed validation; skipping`
                     );
                     continue;
                 }
-                baseline = candidateTotal;
+                baseline = candidateSummary.total;
+                // Folder diffs are optional: show n/a rather than
+                // dropping the whole baseline.
+                baselineFolders = byFolder(candidateSummary);
                 baselineSha = candidate.head_sha;
                 break;
             }
@@ -148,6 +198,35 @@ jobs:
                 return `| ${label} | ${pct} | ${m.covered}/${m.total} | ${diff} |`;
             };
 
+            // Same rounding as istanbul's json-summary pct.
+            const percent = (m) =>
+                m.total === 0
+                    ? null
+                    : Math.floor((10000 * m.covered) / m.total) / 100;
+            const folderCell = (name, key) => {
+                const p = percent(folders.get(name)[key]);
+                if (p === null) return 'n/a';
+                const base = baselineFolders?.get(name);
+                const bp = base ? percent(base[key]) : null;
+                if (bp === null) return `${p}%`;
+                const d = Number((p - bp).toFixed(2));
+                return d === 0
+                    ? `${p}%`
+                    : `${p}% (${d > 0 ? '+' : ''}${d.toFixed(2)})`;
+            };
+            const folderOrder = (name) =>
+                name === '(root)' ? 0 : name === '(other)' ? 2 : 1;
+            const folderNames = [...folders.keys()].sort(
+                (a, b) => folderOrder(a) - folderOrder(b) || a.localeCompare(b)
+            );
+            const folderRows = folderNames.map(
+                (name) =>
+                    `| ${folderOrder(name) === 1 ? `\`${name}\`` : name} | ` +
+                    `${folders.get(name).files} | ` +
+                    METRICS.map((key) => folderCell(name, key)).join(' | ') +
+                    ' |'
+            );
+
             const marker = '<!-- jest-coverage-summary -->';
             const body = [
                 marker,
@@ -159,6 +238,17 @@ jobs:
                 row('Branches', 'branches'),
                 row('Functions', 'functions'),
                 row('Lines', 'lines'),
+                '',
+                '<details>',
+                '<summary>Coverage by folder</summary>',
+                '',
+                'Change vs master in parentheses when nonzero.',
+                '',
+                '| Folder | Files | Statements | Branches | Functions | Lines |',
+                '| --- | --- | --- | --- | --- | --- |',
+                ...folderRows,
+                '',
+                '</details>',
                 '',
                 `Commit: ${run.head_sha} | [Test run](${run.html_url})` +
                     (baselineSha
