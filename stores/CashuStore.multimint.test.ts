@@ -1426,22 +1426,27 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         expect(store.paymentErrorMsg).toBeUndefined();
     });
 
-    it('currently sets the payment error when every part of a donation fails', async () => {
+    it('leaves the payment result alone when every part of a donation fails', async () => {
         const store = await plannedStore();
         // the main payment already succeeded on this screen
         store.paymentSuccess = true;
+        store.paymentError = false;
+        store.paymentErrorMsg = '';
         cdk.melt.mockRejectedValue(new Error('refused'));
+        const onProgress = jest.fn();
 
         await store.payLnInvoiceFromEcash({
             paymentRequest: INVOICE,
-            isDonationPayment: true
+            isDonationPayment: true,
+            onProgress
         });
 
-        // The other failure branches skip the store error for donations;
-        // this one does not, so the store reports success and an error
         expect(store.paymentSuccess).toBe(true);
-        expect(store.paymentError).toBe(true);
-        expect(store.paymentErrorMsg).toBe('refused');
+        expect(store.paymentError).toBe(false);
+        expect(store.paymentErrorMsg).toBe('');
+        expect(onProgress).toHaveBeenLastCalledWith(
+            expect.objectContaining({ step: MultinutPaymentStep.FAILED })
+        );
     });
 
     // An absent state is ambiguous, so it must not be reported as paid
