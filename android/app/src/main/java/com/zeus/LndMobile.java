@@ -154,6 +154,13 @@ class LndMobile extends ReactContextBaseJavaModule {
           final String method = (String) bundle.get("method");
           WritableMap params = Arguments.createMap();
 
+          // Echo the caller's request id so JS can tell concurrent streams
+          // of the same method apart: they all emit under the method name.
+          final String requestId = bundle.getString("request_id");
+          if (requestId != null && !requestId.isEmpty()) {
+            params.putString("request_id", requestId);
+          }
+
           if (bundle.containsKey("error_code")) {
             params.putString("error_code", bundle.getString("error_code"));
             params.putString("error_desc", bundle.getString("error_desc"));
@@ -498,7 +505,7 @@ class LndMobile extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void sendStreamCommand(String method, String payloadStr, boolean streamOnlyOnce, Promise promise) {
+  public void sendStreamCommand(String method, String payloadStr, boolean streamOnlyOnce, String requestId, Promise promise) {
     int req = new Random().nextInt();
     requests.put(req, promise);
 
@@ -509,6 +516,7 @@ class LndMobile extends ReactContextBaseJavaModule {
     bundle.putString("method", method);
     bundle.putByteArray("payload", Base64.decode(payloadStr, Base64.NO_WRAP));
     bundle.putBoolean("stream_only_once", streamOnlyOnce);
+    bundle.putString("request_id", requestId);
     message.setData(bundle);
 
     try {
@@ -521,7 +529,7 @@ class LndMobile extends ReactContextBaseJavaModule {
   }
 
   @ReactMethod
-  public void sendBidiStreamCommand(String method, boolean streamOnlyOnce, Promise promise) {
+  public void sendBidiStreamCommand(String method, boolean streamOnlyOnce, String requestId, Promise promise) {
     int req = new Random().nextInt();
     requests.put(req, promise);
 
@@ -531,6 +539,7 @@ class LndMobile extends ReactContextBaseJavaModule {
     Bundle bundle = new Bundle();
     bundle.putString("method", method);
     bundle.putBoolean("stream_only_once", streamOnlyOnce);
+    bundle.putString("request_id", requestId);
     message.setData(bundle);
 
     try {

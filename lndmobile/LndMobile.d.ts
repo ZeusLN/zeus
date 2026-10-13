@@ -29,14 +29,18 @@ export interface ILndMobile {
         method: string,
         base64Payload: string
     ): Promise<{ data: string }>;
+    // requestId is echoed as `request_id` on every event of the stream;
+    // pass '' for none
     sendStreamCommand(
         method: string,
         base64Payload: string,
-        streamOnlyOnce: boolean
+        streamOnlyOnce: boolean,
+        requestId: string
     ): Promise<'done'>;
     sendBidiStreamCommand(
         method: string,
-        streamOnlyOnce: boolean
+        streamOnlyOnce: boolean,
+        requestId: string
     ): Promise<'done'>;
     writeToStream(method: string, payload: string): Promise<boolean>;
 

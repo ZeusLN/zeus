@@ -1,5 +1,9 @@
 import { NativeModules } from 'react-native';
 import { sendCommand, sendStreamCommand, decodeStreamResult } from './utils';
+import {
+    isEventForRequest,
+    newStreamRequestId
+} from '../utils/StreamRequestUtils';
 import { lnrpc, routerrpc, invoicesrpc } from './../proto/lightning';
 import Long from 'long';
 
@@ -338,11 +342,14 @@ export const sendPaymentV2Sync = async (
         return response;
     };
 
+    const requestId = newStreamRequestId();
     const call = () =>
         new Promise(async (resolve, reject) => {
             const listener = LndMobileEventEmitter.addListener(
                 'RouterSendPaymentV2',
                 (e) => {
+                    // other payments' updates arrive on the same event
+                    if (!isEventForRequest(e, requestId)) return;
                     try {
                         listener.remove();
                         const error = checkLndStreamErrorResponse(
@@ -374,7 +381,8 @@ export const sendPaymentV2Sync = async (
                 {
                     request: routerrpc.SendPaymentRequest,
                     method: 'RouterSendPaymentV2',
-                    options
+                    options,
+                    requestId
                 },
                 false
             );
@@ -430,10 +438,13 @@ export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
         amp
     };
 
+    const requestId = newStreamRequestId();
     return new Promise(async (resolve, reject) => {
         const listener = LndMobileEventEmitter.addListener(
             'RouterSendPaymentV2',
             (e) => {
+                // other payments' updates arrive on the same event
+                if (!isEventForRequest(e, requestId)) return;
                 const error = checkLndStreamErrorResponse(
                     'RouterSendPaymentV2',
                     e
@@ -458,7 +469,8 @@ export const sendKeysendPaymentV2 = (request: any): Promise<lnrpc.Payment> => {
             {
                 request: routerrpc.SendPaymentRequest,
                 method: 'RouterSendPaymentV2',
-                options
+                options,
+                requestId
             },
             false
         );

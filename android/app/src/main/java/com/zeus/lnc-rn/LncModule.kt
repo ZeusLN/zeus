@@ -164,15 +164,6 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
      }
   }
 
-  private fun sendEvent(event: String, data: String) {
-      val params = Arguments.createMap().apply {
-        putString("result", data)
-      }
-      getReactApplicationContext()
-        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
-        .emit(event, params)
-  }
-
   // The key callbacks share one event name across namespaces, and a dial
   // that outlives a wallet switch keeps reporting on it, so they carry the
   // namespace for JS to filter on.
@@ -186,13 +177,26 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
         .emit(event, params)
   }
 
+  // Every stream of a method emits under the method name, so a non-empty
+  // requestId is echoed in each event for JS to tell concurrent streams
+  // apart.
+  private fun sendStreamEvent(event: String, requestId: String, data: String) {
+      val params = Arguments.createMap().apply {
+        putString("result", data)
+        if (requestId.isNotEmpty()) putString("request_id", requestId)
+      }
+      getReactApplicationContext()
+        .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
+        .emit(event, params)
+  }
+
   @ReactMethod
-  fun initListener(namespace: String, eventName: String, request: String) {
+  fun initListener(namespace: String, method: String, request: String, requestId: String) {
      val gocb = AndroidStreamingCallback()
-     gocb.setEventName(eventName)
-     gocb.setCallback(::sendEvent)
+     gocb.setEventName(method)
+     gocb.setCallback { event, data -> sendStreamEvent(event, requestId, data) }
      try {
-        Lndmobile.invokeRPC(namespace, eventName, request, gocb)
+        Lndmobile.invokeRPC(namespace, method, request, gocb)
      } catch(e: Throwable) {
         // Same synchronous-failure path as invokeRPC. Emit the message on the
         // stream's own event so subscribers reject rather than wait forever;
