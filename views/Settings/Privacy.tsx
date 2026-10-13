@@ -58,10 +58,24 @@ export default class Privacy extends React.Component<
         customMempoolInstance: ''
     };
 
+    // The custom URLs as stored when the screen opened. Every prefix of a
+    // typed URL is valid and may already be written, so an invalid final
+    // value writes these back rather than leaving a prefix's host in use.
+    // Undefined until settings load.
+    private savedCustomUrls?: {
+        customBlockExplorer: string;
+        customMempoolInstance: string;
+    };
+
     async componentDidMount() {
         const { SettingsStore } = this.props;
         const { getSettings } = SettingsStore;
         const settings = await getSettings();
+
+        this.savedCustomUrls = {
+            customBlockExplorer: settings.privacy?.customBlockExplorer || '',
+            customMempoolInstance: settings.privacy?.customMempoolInstance || ''
+        };
 
         // Values saved before these fields required a scheme are stored as
         // bare hosts, which every consumer already resolves as https. Show
@@ -165,11 +179,23 @@ export default class Privacy extends React.Component<
 
     handleCustomMempoolUrlChange = (text: string) => {
         this.setState({ customMempoolInstance: text });
-        if (!this.isValidCustomUrl(text)) return;
+        if (!this.isValidCustomUrl(text)) {
+            this.restoreSavedCustomUrl('customMempoolInstance');
+            return;
+        }
         this.props.SettingsStore.updateSettingsGroupDebounced('privacy', {
             customMempoolInstance: text
         });
         alertStore.clearMempoolError();
+    };
+
+    restoreSavedCustomUrl = (
+        field: 'customBlockExplorer' | 'customMempoolInstance'
+    ) => {
+        if (!this.savedCustomUrls) return;
+        this.props.SettingsStore.updateSettingsGroupDebounced('privacy', {
+            [field]: this.savedCustomUrls[field]
+        });
     };
 
     renderSeparator = () => (
@@ -258,7 +284,12 @@ export default class Privacy extends React.Component<
                                         customBlockExplorer: text
                                     });
 
-                                    if (!this.isValidCustomUrl(text)) return;
+                                    if (!this.isValidCustomUrl(text)) {
+                                        this.restoreSavedCustomUrl(
+                                            'customBlockExplorer'
+                                        );
+                                        return;
+                                    }
 
                                     updateSettingsGroupDebounced('privacy', {
                                         customBlockExplorer: text
