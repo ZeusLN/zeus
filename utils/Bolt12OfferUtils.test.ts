@@ -19,6 +19,7 @@ describe('getOfferPayBlockers', () => {
             isFiatDenominated: false,
             expectsQuantity: false,
             isUnderpaying: false,
+            isMissingAmount: false,
             offerAmountSats: undefined,
             cannotPay: false
         });
@@ -132,5 +133,47 @@ describe('getOfferPayBlockers', () => {
                 NOW
             ).cannotPay
         ).toBe(false);
+    });
+
+    // ldk-node accepts Some(0) for an amountless offer (#4972), so a zero
+    // or unparseable amount has to be blocked here
+    it.each([
+        ['the string zero', '0'],
+        ['the number zero', 0],
+        ['an empty string', ''],
+        ['a negative amount', '-5'],
+        ['a non-numeric amount', 'abc']
+    ] as const)('blocks an amountless offer with %s', (_label, satAmount) => {
+        const result = getOfferPayBlockers(offer(), satAmount, NOW);
+        expect(result.isMissingAmount).toBe(true);
+        expect(result.isUnderpaying).toBe(false);
+        expect(result.cannotPay).toBe(true);
+    });
+
+    it('allows an amountless offer with a positive amount', () => {
+        const result = getOfferPayBlockers(offer(), '1', NOW);
+        expect(result.isMissingAmount).toBe(false);
+        expect(result.cannotPay).toBe(false);
+    });
+
+    it('reports a zero amount on a fixed-amount offer as underpaying only', () => {
+        const result = getOfferPayBlockers(
+            offer({ amountType: 'bitcoin', amountMsats: 3_000_000 }),
+            '0',
+            NOW
+        );
+        expect(result.isUnderpaying).toBe(true);
+        expect(result.isMissingAmount).toBe(false);
+        expect(result.cannotPay).toBe(true);
+    });
+
+    it('blocks a non-numeric amount on a fixed-amount offer', () => {
+        const result = getOfferPayBlockers(
+            offer({ amountType: 'bitcoin', amountMsats: 3_000_000 }),
+            'abc',
+            NOW
+        );
+        expect(result.isMissingAmount).toBe(true);
+        expect(result.cannotPay).toBe(true);
     });
 });
