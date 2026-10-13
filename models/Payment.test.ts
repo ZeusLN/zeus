@@ -216,12 +216,14 @@ describe('Payment status from backends without htlcs', () => {
             payment_hash: 'abc123',
             status: 'pending',
             amount_sent_msat: null,
-            amount_msat: 0,
+            amount_msat: 1000000,
             preimage: null
         });
 
         expect(payment.isInTransit).toBe(true);
         expect(payment.isFailed).toBe(false);
+        expect(payment.getAmount).toBe(1000);
+        expect(payment.getFee).toBe('0');
     });
 
     it('flags a pending LDK Node payment as in transit', () => {

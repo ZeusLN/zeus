@@ -157,7 +157,7 @@ describe('CLNRest.watchInvoicePaid', () => {
 describe('CLNRest.getPayments', () => {
     const { DatabaseSync } = require('node:sqlite');
 
-    const paymentsFor = async (
+    const getPaymentsFor = async (
         parts: Array<{ hash: string; groupid: number; status: string }>
     ) => {
         const db = new DatabaseSync(':memory:');
@@ -193,10 +193,18 @@ describe('CLNRest.getPayments', () => {
             })
         );
         const { payments } = await cln.getPayments();
-        return Object.fromEntries(
-            payments.map((p: any) => [p.payment_hash, p.status])
-        );
+        return payments;
     };
+
+    const paymentsFor = async (
+        parts: Array<{ hash: string; groupid: number; status: string }>
+    ) =>
+        Object.fromEntries(
+            (await getPaymentsFor(parts)).map((p: any) => [
+                p.payment_hash,
+                p.status
+            ])
+        );
 
     it('reports an MPP group with failed and pending parts as pending', async () => {
         expect(
@@ -235,5 +243,38 @@ describe('CLNRest.getPayments', () => {
                 { hash: 'c', groupid: 3, status: 'failed' }
             ])
         ).toEqual({ a: 'complete', b: 'pending', c: 'failed' });
+    });
+
+    // each part carries amount_msat 5000000 and amount_sent_msat 5000500
+    it('sums the in-flight parts of a pending group, skipping failed ones', async () => {
+        const [payment] = await getPaymentsFor([
+            { hash: 'mpp', groupid: 1, status: 'failed' },
+            { hash: 'mpp', groupid: 1, status: 'pending' },
+            { hash: 'mpp', groupid: 1, status: 'pending' }
+        ]);
+
+        expect(payment.amount_msat).toBe(10000000);
+        expect(payment.amount_sent_msat).toBeNull();
+    });
+
+    it('sums only the complete parts of a complete group', async () => {
+        const [payment] = await getPaymentsFor([
+            { hash: 'mpp', groupid: 1, status: 'failed' },
+            { hash: 'mpp', groupid: 1, status: 'complete' },
+            { hash: 'mpp', groupid: 1, status: 'complete' }
+        ]);
+
+        expect(payment.amount_msat).toBe(10000000);
+        expect(payment.amount_sent_msat).toBe(10001000);
+    });
+
+    it('reports no amount for a group whose parts all failed', async () => {
+        const [payment] = await getPaymentsFor([
+            { hash: 'mpp', groupid: 1, status: 'failed' },
+            { hash: 'mpp', groupid: 1, status: 'failed' }
+        ]);
+
+        expect(payment.amount_msat).toBe(0);
+        expect(payment.amount_sent_msat).toBeNull();
     });
 });
