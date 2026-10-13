@@ -335,6 +335,15 @@ export default class NostrConnectUtils {
                 )
             },
             {
+                key: PermissionType.InvoiceOnly,
+                title: localeString(
+                    'views.Settings.NostrWalletConnect.invoiceOnly'
+                ),
+                description: localeString(
+                    'views.Settings.NostrWalletConnect.invoiceOnlyDescription'
+                )
+            },
+            {
                 key: PermissionType.Custom,
                 title: localeString('views.Settings.NostrWalletConnect.custom'),
                 description: localeString(
@@ -484,6 +493,19 @@ export default class NostrConnectUtils {
         ];
     }
 
+    /**
+     * Receive-only grant (cf. LND's invoice macaroon): can create and look up
+     * invoices but cannot read the wallet balance or pay.
+     */
+    static getInvoiceOnlyPermissions(): Nip47Method[] {
+        return [
+            'get_info',
+            'make_invoice',
+            'lookup_invoice',
+            'list_transactions'
+        ];
+    }
+
     /** Wallet methods shown under Custom. Sign Message is a separate opt-in. */
     static getWalletPermissionOptions(): IndividualPermissionOption[] {
         return NostrConnectUtils.getAvailablePermissions().filter(
@@ -575,6 +597,13 @@ export default class NostrConnectUtils {
                         currentPermissions
                     )
                 };
+            case PermissionType.InvoiceOnly:
+                return {
+                    permissions: NostrConnectUtils.withPreservedSignMessage(
+                        NostrConnectUtils.getInvoiceOnlyPermissions(),
+                        currentPermissions
+                    )
+                };
             case PermissionType.Custom:
                 return {
                     permissions: currentPermissions
@@ -604,6 +633,14 @@ export default class NostrConnectUtils {
             )
         ) {
             return PermissionType.ReadOnly;
+        }
+        if (
+            NostrConnectUtils.samePermissionSet(
+                walletPermissions,
+                NostrConnectUtils.getInvoiceOnlyPermissions()
+            )
+        ) {
+            return PermissionType.InvoiceOnly;
         }
         return PermissionType.Custom;
     }
