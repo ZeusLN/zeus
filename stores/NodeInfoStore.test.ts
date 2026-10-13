@@ -20,9 +20,8 @@ jest.mock('../utils/BackendUtils', () => ({
     }
 }));
 
-jest.mock('../utils/ErrorUtils', () => ({
-    __esModule: true,
-    errorToUserFriendly: (error: string) => error
+jest.mock('../utils/LocaleUtils', () => ({
+    localeString: (key: string) => key
 }));
 
 jest.mock('../storage', () => ({
@@ -119,5 +118,6 @@ describe('NodeInfoStore.getNodeInfo', () => {
         const currentResult = await currentSettled;
         expect(currentResult.settled).toBe(true);
         expect((currentResult as any).error).toBeDefined();
+        expect(store.errorMsg).toBe('Error: connection refused');
     });
 });

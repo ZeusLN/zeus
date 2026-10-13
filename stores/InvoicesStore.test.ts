@@ -15,9 +15,6 @@ jest.mock('../utils/BackendUtils', () => ({
 jest.mock('../utils/LocaleUtils', () => ({
     localeString: (s: string) => s
 }));
-jest.mock('../utils/ErrorUtils', () => ({
-    errorToUserFriendly: (error: Error) => error.message
-}));
 
 import InvoicesStore from './InvoicesStore';
 import BackendUtils from '../utils/BackendUtils';
