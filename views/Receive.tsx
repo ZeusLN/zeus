@@ -1005,7 +1005,7 @@ export default class Receive extends React.Component<
             expirySeconds,
             customPreimage,
             ampInvoice,
-            routeHints,
+            routeHints: routeHintsSwitch,
             account,
             needInbound,
             enableLSP,
@@ -1018,6 +1018,12 @@ export default class Receive extends React.Component<
             nfcSupported,
             showAdvanced
         } = this.state;
+
+        // LDK Node always attaches automatic hints, so an on/off switch
+        // would be a no-op: it is hidden there and only the mode and
+        // channel picker are offered
+        const routeHints =
+            routeHintsSwitch || BackendUtils.supportsRouteHintUserChannelIds();
 
         const { zeroConfFee, showLspSettings } = LSPStore;
         const requiresChannelSetup =
@@ -1406,7 +1412,7 @@ export default class Receive extends React.Component<
             !onChainOnly &&
             ((BackendUtils.supportsCustomPreimages() &&
                 showCustomPreimageField) ||
-                (BackendUtils.isLNDBased() && !lspIsActive) ||
+                (BackendUtils.supportsRouteHints() && !lspIsActive) ||
                 (BackendUtils.supportsAMP() && !lspIsActive) ||
                 (BackendUtils.supportsBolt11BlindedRoutes() && !lspIsActive));
 
@@ -2606,8 +2612,9 @@ export default class Receive extends React.Component<
                                                                 </>
                                                             )}
 
-                                                        {BackendUtils.isLNDBased() &&
-                                                            !lspIsActive && (
+                                                        {BackendUtils.supportsRouteHints() &&
+                                                            !lspIsActive &&
+                                                            !BackendUtils.supportsRouteHintUserChannelIds() && (
                                                                 <View
                                                                     style={{
                                                                         flexDirection:
@@ -2679,7 +2686,7 @@ export default class Receive extends React.Component<
                                                                 </View>
                                                             )}
 
-                                                        {BackendUtils.isLNDBased() &&
+                                                        {BackendUtils.supportsRouteHints() &&
                                                             !lspIsActive &&
                                                             routeHints && (
                                                                 <Row>
@@ -2731,7 +2738,7 @@ export default class Receive extends React.Component<
                                                                 </Row>
                                                             )}
 
-                                                        {BackendUtils.isLNDBased() &&
+                                                        {BackendUtils.supportsRouteHints() &&
                                                             routeHints && (
                                                                 <HopPicker
                                                                     ref={(

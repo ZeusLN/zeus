@@ -68,6 +68,9 @@ export default class Channel extends BaseModel {
     close_cause: string;
 
     channel_id?: string;
+    user_channel_id?: string;
+    is_channel_ready?: boolean;
+    has_counterparty_forwarding_info?: boolean;
     alias?: string;
     // pending
     remote_node_pub?: string;
@@ -123,6 +126,17 @@ export default class Channel extends BaseModel {
             !this.pendingClose &&
             !this.closing &&
             !this.close_cause
+        );
+    }
+
+    // LDK Node route hints can only reference ready channels whose peer has
+    // sent its forwarding policy (otherwise invoice creation fails)
+    @computed
+    public get canBeRouteHint(): boolean {
+        return (
+            !!this.user_channel_id &&
+            this.is_channel_ready === true &&
+            this.has_counterparty_forwarding_info === true
         );
     }
 
