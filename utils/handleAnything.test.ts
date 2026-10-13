@@ -47,6 +47,8 @@ let mockIsValidLNDHubAddress = false;
 let mockIsValidNpub = false;
 let mockProcessLNDHubAddress = jest.fn();
 let mockSupportsOnchainSends = true;
+let mockSupportsChannelManagement = true;
+let mockSupportsPeers = true;
 let mockGetLnurlParams = {};
 let mockBlobUtilFetch = jest.fn();
 const mockSimplePool = jest.fn();
@@ -80,7 +82,9 @@ jest.mock('./BackendUtils', () => ({
     supportsAccounts: () => false,
     supportsCashuWallet: () => false,
     supportsWithdrawalRequests: () => false,
-    supportsLnurlAuth: () => false
+    supportsLnurlAuth: () => false,
+    supportsChannelManagement: () => mockSupportsChannelManagement,
+    supportsPeers: () => mockSupportsPeers
 }));
 
 let mockIsValidCashuToken = false;
@@ -178,6 +182,8 @@ describe('handleAnything', () => {
         mockIsValidLightningOffer = false;
         mockIsValidLNDHubAddress = false;
         mockIsValidNodeUri = false;
+        mockSupportsChannelManagement = true;
+        mockSupportsPeers = true;
         mockIsValidCashuToken = false;
         mockDecodedCashuToken = {};
     });
@@ -614,6 +620,61 @@ describe('handleAnything', () => {
                     lnurlParams: channelParams
                 }
             ]);
+        });
+
+        it('opens a channel request without channel management if peers are supported', async () => {
+            // The server opens the channel, so only connectPeer is needed
+            mockSupportsChannelManagement = false;
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'lnurlc://example.com/api/v1/lnurl/channel'
+            });
+            const channelParams = {
+                tag: 'channelRequest',
+                domain: 'example.com',
+                k1: 'test-k1-value',
+                uri: 'node@example.com:9735'
+            };
+            mockGetLnurlParamsFn.mockResolvedValue(channelParams);
+
+            const result = await handleAnything(
+                'LIGHTNING:lnurlc://example.com/api/v1/lnurl/channel'
+            );
+
+            expect(result).toEqual([
+                'LnurlChannel',
+                {
+                    lnurlParams: channelParams
+                }
+            ]);
+        });
+
+        it('shows an error for a channel request without peer support', async () => {
+            mockSupportsPeers = false;
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'lnurlc://example.com/api/v1/lnurl/channel'
+            });
+            mockGetLnurlParamsFn.mockResolvedValue({
+                tag: 'channelRequest',
+                domain: 'example.com',
+                k1: 'test-k1-value',
+                uri: 'node@example.com:9735'
+            });
+            const alertSpy = jest
+                .spyOn(Alert, 'alert')
+                .mockImplementation(() => void 0);
+
+            const result = await handleAnything(
+                'LIGHTNING:lnurlc://example.com/api/v1/lnurl/channel'
+            );
+
+            expect(result).toBeUndefined();
+            expect(alertSpy).toHaveBeenCalledWith(
+                'Error',
+                'Opening channels is not supported by this wallet',
+                expect.any(Array),
+                { cancelable: false }
+            );
+            alertSpy.mockRestore();
         });
 
         it('should return true if from clipboard', async () => {
@@ -2268,6 +2329,43 @@ describe('handleAnything', () => {
             // Should be handled as LNURL withdraw, NOT converted to merchant QR
             expect(result[0]).toBe('Receive');
             expect(result[1].lnurlParams.tag).toBe('withdrawRequest');
+        });
+    });
+
+    describe('node URI', () => {
+        const nodeUri =
+            '031234567890123456789012345678901234567890123456789012345678901234@mynode.local:9735';
+
+        beforeEach(() => {
+            mockProcessBIP21Uri.mockImplementation((input: string) => ({
+                value: input
+            }));
+            mockIsValidNodeUri = true;
+        });
+
+        it('is offered from the clipboard with channel management', async () => {
+            const result = await handleAnything(nodeUri, undefined, true);
+
+            expect(result).toBe(true);
+        });
+
+        describe('without channel management', () => {
+            beforeEach(() => {
+                mockSupportsChannelManagement = false;
+            });
+
+            it('rejects instead of opening OpenChannel', async () => {
+                await expect(handleAnything(nodeUri)).rejects.toThrow(
+                    'Opening channels is not supported by this wallet'
+                );
+                expect(mockProcessNodeUri).not.toHaveBeenCalled();
+            });
+
+            it('is not offered from the clipboard', async () => {
+                const result = await handleAnything(nodeUri, undefined, true);
+
+                expect(result).toBe(false);
+            });
         });
     });
 

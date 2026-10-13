@@ -269,7 +269,7 @@ export default class LndHub extends LND {
     supportsSweep = () => false;
     supportsOnchainSendMax = () => false;
     supportsOnchainBatching = () => false;
-    supportsChannelBatching = () => true;
+    supportsChannelBatching = () => false;
     supportsLSPScustomMessage = () => false;
     supportsLSPS1rest = () => false;
     supportsBolt11BlindedRoutes = () => false;

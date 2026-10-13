@@ -170,7 +170,7 @@ the input router (section 11) to one of four screens based on `params.tag`:
 | --- | --- | --- |
 | `payRequest` (LNURL-pay / LUD-06) | server gives min/max, you request an invoice from its callback | `views/LnurlPay/` (or `ChoosePaymentMethod` when ecash is enabled) |
 | `withdrawRequest` (LNURL-withdraw) | server offers sats; you submit YOUR invoice to its callback | `views/Receive.tsx` with `lnurlParams` |
-| `channelRequest` (LNURL-channel) | server opens a channel to you | `views/LnurlChannel.tsx` |
+| `channelRequest` (LNURL-channel) | server opens a channel to you | `views/LnurlChannel.tsx`, gated by `supportsPeers()` (only `connectPeer` + own pubkey needed) |
 | `login` (LNURL-auth) | key-based login challenge | `views/LnurlAuth.tsx`, gated by `supportsLnurlAuth()` |
 
 **Lightning address (LUD-16)** resolution is inline in `handleAnything.ts`: split
@@ -418,7 +418,8 @@ shadow later ones. Current order (verified):
    `ChoosePaymentMethod` when ecash enabled); BOLT12 offer string → `Send`
 5. Node-connection strings (clnrest://, nostr+walletconnect://, LNC pairing, lndconnect,
    LNDHub) → `WalletConfiguration`
-6. Node URI (`pubkey@host`) → `OpenChannel`; lightning address (LUD-16, with BOLT12 DNS
+6. Node URI (`pubkey@host`) → `OpenChannel` (without `supportsChannelManagement()`:
+   error, and no clipboard suggestion); lightning address (LUD-16, with BOLT12 DNS
    probe and the cryptoqr.net casing exception, section 4)
 7. BTCPay pairing config
 8. **Web-wrapped Cashu tokens BEFORE the LNURL detector** — an https URL containing a

@@ -606,6 +606,13 @@ const handleAnything = async (
             throw new Error(localeString('utils.handleAnything.notValid'));
         }
     } else if (hasAt && NodeUriUtils.isValidNodeUri(value)) {
+        // A node URI is only actionable as a channel open
+        if (!BackendUtils.supportsChannelManagement()) {
+            if (isClipboardValue) return false;
+            throw new Error(
+                localeString('utils.handleAnything.channelsNotSupported')
+            );
+        }
         if (isClipboardValue) return true;
         const { pubkey, host } = NodeUriUtils.processNodeUri(value);
         return [
@@ -965,12 +972,30 @@ const handleAnything = async (
                             }
                         ];
                     case 'channelRequest':
-                        return [
-                            'LnurlChannel',
-                            {
-                                lnurlParams: params
-                            }
-                        ];
+                        // The server opens the channel, so this only needs
+                        // connectPeer and our own pubkey
+                        if (BackendUtils.supportsPeers()) {
+                            return [
+                                'LnurlChannel',
+                                {
+                                    lnurlParams: params
+                                }
+                            ];
+                        }
+                        Alert.alert(
+                            localeString('general.error'),
+                            localeString(
+                                'utils.handleAnything.channelsNotSupported'
+                            ),
+                            [
+                                {
+                                    text: localeString('general.ok'),
+                                    onPress: () => void 0
+                                }
+                            ],
+                            { cancelable: false }
+                        );
+                        break;
                     case 'login':
                         if (BackendUtils.supportsLnurlAuth()) {
                             return [
