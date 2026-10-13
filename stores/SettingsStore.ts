@@ -1265,7 +1265,7 @@ export const DEFAULT_VIEW_KEYS = [
 export const DATE_FORMAT_KEYS = [
     {
         key: 'Default',
-        translateKey: 'views.Settings.Display.DateFormat.default',
+        translateKey: 'views.Settings.DateTime.DateFormat.default',
         value: 'default'
     },
     { key: 'YYYY-MM-DD', value: 'iso' },
@@ -1276,12 +1276,12 @@ export const DATE_FORMAT_KEYS = [
 export const TIME_FORMAT_KEYS = [
     {
         key: '24-hour',
-        translateKey: 'views.Settings.Display.TimeFormat.24h',
+        translateKey: 'views.Settings.DateTime.TimeFormat.24h',
         value: '24h'
     },
     {
         key: '12-hour',
-        translateKey: 'views.Settings.Display.TimeFormat.12h',
+        translateKey: 'views.Settings.DateTime.TimeFormat.12h',
         value: '12h'
     }
 ];
