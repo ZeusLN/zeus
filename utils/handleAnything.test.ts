@@ -2935,6 +2935,60 @@ describe('handleAnything', () => {
                 { bolt12: request }
             ]);
         });
+        it('should route an LNURL-withdraw to Receive when Cashu is supported but disabled', async () => {
+            mockSupportsCashuWallet = true;
+            (settingsStore.settings as any).ecash = { enableCashu: false };
+            const url = 'https://example.com/api/v1/lnurl/withdraw';
+            mockProcessBIP21Uri.mockReturnValue({ value: url });
+            const params = {
+                tag: 'withdrawRequest',
+                domain: 'example.com',
+                k1: 'k1',
+                minWithdrawable: 1000,
+                maxWithdrawable: 100000
+            };
+            mockGetLnurlParamsFn.mockResolvedValue(params);
+
+            const result = await handleAnything(url);
+
+            expect(result).toStrictEqual(['Receive', { lnurlParams: params }]);
+        });
+
+        it('should alert instead of routing an LNURL-auth login when unsupported', async () => {
+            const alertSpy = jest
+                .spyOn(Alert, 'alert')
+                .mockImplementation(() => void 0);
+            const url = 'https://example.com/lnurlauth?tag=login&k1=abc';
+            mockProcessBIP21Uri.mockReturnValue({ value: url });
+            mockGetLnurlParamsFn.mockResolvedValue({
+                tag: 'login',
+                domain: 'example.com',
+                k1: 'abc'
+            });
+
+            const result = await handleAnything(url);
+
+            expect(result).toBeUndefined();
+            expect(alertSpy).toHaveBeenCalledTimes(1);
+            alertSpy.mockRestore();
+        });
+
+        it('should not route an xpub to ImportAccount when accounts are unsupported', async () => {
+            mockIsValidXpub = true;
+            const xpub =
+                'xpub6CUGRUonZSQ4TWtTMmzXdrXDtypWKiKrhko4egpiMZbpiaQL2jkwSB1icqYh2cfDfVxdx4df189oLKnC5fSwqPfgyP3hooxujYzAu3fDVmz';
+            mockProcessBIP21Uri.mockReturnValue({ value: xpub });
+
+            await expect(handleAnything(xpub)).rejects.toThrow();
+        });
+
+        it('should not route a BOLT 12 withdrawal request when unsupported', async () => {
+            mockIsValidWithdrawalRequest = true;
+            const request = 'lnr1qqtestwithdrawalrequest';
+            mockProcessBIP21Uri.mockReturnValue({ value: request });
+
+            await expect(handleAnything(request)).rejects.toThrow();
+        });
     });
 });
 
