@@ -8,9 +8,7 @@ jest.mock('../../utils/BackendUtils', () => ({
     supportsSimpleTaprootChannels: () => false,
     supportsChannelOpenMinConfs: jest.fn(() => true)
 }));
-jest.mock('../../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../../utils/LocaleUtils');
 jest.mock('../../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
 }));

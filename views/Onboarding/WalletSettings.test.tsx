@@ -18,9 +18,7 @@ jest.mock('../../stores/SettingsStore', () => ({
 jest.mock('../../utils/WalletCreationUtils', () => ({
     createOnboardingWallet: jest.fn()
 }));
-jest.mock('../../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../../utils/LocaleUtils');
 jest.mock('../../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
 }));

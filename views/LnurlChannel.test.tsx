@@ -21,9 +21,7 @@ jest.mock('../components/SuccessErrorMessage', () => ({
 jest.mock('../utils/ThemeUtils', () => ({
     themeColor: jest.fn((key: string) => `theme:${key}`)
 }));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: jest.fn((key: string) => key)
-}));
+jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/BackendUtils', () => ({
     connectPeer: jest.fn(() => Promise.resolve())
 }));

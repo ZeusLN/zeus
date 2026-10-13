@@ -12,9 +12,7 @@ jest.mock('../utils/BackendUtils', () => ({
     supportsPendingChannels: jest.fn(() => false),
     isLNDBased: () => false
 }));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../utils/LocaleUtils');
 
 import { autorun } from 'mobx';
 

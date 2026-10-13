@@ -33,9 +33,7 @@ jest.mock('../utils/AmountUtils', () => ({ getRawAmountFromSats: jest.fn() }));
 jest.mock('../utils/GraphSyncUtils', () => ({
     clearPendingPaymentData: jest.fn()
 }));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
 }));

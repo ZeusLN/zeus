@@ -16,9 +16,7 @@ jest.mock('../utils/handleAnything', () => ({
 }));
 jest.mock('../utils/BackendUtils', () => ({}));
 jest.mock('../utils/PhotoUtils', () => ({ getPhoto: jest.fn() }));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/NavigationUtils', () => ({
     protectedNavigation: jest.fn()
 }));

@@ -1,13 +1,11 @@
 // Reverse swap lockup verification. Uses the real ecpair, bitcoinjs-lib
 // and @scure key material like SwapStore.rescue.test.ts, so the swap tree
 // and lockup address are derived exactly as the app derives them.
-jest.mock('../stores/Stores', () => ({}));
+jest.mock('../stores/Stores');
 jest.mock('../utils/ThemeUtils', () => ({
     themeColor: (s: string) => s
 }));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (s: string) => s
-}));
+jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/UrlUtils', () => ({
     __esModule: true,
     default: { getMempoolApiUrl: () => 'https://mempool.test/api' }
@@ -18,14 +16,6 @@ jest.mock('react-native-blob-util', () => ({
         fetch: jest.fn(),
         fs: { dirs: { LibraryDir: '/lib', DocumentDir: '/docs' } }
     }
-}));
-jest.mock('react-native-fs', () => ({
-    DownloadDirectoryPath: '/public-downloads',
-    DocumentDirectoryPath: '/docs',
-    CachesDirectoryPath: '/cache',
-    exists: jest.fn().mockResolvedValue(false),
-    unlink: jest.fn().mockResolvedValue(undefined),
-    writeFile: jest.fn().mockResolvedValue(undefined)
 }));
 jest.mock('@react-native-documents/picker', () => ({
     saveDocuments: jest.fn()

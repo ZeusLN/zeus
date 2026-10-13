@@ -10,17 +10,6 @@ jest.mock('react-native-blob-util', () => ({
 }));
 // SwapUtils' rescue-key export pulls these in at import time; neither is
 // covered by transformIgnorePatterns. The tests below never reach them.
-jest.mock('react-native-fs', () => ({
-    __esModule: true,
-    default: {
-        DownloadDirectoryPath: '/public-downloads',
-        DocumentDirectoryPath: '/docs',
-        CachesDirectoryPath: '/cache',
-        exists: jest.fn().mockResolvedValue(false),
-        unlink: jest.fn(),
-        writeFile: jest.fn()
-    }
-}));
 jest.mock('@react-native-documents/picker', () => ({
     saveDocuments: jest.fn()
 }));
@@ -33,7 +22,7 @@ jest.mock('../storage', () => ({
     __esModule: true,
     default: { getItem: jest.fn(), setItem: jest.fn(), removeItem: jest.fn() }
 }));
-jest.mock('../utils/LocaleUtils', () => ({ localeString: (k: string) => k }));
+jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/BackendUtils', () => ({}));
 jest.mock('../utils/ThemeUtils', () => ({ themeColor: () => '#000' }));
 // the real UrlUtils imports the whole store graph via Stores

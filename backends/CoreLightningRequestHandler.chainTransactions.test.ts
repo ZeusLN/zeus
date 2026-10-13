@@ -18,9 +18,7 @@ jest.mock('react-native-encrypted-storage', () => ({
     removeItem: jest.fn(() => Promise.resolve()),
     clear: jest.fn(() => Promise.resolve())
 }));
-jest.mock('../stores/Stores', () => ({
-    nodeInfoStore: { nodeInfo: {} }
-}));
+jest.mock('../stores/Stores');
 
 import { getChainTransactions } from './CoreLightningRequestHandler';
 import { nodeInfoStore } from '../stores/Stores';

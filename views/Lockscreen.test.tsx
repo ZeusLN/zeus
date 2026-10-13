@@ -27,7 +27,7 @@ jest.mock('../stores/SettingsStore', () => ({
     }
 }));
 // ShareIntentProcessor imports the store graph, which loads native modules
-jest.mock('../stores/Stores', () => ({ settingsStore: {} }));
+jest.mock('../stores/Stores');
 jest.mock('../utils/BiometricUtils', () => ({
     verifyBiometry: jest.fn()
 }));
@@ -35,9 +35,7 @@ jest.mock('../utils/DataClearUtils', () => ({
     blockNavigationDuringWipe: jest.fn(),
     clearAllData: jest.fn()
 }));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: jest.fn((key: string) => key)
-}));
+jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/RestartUtils', () => ({
     restartApp: jest.fn()
 }));

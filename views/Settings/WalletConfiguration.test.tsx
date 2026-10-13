@@ -10,7 +10,7 @@ jest.mock('../../backends/LNC/credentialStore', () => ({
     hash: jest.fn(),
     LNC_STORAGE_KEY: 'lnc'
 }));
-jest.mock('../../stores/Stores', () => ({}));
+jest.mock('../../stores/Stores');
 jest.mock('../../stores/SettingsStore', () => ({
     INTERFACE_KEYS: [],
     LNC_MAILBOX_KEYS: [],
@@ -21,9 +21,7 @@ jest.mock('../../stores/SettingsStore', () => ({
     getLspConfigForNetwork: jest.fn()
 }));
 jest.mock('../../utils/BackendUtils', () => ({}));
-jest.mock('../../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../../utils/LocaleUtils');
 jest.mock('../../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
 }));

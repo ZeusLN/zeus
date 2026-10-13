@@ -32,13 +32,9 @@ jest.mock('../ldknode/LdkNodeInjection', () => ({
     }
 }));
 
-jest.mock('../stores/Stores', () => ({
-    settingsStore: {}
-}));
+jest.mock('../stores/Stores');
 
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../utils/LocaleUtils');
 
 import LdkNode from './LdkNode';
 import Payment from '../models/Payment';

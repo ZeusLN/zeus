@@ -2,9 +2,7 @@
 // newly selected wallet's state, on every backend (#2713, #4948). Runs the
 // production Wallet/Settings methods and the real WalletRefreshRunner; node
 // calls and stores are controlled.
-jest.mock('../../utils/LocaleUtils', () => ({
-    localeString: (s: string) => s
-}));
+jest.mock('../../utils/LocaleUtils');
 
 import WalletRefreshRunner from '../../utils/WalletRefreshRunner';
 import {

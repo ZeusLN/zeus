@@ -21,7 +21,7 @@ jest.mock('../zeus_modules/@lightninglabs/lnc-core', () => ({
     walletrpc: {}
 }));
 
-jest.mock('../utils/LocaleUtils', () => ({ localeString: (s: string) => s }));
+jest.mock('../utils/LocaleUtils');
 
 jest.mock('./LNC/credentialStore', () => {
     class MockCredentialStore {

@@ -2,7 +2,7 @@ jest.mock('mobx-react', () => ({
     inject: () => (component: any) => component,
     observer: (component: any) => component
 }));
-jest.mock('../stores/Stores', () => ({}));
+jest.mock('../stores/Stores');
 jest.mock('react-native-blob-util', () => ({}));
 jest.mock('../utils/BackendUtils', () => ({}));
 jest.mock('../utils/DonationUtils', () => ({}));

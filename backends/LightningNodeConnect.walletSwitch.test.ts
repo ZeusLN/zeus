@@ -1,11 +1,8 @@
 // FU5: real backend, credential store, vendored client and refresh runner.
 // Only the native bridge, storage and unrelated services are controlled.
-jest.mock('../stores/Stores', () => ({
-    settingsStore: {},
-    nodeInfoStore: { nodeInfo: {} }
-}));
+jest.mock('../stores/Stores');
 jest.mock('../utils/BackendUtils', () => ({ __esModule: true, default: {} }));
-jest.mock('../utils/LocaleUtils', () => ({ localeString: (s: string) => s }));
+jest.mock('../utils/LocaleUtils');
 // The generated package index has an unresolved type re-export under Jest.
 jest.mock('../zeus_modules/@lightninglabs/lnc-rn', () =>
     jest.requireActual(

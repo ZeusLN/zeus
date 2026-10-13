@@ -6,12 +6,8 @@ jest.mock('@rneui/themed', () => ({ Header: 'Header' }));
 jest.mock('../components/LoadingIndicator', () => 'LoadingIndicator');
 jest.mock('../components/QRCodeScanner', () => 'QRCodeScanner');
 jest.mock('../utils/ThemeUtils', () => ({ themeColor: () => '#000000' }));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
-jest.mock('../stores/Stores', () => ({
-    nodeInfoStore: { nodeInfo: {} }
-}));
+jest.mock('../utils/LocaleUtils');
+jest.mock('../stores/Stores');
 
 import RefundSwapQRScanner from './RefundSwapQRScanner';
 import { nodeInfoStore } from '../stores/Stores';

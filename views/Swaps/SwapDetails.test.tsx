@@ -4,7 +4,7 @@ jest.mock('mobx-react', () => ({
 }));
 jest.mock('@rneui/themed', () => ({ LinearProgress: 'LinearProgress' }));
 jest.mock('react-native-blob-util', () => ({}));
-jest.mock('../../stores/Stores', () => ({}));
+jest.mock('../../stores/Stores');
 jest.mock('../../utils/handleAnything', () => jest.fn());
 jest.mock('../../utils/BackendUtils', () => ({
     supportsOnchainReceiving: () => true
@@ -12,7 +12,6 @@ jest.mock('../../utils/BackendUtils', () => ({
 jest.mock('../../utils/UrlUtils', () => ({}));
 // the real SwapUtils below touches the filesystem and save dialog for the
 // rescue key export; neither is exercised here
-jest.mock('react-native-fs', () => ({}));
 jest.mock('@react-native-documents/picker', () => ({
     saveDocuments: jest.fn()
 }));
@@ -25,9 +24,7 @@ jest.mock('../../utils/SwapUtils', () => ({
 jest.mock('../../utils/UnitsUtils', () => ({
     numberWithCommas: (s: string) => s
 }));
-jest.mock('../../utils/LocaleUtils', () => ({
-    localeString: (s: string) => s
-}));
+jest.mock('../../utils/LocaleUtils');
 jest.mock('../../utils/ThemeUtils', () => ({ themeColor: () => '#000' }));
 jest.mock('../../utils/SleepUtils', () => ({
     sleep: jest.fn().mockResolvedValue(undefined)

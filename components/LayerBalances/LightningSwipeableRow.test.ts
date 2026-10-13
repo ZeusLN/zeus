@@ -15,9 +15,7 @@ jest.mock('../../utils/TorUtils', () => ({
 jest.mock('../../utils/BackendUtils', () => ({
     supportsCashuWallet: () => false
 }));
-jest.mock('../../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../../utils/LocaleUtils');
 jest.mock('../../utils/ThemeUtils', () => ({ themeColor: () => '#ffffff' }));
 jest.mock('../../stores/Stores', () => ({
     modalStore: {},
