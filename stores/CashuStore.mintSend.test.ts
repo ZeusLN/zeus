@@ -121,7 +121,10 @@ const cdkToken = (value = 1000) => ({
 let localeString: jest.SpyInstance;
 
 beforeEach(() => {
-    jest.clearAllMocks();
+    // resetAllMocks, not clearAllMocks: tests set rejections on these
+    // mocks, and clearing keeps implementations, so a failure set in one
+    // test would leak into the next. Every default is set again below.
+    jest.resetAllMocks();
     mockConnectivity.isOffline = false;
     jest.spyOn(console, 'log').mockImplementation(() => {});
     jest.spyOn(console, 'warn').mockImplementation(() => {});
@@ -135,7 +138,16 @@ beforeEach(() => {
     cdk.createMintQuote.mockResolvedValue(mintQuote('Unpaid'));
     cdk.mint.mockResolvedValue(undefined);
     cdk.send.mockResolvedValue(cdkToken());
+    cdk.isAvailable.mockReturnValue(true);
+    cdk.checkMintQuote.mockResolvedValue(mintQuote('Unpaid'));
+    cdk.checkExternalMintQuote.mockResolvedValue({ state: 'UNPAID' });
+    cdk.addExternalMintQuote.mockResolvedValue(undefined);
+    cdk.mintExternal.mockResolvedValue(undefined);
+    cdk.restore.mockResolvedValue(0);
+    blobFetch.mockResolvedValue({ json: () => ({ status: 'OK' }) });
     storage.setItem.mockResolvedValue(true);
+    storage.getItem.mockResolvedValue(null);
+    storage.removeItem.mockResolvedValue(true);
     decode.mockReturnValue({ satoshis: 1000, timestamp: 1700000000 });
 });
 
