@@ -179,6 +179,7 @@
     "@react-native/jest-preset": "0.87.1",
     "@react-native/metro-config": "0.87.1",
     "@react-native/typescript-config": "0.87.1",
+    "@testing-library/react-native": "14.1.0",
     "@types/create-hash": "1.2.6",
     "@types/crypto-js": "4.1.1",
     "@types/jest": "29.5.12",
@@ -186,7 +187,6 @@
     "@types/object-hash": "3.0.6",
     "@types/pako": "2.0.3",
     "@types/react": "19.2.18",
-    "@types/react-test-renderer": "19.1.0",
     "@types/sha.js": "2.4.4",
     "@types/uuid": "9.0.8",
     "@typescript-eslint/eslint-plugin": "8.71.0",
@@ -205,8 +205,8 @@
     "prettier": "2.4.1",
     "protobufjs-cli": "2.7.0",
     "react-native-url-polyfill": "2.0.0",
-    "react-test-renderer": "19.2.8",
     "rn-nodeify": "10.3.0",
+    "test-renderer": "1.2.0",
     "typescript": "5.7.3"
   },
   "resolutions": {

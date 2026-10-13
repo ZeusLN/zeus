@@ -1,6 +1,5 @@
 import React from 'react';
-import { Text } from 'react-native';
-import renderer, { act } from 'react-test-renderer';
+import { render, screen } from '@testing-library/react-native';
 
 // mobx-react's main entry needs react-dom; the stores arrive as props here
 jest.mock('mobx-react', () => ({
@@ -45,26 +44,18 @@ const renderWithSettings = async (settings: any) => {
         persistentNWCServiceEnabled: false,
         lud16Enabled: true
     };
-    let tree: renderer.ReactTestRenderer;
-    await act(async () => {
-        tree = renderer.create(
-            <NWCSettings
-                navigation={{} as any}
-                SettingsStore={
-                    { settings, settingsUpdateInProgress: false } as any
-                }
-                NostrWalletConnectStore={NostrWalletConnectStore as any}
-                ModalStore={{} as any}
-            />
-        );
-    });
-    return tree!;
+    await render(
+        <NWCSettings
+            navigation={{} as any}
+            SettingsStore={{ settings, settingsUpdateInProgress: false } as any}
+            NostrWalletConnectStore={NostrWalletConnectStore as any}
+            ModalStore={{} as any}
+        />
+    );
+    return NostrWalletConnectStore;
 };
 
-const hasCashuRow = (tree: renderer.ReactTestRenderer) =>
-    tree.root
-        .findAllByType(Text)
-        .some((node) => node.props.children === CASHU_ROW);
+const cashuRow = () => screen.queryByText(CASHU_ROW);
 
 describe('NWCSettings', () => {
     beforeEach(() => {
@@ -72,29 +63,31 @@ describe('NWCSettings', () => {
     });
 
     it('renders on a Cashu-capable backend when settings have no ecash key', async () => {
-        const tree = await renderWithSettings({});
-        expect(hasCashuRow(tree)).toBe(false);
+        const store = await renderWithSettings({});
+        expect(store.loadLud16Enabled).toHaveBeenCalled();
+        expect(screen.toJSON()).not.toBeNull();
+        expect(cashuRow()).not.toBeOnTheScreen();
     });
 
     it('shows the Cashu row when Cashu is enabled', async () => {
-        const tree = await renderWithSettings({
+        await renderWithSettings({
             ecash: { enableCashu: true }
         });
-        expect(hasCashuRow(tree)).toBe(true);
+        expect(cashuRow()).toBeOnTheScreen();
     });
 
     it('hides the Cashu row when Cashu is disabled', async () => {
-        const tree = await renderWithSettings({
+        await renderWithSettings({
             ecash: { enableCashu: false }
         });
-        expect(hasCashuRow(tree)).toBe(false);
+        expect(cashuRow()).not.toBeOnTheScreen();
     });
 
     it('hides the Cashu row on backends without Cashu support', async () => {
         (BackendUtils.supportsCashuWallet as jest.Mock).mockReturnValue(false);
-        const tree = await renderWithSettings({
+        await renderWithSettings({
             ecash: { enableCashu: true }
         });
-        expect(hasCashuRow(tree)).toBe(false);
+        expect(cashuRow()).not.toBeOnTheScreen();
     });
 });
