@@ -93,7 +93,7 @@ const verifiedPreimage = (
 };
 
 export default class NostrWalletConnect {
-    nwc: any;
+    nwc: NostrWebLNProvider;
 
     initNWC = async () => {
         const { nostrWalletConnectUrl } = settingsStore;
@@ -183,18 +183,33 @@ export default class NostrWalletConnect {
     };
     payLightningInvoice = async (data: any) => {
         let payment_hash: string | undefined;
+        let isZeroAmount = false;
         try {
-            payment_hash = Bolt11Utils.decode(
-                data.payment_request
-            ).payment_hash;
+            const decoded = Bolt11Utils.decode(data.payment_request);
+            payment_hash = decoded.payment_hash;
+            isZeroAmount = !Number(decoded.num_msat);
         } catch (e) {
             // decoding is best-effort; the wallet service validates the
             // invoice itself
         }
 
+        // amt is the sat amount the user entered, possibly fractional;
+        // NIP-47 pay_invoice takes it in whole msat. Send it only for an
+        // invoice known to have no amount: wallets reject an amount sent
+        // with an invoice that carries one. With no amt this is NaN, which
+        // fails the > 0 check below.
+        const amountMsat = Math.round(Number(data.amt) * 1000);
+
+        // Call the NIP-47 client directly: the provider's sendPayment takes
+        // only the invoice and drops fees_paid from the reply
         let preimage: string | undefined;
+        let fees_paid: number | undefined;
         try {
-            ({ preimage } = await this.nwc.sendPayment(data.payment_request));
+            const { client } = this.nwc;
+            ({ preimage, fees_paid } = await client.payInvoice({
+                invoice: data.payment_request,
+                ...(isZeroAmount && amountMsat > 0 && { amount: amountMsat })
+            }));
         } catch (error: any) {
             // These errors leave the outcome unknown, so the payment may
             // still complete:
@@ -250,12 +265,18 @@ export default class NostrWalletConnect {
             return { status: 'IN_FLIGHT', payment_hash };
         }
 
+        // NIP-47 reports fees_paid in msat
+        const fee = typeof fees_paid === 'number' && {
+            fee_msat: String(fees_paid)
+        };
+
         // the invoice did not decode: there is nothing to check against
         if (!payment_hash) {
             return {
                 status: 'SUCCEEDED',
                 payment_hash,
-                preimage: preimage.toLowerCase()
+                preimage: preimage.toLowerCase(),
+                ...fee
             };
         }
 
@@ -264,7 +285,12 @@ export default class NostrWalletConnect {
             return { status: 'IN_FLIGHT', payment_hash };
         }
 
-        return { status: 'SUCCEEDED', payment_hash, preimage: verified };
+        return {
+            status: 'SUCCEEDED',
+            payment_hash,
+            preimage: verified,
+            ...fee
+        };
     };
     decodePaymentRequest = (urlParams?: Array<string>) =>
         Promise.resolve().then(() =>
