@@ -2,7 +2,6 @@ import { NostrWebLNProvider } from '@getalby/sdk';
 
 import { settingsStore } from '../stores/Stores';
 
-import Base64Utils from '../utils/Base64Utils';
 import Bolt11Utils from '../utils/Bolt11Utils';
 
 export default class NostrWalletConnect {
@@ -77,7 +76,7 @@ export default class NostrWalletConnect {
         );
     lookupInvoice = async (data: any) =>
         await this.nwc.lookupInvoice({
-            payment_hash: Base64Utils.hexToBase64(data.r_hash)
+            paymentHash: data.r_hash
         });
 
     supportsPeers = () => false;
