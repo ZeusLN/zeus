@@ -93,6 +93,10 @@ export const getBalance = (data: any) => {
     let totalBalance = 0;
 
     for (let i = 0; i < opArray.length; i++) {
+        // CLN keeps an output in listfunds with reserved: true after a
+        // transaction spends it, until that transaction confirms. Counting
+        // it would add the spent input next to its change output
+        if (opArray[i].reserved) continue;
         if (opArray[i].status === 'confirmed')
             confBalance = confBalance + opArray[i].amount_msat / 1000;
         else if (opArray[i].status === 'unconfirmed')
