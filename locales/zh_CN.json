@@ -1769,7 +1769,7 @@
     "utils.handleAnything.lightningAddressError": "获取闪电地址数据时出错",
     "utils.handleAnything.notValid": "不是有效的比特币地址或闪电发票",
     "utils.handleAnything.lnurlAuthNotSupported": "您的节点不支持 LnurlAuth ",
-    "utils.handleAnything.channelsNotSupported": "Opening channels is not supported by this wallet",
+    "utils.handleAnything.channelsNotSupported": "此钱包不支持开通闪电网络通道",
     "utils.handleAnything.unsupportedLnurlType": "不支持的闪电网络网址（lnurl）类型",
     "utils.handleAnything.invalidLnurlParams": "无法解析闪电网络地址（lnurl）参数",
     "utils.handleAnything.nostrProfileError": "获取 Nostr 资料时出错",
