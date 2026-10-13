@@ -80,7 +80,7 @@ export default class NWCConnectionsList extends React.Component<
         const { navigation } = this.props;
         navigation.removeListener('focus', this.handleFocus);
     }
-    getConnections = async () => {
+    getConnections = async (force: boolean = false) => {
         try {
             this.setState({
                 connectionsLoading: true,
@@ -94,6 +94,11 @@ export default class NWCConnectionsList extends React.Component<
             this.setState({
                 connectionsLoading: false
             });
+            if (!SettingsStore.connecting) {
+                await NostrWalletConnectStore.refreshPendingMakeInvoices({
+                    force
+                });
+            }
         } catch (error) {
             this.setState({
                 connectionsLoading: false,
@@ -693,7 +698,9 @@ export default class NWCConnectionsList extends React.Component<
                                     refreshControl={
                                         <RefreshControl
                                             refreshing={connectionsLoading}
-                                            onRefresh={this.getConnections}
+                                            onRefresh={() =>
+                                                this.getConnections(true)
+                                            }
                                             tintColor={themeColor('text')}
                                             colors={[themeColor('highlight')]}
                                         />
