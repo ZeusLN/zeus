@@ -1769,6 +1769,7 @@
     "utils.handleAnything.lightningAddressError": "लाइटनिंग पता डेटा प्राप्त करने में त्रुटि",
     "utils.handleAnything.notValid": "प्रदान किया गया मान एक मान्य बिटकॉइन पता या लाइटनिंग इनवॉइस नहीं था",
     "utils.handleAnything.lnurlAuthNotSupported": "LnurlAuth आपके नोड कार्यान्वयन द्वारा समर्थित नहीं है",
+    "utils.handleAnything.channelsNotSupported": "Opening channels is not supported by this wallet",
     "utils.handleAnything.unsupportedLnurlType": "असमर्थित lnurl प्रकार",
     "utils.handleAnything.invalidLnurlParams": "lnurl पैरामीटर पार्स नहीं कर सका",
     "utils.handleAnything.nostrProfileError": "नोस्टर प्रोफाइल प्राप्त करने में त्रुटि",
