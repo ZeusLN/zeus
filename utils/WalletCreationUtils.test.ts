@@ -212,6 +212,42 @@ describe('createOnboardingWallet', () => {
         }
     );
 
+    // SettingsStore queues writes, so one queued ahead of the onboarding
+    // write lands after updateSettings is called but before it runs
+    it.each(['embedded-lnd', 'ldk-node'])(
+        'keeps a write queued ahead of the %s onboarding write',
+        async (implementation) => {
+            const settingsStore = makeSettingsStore({
+                privacy: { lurkerMode: false },
+                ecash: { enableCashu: false }
+            });
+            const apply = settingsStore.updateSettings.getMockImplementation();
+            settingsStore.updateSettings.mockImplementation(
+                async (update: any) => {
+                    settingsStore.settings = {
+                        ...settingsStore.settings,
+                        privacy: { lurkerMode: true },
+                        ecash: { enableCashu: false, automaticallySweep: true }
+                    };
+                    return apply(update);
+                }
+            );
+
+            await createOnboardingWallet(
+                makeParams(settingsStore, { implementation })
+            );
+
+            expect(settingsStore.settings.privacy).toEqual({
+                lurkerMode: true,
+                clipboard: false
+            });
+            expect(settingsStore.settings.ecash).toEqual({
+                enableCashu: true,
+                automaticallySweep: true
+            });
+        }
+    );
+
     describe('failures', () => {
         it('stops before creating a wallet when choosing peers fails', async () => {
             mockedOptimizePeers.mockRejectedValue(new Error('no peers'));
