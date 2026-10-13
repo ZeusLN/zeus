@@ -291,7 +291,7 @@ describe('Lockscreen biometrics', () => {
     ] as const)(
         'disables biometrics before deleting the %s',
         async (_label, settings, params, submit, cleared) => {
-            const updateSettings = jest.fn(() => Promise.resolve());
+            const updateSettings = jest.fn((_update: any) => Promise.resolve());
             const { SettingsStore, navigation } = await renderLockscreen(
                 updateSettings,
                 { settings, params }
