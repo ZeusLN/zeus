@@ -537,22 +537,18 @@ describe('NostrWalletConnect.decodePaymentRequest', () => {
 });
 
 describe('NostrWalletConnect.lookupInvoice', () => {
-    it('sends neither the payment hash nor the invoice', async () => {
-        // pins a bug: the provider reads paymentHash/paymentRequest, but
-        // this backend passes payment_hash (and base64 rather than the hex
-        // NIP-47 expects), so the wallet receives an empty lookup
+    it('sends the hex payment hash to lookup_invoice', async () => {
         const { backend, client } = await setup();
         client.lookupInvoice.mockResolvedValue(nip47Tx());
 
         await backend.lookupInvoice({ r_hash: SPEC_PAYMENT_HASH });
 
+        expect(client.lookupInvoice).toHaveBeenCalledTimes(1);
         expect(client.lookupInvoice).toHaveBeenCalledWith({
             invoice: undefined,
-            payment_hash: undefined
+            payment_hash: SPEC_PAYMENT_HASH
         });
     });
-
-    it.todo('sends the hex payment hash to lookup_invoice');
 
     it('maps the wallet reply to preimage, paymentRequest and paid', async () => {
         const { backend, client } = await setup();
