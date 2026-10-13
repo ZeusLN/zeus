@@ -1327,8 +1327,131 @@ export default class CashuStore {
             usable: number;
         };
 
+        type Allocation = {
+            mintUrl: string;
+            normalizedMintUrl: string;
+            balance: number;
+            amount: number;
+            fee: number;
+            quote: any;
+        };
+
         const skipped: { mintUrl: string; reason: MultimintSkipReason }[] = [];
         const candidates: Candidate[] = [];
+        const probed = new Set<string>();
+
+        const probeMint = async (
+            mintUrl: string,
+            amount: number
+        ): Promise<Candidate | undefined> => {
+            probed.add(mintUrl);
+            const balance = normalizedBalances[mintUrl] || 0;
+            if (balance <= 0) {
+                skipped.push({ mintUrl, reason: 'noBalance' });
+                return;
+            }
+            const normalizedMintUrl = this.normalizeMintUrl(mintUrl);
+            try {
+                await this.ensureMintAdded(mintUrl);
+            } catch {
+                skipped.push({ mintUrl, reason: 'addFailed' });
+                return;
+            }
+            const probeAmount = Math.min(balance, amount);
+            const probeResult = await this.queryMeltQuoteMpp(
+                normalizedMintUrl,
+                invoice,
+                probeAmount
+            );
+            if (!probeResult.ok) {
+                skipped.push({ mintUrl, reason: probeResult.reason });
+                return;
+            }
+            const probeQuote = probeResult.quote;
+            const probeFee = Number(probeQuote.fee_reserve) || 0;
+            const usable = Math.max(0, balance - probeFee);
+            if (usable <= 0) {
+                skipped.push({ mintUrl, reason: 'feeOverBalance' });
+                return;
+            }
+            return {
+                mintUrl,
+                normalizedMintUrl,
+                balance,
+                probeAmount,
+                probeQuote,
+                probeFee,
+                usable
+            };
+        };
+
+        // Quote targetAmount on the candidate, shrinking it when the
+        // re-quoted fee would overdraw the mint. Failures are recorded as
+        // skips unless recordSkips is false (a top-up that fails keeps the
+        // mint's earlier allocation).
+        const allocate = async (
+            c: Candidate,
+            targetAmount: number,
+            recordSkips = true
+        ): Promise<Allocation | undefined> => {
+            const skip = (reason: MultimintSkipReason) => {
+                if (recordSkips) skipped.push({ mintUrl: c.mintUrl, reason });
+            };
+
+            // Reuse the probe quote when the target matches; otherwise
+            // re-query for the actual amount (fees may scale with amount).
+            let quote = c.probeQuote;
+            let fee = c.probeFee;
+            if (targetAmount !== c.probeAmount) {
+                const reResult = await this.queryMeltQuoteMpp(
+                    c.normalizedMintUrl,
+                    invoice,
+                    targetAmount
+                );
+                if (!reResult.ok) {
+                    skip('requoteFailed');
+                    return;
+                }
+                quote = reResult.quote;
+                fee = Number(reResult.quote.fee_reserve) || 0;
+            }
+
+            let amount = targetAmount;
+            // Re-quoted fee may have pushed us over balance — shrink.
+            if (amount + fee > c.balance) {
+                const reduced = Math.min(targetAmount, c.balance - fee);
+                if (reduced <= 0) {
+                    skip('feeOverBalance');
+                    return;
+                }
+                const reResult = await this.queryMeltQuoteMpp(
+                    c.normalizedMintUrl,
+                    invoice,
+                    reduced
+                );
+                if (!reResult.ok) {
+                    skip('requoteFailed');
+                    return;
+                }
+                const reFee = Number(reResult.quote.fee_reserve) || 0;
+                if (reduced + reFee > c.balance) {
+                    skip('feeOverBalance');
+                    return;
+                }
+                quote = reResult.quote;
+                fee = reFee;
+                amount = reduced;
+            }
+
+            return {
+                mintUrl: c.mintUrl,
+                normalizedMintUrl: c.normalizedMintUrl,
+                balance: c.balance,
+                amount,
+                fee,
+                quote
+            };
+        };
 
         // Probe in descending balance order and stop once probed usable
         // capacity covers the payment. A melt quote request contains the
@@ -1345,56 +1468,10 @@ export default class CashuStore {
 
         for (const mintUrl of probeOrder) {
             if (probedUsable >= amountToPay) break;
-            const balance = normalizedBalances[mintUrl] || 0;
-            if (balance <= 0) {
-                skipped.push({ mintUrl, reason: 'noBalance' });
-                continue;
-            }
-            const normalizedMintUrl = this.normalizeMintUrl(mintUrl);
-            try {
-                await this.ensureMintAdded(mintUrl);
-            } catch {
-                skipped.push({ mintUrl, reason: 'addFailed' });
-                continue;
-            }
-            const probeAmount = Math.min(balance, amountToPay);
-            const probeResult = await this.queryMeltQuoteMpp(
-                normalizedMintUrl,
-                invoice,
-                probeAmount
-            );
-            if (!probeResult.ok) {
-                skipped.push({ mintUrl, reason: probeResult.reason });
-                continue;
-            }
-            const probeQuote = probeResult.quote;
-            const probeFee = Number(probeQuote.fee_reserve) || 0;
-            const usable = Math.max(0, balance - probeFee);
-            if (usable <= 0) {
-                skipped.push({ mintUrl, reason: 'feeOverBalance' });
-                continue;
-            }
-            probedUsable += usable;
-            candidates.push({
-                mintUrl,
-                normalizedMintUrl,
-                balance,
-                probeAmount,
-                probeQuote,
-                probeFee,
-                usable
-            });
-        }
-
-        // Surface skip reasons so the error-message layer can name the
-        // mint that couldn't participate (e.g. invoice destination).
-        runInAction(() => {
-            this.multiMintPlannerSkips = [...skipped];
-        });
-
-        if (candidates.length === 0) {
-            this.meltQuotes = [];
-            return [];
+            const candidate = await probeMint(mintUrl, amountToPay);
+            if (!candidate) continue;
+            probedUsable += candidate.usable;
+            candidates.push(candidate);
         }
 
         // Sort by largest usable capacity first: high-capacity mints
@@ -1404,16 +1481,8 @@ export default class CashuStore {
 
         const totalUsable = candidates.reduce((sum, c) => sum + c.usable, 0);
 
-        type Allocation = {
-            mintUrl: string;
-            normalizedMintUrl: string;
-            balance: number;
-            amount: number;
-            fee: number;
-            quote: any;
-        };
-
-        const allocations: Allocation[] = [];
+        const allocations: { candidate: Candidate; allocation: Allocation }[] =
+            [];
         let remainingAmount = amountToPay;
 
         // Greedy proportional allocation against usable capacity. With
@@ -1430,80 +1499,67 @@ export default class CashuStore {
             const targetAmount = Math.min(remainingAmount, share, c.usable);
             if (targetAmount <= 0) continue;
 
-            // Reuse the probe quote when the target matches; otherwise
-            // re-query for the actual amount (fees may scale with amount).
-            let quote = c.probeQuote;
-            let fee = c.probeFee;
-            if (targetAmount !== c.probeAmount) {
-                const reResult = await this.queryMeltQuoteMpp(
-                    c.normalizedMintUrl,
-                    invoice,
-                    targetAmount
-                );
-                if (!reResult.ok) {
-                    skipped.push({
-                        mintUrl: c.mintUrl,
-                        reason: 'requoteFailed'
-                    });
-                    continue;
-                }
-                quote = reResult.quote;
-                fee = Number(reResult.quote.fee_reserve) || 0;
-            }
-
-            let amount = targetAmount;
-            // Re-quoted fee may have pushed us over balance — shrink.
-            if (amount + fee > c.balance) {
-                const reduced = Math.min(remainingAmount, c.balance - fee);
-                if (reduced <= 0) {
-                    skipped.push({
-                        mintUrl: c.mintUrl,
-                        reason: 'feeOverBalance'
-                    });
-                    continue;
-                }
-                const reResult = await this.queryMeltQuoteMpp(
-                    c.normalizedMintUrl,
-                    invoice,
-                    reduced
-                );
-                if (!reResult.ok) {
-                    skipped.push({
-                        mintUrl: c.mintUrl,
-                        reason: 'requoteFailed'
-                    });
-                    continue;
-                }
-                const reFee = Number(reResult.quote.fee_reserve) || 0;
-                if (reduced + reFee > c.balance) {
-                    skipped.push({
-                        mintUrl: c.mintUrl,
-                        reason: 'feeOverBalance'
-                    });
-                    continue;
-                }
-                quote = reResult.quote;
-                fee = reFee;
-                amount = reduced;
-            }
-
-            allocations.push({
-                mintUrl: c.mintUrl,
-                normalizedMintUrl: c.normalizedMintUrl,
-                balance: c.balance,
-                amount,
-                fee,
-                quote
-            });
-            remainingAmount = Math.max(0, remainingAmount - amount);
+            const allocation = await allocate(c, targetAmount);
+            if (!allocation) continue;
+            allocations.push({ candidate: c, allocation });
+            remainingAmount = Math.max(0, remainingAmount - allocation.amount);
         }
 
-        const totalAllocated = allocations.reduce((s, a) => s + a.amount, 0);
+        // A mint dropped out above (failed re-quote, or its fee grew past
+        // its balance), so the proportional shares no longer add up. Let
+        // the mints already in the plan take more, up to their usable
+        // balance, before showing the invoice to any new mint.
+        for (const entry of allocations) {
+            if (remainingAmount <= 0) break;
+            const spare = entry.candidate.usable - entry.allocation.amount;
+            if (spare <= 0) continue;
+            const before = entry.allocation.amount;
+            const topUp = await allocate(
+                entry.candidate,
+                before + Math.min(remainingAmount, spare),
+                false
+            );
+            if (!topUp || topUp.amount <= before) continue;
+            entry.allocation = topUp;
+            remainingAmount = Math.max(
+                0,
+                remainingAmount - (topUp.amount - before)
+            );
+        }
 
-        // MPP couldn't cover the amount — most often because the
-        // destination mint rejects MPP for its own invoice ("internal mpp
-        // not allowed"). Fall back to a regular melt on the highest-balance
-        // funded mint that can cover the whole amount on its own.
+        // Still short: probe the mints the coverage check above stopped
+        // before, for the remaining amount only.
+        for (const mintUrl of probeOrder) {
+            if (remainingAmount <= 0) break;
+            if (probed.has(mintUrl)) continue;
+            const candidate = await probeMint(mintUrl, remainingAmount);
+            if (!candidate) continue;
+            const allocation = await allocate(
+                candidate,
+                Math.min(remainingAmount, candidate.usable)
+            );
+            if (!allocation) continue;
+            allocations.push({ candidate, allocation });
+            remainingAmount = Math.max(0, remainingAmount - allocation.amount);
+        }
+
+        // Surface skip reasons so the error-message layer can name the
+        // mint that couldn't participate (e.g. invoice destination).
+        runInAction(() => {
+            this.multiMintPlannerSkips = [...skipped];
+        });
+
+        const totalAllocated = allocations.reduce(
+            (s, { allocation }) => s + allocation.amount,
+            0
+        );
+
+        // MPP couldn't cover the amount: no selected mint could be probed
+        // (none advertises NUT-15, or the only one that does is the
+        // invoice's own mint), or the destination mint rejects MPP for its
+        // own invoice ("internal mpp not allowed"). Fall back to a regular
+        // melt on the highest-balance funded mint that can cover the whole
+        // amount on its own.
         if (totalAllocated < amountToPay) {
             const fallbackMint = fundedSelectedMints.find(
                 ({ balance }) => balance >= amountToPay
@@ -1525,7 +1581,7 @@ export default class CashuStore {
             mintUrl: string;
             meltQuote: CDKMeltQuote;
             useRegularMelt?: boolean;
-        }[] = allocations.map((a) => ({
+        }[] = allocations.map(({ allocation: a }) => ({
             mintUrl: a.mintUrl,
             meltQuote: {
                 ...a.quote,

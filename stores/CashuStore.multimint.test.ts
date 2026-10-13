@@ -504,7 +504,7 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
         expect(store.getPayReqError).toBe('stores.CashuStore.notEnoughFunds');
     });
 
-    it('currently gives up without the single-mint fallback when no selected mint advertises MPP', async () => {
+    it('falls back to a regular melt when no selected mint advertises MPP', async () => {
         const store = newStore({
             balances: { [A]: 5000, [B]: 300 },
             selected: [A, B],
@@ -514,16 +514,17 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
 
         await store.getPayReq(INVOICE);
 
-        // A alone could pay with a regular melt (that is what the planner
-        // does when A is the only funded mint), but with no MPP candidates
-        // it returns before reaching the fallback.
         expect(fetchMock).not.toHaveBeenCalled();
-        expect(cdk.createMeltQuote).not.toHaveBeenCalled();
-        expect(store.meltQuotes).toEqual([]);
-        expect(store.getPayReqError).toBe('stores.CashuStore.notEnoughFunds');
+        expect(cdk.createMeltQuote).toHaveBeenCalledTimes(1);
+        expect(cdk.createMeltQuote).toHaveBeenCalledWith(A, INVOICE, undefined);
+        expect(planOf(store)).toEqual([
+            { mintUrl: A, amount: 1000, fee: 3, regular: true }
+        ]);
+        expect(store.multiMintPlannerSkips).toEqual([]);
+        expect(store.getPayReqError).toBeUndefined();
     });
 
-    it('currently gives up without the fallback when the invoice mint refuses MPP and no other mint can probe', async () => {
+    it('falls back to a regular melt when the invoice mint refuses MPP and no other mint can probe', async () => {
         const store = newStore({
             balances: { [A]: 5000, [B]: 300 },
             selected: [A, B],
@@ -536,14 +537,33 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
         await store.getPayReq(INVOICE);
 
         // Same invoice and balances as the fallback test above, except B
-        // does not advertise NUT-15. A could still pay alone.
-        expect(cdk.createMeltQuote).not.toHaveBeenCalled();
-        expect(store.getPayReqError).toBe(
-            'stores.CashuStore.notEnoughFundsSelfSend'
-        );
+        // does not advertise NUT-15
+        expect(store.multiMintPlannerSkips).toEqual([
+            { mintUrl: A, reason: 'selfSend' }
+        ]);
+        expect(planOf(store)).toEqual([
+            { mintUrl: A, amount: 1000, fee: 3, regular: true }
+        ]);
+        expect(store.getPayReqError).toBeUndefined();
     });
 
-    it('currently leaves unprobed mints out when a probed mint fails its re-quote', async () => {
+    it('reports not enough funds when no mint can probe and none can pay alone', async () => {
+        const store = newStore({
+            balances: { [A]: 800, [B]: 300 },
+            selected: [A, B],
+            mpp: []
+        });
+        const { fetchMock } = mintApi({});
+
+        await store.getPayReq(INVOICE);
+
+        expect(fetchMock).not.toHaveBeenCalled();
+        expect(cdk.createMeltQuote).not.toHaveBeenCalled();
+        expect(store.meltQuotes).toEqual([]);
+        expect(store.getPayReqError).toBe('stores.CashuStore.notEnoughFunds');
+    });
+
+    it('probes the remaining mints when a probed mint fails its re-quote', async () => {
         const store = newStore({
             balances: { [A]: 600, [B]: 500, [C]: 500 },
             selected: [A, B, C]
@@ -557,15 +577,124 @@ describe('CashuStore multi-mint planning (getPayReq)', () => {
 
         await store.getPayReq(INVOICE);
 
-        // A and B covered the invoice at probe time, so C was never asked.
-        // When A's re-quote fails, B keeps its proportional share
-        // (ceil(1000 * 500 / 1100) = 455) and C is not tried, although
-        // B and C together hold 1000.
-        expect(calls.some((c) => c.mintUrl === C)).toBe(false);
-        // The requoteFailed skip is pushed after the skip list was
-        // published, so it never reaches multiMintPlannerSkips
-        expect(store.multiMintPlannerSkips).toEqual([]);
-        expect(planOf(store)).toEqual([{ mintUrl: B, amount: 455, fee: 0 }]);
+        // A and B covered the invoice at probe time. A's re-quote for 546
+        // fails, B's share of 455 is raised to its full 500 (the probe
+        // quote), and C is probed for the remaining 500 only.
+        expect(calls).toEqual([
+            { mintUrl: A, amountSats: 600 },
+            { mintUrl: B, amountSats: 500 },
+            { mintUrl: A, amountSats: 546 },
+            { mintUrl: B, amountSats: 455 },
+            { mintUrl: C, amountSats: 500 }
+        ]);
+        expect(planOf(store)).toEqual([
+            { mintUrl: B, amount: 500, fee: 0 },
+            { mintUrl: C, amount: 500, fee: 0 }
+        ]);
+        expect(store.multiMintPlannerSkips).toEqual([
+            { mintUrl: A, reason: 'requoteFailed' }
+        ]);
+        expect(store.getPayReqError).toBeUndefined();
+    });
+
+    it('raises the other shares before probing new mints when a re-quote fails', async () => {
+        const store = newStore({
+            balances: { [A]: 600, [B]: 550, [C]: 500 },
+            selected: [A, B, C]
+        });
+        const { calls } = mintApi({
+            [A]: () => ({ fee: 0 }),
+            // B's probe fee leaves it 350 usable; its re-quote fails
+            [B]: (_amt, call) =>
+                call === 0 ? { fee: 200 } : { status: 500, body: 'busy' },
+            [C]: () => ({ fee: 0 })
+        });
+
+        await store.getPayReq(INVOICE);
+
+        // usable A 600, C 500, B 350 (1450). Shares A 414, C 345, B 241.
+        // B fails, so A goes to its full 600 (probe quote reused) and C
+        // takes the last 55 (re-quoted at 400).
+        expect(calls.filter((c) => c.mintUrl === C)).toEqual([
+            { mintUrl: C, amountSats: 500 },
+            { mintUrl: C, amountSats: 345 },
+            { mintUrl: C, amountSats: 400 }
+        ]);
+        expect(planOf(store)).toEqual([
+            { mintUrl: A, amount: 600, fee: 0 },
+            { mintUrl: C, amount: 400, fee: 0 }
+        ]);
+        expect(store.multiMintPlannerSkips).toEqual([
+            { mintUrl: B, reason: 'requoteFailed' }
+        ]);
+        expect(store.getPayReqError).toBeUndefined();
+    });
+
+    it('keeps a share when raising it fails, without recording a skip', async () => {
+        const store = newStore({
+            balances: { [A]: 600, [B]: 550, [C]: 500 },
+            selected: [A, B, C]
+        });
+        mintApi({
+            [A]: () => ({ fee: 0 }),
+            [B]: (_amt, call) =>
+                call === 0 ? { fee: 200 } : { status: 500, body: 'busy' },
+            // C's re-quote for its raised share (400) fails
+            [C]: (_amt, call) =>
+                call === 2 ? { networkError: true } : { fee: 0 }
+        });
+
+        await store.getPayReq(INVOICE);
+
+        expect(planOf(store)).toEqual([
+            { mintUrl: A, amount: 600, fee: 0 },
+            { mintUrl: C, amount: 345, fee: 0 }
+        ]);
+        expect(store.multiMintPlannerSkips).toEqual([
+            { mintUrl: B, reason: 'requoteFailed' }
+        ]);
+        expect(store.getPayReqError).toBe('stores.CashuStore.notEnoughFunds');
+    });
+
+    it('keeps a share when the fee for a raised share would shrink it', async () => {
+        const store = newStore({
+            balances: { [A]: 600, [B]: 550, [C]: 500 },
+            selected: [A, B, C]
+        });
+        mintApi({
+            [A]: () => ({ fee: 0 }),
+            [B]: (_amt, call) =>
+                call === 0 ? { fee: 200 } : { status: 500, body: 'busy' },
+            // raising C to 400 costs a 300 fee, which would shrink it to 200
+            [C]: (_amt, call) => ({ fee: call >= 2 ? 300 : 0 })
+        });
+
+        await store.getPayReq(INVOICE);
+
+        expect(planOf(store)).toEqual([
+            { mintUrl: A, amount: 600, fee: 0 },
+            { mintUrl: C, amount: 345, fee: 0 }
+        ]);
+        expect(store.getPayReqError).toBe('stores.CashuStore.notEnoughFunds');
+    });
+
+    it('publishes fee skips found while allocating', async () => {
+        const store = newStore({
+            balances: { [A]: 600, [B]: 500 },
+            selected: [A, B]
+        });
+        mintApi({
+            // A's re-quoted fee eats its whole balance
+            [A]: (_amt, call) => ({ fee: call === 0 ? 1 : 600 }),
+            [B]: () => ({ fee: 1 })
+        });
+
+        await store.getPayReq(INVOICE);
+
+        expect(store.multiMintPlannerSkips).toEqual([
+            { mintUrl: A, reason: 'feeOverBalance' }
+        ]);
+        expect(planOf(store)).toEqual([{ mintUrl: B, amount: 499, fee: 1 }]);
         expect(store.getPayReqError).toBe('stores.CashuStore.notEnoughFunds');
     });
 });
