@@ -272,6 +272,66 @@ describe('Send BOLT 12 Proceed', () => {
         expect(view.props.navigation.navigate).not.toHaveBeenCalled();
     });
 
+    // The review screen only re-checks offer blockers, so this guard is
+    // what keeps a zero amount from reaching an amountless offer (#4972)
+    describe.each([true, false])(
+        'with supportsOffersDirectPay %s',
+        (directPay) => {
+            it.each(['0', '', 0, undefined])(
+                'rejects amount %p before decoding or fetching',
+                async (satAmount) => {
+                    supportsOffersDirectPay.mockReturnValue(directPay);
+                    const { view, TransactionsStore, InvoicesStore } =
+                        makeOfferView();
+                    view.state = { ...view.state, satAmount } as any;
+
+                    await view.payBolt12();
+
+                    expect(view.state.error_msg).toBe(
+                        'views.Send.payBolt12.specifyAmount'
+                    );
+                    expect(view.state.loading).toBe(false);
+                    expect(decodeOffer).not.toHaveBeenCalled();
+                    expect(fetchInvoiceFromOffer).not.toHaveBeenCalled();
+                    expect(InvoicesStore.getPayReq).not.toHaveBeenCalled();
+                    expect(
+                        TransactionsStore.sendPayment
+                    ).not.toHaveBeenCalled();
+                    expect(
+                        view.props.navigation.navigate
+                    ).not.toHaveBeenCalled();
+                }
+            );
+        }
+    );
+
+    it('reports a missing offer before checking the amount', async () => {
+        supportsOffersDirectPay.mockReturnValue(true);
+        const { view } = makeOfferView();
+        view.state = { ...view.state, bolt12: '', satAmount: '0' } as any;
+
+        await view.payBolt12();
+
+        expect(view.state.error_msg).toBe(
+            'views.Send.payBolt12.offerFetchFailure'
+        );
+        expect(decodeOffer).not.toHaveBeenCalled();
+        expect(view.props.navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('rejects input that is not an offer without calling the backend', async () => {
+        supportsOffersDirectPay.mockReturnValue(true);
+        const { view } = makeOfferView();
+        view.state = { ...view.state, bolt12: 'bitcoin:?sp=sp1qabc' } as any;
+
+        await view.payBolt12();
+
+        expect(view.state.error_msg).toBe('views.Send.payBolt12.invalidOffer');
+        expect(view.state.loading).toBe(false);
+        expect(decodeOffer).not.toHaveBeenCalled();
+        expect(view.props.navigation.navigate).not.toHaveBeenCalled();
+    });
+
     it('fetches an invoice for PaymentRequest on a backend without direct offer pay', async () => {
         supportsOffersDirectPay.mockReturnValue(false);
         fetchInvoiceFromOffer.mockResolvedValue({ invoice: 'lnbcrt1...' });

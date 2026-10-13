@@ -92,6 +92,7 @@ function setup(selectedNode: number) {
     settings.updateSettings = jest.fn(async () => {});
     jest.spyOn(settings, 'setConnectingStatus');
 
+    const repairMissingChannelEdges = jest.fn(async () => {});
     const Wallet = sourceMethods(
         'views/Wallet/Wallet.tsx',
         'Wallet',
@@ -123,7 +124,8 @@ function setup(selectedNode: number) {
             },
             themeColor: () => '#000',
             isLightTheme: () => false,
-            autoPurgeLegacyKeychain: jest.fn()
+            autoPurgeLegacyKeychain: jest.fn(),
+            repairMissingChannelEdges
         }
     );
     const view = new Wallet();
@@ -173,7 +175,15 @@ function setup(selectedNode: number) {
     view.processPendingGraphSyncPayment = jest.fn();
     const refresh = () => view.getSettingsAndNavigate();
     const runner = new WalletRefreshRunner(settings, () => true, refresh);
-    return { settings, view, runner, refresh, ldk, lnd };
+    return {
+        settings,
+        view,
+        runner,
+        refresh,
+        ldk,
+        lnd,
+        repairMissingChannelEdges
+    };
 }
 
 // What Wallets does on selection, once its settings write has committed
@@ -277,4 +287,109 @@ it('a transient embedded LND retry stops once another wallet is selected', async
     } finally {
         jest.useRealTimers();
     }
+});
+
+// Resetting or rebuilding the SQLite graph drops our own channel edges, so
+// an embedded LND refresh repairs them once channels load (#4814). bbolt
+// graphs and remote nodes never lose them
+describe('channel edge repair', () => {
+    const run = async (selectedNode: number, isSqlite: boolean | undefined) => {
+        const ctx = setup(selectedNode);
+        Object.assign(ctx.settings, { isSqlite, lndDir: 'c' });
+        await ctx.runner.run(ctx.refresh);
+        await flush();
+        return ctx;
+    };
+
+    it('repairs the SQLite embedded LND wallet after channels load', async () => {
+        const { view, repairMissingChannelEdges, settings } = await run(
+            2,
+            true
+        );
+
+        expect(repairMissingChannelEdges).toHaveBeenCalledTimes(1);
+        expect(repairMissingChannelEdges).toHaveBeenCalledWith('c');
+        expect(
+            view.props.ChannelsStore.getChannelsWithPolling.mock
+                .invocationCallOrder[0]
+        ).toBeLessThan(repairMissingChannelEdges.mock.invocationCallOrder[0]);
+        expect(settings.connecting).toBe(false);
+    });
+
+    it("falls back to the default 'lnd' directory", async () => {
+        const ctx = setup(2);
+        Object.assign(ctx.settings, { isSqlite: true, lndDir: undefined });
+        await ctx.runner.run(ctx.refresh);
+        await flush();
+
+        expect(ctx.repairMissingChannelEdges).toHaveBeenCalledWith('lnd');
+    });
+
+    it.each([false, undefined])(
+        'skips an embedded LND wallet with isSqlite %p',
+        async (isSqlite) => {
+            const { view, repairMissingChannelEdges } = await run(2, isSqlite);
+
+            expect(
+                view.props.ChannelsStore.getChannelsWithPolling
+            ).toHaveBeenCalledTimes(1);
+            expect(repairMissingChannelEdges).not.toHaveBeenCalled();
+        }
+    );
+
+    it.each([
+        [0, 'ldk-node'],
+        [1, 'lnd'],
+        [3, 'cln-rest']
+    ])(
+        'never repairs on %i (%s), even with a stale isSqlite',
+        async (selectedNode) => {
+            const { repairMissingChannelEdges } = await run(selectedNode, true);
+
+            expect(repairMissingChannelEdges).not.toHaveBeenCalled();
+        }
+    );
+
+    it('logs a rejected repair without failing the refresh', async () => {
+        const errorSpy = jest
+            .spyOn(console, 'error')
+            .mockImplementation(() => {});
+        const ctx = setup(2);
+        Object.assign(ctx.settings, { isSqlite: true, lndDir: 'c' });
+        const error = new Error('graph locked');
+        ctx.repairMissingChannelEdges.mockRejectedValueOnce(error);
+
+        await ctx.runner.run(ctx.refresh);
+        await flush();
+
+        expect(errorSpy).toHaveBeenCalledWith(
+            'Channel edge repair failed',
+            error
+        );
+        expect(ctx.view.props.NodeInfoStore.getNodeInfo).toHaveBeenCalledTimes(
+            1
+        );
+        expect(ctx.settings.connecting).toBe(false);
+    });
+
+    it('skips the repair when the wallet switched before channels loaded', async () => {
+        const ctx = setup(2);
+        Object.assign(ctx.settings, { isSqlite: true, lndDir: 'c' });
+        const channels = deferred();
+        ctx.view.props.ChannelsStore.getChannelsWithPolling.mockReturnValueOnce(
+            channels.promise
+        );
+        const initial = ctx.runner.run(ctx.refresh);
+        await flush();
+        expect(
+            ctx.view.props.ChannelsStore.getChannelsWithPolling
+        ).toHaveBeenCalledTimes(1);
+
+        select(ctx.settings, 1);
+        channels.resolve();
+        await initial;
+        await flush();
+
+        expect(ctx.repairMissingChannelEdges).not.toHaveBeenCalled();
+    });
 });
