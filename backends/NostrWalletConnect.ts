@@ -1,9 +1,11 @@
-import { NostrWebLNProvider } from '@getalby/sdk';
+import { Nip47ReplyTimeoutError, NostrWebLNProvider } from '@getalby/sdk';
 import BigNumber from 'bignumber.js';
 
 import { settingsStore } from '../stores/Stores';
 
+import Base64Utils from '../utils/Base64Utils';
 import Bolt11Utils from '../utils/Bolt11Utils';
+import { sha256Hex } from '../utils/HashingUtils';
 import { localeString } from '../utils/LocaleUtils';
 import {
     markNodeResponded,
@@ -159,9 +161,27 @@ export default class NostrWalletConnect {
         return { payments };
     };
     payLightningInvoice = async (data: any) => {
+        let payment_hash: string | undefined;
         try {
-            return await this.nwc.sendPayment(data.payment_request);
+            payment_hash = Bolt11Utils.decode(
+                data.payment_request
+            ).payment_hash;
+        } catch (e) {
+            // decoding is best-effort; the wallet service validates the
+            // invoice itself
+        }
+
+        let preimage: string | undefined;
+        try {
+            ({ preimage } = await this.nwc.sendPayment(data.payment_request));
         } catch (error: any) {
+            // The request reached the relay but the wallet did not answer
+            // in time. It may still complete the payment, so this is not a
+            // failure. Publish timeouts reject, and wallet errors are
+            // classified below.
+            if (error instanceof Nip47ReplyTimeoutError) {
+                return { status: 'IN_FLIGHT', payment_hash };
+            }
             const code = error?.code;
             // a reply without a message: show the generic failure, not the
             // SDK's placeholder, and don't keep it as the wallet's reason
@@ -184,6 +204,30 @@ export default class NostrWalletConnect {
             }
             throw error;
         }
+
+        // NIP-47 wallets (including Zeus's own NWC service) answer with an
+        // empty preimage while the HTLC is still out
+        if (!preimage) {
+            return { status: 'IN_FLIGHT', payment_hash };
+        }
+
+        const normalizedPreimage = preimage.toLowerCase();
+        if (
+            payment_hash &&
+            (!/^[0-9a-f]{64}$/.test(normalizedPreimage) ||
+                sha256Hex(Base64Utils.hexToBytes(normalizedPreimage)) !==
+                    payment_hash.toLowerCase())
+        ) {
+            throw new Error(
+                localeString('backends.NWC.payLightningInvoice.wrongPreimage')
+            );
+        }
+
+        return {
+            status: 'SUCCEEDED',
+            payment_hash,
+            preimage: normalizedPreimage
+        };
     };
     decodePaymentRequest = (urlParams?: Array<string>) =>
         Promise.resolve().then(() =>
