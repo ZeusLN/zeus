@@ -147,10 +147,17 @@ export async function createOnboardingWallet(params: WalletCreationParams) {
                 }
             ];
 
-            await updateSettings((current: Settings) => ({
-                nodes,
-                ...commonSettings(current)
-            }));
+            // Callers await without a catch, so a rejected write must
+            // surface through onError rather than escape (#5024)
+            try {
+                await updateSettings((current: Settings) => ({
+                    nodes,
+                    ...commonSettings(current)
+                }));
+            } catch (e) {
+                onError();
+                return;
+            }
 
             setConnectingStatus(true);
             onSuccess();
