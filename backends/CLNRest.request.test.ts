@@ -213,6 +213,22 @@ describe('CLNRest.request', () => {
             7000
         );
     });
+
+    it('keeps TLS validation for a clearnet host over Tor', async () => {
+        mockSettingsStore.enableTor = true;
+        mockDoTorRequest.mockResolvedValue({ ok: true });
+
+        await cln.postRequest('/v1/getinfo');
+
+        expect(mockDoTorRequest).toHaveBeenCalledWith(
+            'https://node.example.com:3010/v1/getinfo',
+            'post',
+            undefined,
+            { Rune: 'rune-abc', 'Content-Type': 'application/json' },
+            false,
+            undefined
+        );
+    });
 });
 
 // restReq's non-2xx branch builds a message from the JSON-RPC body
