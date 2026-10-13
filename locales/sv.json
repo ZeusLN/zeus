@@ -1769,6 +1769,7 @@
     "utils.handleAnything.lightningAddressError": "Fel vid hämtning av Lightning Adress-data",
     "utils.handleAnything.notValid": "Värdet var ingen giltig Bitcoinaddress eller Lightningfaktura",
     "utils.handleAnything.lnurlAuthNotSupported": "LnurlAuth stödjs inte av din nodimplementation",
+    "utils.handleAnything.channelsNotSupported": "Opening channels is not supported by this wallet",
     "utils.handleAnything.unsupportedLnurlType": "Lnurl-typ stöds ej",
     "utils.handleAnything.invalidLnurlParams": "Kunde inte avläsa LNURL-parametrar",
     "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",
