@@ -1,11 +1,9 @@
-jest.mock('../stores/Stores', () => ({}));
+jest.mock('../stores/Stores');
 jest.mock('../utils/UrlUtils', () => ({
     __esModule: true,
     default: { getMempoolApiUrl: () => 'https://mempool.test/api' }
 }));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../utils/LocaleUtils');
 
 import * as bitcoin from 'bitcoinjs-lib';
 

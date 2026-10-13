@@ -21,9 +21,7 @@ jest.mock('../utils/BackendUtils', () => ({
     }
 }));
 
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../utils/LocaleUtils');
 
 jest.mock('../storage', () => ({
     __esModule: true,

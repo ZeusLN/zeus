@@ -26,9 +26,7 @@ jest.mock('../utils/BackendUtils', () => ({
     supportsLSPScustomMessage: () => true,
     supportsLSPS7native: () => false
 }));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../utils/LocaleUtils');
 jest.mock('./SettingsStore', () => ({
     __esModule: true,
     default: class {},

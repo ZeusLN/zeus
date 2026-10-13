@@ -20,7 +20,7 @@ jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
     default: { supportsCashuWallet: () => false }
 }));
-jest.mock('../utils/LocaleUtils', () => ({ localeString: (k: string) => k }));
+jest.mock('../utils/LocaleUtils');
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import Storage from '../storage';

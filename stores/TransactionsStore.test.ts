@@ -1,4 +1,4 @@
-jest.mock('../stores/Stores', () => ({}));
+jest.mock('../stores/Stores');
 jest.mock('react-native-blob-util', () => ({}));
 jest.mock('bitcoinjs-lib', () => ({}));
 jest.mock('react-native-randombytes', () => ({ randomBytes: jest.fn() }));
@@ -20,9 +20,7 @@ jest.mock('../utils/BackendUtils', () => ({
 jest.mock('../utils/GraphSyncUtils', () => ({
     checkGraphSyncBeforePayment: jest.fn(() => true)
 }));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (s: string) => s
-}));
+jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/UrlUtils', () => ({
     __esModule: true,
     default: {}

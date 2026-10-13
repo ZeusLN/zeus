@@ -11,7 +11,7 @@ jest.mock('../utils/NostrUtils', () => ({}));
 jest.mock('../utils/NostrMintBackup', () => ({}));
 jest.mock('../utils/MigrationUtils', () => ({}));
 jest.mock('../utils/ThemeUtils', () => ({}));
-jest.mock('../utils/LocaleUtils', () => ({ localeString: (s: string) => s }));
+jest.mock('../utils/LocaleUtils');
 jest.mock('../NavigationService', () => ({}));
 jest.mock('../cashu-cdk', () => ({
     isAvailable: jest.fn(() => true),

@@ -29,9 +29,7 @@ jest.mock('../utils/BackendUtils', () => ({
 jest.mock('../utils/handleAnything', () => jest.fn());
 jest.mock('../utils/NFCUtils', () => ({ scanNfcTag: jest.fn() }));
 jest.mock('../utils/NodeUriUtils', () => ({}));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
 }));

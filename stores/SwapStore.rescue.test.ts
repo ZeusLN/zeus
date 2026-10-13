@@ -4,13 +4,11 @@
 // other file stubs out, and a real in-memory Storage rather than a bare
 // jest.fn. Same split as UnitsUtils.alt.test.ts and
 // AddressUtils-testnet.test.ts.
-jest.mock('../stores/Stores', () => ({}));
+jest.mock('../stores/Stores');
 jest.mock('../utils/ThemeUtils', () => ({
     themeColor: (s: string) => s
 }));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (s: string) => s
-}));
+jest.mock('../utils/LocaleUtils');
 jest.mock('react-native-blob-util', () => ({
     __esModule: true,
     default: {
@@ -20,14 +18,6 @@ jest.mock('react-native-blob-util', () => ({
 }));
 // SwapUtils touches the filesystem and save dialog for the rescue key
 // export; neither is exercised here
-jest.mock('react-native-fs', () => ({
-    DownloadDirectoryPath: '/public-downloads',
-    DocumentDirectoryPath: '/docs',
-    CachesDirectoryPath: '/cache',
-    exists: jest.fn().mockResolvedValue(false),
-    unlink: jest.fn().mockResolvedValue(undefined),
-    writeFile: jest.fn().mockResolvedValue(undefined)
-}));
 jest.mock('@react-native-documents/picker', () => ({
     saveDocuments: jest.fn()
 }));

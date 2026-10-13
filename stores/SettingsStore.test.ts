@@ -34,9 +34,7 @@ jest.mock('../utils/BackendUtils', () => ({
 jest.mock('../utils/BiometricUtils', () => ({
     getSupportedBiometryType: jest.fn().mockResolvedValue(undefined)
 }));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (s: string) => s
-}));
+jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/MigrationUtils', () => ({
     keychainDesyncMigration: jest.fn().mockResolvedValue(undefined),
     keychainCloudSyncMigration: jest.fn().mockResolvedValue(undefined),

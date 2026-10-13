@@ -13,9 +13,7 @@ jest.mock('@react-native-clipboard/clipboard', () => ({
 jest.mock('../../utils/AddressUtils', () => ({
     isValidLightningPubKey: (pubkey: string) => /^02a{64}$/.test(pubkey)
 }));
-jest.mock('../../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../../utils/LocaleUtils');
 jest.mock('../../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
 }));

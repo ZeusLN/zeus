@@ -149,7 +149,6 @@ jest.mock('react-native-blob-util', () => ({
     fetch: (...args: any[]) => mockBlobUtilFetch(...args)
 }));
 jest.mock('react-native-encrypted-storage', () => ({}));
-jest.mock('react-native-fs', () => ({}));
 const mockGetLnurlParamsFn = jest.fn();
 const mockFindLnurl = jest.fn();
 jest.mock('js-lnurl', () => ({

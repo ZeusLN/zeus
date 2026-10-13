@@ -1,7 +1,5 @@
-jest.mock('../stores/Stores', () => ({}));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../stores/Stores');
+jest.mock('../utils/LocaleUtils');
 
 import Transaction from './Transaction';
 

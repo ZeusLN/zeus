@@ -2,10 +2,7 @@ jest.mock('react-native-blob-util', () => ({
     __esModule: true,
     default: { fetch: jest.fn(), config: jest.fn() }
 }));
-jest.mock('../stores/Stores', () => ({
-    settingsStore: {},
-    nodeInfoStore: { nodeInfo: {} }
-}));
+jest.mock('../stores/Stores');
 jest.mock('../utils/TorUtils', () => ({
     doTorRequest: jest.fn(),
     isOnionHttpsUrl: jest.fn(),

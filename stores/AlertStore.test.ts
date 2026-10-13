@@ -8,9 +8,7 @@ jest.mock('./SettingsStore', () => ({
     default: class SettingsStore {}
 }));
 
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../utils/LocaleUtils');
 
 jest.mock('../utils/LndMobileUtils', () => ({
     NEUTRINO_PING_THRESHOLD_MS: 1000,

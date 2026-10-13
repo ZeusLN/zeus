@@ -37,9 +37,7 @@ jest.mock('./CoreLightningRequestHandler', () => ({
     listClosedChannels: jest.fn(),
     listPeerChannels: jest.fn()
 }));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../utils/LocaleUtils');
 
 import CLNRest from './CLNRest';
 

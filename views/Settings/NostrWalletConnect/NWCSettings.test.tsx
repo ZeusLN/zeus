@@ -21,9 +21,7 @@ jest.mock('@rneui/themed', () => ({ Icon: () => null }));
 jest.mock('../../../utils/ThemeUtils', () => ({
     themeColor: jest.fn(() => '#000')
 }));
-jest.mock('../../../utils/LocaleUtils', () => ({
-    localeString: jest.fn((key: string) => key)
-}));
+jest.mock('../../../utils/LocaleUtils');
 jest.mock('../../../utils/BackendUtils', () => ({
     supportsCashuWallet: jest.fn(() => true),
     supportsLightningAddress: jest.fn(() => false)

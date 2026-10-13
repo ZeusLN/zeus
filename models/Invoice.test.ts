@@ -1,4 +1,4 @@
-jest.mock('../stores/Stores', () => ({}));
+jest.mock('../stores/Stores');
 
 import { autorun } from 'mobx';
 

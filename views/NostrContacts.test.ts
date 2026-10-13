@@ -21,9 +21,7 @@ jest.mock('../components/ContactAvatar', () => ({
 }));
 jest.mock('../utils/AddressUtils', () => ({}));
 jest.mock('../utils/ContactUtils', () => ({}));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/ThemeUtils', () => ({ themeColor: () => '#ffffff' }));
 jest.mock('../storage', () => ({}));
 jest.mock('../stores/SettingsStore', () => ({

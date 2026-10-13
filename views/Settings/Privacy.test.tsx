@@ -3,15 +3,13 @@ jest.mock('mobx-react', () => ({
     observer: (component: any) => component
 }));
 // UrlUtils imports the store graph; it is only used here for validation
-jest.mock('../../stores/Stores', () => ({}));
+jest.mock('../../stores/Stores');
 jest.mock('../../stores/SettingsStore', () => ({
     BLOCK_EXPLORER_KEYS: [],
     DEFAULT_MEMPOOL_INSTANCE: 'https://mempool.space',
     MEMPOOL_INSTANCE_KEYS: []
 }));
-jest.mock('../../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../../utils/LocaleUtils');
 jest.mock('../../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
 }));

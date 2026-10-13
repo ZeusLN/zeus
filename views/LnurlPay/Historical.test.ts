@@ -1,8 +1,6 @@
 jest.mock('@rneui/themed', () => ({ Icon: 'Icon' }));
 jest.mock('../../utils/ThemeUtils', () => ({ themeColor: () => '#ffffff' }));
-jest.mock('../../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../../utils/LocaleUtils');
 jest.mock('js-lnurl/lib/helpers', () => ({
     decipherAES: () => 'Decrypted receipt'
 }));

@@ -1,4 +1,4 @@
-jest.mock('../stores/Stores', () => ({}));
+jest.mock('../stores/Stores');
 jest.mock('react-native-blob-util', () => ({}));
 jest.mock('../ldknode/LdkNodeInjection', () => ({}));
 jest.mock('../utils/BackendUtils', () => ({
@@ -12,9 +12,7 @@ jest.mock('../utils/BackendUtils', () => ({
         createInvoice: jest.fn()
     }
 }));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (s: string) => s
-}));
+jest.mock('../utils/LocaleUtils');
 
 import InvoicesStore from './InvoicesStore';
 import BackendUtils from '../utils/BackendUtils';

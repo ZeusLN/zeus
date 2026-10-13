@@ -13,9 +13,7 @@ jest.mock('../utils/BackendUtils', () => ({
 }));
 jest.mock('../utils/Bolt11Utils', () => ({}));
 jest.mock('../models/Invoice', () => ({}));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
 }));

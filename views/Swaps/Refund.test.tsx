@@ -34,7 +34,6 @@ jest.mock('../../utils/UnitsUtils', () => ({
 }));
 // the real SwapUtils touches the filesystem and save dialog for the rescue
 // key export; neither is exercised here
-jest.mock('react-native-fs', () => ({}));
 jest.mock('@react-native-documents/picker', () => ({
     saveDocuments: jest.fn()
 }));

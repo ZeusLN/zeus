@@ -34,9 +34,7 @@ jest.mock('../utils/handleAnything', () => ({
     default: jest.fn().mockResolvedValue(['Send', { invoice: 'lnbc1invoice' }])
 }));
 
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../utils/LocaleUtils');
 
 jest.mock('../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'

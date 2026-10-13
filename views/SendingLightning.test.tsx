@@ -38,9 +38,7 @@ jest.mock('../utils/ContactUtils', () => ({
     __esModule: true,
     default: { findContactByLightningAddress: () => undefined }
 }));
-jest.mock('../utils/LocaleUtils', () => ({
-    localeString: (key: string) => key
-}));
+jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/ThemeUtils', () => ({
     themeColor: () => '#000000'
 }));

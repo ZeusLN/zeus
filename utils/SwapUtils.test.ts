@@ -7,14 +7,6 @@ jest.mock('react-native', () => ({
 // Paths must mirror the real constants' asymmetry: the legacy Android writer
 // used the PUBLIC Downloads dir (RNFS.DownloadDirectoryPath), not the
 // app-scoped one, so the purge must read the same constant.
-jest.mock('react-native-fs', () => ({
-    DownloadDirectoryPath: '/public-downloads',
-    DocumentDirectoryPath: '/docs',
-    CachesDirectoryPath: '/cache',
-    exists: jest.fn().mockResolvedValue(false),
-    unlink: jest.fn().mockResolvedValue(undefined),
-    writeFile: jest.fn().mockResolvedValue(undefined)
-}));
 
 const mockSaveDocuments = jest.fn();
 jest.mock('@react-native-documents/picker', () => ({
