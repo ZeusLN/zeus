@@ -1769,6 +1769,7 @@
     "utils.handleAnything.lightningAddressError": "Gagal mengambil data Alamat Lightning",
     "utils.handleAnything.notValid": "Nilai yang dimasukkan bukanlah alamat Bitcoin atau Faktur Lightning yang valid",
     "utils.handleAnything.lnurlAuthNotSupported": "LnurlAuth tidak didukung oleh implementasi node Anda",
+    "utils.handleAnything.channelsNotSupported": "Opening channels is not supported by this wallet",
     "utils.handleAnything.unsupportedLnurlType": "Tipe lnurl tidak didukung",
     "utils.handleAnything.invalidLnurlParams": "Tidak bisa memproses parameter lnurl",
     "utils.handleAnything.nostrProfileError": "Gagal mengambil data profil Nostr",

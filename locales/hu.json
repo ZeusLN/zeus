@@ -1769,6 +1769,7 @@
     "utils.handleAnything.lightningAddressError": "Hiba történt a Lightning Cím adat lekérésekor",
     "utils.handleAnything.notValid": "A megadott érték nem megfelelő bitcoin cím vagy villámszámla.",
     "utils.handleAnything.lnurlAuthNotSupported": "LnurlAuth nem támogatott az ön node implementációján",
+    "utils.handleAnything.channelsNotSupported": "Opening channels is not supported by this wallet",
     "utils.handleAnything.unsupportedLnurlType": "Nem támogatott lnurl típus",
     "utils.handleAnything.invalidLnurlParams": "Could not parse lnurl params",
     "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",

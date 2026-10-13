@@ -1769,6 +1769,7 @@
     "utils.handleAnything.lightningAddressError": "خطا در دستیابی به داده‌های نشانی لایتنینگ",
     "utils.handleAnything.notValid": "مقدار داده شده نشانی بیت‌کوین یا رسید لایتنینگ درست نبود",
     "utils.handleAnything.lnurlAuthNotSupported": "LnurlAuth  توسط پیاده سازی گره شما پشتیبانی نمی شود",
+    "utils.handleAnything.channelsNotSupported": "Opening channels is not supported by this wallet",
     "utils.handleAnything.unsupportedLnurlType": "نوع lnurl پشتیبانی نشده",
     "utils.handleAnything.invalidLnurlParams": "اجزا lnurl تجزیه نشد",
     "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",

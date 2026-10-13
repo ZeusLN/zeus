@@ -1769,6 +1769,7 @@
     "utils.handleAnything.lightningAddressError": "Pogreška u dohvaćanju podataka o lightning adresi",
     "utils.handleAnything.notValid": "Vrijednost nije bila valjana bitcoin adresa ili lightning faktura",
     "utils.handleAnything.lnurlAuthNotSupported": "Vaša implementacija noda ne podržava LnurlAuth",
+    "utils.handleAnything.channelsNotSupported": "Opening channels is not supported by this wallet",
     "utils.handleAnything.unsupportedLnurlType": "Nepodržani tip LNURL",
     "utils.handleAnything.invalidLnurlParams": "Nije moguće analizirati lnurl parametre",
     "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",

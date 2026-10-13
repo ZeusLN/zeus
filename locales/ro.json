@@ -1769,6 +1769,7 @@
     "utils.handleAnything.lightningAddressError": "Eroare obținere date despre Adresa Lightning",
     "utils.handleAnything.notValid": "Valoarea introdusă nu este o adresă Bitcoin validă sau o factură Lightning",
     "utils.handleAnything.lnurlAuthNotSupported": "Implementarea nodului tău nu suportă LnurlAuth",
+    "utils.handleAnything.channelsNotSupported": "Opening channels is not supported by this wallet",
     "utils.handleAnything.unsupportedLnurlType": "Tip lnurl nesuportat",
     "utils.handleAnything.invalidLnurlParams": "Nu s-au putut interpreta parametrii lnurl",
     "utils.handleAnything.nostrProfileError": "Eroare la preluarea profilului Nostr",

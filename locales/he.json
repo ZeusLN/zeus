@@ -1769,6 +1769,7 @@
     "utils.handleAnything.lightningAddressError": "שגיאה במשיכת נתוני כתובת ברק",
     "utils.handleAnything.notValid": "הערך שהוכנס אינו תואם לכתובת ביטקוין או לייטנינג תקינים",
     "utils.handleAnything.lnurlAuthNotSupported": "אימות באמצעות Lnurl אינו נתמך בצומת שלך",
+    "utils.handleAnything.channelsNotSupported": "Opening channels is not supported by this wallet",
     "utils.handleAnything.unsupportedLnurlType": "סוג lnurl לא נתמך",
     "utils.handleAnything.invalidLnurlParams": "לא ניתן לנתח משתני lnurl",
     "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",

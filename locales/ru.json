@@ -1769,6 +1769,7 @@
     "utils.handleAnything.lightningAddressError": "Ошибка при получении данных адреса Lightning.",
     "utils.handleAnything.notValid": "Предоставленные данные не являются валидным биткоин-адресом или лайтнинг-инвойсом",
     "utils.handleAnything.lnurlAuthNotSupported": "Аутентификация через Лайтнинг не поддерживается имплементацией вашего узла",
+    "utils.handleAnything.channelsNotSupported": "Opening channels is not supported by this wallet",
     "utils.handleAnything.unsupportedLnurlType": "Неподдерживаемый тип lnurl",
     "utils.handleAnything.invalidLnurlParams": "Парсинг параметров lnurl не удался",
     "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",

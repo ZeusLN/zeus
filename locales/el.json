@@ -1769,6 +1769,7 @@
     "utils.handleAnything.lightningAddressError": "Σφάλμα ανάκτησης δεδομένων διεύθυνσης Lightning",
     "utils.handleAnything.notValid": "Η τιμή που δόθηκε δεν ήταν έγκυρη διεύθυνση Bitcoin ή Lightning τιμολόγιο",
     "utils.handleAnything.lnurlAuthNotSupported": "Το LnurlAuth δεν υποστηρίζεται από την υλοποίηση του κόμβου σας",
+    "utils.handleAnything.channelsNotSupported": "Opening channels is not supported by this wallet",
     "utils.handleAnything.unsupportedLnurlType": "Μη υποστηριζόμενος τύπος lnurl",
     "utils.handleAnything.invalidLnurlParams": "Δεν ήταν δυνατή η ανάλυση των παραμέτρων lnurl",
     "utils.handleAnything.nostrProfileError": "Σφάλμα ανάκτησης προφίλ Nostr",

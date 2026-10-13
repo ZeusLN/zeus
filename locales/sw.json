@@ -1769,6 +1769,7 @@
     "utils.handleAnything.lightningAddressError": "Kosa la kupata data ya Anwani ya Umeme",
     "utils.handleAnything.notValid": "Thamani iliyoletwa haikuwa anwani halali ya Bitcoin au Funguo la Umeme",
     "utils.handleAnything.lnurlAuthNotSupported": "LnurlAuth haiauniwi na utekelezaji wako wa nodi",
+    "utils.handleAnything.channelsNotSupported": "Opening channels is not supported by this wallet",
     "utils.handleAnything.unsupportedLnurlType": "Aina isiyoauniwa ya lnurl",
     "utils.handleAnything.invalidLnurlParams": "Haiwezi kupambua vigezo vya lnurl",
     "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",

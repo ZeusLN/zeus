@@ -1769,6 +1769,7 @@
     "utils.handleAnything.lightningAddressError": "Error fetching Lightning Address data",
     "utils.handleAnything.notValid": "提供された値が有効なビットコインアドレスまたはライトニングインボイスではありません",
     "utils.handleAnything.lnurlAuthNotSupported": "LNURL認証があなたのノードの実装でサポートされていません。",
+    "utils.handleAnything.channelsNotSupported": "Opening channels is not supported by this wallet",
     "utils.handleAnything.unsupportedLnurlType": "サポートしていないLNURLタイプ",
     "utils.handleAnything.invalidLnurlParams": "LNURLパラメタが解釈できない",
     "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",

@@ -1769,6 +1769,7 @@
     "utils.handleAnything.lightningAddressError": "Virhe salamaosoitetietojen noutamisessa",
     "utils.handleAnything.notValid": "Annettu arvo ei ollut kelvollinen Bitcoin-osoite tai salamalasku",
     "utils.handleAnything.lnurlAuthNotSupported": "Solmun toteutus ei tue LnurlAuth-toimintoa",
+    "utils.handleAnything.channelsNotSupported": "Opening channels is not supported by this wallet",
     "utils.handleAnything.unsupportedLnurlType": "Ei tuettu lnurl-tyyppi",
     "utils.handleAnything.invalidLnurlParams": "Ei voitu jäsentää lnurl-parametreja",
     "utils.handleAnything.nostrProfileError": "Virhe Nostr-profiilin noutamisessa",
