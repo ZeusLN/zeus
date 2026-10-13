@@ -41,7 +41,14 @@ jest.mock('../../utils/LdkNodeUtils', () => ({
     DEFAULT_SCORER_URL: ''
 }));
 jest.mock('../../storage', () => ({}));
-jest.mock('../../components/Button', () => 'Button');
+jest.mock('../../components/Button', () => {
+    const { Pressable, Text } = require('react-native');
+    return ({ title, onPress, disabled }: any) => (
+        <Pressable role="button" onPress={onPress} disabled={disabled}>
+            <Text>{title}</Text>
+        </Pressable>
+    );
+});
 jest.mock('../../components/CollapsedQR', () => 'CollapsedQR');
 jest.mock('../../components/DropdownSetting', () => 'DropdownSetting');
 jest.mock('../../components/Header', () => 'Header');
@@ -54,11 +61,15 @@ jest.mock('../../components/SuccessErrorMessage', () => ({
     WarningMessage: 'WarningMessage'
 }));
 jest.mock('../../components/Switch', () => 'Switch');
-jest.mock('../../components/TextInput', () => 'TextInput');
+jest.mock('../../components/TextInput', () => {
+    const { TextInput } = require('react-native');
+    return (props: any) => <TextInput {...props} />;
+});
 jest.mock('../../components/Accordion', () => 'Accordion');
 jest.mock('../../components/VssServerPicker', () => ({
     __esModule: true,
-    default: 'VssServerPicker'
+    default: 'VssServerPicker',
+    isVssServerValid: () => true
 }));
 jest.mock('../../components/layout/Row', () => ({ Row: 'Row' }));
 jest.mock('../../components/ShowHideToggle', () => 'ShowHideToggle');
@@ -66,157 +77,264 @@ jest.mock('../../assets/images/SVG/Scan.svg', () => 'Scan');
 jest.mock('../../assets/images/SVG/Add.svg', () => 'AddIcon');
 
 import * as React from 'react';
+import Clipboard from '@react-native-clipboard/clipboard';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import WalletConfiguration from './WalletConfiguration';
 import { confirmAction } from '../../utils/ActionUtils';
 
 const LNDHUB_IMPORT = 'lndhub://alice:secret@https://lndhub.example.com';
 
-const makeView = (state: any = {}) => {
-    const view = new WalletConfiguration({
-        navigation: {},
-        route: { params: {} },
-        SettingsStore: {}
-    } as unknown as React.ComponentProps<typeof WalletConfiguration>);
-    view.state = { ...view.state, ...state };
-    // Not mounted, so apply updates synchronously
-    view.setState = (update: any) => {
-        view.state = { ...view.state, ...update };
+// Opens the screen on an existing node at index 1, so a save neither
+// reconnects (the active node is 0) nor creates a new entry
+const renderView = async (
+    node: any,
+    { clipboard = false }: { clipboard?: boolean } = {}
+) => {
+    const updateSettings = jest.fn(() => Promise.resolve());
+    const SettingsStore = {
+        settings: { privacy: { clipboard }, selectedNode: 0 },
+        updateSettings,
+        setConnectingStatus: jest.fn()
     };
-    return view;
+    const navigation = {
+        goBack: jest.fn(),
+        navigate: jest.fn(),
+        reset: jest.fn()
+    };
+    await render(
+        <WalletConfiguration
+            {...({
+                navigation,
+                route: { params: { node, index: 1, saved: false } },
+                SettingsStore
+            } as any)}
+        />
+    );
+    return { updateSettings, navigation };
+};
+
+// The node the last save writes into slot 1 of the saved nodes
+const savedNode = (updateSettings: jest.Mock) => {
+    const calls = updateSettings.mock.calls as any[];
+    const update = calls[calls.length - 1][0];
+    return update({ nodes: [{}, {}] }).nodes[1];
+};
+
+const pressButton = (name: string) =>
+    fireEvent.press(screen.getByRole('button', { name }));
+
+const save = () => pressButton('views.Settings.WalletConfiguration.saveWallet');
+
+const interfaceDropdown = () =>
+    screen.container.queryAll(
+        (n) =>
+            n.type === 'DropdownSetting' &&
+            n.props.title ===
+                'views.Settings.WalletConfiguration.walletInterface'
+    )[0];
+
+const LND_NODE = {
+    implementation: 'lnd',
+    host: 'https://node.example.com',
+    port: '8080',
+    macaroonHex: 'deadbeef',
+    rune: 'rune',
+    certVerification: true
 };
 
 describe('WalletConfiguration', () => {
     beforeEach(() => {
         (confirmAction as jest.Mock).mockClear();
+        (Clipboard.getString as jest.Mock).mockClear().mockResolvedValue('');
     });
 
     describe('lndhub clipboard import', () => {
-        it('clears REST fields left over from a previous config', () => {
-            const view = makeView({
-                implementation: 'lnd',
-                host: 'http://192.168.1.50',
-                port: '8080',
-                macaroonHex: 'deadbeef',
-                rune: 'rune',
-                suggestImport: LNDHUB_IMPORT
+        it('offers a copied lndhub address and clears REST fields left over from a previous config', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(LNDHUB_IMPORT);
+            const { updateSettings } = await renderView(
+                { ...LND_NODE, host: 'http://192.168.1.50' },
+                { clipboard: true }
+            );
+            expect(screen.getByText(LNDHUB_IMPORT)).toBeOnTheScreen();
+
+            await pressButton('views.Settings.AddEditNode.import');
+            expect(screen.queryByText(LNDHUB_IMPORT)).not.toBeOnTheScreen();
+            expect(interfaceDropdown().props.selectedValue).toBe('lndhub');
+            expect(screen.getByPlaceholderText('https://')).toHaveDisplayValue(
+                'https://lndhub.example.com'
+            );
+
+            await save();
+
+            expect(savedNode(updateSettings)).toMatchObject({
+                implementation: 'lndhub',
+                lndhubUrl: 'https://lndhub.example.com',
+                username: 'alice',
+                password: 'secret',
+                host: '',
+                port: '',
+                macaroonHex: '',
+                rune: ''
             });
+        });
 
-            view.importClipboard();
+        it('does not read the clipboard when clipboard reading is off', async () => {
+            await renderView(LND_NODE);
 
-            expect(view.state.implementation).toBe('lndhub');
-            expect(view.state.lndhubUrl).toBe('https://lndhub.example.com');
-            expect(view.state.username).toBe('alice');
-            expect(view.state.password).toBe('secret');
-            expect(view.state.host).toBe('');
-            expect(view.state.port).toBe('');
-            expect(view.state.macaroonHex).toBe('');
-            expect(view.state.rune).toBe('');
+            expect(Clipboard.getString).not.toHaveBeenCalled();
+            expect(
+                screen.queryByRole('button', {
+                    name: 'views.Settings.AddEditNode.import'
+                })
+            ).not.toBeOnTheScreen();
         });
     });
 
     describe('implementation dropdown', () => {
-        it('clears the previous server address and credentials', () => {
-            const view = makeView({
-                implementation: 'lnd',
-                host: 'https://node.example.com',
-                port: '8080',
-                macaroonHex: 'deadbeef',
-                rune: 'rune',
-                lndhubUrl: 'https://lndhub.example.com'
+        it('clears the previous server address and credentials', async () => {
+            // existingAccount shows the username and password fields
+            // certVerification starts false so the switch to lndhub has
+            // to set it
+            const { updateSettings } = await renderView({
+                ...LND_NODE,
+                certVerification: false,
+                lndhubUrl: 'https://old-lndhub.example.com',
+                existingAccount: true
             });
 
-            view.selectImplementation('lndhub');
+            await fireEvent(interfaceDropdown(), 'valueChange', 'lndhub');
 
-            expect(view.state.implementation).toBe('lndhub');
-            expect(view.state.certVerification).toBe(true);
-            expect(view.state.host).toBe('');
-            expect(view.state.port).toBe('');
-            expect(view.state.macaroonHex).toBe('');
-            expect(view.state.rune).toBe('');
-            expect(view.state.lndhubUrl).toBe('');
+            expect(interfaceDropdown().props.selectedValue).toBe('lndhub');
+            expect(screen.getByPlaceholderText('https://')).toHaveDisplayValue(
+                ''
+            );
+
+            await fireEvent.changeText(
+                screen.getByPlaceholderText('https://'),
+                'https://lndhub.example.com'
+            );
+            const [username, password] = screen.getAllByPlaceholderText('...');
+            await fireEvent.changeText(username, 'alice');
+            await fireEvent.changeText(password, 'secret');
+            await save();
+
+            expect(savedNode(updateSettings)).toMatchObject({
+                implementation: 'lndhub',
+                certVerification: true,
+                lndhubUrl: 'https://lndhub.example.com',
+                host: '',
+                port: '',
+                macaroonHex: '',
+                rune: ''
+            });
         });
     });
 
     describe('cleartext HTTP gate', () => {
-        const save = (state: any) => {
-            const view = makeView(state);
-            const perform = jest.fn();
-            (view as any).performSaveWalletConfiguration = perform;
-            view.saveWalletConfiguration();
-            return perform;
-        };
-
         // LndHub requests go to lndhubUrl only, so a stale host on an
         // lndhub config decides nothing
-        it('warns on lndhub with an http:// lndhubUrl behind a stale https:// host', () => {
-            const perform = save({
-                implementation: 'lndhub',
+        const LNDHUB_NODE = {
+            implementation: 'lndhub',
+            username: 'alice',
+            password: 'secret',
+            existingAccount: true,
+            certVerification: true
+        };
+
+        it('warns on lndhub with an http:// lndhubUrl behind a stale https:// host', async () => {
+            const { updateSettings } = await renderView({
+                ...LNDHUB_NODE,
                 host: 'https://node.example.com',
                 lndhubUrl: 'http://lndhub.example.com'
             });
+            await save();
 
             expect(confirmAction).toHaveBeenCalledTimes(1);
-            expect(perform).not.toHaveBeenCalled();
+            expect(updateSettings).not.toHaveBeenCalled();
         });
 
-        it('ignores a stale http:// host on an lndhub config', () => {
-            save({
-                implementation: 'lndhub',
+        it('saves after the warning is accepted', async () => {
+            const { updateSettings } = await renderView({
+                ...LNDHUB_NODE,
+                lndhubUrl: 'http://lndhub.example.com'
+            });
+            await save();
+
+            const [, , proceed] = (confirmAction as jest.Mock).mock.calls[0];
+            await act(async () => proceed.onPress());
+            expect(savedNode(updateSettings).lndhubUrl).toBe(
+                'http://lndhub.example.com'
+            );
+        });
+
+        it('ignores a stale http:// host on an lndhub config', async () => {
+            const { updateSettings } = await renderView({
+                ...LNDHUB_NODE,
                 host: 'http://192.168.1.50',
                 lndhubUrl: 'https://lndhub.example.com'
             });
+            await save();
 
             expect(confirmAction).not.toHaveBeenCalled();
+            expect(updateSettings).toHaveBeenCalled();
         });
 
-        it('warns on lndhub with an http:// lndhubUrl and no host', () => {
-            save({
-                implementation: 'lndhub',
+        it('warns on lndhub with an http:// lndhubUrl and no host', async () => {
+            const { updateSettings } = await renderView({
+                ...LNDHUB_NODE,
                 host: '',
                 lndhubUrl: 'http://lndhub.example.com'
             });
+            await save();
 
             expect(confirmAction).toHaveBeenCalledTimes(1);
+            expect(updateSettings).not.toHaveBeenCalled();
         });
 
-        it('does not warn on lndhub with an https:// lndhubUrl', () => {
-            const perform = save({
-                implementation: 'lndhub',
+        it('does not warn on lndhub with an https:// lndhubUrl', async () => {
+            const { updateSettings } = await renderView({
+                ...LNDHUB_NODE,
                 host: '',
                 lndhubUrl: 'https://lndhub.example.com'
             });
+            await save();
 
             expect(confirmAction).not.toHaveBeenCalled();
-            expect(perform).toHaveBeenCalled();
+            expect(updateSettings).toHaveBeenCalled();
         });
 
-        it('does not warn on lndhub over an http:// onion host', () => {
-            save({
-                implementation: 'lndhub',
+        it('does not warn on lndhub over an http:// onion host', async () => {
+            const { updateSettings } = await renderView({
+                ...LNDHUB_NODE,
                 host: '',
                 lndhubUrl: 'http://abcdefghijklmnop.onion'
             });
+            await save();
 
             expect(confirmAction).not.toHaveBeenCalled();
+            expect(updateSettings).toHaveBeenCalled();
         });
 
-        it('ignores a stale http:// lndhubUrl on an lnd config', () => {
-            save({
-                implementation: 'lnd',
-                host: 'https://node.example.com',
+        it('ignores a stale http:// lndhubUrl on an lnd config', async () => {
+            const { updateSettings } = await renderView({
+                ...LND_NODE,
                 lndhubUrl: 'http://lndhub.example.com'
             });
+            await save();
 
             expect(confirmAction).not.toHaveBeenCalled();
+            expect(updateSettings).toHaveBeenCalled();
         });
 
-        it('warns on lnd with an http:// host', () => {
-            save({
-                implementation: 'lnd',
+        it('warns on lnd with an http:// host', async () => {
+            const { updateSettings } = await renderView({
+                ...LND_NODE,
                 host: 'http://192.168.1.50'
             });
+            await save();
 
             expect(confirmAction).toHaveBeenCalledTimes(1);
+            expect(updateSettings).not.toHaveBeenCalled();
         });
     });
 });
