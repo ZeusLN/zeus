@@ -46,7 +46,10 @@ describe('Switch', () => {
         const onValueChange = jest.fn();
         const sw = await renderSwitch({ value: true, onValueChange });
         expect(sw).toBeChecked();
-        await fireEvent(sw, 'valueChange', false);
+        // Fire the native switch's own change event. A 'valueChange' event
+        // would reach Switch's onValueChange prop directly and pass even
+        // if Switch never forwarded it to the native switch.
+        await fireEvent(sw, 'change', { nativeEvent: { value: false } });
         expect(onValueChange).toHaveBeenCalledWith(false);
     });
 

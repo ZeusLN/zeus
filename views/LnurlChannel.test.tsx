@@ -108,7 +108,9 @@ describe('LnurlChannel', () => {
 
     it('requests an announced channel after the toggle is switched on', async () => {
         await renderView();
-        await fireEvent(screen.getByRole('switch'), 'valueChange', true);
+        await fireEvent(screen.getByRole('switch'), 'change', {
+            nativeEvent: { value: true }
+        });
         expect(screen.getByRole('switch')).toBeChecked();
         expect(screen.getByRole('switch')).toHaveProp(
             'thumbTintColor',
