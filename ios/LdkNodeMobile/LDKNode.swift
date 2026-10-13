@@ -2834,17 +2834,17 @@ public protocol NodeProtocol : AnyObject {
     
     func onchainPayment()  -> OnchainPayment
     
-    func openAnnouncedChannel(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?) throws  -> UserChannelId
+    func openAnnouncedChannel(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, feeRate: FeeRate?) throws  -> UserChannelId
     
-    func openAnnouncedChannelFundMax(nodeId: PublicKey, address: SocketAddress, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint]?) throws  -> UserChannelId
+    func openAnnouncedChannelFundMax(nodeId: PublicKey, address: SocketAddress, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint]?, feeRate: FeeRate?) throws  -> UserChannelId
     
-    func openAnnouncedChannelWithUtxos(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint]) throws  -> UserChannelId
+    func openAnnouncedChannelWithUtxos(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint], feeRate: FeeRate?) throws  -> UserChannelId
     
-    func openChannel(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?) throws  -> UserChannelId
+    func openChannel(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, feeRate: FeeRate?) throws  -> UserChannelId
     
-    func openChannelFundMax(nodeId: PublicKey, address: SocketAddress, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint]?) throws  -> UserChannelId
+    func openChannelFundMax(nodeId: PublicKey, address: SocketAddress, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint]?, feeRate: FeeRate?) throws  -> UserChannelId
     
-    func openChannelWithUtxos(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint]) throws  -> UserChannelId
+    func openChannelWithUtxos(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint], feeRate: FeeRate?) throws  -> UserChannelId
     
     func payment(paymentId: PaymentId)  -> PaymentDetails?
     
@@ -3115,31 +3115,33 @@ open func onchainPayment() -> OnchainPayment {
 })
 }
     
-open func openAnnouncedChannel(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?)throws  -> UserChannelId {
+open func openAnnouncedChannel(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, feeRate: FeeRate?)throws  -> UserChannelId {
     return try  FfiConverterTypeUserChannelId.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_node_open_announced_channel(self.uniffiClonePointer(),
         FfiConverterTypePublicKey.lower(nodeId),
         FfiConverterTypeSocketAddress.lower(address),
         FfiConverterUInt64.lower(channelAmountSats),
         FfiConverterOptionUInt64.lower(pushToCounterpartyMsat),
-        FfiConverterOptionTypeChannelConfig.lower(channelConfig),$0
+        FfiConverterOptionTypeChannelConfig.lower(channelConfig),,
+        FfiConverterOptionTypeFeeRate.lower(feeRate),$0
     )
 })
 }
     
-open func openAnnouncedChannelFundMax(nodeId: PublicKey, address: SocketAddress, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint]?)throws  -> UserChannelId {
+open func openAnnouncedChannelFundMax(nodeId: PublicKey, address: SocketAddress, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint]?, feeRate: FeeRate?)throws  -> UserChannelId {
     return try  FfiConverterTypeUserChannelId.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_node_open_announced_channel_fund_max(self.uniffiClonePointer(),
         FfiConverterTypePublicKey.lower(nodeId),
         FfiConverterTypeSocketAddress.lower(address),
         FfiConverterOptionUInt64.lower(pushToCounterpartyMsat),
         FfiConverterOptionTypeChannelConfig.lower(channelConfig),
-        FfiConverterOptionSequenceTypeOutPoint.lower(utxos),$0
+        FfiConverterOptionSequenceTypeOutPoint.lower(utxos),,
+        FfiConverterOptionTypeFeeRate.lower(feeRate),$0
     )
 })
 }
     
-open func openAnnouncedChannelWithUtxos(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint])throws  -> UserChannelId {
+open func openAnnouncedChannelWithUtxos(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint], feeRate: FeeRate?)throws  -> UserChannelId {
     return try  FfiConverterTypeUserChannelId.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_node_open_announced_channel_with_utxos(self.uniffiClonePointer(),
         FfiConverterTypePublicKey.lower(nodeId),
@@ -3147,36 +3149,39 @@ open func openAnnouncedChannelWithUtxos(nodeId: PublicKey, address: SocketAddres
         FfiConverterUInt64.lower(channelAmountSats),
         FfiConverterOptionUInt64.lower(pushToCounterpartyMsat),
         FfiConverterOptionTypeChannelConfig.lower(channelConfig),
-        FfiConverterSequenceTypeOutPoint.lower(utxos),$0
+        FfiConverterSequenceTypeOutPoint.lower(utxos),,
+        FfiConverterOptionTypeFeeRate.lower(feeRate),$0
     )
 })
 }
     
-open func openChannel(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?)throws  -> UserChannelId {
+open func openChannel(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, feeRate: FeeRate?)throws  -> UserChannelId {
     return try  FfiConverterTypeUserChannelId.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_node_open_channel(self.uniffiClonePointer(),
         FfiConverterTypePublicKey.lower(nodeId),
         FfiConverterTypeSocketAddress.lower(address),
         FfiConverterUInt64.lower(channelAmountSats),
         FfiConverterOptionUInt64.lower(pushToCounterpartyMsat),
-        FfiConverterOptionTypeChannelConfig.lower(channelConfig),$0
+        FfiConverterOptionTypeChannelConfig.lower(channelConfig),,
+        FfiConverterOptionTypeFeeRate.lower(feeRate),$0
     )
 })
 }
     
-open func openChannelFundMax(nodeId: PublicKey, address: SocketAddress, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint]?)throws  -> UserChannelId {
+open func openChannelFundMax(nodeId: PublicKey, address: SocketAddress, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint]?, feeRate: FeeRate?)throws  -> UserChannelId {
     return try  FfiConverterTypeUserChannelId.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_node_open_channel_fund_max(self.uniffiClonePointer(),
         FfiConverterTypePublicKey.lower(nodeId),
         FfiConverterTypeSocketAddress.lower(address),
         FfiConverterOptionUInt64.lower(pushToCounterpartyMsat),
         FfiConverterOptionTypeChannelConfig.lower(channelConfig),
-        FfiConverterOptionSequenceTypeOutPoint.lower(utxos),$0
+        FfiConverterOptionSequenceTypeOutPoint.lower(utxos),,
+        FfiConverterOptionTypeFeeRate.lower(feeRate),$0
     )
 })
 }
     
-open func openChannelWithUtxos(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint])throws  -> UserChannelId {
+open func openChannelWithUtxos(nodeId: PublicKey, address: SocketAddress, channelAmountSats: UInt64, pushToCounterpartyMsat: UInt64?, channelConfig: ChannelConfig?, utxos: [OutPoint], feeRate: FeeRate?)throws  -> UserChannelId {
     return try  FfiConverterTypeUserChannelId.lift(try rustCallWithError(FfiConverterTypeNodeError.lift) {
     uniffi_ldk_node_fn_method_node_open_channel_with_utxos(self.uniffiClonePointer(),
         FfiConverterTypePublicKey.lower(nodeId),
@@ -3184,7 +3189,8 @@ open func openChannelWithUtxos(nodeId: PublicKey, address: SocketAddress, channe
         FfiConverterUInt64.lower(channelAmountSats),
         FfiConverterOptionUInt64.lower(pushToCounterpartyMsat),
         FfiConverterOptionTypeChannelConfig.lower(channelConfig),
-        FfiConverterSequenceTypeOutPoint.lower(utxos),$0
+        FfiConverterSequenceTypeOutPoint.lower(utxos),,
+        FfiConverterOptionTypeFeeRate.lower(feeRate),$0
     )
 })
 }
@@ -13435,22 +13441,22 @@ private var initializationResult: InitializationResult = {
     if (uniffi_ldk_node_checksum_method_node_onchain_payment() != 6092) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ldk_node_checksum_method_node_open_announced_channel() != 36623) {
+    if (uniffi_ldk_node_checksum_method_node_open_announced_channel() != 41440) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ldk_node_checksum_method_node_open_announced_channel_fund_max() != 53906) {
+    if (uniffi_ldk_node_checksum_method_node_open_announced_channel_fund_max() != 60399) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ldk_node_checksum_method_node_open_announced_channel_with_utxos() != 5133) {
+    if (uniffi_ldk_node_checksum_method_node_open_announced_channel_with_utxos() != 8290) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ldk_node_checksum_method_node_open_channel() != 40283) {
+    if (uniffi_ldk_node_checksum_method_node_open_channel() != 57207) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ldk_node_checksum_method_node_open_channel_fund_max() != 61872) {
+    if (uniffi_ldk_node_checksum_method_node_open_channel_fund_max() != 26092) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_ldk_node_checksum_method_node_open_channel_with_utxos() != 63529) {
+    if (uniffi_ldk_node_checksum_method_node_open_channel_with_utxos() != 35326) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_ldk_node_checksum_method_node_payment() != 60296) {

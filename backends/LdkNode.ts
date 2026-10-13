@@ -12,6 +12,7 @@ import libraryVersions from '../fetch-libraries-versions.json';
 import LdkNodeInjection from '../ldknode/LdkNodeInjection';
 import Base64Utils from '../utils/Base64Utils';
 import { feeLimitSatsToMaxRoutingFeeMsat } from '../utils/AmountUtils';
+import { sanitizeSatPerVbyte } from '../utils/FeeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import type {
     Network,
@@ -909,6 +910,11 @@ export default class LdkNode {
                   })
                 : null;
 
+        // The fee rate the user set in the UI. Anything unusable becomes the
+        // "no rate" sentinel so ldk-node falls back to its own estimation
+        // rather than being handed a nonsense FeeRate.
+        const satPerVbyte = sanitizeSatPerVbyte(data.sat_per_vbyte);
+
         if (data.fundMax) {
             userChannelId = await LdkNodeInjection.channel.openChannelFundMax({
                 nodeId: data.node_pubkey_string,
@@ -917,7 +923,8 @@ export default class LdkNode {
                     ? Number(data.push_sat) * 1000
                     : undefined,
                 announceChannel: !data.privateChannel,
-                utxos: utxoOutpoints
+                utxos: utxoOutpoints,
+                satPerVbyte
             });
         } else if (utxoOutpoints) {
             userChannelId = await LdkNodeInjection.channel.openChannelWithUtxos(
@@ -929,7 +936,8 @@ export default class LdkNode {
                         ? Number(data.push_sat) * 1000
                         : undefined,
                     announceChannel: !data.privateChannel,
-                    utxos: utxoOutpoints
+                    utxos: utxoOutpoints,
+                    satPerVbyte
                 }
             );
         } else {
@@ -940,7 +948,8 @@ export default class LdkNode {
                 pushToCounterpartyMsat: data.push_sat
                     ? Number(data.push_sat) * 1000
                     : undefined,
-                announceChannel: !data.privateChannel
+                announceChannel: !data.privateChannel,
+                satPerVbyte
             });
         }
 
@@ -1221,6 +1230,11 @@ export default class LdkNode {
     sendCoins = async (data: any): Promise<any> => {
         let txid: string;
 
+        // The fee rate the user set in the UI. Anything unusable becomes the
+        // "no rate" sentinel so ldk-node falls back to its own estimation
+        // rather than being handed a nonsense FeeRate.
+        const satPerVbyte = sanitizeSatPerVbyte(data.sat_per_vbyte);
+
         if (data.utxos?.length > 0) {
             const outpoints = data.utxos.map((s: string) => {
                 const [utxoTxid, vout] = s.split(':');
@@ -1232,7 +1246,8 @@ export default class LdkNode {
                         {
                             address: data.addr,
                             retainReserve: false,
-                            utxos: outpoints
+                            utxos: outpoints,
+                            satPerVbyte
                         }
                     );
             } else {
@@ -1241,18 +1256,22 @@ export default class LdkNode {
                         {
                             address: data.addr,
                             amountSats: Number(data.amount),
-                            utxos: outpoints
+                            utxos: outpoints,
+                            satPerVbyte
                         }
                     );
             }
         } else if (data.send_all) {
             txid = await LdkNodeInjection.onchain.sendAllToOnchainAddress(
-                data.addr
+                data.addr,
+                false,
+                satPerVbyte
             );
         } else {
             txid = await LdkNodeInjection.onchain.sendToOnchainAddress({
                 address: data.addr,
-                amountSats: Number(data.amount)
+                amountSats: Number(data.amount),
+                satPerVbyte
             });
         }
 
@@ -2256,8 +2275,7 @@ export default class LdkNode {
     supportsNestedSegWit = () => false;
     supportsTaproot = () => false; // LDK Node's BDK wallet uses BIP-84 descriptors, so it can only hand out P2WPKH addresses
     supportsBumpFee = () => false;
-    // TODO: flip to true when the user's fee rate is applied to on-chain sends (#4354)
-    supportsOnchainSendFeeRate = () => false;
+    supportsOnchainSendFeeRate = () => true;
     // TODO: flip to true when the user's fee rate is applied to channel opens (#4657)
     supportsChannelOpenFeeRate = () => false;
     // ldk-node's channel open calls take no min confs, and fund max
