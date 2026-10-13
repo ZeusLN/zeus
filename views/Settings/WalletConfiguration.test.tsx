@@ -193,8 +193,11 @@ describe('WalletConfiguration', () => {
     describe('implementation dropdown', () => {
         it('clears the previous server address and credentials', async () => {
             // existingAccount shows the username and password fields
+            // certVerification starts false so the switch to lndhub has
+            // to set it
             const { updateSettings } = await renderView({
                 ...LND_NODE,
+                certVerification: false,
                 lndhubUrl: 'https://old-lndhub.example.com',
                 existingAccount: true
             });
@@ -277,7 +280,7 @@ describe('WalletConfiguration', () => {
         });
 
         it('warns on lndhub with an http:// lndhubUrl and no host', async () => {
-            await renderView({
+            const { updateSettings } = await renderView({
                 ...LNDHUB_NODE,
                 host: '',
                 lndhubUrl: 'http://lndhub.example.com'
@@ -285,6 +288,7 @@ describe('WalletConfiguration', () => {
             await save();
 
             expect(confirmAction).toHaveBeenCalledTimes(1);
+            expect(updateSettings).not.toHaveBeenCalled();
         });
 
         it('does not warn on lndhub with an https:// lndhubUrl', async () => {
@@ -300,7 +304,7 @@ describe('WalletConfiguration', () => {
         });
 
         it('does not warn on lndhub over an http:// onion host', async () => {
-            await renderView({
+            const { updateSettings } = await renderView({
                 ...LNDHUB_NODE,
                 host: '',
                 lndhubUrl: 'http://abcdefghijklmnop.onion'
@@ -308,6 +312,7 @@ describe('WalletConfiguration', () => {
             await save();
 
             expect(confirmAction).not.toHaveBeenCalled();
+            expect(updateSettings).toHaveBeenCalled();
         });
 
         it('ignores a stale http:// lndhubUrl on an lnd config', async () => {
