@@ -384,6 +384,125 @@ describe('LSPStore.initFlowLSP', () => {
     });
 });
 
+describe('LSPStore.getLSPInfo across reset', () => {
+    const lspInfo = {
+        pubkey: 'old-lsp-pubkey',
+        connection_methods: [{ address: '203.0.113.1', port: 9735 }]
+    };
+
+    let resolveFetch: (response: any) => void;
+    let rejectFetch: (error: any) => void;
+
+    const makeInfoStore = () => {
+        const connectPeer = jest.fn().mockResolvedValue(undefined);
+        const store = new LSPStore(
+            { implementation: 'embedded-lnd', settings: {} } as any,
+            { channels: [], connectPeer } as any,
+            { nodeInfo: {}, getNodeInfo: jest.fn() } as any
+        );
+        return { store, connectPeer };
+    };
+
+    const okResponse = {
+        info: () => ({ status: 200 }),
+        json: () => lspInfo,
+        text: () => ''
+    };
+
+    const settle = () => new Promise((resolve) => setImmediate(resolve));
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.mocked(ReactNativeBlobUtil.fetch).mockImplementation(
+            () =>
+                new Promise((resolve, reject) => {
+                    resolveFetch = resolve;
+                    rejectFetch = reject;
+                }) as any
+        );
+    });
+
+    it('applies a reply that arrives before reset', async () => {
+        const { store, connectPeer } = makeInfoStore();
+
+        const request = store.getLSPInfo();
+        resolveFetch(okResponse);
+        await expect(request).resolves.toEqual(lspInfo);
+        await settle();
+
+        expect(store.info).toEqual(lspInfo);
+        expect(connectPeer).toHaveBeenCalledTimes(1);
+    });
+
+    it('drops a reply that arrives after reset', async () => {
+        const { store, connectPeer } = makeInfoStore();
+
+        const request = store.getLSPInfo();
+        store.reset();
+        resolveFetch(okResponse);
+        await expect(request).rejects.toBeUndefined();
+        await settle();
+
+        expect(store.info).toEqual({});
+        expect(connectPeer).not.toHaveBeenCalled();
+    });
+
+    it('drops a failure that arrives after reset', async () => {
+        const { store } = makeInfoStore();
+
+        const request = store.getLSPInfo();
+        store.reset();
+        rejectFetch(new Error('timed out'));
+        await expect(request).rejects.toBeUndefined();
+
+        expect(store.flow_error).toBe(false);
+        expect(store.flow_error_msg).toBe('');
+        expect(store.showLspSettings).toBe(false);
+    });
+
+    it('drops an error status that arrives after reset', async () => {
+        const { store } = makeInfoStore();
+
+        const request = store.getLSPInfo();
+        store.reset();
+        resolveFetch({
+            info: () => ({ status: 403 }),
+            json: () => ({ message: 'unavailable in your country' }),
+            text: () => ''
+        });
+        await expect(request).rejects.toBeUndefined();
+
+        expect(store.flow_error).toBe(false);
+        expect(store.showLspSettings).toBe(false);
+    });
+
+    it('keeps a reply when only the errors were reset', async () => {
+        const { store, connectPeer } = makeInfoStore();
+
+        const request = store.getLSPInfo();
+        store.reset(true);
+        resolveFetch(okResponse);
+        await expect(request).resolves.toEqual(lspInfo);
+        await settle();
+
+        expect(store.info).toEqual(lspInfo);
+        expect(connectPeer).toHaveBeenCalledTimes(1);
+    });
+
+    it('applies a request made after reset', async () => {
+        const { store, connectPeer } = makeInfoStore();
+
+        store.reset();
+        const request = store.getLSPInfo();
+        resolveFetch(okResponse);
+        await expect(request).resolves.toEqual(lspInfo);
+        await settle();
+
+        expect(store.info).toEqual(lspInfo);
+        expect(connectPeer).toHaveBeenCalledTimes(1);
+    });
+});
+
 describe('LSPStore remote LND sockets', () => {
     class FakeSocket {
         listeners: { [event: string]: Array<() => void> } = {};

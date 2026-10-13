@@ -47,6 +47,9 @@ export default class LSPStore {
     @observable public showLspSettings: boolean = false;
     @observable public channelAcceptor: any;
     @observable public customMessagesSubscriber: any;
+    // bumped by reset() so a Flow info reply for the previous connection
+    // doesn't write to the next one
+    private flowInfoGeneration = 0;
     // LSPS1
     @observable public getInfoId: string;
     @observable public createOrderId: string;
@@ -121,6 +124,7 @@ export default class LSPStore {
     @action
     public reset = (errorsOnly = false) => {
         if (!errorsOnly) {
+            this.flowInfoGeneration++;
             this.info = {};
             this.resetFee();
             // close before dropping the references: a remote LND socket
@@ -311,7 +315,12 @@ export default class LSPStore {
         return `${prefix}: HTTP ${status}`;
     };
 
+    // Rejects without writing anything if reset() ran while the request
+    // was in flight: the reply belongs to the previous connection, and the
+    // caller no longer waits for it before the next connect resets the store
     public getLSPInfo = () => {
+        const generation = this.flowInfoGeneration;
+        const isCurrent = () => this.flowInfoGeneration === generation;
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'get',
@@ -319,6 +328,10 @@ export default class LSPStore {
                 { 'Content-Type': 'application/json' }
             )
                 .then(async (response: any) => {
+                    if (!isCurrent()) {
+                        reject();
+                        return;
+                    }
                     const status = response.info().status;
                     let data: any;
                     try {
@@ -378,6 +391,10 @@ export default class LSPStore {
                     }
                 })
                 .catch(() => {
+                    if (!isCurrent()) {
+                        reject();
+                        return;
+                    }
                     runInAction(() => {
                         this.flow_error = true;
                         this.flow_error_msg = localeString(
