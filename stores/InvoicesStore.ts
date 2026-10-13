@@ -659,27 +659,18 @@ export default class InvoicesStore {
         return BackendUtils.getNewAddress(request)
             .then((data: any) => {
                 const address =
-                    data.address ||
-                    data.bech32 ||
-                    data.p2tr ||
-                    (data[0] && data[0].address);
+                    data?.address ||
+                    data?.bech32 ||
+                    data?.p2tr ||
+                    data?.[0]?.address;
+                if (!address) return this.addressRequestFailed();
                 runInAction(() => {
                     if (!request.unified) this.onChainAddress = address;
                     if (!request.unified) this.creatingInvoice = false;
                 });
                 return address;
             })
-            .catch((error: any) => {
-                const error_msg = error.toString();
-                runInAction(() => {
-                    this.error_msg =
-                        error_msg ||
-                        localeString(
-                            'stores.InvoicesStore.errorGeneratingAddress'
-                        );
-                    this.creatingInvoice = false;
-                });
-            });
+            .catch(this.addressRequestFailed);
     };
 
     @action
@@ -694,24 +685,29 @@ export default class InvoicesStore {
         this.onChainAddress = null;
         return BackendUtils.getNewChangeAddress(request)
             .then((data: any) => {
-                const address = data.addr;
+                const address = data?.addr;
+                if (!address) return this.addressRequestFailed();
                 runInAction(() => {
                     if (!request.unified) this.onChainAddress = address;
                     if (!request.unified) this.creatingInvoice = false;
                 });
                 return address;
             })
-            .catch((error: any) => {
-                const error_msg = error?.toString();
-                runInAction(() => {
-                    this.error_msg =
-                        error_msg ||
-                        localeString(
-                            'stores.InvoicesStore.errorGeneratingAddress'
-                        );
-                    this.creatingInvoice = false;
-                });
-            });
+            .catch(this.addressRequestFailed);
+    };
+
+    // Shared failure path for getNewAddress and getNewChangeAddress: a
+    // rejection (including with undefined or null) or a response without an
+    // address. Resolves to undefined, which callers treat as no address.
+    private addressRequestFailed = (error?: any): undefined => {
+        const error_msg = error?.toString();
+        runInAction(() => {
+            this.error_msg =
+                error_msg ||
+                localeString('stores.InvoicesStore.errorGeneratingAddress');
+            this.creatingInvoice = false;
+        });
+        return undefined;
     };
 
     public clearAddress = () => (this.onChainAddress = null);
