@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 // mobx-react's main entry needs react-dom; the stores arrive as props here
 jest.mock('mobx-react', () => ({
@@ -79,6 +79,25 @@ describe('LnurlChannel', () => {
             }
         });
         expect(connectButton()).toBeEnabled();
+    });
+
+    it('keeps Connect disabled until the peer connection resolves', async () => {
+        let connected!: () => void;
+        (BackendUtils.connectPeer as jest.Mock).mockReturnValueOnce(
+            new Promise<void>((resolve) => {
+                connected = resolve;
+            })
+        );
+        await renderView();
+
+        expect(connectButton()).toBeDisabled();
+        await fireEvent.press(connectButton());
+        expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+
+        await act(async () => connected());
+        expect(connectButton()).toBeEnabled();
+        await fireEvent.press(connectButton());
+        expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledTimes(1);
     });
 
     it('keeps Connect disabled when the peer connection fails', async () => {
