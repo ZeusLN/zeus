@@ -1,9 +1,11 @@
+jest.mock('../stores/Stores', () => ({}));
 jest.mock('./LocaleUtils', () => ({
     localeString: (s: string) => s
 }));
 
 import { LSPOrderState } from '../models/LSP';
-import { getRightTitleTheme } from './ActivityUtils';
+import Transaction from '../models/Transaction';
+import { getRightTitleTheme, getTransactionSubtitle } from './ActivityUtils';
 
 describe('ActivityUtils', () => {
     describe('getRightTitleTheme', () => {
@@ -127,6 +129,48 @@ describe('ActivityUtils', () => {
             expect(
                 getRightTitleTheme({ getAmount: 1000, model: 'other' })
             ).toBe('secondaryText');
+        });
+    });
+    describe('getTransactionSubtitle', () => {
+        it('labels a transaction with 0 confirmations unconfirmed', () => {
+            expect(
+                getTransactionSubtitle(
+                    new Transaction({ amount: '-50000', num_confirmations: 0 })
+                )
+            ).toBe('general.onchain: general.unconfirmed');
+        });
+
+        it('labels an embedded LND transaction with no num_confirmations unconfirmed', () => {
+            // embedded LND keeps a 0 num_confirmations on the protobuf
+            // prototype, and BaseModel only copies own fields
+            expect(
+                getTransactionSubtitle(new Transaction({ amount: '-50000' }))
+            ).toBe('general.onchain: general.unconfirmed');
+        });
+
+        it('labels an LDK Node pending transaction unconfirmed', () => {
+            expect(
+                getTransactionSubtitle(
+                    new Transaction({
+                        amount: '-50000',
+                        num_confirmations: 0,
+                        status: 'pending'
+                    })
+                )
+            ).toBe('general.onchain: general.unconfirmed');
+        });
+
+        it('labels a confirmed transaction on-chain only', () => {
+            expect(
+                getTransactionSubtitle(
+                    new Transaction({ amount: '100000', num_confirmations: 3 })
+                )
+            ).toBe('general.onchain');
+            expect(
+                getTransactionSubtitle(
+                    new Transaction({ amount: '100000', status: 'confirmed' })
+                )
+            ).toBe('general.onchain');
         });
     });
 });
