@@ -277,6 +277,8 @@ describe('SwapStore.verifyReverseLockup', () => {
                     keys: OUR_KEYS,
                     preimage: PREIMAGE,
                     onchainAmount: ONCHAIN_AMOUNT,
+                    // created with the creation-time amount check
+                    onchainAmountVerified: true,
                     ...details,
                     ...overrides
                 })

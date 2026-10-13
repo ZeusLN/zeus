@@ -105,6 +105,18 @@ const pickFields = (source: any, fields: string[]): { [key: string]: any } => {
 
 const hasPreimage = (swap: any) => !!preimageHexFrom(swap?.preimage);
 
+// The amount in sats of a stored swap's invoice, or undefined when there is
+// none or it can't be decoded
+const invoiceAmountSats = (invoice?: string): number | undefined => {
+    if (!invoice) return undefined;
+    try {
+        const sats = Number(Bolt11Utils.decode(invoice)?.satoshis);
+        return sats > 0 ? sats : undefined;
+    } catch (e) {
+        return undefined;
+    }
+};
+
 /**
  * Keeps one stored entry per swap ID. Running the rescue again used to
  * append a second copy of a reverse swap already re-filed under
@@ -711,6 +723,9 @@ export default class SwapStore {
             responseData.preimage = preimage;
             responseData.destinationAddress = destinationAddress;
             responseData.claimMinerFee = this.claimMinerFee;
+            // onchainAmount passed the check above, so the claim can use it
+            // as the lockup floor
+            responseData.onchainAmountVerified = true;
 
             await this.saveReverseSwaps(
                 responseData,
@@ -858,12 +873,25 @@ export default class SwapStore {
         // payment for the swap instead. With no such payment, or a lockup
         // short of the floor for it, the user has to confirm the amount
         // before the preimage is revealed.
-        let minAmount: number | undefined = swap.onchainAmount ?? undefined;
+        //
+        // A swap created here before onchainAmount was checked at creation
+        // (v13.2.2) stores the host's figure unchecked, so it can't be the
+        // floor either. Its invoice is what this wallet pays, so it sets
+        // the floor the same way a rescued swap's payment does.
+        const amountUnchecked = !swap.imported && !swap.onchainAmountVerified;
+        let minAmount: number | undefined = amountUnchecked
+            ? undefined
+            : swap.onchainAmount ?? undefined;
         let paidAmount: number | undefined;
         let needsConfirmation = false;
         if (minAmount == null) {
+            const invoiceAmount = amountUnchecked
+                ? invoiceAmountSats(swap.invoice)
+                : undefined;
             if (confirmedLockupAmount != null) {
                 minAmount = confirmedLockupAmount;
+            } else if (invoiceAmount) {
+                paidAmount = invoiceAmount;
             } else {
                 const paid = await this.findOwnPaymentAmount(
                     crypto
