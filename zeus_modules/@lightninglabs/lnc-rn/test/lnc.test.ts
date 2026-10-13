@@ -398,4 +398,35 @@ describe('lnc', () => {
             expect(credentials.remoteKey).to.equal('remote-key');
         });
     });
+
+    describe('subscribe', () => {
+        it('passes the request id to the native listener', () => {
+            const lnc = newLnc();
+            const eventName = lnc.subscribe(
+                'lnrpc.Lightning.CloseChannel',
+                { force: true },
+                'req-1'
+            );
+
+            expect(eventName).to.equal('lnrpc.Lightning.CloseChannel');
+            expect(lastCall('initListener')!.args).to.deep.equal([
+                'test-namespace',
+                'lnrpc.Lightning.CloseChannel',
+                '{"force":true}',
+                'req-1'
+            ]);
+        });
+
+        it('passes an empty request id when none is given', () => {
+            const lnc = newLnc();
+            lnc.subscribe('lnrpc.Lightning.SubscribeInvoices');
+
+            expect(lastCall('initListener')!.args).to.deep.equal([
+                'test-namespace',
+                'lnrpc.Lightning.SubscribeInvoices',
+                '{}',
+                ''
+            ]);
+        });
+    });
 });

@@ -13,6 +13,10 @@ import {
     checkLndStreamErrorResponse,
     LndMobileEventEmitter
 } from '../utils/LndMobileUtils';
+import {
+    isEventForRequest,
+    newStreamRequestId
+} from '../utils/StreamRequestUtils';
 
 const {
     addInvoice,
@@ -162,8 +166,10 @@ export default class EmbeddedLND extends LND {
             data.close_address
         );
     openChannelStream = async (data: OpenChannelRequest) => {
+        const requestId = newStreamRequestId();
         return await new Promise((resolve, reject) => {
             LndMobileEventEmitter.addListener('OpenChannel', (e: any) => {
+                if (!isEventForRequest(e, requestId)) return;
                 try {
                     const error = checkLndStreamErrorResponse('OpenChannel', e);
                     if (error === 'EOF') {
@@ -196,7 +202,8 @@ export default class EmbeddedLND extends LND {
                 data.simpleTaprootChannel,
                 data.fundMax,
                 data.utxos,
-                data.funding_shim
+                data.funding_shim,
+                requestId
             );
         });
     };
@@ -308,10 +315,10 @@ export default class EmbeddedLND extends LND {
 
         // ChannelsStore stops waiting after 6 s and ignores any later result,
         // so stop listening then as well. Every close stream reports under
-        // the same CloseChannel event, so a close started later can still
-        // receive this close's late updates: they carry nothing to tell the
-        // requests apart.
+        // the same CloseChannel event; the request id tells this close's
+        // updates apart from the others'.
         const CHANNEL_CLOSE_TIMEOUT_MS = 6000;
+        const requestId = newStreamRequestId();
         return await new Promise((resolve, reject) => {
             const finish = () => {
                 clearTimeout(timeout);
@@ -325,6 +332,7 @@ export default class EmbeddedLND extends LND {
             const listener = LndMobileEventEmitter.addListener(
                 'CloseChannel',
                 (e: any) => {
+                    if (!isEventForRequest(e, requestId)) return;
                     try {
                         const error = checkLndStreamErrorResponse(
                             'CloseChannel',
@@ -338,9 +346,8 @@ export default class EmbeddedLND extends LND {
                             return;
                         }
 
-                        // chan_close is not a reply to this request: every
-                        // close stream reports under the same event name,
-                        // and a new close always reports close_pending first
+                        // a close reports close_pending first; chan_close only
+                        // follows once the close confirms
                         const update = decodeCloseStatusUpdate(e.data);
                         if (update?.close_pending) {
                             finish();
@@ -357,7 +364,8 @@ export default class EmbeddedLND extends LND {
                 outputIndex,
                 force,
                 sat_per_vbyte,
-                delivery_address
+                delivery_address,
+                requestId
             ).catch((error: any) => {
                 finish();
                 reject(error);
