@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "Minimumdíj",
     "views.EditFee.confirmFee": "Díj megerősítése",
     "views.EditFee.error": "Sikertelen a díj ráta lekérdezése",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "Számla",
     "views.Invoice.paid": "Fizetve",
     "views.Invoice.unpaid": "Kifizetetlen",
