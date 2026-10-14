@@ -253,6 +253,26 @@ export function isCdkMeltTrackedLocally(
     });
 }
 
+/**
+ * Outgoing CDK melts missing from locally persisted payments: in-flight melts
+ * (local storage only records settled ones) and settled melts local storage
+ * missed, e.g. when the app was killed between melt and persist. Failed melts
+ * moved no funds. Token sends carry no quote_id and stay tracked via
+ * sentTokens.
+ */
+export function selectUntrackedCdkMelts(
+    transactions: CDKTransaction[],
+    payments: LocalCashuPaymentRecord[]
+): CDKTransaction[] {
+    return transactions.filter(
+        (tx) =>
+            tx.direction === 'outgoing' &&
+            !!tx.quote_id &&
+            tx.state !== 'Failed' &&
+            !isCdkMeltTrackedLocally(tx, payments)
+    );
+}
+
 // Limits to mitigate resource exhaustion from malicious P2PK secret payloads
 const MAX_P2PK_SECRET_LENGTH = 2048;
 const MAX_P2PK_SECRET_DEPTH = 10;
