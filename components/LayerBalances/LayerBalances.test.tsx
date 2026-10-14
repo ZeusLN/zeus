@@ -69,7 +69,8 @@ beforeEach(() => {
     utxosStore.unhideAccount.mockClear();
     Object.assign(cashuStore, {
         totalBalanceSats: 0,
-        mintUrls: ['https://mint.example']
+        mintUrls: ['https://mint.example'],
+        mintInfos: {}
     });
     jest.spyOn(console, 'warn').mockImplementation(() => {});
 });
@@ -285,7 +286,19 @@ describe('LayerBalances ecash', () => {
         expect(row('Ecash')).toBeUndefined();
     });
 
-    it('warms the ecash row color from 10,000 sats', async () => {
+    it('warms the ecash row color from exactly 10,000 sats', async () => {
+        await renderBalances({
+            enableCashu: true,
+            cashu: { totalBalanceSats: 10_000 }
+        });
+
+        expect(row('Ecash').gradient).toEqual([
+            'blend(theme:buttonBackground,theme:warning,0.1)',
+            'theme:error'
+        ]);
+    });
+
+    it('scales the warning blend with the ecash balance', async () => {
         await renderBalances({
             enableCashu: true,
             cashu: { totalBalanceSats: 50_000 }
