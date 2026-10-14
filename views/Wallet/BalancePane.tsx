@@ -85,20 +85,39 @@ export default class BalancePane extends React.PureComponent<
     BalancePaneProps,
     BalancePaneState
 > {
+    private focusUnsubscribe?: () => void;
+
     state = {
         showBackupPrompt: false,
         showOfflinePendingModal: false,
         showOfflineSpentModal: false
     };
 
-    async componentDidMount() {
-        const isBackedUp = await Storage.getItem(IS_BACKED_UP_KEY);
-        if (isBackedUp !== 'true') {
-            this.setState({
-                showBackupPrompt: true
-            });
-        }
+    componentDidMount() {
+        // the seed backup is confirmed on another screen, so read the flag
+        // again whenever the wallet view comes back into focus
+        this.focusUnsubscribe = this.props.navigation.addListener(
+            'focus',
+            this.loadBackupStatus
+        );
+        this.loadBackupStatus();
     }
+
+    componentWillUnmount() {
+        this.focusUnsubscribe?.();
+    }
+
+    loadBackupStatus = async () => {
+        try {
+            const isBackedUp = await Storage.getItem(IS_BACKED_UP_KEY);
+            this.setState({
+                showBackupPrompt: isBackedUp !== 'true'
+            });
+        } catch (error) {
+            // keep the current state; the next focus reads the flag again
+            console.error('Error reading backup status', error);
+        }
+    };
 
     handlePendingPress = (context: PendingBalanceContext = 'onchain') => {
         const { ModalStore } = this.props;

@@ -40,7 +40,7 @@ jest.mock('../../assets/images/SVG/Clock.svg', () => 'ClockIcon');
 jest.mock('../../assets/images/SVG/Lock.svg', () => 'LockIcon');
 
 import * as React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import BalancePane from './BalancePane';
 import Storage from '../../storage';
@@ -54,6 +54,8 @@ beforeEach(() => {
     (Storage.getItem as jest.Mock).mockResolvedValue(false);
 });
 
+afterEach(() => jest.restoreAllMocks());
+
 const renderPane = async ({
     implementation = 'embedded-lnd',
     lndFolderMissing = false,
@@ -65,8 +67,16 @@ const renderPane = async ({
     isSyncing?: boolean;
     balances?: Record<string, any>;
 } = {}) => {
-    const navigation = { navigate: jest.fn() };
-    await render(
+    const listeners: { [event: string]: () => void } = {};
+    const unsubscribe = jest.fn();
+    const navigation = {
+        addListener: jest.fn((event: string, listener: () => void) => {
+            listeners[event] = listener;
+            return unsubscribe;
+        }),
+        navigate: jest.fn()
+    };
+    const result = await render(
         <BalancePane
             {...({
                 navigation,
@@ -97,7 +107,7 @@ const renderPane = async ({
             } as any)}
         />
     );
-    return { navigation };
+    return { navigation, listeners, unsubscribe, ...result };
 };
 
 describe('BalancePane backup card', () => {
@@ -121,6 +131,49 @@ describe('BalancePane backup card', () => {
         await renderPane();
 
         expect(screen.queryByText(BACKUP_TITLE)).not.toBeOnTheScreen();
+    });
+
+    it('is hidden when the view regains focus after the seed is backed up', async () => {
+        const { listeners } = await renderPane();
+        expect(screen.getByText(BACKUP_TITLE)).toBeOnTheScreen();
+
+        // the Seed view stores the flag once the backup is confirmed
+        (Storage.getItem as jest.Mock).mockResolvedValue('true');
+        await act(async () => listeners.focus());
+
+        expect(screen.queryByText(BACKUP_TITLE)).not.toBeOnTheScreen();
+    });
+
+    it('stays visible when the view regains focus without a backup', async () => {
+        const { listeners } = await renderPane();
+
+        await act(async () => listeners.focus());
+
+        expect(Storage.getItem).toHaveBeenCalledTimes(2);
+        expect(screen.getByText(BACKUP_TITLE)).toBeOnTheScreen();
+    });
+
+    it('keeps the card when the backup status cannot be read on focus', async () => {
+        const consoleError = jest
+            .spyOn(console, 'error')
+            .mockImplementation(() => {});
+        const { listeners } = await renderPane();
+
+        (Storage.getItem as jest.Mock).mockRejectedValue(
+            new Error('keychain error')
+        );
+        await act(async () => listeners.focus());
+
+        expect(consoleError).toHaveBeenCalled();
+        expect(screen.getByText(BACKUP_TITLE)).toBeOnTheScreen();
+    });
+
+    it('stops listening for focus on unmount', async () => {
+        const { unsubscribe, unmount } = await renderPane();
+
+        await unmount();
+
+        expect(unsubscribe).toHaveBeenCalledTimes(1);
     });
 
     it.each([
