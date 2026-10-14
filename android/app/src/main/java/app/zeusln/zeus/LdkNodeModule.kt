@@ -1378,6 +1378,51 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         }
     }
 
+    // A fee limit of 0 means no limit
+    @ReactMethod
+    fun receiveViaJitChannel(amountMsat: Double, description: String, expirySecs: Double, maxLspFeeLimitMsat: Double, promise: Promise) {
+        // Connects to the LSP and waits on two LSPS2 requests
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                val bolt11 = node.bolt11Payment()
+                val invoiceDescription = Bolt11InvoiceDescription.Direct(description)
+                val maxFeeMsat = optionalPositiveULong(maxLspFeeLimitMsat, "fee limit")
+                val invoice = bolt11.receiveViaJitChannel(toULongExact(amountMsat, "amount"), invoiceDescription, toUIntExact(expirySecs, "expiry"), maxFeeMsat)
+                val result = Arguments.createMap().apply { putString("invoice", invoice.toString()) }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(result)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", errorMessage(e))
+                }
+            }
+        }
+    }
+
+    // A fee limit of 0 means no limit
+    @ReactMethod
+    fun receiveVariableAmountViaJitChannel(description: String, expirySecs: Double, maxProportionalLspFeeLimitPpmMsat: Double, promise: Promise) {
+        moduleScope.launch {
+            try {
+                val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
+                val bolt11 = node.bolt11Payment()
+                val invoiceDescription = Bolt11InvoiceDescription.Direct(description)
+                val maxFeePpmMsat = optionalPositiveULong(maxProportionalLspFeeLimitPpmMsat, "fee limit")
+                val invoice = bolt11.receiveVariableAmountViaJitChannel(invoiceDescription, toUIntExact(expirySecs, "expiry"), maxFeePpmMsat)
+                val result = Arguments.createMap().apply { putString("invoice", invoice.toString()) }
+                withContext(Dispatchers.Main) {
+                    promise.resolve(result)
+                }
+            } catch (e: Exception) {
+                withContext(Dispatchers.Main) {
+                    promise.reject("error", errorMessage(e))
+                }
+            }
+        }
+    }
+
     // Number Conversion Helpers
 
     // Double.toLong().toULong() and Double.toInt().toUInt() wrap a negative
