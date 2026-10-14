@@ -63,6 +63,11 @@ class DateTimeUtils {
         );
 
     listFormattedDateOrder = (timestamp: Date) => {
+        // dateformat throws on an invalid Date
+        if (isNaN(timestamp.getTime())) {
+            return localeString('general.notAvailable');
+        }
+
         const time = dateFormat(timestamp, this.timeMask());
         const numericDateMask = this.numericDateMask();
         if (numericDateMask) {

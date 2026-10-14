@@ -66,6 +66,11 @@ describe('Order.getDisplayTime', () => {
         const order = new Order({ created_at: '2026-08-09T10:40:00' });
         expect(order.getDisplayTime).toBe('10:40 am | Sun, Aug 09');
     });
+
+    it('shows N/A for an unparseable timestamp', () => {
+        const order = new Order({ updated_at: 'not-a-date' });
+        expect(order.getDisplayTime).toBe('general.notAvailable');
+    });
 });
 
 const makeOrder = (data: any = {}) =>

@@ -7,12 +7,14 @@ import SettingsStore, {
     DATE_FORMAT_KEYS,
     TIME_FORMAT_KEYS
 } from '../../stores/SettingsStore';
+import DateTimeUtils from '../../utils/DateTimeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Text from '../../components/Text';
 import DropdownSetting from '../../components/DropdownSetting';
 import Header from '../../components/Header';
+import KeyValue from '../../components/KeyValue';
 import Screen from '../../components/Screen';
 import Switch from '../../components/Switch';
 
@@ -55,6 +57,9 @@ export default class DateTime extends React.Component<
         const { navigation, SettingsStore } = this.props;
         const { dateFormat, timeFormat, showSeconds } = this.state;
         const { updateSettingsGroup } = SettingsStore;
+        // DateTimeUtils reads the display settings from the store, so this
+        // observer re-renders the preview when a setting changes
+        const now = new Date();
 
         return (
             <Screen>
@@ -126,6 +131,32 @@ export default class DateTime extends React.Component<
                                 }}
                             />
                         </View>
+                    </View>
+
+                    <View style={{ marginTop: 30 }}>
+                        <Text
+                            style={{
+                                color: themeColor('secondaryText'),
+                                fontSize: 17,
+                                fontFamily: 'PPNeueMontreal-Book'
+                            }}
+                        >
+                            {localeString('views.Settings.DateTime.preview')}
+                        </Text>
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Settings.DateTime.previewList'
+                            )}
+                            value={DateTimeUtils.formatDateTimeShort(now)}
+                            disableCopy
+                        />
+                        <KeyValue
+                            keyValue={localeString(
+                                'views.Settings.DateTime.previewDetails'
+                            )}
+                            value={DateTimeUtils.formatDateTime(now)}
+                            disableCopy
+                        />
                     </View>
                 </ScrollView>
             </Screen>

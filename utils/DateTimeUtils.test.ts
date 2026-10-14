@@ -217,6 +217,14 @@ describe('year-relative formatting', () => {
 
             expect(result).toEqual('00:00 | Thu, Jan 01');
         });
+
+        it('returns N/A for an invalid date instead of throwing', () => {
+            const result = DateTimeUtils.listFormattedDateOrder(
+                new Date('not-a-date')
+            );
+
+            expect(result).toEqual('N/A');
+        });
     });
 
     it.each([
