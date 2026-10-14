@@ -15,6 +15,11 @@ import {
     isLightningAddressEndpointAllowed
 } from './LnurlPayUtils';
 
+// Jest resolves 'url' to Node's built-in module, which maps fullwidth and
+// other compatibility characters in a hostname before returning it. The app
+// bundles the npm 'url' package, which does not, so test against that one.
+jest.mock('url', () => jest.requireActual('../node_modules/url/url.js'));
+
 const METADATA = '[["text/plain","Payment to Alice"]]';
 const MATCHING_HASH = Base64Utils.bytesToHex(
     Array.from(sha256(Base64Utils.utf8ToBytes(METADATA)))
@@ -233,6 +238,23 @@ describe('LnurlPayUtils', () => {
             );
         });
 
+        it.each([
+            'https://１２７.０.０.１/x',
+            'https://１９２.１６８.１.１/x',
+            'https://１６９．２５４．１６９．２５４/latest',
+            'https://ｌｏｃａｌｈｏｓｔ/x',
+            'https://ⓛⓞⓒⓐⓛⓗⓞⓢⓣ/x',
+            'https://①②⑦.⓪.⓪.①/x'
+        ])('rejects %s, which native stacks map to a private host', (cb) => {
+            expect(isLnurlCallbackAllowed(cb).ok).toBe(false);
+        });
+
+        it('still allows a non-ASCII public domain', () => {
+            expect(isLnurlCallbackAllowed('https://bücher.example/cb').ok).toBe(
+                true
+            );
+        });
+
         it('rejects an RFC1918 address', () => {
             expect(isLnurlCallbackAllowed('https://10.1.2.3/x').ok).toBe(false);
             expect(isLnurlCallbackAllowed('https://192.168.0.1/x').ok).toBe(
@@ -438,7 +460,8 @@ describe('isLnurlEndpointAllowed', () => {
         'https://10.1.2.3/lnurl',
         'https://192.168.0.1/lnurl',
         'https://169.254.169.254/latest',
-        'http://cleartext.example/lnurl'
+        'http://cleartext.example/lnurl',
+        'https://１２７.０.０.１/lnurl'
     ])('refuses a bech32 endpoint pointing at %s', (target) => {
         expect(isLnurlEndpointAllowed(asLnurl(target)).ok).toBe(false);
     });
