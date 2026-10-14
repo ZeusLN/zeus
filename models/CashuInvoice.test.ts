@@ -19,6 +19,7 @@ describe('CashuInvoice.fromCDKTransaction', () => {
         expect(invoice.isPaid).toBe(true);
         expect(invoice.isFailed).toBe(false);
         expect(invoice.isExpired).toBe(false);
+        expect(invoice.shouldPollMint).toBe(false);
     });
 
     it('treats a Completed lifecycle state as paid', () => {
@@ -43,6 +44,8 @@ describe('CashuInvoice.fromCDKTransaction', () => {
         expect(invoice.isPaid).toBe(false);
         expect(invoice.isFailed).toBe(false);
         expect(invoice.isExpired).toBe(false);
+        // a transaction id is not a mint quote id
+        expect(invoice.shouldPollMint).toBe(false);
     });
 
     it('does not report a Failed lifecycle state as paid', () => {
@@ -57,5 +60,45 @@ describe('CashuInvoice.fromCDKTransaction', () => {
         expect(invoice.isFailed).toBe(true);
         // closed out, so views do not render it as a pending request
         expect(invoice.isExpired).toBe(true);
+        expect(invoice.shouldPollMint).toBe(false);
+    });
+
+    it('does not report an unrecognised lifecycle state as paid', () => {
+        const invoice = CashuInvoice.fromCDKTransaction({
+            ...cdkReceive,
+            state: 'Unknown'
+        });
+
+        expect(invoice.state).toBe('UNPAID');
+        expect(invoice.paid).toBe(false);
+        expect(invoice.isPaid).toBe(false);
+        expect(invoice.isFailed).toBe(false);
+        expect(invoice.shouldPollMint).toBe(false);
+    });
+});
+
+describe('CashuInvoice.shouldPollMint', () => {
+    it('polls an unpaid mint quote', () => {
+        const invoice = new CashuInvoice({
+            quote: 'quote-id',
+            request: '',
+            state: 'UNPAID',
+            paid: false,
+            mintUrl: 'https://mint.example.com'
+        });
+
+        expect(invoice.shouldPollMint).toBe(true);
+    });
+
+    it('does not poll a paid mint quote', () => {
+        const invoice = new CashuInvoice({
+            quote: 'quote-id',
+            request: '',
+            state: 'PAID',
+            paid: true,
+            mintUrl: 'https://mint.example.com'
+        });
+
+        expect(invoice.shouldPollMint).toBe(false);
     });
 });

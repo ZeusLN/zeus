@@ -45,16 +45,19 @@ export default class CashuInvoice extends BaseModel {
         // absent before CDK 0.18, when every recorded transaction is completed
         state?: string;
     }): CashuInvoice {
+        // only a completed record is paid; an unrecognised state (the iOS
+        // bridge reports "Unknown" for a status it does not know) stays
+        // unpaid so it cannot show as received without being in the balance
+        const completed = tx.state === undefined || tx.state === 'Completed';
         const invoice = new CashuInvoice({
             quote: tx.id,
             request: '',
-            state:
-                tx.state === 'Pending'
-                    ? 'UNPAID'
-                    : tx.state === 'Failed'
-                    ? 'FAILED'
-                    : 'PAID',
-            paid: tx.state !== 'Pending' && tx.state !== 'Failed',
+            state: completed
+                ? 'PAID'
+                : tx.state === 'Failed'
+                ? 'FAILED'
+                : 'UNPAID',
+            paid: completed,
             mintUrl: tx.mint_url,
             expires_at: tx.timestamp,
             fromCDK: true,
@@ -89,6 +92,12 @@ export default class CashuInvoice extends BaseModel {
 
     @computed public get isFailed(): boolean {
         return !!this.fromCDK && this.state === 'FAILED';
+    }
+
+    // CDK history records carry a transaction id, not a mint quote id, so
+    // there is no quote to poll the mint with
+    @computed public get shouldPollMint(): boolean {
+        return !this.isPaid && !this.fromCDK;
     }
 
     @computed public get key(): string {
