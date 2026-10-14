@@ -79,8 +79,13 @@ export default class CurrencyConverterContent extends React.Component<
     // and dismissing the keyboard mid-typing. Reuse the same array while the
     // currency set is unchanged so value edits never remount the inputs.
     private currencyKeys: string[] = [];
+    // Whether rates were loaded at the last render. FiatStore is a single
+    // MobX instance, so prevProps.FiatStore holds the current rates too and
+    // cannot show when they arrived.
+    private hadRates: boolean;
     constructor(props: CurrencyConverterContentProps) {
         super(props);
+        this.hadRates = !isEmpty(props.FiatStore?.fiatRates);
         this.state = {
             inputValues: {
                 BTC: '',
@@ -111,7 +116,7 @@ export default class CurrencyConverterContent extends React.Component<
     }
 
     componentDidUpdate(
-        prevProps: CurrencyConverterContentProps,
+        _prevProps: CurrencyConverterContentProps,
         prevState: CurrencyConverterContentState
     ) {
         const { onInputValuesChanged } = this.props;
@@ -121,13 +126,12 @@ export default class CurrencyConverterContent extends React.Component<
         ) {
             onInputValuesChanged(Object.keys(this.state.inputValues).length);
         }
-        // Backfill  fields once rates arrive (e.g. user typed BTC before rates loaded).
-        if (
-            isEmpty(prevProps.FiatStore?.fiatRates) &&
-            !isEmpty(this.props.FiatStore?.fiatRates)
-        ) {
+        // Backfill fields once rates arrive (e.g. user typed BTC before rates loaded).
+        const hasRates = !isEmpty(this.props.FiatStore?.fiatRates);
+        if (hasRates && !this.hadRates) {
             this.syncConversions();
         }
+        this.hadRates = hasRates;
     }
 
     syncConversions = () => {
@@ -226,16 +230,16 @@ export default class CurrencyConverterContent extends React.Component<
         const FiatStore = this.props.FiatStore!;
         const fiatRates = FiatStore?.fiatRates || [];
 
-        const formatNumber = (value: string, currency: string) => {
-            if (currency === 'BTC') {
-                if (parseFloat(value) > 1) {
-                    return numberWithCommas(value);
-                } else {
-                    return value;
-                }
-            } else {
-                return numberWithCommas(value);
-            }
+        // Groups the whole part only; numberWithCommas would also group the
+        // decimals (2.00000000 -> 2.00,000,000). An empty value stays empty
+        // rather than becoming 0, so a currency without a rate shows nothing.
+        const formatNumber = (value: string) => {
+            if (value === '') return '';
+            const [whole, ...decimals] = value.split('.');
+            const groupedWhole = whole === '' ? '' : numberWithCommas(whole);
+            return decimals.length > 0
+                ? `${groupedWhole}.${decimals.join('.')}`
+                : groupedWhole;
         };
 
         const convertedValues: { [key: string]: string } = { ...inputValues };
@@ -255,7 +259,7 @@ export default class CurrencyConverterContent extends React.Component<
             return;
         }
 
-        const formattedValue = formatNumber(sanitizedValue, currency);
+        const formattedValue = formatNumber(sanitizedValue);
         convertedValues[currency] = formattedValue;
 
         Object.keys(convertedValues).forEach((key) => {
@@ -325,7 +329,7 @@ export default class CurrencyConverterContent extends React.Component<
                     }
                 }
 
-                convertedValues[key] = formatNumber(convertedValue, key);
+                convertedValues[key] = formatNumber(convertedValue);
             }
         });
 

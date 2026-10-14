@@ -258,8 +258,8 @@ describe('CurrencyConverterContent conversion', () => {
         expect(values()).toMatchObject({ USD: '1,000', sats: '2,000,000' });
     });
 
-    // pins current behavior; the fix is tracked in #5070
-    it('shows 0 for a currency without a rate', async () => {
+    // #5070: it used to show 0
+    it('leaves a currency without a rate empty', async () => {
         await renderConverter({
             saved: allCurrencies,
             fiatRates: [RATES[0]]
@@ -267,11 +267,11 @@ describe('CurrencyConverterContent conversion', () => {
 
         await type('BTC', '0.5');
 
-        expect(values()).toMatchObject({ USD: '25,000.00', EUR: '0' });
+        expect(values()).toMatchObject({ USD: '25,000.00', EUR: '' });
     });
 
-    // pins current behavior; the fix is tracked in #5070
-    it('shows 0 for sats and fiat but leaves BTC empty when the typed currency has no rate', async () => {
+    // #5070: sats and fiat used to show 0
+    it('leaves every other currency empty when the typed one has no rate', async () => {
         await renderConverter({
             saved: allCurrencies,
             fiatRates: [RATES[0]]
@@ -279,7 +279,7 @@ describe('CurrencyConverterContent conversion', () => {
 
         await type('EUR', '400');
 
-        expect(values()).toMatchObject({ BTC: '', sats: '0', USD: '0' });
+        expect(values()).toMatchObject({ BTC: '', sats: '', USD: '' });
     });
 
     it('clears every currency when one is cleared', async () => {
@@ -304,13 +304,29 @@ describe('CurrencyConverterContent conversion', () => {
         });
     });
 
-    // pins current behavior; the fix is tracked in #5069
-    it('groups the BTC decimals above 1 BTC like an integer', async () => {
+    // #5069: the decimals used to be grouped too (2.00,000,000)
+    it('groups only the whole part of a converted amount', async () => {
         await renderConverter({ saved: allCurrencies });
 
         await type('USD', '100000');
 
-        expect(values().BTC).toBe('2.00,000,000');
+        expect(values()).toMatchObject({
+            BTC: '2.00000000',
+            sats: '200,000,000'
+        });
+    });
+
+    it.each([
+        ['BTC', '1234.12345678', '1,234.12345678'],
+        ['USD', '1234.5678', '1,234.5678'],
+        ['USD', '1234.', '1,234.'],
+        ['USD', '.5', '.5']
+    ])('keeps %s typed as %p readable as %p', async (currency, text, shown) => {
+        await renderConverter({ saved: allCurrencies });
+
+        await type(currency, text);
+
+        expect(values()[currency]).toBe(shown);
     });
 });
 
@@ -361,7 +377,7 @@ describe('CurrencyConverterContent rates', () => {
             fiatRates: []
         });
         await type('BTC', '0.5');
-        expect(values().USD).toBe('0');
+        expect(values().USD).toBe('');
 
         await rerender({
             FiatStore: {
@@ -374,8 +390,8 @@ describe('CurrencyConverterContent rates', () => {
         expect(values().USD).toBe('25,000.00');
     });
 
-    // pins current behavior; the fix is tracked in #5071
-    it('does not fill in fiat when the same store receives rates', async () => {
+    // #5071: the check compared the store with itself and never fired
+    it('fills in fiat when the same store receives rates', async () => {
         const { FiatStore, rerender } = await renderConverter({
             saved: { BTC: '', sats: '', USD: '' },
             fiatRates: []
@@ -386,7 +402,7 @@ describe('CurrencyConverterContent rates', () => {
         FiatStore.fiatRates = RATES;
         await rerender({});
 
-        expect(values().USD).toBe('0');
+        expect(values().USD).toBe('25,000.00');
     });
 });
 
