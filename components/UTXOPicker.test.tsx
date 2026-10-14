@@ -96,10 +96,13 @@ const renderPicker = async ({
         listAccounts: jest.fn()
     });
     const onValueChange = jest.fn();
-    const view = await render(
+    const element = () => (
         <UTXOPicker {...({ UTXOsStore, onValueChange, ...props } as any)} />
     );
-    return { UTXOsStore, onValueChange, unmount: view.unmount };
+    const view = await render(element());
+    // observer is mocked out, so store changes need an explicit rerender
+    const rerender = () => view.rerender(element());
+    return { UTXOsStore, onValueChange, rerender, unmount: view.unmount };
 };
 
 const button = (name: string) => screen.getByRole('button', { name });
@@ -202,6 +205,20 @@ describe('UTXOPicker sheet', () => {
         expect(
             screen.container.queryAll((n) => n.type === 'LoadingIndicator')
         ).toHaveLength(1);
+        expect(button('components.UTXOPicker.modal.set')).toBeDisabled();
+    });
+
+    it('cannot be set once loading starts after a pick', async () => {
+        const { UTXOsStore, rerender } = await renderPicker();
+        await openPicker();
+        await pick(A);
+        expect(button('components.UTXOPicker.modal.set')).toBeEnabled();
+
+        runInAction(() => {
+            UTXOsStore.loading = true;
+        });
+        await rerender();
+
         expect(button('components.UTXOPicker.modal.set')).toBeDisabled();
     });
 
