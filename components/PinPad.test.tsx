@@ -250,6 +250,20 @@ describe('PinPad with a hidden PIN length', () => {
         expect(submitKey()).toBeUndefined();
     });
 
+    it('starts over after a long press of <', async () => {
+        await renderPad({ hidePinLength: true, minLength: 4 });
+        await typeDigits('1234');
+
+        await fireEvent(screen.getByText('<'), 'longPress');
+        expect(submitKey()).toBeUndefined();
+
+        await typeDigits('123');
+        expect(submitKey()).toBeUndefined();
+
+        await press('4');
+        expect(submitKey()).toBeDefined();
+    });
+
     it('does not count past the maximum length', async () => {
         await renderPad({ hidePinLength: true, minLength: 3, maxLength: 3 });
 
