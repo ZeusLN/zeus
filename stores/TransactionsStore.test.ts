@@ -43,7 +43,8 @@ import TransactionsStore, {
     PAYMENT_TRACK_POLL_MS,
     PAYMENT_TRACK_MAX_FAILURES,
     PAYMENT_TRACK_MAX_NOT_FOUND,
-    PAYMENT_TRACK_MAX_MS
+    PAYMENT_TRACK_MAX_MS,
+    PAYMENT_STALE_ATTEMPT_SLACK_MS
 } from './TransactionsStore';
 import BackendUtils from '../utils/BackendUtils';
 import { paymentLookupInconclusiveError } from '../utils/PaymentLookupUtils';
@@ -439,6 +440,162 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
         expect(store.status).toBe('IN_FLIGHT');
         expect(store.error).toBe(false);
         expect(store.paymentOutcomeUnverified).toBe(true);
+    });
+
+    it('keeps tracking through lookup failures once the node has reported the payment', async () => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockResolvedValue({
+            payment_error: 'views.SendingLightning.paymentTimedOut',
+            payment_timed_out: true
+        });
+        // the node reports the payment pending, then becomes unreachable
+        // for longer than the failure limit, then reports it settled
+        const lookup = BackendUtils.lookupPayment as jest.Mock;
+        lookup.mockResolvedValueOnce({
+            status: 'IN_FLIGHT',
+            payment_hash: HASH
+        });
+        for (let i = 0; i < PAYMENT_TRACK_MAX_FAILURES + 2; i++) {
+            lookup.mockRejectedValueOnce(new Error('node unreachable'));
+        }
+        lookup.mockResolvedValueOnce({
+            status: 'SUCCEEDED',
+            payment_hash: HASH,
+            payment_preimage: 'deadbeef'
+        });
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+        expect(store.status).toBe('IN_FLIGHT');
+
+        for (let i = 0; i < PAYMENT_TRACK_MAX_FAILURES + 2; i++) {
+            await advancePoll();
+        }
+        // the HTLC is known to be pending: an outage must not release the
+        // guard and reopen the keysend double-pay window
+        expect(store.paymentInFlight).toBe(true);
+        expect(store.paymentOutcomeUnverified).toBe(false);
+
+        await advancePoll();
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.status).toBe('SUCCEEDED');
+    });
+
+    it('releases at the ceiling when lookups keep failing after the node answered', async () => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockResolvedValue({
+            payment_error: 'views.SendingLightning.paymentTimedOut',
+            payment_timed_out: true
+        });
+        (BackendUtils.lookupPayment as jest.Mock)
+            .mockResolvedValueOnce({ status: 'IN_FLIGHT', payment_hash: HASH })
+            .mockRejectedValue(new Error('node unreachable'));
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+
+        await jest.advanceTimersByTimeAsync(PAYMENT_TRACK_MAX_MS - 1000);
+        expect(store.paymentInFlight).toBe(true);
+
+        await jest.advanceTimersByTimeAsync(PAYMENT_TRACK_POLL_MS + 1000);
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.status).toBe('IN_FLIGHT');
+        expect(store.error).toBe(false);
+        expect(store.paymentOutcomeUnverified).toBe(true);
+    });
+
+    it("doesn't surface an earlier attempt's failed record as this attempt's outcome", async () => {
+        // a retry of an invoice whose earlier attempt failed: the old record
+        // is still on the node because the retry hasn't reached it yet
+        const staleFailure = {
+            status: 'FAILED',
+            failure_reason: 'FAILURE_REASON_NO_ROUTE',
+            payment_hash: HASH,
+            creation_date: String(
+                Math.floor(
+                    (Date.now() - PAYMENT_STALE_ATTEMPT_SLACK_MS - 60_000) /
+                        1000
+                )
+            )
+        };
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            new Error('connection closed')
+        );
+        (BackendUtils.lookupPayment as jest.Mock)
+            .mockResolvedValueOnce(staleFailure)
+            .mockResolvedValueOnce({ status: 'IN_FLIGHT', payment_hash: HASH })
+            .mockResolvedValueOnce({
+                status: 'SUCCEEDED',
+                payment_hash: HASH,
+                payment_preimage: 'deadbeef'
+            });
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+        expect(store.paymentInFlight).toBe(true);
+        expect(store.status).not.toBe('FAILED');
+
+        await advancePoll();
+        expect(store.status).toBe('IN_FLIGHT');
+
+        await advancePoll();
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.status).toBe('SUCCEEDED');
+        expect(store.error).toBe(false);
+    });
+
+    it("treats an earlier attempt's failed record as no record of this attempt", async () => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            new Error('connection closed')
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue({
+            status: 'FAILED',
+            payment_hash: HASH,
+            // embedded LND returns int64 fields as Long
+            creation_time_ns: {
+                toString: () =>
+                    String(
+                        (Date.now() - PAYMENT_STALE_ATTEMPT_SLACK_MS - 60_000) *
+                            1e6
+                    )
+            }
+        });
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+
+        for (let i = 1; i < PAYMENT_TRACK_MAX_NOT_FOUND; i++) {
+            await advancePoll();
+        }
+        // the retry never reached the node: released with the dispatch
+        // error, not the earlier attempt's failure
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.status).not.toBe('FAILED');
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe('connection closed');
+    });
+
+    it('surfaces a failed record created around dispatch', async () => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            new Error('connection closed')
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue({
+            status: 'FAILED',
+            failure_reason: 'FAILURE_REASON_NO_ROUTE',
+            payment_hash: HASH,
+            // node clock slightly behind the device's, inside the slack
+            creation_date: String(Math.floor((Date.now() - 30_000) / 1000))
+        });
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.status).toBe('FAILED');
+        expect(store.error).toBe(true);
     });
 
     it('shows a timed-out payment the node never recorded as not sent', async () => {

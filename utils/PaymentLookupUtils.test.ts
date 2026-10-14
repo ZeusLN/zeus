@@ -1,7 +1,8 @@
 import {
     PAYMENT_LOOKUP_PAGE_SIZE,
     findPaymentByHash,
-    isPaymentLookupInconclusive
+    isPaymentLookupInconclusive,
+    paymentCreationTimeMs
 } from './PaymentLookupUtils';
 
 const HASH = 'ab'.repeat(32);
@@ -118,5 +119,39 @@ describe('findPaymentByHash', () => {
         );
         expect(error.message).toBe('offline');
         expect(isPaymentLookupInconclusive(error)).toBe(false);
+    });
+});
+
+describe('paymentCreationTimeMs', () => {
+    it('prefers creation_time_ns for sub-second precision', () => {
+        expect(
+            paymentCreationTimeMs({
+                creation_time_ns: '1700000000123456789',
+                creation_date: '1700000000'
+            })
+        ).toBe(1700000000123);
+    });
+
+    it('falls back to creation_date seconds', () => {
+        expect(paymentCreationTimeMs({ creation_date: '1700000000' })).toBe(
+            1700000000000
+        );
+    });
+
+    it('reads embedded LND Long values through toString', () => {
+        expect(
+            paymentCreationTimeMs({
+                creation_time_ns: { toString: () => '0' },
+                creation_date: { toString: () => '1700000000' }
+            })
+        ).toBe(1700000000000);
+    });
+
+    it('returns null without a usable creation time', () => {
+        expect(paymentCreationTimeMs({})).toBeNull();
+        expect(paymentCreationTimeMs(null)).toBeNull();
+        expect(
+            paymentCreationTimeMs({ creation_time_ns: 'x', creation_date: '' })
+        ).toBeNull();
     });
 });
