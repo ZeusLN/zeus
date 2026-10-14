@@ -144,6 +144,9 @@ describe('LightningAddressStore flows', () => {
         it('reuses the signature for 10 minutes, then signs a new challenge', async () => {
             const now = jest.spyOn(Date, 'now').mockReturnValue(1_000_000);
             const store = newStore();
+            signMessage
+                .mockResolvedValueOnce({ zbase: 'sig-first' })
+                .mockResolvedValueOnce({ zbase: 'sig-second' });
             reply(
                 '/api/lnurl/auth',
                 ok({ verification: 'first' }),
@@ -156,13 +159,22 @@ describe('LightningAddressStore flows', () => {
             await store.createZeusPayPlusOrder();
 
             expect(callsTo('/api/lnurl/auth')).toHaveLength(1);
-            expect(bodyOf('/api/plus/order', 1).message).toBe('first');
+            expect(signMessage).toHaveBeenCalledTimes(1);
+            expect(bodyOf('/api/plus/order', 1)).toMatchObject({
+                message: 'first',
+                signature: 'sig-first'
+            });
 
             now.mockReturnValue(1_000_000 + 10 * 60 * 1000 + 1);
             await store.createZeusPayPlusOrder();
 
             expect(callsTo('/api/lnurl/auth')).toHaveLength(2);
-            expect(bodyOf('/api/plus/order', 2).message).toBe('second');
+            expect(signMessage).toHaveBeenCalledTimes(2);
+            expect(signMessage).toHaveBeenLastCalledWith('second');
+            expect(bodyOf('/api/plus/order', 2)).toMatchObject({
+                message: 'second',
+                signature: 'sig-second'
+            });
         });
 
         it('signs a new challenge after reset', async () => {
@@ -196,6 +208,34 @@ describe('LightningAddressStore flows', () => {
             expect(store.error).toBe(true);
             expect(store.error_msg).toBe('rate limited');
             expect(store.loading).toBe(false);
+        });
+        it('sends no account request when signing fails, and signs again on retry', async () => {
+            const store = newStore();
+            signMessage
+                .mockRejectedValueOnce(new Error('node locked'))
+                .mockResolvedValueOnce({ zbase: 'sig-retry' });
+            reply(
+                '/api/lnurl/auth',
+                ok({ verification: 'first' }),
+                ok({ verification: 'second' })
+            );
+            reply('/api/lnurl/status', ok({ addressType: 'cashu' }));
+
+            await expect(store.status()).rejects.toThrow('node locked');
+
+            expect(callsTo('/api/lnurl/status')).toHaveLength(0);
+            expect(store.error).toBe(true);
+            expect(store.error_msg).toBe('Error: node locked');
+            expect(store.loading).toBe(false);
+
+            await store.status();
+
+            expect(callsTo('/api/lnurl/auth')).toHaveLength(2);
+            expect(bodyOf('/api/lnurl/status')).toMatchObject({
+                message: 'second',
+                signature: 'sig-retry'
+            });
+            expect(store.error).toBe(false);
         });
     });
 
