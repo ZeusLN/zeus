@@ -68,6 +68,7 @@ import Storage from '../storage';
 import BackendUtils from '../utils/BackendUtils';
 import NWCConnection, { BudgetRenewalType } from '../models/NWCConnection';
 import Invoice from '../models/Invoice';
+import CashuInvoice from '../models/CashuInvoice';
 import Payment from '../models/Payment';
 import CashuPayment from '../models/CashuPayment';
 import Base64Utils from '../utils/Base64Utils';
@@ -1992,7 +1993,7 @@ describe('NostrWalletConnectStore connection data scoping', () => {
             expect((reconcile.mock.calls[0] as any[])[0].id).toBe('lnbc1older');
         });
 
-        it('runs one refresh at a time and queues a single trailing run', async () => {
+        it('runs one refresh at a time and does not re-check the same invoices on the trailing run', async () => {
             const { store } = buildStore();
             seedConnection(store, {
                 activity: [pendingActivity('lnbc1single')]
@@ -2014,9 +2015,121 @@ describe('NostrWalletConnectStore connection data scoping', () => {
             release();
             await Promise.all([first, second, third]);
 
-            expect(reconcile).toHaveBeenCalledTimes(2);
+            // trailing run found the same objects already checked
+            expect(reconcile).toHaveBeenCalledTimes(1);
+
+            // a fresh cycle checks them again
             await store.refreshPendingMakeInvoices({ force: true });
-            expect(reconcile).toHaveBeenCalledTimes(3);
+            expect(reconcile).toHaveBeenCalledTimes(2);
+        });
+
+        it('re-checks invoices on the trailing run when connections were reloaded mid-flight', async () => {
+            const { store } = buildStore();
+            seedConnection(store, {
+                activity: [pendingActivity('lnbc1reloaded')]
+            });
+            let release: () => void = () => undefined;
+            const gate = new Promise<void>((resolve) => {
+                release = resolve;
+            });
+            const reconcile = jest
+                .spyOn(store as any, 'reconcilePendingMakeInvoiceActivity')
+                .mockImplementationOnce(() => gate)
+                .mockResolvedValue(undefined);
+
+            const first = store.refreshPendingMakeInvoices({ force: true });
+            await Promise.resolve();
+            // loadConnections replaces the connection (and activity) objects
+            seedConnection(store, {
+                activity: [pendingActivity('lnbc1reloaded')]
+            });
+            const second = store.refreshPendingMakeInvoices({ force: true });
+
+            release();
+            await Promise.all([first, second]);
+
+            expect(reconcile).toHaveBeenCalledTimes(2);
+        });
+
+        describe('with Cashu configured', () => {
+            const cashuPending = (id: string, overrides = {}) =>
+                pendingActivity(id, {
+                    payment_source: 'cashu',
+                    // older than the min age gate
+                    createdAt: new Date(Date.now() - 60_000),
+                    invoice: { paymentRequest: id, quote: `quote-${id}` },
+                    ...overrides
+                });
+
+            const enableCashu = (store: any) => {
+                store.settingsStore.settings.ecash.enableCashu = true;
+                store.cashuEnabled = true;
+                store.cashuStore = {
+                    isProperlyConfigured: () => true,
+                    invoices: []
+                };
+            };
+
+            it('skips Cashu invoices inside the per-connection debounce', async () => {
+                const { store } = buildStore();
+                const connection = seedConnection(store, {
+                    activity: [cashuPending('cashu-debounced')]
+                });
+                enableCashu(store);
+                expect(store.isCashuConfigured).toBe(true);
+                const reconcile = jest
+                    .spyOn(store as any, 'reconcilePendingMakeInvoiceActivity')
+                    .mockResolvedValue(undefined);
+                (store as any).lastPendingInvoiceStatusFetchByConnection.set(
+                    connection.id,
+                    Date.now()
+                );
+
+                await store.refreshPendingMakeInvoices({ force: true });
+                expect(reconcile).not.toHaveBeenCalled();
+
+                (store as any).lastPendingInvoiceStatusFetchByConnection.set(
+                    connection.id,
+                    Date.now() - 31_000
+                );
+                await store.refreshPendingMakeInvoices({ force: true });
+                expect(reconcile).toHaveBeenCalledTimes(1);
+            });
+
+            it('stamps the debounce so an immediate second refresh skips Cashu', async () => {
+                const { store } = buildStore();
+                seedConnection(store, {
+                    activity: [cashuPending('cashu-stamped')]
+                });
+                enableCashu(store);
+                const reconcile = jest
+                    .spyOn(store as any, 'reconcilePendingMakeInvoiceActivity')
+                    .mockResolvedValue(undefined);
+
+                await store.refreshPendingMakeInvoices({ force: true });
+                await store.refreshPendingMakeInvoices({ force: true });
+
+                expect(reconcile).toHaveBeenCalledTimes(1);
+            });
+
+            it('rehydrates a stored Cashu invoice before reconciling', async () => {
+                const { store } = buildStore();
+                seedConnection(store, {
+                    activity: [cashuPending('cashu-rehydrate')]
+                });
+                enableCashu(store);
+                let seen: unknown;
+                jest.spyOn(
+                    store as any,
+                    'reconcilePendingMakeInvoiceActivity'
+                ).mockImplementation(async (activity: any) => {
+                    seen = activity.invoice;
+                });
+
+                await store.refreshPendingMakeInvoices({ force: true });
+
+                expect(seen).toBeInstanceOf(CashuInvoice);
+            });
         });
 
         it('skips non-forced refreshes inside the throttle window', async () => {

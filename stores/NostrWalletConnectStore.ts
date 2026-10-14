@@ -207,6 +207,11 @@ export default class NostrWalletConnectStore {
     private lastPendingMakeInvoiceCheckByKey = new Map<string, number>();
     private pendingMakeInvoiceRefresh: Promise<void> | null = null;
     private lastPendingMakeInvoiceRefreshAt = 0;
+    // Activity objects already looked up during the current single-flight
+    // cycle, so a queued trailing run skips them. Keyed by object identity:
+    // after loadConnections replaces the connections the entries are new
+    // objects and are checked again, which is the point of the trailing run.
+    private pendingMakeInvoiceCheckedThisCycle = new WeakSet<object>();
     private pendingMakeInvoiceRefreshQueued = false;
     private makeInvoiceTimestampsByConnection = new Map<string, number[]>();
     // A list, not a single slot: overlapping mutations of the same kind
@@ -1372,6 +1377,7 @@ export default class NostrWalletConnectStore {
 
         this.pendingMakeInvoiceRefresh = (async () => {
             try {
+                this.pendingMakeInvoiceCheckedThisCycle = new WeakSet();
                 do {
                     this.pendingMakeInvoiceRefreshQueued = false;
                     this.lastPendingMakeInvoiceRefreshAt = Date.now();
@@ -1423,6 +1429,9 @@ export default class NostrWalletConnectStore {
                 if (activity.payment_source === 'cashu' && !cashuDue) {
                     continue;
                 }
+                if (this.pendingMakeInvoiceCheckedThisCycle.has(activity)) {
+                    continue;
+                }
                 const createdAtMs = activity.createdAt
                     ? new Date(activity.createdAt).getTime()
                     : 0;
@@ -1463,6 +1472,7 @@ export default class NostrWalletConnectStore {
         await Promise.all(
             batch.map(async ({ key, activity }) => {
                 this.lastPendingMakeInvoiceCheckByKey.set(key, checkedAt);
+                this.pendingMakeInvoiceCheckedThisCycle.add(activity);
                 const statusBefore = activity.status;
                 try {
                     if (
