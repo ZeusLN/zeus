@@ -4363,6 +4363,14 @@ export default class CashuStore {
                 );
             }
 
+            // Never fetch a withdraw callback that would reach internal
+            // infrastructure or leak in cleartext (SSRF-by-callback). Refuse
+            // before requesting a mint quote, so the user is not left holding
+            // an invoice the service will never pay.
+            if (lnurl && !isLnurlCallbackAllowed(lnurl.callback).ok) {
+                throw new Error(localeString('utils.lnurl.unsafeCallback'));
+            }
+
             // Pick mint: random if enabled, otherwise selected
             const mintUrl = this.randomizeMintSelection
                 ? this.getRandomMintUrl()
@@ -4425,23 +4433,6 @@ export default class CashuStore {
             });
 
             if (lnurl) {
-                if (!isLnurlCallbackAllowed(lnurl.callback).ok) {
-                    // Never fetch a callback that would reach internal
-                    // infrastructure or leak in cleartext (SSRF-by-callback)
-                    Alert.alert(
-                        localeString('general.error'),
-                        localeString('utils.lnurl.unsafeCallback'),
-                        [
-                            {
-                                text: localeString('general.ok'),
-                                onPress: () => void 0
-                            }
-                        ],
-                        { cancelable: false }
-                    );
-                    return { paymentRequest: invoice.getPaymentRequest };
-                }
-
                 const u = url.parse(lnurl.callback);
                 const qs = querystring.parse(u.query);
                 qs.k1 = lnurl.k1;
