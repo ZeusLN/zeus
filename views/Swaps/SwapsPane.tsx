@@ -3,7 +3,6 @@ import { Text, TouchableOpacity, View, FlatList } from 'react-native';
 
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import moment from 'moment';
 
 import { WarningMessage } from '../../components/SuccessErrorMessage';
 import Screen from '../../components/Screen';
@@ -13,6 +12,7 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import Button from '../../components/Button';
 
 import { themeColor } from '../../utils/ThemeUtils';
+import DateTimeUtils from '../../utils/DateTimeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 
 import SwapStore from '../../stores/SwapStore';
@@ -211,8 +211,8 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
                                 fontSize: 16
                             }}
                         >
-                            {moment(item.createdAtFormatted).format(
-                                'MMM Do YYYY, h:mm:ss a'
+                            {DateTimeUtils.formatDateTimeShort(
+                                item.createdAtFormatted
                             )}
                         </Text>
                     </View>

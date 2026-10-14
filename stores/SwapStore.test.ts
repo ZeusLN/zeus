@@ -30,6 +30,9 @@ jest.mock('../utils/UrlUtils', () => ({
     __esModule: true,
     default: { getMempoolApiUrl: () => 'https://mempool.test/api' }
 }));
+// models/Swap formats dates with DateTimeUtils, which reads display
+// settings from the store graph
+jest.mock('./Stores', () => ({}));
 jest.mock('ecpair', () => ({ ECPairFactory: () => ({}) }));
 jest.mock('@bitcoinerlab/secp256k1', () => ({ __esModule: true, default: {} }));
 jest.mock('bitcoinjs-lib', () => ({

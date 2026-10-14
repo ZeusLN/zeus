@@ -2,7 +2,6 @@ import * as React from 'react';
 import { FlatList, Text, View } from 'react-native';
 import { ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
-import moment from 'moment';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Button from '../../../components/Button';
@@ -13,6 +12,7 @@ import { ErrorMessage } from '../../../components/SuccessErrorMessage';
 
 import ChannelBackupStore from '../../../stores/ChannelBackupStore';
 
+import DateTimeUtils from '../../../utils/DateTimeUtils';
 import { localeString } from '../../../utils/LocaleUtils';
 import { themeColor } from '../../../utils/ThemeUtils';
 
@@ -180,10 +180,8 @@ export default class DisasterRecoveryAdvanced extends React.Component<
                                                             : themeColor('text')
                                                     }}
                                                 >
-                                                    {moment(
+                                                    {DateTimeUtils.formatDateTimeShort(
                                                         item.created_at
-                                                    ).format(
-                                                        'ddd, MMM DD, hh:mm:ss a'
                                                     )}
                                                 </Text>
                                             </View>

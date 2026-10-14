@@ -1,6 +1,13 @@
+const mockDisplay: { timeFormat?: string } = {};
+
 jest.mock('../stores/Stores', () => ({
     fiatStore: {
         formatAmountForDisplay: (amount: string) => `$${amount}`
+    },
+    settingsStore: {
+        get settings() {
+            return { display: mockDisplay };
+        }
     }
 }));
 jest.mock('../utils/LocaleUtils');
@@ -11,10 +18,21 @@ describe('Order.getDisplayTime', () => {
     beforeEach(() => {
         jest.useFakeTimers();
         jest.setSystemTime(new Date('2026-09-25T12:00:00'));
+        mockDisplay.timeFormat = '12h';
     });
 
     afterEach(() => {
         jest.useRealTimers();
+        delete mockDisplay.timeFormat;
+    });
+
+    it('uses a 24-hour clock when no time format is set', () => {
+        delete mockDisplay.timeFormat;
+        const order = new Order({
+            created_at: '2025-07-17T21:20:00',
+            updated_at: '2025-07-17T21:22:00'
+        });
+        expect(order.getDisplayTime).toBe("21:22 | Thu, Jul 17, '25");
     });
 
     it('includes the day of the month for an order from this year', () => {
@@ -45,6 +63,11 @@ describe('Order.getDisplayTime', () => {
     it('falls back to created_at when updated_at is missing', () => {
         const order = new Order({ created_at: '2026-08-09T10:40:00' });
         expect(order.getDisplayTime).toBe('10:40 am | Sun, Aug 09');
+    });
+
+    it('shows N/A for an unparseable timestamp', () => {
+        const order = new Order({ updated_at: 'not-a-date' });
+        expect(order.getDisplayTime).toBe('general.notAvailable');
     });
 });
 

@@ -112,6 +112,7 @@ import Language from './views/Settings/Language';
 import Currency from './views/Settings/Currency';
 import SelectCurrency from './views/Settings/SelectCurrency';
 import Display from './views/Settings/Display';
+import DateTime from './views/Settings/DateTime';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import Support from './views/Settings/Support';
 import Help from './views/Settings/Help';
@@ -745,6 +746,12 @@ export default class App extends React.PureComponent {
                                                                 name="Display" // @ts-ignore:next-line
                                                                 component={
                                                                     Display
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="DateTime" // @ts-ignore:next-line
+                                                                component={
+                                                                    DateTime
                                                                 }
                                                             />
                                                             <Stack.Screen

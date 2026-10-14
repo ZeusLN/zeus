@@ -100,6 +100,9 @@ interface DisplaySettings {
     showAllDecimalPlaces?: boolean;
     removeDecimalSpaces?: boolean;
     showMillisatoshiAmounts?: boolean;
+    dateFormat?: string;
+    timeFormat?: string;
+    showSeconds?: boolean;
 }
 
 export enum PosEnabled {
@@ -1259,6 +1262,30 @@ export const DEFAULT_VIEW_KEYS = [
     }
 ];
 
+export const DATE_FORMAT_KEYS = [
+    {
+        key: 'Default',
+        translateKey: 'views.Settings.DateTime.DateFormat.default',
+        value: 'default'
+    },
+    { key: 'YYYY-MM-DD', value: 'iso' },
+    { key: 'DD/MM/YYYY', value: 'dmy' },
+    { key: 'MM/DD/YYYY', value: 'mdy' }
+];
+
+export const TIME_FORMAT_KEYS = [
+    {
+        key: '24-hour',
+        translateKey: 'views.Settings.DateTime.TimeFormat.24h',
+        value: '24h'
+    },
+    {
+        key: '12-hour',
+        translateKey: 'views.Settings.DateTime.TimeFormat.12h',
+        value: '12h'
+    }
+];
+
 export const DEFAULT_VIEW_KEYS_POS = [
     {
         key: 'Products',
@@ -1553,7 +1580,10 @@ export const DEFAULT_SETTINGS: Settings = {
         bigKeypadButtons: false,
         showAllDecimalPlaces: false,
         removeDecimalSpaces: false,
-        showMillisatoshiAmounts: false
+        showMillisatoshiAmounts: false,
+        dateFormat: 'default',
+        timeFormat: '24h',
+        showSeconds: false
     },
     pos: {
         posEnabled: PosEnabled.Disabled,
