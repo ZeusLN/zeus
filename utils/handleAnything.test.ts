@@ -1346,17 +1346,27 @@ describe('handleAnything', () => {
         });
 
         // The address grammar admits IP-literal domains, and the well-known
-        // lookup is a request from the user's network position.
+        // lookup is a request from the user's network position. The BOLT 12
+        // DoH lookup must not run either: it would send the address to the
+        // resolver before the refusal.
         it.each(['user@192.168.1.1', 'user@127.0.0.1', 'user@169.254.169.254'])(
             'refuses to resolve %s',
             async (address) => {
                 mockProcessBIP21Uri.mockReturnValue({ value: address });
                 mockIsValidLightningAddress = true;
+                const originalFetch = global.fetch;
+                const mockDohFetch = jest.fn();
+                global.fetch = mockDohFetch as any;
 
-                await expect(handleAnything(address)).rejects.toThrow(
-                    'This lightning address points at an unsafe host'
-                );
-                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+                try {
+                    await expect(handleAnything(address)).rejects.toThrow(
+                        'This lightning address points at an unsafe host'
+                    );
+                    expect(mockDohFetch).not.toHaveBeenCalled();
+                    expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+                } finally {
+                    global.fetch = originalFetch;
+                }
             }
         );
 
