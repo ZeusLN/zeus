@@ -33,6 +33,7 @@ import ModalBox from '../../components/ModalBox';
 import Switch from '../../components/Switch';
 
 import { font } from '../../utils/FontUtils';
+import { hasUsableClaimFee } from '../../utils/FeeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { reAuthNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -214,10 +215,18 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 ? true
                 : currentInputSatsBN.isLessThanOrEqualTo(maxSendAmount));
 
+        // The reverse claim is broadcast without asking, so it needs a fee
+        // before the swap starts: the host's claim miner fee, or else a
+        // usable rate from the fee section above
+        const feeRateUsable =
+            !reverse ||
+            hasUsableClaimFee(SwapStore.claimMinerFee, this.state.fee);
+
         const newIsValid =
             invoiceAddressValid &&
             inputAmountValidAndWithinLimits &&
-            outputGreaterThanZero;
+            outputGreaterThanZero &&
+            feeRateUsable;
 
         if (this.state.isValid !== newIsValid) {
             this.setState({ isValid: newIsValid });
@@ -491,7 +500,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             prevState.inputSats !== this.state.inputSats ||
             prevState.outputSats !== this.state.outputSats ||
             prevState.invoice !== this.state.invoice ||
-            prevState.reverse !== this.state.reverse
+            prevState.reverse !== this.state.reverse ||
+            prevState.fee !== this.state.fee
         ) {
             this.checkIsValid();
         }
