@@ -143,4 +143,71 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
     // nothing. Jest fails a test on an unhandled rejection, so this cannot be
     // pinned through the row until the error is handled (#5060).
     it.todo('tells the user when the Lightning address lookup fails');
+
+    describe('handler validation', () => {
+        // Until #5060 lands, call the handler on a mounted row directly
+        const lookUp = async (lightningAddress: string) => {
+            const ref = React.createRef<any>();
+            const navigation = { navigate: jest.fn() };
+            await render(
+                <LightningSwipeableRow
+                    {...({
+                        ref,
+                        lightningAddress,
+                        locked: true,
+                        navigation,
+                        SyncStore: { isSyncing: false }
+                    } as any)}
+                >
+                    <Text>Pay</Text>
+                </LightningSwipeableRow>
+            );
+            const result = ref.current.handleLightningAddress(
+                lightningAddress,
+                navigation,
+                {}
+            );
+            return { navigation, result };
+        };
+
+        it('rejects a response without a callback', async () => {
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({ status: 200 }),
+                json: () => ({})
+            });
+
+            const { navigation, result } = await lookUp('satoshi@domain.com');
+
+            await expect(result).rejects.toThrow(
+                'utils.handleAnything.lightningAddressError'
+            );
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        });
+
+        it('rejects a non-200 response', async () => {
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({ status: 404 }),
+                json: () => ({ callback: 'https://example.com/callback' })
+            });
+
+            const { navigation, result } = await lookUp('satoshi@domain.com');
+
+            await expect(result).rejects.toThrow(
+                'utils.handleAnything.lightningAddressError'
+            );
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        });
+
+        it('rejects a Tor response without a callback', async () => {
+            mockSettingsStore.enableTor = true;
+            mockDoTorRequest.mockResolvedValue({});
+
+            const { navigation, result } = await lookUp(`satoshi@${ONION}`);
+
+            await expect(result).rejects.toThrow(
+                'utils.handleAnything.lightningAddressError'
+            );
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        });
+    });
 });
