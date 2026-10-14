@@ -426,22 +426,6 @@
       "sha1": "48ff7f8fb7c94d8cfc218b0a3079e22e338e00f1"
     },
     {
-      "path": "assets/images/SVG/Nostrich_invalid.svg",
-      "sha1": "cac265f67801971ebb7602fc61e3e0ed81da5bd4"
-    },
-    {
-      "path": "assets/images/SVG/Nostrich_not-found.svg",
-      "sha1": "5cdcdd779d01ac52b3219bd7acf42f3cffb3c10c"
-    },
-    {
-      "path": "assets/images/SVG/Nostrich_not-loaded.svg",
-      "sha1": "3ed705234f24ba88ca66ffd00942965277f12b21"
-    },
-    {
-      "path": "assets/images/SVG/Nostrich_valid.svg",
-      "sha1": "d160f441207e2bb0a65f0d4b527ba5ee616d1605"
-    },
-    {
       "path": "assets/images/SVG/Nostrich.svg",
       "sha1": "97173ce4920cec6a44e8c0b73186d1a9861591d0"
     },

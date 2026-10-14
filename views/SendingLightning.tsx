@@ -459,49 +459,11 @@ export default class SendingLightning extends React.Component<
                                     </Text>
                                 </View>
                             )}
-                            {LnurlPayStore.isZaplocker &&
-                                (!success || !!error) && (
-                                    <View
-                                        style={{
-                                            padding: 20,
-                                            marginTop: 10,
-                                            marginBottom: 10,
-                                            alignItems: 'center'
-                                        }}
-                                    >
-                                        <Clock
-                                            color={themeColor('bitcoin')}
-                                            width={windowSize.height * 0.2}
-                                            height={windowSize.height * 0.2}
-                                        />
-                                        <Text
-                                            style={{
-                                                color: themeColor('text'),
-                                                fontFamily:
-                                                    'PPNeueMontreal-Book',
-                                                fontSize:
-                                                    windowSize.width *
-                                                    windowSize.scale *
-                                                    0.014,
-                                                marginTop:
-                                                    windowSize.height * 0.03,
-                                                textAlign: 'center'
-                                            }}
-                                        >
-                                            {localeString(
-                                                'views.SendingLightning.isZaplocker'
-                                            )}
-                                        </Text>
-                                    </View>
-                                )}
-                            {(!!error || !!payment_error) &&
-                                !LnurlPayStore.isZaplocker && (
-                                    <PaymentErrorView
-                                        errorMessage={
-                                            payment_error || error_msg
-                                        }
-                                    />
-                                )}
+                            {(!!error || !!payment_error) && (
+                                <PaymentErrorView
+                                    errorMessage={payment_error || error_msg}
+                                />
+                            )}
                             {!!success &&
                                 !error &&
                                 payment_hash === LnurlPayStore.paymentHash &&

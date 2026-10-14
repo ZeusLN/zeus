@@ -242,19 +242,19 @@ networks. The testnet default is also dead and has no working replacement — no
 Boltz-compatible testnet provider exists publicly — so `SWAP_HOST_KEYS_TESTNET` is
 knowingly left pointing at it.
 
-### `lightningAddress` (nested) — UI: `views/LightningAddress/LightningAddressSettings.tsx` (+ Cashu/NWC variants under `views/Cashu/LightningAddress/`, `views/LightningAddress/NWCAddressSettings.tsx`)
+### `lightningAddress` (nested) — UI: `views/Cashu/LightningAddress/LightningAddressSettings.tsx` (Cashu) and `views/LightningAddress/NWCAddressSettings.tsx` (NWC); `views/LightningAddress/LightningAddressSettings.tsx` only offers switch/delete for a retired Zaplocker address
 
 | Axis | Options | Default |
 |---|---|---|
 | `enabled` | bool (ZEUS Pay address) | `false` |
 | `automaticallyAccept` | bool | `true` |
-| `automaticallyAcceptAttestationLevel` | `0 \| 1 \| 2` (`AUTOMATIC_ATTESTATION_KEYS`: disabled / success only / success+not-found) | `2` |
+| `automaticallyAcceptAttestationLevel` | `0 \| 1 \| 2` | `2` — DEPRECATED (Zaplocker, nothing reads it) |
 | `automaticallyRequestOlympusChannels` | bool | `false` — DEPRECATED |
-| `routeHints` | bool | `false` |
+| `routeHints` | bool | `false` — DEPRECATED (Zaplocker, nothing reads it) |
 | `allowComments` | bool | `true` |
 | `zapReceiptsEnabled` | bool (Nostr zap receipts) | `true` |
-| `nostrPrivateKey` | string | `''` |
-| `nostrRelays` | string[] | `DEFAULT_NOSTR_RELAYS` (8 relays; the older 3-relay list survives as `DEFAULT_NOSTR_RELAYS_2023` for migration) |
+| `nostrPrivateKey` | string | `''` — DEPRECATED (Zaplocker, nothing reads it) |
+| `nostrRelays` | string[] | `DEFAULT_NOSTR_RELAYS` (8 relays; the older 3-relay list survives as `DEFAULT_NOSTR_RELAYS_2023` for migration) — DEPRECATED (Zaplocker, only the mod8 migration touches it) |
 | `notifications` | `0 \| 1 \| 2` (`NOTIFICATIONS_PREF_KEYS`: disabled / push / nostr) | `0` |
 | `mintUrl` | string (Cashu-type address mint) | `''` |
 | `posEnabled` | bool — ZEUS Pay+ web POS | `false` (newer, treat as experimental) |

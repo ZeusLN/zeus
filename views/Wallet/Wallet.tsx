@@ -1368,19 +1368,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     await LightningAddressStore.status();
                     if (!isCurrent()) return;
 
-                    if (settings?.lightningAddress?.automaticallyAccept) {
-                        if (
-                            LightningAddressStore.lightningAddressType ===
-                                'zaplocker' &&
-                            BackendUtils.supportsCustomPreimages()
-                        ) {
-                            LightningAddressStore.prepareToAutomaticallyAcceptZaplocker();
-                        } else if (
-                            LightningAddressStore.lightningAddressType ===
-                            'cashu'
-                        ) {
-                            LightningAddressStore.prepareToAutomaticallyAcceptCashu();
-                        }
+                    if (
+                        settings?.lightningAddress?.automaticallyAccept &&
+                        LightningAddressStore.lightningAddressType === 'cashu'
+                    ) {
+                        LightningAddressStore.prepareToAutomaticallyAcceptCashu();
                     }
 
                     if (

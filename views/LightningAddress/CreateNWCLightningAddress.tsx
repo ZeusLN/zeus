@@ -59,7 +59,7 @@ export default class CreateNWCLightningAddress extends React.Component<
     render() {
         const { navigation, LightningAddressStore, route } = this.props;
         const { nwcConnectionString, tested } = this.state;
-        const { createNWC, testNWCConnectionString, update, fees, error_msg } =
+        const { createNWC, testNWCConnectionString, update, error_msg } =
             LightningAddressStore;
         const switchTo = route.params?.switchTo;
         const updateConnection = route.params?.updateConnection;
@@ -99,7 +99,9 @@ export default class CreateNWCLightningAddress extends React.Component<
                         }
                         rightComponent={
                             !loading ? (
-                                <Row>{fees && <InfoButton />}</Row>
+                                <Row>
+                                    <InfoButton />
+                                </Row>
                             ) : undefined
                         }
                         navigation={navigation}

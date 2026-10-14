@@ -31,7 +31,6 @@ interface NWCAddressSettingsProps {
 }
 
 interface NWCAddressSettingsState {
-    routeHints: boolean | undefined;
     allowComments: boolean | undefined;
     zapReceiptsEnabled: boolean;
     notifications: number;
@@ -50,7 +49,6 @@ export default class NWCAddressSettings extends React.Component<
         const { settings } = SettingsStore;
 
         this.state = {
-            routeHints: settings.lightningAddress?.routeHints ? true : false,
             allowComments: settings.lightningAddress?.allowComments
                 ? true
                 : false,

@@ -34,12 +34,10 @@ import TransactionsStore, {
     SendPaymentReq
 } from '../../stores/TransactionsStore';
 import UnitsStore from '../../stores/UnitsStore';
-import LnurlPayStore from '../../stores/LnurlPayStore';
 import SettingsStore from '../../stores/SettingsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
-import LinkingUtils from '../../utils/LinkingUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
 import {
@@ -53,12 +51,6 @@ import CaretDown from '../../assets/images/SVG/Caret Down.svg';
 import CaretRight from '../../assets/images/SVG/Caret Right.svg';
 import QR from '../../assets/images/SVG/QR.svg';
 
-const zaplockerDestinations = [
-    // OLYMPUS
-    '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581'
-    // TODO add Zaplocker.com
-];
-
 interface CashuPaymentRequestProps {
     exitSetup: any;
     navigation: NativeStackNavigationProp<any, any>;
@@ -66,12 +58,10 @@ interface CashuPaymentRequestProps {
     CashuStore: CashuStore;
     TransactionsStore: TransactionsStore;
     UnitsStore: UnitsStore;
-    LnurlPayStore: LnurlPayStore;
     SettingsStore: SettingsStore;
 }
 
 interface CashuPaymentRequestState {
-    zaplockerToggle: boolean;
     slideToPayThreshold: number;
     donationsToggle: boolean;
     donationPercentage: any;
@@ -87,7 +77,6 @@ interface CashuPaymentRequestState {
     'CashuStore',
     'TransactionsStore',
     'UnitsStore',
-    'LnurlPayStore',
     'SettingsStore'
 )
 @observer
@@ -102,7 +91,6 @@ export default class CashuPaymentRequest extends React.Component<
     swipeResetDisposer: any;
     donationLockRequest?: string;
     state = {
-        zaplockerToggle: false,
         slideToPayThreshold: 10000,
         donationsToggle: false,
         donationPercentage: 0,
@@ -241,8 +229,7 @@ export default class CashuPaymentRequest extends React.Component<
     };
 
     triggerPayment = () => {
-        const { CashuStore, LnurlPayStore, SettingsStore, navigation } =
-            this.props;
+        const { CashuStore, SettingsStore, navigation } = this.props;
         const { multiMintEnabled, donationAmount } = this.state;
 
         // Fail closed: if the invoice in the store no longer matches the one
@@ -299,12 +286,6 @@ export default class CashuPaymentRequest extends React.Component<
             return;
         }
 
-        // Zaplocker
-        const { isZaplocker } = LnurlPayStore;
-
-        // Broadcast attestation if Zaplocker is enabled
-        if (isZaplocker) LnurlPayStore.broadcastAttestation();
-
         // Call sendPayment with the freshest values
         this.sendPayment({
             amount: paymentAmount
@@ -357,10 +338,8 @@ export default class CashuPaymentRequest extends React.Component<
     };
 
     render() {
-        const { CashuStore, LnurlPayStore, SettingsStore, navigation } =
-            this.props;
+        const { CashuStore, SettingsStore, navigation } = this.props;
         const {
-            zaplockerToggle,
             slideToPayThreshold,
             donationsToggle,
             donationAmount,
@@ -378,16 +357,6 @@ export default class CashuPaymentRequest extends React.Component<
             totalBalanceSats
         } = CashuStore;
 
-        // Zaplocker
-        const {
-            isZaplocker,
-            isPmtHashSigValid,
-            isRelaysSigValid,
-            zaplockerNpub
-        } = LnurlPayStore;
-
-        const isZaplockerValid = isPmtHashSigValid && isRelaysSigValid;
-
         const isPayReqExpired = !!payReq && payReq.isExpiredNow();
 
         const requestAmount =
@@ -403,7 +372,7 @@ export default class CashuPaymentRequest extends React.Component<
 
         const date = new Date(Number(timestamp) * 1000).toString();
 
-        const { implementation, settings } = SettingsStore;
+        const { settings } = SettingsStore;
 
         const isNoAmountInvoice: boolean = !requestAmount;
         const showMultiMintToggle = !!settings?.ecash?.enableMultiMint;
@@ -426,13 +395,6 @@ export default class CashuPaymentRequest extends React.Component<
             Platform.OS !== 'ios' &&
             !isNoAmountInvoice &&
             settings?.payments?.enableDonations;
-
-        const showZaplockerWarning =
-            isZaplocker ||
-            (destination &&
-                zaplockerDestinations.includes(destination) &&
-                cltv_expiry &&
-                Number(cltv_expiry) > 200);
 
         const QRButton = () => (
             <TouchableOpacity
@@ -563,21 +525,6 @@ export default class CashuPaymentRequest extends React.Component<
                                             />
                                         </View>
                                     )}
-                                    {showZaplockerWarning &&
-                                        implementation === 'embedded-lnd' && (
-                                            <View
-                                                style={{
-                                                    paddingTop: 10,
-                                                    paddingBottom: 10
-                                                }}
-                                            >
-                                                <WarningMessage
-                                                    message={localeString(
-                                                        'views.Send.zaplockerWarning'
-                                                    )}
-                                                />
-                                            </View>
-                                        )}
                                     {!BackendUtils.supportsLightningSends() && (
                                         <View
                                             style={{
@@ -634,139 +581,6 @@ export default class CashuPaymentRequest extends React.Component<
                                         </View>
                                     )}
                                 </>
-
-                                {isZaplocker && (
-                                    <TouchableOpacity
-                                        onPress={() => {
-                                            this.setState({
-                                                zaplockerToggle:
-                                                    !zaplockerToggle
-                                            });
-                                        }}
-                                    >
-                                        <View
-                                            style={{
-                                                marginTop: 10,
-                                                marginBottom: 10
-                                            }}
-                                        >
-                                            <Row justify="space-between">
-                                                <View style={{ flex: 1 }}>
-                                                    <KeyValue
-                                                        keyValue={localeString(
-                                                            'views.Settings.LightningAddress.zaplockerVerification'
-                                                        )}
-                                                        color={
-                                                            isZaplockerValid
-                                                                ? themeColor(
-                                                                      'success'
-                                                                  )
-                                                                : themeColor(
-                                                                      'error'
-                                                                  )
-                                                        }
-                                                    />
-                                                </View>
-                                                {zaplockerToggle ? (
-                                                    <CaretDown
-                                                        fill={
-                                                            isZaplockerValid
-                                                                ? themeColor(
-                                                                      'success'
-                                                                  )
-                                                                : themeColor(
-                                                                      'error'
-                                                                  )
-                                                        }
-                                                        width="20"
-                                                        height="20"
-                                                    />
-                                                ) : (
-                                                    <CaretRight
-                                                        fill={
-                                                            isZaplockerValid
-                                                                ? themeColor(
-                                                                      'success'
-                                                                  )
-                                                                : themeColor(
-                                                                      'error'
-                                                                  )
-                                                        }
-                                                        width="20"
-                                                        height="20"
-                                                    />
-                                                )}
-                                            </Row>
-                                        </View>
-                                    </TouchableOpacity>
-                                )}
-
-                                {zaplockerToggle && (
-                                    <>
-                                        <KeyValue
-                                            keyValue={localeString(
-                                                'views.PaymentRequest.isPmtHashSigValid'
-                                            )}
-                                            value={
-                                                isPmtHashSigValid
-                                                    ? localeString(
-                                                          'general.valid'
-                                                      )
-                                                    : localeString(
-                                                          'general.invalid'
-                                                      )
-                                            }
-                                            color={
-                                                isPmtHashSigValid
-                                                    ? themeColor('success')
-                                                    : themeColor('error')
-                                            }
-                                        />
-
-                                        <KeyValue
-                                            keyValue={localeString(
-                                                'views.PaymentRequest.isRelaysSigValid'
-                                            )}
-                                            value={
-                                                isRelaysSigValid
-                                                    ? localeString(
-                                                          'general.valid'
-                                                      )
-                                                    : localeString(
-                                                          'general.invalid'
-                                                      )
-                                            }
-                                            color={
-                                                isRelaysSigValid
-                                                    ? themeColor('success')
-                                                    : themeColor('error')
-                                            }
-                                        />
-
-                                        <KeyValue
-                                            keyValue={localeString(
-                                                'nostr.npub'
-                                            )}
-                                            value={zaplockerNpub}
-                                            sensitive
-                                            showCopyIcon
-                                        />
-
-                                        <View style={styles.button}>
-                                            <Button
-                                                title={localeString(
-                                                    'nostr.loadProfileExternal'
-                                                )}
-                                                onPress={() =>
-                                                    LinkingUtils.handleDeepLink(
-                                                        `nostr:${zaplockerNpub}`,
-                                                        this.props.navigation
-                                                    )
-                                                }
-                                            />
-                                        </View>
-                                    </>
-                                )}
 
                                 {!!description && (
                                     <KeyValue
