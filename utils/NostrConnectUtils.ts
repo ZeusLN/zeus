@@ -697,9 +697,9 @@ export default class NostrConnectUtils {
     }
 
     /**
-     * NIP-47 payment hashes are hex, but some clients send them base64-encoded
-     * — ZEUS's own NWC backend does. Stored hashes are hex, so a request value
-     * has to be normalized before any exact comparison.
+     * NIP-47 payment hashes are hex, but some clients send them
+     * base64-encoded. Stored hashes are hex, so a request value has to be
+     * normalized before any exact comparison.
      */
     static normalizePaymentHash(paymentHash?: string): string | undefined {
         const hash = paymentHash?.trim();
