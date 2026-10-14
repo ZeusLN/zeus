@@ -3,7 +3,7 @@ import { observable, computed } from 'mobx';
 
 import BaseModel from './BaseModel';
 import { lnrpc } from '../proto/lightning';
-import { formatScid } from '../utils/ScidUtils';
+import { formatNonZeroScid, formatScid } from '../utils/ScidUtils';
 
 interface HTLC {
     hash_lock: string;
@@ -252,25 +252,19 @@ export default class Channel extends BaseModel {
     public get aliasScids(): Array<string> {
         const scids: Array<string> = [];
         this.alias_scids?.forEach((scid) => {
-            const formatted = formatScid(scid);
-            if (formatted && formatted !== '0x0x0') scids.push(formatted);
+            const formatted = formatNonZeroScid(scid);
+            if (formatted) scids.push(formatted);
         });
         return scids;
     }
 
     @computed
     public get peerScidAlias(): string | undefined {
-        const scid = this.peer_scid_alias
-            ? formatScid(this.peer_scid_alias)
-            : undefined;
-        return scid !== '0x0x0' ? scid : undefined;
+        return formatNonZeroScid(this.peer_scid_alias);
     }
 
     @computed get zeroConfConfirmedScid(): string | undefined {
-        const scid = this.zero_conf_confirmed_scid
-            ? formatScid(this.zero_conf_confirmed_scid)
-            : undefined;
-        return scid !== '0x0x0' ? scid : undefined;
+        return formatNonZeroScid(this.zero_conf_confirmed_scid);
     }
 
     @computed

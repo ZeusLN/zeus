@@ -2022,7 +2022,7 @@ export default class LdkNode {
             channel_point: channel.fundingTxo_txid
                 ? `${channel.fundingTxo_txid}:${channel.fundingTxo_vout}`
                 : '',
-            // chan_id is the numeric SCID (used by chanFormat for NNNxNNNxNNN)
+            // chan_id is the numeric SCID (formatted as NNNxNNNxNNN by formatScid)
             chan_id: channel.shortChannelId || '',
             // channel_id is the 32-byte hex channel ID
             channel_id: channel.channelId,

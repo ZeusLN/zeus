@@ -21,12 +21,16 @@ const OUTPUT_INDEX_MODULUS = 2 ** 16;
  * Accepts a decimal string, a number, or a protobuf Long (embedded LND
  * decodes uint64 fields as Long, and arrays of them are not converted to
  * strings by BaseModel). Returns undefined for anything that is not an
- * integer in the uint64 range.
+ * integer in the uint64 range, and for numbers above
+ * Number.MAX_SAFE_INTEGER, which have already lost precision.
  */
 export const formatScid = (
     scid?: string | number | { toString(): string } | null
 ): string | undefined => {
     if (scid === undefined || scid === null) return undefined;
+    if (typeof scid === 'number' && !Number.isSafeInteger(scid)) {
+        return undefined;
+    }
 
     const value = String(scid);
     if (!/^\d+$/.test(value)) return undefined;
@@ -39,4 +43,15 @@ export const formatScid = (
     const outputIndex = number.mod(OUTPUT_INDEX_MODULUS);
 
     return `${blockHeight.toFixed()}x${txIndex.toFixed()}x${outputIndex.toFixed()}`;
+};
+
+/**
+ * Like formatScid, but also returns undefined for a zero scid, which LND
+ * uses for alias and confirmed scid fields that are not set.
+ */
+export const formatNonZeroScid = (
+    scid?: string | number | { toString(): string } | null
+): string | undefined => {
+    const formatted = formatScid(scid);
+    return formatted === '0x0x0' ? undefined : formatted;
 };
