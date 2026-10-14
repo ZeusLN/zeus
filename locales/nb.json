@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "Minimum avgift",
     "views.EditFee.confirmFee": "Bekreft avgift",
     "views.EditFee.error": "feil ved henting av avgiftsatser",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "Faktura",
     "views.Invoice.paid": "Betalt",
     "views.Invoice.unpaid": "Ubetalt",
