@@ -1242,6 +1242,56 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
+    // A fee limit of 0 means no limit
+    @objc(receiveViaJitChannel:invoiceDescription:expirySecs:maxLspFeeLimitMsat:resolver:rejecter:)
+    func receiveViaJitChannel(_ amountMsat: Double, invoiceDescription: String, expirySecs: Double, maxLspFeeLimitMsat: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        // Connects to the LSP and waits on two LSPS2 requests
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let bolt11 = node.bolt11Payment()
+                let descriptionObj = Bolt11InvoiceDescription.direct(description: invoiceDescription)
+                let invoice = try bolt11.receiveViaJitChannel(
+                    amountMsat: UInt64(amountMsat),
+                    description: descriptionObj,
+                    expirySecs: UInt32(expirySecs),
+                    maxLspFeeLimitMsat: maxLspFeeLimitMsat > 0 ? UInt64(maxLspFeeLimitMsat) : nil
+                )
+                resolve(["invoice": invoice.description])
+            } catch {
+                reject("error", self.errorMessage(error), error)
+            }
+        }
+    }
+
+    // A fee limit of 0 means no limit
+    @objc(receiveVariableAmountViaJitChannel:expirySecs:maxProportionalLspFeeLimitPpmMsat:resolver:rejecter:)
+    func receiveVariableAmountViaJitChannel(_ invoiceDescription: String, expirySecs: Double, maxProportionalLspFeeLimitPpmMsat: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let bolt11 = node.bolt11Payment()
+                let descriptionObj = Bolt11InvoiceDescription.direct(description: invoiceDescription)
+                let invoice = try bolt11.receiveVariableAmountViaJitChannel(
+                    description: descriptionObj,
+                    expirySecs: UInt32(expirySecs),
+                    maxProportionalLspFeeLimitPpmMsat: maxProportionalLspFeeLimitPpmMsat > 0 ? UInt64(maxProportionalLspFeeLimitPpmMsat) : nil
+                )
+                resolve(["invoice": invoice.description])
+            } catch {
+                reject("error", self.errorMessage(error), error)
+            }
+        }
+    }
+
     @objc(sendBolt11:maxTotalRoutingFeeMsat:maxPathCount:paymentTimeoutSecs:resolver:rejecter:)
     func sendBolt11(_ invoice: String, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, paymentTimeoutSecs: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
         guard let node = self.getNode() else {

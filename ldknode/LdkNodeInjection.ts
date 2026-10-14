@@ -475,6 +475,46 @@ const receiveVariableAmountBolt11 = async ({
     return result.invoice;
 };
 
+// Creates an invoice that routes through the LSPS2 LSP, which opens a
+// channel to us when it is paid and withholds its fee from the payment.
+// Without a fee limit, the LSP's cheapest offer is accepted at any cost.
+const receiveViaJitChannel = async ({
+    amountMsat,
+    description,
+    expirySecs,
+    maxLspFeeLimitMsat
+}: {
+    amountMsat: number;
+    description: string;
+    expirySecs: number;
+    maxLspFeeLimitMsat?: number;
+}): Promise<string> => {
+    const result = await LdkNodeModule.receiveViaJitChannel(
+        amountMsat,
+        description,
+        expirySecs,
+        maxLspFeeLimitMsat ?? 0
+    );
+    return result.invoice;
+};
+
+const receiveVariableAmountViaJitChannel = async ({
+    description,
+    expirySecs,
+    maxProportionalLspFeeLimitPpmMsat
+}: {
+    description: string;
+    expirySecs: number;
+    maxProportionalLspFeeLimitPpmMsat?: number;
+}): Promise<string> => {
+    const result = await LdkNodeModule.receiveVariableAmountViaJitChannel(
+        description,
+        expirySecs,
+        maxProportionalLspFeeLimitPpmMsat ?? 0
+    );
+    return result.invoice;
+};
+
 const sendBolt11 = async ({
     invoice,
     maxTotalRoutingFeeMsat,
@@ -1211,6 +1251,17 @@ export interface ILdkNodeInjections {
             description: string;
             expirySecs: number;
         }) => Promise<string>;
+        receiveViaJitChannel: (params: {
+            amountMsat: number;
+            description: string;
+            expirySecs: number;
+            maxLspFeeLimitMsat?: number;
+        }) => Promise<string>;
+        receiveVariableAmountViaJitChannel: (params: {
+            description: string;
+            expirySecs: number;
+            maxProportionalLspFeeLimitPpmMsat?: number;
+        }) => Promise<string>;
         sendBolt11: (params: {
             invoice: string;
             maxTotalRoutingFeeMsat?: number;
@@ -1421,6 +1472,8 @@ const LdkNodeInjection: ILdkNodeInjections = {
     bolt11: {
         receiveBolt11,
         receiveVariableAmountBolt11,
+        receiveViaJitChannel,
+        receiveVariableAmountViaJitChannel,
         sendBolt11,
         sendBolt11UsingAmount,
         sendBolt11Probes,
