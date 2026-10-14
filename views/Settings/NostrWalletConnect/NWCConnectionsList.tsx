@@ -53,6 +53,10 @@ interface NWCConnectionsListState {
     connectionsLoading: boolean;
     error: string;
     filter: ConnectionFilter;
+    // Bumped after pending invoices are re-checked: FlatList cells render
+    // outside the observer's tracking, so activity changes made in place
+    // would otherwise not re-render the rows.
+    refreshTick: number;
 }
 
 @inject('SettingsStore', 'NostrWalletConnectStore')
@@ -67,9 +71,12 @@ export default class NWCConnectionsList extends React.Component<
             searchQuery: '',
             connectionsLoading: false,
             error: '',
-            filter: ConnectionFilter.All
+            filter: ConnectionFilter.All,
+            refreshTick: 0
         };
     }
+
+    private unmounted = false;
 
     componentDidMount() {
         const { navigation } = this.props;
@@ -77,6 +84,7 @@ export default class NWCConnectionsList extends React.Component<
         this.getConnections();
     }
     componentWillUnmount() {
+        this.unmounted = true;
         const { navigation } = this.props;
         navigation.removeListener('focus', this.handleFocus);
     }
@@ -98,6 +106,11 @@ export default class NWCConnectionsList extends React.Component<
                 await NostrWalletConnectStore.refreshPendingMakeInvoices({
                     force
                 });
+                if (!this.unmounted) {
+                    this.setState((prev) => ({
+                        refreshTick: prev.refreshTick + 1
+                    }));
+                }
             }
         } catch (error) {
             this.setState({
@@ -678,6 +691,7 @@ export default class NWCConnectionsList extends React.Component<
                             {this.getFilteredConnections().length > 0 ? (
                                 <FlatList
                                     data={this.getFilteredConnections()}
+                                    extraData={this.state.refreshTick}
                                     renderItem={this.renderConnection}
                                     keyExtractor={(item) => item.id}
                                     showsVerticalScrollIndicator={false}
