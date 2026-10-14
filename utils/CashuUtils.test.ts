@@ -15,7 +15,8 @@ import CashuUtils, {
     CashuSeedOrigin,
     classifyCashuSeedOrigin,
     resolveLockTarget,
-    isCdkMeltTrackedLocally
+    isCdkMeltTrackedLocally,
+    selectUntrackedCdkMelts
 } from './CashuUtils';
 
 const mockIsValidToken = CashuDevKit.isValidToken as jest.Mock;
@@ -580,5 +581,60 @@ describe('isCdkMeltTrackedLocally', () => {
             }
         ];
         expect(isCdkMeltTrackedLocally(cdkMelt(), payments)).toBe(false);
+    });
+});
+
+describe('selectUntrackedCdkMelts', () => {
+    const melt = (overrides: Partial<CDKTransaction> = {}): CDKTransaction => ({
+        id: 'melt',
+        direction: 'outgoing',
+        amount: 1000,
+        fee: 1,
+        mint_url: 'https://mint.example.com',
+        timestamp: 1756200000,
+        quote_id: 'quote-1',
+        payment_proof: 'preimage-1',
+        state: 'Completed',
+        ...overrides
+    });
+
+    it('keeps a completed melt missing from local storage', () => {
+        const tx = melt();
+        expect(selectUntrackedCdkMelts([tx], [])).toEqual([tx]);
+    });
+
+    it('keeps an in-flight melt', () => {
+        const tx = melt({ state: 'Pending', payment_proof: undefined });
+        expect(selectUntrackedCdkMelts([tx], [])).toEqual([tx]);
+    });
+
+    it('drops a failed melt', () => {
+        expect(
+            selectUntrackedCdkMelts([melt({ state: 'Failed' })], [])
+        ).toEqual([]);
+    });
+
+    it('drops a melt already tracked locally', () => {
+        expect(
+            selectUntrackedCdkMelts(
+                [melt()],
+                [{ meltResponse: { quote: { quote: 'quote-1' } } }]
+            )
+        ).toEqual([]);
+    });
+
+    it('drops token sends, which carry no quote id', () => {
+        expect(
+            selectUntrackedCdkMelts(
+                [melt({ quote_id: undefined, state: 'Pending' })],
+                []
+            )
+        ).toEqual([]);
+    });
+
+    it('drops incoming transactions', () => {
+        expect(
+            selectUntrackedCdkMelts([melt({ direction: 'incoming' })], [])
+        ).toEqual([]);
     });
 });

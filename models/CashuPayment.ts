@@ -55,6 +55,12 @@ export default class CashuPayment extends Payment {
             fee: tx.fee || 0,
             mintUrl: tx.mint_url,
             timestamp: tx.timestamp,
+            status:
+                tx.state === 'Pending'
+                    ? 'IN_FLIGHT'
+                    : tx.state === 'Failed'
+                    ? 'FAILED'
+                    : undefined,
             fromCDK: true,
             cdkTransactionId: tx.id,
             cdkQuoteId: tx.quote_id

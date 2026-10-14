@@ -320,7 +320,7 @@ export default class ActivityStore {
             // CDK transaction history (completed, pending and failed receives)
             additions = additions.concat(this.cashuStore.cdkInvoices);
             additions = additions.concat(this.cashuStore.payments || []);
-            // CDK-recorded melts missing from local payment storage
+            // CDK-recorded melts (settled or in flight) missing from local storage
             additions = additions.concat(this.cashuStore.cdkPayments);
 
             // Include pending/unpaid Cashu invoices (from local storage)

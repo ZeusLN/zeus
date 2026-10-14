@@ -53,11 +53,11 @@ import ModalStore from './ModalStore';
 import Base64Utils from '../utils/Base64Utils';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
 import CashuUtils, {
-    isCdkMeltTrackedLocally,
     MintPaymentStatus,
     MintProgressInfo,
     MultimintProgressCallback,
-    MultinutPaymentStep
+    MultinutPaymentStep,
+    selectUntrackedCdkMelts
 } from '../utils/CashuUtils';
 import { cashuErrorForDisplay, errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -204,7 +204,7 @@ export default class CashuStore {
     @observable public sentTokens?: Array<CashuToken>;
     // CDK transactions loaded from history (CashuInvoice for incoming, CashuPayment for outgoing)
     @observable public cdkInvoices: Array<CashuInvoice> = [];
-    // CDK outgoing melts not represented in locally persisted payments
+    // CDK melts, settled or in flight, not in locally persisted payments
     @observable public cdkPayments: Array<CashuPayment> = [];
     @observable public seedVersion?: string;
     @observable public seedPhrase?: Array<string>;
@@ -715,17 +715,10 @@ export default class CashuStore {
                 this.cdkInvoices = cdkTransactions
                     .filter((tx) => tx.direction === 'incoming')
                     .map((tx) => CashuInvoice.fromCDKTransaction(tx));
-                // Outgoing melts CDK recorded but local storage missed
-                // (e.g. app killed between melt and persist). Token sends
-                // carry no quote_id and stay tracked via sentTokens.
-                this.cdkPayments = cdkTransactions
-                    .filter(
-                        (tx) =>
-                            tx.direction === 'outgoing' &&
-                            !!tx.quote_id &&
-                            !isCdkMeltTrackedLocally(tx, this.payments || [])
-                    )
-                    .map((tx) => CashuPayment.fromCDKTransaction(tx));
+                this.cdkPayments = selectUntrackedCdkMelts(
+                    cdkTransactions,
+                    this.payments || []
+                ).map((tx) => CashuPayment.fromCDKTransaction(tx));
             });
         } catch (e) {
             console.error('CDK: Failed to load transactions:', e);
