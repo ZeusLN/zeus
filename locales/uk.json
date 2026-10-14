@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "Мінімальна комісія",
     "views.EditFee.confirmFee": "Підтвердити комісію",
     "views.EditFee.error": "Не вдалося завантажити комісії",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "Рахунок",
     "views.Invoice.paid": "Сплачено",
     "views.Invoice.unpaid": "Не сплачено",
