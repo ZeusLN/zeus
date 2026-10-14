@@ -229,12 +229,18 @@ describe('LnurlPay fixed-amount prefill', () => {
         expect(await confirmedMsat()).toBe('5000000');
     });
 
-    it('sends the amount entered in the input', async () => {
+    it('sends the sat amount entered in the input, not the display amount', async () => {
+        unitsStore.units = 'fiat';
         await renderView({ lnurlParams: lnurlParams(1, 100000) });
 
-        await fireEvent(hostOfType('AmountInput'), 'amountChange', '700', 700);
+        await fireEvent(
+            hostOfType('AmountInput'),
+            'amountChange',
+            '2.50',
+            5000
+        );
 
-        expect(await confirmedMsat()).toBe('700000');
+        expect(await confirmedMsat()).toBe('5000000');
     });
 });
 
