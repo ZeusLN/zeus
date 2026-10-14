@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "Minimalna naknada",
     "views.EditFee.confirmFee": "Potvrdi naknadu",
     "views.EditFee.error": "Pogreška pri dohvaćanju stopa naknada",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "Faktura",
     "views.Invoice.paid": "Plaćeno",
     "views.Invoice.unpaid": "Neplaćeno",
