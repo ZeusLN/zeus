@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "ค่าธรรมเนียมขั้นต่ำ",
     "views.EditFee.confirmFee": "ยืนยันค่าธรรมเนียม",
     "views.EditFee.error": "เกิดข้อผิดพลาดในการดึงอัตราค่าธรรมเนียม",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "ใบแจ้งหนี้",
     "views.Invoice.paid": "จ่ายไป",
     "views.Invoice.unpaid": "ยังไม่จ่าย",
