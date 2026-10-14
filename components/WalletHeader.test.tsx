@@ -72,11 +72,13 @@ const INVOICE = 'lnbcrt1pexample';
 const renderHeader = async ({
     clipboard,
     connecting,
-    settingsLoaded = true
+    settingsLoaded = true,
+    nodeInfo = {}
 }: {
     clipboard: boolean;
     connecting?: boolean;
     settingsLoaded?: boolean;
+    nodeInfo?: any;
 }) => {
     const listeners: { [event: string]: () => void } = {};
     const navigation = {
@@ -101,7 +103,7 @@ const renderHeader = async ({
                 LightningAddressStore: { paid: [] },
                 SyncStore: { isSyncing: false },
                 PosStore: { getOrders: jest.fn() },
-                NodeInfoStore: { nodeInfo: {} },
+                NodeInfoStore: { nodeInfo },
                 ModalStore: {},
                 AlertStore: {},
                 ConnectivityStore: { isOffline: false }
@@ -234,5 +236,27 @@ describe('networkBadgeLabel', () => {
             })
         ).toBeUndefined();
         expect(networkBadgeLabel({})).toBeUndefined();
+    });
+});
+
+describe('WalletHeader network badge', () => {
+    const badges = () =>
+        screen.container
+            .queryAll((n) => n.type === 'Badge')
+            .map((n) => n.props.value);
+
+    it('shows Testnet4 for a testnet4 node', async () => {
+        await renderHeader({
+            clipboard: false,
+            nodeInfo: { isTestNet: true, isTestNet4: true }
+        });
+
+        expect(badges()).toContain('network.testnet4');
+    });
+
+    it('shows no network badge on mainnet', async () => {
+        await renderHeader({ clipboard: false, nodeInfo: {} });
+
+        expect(badges()).toEqual([]);
     });
 });
