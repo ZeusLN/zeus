@@ -13,14 +13,23 @@ jest.mock('react-native-nfc-manager', () => ({
         unregisterTagEvent: jest.fn(async () => {})
     },
     NfcEvents: { DiscoverTag: 'DiscoverTag', SessionClosed: 'SessionClosed' },
+    NfcTech: { IsoDep: 'IsoDep' },
     // the record helpers are plain JS, so tags are built and read with the
     // real ones
     Ndef: jest.requireActual('react-native-nfc-manager/ndef-lib')
 }));
 
+// LocaleUtils transitively loads Stores → backends → react-native-blob-util,
+// which fails in the Jest environment. Stub it — these tests only exercise
+// pure NDEF helpers that don't call localeString.
+jest.mock('./LocaleUtils', () => ({
+    localeString: (s: string) => s
+}));
+
 import NfcManager, { Ndef, NdefRecord } from 'react-native-nfc-manager';
 import ModalStore from '../stores/ModalStore';
 import {
+    buildNdefTextMessage,
     decodeNdefRecord,
     decodeNdefTextPayload,
     decodeNdefUriPayload,
@@ -329,5 +338,59 @@ describe('scanNfcTag', () => {
     it('resolves undefined for a tag without NDEF records', async () => {
         await expect(tap(undefined)).resolves.toBeUndefined();
         expect(NfcManager.unregisterTagEvent).toHaveBeenCalled();
+    });
+});
+
+describe('buildNdefTextMessage', () => {
+    it('builds a valid NDEF text message with NLEN prefix', () => {
+        const msg = buildNdefTextMessage('hello');
+        // First 2 bytes are NLEN (big-endian length of the NDEF record)
+        const nlen = (msg[0] << 8) | msg[1];
+        expect(nlen).toBe(msg.length - 2);
+
+        // NDEF record flags: MB=1, ME=1, SR=1, TNF=01 => 0xD1
+        expect(msg[2]).toBe(0xd1);
+        // Type length = 1
+        expect(msg[3]).toBe(0x01);
+        // Type = 'T' (Text)
+        expect(msg[5]).toBe(0x54);
+
+        // Payload: status byte (lang length=2) + "en" + "hello"
+        expect(msg[6]).toBe(0x02); // lang code length
+        expect(msg[7]).toBe(0x65); // 'e'
+        expect(msg[8]).toBe(0x6e); // 'n'
+        // "hello" bytes
+        expect(msg[9]).toBe(0x68);
+        expect(msg[10]).toBe(0x65);
+        expect(msg[11]).toBe(0x6c);
+        expect(msg[12]).toBe(0x6c);
+        expect(msg[13]).toBe(0x6f);
+    });
+
+    it('handles empty text', () => {
+        const msg = buildNdefTextMessage('');
+        const nlen = (msg[0] << 8) | msg[1];
+        expect(nlen).toBeGreaterThan(0);
+        // Should still have the NDEF header + lang code
+        expect(msg[2]).toBe(0xd1);
+    });
+
+    it('handles UTF-8 multi-byte characters', () => {
+        const msg = buildNdefTextMessage('ü');
+        // ü in UTF-8 is 0xC3 0xBC (2 bytes)
+        const nlen = (msg[0] << 8) | msg[1];
+        const recordBytes = msg.slice(2, 2 + nlen);
+        // payload length should account for lang (3 bytes: status + "en") + 2 bytes for ü
+        const payloadLen = recordBytes[2]; // SR payload length byte
+        expect(payloadLen).toBe(2 + 2 + 1); // langLen(2) + "en" + status byte... wait
+        // Actually: status(1) + lang(2) + text(2) = 5
+        expect(payloadLen).toBe(5);
+    });
+
+    it('produces a CREQ-sized message correctly', () => {
+        const creq = 'creqA' + 'x'.repeat(200);
+        const msg = buildNdefTextMessage(creq);
+        const nlen = (msg[0] << 8) | msg[1];
+        expect(msg.length).toBe(2 + nlen);
     });
 });
