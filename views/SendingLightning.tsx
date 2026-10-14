@@ -352,7 +352,8 @@ export default class SendingLightning extends React.Component<
             payment_error,
             noteKey,
             paymentDuration,
-            paymentOutcomeUnverified
+            paymentOutcomeUnverified,
+            paymentInFlight
         } = TransactionsStore;
 
         const {
@@ -595,15 +596,21 @@ export default class SendingLightning extends React.Component<
                                 )}
                                 {(!!payment_error || !!error) && (
                                     <>
+                                        {/* the send guard is still held while
+                                        the node is checked for this payment,
+                                        so a retry would be silently ignored */}
                                         <Button
                                             title={localeString(
-                                                'views.SendingLightning.tryAgain'
+                                                paymentInFlight
+                                                    ? 'views.SendingLightning.checkingPayment'
+                                                    : 'views.SendingLightning.tryAgain'
                                             )}
                                             icon={{
                                                 name: 'rotate-ccw',
                                                 type: 'feather',
                                                 size: 25
                                             }}
+                                            disabled={paymentInFlight}
                                             onPress={() => navigation.goBack()}
                                             buttonStyle={{
                                                 backgroundColor: 'white',
