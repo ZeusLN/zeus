@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "Minimum ücret",
     "views.EditFee.confirmFee": "Ücreti onayla",
     "views.EditFee.error": "Ücretleri çekerken sorun yaşandı",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "Fatura",
     "views.Invoice.paid": "Ödendi",
     "views.Invoice.unpaid": "Ödenmedi",
