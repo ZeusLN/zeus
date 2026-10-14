@@ -405,6 +405,41 @@ describe('Send BOLT 12 Proceed', () => {
         expect(navigation.navigate).toHaveBeenCalledWith('PaymentRequest');
         expect(TransactionsStore.sendPayment).not.toHaveBeenCalled();
     });
+
+    it.each([
+        [
+            'resolves without an invoice',
+            () => fetchInvoiceFromOffer.mockResolvedValue({}),
+            'views.Send.payBolt12.invoiceFetchFailure'
+        ],
+        [
+            // a PascalCase code, so the assertion shows the message went
+            // through errorToUserFriendly rather than being shown raw
+            'rejects',
+            () =>
+                fetchInvoiceFromOffer.mockRejectedValue(
+                    new Error('InvalidBech32')
+                ),
+            'Invalid bech32'
+        ]
+    ])(
+        'shows an error and stays on Send when the invoice fetch %s',
+        async (_case, mockFetch, message) => {
+            supportsOffersDirectPay.mockReturnValue(false);
+            mockFetch();
+            const { navigation, TransactionsStore, InvoicesStore } =
+                await renderOffer();
+
+            await proceed();
+
+            expect(fetchInvoiceFromOffer).toHaveBeenCalledTimes(1);
+            expect(errorShown()).toBe(message);
+            expect(button('general.proceed').props.disabled).toBe(false);
+            expect(InvoicesStore.getPayReq).not.toHaveBeenCalled();
+            expect(navigation.navigate).not.toHaveBeenCalled();
+            expect(TransactionsStore.sendPayment).not.toHaveBeenCalled();
+        }
+    );
 });
 
 describe('Send mount', () => {
