@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "Taxa mínima",
     "views.EditFee.confirmFee": "Confirme taxa",
     "views.EditFee.error": "Erro ao buscar taxas",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "Conbrança",
     "views.Invoice.paid": "Paga",
     "views.Invoice.unpaid": "Não Paga",
