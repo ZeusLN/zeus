@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "Comision minim",
     "views.EditFee.confirmFee": "Confirmă Comision",
     "views.EditFee.error": "Eroare la obținerea comisioanelor",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "Factură",
     "views.Invoice.paid": "Plătit",
     "views.Invoice.unpaid": "Neplătit",
