@@ -62,6 +62,13 @@ const renderAmount = (props: Record<string, any> = {}) =>
 const hosts = (type: string) =>
     screen.container.queryAll((n) => n.type === type);
 
+// the text nodes in render order, joined, as the user reads them
+const shownText = () =>
+    screen.container
+        .queryAll((n) => n.type === 'Text')
+        .map((n) => [n.props.children].flat().join(''))
+        .join('');
+
 describe('Amount in sats', () => {
     it('groups the digits and pluralizes the unit', async () => {
         await renderAmount({ sats: 1234567 });
@@ -136,6 +143,13 @@ describe('Amount in sats', () => {
 
         expect(screen.getByText('0.5')).toBeOnTheScreen();
     });
+
+    it('keeps millisatoshis when forced even when the setting is off', async () => {
+        settingsStore.settings.display = { showMillisatoshiAmounts: false };
+        await renderAmount({ sats: '0.5', forceMsats: true });
+
+        expect(screen.getByText('0.5')).toBeOnTheScreen();
+    });
 });
 
 describe('Amount in BTC', () => {
@@ -162,6 +176,21 @@ describe('Amount in fiat', () => {
         expect(screen.getByText('$')).toBeOnTheScreen();
         expect(screen.getByText('≈')).toBeOnTheScreen();
         expect(screen.getByText('6.17')).toBeOnTheScreen();
+    });
+
+    it('puts the symbol after the amount for a right-to-left currency', async () => {
+        settingsStore.settings.fiat = 'EUR';
+        fiatStore.fiatRates = [{ code: 'EUR', rate: 50_000 }];
+        fiatStore.getSymbol = () => ({
+            symbol: '€',
+            space: true,
+            rtl: true,
+            separatorSwap: true,
+            decimalPlaces: 2
+        });
+        await renderAmount({ sats: 12_345_678, fixedUnits: 'fiat' });
+
+        expect(shownText()).toBe('≈6.172,84 €');
     });
 
     it('shows N/A with no symbol when the currency has no rate', async () => {

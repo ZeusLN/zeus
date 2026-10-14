@@ -94,13 +94,13 @@ describe('KeypadAmountDisplay formatting', () => {
         ['sats', '1234', '1,234 sats'],
         ['sats', '1', '1 sat'],
         ['sats', '0', '0 sats'],
-        ['BTC', '0.0001', '₿0.00 01'],
-        ['fiat', '1234.5', '$1,234.5']
+        ['BTC', '0.0001', '₿0.00 010 000'],
+        ['fiat', '1234.5', '$1,234.50']
     ])('shows %s %p as %p', async (units, amount, text) => {
         unitsStore.units = units;
         await renderDisplay({ amount });
 
-        expect(shown().startsWith(text)).toBe(true);
+        expect(shown()).toBe(text);
     });
 
     it('puts the symbol after the amount for a right-to-left currency', async () => {
