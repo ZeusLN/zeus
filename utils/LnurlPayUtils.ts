@@ -280,7 +280,10 @@ export const isLnurlCallbackAllowed = (callback: string): LnurlCheckResult => {
         };
     }
 
-    if (isPrivateOrReservedHost(hostname)) {
+    if (
+        isPrivateOrReservedHost(hostname) ||
+        isPrivateOrReservedHost(compatibilityHostname(callback))
+    ) {
         return {
             ok: false,
             reason: 'callback targets a private or reserved address'
@@ -288,6 +291,24 @@ export const isLnurlCallbackAllowed = (callback: string): LnurlCheckResult => {
     }
 
     return { ok: true };
+};
+
+/**
+ * The hostname a native HTTP stack is likely to contact. The bundled `url`
+ * package punycodes a non-ASCII host as is, so `１２７.０.０.１` (fullwidth)
+ * parses to an `xn--` name, while OkHttp and other IDNA implementations apply
+ * compatibility mapping first and connect to 127.0.0.1. NFKC plus lowercasing
+ * is that mapping for the characters that matter here (fullwidth and circled
+ * digits, letters and dots).
+ */
+const compatibilityHostname = (callback: string): string => {
+    try {
+        return (
+            url.parse(callback.normalize('NFKC')).hostname || ''
+        ).toLowerCase();
+    } catch (err: any) {
+        return '';
+    }
 };
 
 /**
