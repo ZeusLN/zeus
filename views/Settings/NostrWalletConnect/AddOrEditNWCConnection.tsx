@@ -7,7 +7,7 @@ import {
     Text,
     TouchableOpacity
 } from 'react-native';
-import { ButtonGroup } from '@rneui/themed';
+import ButtonGroup from '../../../components/GlassButtonGroup';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
