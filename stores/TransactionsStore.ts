@@ -18,7 +18,10 @@ import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { checkGraphSyncBeforePayment } from '../utils/GraphSyncUtils';
 import { deriveExpectedPaymentHash } from '../utils/LncPayUtils';
-import { isPaymentLookupInconclusive } from '../utils/PaymentLookupUtils';
+import {
+    isPaymentLookupInconclusive,
+    paymentCreationTimeMs
+} from '../utils/PaymentLookupUtils';
 import { sleep } from '../utils/SleepUtils';
 import UrlUtils from '../utils/UrlUtils';
 import { RATING_MODAL_TRIGGER_DELAY } from '../utils/RatingUtils';
@@ -40,7 +43,9 @@ export const PAYMENT_TRACK_POLL_MS = 5000;
 // lock the user out of all sends
 export const PAYMENT_TRACK_MAX_MS = 10 * 60 * 1000;
 // consecutive failed lookups tolerated before giving up and releasing the
-// guard the way the timed backstop used to
+// guard the way the timed backstop used to. Only applies until the node has
+// answered a lookup: once one has, lookups demonstrably work and later
+// failures are transient, so only the ceiling ends tracking
 export const PAYMENT_TRACK_MAX_FAILURES = 3;
 // consecutive "node answered, no record" results required before concluding
 // the dispatch never reached the node: a single lookup can miss a payment
@@ -50,6 +55,13 @@ export const PAYMENT_TRACK_MAX_NOT_FOUND = 3;
 // creation_date_start filter reaches, to absorb clock skew between the
 // device and the node
 export const PAYMENT_LOOKUP_CREATION_SLACK_MS = 10 * 60 * 1000;
+// a FAILED record created more than this before the recorded dispatch time
+// belongs to an earlier attempt for the same payment hash. LND overwrites
+// that record when the new attempt reaches it, so until then it's no record
+// of this attempt. Tighter than the lookup slack because a skewed clock only
+// costs the specific failure reason here (the payment shows as not sent or
+// unverified), while a looser bound lets more stale failures through.
+export const PAYMENT_STALE_ATTEMPT_SLACK_MS = 60 * 1000;
 
 export interface SendPaymentReq {
     payment_request?: string;
@@ -848,7 +860,8 @@ export default class TransactionsStore {
     // a keysend retry generates a fresh preimage, so node-side same-hash
     // dedup can't protect against it (issue #4317). Exits released: on a
     // terminal state, when the payment provably never reached the node,
-    // after PAYMENT_TRACK_MAX_FAILURES unobservable polls, or at the
+    // after PAYMENT_TRACK_MAX_FAILURES failed lookups before the node has
+    // answered any, or at the
     // PAYMENT_TRACK_MAX_MS ceiling. A release without a terminal state
     // updates the send screen: never-dispatched shows as not sent, any other
     // exit leaves the outcome flagged as unverified.
@@ -880,10 +893,12 @@ export default class TransactionsStore {
                   )
               )
             : undefined;
+        const dispatchTime = this.inFlightDispatchTime;
         this.trackingSeq = seq;
         const deadline = Date.now() + PAYMENT_TRACK_MAX_MS;
         let failures = 0;
         let notFound = 0;
+        let answered = false;
         let neverDispatched = false;
         try {
             while (this.inFlightOwnerSeq === seq && Date.now() < deadline) {
@@ -900,12 +915,27 @@ export default class TransactionsStore {
                     else lookupFailed = true;
                 }
                 if (this.inFlightOwnerSeq !== seq) return;
+                if (!lookupFailed) answered = true;
 
                 // embedded-lnd statuses are numeric protobuf enums
-                const status =
+                let status =
                     typeof payment?.status === 'number'
                         ? lnrpc.Payment.PaymentStatus[payment.status]
                         : payment?.status;
+
+                if (status === 'FAILED' && dispatchTime) {
+                    const createdAt = paymentCreationTimeMs(payment);
+                    if (
+                        createdAt !== null &&
+                        createdAt <
+                            dispatchTime - PAYMENT_STALE_ATTEMPT_SLACK_MS
+                    ) {
+                        // an earlier attempt's failure, not this one's
+                        // outcome: treat it as no record of this attempt
+                        payment = null;
+                        status = undefined;
+                    }
+                }
 
                 if (status === 'SUCCEEDED' || status === 'FAILED') {
                     // clear any transport error shown while the outcome
@@ -917,7 +947,6 @@ export default class TransactionsStore {
                 }
 
                 if (payment) {
-                    failures = 0;
                     notFound = 0;
                     if (status === 'IN_FLIGHT') {
                         // outcome is pending, not failed: don't leave a
@@ -928,7 +957,6 @@ export default class TransactionsStore {
                     // the node answered, but the scan may have missed the
                     // payment on a truncated page: neither a sighting nor a
                     // no-record answer, so keep polling until the ceiling
-                    failures = 0;
                 } else if (!lookupFailed) {
                     // the node answered and has no record of the payment.
                     // One such answer isn't proof the dispatch never reached
@@ -937,7 +965,6 @@ export default class TransactionsStore {
                     // lookup returns). Only conclude never-dispatched after
                     // repeated no-record answers with no sighting between,
                     // all given once the request's deadline has passed.
-                    failures = 0;
                     if (
                         neverDispatchedAfter !== null &&
                         Date.now() < neverDispatchedAfter
@@ -947,7 +974,16 @@ export default class TransactionsStore {
                         neverDispatched = neverDispatchedAfter !== null;
                         return;
                     }
-                } else if (++failures >= PAYMENT_TRACK_MAX_FAILURES) {
+                } else if (
+                    !answered &&
+                    ++failures >= PAYMENT_TRACK_MAX_FAILURES
+                ) {
+                    // lookups have never worked on this node: holding the
+                    // guard to the ceiling would lock out sends for nothing.
+                    // Once the node has answered (e.g. reported the payment
+                    // IN_FLIGHT), a short outage must not release the guard
+                    // while an HTLC may be pending (a keysend retry can't be
+                    // deduplicated by the node)
                     return;
                 }
                 await sleep(PAYMENT_TRACK_POLL_MS);

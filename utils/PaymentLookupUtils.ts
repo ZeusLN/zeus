@@ -78,3 +78,14 @@ export const findPaymentByHash = async (
     if (truncated) throw paymentLookupInconclusiveError();
     return null;
 };
+
+// When the node created a payment record, in ms on the node's clock, or null
+// if the record carries no usable creation time. LND REST and LNC return
+// int64 fields as strings, embedded LND as Long, so both go through String.
+export const paymentCreationTimeMs = (payment: any): number | null => {
+    const ns = Number(String(payment?.creation_time_ns ?? ''));
+    if (Number.isFinite(ns) && ns > 0) return Math.floor(ns / 1e6);
+    const seconds = Number(String(payment?.creation_date ?? ''));
+    if (Number.isFinite(seconds) && seconds > 0) return seconds * 1000;
+    return null;
+};
