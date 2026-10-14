@@ -54,6 +54,7 @@ import UnitsStore from '../../stores/UnitsStore';
 import CashuInvoice from '../../models/CashuInvoice';
 
 import BackendUtils from '../../utils/BackendUtils';
+import { encodeCREQ } from '../../utils/CREQUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { isNfcWithdraw, scanNfcTag } from '../../utils/NFCUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -314,6 +315,16 @@ export default class ReceiveEcash extends React.Component<
         this.validateAddress(str);
     };
 
+    onNfcTokenReceived = async (content: string) => {
+        const { CashuStore } = this.props;
+        try {
+            await CashuStore.receiveTokenCDK(content);
+            CashuStore.watchedInvoicePaid = true;
+        } catch (e: any) {
+            console.warn('Failed to receive CREQ token:', e);
+        }
+    };
+
     validateAddress = (text: string) => {
         const { navigation, CashuStore } = this.props;
         const { createInvoice } = CashuStore;
@@ -550,11 +561,31 @@ export default class ReceiveEcash extends React.Component<
 
         const haveInvoice = !!invoice;
 
-        let lnInvoice, lnInvoiceCopyValue;
+        let lnInvoice, lnInvoiceCopyValue, creqNfcValue;
 
         if (invoice) {
             lnInvoice = `lightning:${invoice.toUpperCase()}`;
             lnInvoiceCopyValue = invoice;
+        }
+
+        // Generate CREQ for NFC tap-to-pay (Android merchant mode)
+        if (
+            haveInvoice &&
+            Platform.OS === 'android' &&
+            satAmount &&
+            Number(satAmount) > 0
+        ) {
+            try {
+                const { selectedMintUrl } = CashuStore;
+                creqNfcValue = encodeCREQ({
+                    amount: Number(satAmount),
+                    unit: 'sat',
+                    mints: selectedMintUrl ? [selectedMintUrl] : undefined,
+                    description: memo || undefined
+                });
+            } catch (e) {
+                // CREQ generation is best-effort
+            }
         }
 
         const enablePrinter: boolean = settings?.pos?.enablePrinter || false;
@@ -810,6 +841,7 @@ export default class ReceiveEcash extends React.Component<
                                                     <CollapsedQR
                                                         value={lnInvoice || ''}
                                                         copyValue={
+                                                            creqNfcValue ||
                                                             lnInvoiceCopyValue
                                                         }
                                                         expanded
@@ -817,6 +849,13 @@ export default class ReceiveEcash extends React.Component<
                                                         truncateLongValue
                                                         nfcSupported={
                                                             nfcSupported
+                                                        }
+                                                        nfcWritable={
+                                                            !!creqNfcValue
+                                                        }
+                                                        onNfcTokenReceived={
+                                                            this
+                                                                .onNfcTokenReceived
                                                         }
                                                         satAmount={satAmount}
                                                         displayAmount
