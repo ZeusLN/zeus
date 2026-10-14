@@ -434,9 +434,10 @@ export const getUTXOs = async () => {
 
     return {
         ...listfunds,
-        // CLN keeps an output in listfunds with reserved: true after a
-        // transaction spends it, until that transaction confirms. Coin
-        // control must not offer it: withdraw fails when it is picked
+        // CLN marks an output reserved: true while a transaction or PSBT
+        // holds it, for example after a transaction spends it and until
+        // that transaction confirms. Coin control must not offer it:
+        // withdraw fails when it is picked
         outputs: (listfunds.outputs || [])
             .filter((output: any) => !output.reserved)
             .map((output: any) => {

@@ -159,6 +159,20 @@ describe('CoreLightningRequestHandler.getUTXOs', () => {
         expect(outputs.map((output: any) => output.txid)).toEqual(['b', 'c']);
     });
 
+    it('leaves out reserved outputs when the tip is unknown', async () => {
+        // getinfo fails, so the tip is unknown
+        respond(
+            listfunds([
+                { txid: 'a', blockheight: 108, reserved: true },
+                { txid: 'b', blockheight: 108, reserved: false }
+            ])
+        );
+
+        const { outputs } = await getUTXOs();
+
+        expect(outputs.map((output: any) => output.txid)).toEqual(['b']);
+    });
+
     it('rejects when listfunds fails', async () => {
         mockPostRequest.mockImplementation((route: string) =>
             route === '/v1/listfunds'
