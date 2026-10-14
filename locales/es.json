@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "Comisión mínima",
     "views.EditFee.confirmFee": "Confirmar comisión",
     "views.EditFee.error": "Error recopilando tarifas de comisiones",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "Invoice",
     "views.Invoice.paid": "Pagado",
     "views.Invoice.unpaid": "Impagado",
