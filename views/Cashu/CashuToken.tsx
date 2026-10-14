@@ -46,6 +46,7 @@ interface CashuTokenProps {
             decoded: CashuToken;
             startOnQrTab?: boolean;
             offlineSpent?: boolean;
+            saveFailed?: boolean;
         }
     >;
 }
@@ -305,6 +306,14 @@ export default class CashuTokenView extends React.Component<
 
                     {warningMessage && (
                         <WarningMessage message={warningMessage} />
+                    )}
+
+                    {route.params?.saveFailed && (
+                        <WarningMessage
+                            message={localeString(
+                                'views.Cashu.CashuToken.saveFailed'
+                            )}
+                        />
                     )}
 
                     {(errorMessage || storeErrorMsg) && (
