@@ -785,6 +785,62 @@ describe('CashuStore single-mint melt state', () => {
             expect(store.syncCDKBalances).toHaveBeenCalledWith(true);
         }
     );
+
+    // The quote is tracked before the melt starts. A reconcile pass in
+    // between would find an Unpaid quote no saga holds yet and untrack it,
+    // losing the record a kill mid-melt depends on.
+    it('keeps a quote from reconcile while it is being tracked', async () => {
+        const store = payingStore();
+        store.cdkInitialized = true;
+        store.mintUrls = ['https://mint.example.com'];
+        store.syncCDKBalances = jest.fn().mockResolvedValue(undefined);
+        let persistTracked: (value: boolean) => void = () => {};
+        (Storage.setItem as jest.Mock).mockImplementationOnce(
+            () => new Promise((resolve) => (persistTracked = resolve))
+        );
+        (CashuDevKit.checkMeltQuote as jest.Mock).mockResolvedValue({
+            id: 'quote-1',
+            state: 'Unpaid'
+        });
+        let finishMelt: (value: any) => void = () => {};
+        (CashuDevKit.melt as jest.Mock).mockImplementation(
+            () => new Promise((resolve) => (finishMelt = resolve))
+        );
+
+        // fake timers are on, so drain microtasks rather than wait
+        const settle = async () => {
+            for (let i = 0; i < 20; i++) await Promise.resolve();
+        };
+
+        const paying = store.payLnInvoiceFromEcash({
+            amount: '1000',
+            paymentRequest: 'lnbc10n1ptestinvoice'
+        });
+        await settle();
+        expect(store.pendingMelts).toHaveLength(1);
+
+        await store.reconcilePendingMelts();
+
+        expect(CashuDevKit.checkMeltQuote).not.toHaveBeenCalled();
+        expect(store.pendingMelts).toHaveLength(1);
+
+        persistTracked(true);
+        await settle();
+        expect(CashuDevKit.melt).toHaveBeenCalledWith(
+            'https://mint.example.com',
+            'quote-1'
+        );
+        finishMelt({
+            state: 'Paid',
+            amount: 1000,
+            fee_paid: 1,
+            preimage: 'a'.repeat(64)
+        });
+        await paying;
+
+        expect(store.paymentSuccess).toBe(true);
+        expect(store.pendingMelts).toEqual([]);
+    });
 });
 
 describe('CashuStore self-custody claim', () => {
@@ -939,6 +995,8 @@ describe('CashuStore reconcilePendingMelts', () => {
         expect(store.payments).toHaveLength(1);
         expect(store.payments[0].getAmount).toBe(1000);
         expect(store.payments[0].payment_preimage).toBe('b'.repeat(64));
+        // dated when the melt started, not 1970
+        expect(store.payments[0].getTimestamp).toBe(1_700_000_000);
         expect(store.pendingMelts).toEqual([]);
     });
 
@@ -994,6 +1052,8 @@ describe('CashuStore reconcilePendingMelts', () => {
         expect(store.payments[0].isInTransit).toBe(true);
         expect(store.payments[0].bolt11).toBe('lnbc10n1ptestinvoice');
         expect(store.payments[0].getAmount).toBe(1000);
+        expect(store.payments[0].getTimestamp).toBe(1_700_000_000);
+        expect(store.payments[0].getFee).toBe('');
         expect(store.pendingMelts).toHaveLength(1);
     });
 
@@ -1020,6 +1080,32 @@ describe('CashuStore reconcilePendingMelts', () => {
 
         expect(CashuDevKit.checkMeltQuote).not.toHaveBeenCalled();
         expect(store.pendingMelts).toHaveLength(1);
+    });
+
+    // The quotes to check are copied up front; one whose caller settled it
+    // while an earlier quote was being checked is no longer tracked
+    it('skips a melt untracked while an earlier one was being checked', async () => {
+        const store = reconcilingStore(pendingMelt());
+        store.pendingMelts = [
+            pendingMelt(),
+            { ...pendingMelt(), quote: 'quote-2' }
+        ];
+        (CashuDevKit.checkMeltQuote as jest.Mock).mockImplementation(
+            async () => {
+                store.pendingMelts = store.pendingMelts.filter(
+                    (melt: any) => melt.quote !== 'quote-2'
+                );
+                return { id: 'quote-1', state: 'Pending' };
+            }
+        );
+
+        await store.reconcilePendingMelts();
+
+        expect(CashuDevKit.checkMeltQuote).toHaveBeenCalledTimes(1);
+        expect(CashuDevKit.checkMeltQuote).toHaveBeenCalledWith(
+            mintUrl,
+            'quote-1'
+        );
     });
 
     // A mint being unreachable says nothing about the payment

@@ -1071,7 +1071,7 @@ export default class CashuStore {
 
         // Create melt quote first, then execute melt with quote ID
         const quote = await CashuDevKit.createMeltQuote(mintUrl, bolt11);
-        await this.trackPendingMelt({
+        const result = await this.trackAndMelt({
             quote: quote.id,
             mintUrl,
             source: 'claim',
@@ -1081,7 +1081,6 @@ export default class CashuStore {
             expiry: quote.expiry,
             createdAt: Date.now()
         });
-        const result = await this.executeMelt(mintUrl, quote.id);
         await this.syncCDKBalances();
 
         // A resolved melt is not a paid one. Callers treat a returned result
@@ -3249,12 +3248,19 @@ export default class CashuStore {
         await this.persistPendingMelts();
     };
 
-    private executeMelt = async (mintUrl: string, quote: string) => {
-        this.meltsInProgress.add(quote);
+    /**
+     * Tracks a melt and executes it. The quote is marked in progress before
+     * it is tracked: a reconcile pass that saw it tracked but not yet in
+     * progress would find a quote no melt saga holds yet, read it as settled
+     * unpaid and untrack it just before the melt starts.
+     */
+    private trackAndMelt = async (melt: PendingMelt) => {
+        this.meltsInProgress.add(melt.quote);
         try {
-            return await CashuDevKit.melt(mintUrl, quote);
+            await this.trackPendingMelt(melt);
+            return await CashuDevKit.melt(melt.mintUrl, melt.quote);
         } finally {
-            this.meltsInProgress.delete(quote);
+            this.meltsInProgress.delete(melt.quote);
         }
     };
 
@@ -3301,6 +3307,9 @@ export default class CashuStore {
             },
             amount: existing?.amount ?? melt.amount,
             fee: existing?.fee ?? 0,
+            ...(existing
+                ? {}
+                : { creation_date: Math.floor(melt.createdAt / 1000) }),
             status: 'SUCCEEDED',
             payment_preimage: preimage,
             mintUrl: melt.mintUrl
@@ -3342,6 +3351,9 @@ export default class CashuStore {
             },
             amount: melt.amount,
             fee: 0,
+            // When the melt started. Without it an entry recovered after a
+            // kill has no time at all and sorts as 1970.
+            creation_date: Math.floor(melt.createdAt / 1000),
             status: 'IN_FLIGHT',
             payment_preimage: '',
             mintUrl: melt.mintUrl
@@ -3395,6 +3407,14 @@ export default class CashuStore {
         for (const melt of [...this.pendingMelts]) {
             if (!knownMints.has(this.normalizeMintUrl(melt.mintUrl))) continue;
             if (this.meltsInProgress.has(melt.quote)) continue;
+            // Settled by its caller while earlier quotes were being checked
+            if (
+                !this.pendingMelts.some(
+                    (pending) => pending.quote === melt.quote
+                )
+            ) {
+                continue;
+            }
 
             let quote;
             try {
@@ -4871,11 +4891,10 @@ export default class CashuStore {
                 expiry: meltQuote.expiry,
                 createdAt: Date.now()
             };
-            await this.trackPendingMelt(pendingMelt);
 
             let meltResult;
             try {
-                meltResult = await this.executeMelt(mintUrl, meltQuote.quote);
+                meltResult = await this.trackAndMelt(pendingMelt);
             } catch (meltError) {
                 // CDK waits while the mint reports the melt Pending, and
                 // when it stops waiting (connection lost, mint unreachable)
@@ -5981,7 +6000,7 @@ export default class CashuStore {
             if (__DEV__) {
                 console.log(`Sweep ${mintUrl}: Executing melt via CDK`);
             }
-            await this.trackPendingMelt({
+            const meltResponse = await this.trackAndMelt({
                 quote: finalMeltQuote.id,
                 mintUrl,
                 source: 'sweep',
@@ -5991,10 +6010,6 @@ export default class CashuStore {
                 expiry: finalMeltQuote.expiry,
                 createdAt: Date.now()
             });
-            const meltResponse = await this.executeMelt(
-                mintUrl,
-                finalMeltQuote.id
-            );
             if (__DEV__) {
                 console.log(
                     `Sweep ${mintUrl}: Melt response received`,

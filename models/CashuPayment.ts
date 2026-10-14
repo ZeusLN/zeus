@@ -55,6 +55,10 @@ export default class CashuPayment extends Payment {
     }
 
     @computed public get getFee(): string {
+        // The mint has not settled the melt, so there is no fee yet. A 0
+        // here would read as a free payment.
+        if (this.isInTransit) return '';
+
         const feeMsat = Number(this.fee_msat);
         if (!Number.isNaN(feeMsat) && feeMsat !== 0) {
             return (feeMsat / 1000).toString();
