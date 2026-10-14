@@ -647,6 +647,13 @@ const handleAnything = async (
         const normalizedDomain = domain.toLowerCase();
         const isOnion = normalizedDomain.endsWith('.onion');
 
+        const { url } = getLnurlpUrl(value);
+        // Refuse before the BOLT 12 lookup below, which would otherwise send
+        // the address, IP literal included, to the DoH resolver first
+        if (!isLightningAddressEndpointAllowed(url).ok) {
+            throw new Error(localeString('utils.lnurl.unsafeLightningAddress'));
+        }
+
         let bolt12: string | undefined;
         let b12Value: string | undefined,
             b12SatAmount: string | undefined,
@@ -733,10 +740,6 @@ const handleAnything = async (
         }
 
         // try BOLT 11 address
-        const { url } = getLnurlpUrl(value);
-        if (!isLightningAddressEndpointAllowed(url).ok) {
-            throw new Error(localeString('utils.lnurl.unsafeLightningAddress'));
-        }
         const error = localeString(
             'utils.handleAnything.lightningAddressError'
         );
