@@ -201,6 +201,20 @@ describe.each([
         expect(store.stored.privacy[field]).toEqual((privacy as any)[field]);
     });
 
+    // A written URL cannot be told apart from a written prefix
+    it('restores the saved URL over a valid URL written earlier', async () => {
+        const store = makeStore(privacy);
+        const { unmount } = await mount(store);
+
+        await typeInto(placeholder, 'https://new.onion');
+        store.flushPendingSettings();
+        expect(store.stored.privacy[field]).toEqual('https://new.onion');
+        await typeInto(placeholder, 'https://new .onion');
+        await unmount();
+
+        expect(store.stored.privacy[field]).toEqual((privacy as any)[field]);
+    });
+
     it('restores an empty saved URL', async () => {
         const store = makeStore({ ...privacy, [field]: '' });
         const { unmount } = await mount(store);

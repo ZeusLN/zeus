@@ -60,6 +60,9 @@ export default class Privacy extends React.Component<
     // The custom URLs as stored when the screen opened. Every prefix of a
     // typed URL is valid and may already be written, so an invalid final
     // value writes these back rather than leaving a prefix's host in use.
+    // A valid URL written later in the same visit is also replaced by
+    // these: the store cannot tell it from a prefix, so restoring the
+    // last written value instead would bring back #4974.
     // Undefined until settings load.
     private savedCustomUrls?: {
         customBlockExplorer: string;
