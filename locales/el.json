@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "Ελάχιστο τέλος",
     "views.EditFee.confirmFee": "Επιβεβαίωση τέλους",
     "views.EditFee.error": "Σφάλμα λήψης αξιάς τελών",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "Τιμολόγιο",
     "views.Invoice.paid": "Πληρωμένο",
     "views.Invoice.unpaid": "Απλήρωτο",
