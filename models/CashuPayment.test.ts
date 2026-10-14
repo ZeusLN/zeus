@@ -78,10 +78,41 @@ describe('CashuPayment.fromCDKTransaction', () => {
         expect(payment.cdkQuoteId).toBe('quote-1');
     });
 
-    it('is neither failed nor in transit', () => {
+    it('treats a completed melt as neither failed nor in transit', () => {
+        const payment = CashuPayment.fromCDKTransaction({
+            ...cdkMelt,
+            state: 'Completed'
+        });
+
+        expect(payment.isFailed).toBe(false);
+        expect(payment.isInTransit).toBe(false);
+    });
+
+    it('treats a melt without a lifecycle state as settled', () => {
         const payment = CashuPayment.fromCDKTransaction(cdkMelt);
 
         expect(payment.isFailed).toBe(false);
+        expect(payment.isInTransit).toBe(false);
+    });
+
+    it('treats a pending melt as in transit', () => {
+        const payment = CashuPayment.fromCDKTransaction({
+            ...cdkMelt,
+            state: 'Pending',
+            payment_proof: undefined
+        });
+
+        expect(payment.isInTransit).toBe(true);
+        expect(payment.isFailed).toBe(false);
+    });
+
+    it('treats a failed melt as failed', () => {
+        const payment = CashuPayment.fromCDKTransaction({
+            ...cdkMelt,
+            state: 'Failed'
+        });
+
+        expect(payment.isFailed).toBe(true);
         expect(payment.isInTransit).toBe(false);
     });
 
