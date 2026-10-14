@@ -418,17 +418,35 @@ describe('OpenChannel min confs default from settings', () => {
         }
     );
 
-    it('uses the default for each toggle missing from saved settings', async () => {
-        const { props } = await renderView({
-            settings: { channels: { min_confs: 3 } }
-        });
+    it.each([
+        [
+            'uses the default for each toggle missing from saved settings',
+            { min_confs: 3 },
+            {
+                privateChannel: true,
+                scidAlias: true,
+                simpleTaprootChannel: false
+            }
+        ],
+        [
+            'loads each saved toggle that differs from the default',
+            {
+                min_confs: 3,
+                privateChannel: false,
+                scidAlias: false,
+                simpleTaprootChannel: true
+            },
+            {
+                privateChannel: false,
+                scidAlias: false,
+                simpleTaprootChannel: true
+            }
+        ]
+    ])('%s', async (_name, channels, toggles) => {
+        const { props } = await renderView({ settings: { channels } });
         await enterAmount('50000', 50000);
 
-        expect(await openRequest(props)).toMatchObject({
-            privateChannel: true,
-            scidAlias: true,
-            simpleTaprootChannel: false
-        });
+        expect(await openRequest(props)).toMatchObject(toggles);
     });
 
     it('counts unconfirmed funds for fund max with a saved default of 0', async () => {
