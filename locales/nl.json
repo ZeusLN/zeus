@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "Minimale fee",
     "views.EditFee.confirmFee": "Bevestig Fee",
     "views.EditFee.error": "Fout bij ophalen fee tarieven",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "Factuur",
     "views.Invoice.paid": "Betaald",
     "views.Invoice.unpaid": "Onbetaald",
