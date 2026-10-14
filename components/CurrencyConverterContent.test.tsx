@@ -33,26 +33,32 @@ jest.mock('../storage', () => ({
 }));
 const mockDragStart = jest.fn();
 const mockDragEnd = jest.fn();
+// Every data array DragList renders with, in order. DragList resets its drag
+// state whenever data changes identity
+const mockListData: string[][] = [];
 jest.mock('react-native-draglist', () => {
     const React = require('react');
     const { View } = require('react-native');
     return {
         __esModule: true,
-        default: ({ data, keyExtractor, renderItem, onReordered }: any) => (
-            <View testID="currency-list" onReordered={onReordered}>
-                {data.map((item: string, index: number) => (
-                    <React.Fragment key={keyExtractor(item, index)}>
-                        {renderItem({
-                            item,
-                            index,
-                            onDragStart: mockDragStart,
-                            onDragEnd: mockDragEnd,
-                            isActive: false
-                        })}
-                    </React.Fragment>
-                ))}
-            </View>
-        )
+        default: ({ data, keyExtractor, renderItem, onReordered }: any) => {
+            mockListData.push(data);
+            return (
+                <View testID="currency-list" onReordered={onReordered}>
+                    {data.map((item: string, index: number) => (
+                        <React.Fragment key={keyExtractor(item, index)}>
+                            {renderItem({
+                                item,
+                                index,
+                                onDragStart: mockDragStart,
+                                onDragEnd: mockDragEnd,
+                                isActive: false
+                            })}
+                        </React.Fragment>
+                    ))}
+                </View>
+            );
+        }
     };
 });
 jest.mock('react-native-svg', () => {
@@ -107,6 +113,7 @@ beforeEach(() => {
     mockStored.clear();
     mockDragStart.mockClear();
     mockDragEnd.mockClear();
+    mockListData.length = 0;
     (Storage.setItem as jest.Mock).mockClear();
 });
 
@@ -572,5 +579,64 @@ describe('CurrencyConverterContent lifecycle', () => {
             sats: '1,000',
             EUR: '0.40'
         });
+    });
+});
+
+describe('CurrencyConverterContent list data', () => {
+    const lastData = () => mockListData[mockListData.length - 1];
+
+    it('keeps the same list data while typing', async () => {
+        await renderConverter({ saved: { BTC: '', sats: '', USD: '' } });
+        const before = lastData();
+        const renders = mockListData.length;
+
+        await type('sats', '1000');
+
+        expect(mockListData.length).toBeGreaterThan(renders);
+        expect(lastData()).toBe(before);
+    });
+
+    it('replaces the list data when a currency is added', async () => {
+        const { ref } = await renderConverter();
+        const before = lastData();
+
+        await act(() => ref.current.addCurrency('USD'));
+
+        expect(lastData()).not.toBe(before);
+        expect(lastData()).toEqual(['BTC', 'sats', 'USD']);
+    });
+
+    describe('with the edit controls shown', () => {
+        // the controls slide in over 350ms
+        beforeEach(() => jest.useFakeTimers());
+        afterEach(() => jest.useRealTimers());
+
+        it('replaces the list data when a currency is deleted', async () => {
+            await renderConverter({ saved: { BTC: '', sats: '', USD: '' } });
+            await fireEvent.press(
+                screen.container.queryAll((n) => n.type === 'EditIcon')[0]
+            );
+            await act(() => jest.advanceTimersByTime(400));
+            const before = lastData();
+
+            await fireEvent.press(
+                screen.container.queryAll((n) => n.type === 'Icon')[0]
+            );
+
+            expect(lastData()).not.toBe(before);
+            expect(lastData()).toEqual(['BTC', 'sats']);
+        });
+    });
+
+    it('replaces the list data when currencies are reordered', async () => {
+        await renderConverter({ saved: { BTC: '', sats: '', USD: '' } });
+        const before = lastData();
+
+        await act(() =>
+            screen.getByTestId('currency-list').props.onReordered(2, 0)
+        );
+
+        expect(lastData()).not.toBe(before);
+        expect(lastData()).toEqual(['USD', 'BTC', 'sats']);
     });
 });
