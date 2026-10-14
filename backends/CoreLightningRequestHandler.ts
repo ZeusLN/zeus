@@ -438,14 +438,20 @@ export const getUTXOs = async () => {
 
     return {
         ...listfunds,
-        outputs: (listfunds.outputs || []).map((output: any) => {
-            if (!tip) return output;
-            return {
-                ...output,
-                confirmations: output.blockheight
-                    ? tip - output.blockheight + 1
-                    : 0
-            };
-        })
+        // CLN marks an output reserved: true while a transaction or PSBT
+        // holds it, for example after a transaction spends it and until
+        // that transaction confirms. Coin control must not offer it:
+        // withdraw fails when it is picked
+        outputs: (listfunds.outputs || [])
+            .filter((output: any) => !output.reserved)
+            .map((output: any) => {
+                if (!tip) return output;
+                return {
+                    ...output,
+                    confirmations: output.blockheight
+                        ? tip - output.blockheight + 1
+                        : 0
+                };
+            })
     };
 };
