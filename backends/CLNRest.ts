@@ -379,11 +379,12 @@ export default class CLNRest {
     // A payment group can mix part statuses: an MPP retry leaves the failed
     // parts beside the pending ones. Rank complete over pending over failed
     // so a group still in flight is not reported as failed. amount_msat
-    // counts pending parts too, so an in-flight payment shows its amount;
-    // the fee (amount_sent_msat) waits for complete parts.
+    // and amount_sent_msat both count every part that has not failed, so
+    // an in-flight payment shows its amount and the fee stays consistent
+    // while some parts are complete and others pending.
     getPayments = () =>
         this.postRequest('/v1/sql', {
-            query: "select sp.payment_hash, sp.groupid, case when sum(sp.status = 'complete') > 0 then 'complete' when sum(sp.status = 'pending') > 0 then 'pending' else 'failed' end as status, min(sp.destination) as destination, min(sp.created_at) as created_at, min(sp.description) as description, min(sp.bolt11) as bolt11, min(sp.bolt12) as bolt12, sum(case when sp.status = 'complete' then sp.amount_sent_msat else null end) as amount_sent_msat, sum(case when sp.status != 'failed' then sp.amount_msat else 0 end) as amount_msat, max(sp.payment_preimage) as preimage from sendpays sp group by sp.payment_hash, sp.groupid order by created_index desc limit 150"
+            query: "select sp.payment_hash, sp.groupid, case when sum(sp.status = 'complete') > 0 then 'complete' when sum(sp.status = 'pending') > 0 then 'pending' else 'failed' end as status, min(sp.destination) as destination, min(sp.created_at) as created_at, min(sp.description) as description, min(sp.bolt11) as bolt11, min(sp.bolt12) as bolt12, sum(case when sp.status != 'failed' then sp.amount_sent_msat else null end) as amount_sent_msat, sum(case when sp.status != 'failed' then sp.amount_msat else 0 end) as amount_msat, max(sp.payment_preimage) as preimage from sendpays sp group by sp.payment_hash, sp.groupid order by created_index desc limit 150"
         }).then((data: any) => {
             const paymentList: any[] = [];
             data.rows.forEach((pay: any) => {

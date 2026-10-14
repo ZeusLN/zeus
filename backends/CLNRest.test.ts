@@ -23,6 +23,7 @@ jest.mock('./CoreLightningRequestHandler', () => ({
 }));
 
 import CLNRest from './CLNRest';
+import Payment from '../models/Payment';
 
 // CLNRest's own `getURL` is not reachable with ws=true today — its single
 // caller passes no ws argument — so these lock in the anchored behaviour
@@ -254,10 +255,22 @@ describe('CLNRest.getPayments', () => {
         ]);
 
         expect(payment.amount_msat).toBe(10000000);
-        expect(payment.amount_sent_msat).toBeNull();
+        expect(payment.amount_sent_msat).toBe(10001000);
     });
 
-    it('sums only the complete parts of a complete group', async () => {
+    it('counts pending parts of a complete group in both amounts', async () => {
+        const [payment] = await getPaymentsFor([
+            { hash: 'mpp', groupid: 1, status: 'complete' },
+            { hash: 'mpp', groupid: 1, status: 'pending' }
+        ]);
+
+        expect(payment.status).toBe('complete');
+        expect(payment.amount_msat).toBe(10000000);
+        expect(payment.amount_sent_msat).toBe(10001000);
+        expect(new Payment(payment).getFee).toBe('1');
+    });
+
+    it('skips failed parts of a complete group', async () => {
         const [payment] = await getPaymentsFor([
             { hash: 'mpp', groupid: 1, status: 'failed' },
             { hash: 'mpp', groupid: 1, status: 'complete' },
