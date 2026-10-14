@@ -75,11 +75,13 @@ import { act, render, screen } from '@testing-library/react-native';
 import SwapDetails from './SwapDetails';
 import lndMobile from '../../lndmobile/LndMobileInjection';
 import { ReverseClaimTransaction } from '../../models/ClaimTransaction';
+import { SwapType } from '../../models/Swap';
 
 const nativeClaim = lndMobile.swaps.createReverseClaimTransaction as jest.Mock;
 
 const originalWebSocket = global.WebSocket;
 let socket: any;
+let unexpectedErrors: any[][];
 
 beforeEach(() => {
     jest.useFakeTimers();
@@ -88,10 +90,18 @@ beforeEach(() => {
     socket = { close: jest.fn(), send: jest.fn() };
     global.WebSocket = jest.fn(() => socket) as any;
     jest.spyOn(console, 'log').mockImplementation(() => {});
-    jest.spyOn(console, 'error').mockImplementation(() => {});
+    // the view logs rejected lockups; anything else, act warnings
+    // included, fails the test
+    unexpectedErrors = [];
+    jest.spyOn(console, 'error').mockImplementation((...args) => {
+        if (args[0] !== 'Reverse swap lockup verification failed:') {
+            unexpectedErrors.push(args);
+        }
+    });
 });
 
 afterEach(() => {
+    expect(unexpectedErrors).toEqual([]);
     global.WebSocket = originalWebSocket;
     jest.useRealTimers();
     jest.restoreAllMocks();
@@ -103,6 +113,7 @@ const renderView = async (swapData: any = {}) => {
     const store = {
         claimMinerFee: 100,
         getSwapFees: jest.fn(),
+        getReverseSwapReceiveAmount: jest.fn(() => 0),
         updateSwapStatus: jest.fn().mockResolvedValue(undefined),
         verifyReverseLockup: jest.fn().mockResolvedValue({ status: 'ok' }),
         resolveClaimAddress: jest.fn(
@@ -121,7 +132,7 @@ const renderView = async (swapData: any = {}) => {
                     params: {
                         swapData: {
                             id: 'swap',
-                            type: 'reverse',
+                            type: SwapType.Reverse,
                             destinationAddress: 'destination',
                             ...swapData
                         },
@@ -317,16 +328,21 @@ describe('SwapDetails lockup verification retry wiring', () => {
                 })
             );
 
-            const update = socket.onmessage({
-                data: JSON.stringify({
-                    event: 'update',
-                    args: [
-                        {
-                            status: 'transaction.confirmed',
-                            transaction: { hex: 'txhex' }
-                        }
-                    ]
-                })
+            // keep the handler's promise out of act so it stays
+            // pending until after unmount
+            let update!: Promise<void>;
+            await act(() => {
+                update = socket.onmessage({
+                    data: JSON.stringify({
+                        event: 'update',
+                        args: [
+                            {
+                                status: 'transaction.confirmed',
+                                transaction: { hex: 'txhex' }
+                            }
+                        ]
+                    })
+                });
             });
             await advance(0);
             expect(store.verifyReverseLockup).toHaveBeenCalledTimes(1);
