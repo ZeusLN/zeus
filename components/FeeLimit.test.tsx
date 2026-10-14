@@ -215,9 +215,11 @@ describe('FeeLimit fixed', () => {
             satAmount: 10_000
         });
 
+        onFeeLimitSatChange.mockClear();
         await rerender({ satAmount: 20_000 });
 
-        expect(onFeeLimitSatChange).toHaveBeenLastCalledWith('100');
+        expect(onFeeLimitSatChange).toHaveBeenCalledTimes(1);
+        expect(onFeeLimitSatChange).toHaveBeenCalledWith('100');
     });
 });
 

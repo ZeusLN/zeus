@@ -220,6 +220,26 @@ describe('FeeBreakdown inbound fees', () => {
         expect(row('views.Channel.remoteInboundFeeRate')).toBeUndefined();
     });
 
+    it('shows nonzero remote inbound fees from the remote policy', async () => {
+        (BackendUtils.supportInboundFees as jest.Mock).mockReturnValue(true);
+        await renderBreakdown({
+            chanInfo: {
+                [CHANNEL_ID]: {
+                    ...inbound[CHANNEL_ID],
+                    node2Policy: policy({
+                        inbound_fee_base_msat: -1200,
+                        inbound_fee_rate_milli_msat: -250
+                    })
+                }
+            }
+        });
+
+        expect(shown('views.Channel.localInboundBaseFee')).toBe(-0.5);
+        expect(shown('views.Channel.localInboundFeeRate')).toBe('-0.005%');
+        expect(shown('views.Channel.remoteInboundBaseFee')).toBe(-1.2);
+        expect(shown('views.Channel.remoteInboundFeeRate')).toBe('-0.025%');
+    });
+
     it('leaves inbound fees out when the backend does not support them', async () => {
         await renderBreakdown({ chanInfo: inbound });
 
