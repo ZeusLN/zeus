@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "Най-малки такси",
     "views.EditFee.confirmFee": "Такса за потвърждение",
     "views.EditFee.error": "Грешка при получаване на такси",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "Фактура",
     "views.Invoice.paid": "Платен",
     "views.Invoice.unpaid": "Неплатен",
