@@ -144,6 +144,8 @@ describe('PaymentRequest mount', () => {
 });
 
 describe('PaymentRequest embedded LND readiness', () => {
+    afterEach(() => jest.restoreAllMocks());
+
     it('becomes ready once a stale zero balance is refreshed', async () => {
         const isReady = jest.fn().mockResolvedValue(true);
         const { BalanceStore } = await renderView({

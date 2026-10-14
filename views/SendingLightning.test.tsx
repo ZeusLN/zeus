@@ -103,17 +103,21 @@ describe('SendingLightning retry', () => {
     it('does not offer Try Again while the payment is in transit', async () => {
         // what TransactionsStore holds after LdkNode reports a keysend or
         // BOLT 12 payment still pending at its timeout
-        await renderView({ status: 'IN_FLIGHT' });
+        const navigation = await renderView({ status: 'IN_FLIGHT' });
 
         expect(
             screen.queryByRole('button', { name: TRY_AGAIN })
         ).not.toBeOnTheScreen();
         expect(
-            screen.getByRole('button', { name: GO_TO_WALLET })
-        ).toBeOnTheScreen();
-        expect(
             screen.getByText('views.SendingLightning.inTransit')
         ).toBeOnTheScreen();
+
+        await fireEvent.press(
+            screen.getByRole('button', { name: GO_TO_WALLET })
+        );
+
+        expect(navigation.popTo).toHaveBeenCalledWith('Wallet');
+        expect(navigation.goBack).not.toHaveBeenCalled();
     });
 
     it('offers Try Again, going back to the previous screen, after a failure', async () => {
