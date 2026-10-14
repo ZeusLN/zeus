@@ -1841,7 +1841,7 @@ describe('InvoicesStore lnurl-withdraw callback', () => {
             paymentRequest: 'lnbc1invoice'
         });
 
-        await store.createInvoice({
+        const result = await store.createInvoice({
             value: '1000',
             memo: 'x',
             lnurl: { callback, k1: 'K1', domain: 'service.example' },
@@ -1851,7 +1851,7 @@ describe('InvoicesStore lnurl-withdraw callback', () => {
 
         // the callback fetch is not awaited by createInvoice
         await new Promise((res) => setTimeout(res, 20));
-        return store;
+        return { store, result };
     };
 
     const blobFetch = ReactNativeBlobUtil.fetch as jest.Mock;
@@ -1862,17 +1862,25 @@ describe('InvoicesStore lnurl-withdraw callback', () => {
             json: () => ({ status: 'OK' }),
             text: () => ''
         });
+        (BackendUtils.createInvoice as jest.Mock).mockClear();
     });
 
     it.each([
         'http://127.0.0.1:8080/cb',
         'https://192.168.1.1/cb',
         'https://169.254.169.254/cb',
-        'http://cleartext.example/cb'
-    ])('does not fetch a callback at %s', async (callback) => {
-        await withdrawTo(callback);
+        'http://cleartext.example/cb',
+        'https://１２７.０.０.１/cb'
+    ])('refuses a callback at %s before creating an invoice', async (cb) => {
+        const { store, result } = await withdrawTo(cb);
 
         expect(blobFetch).not.toHaveBeenCalled();
+        expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
+        expect(result).toBeUndefined();
+        expect(store.payment_request).toBeNull();
+        expect(store.creatingInvoice).toBe(false);
+        expect(store.creatingInvoiceError).toBe(true);
+        expect(store.error_msg).toBe('utils.lnurl.unsafeCallback');
     });
 
     it('still fetches a public https callback', async () => {
