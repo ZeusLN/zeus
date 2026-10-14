@@ -156,8 +156,10 @@ const textInputWith = (placeholder: string) =>
     hosts('TextInput').find((n) => n.props.placeholder === placeholder);
 const minConfsInput = () => textInputWith('1');
 
-// the request handed to ChannelsStore.connectPeer when Open is pressed
+// the request handed to ChannelsStore.connectPeer when Open is pressed.
+// fireEvent.press ignores disabled on the mocked Button, so check it here
 const openRequest = async (props: any) => {
+    expect(isOpenDisabled()).toBe(false);
     await fireEvent.press(openButton());
     return props.ChannelsStore.connectPeer.mock.calls[0][0];
 };
@@ -444,6 +446,7 @@ describe('OpenChannel min confs default from settings', () => {
 describe('OpenChannel min confs field', () => {
     it('treats a cleared field as unset and opens with the default of 1', async () => {
         const { props } = await renderView();
+        await enterAmount('50000', 50000);
         await fireEvent.changeText(minConfsInput()!, '0');
         await fireEvent.changeText(minConfsInput()!, '');
 
@@ -456,6 +459,7 @@ describe('OpenChannel min confs field', () => {
 
     it('sends a typed 0 with spend unconfirmed', async () => {
         const { props } = await renderView();
+        await enterAmount('50000', 50000);
         await fireEvent.changeText(minConfsInput()!, '0');
 
         const request = await openRequest(props);
