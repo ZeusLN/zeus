@@ -964,6 +964,7 @@
     "views.Sending.goToSwap": "Go to swap",
     "views.SendingLightning.lowFeeLimitMessage": "This payment may have failed due to a low fee limit. Try again with a higher fee limit",
     "views.SendingLightning.tryAgain": "Try Again",
+    "views.SendingLightning.checkingPayment": "Checking payment with your node",
     "views.SendingLightning.copyPaymentHash": "Copy Hash to Clipboard",
     "views.SendingLightning.inTransit": "Payment is in transit. It may complete momentarily or it may go on to fail. Check the Activity view to track its progress.",
     "views.SendingLightning.paymentNotSent": "Payment was not sent. Your node has no record of it. Check the Activity view before trying again.",
