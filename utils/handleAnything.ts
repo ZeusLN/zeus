@@ -634,6 +634,20 @@ const handleAnything = async (
         const normalizedDomain = domain.toLowerCase();
         const isOnion = normalizedDomain.endsWith('.onion');
 
+        // Skip lowercasing for cryptoqr.net addresses as they contain URL-encoded
+        // data where hex digit casing matters for server-side lookup
+        const isCryptoQR = normalizedDomain.endsWith('cryptoqr.net');
+        const normalizedUsername = isCryptoQR
+            ? username
+            : username.toLowerCase();
+        const scheme = isOnion ? 'http' : 'https';
+        const url = `${scheme}://${normalizedDomain}/.well-known/lnurlp/${normalizedUsername}`;
+        // Refuse before the BOLT 12 lookup below, which would otherwise send
+        // the address, IP literal included, to the DoH resolver first
+        if (!isLightningAddressEndpointAllowed(url).ok) {
+            throw new Error(localeString('utils.lnurl.unsafeLightningAddress'));
+        }
+
         let bolt12: string | undefined;
         let b12Value: string | undefined,
             b12SatAmount: string | undefined,
@@ -720,17 +734,6 @@ const handleAnything = async (
         }
 
         // try BOLT 11 address
-        // Skip lowercasing for cryptoqr.net addresses as they contain URL-encoded
-        // data where hex digit casing matters for server-side lookup
-        const isCryptoQR = normalizedDomain.endsWith('cryptoqr.net');
-        const normalizedUsername = isCryptoQR
-            ? username
-            : username.toLowerCase();
-        const scheme = isOnion ? 'http' : 'https';
-        const url = `${scheme}://${normalizedDomain}/.well-known/lnurlp/${normalizedUsername}`;
-        if (!isLightningAddressEndpointAllowed(url).ok) {
-            throw new Error(localeString('utils.lnurl.unsafeLightningAddress'));
-        }
         const error = localeString(
             'utils.handleAnything.lightningAddressError'
         );
