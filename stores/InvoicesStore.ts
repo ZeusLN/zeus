@@ -361,6 +361,18 @@ export default class InvoicesStore {
         this.creatingInvoiceError = false;
         this.error_msg = null;
 
+        // Never fetch a withdraw callback that would reach internal
+        // infrastructure or leak in cleartext (SSRF-by-callback). Refuse
+        // before creating anything, so the user is not left holding an
+        // invoice the service will never pay. getLnurlParams already refuses
+        // these at resolve time; this covers params that arrive another way.
+        if (lnurl && !isLnurlCallbackAllowed(lnurl.callback).ok) {
+            this.creatingInvoice = false;
+            this.creatingInvoiceError = true;
+            this.error_msg = localeString('utils.lnurl.unsafeCallback');
+            return;
+        }
+
         const req: any = {
             memo,
             value,
@@ -621,29 +633,6 @@ export default class InvoicesStore {
                 }
 
                 if (lnurl) {
-                    if (!isLnurlCallbackAllowed(lnurl.callback).ok) {
-                        // Never fetch a callback that would reach internal
-                        // infrastructure or leak in cleartext
-                        // (SSRF-by-callback)
-                        Alert.alert(
-                            localeString('general.error'),
-                            localeString('utils.lnurl.unsafeCallback'),
-                            [
-                                {
-                                    text: localeString('general.ok'),
-                                    onPress: () => void 0
-                                }
-                            ],
-                            { cancelable: false }
-                        );
-                        return {
-                            rHash: invoice.getFormattedRhash,
-                            paymentRequest: jit_bolt11
-                                ? jit_bolt11
-                                : invoice.getPaymentRequest
-                        };
-                    }
-
                     const u = url.parse(lnurl.callback);
                     const qs = querystring.parse(u.query);
                     qs.k1 = lnurl.k1;
