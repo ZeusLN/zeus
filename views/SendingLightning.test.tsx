@@ -10,8 +10,18 @@ jest.mock('../NavigationService', () => ({
 }));
 jest.mock('../utils/DonationUtils', () => ({ loadDonationLnurl: jest.fn() }));
 jest.mock('./LnurlPay/Success', () => 'LnurlPaySuccess');
-jest.mock('../components/Button', () => 'Button');
-jest.mock('../components/Screen', () => 'Screen');
+jest.mock('../components/Button', () => {
+    const { Pressable, Text } = require('react-native');
+    return ({ title, onPress }: any) => (
+        <Pressable role="button" onPress={onPress}>
+            <Text>{title}</Text>
+        </Pressable>
+    );
+});
+jest.mock('../components/Screen', () => {
+    const { View } = require('react-native');
+    return ({ children }: any) => <View>{children}</View>;
+});
 jest.mock('../components/layout/Row', () => ({ Row: 'Row' }));
 jest.mock('../components/PaymentSuccessView', () => 'PaymentSuccessView');
 jest.mock('../components/PaymentErrorView', () => 'PaymentErrorView');
@@ -48,25 +58,14 @@ jest.mock('../assets/images/SVG/wordmark-black.svg', () => 'Wordmark');
 jest.mock('../utils/AmountUtils', () => ({ getFeePercentage: jest.fn() }));
 
 import * as React from 'react';
+import { BackHandler } from 'react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import SendingLightning from './SendingLightning';
 
-const childrenOf = (element: any): any[] =>
-    React.Children.toArray(element?.props?.children);
+const TRY_AGAIN = 'views.SendingLightning.tryAgain';
+const GO_TO_WALLET = 'views.SendingLightning.goToWallet';
 
-const findAll = (node: any, predicate: (node: any) => boolean): any[] => {
-    if (!React.isValidElement(node)) return [];
-    const matches = predicate(node) ? [node] : [];
-    return matches.concat(
-        ...childrenOf(node).map((child) => findAll(child, predicate))
-    );
-};
-
-const buttonTitles = (tree: any): string[] =>
-    findAll(tree, (node) => node.type === 'Button').map(
-        (button) => button.props.title
-    );
-
-const makeView = (transactionsState: Record<string, any>) => {
+const renderView = async (transactionsState: Record<string, any>) => {
     const TransactionsStore = {
         loading: false,
         error: false,
@@ -80,55 +79,86 @@ const makeView = (transactionsState: Record<string, any>) => {
         status: null,
         ...transactionsState
     };
-    const navigation = { goBack: jest.fn(), popTo: jest.fn() };
-    const view = new SendingLightning({
-        navigation,
-        route: { key: 'SendingLightning', name: 'SendingLightning' },
-        TransactionsStore,
-        ContactStore: { contacts: [] },
-        LnurlPayStore: {}
-    } as unknown as React.ComponentProps<typeof SendingLightning>);
-    return { view, navigation };
+    const navigation = {
+        goBack: jest.fn(),
+        popTo: jest.fn(),
+        addListener: jest.fn(() => jest.fn())
+    };
+    await render(
+        <SendingLightning
+            {...({
+                navigation,
+                route: { key: 'SendingLightning', name: 'SendingLightning' },
+                TransactionsStore,
+                ContactStore: { contacts: [] },
+                LnurlPayStore: {},
+                NodeInfoStore: { nodeInfo: {} }
+            } as any)}
+        />
+    );
+    return navigation;
 };
 
 describe('SendingLightning retry', () => {
-    it('does not offer Try Again while the payment is in transit', () => {
+    it('does not offer Try Again while the payment is in transit', async () => {
         // what TransactionsStore holds after LdkNode reports a keysend or
         // BOLT 12 payment still pending at its timeout
-        const { view } = makeView({ status: 'IN_FLIGHT' });
+        await renderView({ status: 'IN_FLIGHT' });
 
-        const tree = view.render();
-
-        expect(buttonTitles(tree)).not.toContain(
-            'views.SendingLightning.tryAgain'
-        );
-        expect(buttonTitles(tree)).toContain(
-            'views.SendingLightning.goToWallet'
-        );
         expect(
-            findAll(
-                tree,
-                (node) =>
-                    node.props?.children === 'views.SendingLightning.inTransit'
-            )
-        ).toHaveLength(1);
+            screen.queryByRole('button', { name: TRY_AGAIN })
+        ).not.toBeOnTheScreen();
+        expect(
+            screen.getByRole('button', { name: GO_TO_WALLET })
+        ).toBeOnTheScreen();
+        expect(
+            screen.getByText('views.SendingLightning.inTransit')
+        ).toBeOnTheScreen();
     });
 
-    it('offers Try Again, going back to the previous screen, after a failure', () => {
-        const { view, navigation } = makeView({
+    it('offers Try Again, going back to the previous screen, after a failure', async () => {
+        const navigation = await renderView({
             error: true,
             error_msg: 'RouteNotFound'
         });
 
-        const tryAgain = findAll(
-            view.render(),
-            (node) =>
-                node.type === 'Button' &&
-                node.props.title === 'views.SendingLightning.tryAgain'
-        );
+        await fireEvent.press(screen.getByRole('button', { name: TRY_AGAIN }));
 
-        expect(tryAgain).toHaveLength(1);
-        tryAgain[0].props.onPress();
         expect(navigation.goBack).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('SendingLightning hardware back', () => {
+    let onBack: () => boolean;
+
+    beforeEach(() => {
+        jest.spyOn(BackHandler, 'addEventListener').mockImplementation(
+            (_event: any, listener: any) => {
+                onBack = listener;
+                return { remove: jest.fn() } as any;
+            }
+        );
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('returns to the wallet while the payment is in transit', async () => {
+        const navigation = await renderView({ status: 'IN_FLIGHT' });
+
+        expect(onBack()).toBe(true);
+
+        expect(navigation.popTo).toHaveBeenCalledWith('Wallet');
+        expect(navigation.goBack).not.toHaveBeenCalled();
+    });
+
+    it('leaves a failed payment to the default back behavior', async () => {
+        const navigation = await renderView({
+            error: true,
+            error_msg: 'RouteNotFound'
+        });
+
+        expect(onBack()).toBe(false);
+
+        expect(navigation.popTo).not.toHaveBeenCalled();
     });
 });
