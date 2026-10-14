@@ -1075,3 +1075,87 @@ describe('CashuStore removeMint with several mints', () => {
         expect(storage.setItem).not.toHaveBeenCalled();
     });
 });
+
+describe('CashuStore payReqMintBalance and payReqAmount', () => {
+    const singleMintStore = () =>
+        newStore({
+            balances: { [A]: 1200 },
+            selected: [A],
+            enableMultiMint: false
+        });
+
+    it('sets the mint balance and the quote amount for a single mint', async () => {
+        const store = singleMintStore();
+
+        await store.getPayReq(INVOICE);
+
+        // the quote is 1000 + 3 fee reserve
+        expect(cdk.createMeltQuote).toHaveBeenCalledWith(A, INVOICE, undefined);
+        expect(store.getPayReqError).toBeUndefined();
+        expect(store.payReqMintBalance).toBe(1200);
+        expect(store.payReqAmount).toBe(1000);
+    });
+
+    it('leaves both at 0 when the invoice is split across two mints', async () => {
+        const store = newStore({
+            balances: { [A]: 600, [B]: 500 },
+            selected: [A, B]
+        });
+        mintApi({
+            [A]: () => ({ fee: 1 }),
+            [B]: () => ({ fee: 1 })
+        });
+
+        await store.getPayReq(INVOICE);
+
+        expect(planOf(store).map(({ mintUrl }) => mintUrl)).toEqual([A, B]);
+        expect(store.getPayReqError).toBeUndefined();
+        expect(store.payReqMintBalance).toBe(0);
+        expect(store.payReqAmount).toBe(0);
+    });
+
+    it('resets both when a good invoice is followed by an expired one', async () => {
+        const store = singleMintStore();
+        await store.getPayReq(INVOICE);
+        expect(store.payReqMintBalance).toBe(1200);
+        expect(store.payReqAmount).toBe(1000);
+
+        invoiceFor({
+            num_satoshis: '1000',
+            timestamp: Math.floor(Date.now() / 1000) - 7200
+        });
+        cdk.createMeltQuote.mockClear();
+        await store.getPayReq(INVOICE);
+
+        // an expired invoice returns before any melt quote is requested
+        expect(cdk.createMeltQuote).not.toHaveBeenCalled();
+        expect(store.payReqMintBalance).toBe(0);
+        expect(store.payReqAmount).toBe(0);
+    });
+
+    it('resets both and sets the error when the melt quote request fails', async () => {
+        const store = singleMintStore();
+        await store.getPayReq(INVOICE);
+        expect(store.payReqMintBalance).toBe(1200);
+        expect(store.payReqAmount).toBe(1000);
+
+        cdk.createMeltQuote.mockRejectedValueOnce(new Error('mint offline'));
+        await store.getPayReq(INVOICE);
+
+        expect(store.getPayReqError).toBe('mint offline');
+        expect(store.payReqMintBalance).toBe(0);
+        expect(store.payReqAmount).toBe(0);
+    });
+
+    it('resets both on clearPayReq', async () => {
+        const store = singleMintStore();
+        await store.getPayReq(INVOICE);
+        expect(store.payReqMintBalance).toBe(1200);
+        expect(store.payReqAmount).toBe(1000);
+
+        store.clearPayReq();
+
+        expect(store.payReqMintBalance).toBe(0);
+        expect(store.payReqAmount).toBe(0);
+    });
+});
