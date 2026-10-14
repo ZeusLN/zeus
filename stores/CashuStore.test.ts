@@ -686,6 +686,55 @@ describe('CashuStore single-mint melt state', () => {
         expect(store.pendingMelts).toEqual([]);
     });
 
+    // CDK history keeps no outgoing record, so a kill after the untrack but
+    // before the payment write would lose a paid invoice from activity
+    it('stores a Paid payment before it stops tracking the melt', async () => {
+        const store = payingStore();
+        (CashuDevKit.melt as jest.Mock).mockResolvedValue({
+            state: 'Paid',
+            amount: 1000,
+            fee_paid: 2,
+            preimage: 'a'.repeat(64)
+        });
+
+        await store.payLnInvoiceFromEcash({
+            amount: '1000',
+            paymentRequest: 'lnbc10n1ptestinvoice'
+        });
+
+        const keys = (Storage.setItem as jest.Mock).mock.calls.map(
+            ([key]) => key
+        );
+        const paymentsWrite = keys.indexOf('lnd-cashu-payments');
+        const untrackWrite = keys.lastIndexOf('lnd-cashu-pending-melts');
+        expect(paymentsWrite).toBeGreaterThan(-1);
+        expect(untrackWrite).toBeGreaterThan(paymentsWrite);
+    });
+
+    it('keeps tracking a Paid melt whose payment could not be stored', async () => {
+        const store = payingStore();
+        (CashuDevKit.melt as jest.Mock).mockResolvedValue({
+            state: 'Paid',
+            amount: 1000,
+            fee_paid: 2,
+            preimage: 'a'.repeat(64)
+        });
+        (Storage.setItem as jest.Mock).mockImplementation(async (key) => {
+            if (key === 'lnd-cashu-payments') throw new Error('disk full');
+            return true;
+        });
+
+        await store.payLnInvoiceFromEcash({
+            amount: '1000',
+            paymentRequest: 'lnbc10n1ptestinvoice'
+        });
+
+        // reconcile settles it from the mint on the next pass
+        expect(store.pendingMelts).toEqual([
+            expect.objectContaining({ quote: 'quote-1' })
+        ]);
+    });
+
     // What CDK does with a melt the mint has not settled: it waits, and if
     // it stops waiting it throws while its saga still holds the quote. The
     // quote CDK then returns is its local copy, still Unpaid.
@@ -978,6 +1027,40 @@ describe('CashuStore reconcilePendingMelts', () => {
         expect(store.payments[0].payment_preimage).toBe('b'.repeat(64));
         expect(store.pendingMelts).toEqual([]);
         expect(store.syncCDKBalances).toHaveBeenCalled();
+    });
+
+    // A kill after the pay path stored the payment but before it untracked
+    // the melt leaves both behind
+    it('settles a stored payment in place rather than adding a second', async () => {
+        const stored = new CashuPayment({
+            bolt11: 'lnbc10n1ptestinvoice',
+            meltResponse: {
+                quote: {
+                    quote: 'quote-1',
+                    amount: 1000,
+                    fee_reserve: 10,
+                    state: 'Unpaid',
+                    expiry: 9999999999
+                }
+            },
+            amount: 1000,
+            fee: 2,
+            payment_preimage: 'b'.repeat(64),
+            mintUrl
+        });
+        const store = reconcilingStore(pendingMelt(), [stored]);
+        (CashuDevKit.checkMeltQuote as jest.Mock).mockResolvedValue({
+            id: 'quote-1',
+            state: 'Paid',
+            payment_preimage: 'b'.repeat(64)
+        });
+
+        await store.reconcilePendingMelts();
+
+        expect(store.payments).toHaveLength(1);
+        expect(store.payments[0].getFee).toBe('2');
+        expect(store.payments[0].payment_preimage).toBe('b'.repeat(64));
+        expect(store.pendingMelts).toEqual([]);
     });
 
     // The pay path may never have recorded anything: a melt whose execution

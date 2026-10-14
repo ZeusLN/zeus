@@ -4951,8 +4951,6 @@ export default class CashuStore {
                 );
             }
 
-            await this.untrackPendingMelt(meltQuote.quote);
-
             const realFee = meltResult.fee_paid;
             const paymentPreimage = meltResult.preimage || '';
 
@@ -4976,6 +4974,12 @@ export default class CashuStore {
                 `${this.getNodeDir()}-cashu-payments`,
                 this.payments
             );
+
+            // Untracked only once the payment is stored. CDK history keeps
+            // no outgoing record, so a kill between the two writes in the
+            // other order would lose the payment. In this order reconcile
+            // finds the stored entry by quote and settles it in place.
+            await this.untrackPendingMelt(meltQuote.quote);
 
             // CDK handles balance updates internally
             await this.syncCDKBalances(true); // Include transactions for activity
