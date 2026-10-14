@@ -30,12 +30,16 @@ jest.mock('../utils/handleAnything', () => jest.fn());
 jest.mock('../utils/NFCUtils', () => ({ scanNfcTag: jest.fn() }));
 jest.mock('../utils/NodeUriUtils', () => ({}));
 jest.mock('../utils/LocaleUtils');
+// the theme key comes through, so a field's error color is visible
 jest.mock('../utils/ThemeUtils', () => ({
-    themeColor: () => '#000000'
+    themeColor: (key: string) => key
 }));
 jest.mock('../components/Amount', () => 'Amount');
 jest.mock('../components/AmountInput', () => 'AmountInput');
-jest.mock('../components/Text', () => 'Text');
+jest.mock('../components/Text', () => {
+    const { Text } = require('react-native');
+    return ({ children }: any) => <Text>{children}</Text>;
+});
 jest.mock('../components/Button', () => 'Button');
 jest.mock('../components/DropdownSetting', () => 'DropdownSetting');
 jest.mock('../components/Accordion', () => 'Accordion');
@@ -43,7 +47,10 @@ jest.mock('../components/Header', () => 'Header');
 jest.mock('../components/OnchainFeeInput', () => 'OnchainFeeInput');
 jest.mock('../components/KeyValue', () => 'KeyValue');
 jest.mock('../components/LoadingIndicator', () => 'LoadingIndicator');
-jest.mock('../components/Screen', () => 'Screen');
+jest.mock('../components/Screen', () => {
+    const { View } = require('react-native');
+    return ({ children }: any) => <View>{children}</View>;
+});
 jest.mock('../components/SuccessErrorMessage', () => ({
     ErrorMessage: 'ErrorMessage'
 }));
@@ -55,49 +62,26 @@ jest.mock('../assets/images/SVG/Scan.svg', () => 'Scan');
 jest.mock('../assets/images/SVG/NFC-alt.svg', () => 'NfcIcon');
 
 import * as React from 'react';
+import { fireEvent, render, screen } from '@testing-library/react-native';
+import type { TestInstance } from 'test-renderer';
 import OpenChannel from './OpenChannel';
 import BackendUtils from '../utils/BackendUtils';
 import { getLspConfigForNetwork, isOlympusPeer } from '../stores/SettingsStore';
 
 const BALANCE = 500000;
+const OPEN = 'views.OpenChannel.openChannel';
 
-const childrenOf = (element: any): any[] =>
-    React.Children.toArray(element?.props?.children);
-
-// first element in the tree, depth first, that matches
-const findElement = (node: any, match: (element: any) => boolean): any => {
-    if (!React.isValidElement(node)) return undefined;
-    if (match(node)) return node;
-    for (const child of childrenOf(node)) {
-        const found = findElement(child, match);
-        if (found) return found;
-    }
-    return undefined;
+// a valid peer, so Open is not disabled for want of one
+const PEER = {
+    node_pubkey_string: `02${'d'.repeat(64)}`,
+    host: 'peer.example.com:9735'
 };
 
-const findByType = (tree: any, type: string, title?: string) =>
-    findElement(
-        tree,
-        (element) =>
-            element.type === type &&
-            (title === undefined || element.props.title === title)
-    );
-
-// the Switch whose label is a sibling showing `text`
-const findSwitchNextTo = (tree: any, text: string) => {
-    const parent = findElement(tree, (element) =>
-        childrenOf(element).some(
-            (child: any) => child?.props?.children === text
-        )
-    );
-    return childrenOf(parent).find((child: any) => child.type === 'Switch');
-};
-
-const makeView = ({
+const makeProps = ({
     implementation = 'lnd',
     confirmedBlockchainBalance = BALANCE,
     unconfirmedBlockchainBalance = 0,
-    routeParams = {},
+    routeParams = PEER,
     settings = {}
 }: {
     implementation?: string;
@@ -112,7 +96,7 @@ const makeView = ({
     (BackendUtils.supportsChannelOpenMinConfs as jest.Mock).mockReturnValue(
         implementation !== 'ldk-node'
     );
-    const view = new OpenChannel({
+    return {
         navigation: { navigate: jest.fn() },
         route: { params: routeParams },
         BalanceStore: {
@@ -130,108 +114,123 @@ const makeView = ({
         NodeInfoStore: { nodeInfo: {} },
         SettingsStore: { implementation, settings },
         UTXOsStore: {}
-    } as unknown as React.ComponentProps<typeof OpenChannel>);
-    // setState on a class that was never mounted does nothing, so apply it
-    // directly to see what the screen would render next
-    jest.spyOn(view, 'setState').mockImplementation((update: any) => {
-        view.state = { ...view.state, ...update };
-    });
-    return view;
+    } as any;
 };
 
-const amountInputProps = (view: OpenChannel) =>
-    findByType(view.render(), 'AmountInput').props;
+const renderView = async (options: Parameters<typeof makeProps>[0] = {}) => {
+    const props = makeProps(options);
+    const result = await render(<OpenChannel {...props} />);
+    return { props, ...result };
+};
 
-const toggleFundMax = (view: OpenChannel) =>
-    findSwitchNextTo(
-        view.render(),
-        'views.OpenChannel.fundMax'
-    ).props.onValueChange();
+const hosts = (type: string) =>
+    screen.container.queryAll((n) => n.type === type);
+
+const amountInput = () => hosts('AmountInput')[0];
+const enterAmount = (amount: string, sats: number | string) =>
+    fireEvent(amountInput(), 'amountChange', amount, sats);
+
+const openButton = () => hosts('Button').find((n) => n.props.title === OPEN)!;
+const isOpenDisabled = () => openButton().props.disabled;
+
+// the Switch in the row labelled `text`
+const switchNextTo = (text: string) => {
+    let node: TestInstance | null = screen.getByText(text);
+    while (node && !node.queryAll((n) => n.type === 'Switch').length) {
+        node = node.parent;
+    }
+    return node!.queryAll((n) => n.type === 'Switch')[0];
+};
+
+const toggleFundMax = () =>
+    fireEvent(switchNextTo('views.OpenChannel.fundMax'), 'valueChange');
 
 // AmountInput reports the balance once when fund max turns on (forceUnit
 // changes to sats) and stays silent when it turns off
-const turnFundMaxOn = (view: OpenChannel) => {
-    toggleFundMax(view);
-    amountInputProps(view).onAmountChange(String(BALANCE), BALANCE);
+const turnFundMaxOn = async () => {
+    await toggleFundMax();
+    await enterAmount(String(BALANCE), BALANCE);
 };
 
-const isOpenDisabled = (view: OpenChannel) =>
-    findByType(view.render(), 'Button', 'views.OpenChannel.openChannel').props
-        .disabled;
+const textInputWith = (placeholder: string) =>
+    hosts('TextInput').find((n) => n.props.placeholder === placeholder);
+const minConfsInput = () => textInputWith('1');
+
+// the request handed to ChannelsStore.connectPeer when Open is pressed.
+// fireEvent.press ignores disabled on the mocked Button, so check it here
+const openRequest = async (props: any) => {
+    expect(isOpenDisabled()).toBe(false);
+    await fireEvent.press(openButton());
+    return props.ChannelsStore.connectPeer.mock.calls[0][0];
+};
 
 describe('OpenChannel fund max toggle', () => {
-    it('restores the entered amount when fund max is turned off', () => {
-        const view = makeView();
-        amountInputProps(view).onAmountChange('50000', 50000);
+    it('restores the entered amount when fund max is turned off', async () => {
+        const { props } = await renderView();
+        await enterAmount('50000', 50000);
 
-        turnFundMaxOn(view);
-        expect(amountInputProps(view).amount).toBe(String(BALANCE));
+        await turnFundMaxOn();
+        expect(amountInput().props.amount).toBe(String(BALANCE));
 
-        toggleFundMax(view);
-        expect(view.state.local_funding_amount).toBe('50000');
-        expect(view.state.satAmount).toBe(50000);
-        expect(amountInputProps(view).amount).toBe('50000');
-        expect(isOpenDisabled(view)).toBe(false);
+        await toggleFundMax();
+        expect(amountInput().props.amount).toBe('50000');
+        expect(isOpenDisabled()).toBe(false);
+        expect(await openRequest(props)).toMatchObject({
+            local_funding_amount: '50000',
+            fundMax: false
+        });
     });
 
-    it('keeps an empty amount empty when fund max is turned off', () => {
-        const view = makeView();
+    it('keeps an empty amount empty when fund max is turned off', async () => {
+        await renderView();
         // AmountInput reports '0' for the empty field on mount
-        amountInputProps(view).onAmountChange('', '0');
+        await enterAmount('', '0');
 
-        turnFundMaxOn(view);
-        expect(isOpenDisabled(view)).toBe(false);
+        await turnFundMaxOn();
+        expect(isOpenDisabled()).toBe(false);
 
-        toggleFundMax(view);
-        expect(view.state.local_funding_amount).toBe('');
-        expect(amountInputProps(view).amount).toBe('');
-        expect(isOpenDisabled(view)).toBe(true);
+        await toggleFundMax();
+        expect(amountInput().props.amount).toBe('');
+        expect(isOpenDisabled()).toBe(true);
     });
 });
-
-const findMinConfsInput = (view: OpenChannel) =>
-    findElement(
-        view.render(),
-        (element) =>
-            element.type === 'TextInput' && element.props.placeholder === '1'
-    );
 
 describe('OpenChannel fund max with unconfirmed funds and min confs 0', () => {
     const UNCONFIRMED = 100000;
 
     it.each(['lnd', 'cln-rest'])(
         'on %s counts unconfirmed funds',
-        (implementation) => {
-            const view = makeView({
+        async (implementation) => {
+            await renderView({
                 implementation,
                 confirmedBlockchainBalance: 0,
                 unconfirmedBlockchainBalance: UNCONFIRMED
             });
-            findMinConfsInput(view).props.onChangeText('0');
-            toggleFundMax(view);
+            await fireEvent.changeText(minConfsInput()!, '0');
+            await toggleFundMax();
 
-            expect(amountInputProps(view).amount).toBe(String(UNCONFIRMED));
-            expect(isOpenDisabled(view)).toBe(false);
+            expect(amountInput().props.amount).toBe(String(UNCONFIRMED));
+            expect(isOpenDisabled()).toBe(false);
         }
     );
 
-    it('on ldk-node hides the min confs field', () => {
-        const view = makeView({ implementation: 'ldk-node' });
+    it('on ldk-node hides the min confs field', async () => {
+        await renderView({ implementation: 'ldk-node' });
 
-        expect(findMinConfsInput(view)).toBeUndefined();
+        expect(minConfsInput()).toBeUndefined();
     });
 
-    it('on ldk-node ignores a min confs of 0 from settings', () => {
-        const view = makeView({
+    it('on ldk-node ignores a min confs of 0 from settings', async () => {
+        await renderView({
             implementation: 'ldk-node',
             confirmedBlockchainBalance: 0,
-            unconfirmedBlockchainBalance: UNCONFIRMED
+            unconfirmedBlockchainBalance: UNCONFIRMED,
+            settings: { channels: { min_confs: 0 } }
         });
-        view.setState({ min_confs: 0, spend_unconfirmed: true });
-        toggleFundMax(view);
+        await toggleFundMax();
 
-        expect(amountInputProps(view).amount).toBe('0');
-        expect(isOpenDisabled(view)).toBe(true);
+        expect(amountInput().props.amount).toBe('0');
+        expect(isOpenDisabled()).toBe(true);
     });
 });
 
@@ -255,58 +254,59 @@ describe('OpenChannel LSP channel partner', () => {
     afterEach(() => {
         getLspConfig.mockReturnValue({});
         isOlympus.mockReturnValue(true);
+        jest.restoreAllMocks();
     });
 
-    const partnerDropdown = (view: OpenChannel) =>
-        findByType(view.render(), 'DropdownSetting', 'general.channelPartner')
-            .props;
+    const partnerDropdown = () =>
+        hosts('DropdownSetting').find(
+            (n) => n.props.title === 'general.channelPartner'
+        )!;
+    const choosePartner = (value: string) =>
+        fireEvent(partnerDropdown(), 'valueChange', value);
 
-    const peerInput = (view: OpenChannel, placeholder: string) =>
-        findElement(
-            view.render(),
-            (element) =>
-                element.type === 'TextInput' &&
-                element.props.placeholder === placeholder
-        ).props;
-    const pubkeyInput = (view: OpenChannel) => peerInput(view, '0A...');
-    const hostInput = (view: OpenChannel) =>
-        peerInput(view, 'views.OpenChannel.hostPort');
+    const pubkeyInput = () => textInputWith('0A...')!;
+    const hostInput = () => textInputWith('views.OpenChannel.hostPort')!;
 
-    const peerState = (view: OpenChannel) => ({
-        node_pubkey_string: view.state.node_pubkey_string,
-        host: view.state.host,
-        isNodePubkeyValid: view.state.isNodePubkeyValid,
-        isNodeHostValid: view.state.isNodeHostValid
+    // what the peer fields show; an invalid value turns its field red
+    const peerShown = () => ({
+        node_pubkey_string: pubkeyInput().props.value,
+        host: hostInput().props.value,
+        isNodePubkeyValid: pubkeyInput().props.textColor === 'text',
+        isNodeHostValid: hostInput().props.textColor === 'text'
     });
 
-    const lspView = () => {
-        const view = makeView();
-        view.initFromProps(view.props);
-        return view;
-    };
+    // A new props object re-renders the screen, as a settings change does
+    const rerenderWith = (props: any, rerender: any) =>
+        rerender(
+            <OpenChannel
+                {...props}
+                SettingsStore={{ ...props.SettingsStore }}
+            />
+        );
 
     it.each([
         [true, 'Olympus by ZEUS'],
         [false, 'general.lsp']
     ])(
         'labels the LSP option by isOlympusPeer (%s → %s) and keeps its value',
-        (olympus, label) => {
+        async (olympus, label) => {
             isOlympus.mockReturnValue(olympus);
-            const [lspOption] = partnerDropdown(lspView()).values;
+            await renderView({ routeParams: {} });
+            const [lspOption] = partnerDropdown().props.values;
 
             expect(lspOption.key).toBe(label);
             expect(lspOption.value).toBe('LSP');
         }
     );
 
-    it('moves the cached peer to a changed LSPS1 config while LSP is selected', () => {
-        const view = lspView();
-        expect(view.state.channelDestination).toBe('LSP');
+    it('moves the cached peer to a changed LSPS1 config while LSP is selected', async () => {
+        const { props, rerender } = await renderView({ routeParams: {} });
+        expect(partnerDropdown().props.selectedValue).toBe('LSP');
 
         getLspConfig.mockReturnValue({ ...OTHER, lsps1Host: '' });
-        view.componentDidUpdate(view.props);
+        await rerenderWith(props, rerender);
 
-        expect(peerState(view)).toEqual({
+        expect(peerShown()).toEqual({
             node_pubkey_string: OTHER.lsps1Pubkey,
             host: '',
             isNodePubkeyValid: true,
@@ -314,9 +314,9 @@ describe('OpenChannel LSP channel partner', () => {
         });
 
         getLspConfig.mockReturnValue(OTHER);
-        view.componentDidUpdate(view.props);
+        await rerenderWith(props, rerender);
 
-        expect(peerState(view)).toEqual({
+        expect(peerShown()).toEqual({
             node_pubkey_string: OTHER.lsps1Pubkey,
             host: OTHER.lsps1Host,
             isNodePubkeyValid: true,
@@ -324,46 +324,46 @@ describe('OpenChannel LSP channel partner', () => {
         });
     });
 
-    it('does not set state when the cached peer already matches the config', () => {
-        const view = lspView();
-        (view.setState as jest.Mock).mockClear();
+    it('does not set state when the cached peer already matches the config', async () => {
+        const { props, rerender } = await renderView({ routeParams: {} });
+        const setState = jest.spyOn(OpenChannel.prototype, 'setState');
 
-        view.componentDidUpdate(view.props);
+        await rerenderWith(props, rerender);
 
-        expect(view.setState).not.toHaveBeenCalled();
+        expect(setState).not.toHaveBeenCalled();
     });
 
-    it('leaves a typed pubkey alone while Custom is selected', () => {
-        const view = lspView();
-        partnerDropdown(view).onValueChange('Custom');
-        pubkeyInput(view).onChangeText(OTHER.lsps1Pubkey);
+    it('leaves a typed pubkey alone while Custom is selected', async () => {
+        const { props, rerender } = await renderView({ routeParams: {} });
+        await choosePartner('Custom');
+        await fireEvent.changeText(pubkeyInput(), OTHER.lsps1Pubkey);
 
         getLspConfig.mockReturnValue({
             lsps1Pubkey: `03${'c'.repeat(64)}`,
             lsps1Host: '10.0.0.1:9735'
         });
-        view.componentDidUpdate(view.props);
+        await rerenderWith(props, rerender);
 
-        expect(view.state.channelDestination).toBe('Custom');
-        expect(view.state.node_pubkey_string).toBe(OTHER.lsps1Pubkey);
+        expect(partnerDropdown().props.selectedValue).toBe('Custom');
+        expect(pubkeyInput().props.value).toBe(OTHER.lsps1Pubkey);
     });
 
-    it('locks the peer fields under LSP and restores the configured peer', () => {
-        const view = lspView();
-        expect(pubkeyInput(view).locked).toBe(true);
-        expect(hostInput(view).locked).toBe(true);
+    it('locks the peer fields under LSP and restores the configured peer', async () => {
+        await renderView({ routeParams: {} });
+        expect(pubkeyInput().props.locked).toBe(true);
+        expect(hostInput().props.locked).toBe(true);
 
-        partnerDropdown(view).onValueChange('Custom');
-        expect(pubkeyInput(view).locked).toBe(false);
-        expect(hostInput(view).locked).toBe(false);
+        await choosePartner('Custom');
+        expect(pubkeyInput().props.locked).toBe(false);
+        expect(hostInput().props.locked).toBe(false);
 
-        pubkeyInput(view).onChangeText(OTHER.lsps1Pubkey);
-        hostInput(view).onChangeText(OTHER.lsps1Host);
+        await fireEvent.changeText(pubkeyInput(), OTHER.lsps1Pubkey);
+        await fireEvent.changeText(hostInput(), OTHER.lsps1Host);
 
-        partnerDropdown(view).onValueChange('LSP');
-        expect(pubkeyInput(view).locked).toBe(true);
-        expect(hostInput(view).locked).toBe(true);
-        expect(peerState(view)).toEqual({
+        await choosePartner('LSP');
+        expect(pubkeyInput().props.locked).toBe(true);
+        expect(hostInput().props.locked).toBe(true);
+        expect(peerShown()).toEqual({
             node_pubkey_string: OLYMPUS.lsps1Pubkey,
             host: OLYMPUS.lsps1Host,
             isNodePubkeyValid: true,
@@ -371,95 +371,116 @@ describe('OpenChannel LSP channel partner', () => {
         });
     });
 
-    it('selects Custom for a routed peer and does not sync over it', () => {
-        const view = makeView({
+    it('selects Custom for a routed peer and does not sync over it', async () => {
+        const { props, rerender } = await renderView({
             routeParams: {
                 node_pubkey_string: OTHER.lsps1Pubkey,
                 host: OTHER.lsps1Host
             }
         });
-        view.initFromProps(view.props);
-        expect(view.state.channelDestination).toBe('Custom');
+        expect(partnerDropdown().props.selectedValue).toBe('Custom');
 
-        view.componentDidUpdate(view.props);
+        await rerenderWith(props, rerender);
 
-        expect(view.state.node_pubkey_string).toBe(OTHER.lsps1Pubkey);
-        expect(view.state.host).toBe(OTHER.lsps1Host);
+        expect(pubkeyInput().props.value).toBe(OTHER.lsps1Pubkey);
+        expect(hostInput().props.value).toBe(OTHER.lsps1Host);
+    });
+
+    it('opens the channel to the LSP peer', async () => {
+        const { props } = await renderView({ routeParams: {} });
+        await enterAmount('50000', 50000);
+
+        expect(await openRequest(props)).toMatchObject({
+            node_pubkey_string: OLYMPUS.lsps1Pubkey,
+            host: OLYMPUS.lsps1Host
+        });
     });
 });
 
 describe('OpenChannel min confs default from settings', () => {
     it.each([
-        [0, 0, true],
-        [3, 3, false],
-        [undefined, 1, false]
+        [0, '0', true],
+        [3, '3', false],
+        [undefined, '1', false]
     ])(
         'a saved min confs of %s loads as %s with spend unconfirmed %s',
-        async (saved, minConfs, spendUnconfirmed) => {
-            const view = makeView({
+        async (saved, shown, spendUnconfirmed) => {
+            const { props } = await renderView({
                 settings: { channels: { min_confs: saved } }
             });
-            await view.componentDidMount();
+            await enterAmount('50000', 50000);
 
-            expect(view.state.min_confs).toBe(minConfs);
-            expect(view.state.spend_unconfirmed).toBe(spendUnconfirmed);
+            expect(minConfsInput()!.props.value).toBe(shown);
+            expect(await openRequest(props)).toMatchObject({
+                min_confs: Number(shown),
+                spend_unconfirmed: spendUnconfirmed
+            });
         }
     );
 
-    it('uses the default for each toggle missing from saved settings', async () => {
-        const view = makeView({ settings: { channels: { min_confs: 3 } } });
-        await view.componentDidMount();
+    it.each([
+        [
+            'uses the default for each toggle missing from saved settings',
+            { min_confs: 3 },
+            {
+                privateChannel: true,
+                scidAlias: true,
+                simpleTaprootChannel: false
+            }
+        ],
+        [
+            'loads each saved toggle that differs from the default',
+            {
+                min_confs: 3,
+                privateChannel: false,
+                scidAlias: false,
+                simpleTaprootChannel: true
+            },
+            {
+                privateChannel: false,
+                scidAlias: false,
+                simpleTaprootChannel: true
+            }
+        ]
+    ])('%s', async (_name, channels, toggles) => {
+        const { props } = await renderView({ settings: { channels } });
+        await enterAmount('50000', 50000);
 
-        expect(view.state.privateChannel).toBe(true);
-        expect(view.state.scidAlias).toBe(true);
-        expect(view.state.simpleTaprootChannel).toBe(false);
+        expect(await openRequest(props)).toMatchObject(toggles);
     });
 
     it('counts unconfirmed funds for fund max with a saved default of 0', async () => {
-        const view = makeView({
+        await renderView({
             confirmedBlockchainBalance: 0,
             unconfirmedBlockchainBalance: 100000,
             settings: { channels: { min_confs: 0 } }
         });
-        await view.componentDidMount();
-        toggleFundMax(view);
+        await toggleFundMax();
 
-        expect(amountInputProps(view).amount).toBe('100000');
+        expect(amountInput().props.amount).toBe('100000');
     });
 });
 
 describe('OpenChannel min confs field', () => {
-    it('treats a cleared field as unset and opens with the default of 1', () => {
-        const view = makeView();
-        findMinConfsInput(view).props.onChangeText('0');
-        findMinConfsInput(view).props.onChangeText('');
+    it('treats a cleared field as unset and opens with the default of 1', async () => {
+        const { props } = await renderView();
+        await enterAmount('50000', 50000);
+        await fireEvent.changeText(minConfsInput()!, '0');
+        await fireEvent.changeText(minConfsInput()!, '');
 
-        expect(view.state.min_confs).toBeUndefined();
-        expect(view.state.spend_unconfirmed).toBe(false);
-        expect(findMinConfsInput(view).props.value).toBe('');
+        expect(minConfsInput()!.props.value).toBe('');
 
-        findByType(
-            view.render(),
-            'Button',
-            'views.OpenChannel.openChannel'
-        ).props.onPress();
-        const request = (view.props.ChannelsStore.connectPeer as jest.Mock).mock
-            .calls[0][0];
+        const request = await openRequest(props);
         expect(request.min_confs).toBe(1);
         expect(request.spend_unconfirmed).toBe(false);
     });
 
-    it('sends a typed 0 with spend unconfirmed', () => {
-        const view = makeView();
-        findMinConfsInput(view).props.onChangeText('0');
+    it('sends a typed 0 with spend unconfirmed', async () => {
+        const { props } = await renderView();
+        await enterAmount('50000', 50000);
+        await fireEvent.changeText(minConfsInput()!, '0');
 
-        findByType(
-            view.render(),
-            'Button',
-            'views.OpenChannel.openChannel'
-        ).props.onPress();
-        const request = (view.props.ChannelsStore.connectPeer as jest.Mock).mock
-            .calls[0][0];
+        const request = await openRequest(props);
         expect(request.min_confs).toBe(0);
         expect(request.spend_unconfirmed).toBe(true);
     });
