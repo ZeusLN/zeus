@@ -23,6 +23,8 @@ interface NFCButtonProps {
     icon?: any;
     noUppercase?: boolean;
     iconOnly?: boolean;
+    writable?: boolean;
+    onTokenReceived?: (content: string) => void;
     ModalStore?: ModalStore;
 }
 
@@ -37,6 +39,7 @@ export default class NFCButton extends React.Component<
     NFCButtonState
 > {
     simulation: any;
+    removeWriteListener: (() => void) | null = null;
     state = {
         nfcBroadcast: false
     };
@@ -73,17 +76,36 @@ export default class NFCButton extends React.Component<
     };
 
     startSimulation = async () => {
+        const { writable, onTokenReceived } = this.props;
         const tag = new NFCTagType4({
             type: NFCTagType4NDEFContentType.Text,
             content: this.props.value,
-            writable: false
+            writable: writable || false
         });
         this.simulation = await HCESession.getInstance();
         await this.simulation.setApplication(tag);
         await this.simulation.setEnabled(true);
+
+        if (writable && onTokenReceived) {
+            this.removeWriteListener = this.simulation.on(
+                HCESession.Events.HCE_STATE_WRITE_FULL,
+                async () => {
+                    await this.simulation.syncApplication();
+                    const content =
+                        this.simulation?.application?.content?.content;
+                    if (content) {
+                        onTokenReceived(content);
+                    }
+                }
+            );
+        }
     };
 
     stopSimulation = async () => {
+        if (this.removeWriteListener) {
+            this.removeWriteListener();
+            this.removeWriteListener = null;
+        }
         if (this.simulation) {
             await this.simulation.setEnabled(false);
         }
