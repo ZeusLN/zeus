@@ -337,17 +337,6 @@ export default class PaymentMethodList extends Component<
             : lightning ?? lnurlParams?.tag;
 
         if (lightning || lnurlParams) {
-            DATA.push({
-                layer: 'Lightning',
-                subtitle,
-                balance: lightningBalance,
-                balanceLabel: this.props.lightningBalanceLabel,
-                eligibilityBalance: lightningEligibility,
-                disabled: false,
-                isWithdraw,
-                satAmount
-            });
-
             if (
                 BackendUtils.supportsCashuWallet() &&
                 settingsStore?.settings?.ecash?.enableCashu
@@ -361,6 +350,17 @@ export default class PaymentMethodList extends Component<
                     satAmount
                 });
             }
+
+            DATA.push({
+                layer: 'Lightning',
+                subtitle,
+                balance: lightningBalance,
+                balanceLabel: this.props.lightningBalanceLabel,
+                eligibilityBalance: lightningEligibility,
+                disabled: false,
+                isWithdraw,
+                satAmount
+            });
         }
 
         if (lightningAddress) {
