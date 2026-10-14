@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "न्यूनतम फीस",
     "views.EditFee.confirmFee": "फीस की पुष्टि करें",
     "views.EditFee.error": "फीस दरें प्राप्त करने में त्रुटि",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "इनवॉइस",
     "views.Invoice.paid": "भुगतान किया गया",
     "views.Invoice.unpaid": "भुगतान नहीं किया गया",
