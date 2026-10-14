@@ -98,7 +98,7 @@ export default class TransactionView extends React.Component<
             isConfirmed,
             block_hash,
             getBlockHeight,
-            num_confirmations,
+            getNumConfirmations,
             time_stamp,
             destAddresses,
             getFee,
@@ -323,14 +323,12 @@ export default class TransactionView extends React.Component<
                         />
                     )}
 
-                    {num_confirmations != null && (
-                        <KeyValue
-                            keyValue={localeString('views.Transaction.numConf')}
-                            value={num_confirmations}
-                            color={num_confirmations > 0 ? 'green' : 'red'}
-                            sensitive
-                        />
-                    )}
+                    <KeyValue
+                        keyValue={localeString('views.Transaction.numConf')}
+                        value={getNumConfirmations}
+                        color={getNumConfirmations > 0 ? 'green' : 'red'}
+                        sensitive
+                    />
 
                     <KeyValue
                         keyValue={localeString('general.status')}

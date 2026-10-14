@@ -19,6 +19,22 @@ describe('Transaction.isConfirmed', () => {
     });
 });
 
+describe('Transaction.getNumConfirmations', () => {
+    it('is 0 when num_confirmations is missing', () => {
+        // embedded LND drops a num_confirmations of 0 (protobuf default)
+        expect(new Transaction({}).getNumConfirmations).toBe(0);
+    });
+
+    it('returns the backend value when present', () => {
+        expect(
+            new Transaction({ num_confirmations: 0 }).getNumConfirmations
+        ).toBe(0);
+        expect(
+            new Transaction({ num_confirmations: 3 }).getNumConfirmations
+        ).toBe(3);
+    });
+});
+
 describe('Transaction.getStatusDisplay', () => {
     it('reports unconfirmed for lnd-style transactions with no status field', () => {
         // lnd, embedded LND, LNC, and CLN transactions carry no status
