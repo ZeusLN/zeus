@@ -440,6 +440,30 @@ const receiveVariableAmountBolt11 = async ({
     return result.invoice;
 };
 
+// Creates an invoice that routes through the LSPS2 LSP, which opens a
+// channel to us when it is paid and withholds its fee from the payment.
+// The fee limit is required: without one, ldk-node accepts the LSP's
+// cheapest offer at any cost.
+const receiveViaJitChannel = async ({
+    amountMsat,
+    description,
+    expirySecs,
+    maxLspFeeLimitMsat
+}: {
+    amountMsat: number;
+    description: string;
+    expirySecs: number;
+    maxLspFeeLimitMsat: number;
+}): Promise<string> => {
+    const result = await LdkNodeModule.receiveViaJitChannel(
+        amountMsat,
+        description,
+        expirySecs,
+        maxLspFeeLimitMsat
+    );
+    return result.invoice;
+};
+
 const sendBolt11 = async ({
     invoice,
     maxTotalRoutingFeeMsat,
@@ -1165,6 +1189,12 @@ export interface ILdkNodeInjections {
             description: string;
             expirySecs: number;
         }) => Promise<string>;
+        receiveViaJitChannel: (params: {
+            amountMsat: number;
+            description: string;
+            expirySecs: number;
+            maxLspFeeLimitMsat: number;
+        }) => Promise<string>;
         sendBolt11: (params: {
             invoice: string;
             maxTotalRoutingFeeMsat?: number;
@@ -1375,6 +1405,7 @@ const LdkNodeInjection: ILdkNodeInjections = {
     bolt11: {
         receiveBolt11,
         receiveVariableAmountBolt11,
+        receiveViaJitChannel,
         sendBolt11,
         sendBolt11UsingAmount,
         sendBolt11Probes,
