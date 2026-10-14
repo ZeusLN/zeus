@@ -206,6 +206,21 @@ describe('CurrencyConverterContent currencies', () => {
             USD: '0.50'
         });
     });
+
+    // Older versions saved 0 for a currency without a rate; taking sats as
+    // the source used to wipe the typed EUR
+    it('fills in from a saved amount rather than a saved zero', async () => {
+        await renderConverter({
+            saved: { BTC: '', sats: '0', USD: '0', EUR: '400' }
+        });
+
+        expect(values()).toEqual({
+            BTC: '0.01000000',
+            sats: '1,000,000',
+            USD: '500.00',
+            EUR: '400'
+        });
+    });
 });
 
 describe('CurrencyConverterContent conversion', () => {
@@ -327,6 +342,40 @@ describe('CurrencyConverterContent conversion', () => {
         await type(currency, text);
 
         expect(values()[currency]).toBe(shown);
+    });
+
+    // A lone point parses as NaN, which used to show and save as "NaN"
+    it.each(['BTC', 'sats', 'USD'])(
+        'leaves the others empty while %s is a lone point',
+        async (currency) => {
+            await renderConverter({ saved: allCurrencies });
+
+            await type(currency, '.');
+
+            expect(values()).toEqual({ ...allCurrencies, [currency]: '.' });
+            expect(stored()).toEqual({ ...allCurrencies, [currency]: '.' });
+        }
+    );
+
+    it('leaves the others empty when the amount is too long to parse', async () => {
+        await renderConverter({ saved: allCurrencies });
+
+        // parses as Infinity
+        await type('sats', '9'.repeat(400));
+
+        expect(values()).toMatchObject({ BTC: '', USD: '', EUR: '' });
+    });
+
+    it('leaves a conversion empty when toFixed would show an exponent', async () => {
+        await renderConverter({ saved: allCurrencies });
+
+        // 1e13 BTC is 1e21 sats, which toFixed shows as "1e+21"
+        await type('BTC', '10000000000000');
+
+        expect(values()).toMatchObject({
+            sats: '',
+            USD: '500,000,000,000,000,000.00'
+        });
     });
 });
 

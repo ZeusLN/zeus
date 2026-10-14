@@ -137,11 +137,13 @@ export default class CurrencyConverterContent extends React.Component<
     syncConversions = () => {
         if (isEmpty(this.props.FiatStore?.fiatRates)) return;
 
+        // Zeros are skipped: older versions saved 0 for a currency without a
+        // rate, and taking that as the source would wipe a typed amount.
         const { inputValues } = this.state;
         const source = Object.keys(inputValues).find((key) => {
             const val = inputValues[key];
             return (
-                typeof val === 'string' && val.replace(/,/g, '').trim() !== ''
+                typeof val === 'string' && parseFloat(val.replace(/,/g, '')) > 0
             );
         });
         if (!source) return;
@@ -242,6 +244,14 @@ export default class CurrencyConverterContent extends React.Component<
                 : groupedWhole;
         };
 
+        // toFixed, or empty when the result would not be plain digits: a lone
+        // point parses as NaN, very long input as Infinity, and toFixed
+        // switches to exponent notation (1e+21) from 1e21.
+        const toFixed = (value: number, digits: number) =>
+            Number.isFinite(value) && Math.abs(value) < 1e21
+                ? value.toFixed(digits)
+                : '';
+
         const convertedValues: { [key: string]: string } = { ...inputValues };
 
         if (sanitizedValue === '') {
@@ -266,9 +276,10 @@ export default class CurrencyConverterContent extends React.Component<
             if (key !== currency) {
                 let convertedValue = '';
                 if (currency === 'sats') {
-                    const btcValue = (
-                        parseFloat(sanitizedValue) / 100000000
-                    ).toFixed(8);
+                    const btcValue = toFixed(
+                        parseFloat(sanitizedValue) / 100000000,
+                        8
+                    );
 
                     if (key === 'BTC') {
                         convertedValue = btcValue;
@@ -278,9 +289,10 @@ export default class CurrencyConverterContent extends React.Component<
                         )?.rate;
 
                         if (btcConversionRate) {
-                            convertedValue = (
-                                parseFloat(btcValue) * btcConversionRate
-                            ).toFixed(2);
+                            convertedValue = toFixed(
+                                parseFloat(btcValue) * btcConversionRate,
+                                2
+                            );
                         }
                     }
                 } else if (currency === 'BTC') {
@@ -288,14 +300,16 @@ export default class CurrencyConverterContent extends React.Component<
                         (rate) => rate.currencyPair === `${currency}_${key}`
                     );
                     if (key === 'sats') {
-                        convertedValue = (
-                            parseFloat(sanitizedValue) * 100000000
-                        ).toFixed(0);
+                        convertedValue = toFixed(
+                            parseFloat(sanitizedValue) * 100000000,
+                            0
+                        );
                     }
                     if (directRate) {
-                        convertedValue = (
-                            parseFloat(sanitizedValue) * directRate.rate
-                        ).toFixed(2);
+                        convertedValue = toFixed(
+                            parseFloat(sanitizedValue) * directRate.rate,
+                            2
+                        );
                     }
                 } else {
                     const btcToRate = fiatRates.find(
@@ -306,9 +320,10 @@ export default class CurrencyConverterContent extends React.Component<
                     )?.rate;
 
                     if (btcFromRate) {
-                        const btcValue = (
-                            parseFloat(sanitizedValue) / btcFromRate
-                        ).toFixed(8);
+                        const btcValue = toFixed(
+                            parseFloat(sanitizedValue) / btcFromRate,
+                            8
+                        );
                         if (key === 'BTC') {
                             convertedValue =
                                 sanitizedValue === '' ? '' : btcValue;
@@ -316,16 +331,17 @@ export default class CurrencyConverterContent extends React.Component<
                             convertedValue =
                                 sanitizedValue === ''
                                     ? ''
-                                    : (
-                                          parseFloat(btcValue) * 100000000
-                                      ).toFixed(0);
+                                    : toFixed(
+                                          parseFloat(btcValue) * 100000000,
+                                          0
+                                      );
                         }
                     }
 
                     if (btcToRate && btcFromRate) {
                         const btcValue =
                             parseFloat(sanitizedValue) / btcFromRate;
-                        convertedValue = (btcValue * btcToRate).toFixed(2);
+                        convertedValue = toFixed(btcValue * btcToRate, 2);
                     }
                 }
 
