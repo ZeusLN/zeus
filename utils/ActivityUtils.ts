@@ -1,5 +1,6 @@
 import { localeString } from './LocaleUtils';
 import { LSPOrderState } from '../models/LSP';
+import type Transaction from '../models/Transaction';
 
 export type ActivityRightTitleTheme =
     | 'text'
@@ -65,3 +66,13 @@ export const getRightTitleTheme = (item: any): ActivityRightTitleTheme => {
 
     return 'secondaryText';
 };
+
+// embedded LND keeps a num_confirmations of 0 on the protobuf prototype,
+// which BaseModel does not copy, so check isConfirmed instead of
+// comparing num_confirmations to 0
+export const getTransactionSubtitle = (transaction: Transaction): string =>
+    transaction.isConfirmed
+        ? localeString('general.onchain')
+        : `${localeString('general.onchain')}: ${localeString(
+              'general.unconfirmed'
+          )}`;

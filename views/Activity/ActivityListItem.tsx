@@ -5,7 +5,10 @@ import { observer } from 'mobx-react';
 
 import Amount from '../../components/Amount';
 
-import { getRightTitleTheme } from '../../utils/ActivityUtils';
+import {
+    getRightTitleTheme,
+    getTransactionSubtitle
+} from '../../utils/ActivityUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import PrivacyUtils from '../../utils/PrivacyUtils';
@@ -182,12 +185,7 @@ const ActivityListItem = observer(
                     : !item.getAmount.toString().includes('-')
                     ? localeString('views.Activity.youReceived')
                     : localeString('views.Activity.youSent');
-            subTitle =
-                item.num_confirmations == 0
-                    ? `${localeString('general.onchain')}: ${localeString(
-                          'general.unconfirmed'
-                      )}`
-                    : localeString('general.onchain');
+            subTitle = getTransactionSubtitle(item);
         } else if (item.model === localeString('views.Swaps.title')) {
             displayName =
                 item.type === SwapType.Submarine
