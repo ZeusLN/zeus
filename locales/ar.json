@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "الحد الأدنى للرسوم",
     "views.EditFee.confirmFee": "تأكيد الرسوم",
     "views.EditFee.error": "Error fetching fee rates",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "فاتورة",
     "views.Invoice.paid": "مدفوع",
     "views.Invoice.unpaid": "غير مدفوع",
