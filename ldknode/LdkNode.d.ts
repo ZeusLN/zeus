@@ -560,6 +560,12 @@ export interface ILdkNodeModule {
         description: string,
         expirySecs: number
     ): Promise<{ invoice: string }>;
+    receiveViaJitChannel(
+        amountMsat: number,
+        description: string,
+        expirySecs: number,
+        maxLspFeeLimitMsat: number
+    ): Promise<{ invoice: string }>;
     sendBolt11(
         invoice: string,
         maxTotalRoutingFeeMsat: number,
