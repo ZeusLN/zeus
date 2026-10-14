@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "Biaya minimum",
     "views.EditFee.confirmFee": "Biaya Konfirmasi",
     "views.EditFee.error": "Gagal mengambil data tingkat biaya",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "Faktur",
     "views.Invoice.paid": "Sudah dibayar",
     "views.Invoice.unpaid": "Belum dibayar",

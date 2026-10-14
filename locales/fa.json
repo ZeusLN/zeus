@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "حداقل کارمزد",
     "views.EditFee.confirmFee": "تایید کارمزد",
     "views.EditFee.error": "خطا در دستیابی به نرخ کارمزد",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "رسید",
     "views.Invoice.paid": "پرداخت شده",
     "views.Invoice.unpaid": "پرداخت نشده",

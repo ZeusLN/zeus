@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "最低費用",
     "views.EditFee.confirmFee": "確認費用",
     "views.EditFee.error": "取得費率時發生錯誤",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "帳單",
     "views.Invoice.paid": "已付款",
     "views.Invoice.unpaid": "未付款",

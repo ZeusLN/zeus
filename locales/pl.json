@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "Minimalna opłata",
     "views.EditFee.confirmFee": "Potwierdź opłatę",
     "views.EditFee.error": "Błąd pobierania bieżącego poziomu opłat",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "Faktura",
     "views.Invoice.paid": "Zapłacona",
     "views.Invoice.unpaid": "Niezapłacona",

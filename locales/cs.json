@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "Minimální poplatek",
     "views.EditFee.confirmFee": "Potvrdit poplatek",
     "views.EditFee.error": "Chybné načtení sazeb poplatků",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "Faktura",
     "views.Invoice.paid": "Zaplaceno",
     "views.Invoice.unpaid": "Nezaplaceno",

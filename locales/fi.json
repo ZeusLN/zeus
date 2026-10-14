@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "Minimi siirtomaksu",
     "views.EditFee.confirmFee": "Vahvista siirtomaksu",
     "views.EditFee.error": "Virhe siirtomaksujen hakemisessa",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "Lasku",
     "views.Invoice.paid": "Maksettu",
     "views.Invoice.unpaid": "Maksamaton",

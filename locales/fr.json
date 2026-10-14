@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "Frais minimum",
     "views.EditFee.confirmFee": "Confirmer les frais",
     "views.EditFee.error": "Erreur lors de la récupération du  taux de frais",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "Facture",
     "views.Invoice.paid": "Payé",
     "views.Invoice.unpaid": "Non-payé",

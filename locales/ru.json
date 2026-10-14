@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "Минимальная комиссия",
     "views.EditFee.confirmFee": "Подтвердить Комиссию",
     "views.EditFee.error": "Не удалось получить ставки комиссий.",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "Инвойс",
     "views.Invoice.paid": "Оплачено",
     "views.Invoice.unpaid": "Неоплаченно",

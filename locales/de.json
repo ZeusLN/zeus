@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "Mindestgebühr",
     "views.EditFee.confirmFee": "Gebühr bestätigen",
     "views.EditFee.error": "Fehler beim Abrufen der Gebühren",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "Rechnung",
     "views.Invoice.paid": "Bezahlt",
     "views.Invoice.unpaid": "Unbezahlt",

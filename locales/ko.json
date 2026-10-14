@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "최소 수수료",
     "views.EditFee.confirmFee": "수수료 확인",
     "views.EditFee.error": "수수료율 가져오기 오류",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "인보이스",
     "views.Invoice.paid": "지불",
     "views.Invoice.unpaid": "미지불",

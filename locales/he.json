@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "עמלה מינימלית",
     "views.EditFee.confirmFee": "אישור עמלה",
     "views.EditFee.error": "שגיאה במשיכת תעריפי עמלות",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "חשבונית",
     "views.Invoice.paid": "שולם",
     "views.Invoice.unpaid": "לא שולם",

@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "Ada ya chini",
     "views.EditFee.confirmFee": "Thibitisha Ada",
     "views.EditFee.error": "Kosa la kupata viwango vya ada",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "Invoice",
     "views.Invoice.paid": "Imelipwa",
     "views.Invoice.unpaid": "Haijalipwa",

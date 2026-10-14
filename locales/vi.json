@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "Phí tối thiểu",
     "views.EditFee.confirmFee": "Phí Xác nhận",
     "views.EditFee.error": "Lỗi khi cập nhật tỷ lệ phí",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "Hoá đơn",
     "views.Invoice.paid": "Đã trả",
     "views.Invoice.unpaid": "Chưa trả",

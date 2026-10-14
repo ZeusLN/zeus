@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "Minimum fee",
     "views.EditFee.confirmFee": "Confirm Fee",
     "views.EditFee.error": "手数料の取得に失敗しました",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "Invoice",
     "views.Invoice.paid": "支払い済み",
     "views.Invoice.unpaid": "Unpaid",

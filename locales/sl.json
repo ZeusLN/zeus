@@ -650,6 +650,7 @@
     "views.EditFee.minimumFee": "Minimalna omrežnina",
     "views.EditFee.confirmFee": "Potrdi omrežnino",
     "views.EditFee.error": "Napaka pri pridobivanju omrežnin",
+    "views.EditFee.customFeeOutOfRange": "Enter a fee rate between {min} and {max} sats/vB",
     "views.Invoice.title": "Račun",
     "views.Invoice.paid": "Plačano",
     "views.Invoice.unpaid": "Neplačano",
