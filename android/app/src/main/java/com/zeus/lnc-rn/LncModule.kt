@@ -276,9 +276,9 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
   // Builds and signs a submarine swap refund and returns its hex without
   // broadcasting it
   @ReactMethod
-  fun buildRefundTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, transactionHex: String, privateKey: String, servicePubKey: String, feeRate: Int, timeoutBlockHeight: Int, destinationAddress: String, lockupAddress: String, cooperative: Boolean?, network: String, promise: Promise) {
+  fun buildRefundTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, transactionHex: String, privateKey: String, servicePubKey: String, feeRate: Int, minerFee: Int, timeoutBlockHeight: Int, destinationAddress: String, lockupAddress: String, cooperative: Boolean?, network: String, promise: Promise) {
      try {
-         val txHex = Lndmobile.buildRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, feeRate, timeoutBlockHeight, destinationAddress, lockupAddress, cooperative ?: false, network)
+         val txHex = Lndmobile.buildRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, feeRate, minerFee, timeoutBlockHeight, destinationAddress, lockupAddress, cooperative ?: false, network)
          promise.resolve(txHex)
      } catch (e: Exception) {
          promise.reject("BUILD_REFUND_ERROR", e.toString())

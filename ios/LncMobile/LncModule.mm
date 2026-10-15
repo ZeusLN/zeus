@@ -387,6 +387,7 @@ RCT_EXPORT_METHOD(buildRefundTransaction:(NSString *)endpoint
                  privateKey:(NSString *)privateKey
                  servicePubKey:(NSString *)servicePubKey
                  feeRate:(NSInteger)feeRate
+                 minerFee:(NSInteger)minerFee
                  timeoutBlockHeight:(NSInteger)timeoutBlockHeight
                  destinationAddress:(NSString *)destinationAddress
                  lockupAddress:(NSString *)lockupAddress
@@ -396,7 +397,7 @@ RCT_EXPORT_METHOD(buildRefundTransaction:(NSString *)endpoint
                  rejecter:(RCTPromiseRejectBlock)reject)
 {
     NSError *error;
-    NSString *txHex = LndmobileBuildRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, (int32_t)feeRate, (int32_t)timeoutBlockHeight, destinationAddress, lockupAddress, cooperative, network, &error);
+    NSString *txHex = LndmobileBuildRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, (int32_t)feeRate, (int32_t)minerFee, (int32_t)timeoutBlockHeight, destinationAddress, lockupAddress, cooperative, network, &error);
     if (error) {
         NSLog(@"buildRefundTransaction error   %@",   error);
         reject(@"buildRefundTransaction_error", error.localizedDescription, error);
