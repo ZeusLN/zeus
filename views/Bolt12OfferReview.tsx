@@ -6,6 +6,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import Amount from '../components/Amount';
 import Button from '../components/Button';
+import PaymentInFlightNotice from '../components/PaymentInFlightNotice';
 import Conversion from '../components/Conversion';
 import Header from '../components/Header';
 import KeyValue from '../components/KeyValue';
@@ -257,6 +258,9 @@ export default class Bolt12OfferReview extends React.Component<
                     </View>
                 </ScrollView>
                 <View style={{ bottom: 10 }}>
+                    <PaymentInFlightNotice
+                        TransactionsStore={TransactionsStore}
+                    />
                     {Number(satAmount) >= slideToPayThreshold ? (
                         <SwipeButton
                             key={this.state.swipeButtonKey}

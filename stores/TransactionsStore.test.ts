@@ -942,3 +942,157 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
         expect(store.paymentInFlight).toBe(false);
     });
 });
+
+describe('TransactionsStore releasePaymentInFlight', () => {
+    const HASH2 = 'cd'.repeat(32);
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        jest.clearAllMocks();
+        (BackendUtils.supportsPaymentLookup as jest.Mock).mockReturnValue(true);
+        (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(true);
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('refuses to release the guard before the node reports the payment in flight', async () => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockResolvedValue({
+            payment_error: 'views.SendingLightning.paymentTimedOut',
+            payment_timed_out: true
+        });
+        // the first lookup hasn't answered yet
+        (BackendUtils.lookupPayment as jest.Mock).mockReturnValue(
+            new Promise(() => {})
+        );
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+
+        expect(store.paymentInFlight).toBe(true);
+        expect(store.paymentInFlightConfirmed).toBe(false);
+        expect(store.releasePaymentInFlight()).toBe(false);
+        expect(store.paymentInFlight).toBe(true);
+    });
+
+    it('confirms a payment the node reports in flight after a timeout', async () => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockResolvedValue({
+            payment_error: 'views.SendingLightning.paymentTimedOut',
+            payment_timed_out: true
+        });
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue({
+            status: 'IN_FLIGHT',
+            payment_hash: HASH
+        });
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+
+        expect(store.paymentInFlightConfirmed).toBe(true);
+    });
+
+    it("lets a second payment go out once released and ignores the first one's late outcome", async () => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockResolvedValueOnce({
+            status: 'IN_FLIGHT',
+            payment_hash: HASH
+        });
+        // the tracker's first lookup is still open when the user releases
+        const firstLookup = deferred();
+        (BackendUtils.lookupPayment as jest.Mock).mockReturnValueOnce(
+            firstLookup.promise
+        );
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+        expect(store.paymentInFlightConfirmed).toBe(true);
+
+        expect(store.releasePaymentInFlight()).toBe(true);
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.paymentInFlightConfirmed).toBe(false);
+
+        // a second, unrelated invoice
+        const Bolt11Utils = require('../utils/Bolt11Utils').default;
+        (Bolt11Utils.decode as jest.Mock).mockReturnValueOnce({
+            payment_hash: HASH2
+        });
+        const second = deferred();
+        (BackendUtils.payLightningInvoice as jest.Mock).mockReturnValueOnce(
+            second.promise
+        );
+        store.sendPayment({ payment_request: 'lnbc1other' });
+        await flush();
+        expect(BackendUtils.payLightningInvoice).toHaveBeenCalledTimes(2);
+        expect(store.paymentInFlight).toBe(true);
+        expect(store.paymentInFlightConfirmed).toBe(false);
+
+        // the first payment settles: its tracker must not report it as
+        // the second payment's outcome
+        firstLookup.resolve({
+            status: 'SUCCEEDED',
+            payment_hash: HASH,
+            payment_preimage: 'deadbeef'
+        });
+        await flush();
+        expect(store.status).toBeNull();
+        expect(store.payment_preimage).toBeNull();
+        expect(store.paymentInFlight).toBe(true);
+
+        const lookups = (BackendUtils.lookupPayment as jest.Mock).mock.calls
+            .length;
+        await advancePoll();
+        expect(BackendUtils.lookupPayment).toHaveBeenCalledTimes(lookups);
+
+        second.resolve({
+            status: 'SUCCEEDED',
+            payment_hash: HASH2,
+            payment_preimage: 'beefdead'
+        });
+        await flush();
+        expect(store.status).toBe('SUCCEEDED');
+        expect(store.paymentInFlight).toBe(false);
+    });
+
+    it("ignores the released payment's send request resolving late", async () => {
+        // the send request never answers (e.g. a dropped LNC stream), so
+        // the backstop starts tracking and the node reports it in flight
+        const first = deferred();
+        (BackendUtils.payLightningInvoice as jest.Mock).mockReturnValueOnce(
+            first.promise
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue({
+            status: 'IN_FLIGHT',
+            payment_hash: HASH
+        });
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await jest.advanceTimersByTimeAsync((60 + 60) * 1000);
+        expect(store.paymentInFlightConfirmed).toBe(true);
+        expect(store.releasePaymentInFlight()).toBe(true);
+
+        const Bolt11Utils = require('../utils/Bolt11Utils').default;
+        (Bolt11Utils.decode as jest.Mock).mockReturnValueOnce({
+            payment_hash: HASH2
+        });
+        (BackendUtils.payLightningInvoice as jest.Mock).mockReturnValueOnce(
+            new Promise(() => {})
+        );
+        store.sendPayment({ payment_request: 'lnbc1other' });
+        await flush();
+
+        first.resolve({
+            status: 'SUCCEEDED',
+            payment_hash: HASH,
+            payment_preimage: 'deadbeef'
+        });
+        await flush();
+        expect(store.status).toBeNull();
+        expect(store.payment_preimage).toBeNull();
+        expect(store.loading).toBe(true);
+        expect(store.paymentInFlight).toBe(true);
+    });
+});

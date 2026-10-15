@@ -16,6 +16,7 @@ import { ButtonGroup } from '@rneui/themed';
 import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
 import Button from '../components/Button';
+import PaymentInFlightNotice from '../components/PaymentInFlightNotice';
 import SwipeButton from '../components/SwipeButton';
 import Conversion from '../components/Conversion';
 import FeeLimit from '../components/FeeLimit';
@@ -1452,6 +1453,9 @@ export default class PaymentRequest extends React.Component<
                                     <LoadingIndicator size={30} />
                                 </>
                             )}
+                            <PaymentInFlightNotice
+                                TransactionsStore={TransactionsStore}
+                            />
                             {requestAmount &&
                             requestAmount >= slideToPayThreshold ? (
                                 <SwipeButton
