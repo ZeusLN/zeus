@@ -19,8 +19,6 @@ interface OnchainFeeInputProps {
     onNavigateAway?: () => void;
 }
 
-const DEFAULT_FEE = '10';
-
 export default function OnchainFeeInput(props: OnchainFeeInputProps) {
     const { fee, onChangeFee, onNavigateAway, navigation } = props;
     const { settings } = settingsStore;
@@ -127,7 +125,9 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
             ) : (
                 <TextInput
                     keyboardType="numeric"
-                    placeholder={DEFAULT_FEE}
+                    placeholder={localeString(
+                        'components.OnchainFeeInput.placeholder'
+                    )}
                     value={newFee}
                     onChangeText={(text: string) => {
                         setNewFee(text);
