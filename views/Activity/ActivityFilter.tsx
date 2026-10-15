@@ -373,7 +373,8 @@ export default class ActivityFilter extends React.Component<
                     flex: 1,
                     flexDirection: 'row',
                     justifyContent: 'flex-end',
-                    alignItems: 'center'
+                    alignItems: 'center',
+                    paddingRight: 16
                 }}
             >
                 <Text
@@ -1429,11 +1430,15 @@ export default class ActivityFilter extends React.Component<
                                                 />
                                             </View>
                                         )}
-                                        {item.type === 'StartDate' && (
-                                            <DateFilter type="startDate" />
-                                        )}
-                                        {item.type === 'EndDate' && (
-                                            <DateFilter type="endDate" />
+                                        {(item.type === 'StartDate' ||
+                                            item.type === 'EndDate') && (
+                                            <DateFilter
+                                                type={
+                                                    item.type === 'StartDate'
+                                                        ? 'startDate'
+                                                        : 'endDate'
+                                                }
+                                            />
                                         )}
                                     </ListItem>
                                     {index < FILTERS.length - 1 &&
