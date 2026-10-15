@@ -17,7 +17,10 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import LND from './LND';
 import { settingsStore } from '../stores/Stores';
 import { localeString } from '../utils/LocaleUtils';
-import { isNodeResponse } from '../utils/PaymentLookupUtils';
+import {
+    isNodeResponse,
+    isPaymentRefusedAsDuplicate
+} from '../utils/PaymentLookupUtils';
 
 describe('LND.getURL', () => {
     const lnd = new LND();
@@ -629,6 +632,29 @@ describe('LND.restReq errors', () => {
 
         expect(error.message).toContain('invoice expired');
         expect(isNodeResponse(error)).toBe(true);
+        expect(isPaymentRefusedAsDuplicate(error)).toBe(false);
+    });
+
+    it("tags a stream's AlreadyExists error chunk as a duplicate refusal", async () => {
+        // grpc-gateway writes a stream error before any message with the
+        // HTTP status for the gRPC code (409) and the code in error.code
+        const body = JSON.stringify({
+            error: { code: 6, message: 'invoice is already paid' }
+        });
+        fetchResolving({
+            info: () => ({ status: 409 }),
+            json: () => JSON.parse(body),
+            data: body
+        });
+
+        const error = await new LND()
+            .restReq({}, 'https://node:8080/v2/router/send', 'POST', {
+                id: 'already-paid'
+            })
+            .catch((e: any) => e);
+
+        expect(error.message).toContain('invoice is already paid');
+        expect(isPaymentRefusedAsDuplicate(error)).toBe(true);
     });
 
     it('does not tag a transport failure', async () => {

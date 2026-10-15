@@ -26,17 +26,47 @@ export const isPaymentLookupInconclusive = (error: unknown): boolean =>
 // one lookup finding no record shows the payment was never sent; a
 // transport failure (timeout, dropped connection) needs repeated answers
 // because the request may still reach the node. String rejections are
-// wrapped so they can carry the tag.
-export const markNodeResponded = (error: unknown): unknown => {
+// wrapped so they can carry the tag. `grpcCode` is the gRPC status code of
+// the rejection when known (numeric over REST, the code name on embedded
+// LND).
+export const markNodeResponded = (
+    error: unknown,
+    grpcCode?: unknown
+): unknown => {
     const tagged = typeof error === 'string' ? new Error(error) : error;
     if (tagged && typeof tagged === 'object') {
         (tagged as any).nodeResponded = true;
+        if (grpcCode !== undefined && grpcCode !== null) {
+            (tagged as any).grpcCode = grpcCode;
+        }
     }
     return tagged;
 };
 
 export const isNodeResponse = (error: unknown): boolean =>
     (error as any)?.nodeResponded === true;
+
+// The gRPC status code in an LND REST error body: grpc-gateway puts it at
+// `code` for unary calls and at `error.code` in a stream's error chunk
+export const grpcErrorCode = (body: unknown): unknown => {
+    if (!body || typeof body !== 'object') return undefined;
+    const { code, error } = body as any;
+    if (error && typeof error === 'object' && error.code !== undefined) {
+        return error.code;
+    }
+    return code;
+};
+
+// LND refuses a send with AlreadyExists when it already has a payment for
+// the hash (already paid, still in flight, or being created), before any
+// HTLC for this request goes out. Only a FAILED payment can be retried. So
+// such a rejection proves this request sent nothing, and the existing
+// record belongs to an earlier attempt.
+export const isPaymentRefusedAsDuplicate = (error: unknown): boolean => {
+    if (!isNodeResponse(error)) return false;
+    const code = (error as any).grpcCode;
+    return code === 6 || code === '6' || code === 'AlreadyExists';
+};
 
 type PaymentsPageRequest = {
     maxPayments: number;

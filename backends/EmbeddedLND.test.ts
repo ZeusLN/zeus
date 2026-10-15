@@ -74,7 +74,10 @@ import lndMobile from '../lndmobile/LndMobileInjection';
 import { lnrpc } from '../proto/lightning';
 import EmbeddedLND from './EmbeddedLND';
 import Peer from '../models/Peer';
-import { isNodeResponse } from '../utils/PaymentLookupUtils';
+import {
+    isNodeResponse,
+    isPaymentRefusedAsDuplicate
+} from '../utils/PaymentLookupUtils';
 
 const PUBKEY =
     '02aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -288,6 +291,21 @@ describe('EmbeddedLND payment rejections', () => {
 
         expect(error.message).toBe('invoice expired');
         expect(isNodeResponse(error)).toBe(true);
+        expect(isPaymentRefusedAsDuplicate(error)).toBe(false);
+    });
+
+    it('tags an AlreadyExists rejection as a duplicate refusal', async () => {
+        // checkLndStreamErrorResponse carries the natively parsed code name
+        const refusal = new Error('invoice is already paid');
+        (refusal as any).grpcCode = 'AlreadyExists';
+        mockSendPaymentV2Sync.mockRejectedValue(refusal);
+
+        const error = await new EmbeddedLND()
+            .payLightningInvoice({ payment_request: 'lnbc1fake' })
+            .catch((e: any) => e);
+
+        expect(error.message).toBe('invoice is already paid');
+        expect(isPaymentRefusedAsDuplicate(error)).toBe(true);
     });
 
     it('tags a rejected keysend as a response from the node', async () => {

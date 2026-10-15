@@ -1,8 +1,10 @@
 import {
     PAYMENT_LOOKUP_PAGE_SIZE,
     findPaymentByHash,
+    grpcErrorCode,
     isNodeResponse,
     isPaymentLookupInconclusive,
+    isPaymentRefusedAsDuplicate,
     markNodeResponded,
     paymentCreationTimeMs
 } from './PaymentLookupUtils';
@@ -176,5 +178,60 @@ describe('markNodeResponded', () => {
         expect(isNodeResponse(new Error('Request timeout'))).toBe(false);
         expect(isNodeResponse('connection closed')).toBe(false);
         expect(isNodeResponse(undefined)).toBe(false);
+    });
+});
+
+describe('grpcErrorCode', () => {
+    it('reads the code from a unary error body', () => {
+        expect(grpcErrorCode({ code: 2, message: 'invoice expired' })).toBe(2);
+    });
+
+    it("reads the code from a stream's error chunk", () => {
+        expect(
+            grpcErrorCode({
+                error: { code: 6, message: 'invoice is already paid' }
+            })
+        ).toBe(6);
+    });
+
+    it('returns undefined for bodies without a code', () => {
+        expect(grpcErrorCode('<html>502 Bad Gateway</html>')).toBeUndefined();
+        expect(grpcErrorCode({ error: 'bad request' })).toBeUndefined();
+        expect(grpcErrorCode(undefined)).toBeUndefined();
+    });
+});
+
+describe('isPaymentRefusedAsDuplicate', () => {
+    it('matches AlreadyExists from REST and from embedded LND', () => {
+        expect(
+            isPaymentRefusedAsDuplicate(
+                markNodeResponded(new Error('invoice is already paid'), 6)
+            )
+        ).toBe(true);
+        expect(
+            isPaymentRefusedAsDuplicate(
+                markNodeResponded(
+                    new Error('payment is in transition'),
+                    'AlreadyExists'
+                )
+            )
+        ).toBe(true);
+    });
+
+    it('ignores other codes and untagged errors', () => {
+        expect(
+            isPaymentRefusedAsDuplicate(
+                markNodeResponded(new Error('invoice expired'), 2)
+            )
+        ).toBe(false);
+        expect(
+            isPaymentRefusedAsDuplicate(
+                markNodeResponded(new Error('invoice expired'))
+            )
+        ).toBe(false);
+        // a code alone, without a response from the node, isn't a refusal
+        const untagged = new Error('invoice is already paid');
+        (untagged as any).grpcCode = 6;
+        expect(isPaymentRefusedAsDuplicate(untagged)).toBe(false);
     });
 });

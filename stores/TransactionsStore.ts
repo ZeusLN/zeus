@@ -21,6 +21,7 @@ import { deriveExpectedPaymentHash } from '../utils/LncPayUtils';
 import {
     isNodeResponse,
     isPaymentLookupInconclusive,
+    isPaymentRefusedAsDuplicate,
     paymentCreationTimeMs
 } from '../utils/PaymentLookupUtils';
 import { sleep } from '../utils/SleepUtils';
@@ -58,12 +59,15 @@ export const PAYMENT_TRACK_MAX_NOT_FOUND = 3;
 // creation_date_start filter reaches, to absorb clock skew between the
 // device and the node
 export const PAYMENT_LOOKUP_CREATION_SLACK_MS = 10 * 60 * 1000;
-// a FAILED record created more than this before the recorded dispatch time
-// belongs to an earlier attempt for the same payment hash. LND overwrites
-// that record when the new attempt reaches it, so until then it's no record
-// of this attempt. Tighter than the lookup slack because a skewed clock only
-// costs the specific failure reason here (the payment shows as not sent or
-// unverified), while a looser bound lets more stale failures through.
+// a terminal record created more than this before the recorded dispatch
+// time belongs to an earlier attempt for the same payment hash, so it's no
+// record of this attempt. LND overwrites a FAILED record when the new
+// attempt reaches it, and refuses a new attempt for a SUCCEEDED one (already
+// paid). Tighter than the lookup slack because the costs of a skewed node
+// clock are bounded here: a genuine failure loses its specific reason, and
+// a genuine invoice success shows as not sent, where a retry is refused by
+// the node as already paid. Keysend records are never treated as stale (see
+// inFlightIsKeysend).
 export const PAYMENT_STALE_ATTEMPT_SLACK_MS = 60 * 1000;
 
 export interface SendPaymentReq {
@@ -141,6 +145,11 @@ export default class TransactionsStore {
     // when the guard-owning payment was dispatched (ms); bounds lookupPayment
     // scans so a busy node's newer payments can't evict ours from the page
     private inFlightDispatchTime: number | null = null;
+    // whether the guard-owning payment is a keysend. Its hash comes from a
+    // preimage generated for this attempt, so any record of it is this
+    // attempt's, and a skewed clock must not make a success look stale: a
+    // keysend retry gets a fresh hash and would pay again.
+    private inFlightIsKeysend = false;
     // sequence currently being tracked to a terminal state (null when none)
     private trackingSeq: number | null = null;
 
@@ -171,6 +180,7 @@ export default class TransactionsStore {
         this.inFlightOwnerSeq = null;
         this.inFlightPaymentHash = null;
         this.inFlightDispatchTime = null;
+        this.inFlightIsKeysend = false;
         this.paymentOutcomeUnverified = false;
         this.error = false;
         this.error_msg = null;
@@ -672,6 +682,7 @@ export default class TransactionsStore {
             this.inFlightOwnerSeq = seq;
             this.inFlightPaymentHash = null;
             this.inFlightDispatchTime = Date.now();
+            this.inFlightIsKeysend = !!pubkey;
         }
         this.paymentStartTime = Date.now();
         this.paymentDuration = null;
@@ -831,6 +842,7 @@ export default class TransactionsStore {
         this.inFlightOwnerSeq = null;
         this.inFlightPaymentHash = null;
         this.inFlightDispatchTime = null;
+        this.inFlightIsKeysend = false;
     };
 
     // true when payment `seq` still owns the guard and its terminal state
@@ -901,6 +913,7 @@ export default class TransactionsStore {
               )
             : undefined;
         const dispatchTime = this.inFlightDispatchTime;
+        const isKeysend = this.inFlightIsKeysend;
         this.trackingSeq = seq;
         const deadline = Date.now() + PAYMENT_TRACK_MAX_MS;
         let failures = 0;
@@ -930,15 +943,19 @@ export default class TransactionsStore {
                         ? lnrpc.Payment.PaymentStatus[payment.status]
                         : payment?.status;
 
-                if (status === 'FAILED' && dispatchTime) {
+                if (
+                    (status === 'FAILED' ||
+                        (status === 'SUCCEEDED' && !isKeysend)) &&
+                    dispatchTime
+                ) {
                     const createdAt = paymentCreationTimeMs(payment);
                     if (
                         createdAt !== null &&
                         createdAt <
                             dispatchTime - PAYMENT_STALE_ATTEMPT_SLACK_MS
                     ) {
-                        // an earlier attempt's failure, not this one's
-                        // outcome: treat it as no record of this attempt
+                        // an earlier attempt's outcome, not this one's:
+                        // treat it as no record of this attempt
                         payment = null;
                         status = undefined;
                     }
@@ -1200,7 +1217,14 @@ export default class TransactionsStore {
         // via lookup before releasing the double-submission guard; if the
         // payment turns out to be pending or terminal after all, the
         // tracker replaces this error with the real outcome.
-        if (seq !== undefined && this.canTrackPayment(seq)) {
+        if (isPaymentRefusedAsDuplicate(err)) {
+            // the node refused the request because it already has a
+            // payment for this hash, before sending anything for it. The
+            // existing record is an earlier attempt's, so tracking it would
+            // show that attempt's outcome (e.g. an earlier success for an
+            // already-paid invoice) as this one's.
+            this.clearPaymentInFlight(seq);
+        } else if (seq !== undefined && this.canTrackPayment(seq)) {
             // the rejection settled the request, so no-record answers
             // count from now on. A rejection from the node itself (e.g. an
             // expired invoice) means the request was processed, and LND

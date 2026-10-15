@@ -263,7 +263,7 @@ export default class EmbeddedLND extends LND {
 
         // in-process call: a rejection comes from lnd, never from transport
         return await sendPaymentV2Sync(sendPaymentReq).catch((error) => {
-            throw markNodeResponded(error);
+            throw markNodeResponded(error, error?.grpcCode);
         });
     };
     sendKeysend = async (data: any) =>
@@ -278,7 +278,7 @@ export default class EmbeddedLND extends LND {
             cltv_limit: data.cltv_limit,
             amp: data.amp
         }).catch((error) => {
-            throw markNodeResponded(error);
+            throw markNodeResponded(error, error?.grpcCode);
         });
     // override LND's REST implementation with an on-device lookup
     lookupPayment = async (data: {
