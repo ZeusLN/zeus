@@ -1,6 +1,7 @@
 jest.mock('../stores/Stores');
 
 import Payment from './Payment';
+import { lnrpc } from '../proto/lightning';
 
 describe('Payment.getAmount with partial HTLC success', () => {
     it('sums only succeeded HTLC parts and ignores failed ones', () => {
@@ -270,7 +271,7 @@ describe('Payment status from backends without htlcs', () => {
             type: 'outgoing',
             state: 'pending',
             payment_hash: 'abc123',
-            amount: 1000000,
+            amount: 1000,
             preimage: ''
         });
 
@@ -283,7 +284,7 @@ describe('Payment status from backends without htlcs', () => {
             type: 'outgoing',
             state: 'failed',
             payment_hash: 'abc123',
-            amount: 1000000,
+            amount: 1000,
             preimage: ''
         });
 
@@ -296,7 +297,7 @@ describe('Payment status from backends without htlcs', () => {
             type: 'outgoing',
             state: 'settled',
             payment_hash: 'abc123',
-            amount: 1000000,
+            amount: 1000,
             preimage
         });
 
@@ -329,9 +330,25 @@ describe('Payment status from backends without htlcs', () => {
     it('flags an LND payment with no htlcs yet as in transit', () => {
         const payment = new Payment({
             payment_hash: 'abc123',
-            status: 'IN_FLIGHT',
+            status: 'INITIATED',
             value_sat: 50000,
             failure_reason: 'FAILURE_REASON_NONE',
+            htlcs: []
+        });
+
+        expect(payment.isInTransit).toBe(true);
+        expect(payment.isFailed).toBe(false);
+        expect(payment.getAmount).toBe(50000);
+    });
+
+    it('flags an embedded LND payment with no htlcs yet as in transit', () => {
+        // raw protobuf decode: numeric enums, empty repeated fields
+        const payment = new Payment({
+            payment_hash: 'abc123',
+            status: lnrpc.Payment.PaymentStatus.INITIATED,
+            value_sat: 50000,
+            payment_preimage: '',
+            failure_reason: lnrpc.PaymentFailureReason.FAILURE_REASON_NONE,
             htlcs: []
         });
 

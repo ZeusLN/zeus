@@ -31,7 +31,8 @@ export default class Payment extends BaseModel {
     payment_preimage: string;
     path: Array<string>;
     bolt: string;
-    status: string;
+    // embedded LND returns the numeric lnrpc enum
+    status: string | lnrpc.Payment.PaymentStatus;
     state?: string; // NWC (NIP-47): settled, pending, failed
     payment_request: string;
     failure_reason?: string | number;
@@ -180,13 +181,17 @@ export default class Payment extends BaseModel {
     @computed public get isInTransit(): boolean {
         if (!this.isIncomplete) return false;
         // CLN ('pending'), LDK Node ('IN_FLIGHT') and NWC (state) report
-        // in-flight payments by status only, without htlcs. LND keeps
-        // status IN_FLIGHT between retries, so payments with htlcs are
-        // judged by their htlcs below.
+        // in-flight payments by status only, without htlcs, as does LND
+        // (INITIATED) before its first htlc attempt. LND keeps status
+        // IN_FLIGHT between retries, so payments with htlcs are judged by
+        // their htlcs below. Embedded LND returns the numeric enums.
         if (
             !this.htlcs?.length &&
             (this.status === 'pending' ||
                 this.status === 'IN_FLIGHT' ||
+                this.status === lnrpc.Payment.PaymentStatus.IN_FLIGHT ||
+                this.status === 'INITIATED' ||
+                this.status === lnrpc.Payment.PaymentStatus.INITIATED ||
                 this.state === 'pending')
         )
             return true;
