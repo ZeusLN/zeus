@@ -300,12 +300,23 @@ export const isLnurlCallbackAllowed = (callback: string): LnurlCheckResult => {
  * compatibility mapping first and connect to 127.0.0.1. NFKC plus lowercasing
  * is that mapping for the characters that matter here (fullwidth and circled
  * digits, letters and dots).
+ *
+ * IDNA also deletes some code points outright (soft hyphen, zero-width and
+ * variation-selector characters, Hangul fillers), which NFKC leaves in place,
+ * so `12<U+00AD>7.0.0.1` reaches 127.0.0.1 too. Those are stripped on both
+ * sides of the NFKC pass. The set is UTS-46's "ignored" code points plus the
+ * ones only nameprep (java.net.IDN) maps to nothing: U+1806, U+200C, U+200D.
  */
+const IDNA_IGNORED =
+    /[\u00AD\u034F\u115F\u1160\u17B4\u17B5\u1806\u180B-\u180F\u200B-\u200D\u2060-\u2064\u206A-\u206F\u3164\uFE00-\uFE0F\uFEFF\uFFA0\u{1BCA0}-\u{1BCA3}\u{1D173}-\u{1D17A}\u{E0100}-\u{E01EF}]/gu;
+
 const compatibilityHostname = (callback: string): string => {
     try {
-        return (
-            url.parse(callback.normalize('NFKC')).hostname || ''
-        ).toLowerCase();
+        const mapped = callback
+            .replace(IDNA_IGNORED, '')
+            .normalize('NFKC')
+            .replace(IDNA_IGNORED, '');
+        return (url.parse(mapped).hostname || '').toLowerCase();
     } catch (err: any) {
         return '';
     }
