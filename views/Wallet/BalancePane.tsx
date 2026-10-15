@@ -85,20 +85,39 @@ export default class BalancePane extends React.PureComponent<
     BalancePaneProps,
     BalancePaneState
 > {
+    private focusUnsubscribe?: () => void;
+
     state = {
         showBackupPrompt: false,
         showOfflinePendingModal: false,
         showOfflineSpentModal: false
     };
 
-    async componentDidMount() {
-        const isBackedUp = await Storage.getItem(IS_BACKED_UP_KEY);
-        if (isBackedUp !== 'true') {
-            this.setState({
-                showBackupPrompt: true
-            });
-        }
+    componentDidMount() {
+        // the seed backup is confirmed on another screen, so read the flag
+        // again whenever the wallet view comes back into focus
+        this.focusUnsubscribe = this.props.navigation.addListener(
+            'focus',
+            this.loadBackupStatus
+        );
+        this.loadBackupStatus();
     }
+
+    componentWillUnmount() {
+        this.focusUnsubscribe?.();
+    }
+
+    loadBackupStatus = async () => {
+        try {
+            const isBackedUp = await Storage.getItem(IS_BACKED_UP_KEY);
+            this.setState({
+                showBackupPrompt: isBackedUp !== 'true'
+            });
+        } catch (error) {
+            // keep the current state; the next focus reads the flag again
+            console.error('Error reading backup status', error);
+        }
+    };
 
     handlePendingPress = (context: PendingBalanceContext = 'onchain') => {
         const { ModalStore } = this.props;
@@ -191,6 +210,17 @@ export default class BalancePane extends React.PureComponent<
         const cashuBalance = CashuStore.totalBalanceSats;
         const cashuOfflinePendingBalance = CashuStore.offlinePendingBalance;
         const { implementation, settings, lndFolderMissing } = SettingsStore;
+
+        const showBackupCard =
+            implementation === 'embedded-lnd' &&
+            !SyncStore.isSyncing &&
+            showBackupPrompt &&
+            (BalanceStore.lightningBalance !== 0 ||
+                BalanceStore.totalBlockchainBalance !== 0) &&
+            !BalanceStore.loadingBlockchainBalance &&
+            !BalanceStore.loadingLightningBalance;
+        const showLndFolderMissingCard =
+            implementation === 'embedded-lnd' && lndFolderMissing;
 
         const lightningPendingTotal = new BigNumber(pendingOpenBalance || 0)
             .plus(pendingCloseBalance || 0)
@@ -411,6 +441,8 @@ export default class BalancePane extends React.PureComponent<
                                 <RecoveryStatus navigation={navigation} />
                                 <RescanStatus navigation={navigation} />
                                 {(SyncStore.isSyncing ||
+                                    showBackupCard ||
+                                    showLndFolderMissingCard ||
                                     cashuOfflinePendingBalance > 0 ||
                                     CashuStore.offlineSpentTokens.length >
                                         0) && (
@@ -418,173 +450,160 @@ export default class BalancePane extends React.PureComponent<
                                         <SyncingStatus
                                             navigation={navigation}
                                         />
-                                        {implementation === 'embedded-lnd' &&
-                                            !SyncStore.isSyncing &&
-                                            showBackupPrompt &&
-                                            (BalanceStore.lightningBalance !==
-                                                0 ||
-                                                BalanceStore.totalBlockchainBalance !==
-                                                    0) &&
-                                            !BalanceStore.loadingBlockchainBalance &&
-                                            !BalanceStore.loadingLightningBalance && (
-                                                <TouchableOpacity
-                                                    onPress={() =>
-                                                        reAuthNavigation(
-                                                            navigation,
-                                                            'Seed'
-                                                        )
-                                                    }
-                                                >
-                                                    <View
-                                                        style={[
-                                                            styles.backupCard,
-                                                            {
-                                                                backgroundColor:
-                                                                    themeColor(
-                                                                        'secondary'
-                                                                    ),
-                                                                borderColor:
-                                                                    themeColor(
-                                                                        'highlight'
-                                                                    )
-                                                            }
-                                                        ]}
-                                                    >
-                                                        <View
-                                                            style={
-                                                                styles.lockIconContainer
-                                                            }
-                                                        >
-                                                            <LockIcon
-                                                                fill={themeColor(
-                                                                    'highlight'
-                                                                )}
-                                                            />
-                                                        </View>
-                                                        <Text
-                                                            style={[
-                                                                styles.cardTitleText,
-                                                                {
-                                                                    color: themeColor(
-                                                                        'text'
-                                                                    )
-                                                                }
-                                                            ]}
-                                                        >
-                                                            {localeString(
-                                                                'views.Wallet.BalancePane.backup.title'
-                                                            )}
-                                                        </Text>
-                                                        <Text
-                                                            style={[
-                                                                styles.cardBodyText,
-                                                                {
-                                                                    color: themeColor(
-                                                                        'text'
-                                                                    )
-                                                                }
-                                                            ]}
-                                                        >
-                                                            {localeString(
-                                                                'views.Wallet.BalancePane.backup.text'
-                                                            )}
-                                                        </Text>
-                                                        <Text
-                                                            style={[
-                                                                styles.cardBodyTextBold,
-                                                                {
-                                                                    color: themeColor(
-                                                                        'text'
-                                                                    )
-                                                                }
-                                                            ]}
-                                                        >
-                                                            {localeString(
-                                                                'views.Wallet.BalancePane.backup.action'
-                                                            )}
-                                                        </Text>
-                                                    </View>
-                                                </TouchableOpacity>
-                                            )}
-                                        {implementation === 'embedded-lnd' &&
-                                            lndFolderMissing && (
+                                        {showBackupCard && (
+                                            <TouchableOpacity
+                                                onPress={() =>
+                                                    reAuthNavigation(
+                                                        navigation,
+                                                        'Seed'
+                                                    )
+                                                }
+                                            >
                                                 <View
                                                     style={[
-                                                        styles.errorCard,
+                                                        styles.backupCard,
                                                         {
                                                             backgroundColor:
                                                                 themeColor(
-                                                                    'error'
+                                                                    'secondary'
+                                                                ),
+                                                            borderColor:
+                                                                themeColor(
+                                                                    'highlight'
                                                                 )
                                                         }
                                                     ]}
                                                 >
-                                                    <Text
-                                                        style={
-                                                            styles.errorTitleText
-                                                        }
-                                                    >
-                                                        {localeString(
-                                                            'views.Wallet.lndFolderMissing.title'
-                                                        )}
-                                                    </Text>
-                                                    <Text
-                                                        style={
-                                                            styles.errorBodyText
-                                                        }
-                                                    >
-                                                        {localeString(
-                                                            'views.Wallet.lndFolderMissing.message'
-                                                        )}
-                                                    </Text>
                                                     <View
                                                         style={
-                                                            styles.errorButtonRow
+                                                            styles.lockIconContainer
                                                         }
                                                     >
-                                                        <Button
-                                                            title={localeString(
-                                                                'views.Wallet.lndFolderMissing.deleteWallet'
+                                                        <LockIcon
+                                                            fill={themeColor(
+                                                                'highlight'
                                                             )}
-                                                            onPress={() =>
-                                                                navigation.navigate(
-                                                                    'Wallets'
-                                                                )
-                                                            }
-                                                            quaternary
-                                                            buttonStyle={{
-                                                                minHeight: 80
-                                                            }}
-                                                            containerStyle={{
-                                                                flex: 1,
-                                                                marginRight: 5
-                                                            }}
-                                                        />
-                                                        <Button
-                                                            title={localeString(
-                                                                'views.Tools.clearStorage.title'
-                                                            )}
-                                                            onPress={() =>
-                                                                navigation.navigate(
-                                                                    'Tools',
-                                                                    {
-                                                                        showClearDataModal:
-                                                                            true
-                                                                    }
-                                                                )
-                                                            }
-                                                            quaternary
-                                                            buttonStyle={{
-                                                                minHeight: 80
-                                                            }}
-                                                            containerStyle={{
-                                                                flex: 1,
-                                                                marginLeft: 5
-                                                            }}
                                                         />
                                                     </View>
+                                                    <Text
+                                                        style={[
+                                                            styles.cardTitleText,
+                                                            {
+                                                                color: themeColor(
+                                                                    'text'
+                                                                )
+                                                            }
+                                                        ]}
+                                                    >
+                                                        {localeString(
+                                                            'views.Wallet.BalancePane.backup.title'
+                                                        )}
+                                                    </Text>
+                                                    <Text
+                                                        style={[
+                                                            styles.cardBodyText,
+                                                            {
+                                                                color: themeColor(
+                                                                    'text'
+                                                                )
+                                                            }
+                                                        ]}
+                                                    >
+                                                        {localeString(
+                                                            'views.Wallet.BalancePane.backup.text'
+                                                        )}
+                                                    </Text>
+                                                    <Text
+                                                        style={[
+                                                            styles.cardBodyTextBold,
+                                                            {
+                                                                color: themeColor(
+                                                                    'text'
+                                                                )
+                                                            }
+                                                        ]}
+                                                    >
+                                                        {localeString(
+                                                            'views.Wallet.BalancePane.backup.action'
+                                                        )}
+                                                    </Text>
                                                 </View>
-                                            )}
+                                            </TouchableOpacity>
+                                        )}
+                                        {showLndFolderMissingCard && (
+                                            <View
+                                                style={[
+                                                    styles.errorCard,
+                                                    {
+                                                        backgroundColor:
+                                                            themeColor('error')
+                                                    }
+                                                ]}
+                                            >
+                                                <Text
+                                                    style={
+                                                        styles.errorTitleText
+                                                    }
+                                                >
+                                                    {localeString(
+                                                        'views.Wallet.lndFolderMissing.title'
+                                                    )}
+                                                </Text>
+                                                <Text
+                                                    style={styles.errorBodyText}
+                                                >
+                                                    {localeString(
+                                                        'views.Wallet.lndFolderMissing.message'
+                                                    )}
+                                                </Text>
+                                                <View
+                                                    style={
+                                                        styles.errorButtonRow
+                                                    }
+                                                >
+                                                    <Button
+                                                        title={localeString(
+                                                            'views.Wallet.lndFolderMissing.deleteWallet'
+                                                        )}
+                                                        onPress={() =>
+                                                            navigation.navigate(
+                                                                'Wallets'
+                                                            )
+                                                        }
+                                                        quaternary
+                                                        buttonStyle={{
+                                                            minHeight: 80
+                                                        }}
+                                                        containerStyle={{
+                                                            flex: 1,
+                                                            marginRight: 5
+                                                        }}
+                                                    />
+                                                    <Button
+                                                        title={localeString(
+                                                            'views.Tools.clearStorage.title'
+                                                        )}
+                                                        onPress={() =>
+                                                            navigation.navigate(
+                                                                'Tools',
+                                                                {
+                                                                    showClearDataModal:
+                                                                        true
+                                                                }
+                                                            )
+                                                        }
+                                                        quaternary
+                                                        buttonStyle={{
+                                                            minHeight: 80
+                                                        }}
+                                                        containerStyle={{
+                                                            flex: 1,
+                                                            marginLeft: 5
+                                                        }}
+                                                    />
+                                                </View>
+                                            </View>
+                                        )}
                                         {cashuOfflinePendingBalance > 0 && (
                                             <>
                                                 <TouchableOpacity
