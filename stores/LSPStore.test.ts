@@ -648,6 +648,37 @@ describe('LSPStore remote LND sockets', () => {
         expect(BackendUtils.subscribeCustomMessages).toHaveBeenCalledTimes(2);
     });
 
+    it.each([
+        [
+            'a socket error (string)',
+            'backends.LND.wsReq.warning (SSL handshake failed)',
+            'backends.LND.wsReq.warning (SSL handshake failed)'
+        ],
+        [
+            'a stream error object',
+            { code: 2, message: 'permission denied' },
+            'permission denied'
+        ]
+    ])(
+        'logs the reason for %s from the custom message subscription',
+        async (_label, error, expected) => {
+            const consoleError = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
+            const store = makeStore('lnd');
+
+            await store.subscribeCustomMessages();
+            const onError = jest.mocked(BackendUtils.subscribeCustomMessages)
+                .mock.calls[0][1];
+            onError(error);
+
+            expect(consoleError).toHaveBeenCalledWith(
+                `sub custom messages error: ${expected}`
+            );
+            consoleError.mockRestore();
+        }
+    );
+
     it('closes both sockets on reset and opens new ones on the next connect', async () => {
         const store = makeStore('lnd');
         await store.initChannelAcceptor();
