@@ -221,6 +221,38 @@ describe('BbqrUtils', () => {
             expect(Array.from(raw)).toEqual(Array.from(original));
         });
 
+        it('only needs the named pako exports', () => {
+            // pako 3's ESM entry, which Metro resolves for an `import`
+            // statement, has no default export. Jest loads the CJS build,
+            // where a default import still works, so mock the ESM shape to
+            // catch a default import here instead of on a device.
+            jest.isolateModules(() => {
+                const actualPako = jest.requireActual('pako');
+                jest.doMock('pako', () => ({
+                    __esModule: true,
+                    deflate: actualPako.deflate,
+                    inflate: actualPako.inflate
+                }));
+                const {
+                    splitQRs: isolatedSplitQRs,
+                    joinQRs: isolatedJoinQRs
+                } = require('./BbqrUtils');
+                const original = new Uint8Array(600).map(
+                    (_, i) => (i * 7) % 256
+                );
+
+                const { parts, encoding } = isolatedSplitQRs(original, 'P', {
+                    encoding: 'Z',
+                    maxVersion: 10
+                });
+                const { raw } = isolatedJoinQRs(parts);
+
+                expect(encoding).toBe('Z');
+                expect(Array.from(raw)).toEqual(Array.from(original));
+            });
+            jest.dontMock('pako');
+        });
+
         it('survives a payload that needs many parts', () => {
             const original = new Uint8Array(5000).map((_, i) => (i * 13) % 256);
 
