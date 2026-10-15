@@ -1,7 +1,9 @@
 import {
     PAYMENT_LOOKUP_PAGE_SIZE,
     findPaymentByHash,
+    isNodeResponse,
     isPaymentLookupInconclusive,
+    markNodeResponded,
     paymentCreationTimeMs
 } from './PaymentLookupUtils';
 
@@ -153,5 +155,26 @@ describe('paymentCreationTimeMs', () => {
         expect(
             paymentCreationTimeMs({ creation_time_ns: 'x', creation_date: '' })
         ).toBeNull();
+    });
+});
+
+describe('markNodeResponded', () => {
+    it('tags an Error in place', () => {
+        const error = new Error('invoice expired');
+        expect(markNodeResponded(error)).toBe(error);
+        expect(isNodeResponse(error)).toBe(true);
+    });
+
+    it('wraps a string rejection in a tagged Error', () => {
+        const tagged = markNodeResponded('invoice expired') as Error;
+        expect(tagged).toBeInstanceOf(Error);
+        expect(tagged.message).toBe('invoice expired');
+        expect(isNodeResponse(tagged)).toBe(true);
+    });
+
+    it('leaves untagged errors as transport failures', () => {
+        expect(isNodeResponse(new Error('Request timeout'))).toBe(false);
+        expect(isNodeResponse('connection closed')).toBe(false);
+        expect(isNodeResponse(undefined)).toBe(false);
     });
 });

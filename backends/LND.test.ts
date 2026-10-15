@@ -13,9 +13,11 @@ jest.mock('../utils/TorUtils', () => ({
     RequestMethod: {}
 }));
 
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import LND from './LND';
 import { settingsStore } from '../stores/Stores';
 import { localeString } from '../utils/LocaleUtils';
+import { isNodeResponse } from '../utils/PaymentLookupUtils';
 
 describe('LND.getURL', () => {
     const lnd = new LND();
@@ -601,5 +603,45 @@ describe('LND.lookupPayment', () => {
             })
         ).resolves.toBe(target);
         expect(getRequest).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('LND.restReq errors', () => {
+    const fetchResolving = (response: any) =>
+        (ReactNativeBlobUtil.config as jest.Mock).mockReturnValue({
+            fetch: jest.fn().mockResolvedValue(response)
+        });
+
+    it('tags an error status as a response from the node', async () => {
+        const body = JSON.stringify({
+            code: 2,
+            message: 'invoice expired'
+        });
+        fetchResolving({
+            info: () => ({ status: 500 }),
+            json: () => JSON.parse(body),
+            data: body
+        });
+
+        const error = await new LND()
+            .restReq({}, 'https://node:8080/v2/router/send', 'POST', {})
+            .catch((e: any) => e);
+
+        expect(error.message).toContain('invoice expired');
+        expect(isNodeResponse(error)).toBe(true);
+    });
+
+    it('does not tag a transport failure', async () => {
+        (ReactNativeBlobUtil.config as jest.Mock).mockReturnValue({
+            fetch: jest.fn().mockRejectedValue(new Error('connection lost'))
+        });
+
+        const error = await new LND()
+            .restReq({}, 'https://node:8080/v2/router/send', 'POST', {
+                id: 'transport'
+            })
+            .catch((e: any) => e);
+
+        expect(isNodeResponse(error)).toBe(false);
     });
 });

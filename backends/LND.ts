@@ -11,7 +11,10 @@ import Base64Utils from './../utils/Base64Utils';
 import VersionUtils from './../utils/VersionUtils';
 import { localeString } from './../utils/LocaleUtils';
 import { toLnrpcAddressType } from './../utils/LndUtils';
-import { findPaymentByHash } from './../utils/PaymentLookupUtils';
+import {
+    findPaymentByHash,
+    markNodeResponded
+} from './../utils/PaymentLookupUtils';
 import { Hash as sha256Hash } from 'fast-sha256';
 import BigNumber from 'bignumber.js';
 
@@ -105,23 +108,32 @@ export default class LND {
                         }
                         return response.json();
                     } else {
+                        // an error status means the request was processed,
+                        // not left in transit
                         try {
                             const errorInfo = response.json();
-                            throw new Error(
-                                (errorInfo.error && errorInfo.error.message) ||
-                                    errorInfo.message ||
-                                    errorInfo.error
+                            throw markNodeResponded(
+                                new Error(
+                                    (errorInfo.error &&
+                                        errorInfo.error.message) ||
+                                        errorInfo.message ||
+                                        errorInfo.error
+                                )
                             );
                         } catch (e) {
                             if (
                                 response.data &&
                                 typeof response.data === 'string'
                             ) {
-                                throw new Error(response.data);
+                                throw markNodeResponded(
+                                    new Error(response.data)
+                                );
                             } else {
-                                throw new Error(
-                                    localeString(
-                                        'backends.LND.restReq.connectionError'
+                                throw markNodeResponded(
+                                    new Error(
+                                        localeString(
+                                            'backends.LND.restReq.connectionError'
+                                        )
                                     )
                                 );
                             }

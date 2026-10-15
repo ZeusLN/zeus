@@ -12,7 +12,9 @@ jest.mock('react-native-fs', () => ({
     DocumentDirectoryPath: '/tmp'
 }));
 
-import { isOnionHttpsUrl } from './TorUtils';
+import { RnTor } from 'react-native-nitro-tor';
+import { doTorRequest, isOnionHttpsUrl, RequestMethod } from './TorUtils';
+import { isNodeResponse } from './PaymentLookupUtils';
 
 describe('TorUtils', () => {
     describe('isOnionHttpsUrl', () => {
@@ -96,5 +98,44 @@ describe('TorUtils', () => {
             expect(isOnionHttpsUrl('xyz.onion')).toBe(false); // no scheme
             expect(isOnionHttpsUrl('://xyz.onion')).toBe(false);
         });
+    });
+});
+
+describe('doTorRequest errors', () => {
+    beforeEach(() => {
+        (RnTor.startTorIfNotRunning as jest.Mock).mockResolvedValue({
+            is_success: true
+        });
+    });
+
+    it('tags an error status as a response from the node', async () => {
+        (RnTor.httpPost as jest.Mock).mockResolvedValue({
+            status_code: 500,
+            body: JSON.stringify({ code: 2, message: 'invoice expired' })
+        });
+
+        const error = await doTorRequest(
+            'https://node.onion:8080/v2/router/send',
+            RequestMethod.POST,
+            '{}'
+        ).catch((e: any) => e);
+
+        expect(error.message).toBe('invoice expired');
+        expect(isNodeResponse(error)).toBe(true);
+    });
+
+    it('does not tag a transport failure', async () => {
+        (RnTor.httpPost as jest.Mock).mockResolvedValue({
+            error: 'circuit closed'
+        });
+
+        const error = await doTorRequest(
+            'https://node.onion:8080/v2/router/send',
+            RequestMethod.POST,
+            '{}'
+        ).catch((e: any) => e);
+
+        expect(error.message).toBe('circuit closed');
+        expect(isNodeResponse(error)).toBe(false);
     });
 });

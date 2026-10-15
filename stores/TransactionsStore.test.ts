@@ -50,7 +50,10 @@ import TransactionsStore, {
     PAYMENT_STALE_ATTEMPT_SLACK_MS
 } from './TransactionsStore';
 import BackendUtils from '../utils/BackendUtils';
-import { paymentLookupInconclusiveError } from '../utils/PaymentLookupUtils';
+import {
+    markNodeResponded,
+    paymentLookupInconclusiveError
+} from '../utils/PaymentLookupUtils';
 
 const payOffer = BackendUtils.payOffer as jest.Mock;
 const payLightningInvoice = BackendUtils.payLightningInvoice as jest.Mock;
@@ -467,6 +470,56 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
             payment_hash: HASH,
             creation_date_start: expect.any(Number)
         });
+    });
+
+    it('releases the guard after one no-record answer when the node rejected the send', async () => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            markNodeResponded(
+                new Error(
+                    'amount must be specified when paying a zero amount invoice'
+                )
+            )
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(null);
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+
+        // the node processed the request and records a payment before
+        // dispatching it, so its no-record answer is conclusive
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe(
+            'amount must be specified when paying a zero amount invoice'
+        );
+        expect(BackendUtils.lookupPayment).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps tracking a node-rejected send the node has recorded', async () => {
+        // with no_inflight_updates, LND reports an error after dispatch
+        // (e.g. shutting down) as an error status from the node itself
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            markNodeResponded(new Error('routerrpc server shutting down'))
+        );
+        (BackendUtils.lookupPayment as jest.Mock)
+            .mockResolvedValueOnce({ status: 'IN_FLIGHT', payment_hash: HASH })
+            .mockResolvedValueOnce({
+                status: 'SUCCEEDED',
+                payment_hash: HASH,
+                payment_preimage: 'deadbeef'
+            });
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+        expect(store.paymentInFlight).toBe(true);
+        expect(store.status).toBe('IN_FLIGHT');
+
+        await advancePoll();
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.status).toBe('SUCCEEDED');
+        expect(store.error).toBe(false);
     });
 
     it('keeps tracking when a no-record answer precedes the payment appearing', async () => {
