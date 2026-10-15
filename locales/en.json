@@ -816,6 +816,7 @@
     "views.PaymentRequest.error": "Error loading invoice",
     "views.PaymentRequest.invoiceExpired": "This invoice has expired and can no longer be paid",
     "views.PaymentRequest.customAmt": "Custom Amount",
+    "views.PaymentRequest.enterAmount": "Enter an amount to pay this invoice",
     "views.PaymentRequest.payDefault": "Pay default amount",
     "views.PaymentRequest.payCustom": "Pay custom amount",
     "views.PaymentRequest.feeEstimate": "Fee Estimate",
