@@ -267,6 +267,8 @@ class BackendUtils {
     supportsOnchainSendFeeRate = () => this.call('supportsOnchainSendFeeRate');
     supportsOnchainSendAutoFeeRate = () =>
         this.call('supportsOnchainSendAutoFeeRate');
+    supportsOnchainSendSubSatFeeRate = () =>
+        this.call('supportsOnchainSendSubSatFeeRate');
     supportsChannelOpenFeeRate = () => this.call('supportsChannelOpenFeeRate');
     supportsChannelOpenMinConfs = () =>
         this.call('supportsChannelOpenMinConfs');

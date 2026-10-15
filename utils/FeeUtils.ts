@@ -12,6 +12,16 @@ export const MIN_SAT_PER_VBYTE = 1;
 export const MAX_SAT_PER_VBYTE = 2000;
 
 /**
+ * Lowest rate on backends that take rates below 1 sat/vB
+ * (supportsOnchainSendSubSatFeeRate). It is Bitcoin Core's default
+ * minrelaytxfee since v30, so a lower rate would not relay.
+ */
+export const MIN_SUB_SAT_PER_VBYTE = 0.1;
+
+export const minSatPerVbyte = (subSatFeeRate?: boolean): number =>
+    subSatFeeRate ? MIN_SUB_SAT_PER_VBYTE : MIN_SAT_PER_VBYTE;
+
+/**
  * Keys of the mempool `/v1/fees/recommended` response. Every consumer
  * falls back to `fastestFee`, so a response without it is unusable.
  */
@@ -23,13 +33,32 @@ export const RECOMMENDED_FEE_KEYS = [
     'minimumFee'
 ] as const;
 
-export const isPlausibleSatPerVbyte = (value: unknown): boolean => {
+export const isPlausibleSatPerVbyte = (
+    value: unknown,
+    minRate: number = MIN_SAT_PER_VBYTE
+): boolean => {
     const rate = Number(value);
     return (
-        Number.isFinite(rate) &&
-        rate >= MIN_SAT_PER_VBYTE &&
-        rate <= MAX_SAT_PER_VBYTE
+        Number.isFinite(rate) && rate >= minRate && rate <= MAX_SAT_PER_VBYTE
     );
+};
+
+/**
+ * Cleans a typed fee rate. Whole sat/vB backends keep digits only. With
+ * subSatFeeRate a single decimal point is kept, and a comma is read as one.
+ */
+export const sanitizeFeeRateInput = (
+    text: string,
+    subSatFeeRate?: boolean
+): string => {
+    if (!subSatFeeRate) return text.replace(/[^0-9]/g, '').replace(/^0+/, '');
+    const [whole, ...rest] = text
+        .replace(/,/g, '.')
+        .replace(/[^0-9.]/g, '')
+        .split('.');
+    const digits = whole.replace(/^0+(?=\d)/, '');
+    if (rest.length === 0) return digits;
+    return `${digits || '0'}.${rest.join('')}`;
 };
 
 /**

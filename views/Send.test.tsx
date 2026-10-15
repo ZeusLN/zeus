@@ -21,6 +21,7 @@ jest.mock('../utils/BackendUtils', () => ({
     supportsOnchainSendMax: () => true,
     supportsOnchainSendFeeRate: jest.fn(() => false),
     supportsOnchainSendAutoFeeRate: jest.fn(() => false),
+    supportsOnchainSendSubSatFeeRate: jest.fn(() => false),
     supportsOnchainBatching: jest.fn(() => false),
     supportsCoinControl: () => false,
     supportsKeysend: jest.fn(() => false),
@@ -261,6 +262,10 @@ describe('Send on-chain fee rate', () => {
         BackendUtils.supportsOnchainSendFeeRate as jest.Mock;
     const supportsOnchainSendAutoFeeRate =
         BackendUtils.supportsOnchainSendAutoFeeRate as jest.Mock;
+    const supportsOnchainSendSubSatFeeRate =
+        BackendUtils.supportsOnchainSendSubSatFeeRate as jest.Mock;
+
+    const feeInput = () => hosts('OnchainFeeInput')[0];
 
     const renderWithFee = async (fee: string) => {
         await renderView();
@@ -268,36 +273,65 @@ describe('Send on-chain fee rate', () => {
         await fireEvent(feeInput(), 'changeFee', fee);
     };
 
-    const feeInput = () => hosts('OnchainFeeInput')[0];
-
     beforeEach(() => supportsOnchainSendFeeRate.mockReturnValue(true));
 
     afterEach(() => {
         supportsOnchainSendFeeRate.mockReturnValue(false);
         supportsOnchainSendAutoFeeRate.mockReturnValue(false);
+        supportsOnchainSendSubSatFeeRate.mockReturnValue(false);
     });
 
-    describe('on a backend that needs a fee rate', () => {
-        it.each(['', '0'])('blocks Proceed when the fee is %p', async (fee) => {
-            await renderWithFee(fee);
-            expect(isProceedDisabled()).toBe(true);
-            expect(feeInput().props.autoFeeRate).toBe(false);
-        });
-
-        it('allows Proceed once a fee is set', async () => {
-            await renderWithFee('5');
-            expect(isProceedDisabled()).toBe(false);
-        });
-    });
-
-    describe('on a backend that estimates the fee itself', () => {
-        beforeEach(() => supportsOnchainSendAutoFeeRate.mockReturnValue(true));
-
+    describe('on a backend that needs a whole sat/vB fee rate', () => {
         // '0' is what OnchainFeeInput reports when the mempool fetch fails
-        it.each(['', '0'])('allows Proceed when the fee is %p', async (fee) => {
-            await renderWithFee(fee);
-            expect(isProceedDisabled()).toBe(false);
+        it.each(['', '0', '0.5', '2001', 'abc'])(
+            'blocks Proceed when the fee is %p',
+            async (fee) => {
+                await renderWithFee(fee);
+                expect(isProceedDisabled()).toBe(true);
+            }
+        );
+
+        it.each(['1', '5', '2000'])(
+            'allows Proceed when the fee is %p',
+            async (fee) => {
+                await renderWithFee(fee);
+                expect(isProceedDisabled()).toBe(false);
+            }
+        );
+
+        it('tells the fee input that empty and sub-sat rates are not allowed', async () => {
+            await renderWithFee('');
+            expect(feeInput().props.autoFeeRate).toBe(false);
+            expect(feeInput().props.subSatFeeRate).toBe(false);
+        });
+    });
+
+    describe('on a backend that estimates the fee and takes sub-sat rates', () => {
+        beforeEach(() => {
+            supportsOnchainSendAutoFeeRate.mockReturnValue(true);
+            supportsOnchainSendSubSatFeeRate.mockReturnValue(true);
+        });
+
+        it.each(['', '0', '0.1', '0.5', '5'])(
+            'allows Proceed when the fee is %p',
+            async (fee) => {
+                await renderWithFee(fee);
+                expect(isProceedDisabled()).toBe(false);
+            }
+        );
+
+        it.each(['0.05', '2001'])(
+            'blocks Proceed when the fee is %p',
+            async (fee) => {
+                await renderWithFee(fee);
+                expect(isProceedDisabled()).toBe(true);
+            }
+        );
+
+        it('tells the fee input that empty and sub-sat rates are allowed', async () => {
+            await renderWithFee('');
             expect(feeInput().props.autoFeeRate).toBe(true);
+            expect(feeInput().props.subSatFeeRate).toBe(true);
         });
     });
 });
