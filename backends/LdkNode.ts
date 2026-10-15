@@ -127,7 +127,7 @@ export default class LdkNode {
 
     // rHash arrives hex encoded from the Receive view
     watchInvoicePaid = (
-        { rHash }: { rHash: string; value?: string | number },
+        { rHash }: { rHash: string },
         onPaid: (payload: {
             amountSat: number;
             tx?: string;

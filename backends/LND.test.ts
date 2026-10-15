@@ -111,3 +111,203 @@ describe('LND.getURL', () => {
         });
     });
 });
+
+describe('LND.watchInvoicePaid', () => {
+    // a settled lookupInvoice result paying `sats`
+    const settled = (sats: number) => ({
+        settled: true,
+        state: 'SETTLED',
+        amt_paid_sat: String(sats),
+        payment_request: 'lnbc1test'
+    });
+    const open = () => ({ settled: false, state: 'OPEN', value: '7100' });
+
+    let lnd: LND;
+    let lookupInvoice: jest.SpyInstance;
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        lnd = new LND();
+        lookupInvoice = jest.spyOn(lnd, 'lookupInvoice');
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    // advance one poll interval and let the lookup promise settle
+    const tick = async () => {
+        jest.advanceTimersByTime(5000);
+        await Promise.resolve();
+        await Promise.resolve();
+    };
+
+    it('fires once the watched invoice is settled', async () => {
+        lookupInvoice.mockResolvedValue(settled(7100));
+        const onPaid = jest.fn();
+        lnd.watchInvoicePaid({ rHash: 'AQID' }, onPaid);
+
+        await tick();
+
+        expect(lookupInvoice).toHaveBeenCalledWith({ r_hash: '010203' });
+        expect(onPaid).toHaveBeenCalledTimes(1);
+        expect(onPaid).toHaveBeenCalledWith({
+            amountSat: 7100,
+            tx: 'lnbc1test'
+        });
+    });
+
+    it('fires when the node invoice is for less than the Receive amount', async () => {
+        // with the Flow LSP, a 1,000 sat Receive creates a node invoice
+        // for 1,000 minus the LSP fee
+        lookupInvoice.mockResolvedValue(settled(900));
+        const onPaid = jest.fn();
+        lnd.watchInvoicePaid({ rHash: 'AQID' }, onPaid);
+
+        await tick();
+
+        expect(onPaid).toHaveBeenCalledWith({
+            amountSat: 900,
+            tx: 'lnbc1test'
+        });
+    });
+
+    it('does not fire while the invoice is unpaid', async () => {
+        lookupInvoice.mockResolvedValue(open());
+        const onPaid = jest.fn();
+        lnd.watchInvoicePaid({ rHash: 'AQID' }, onPaid);
+
+        await tick();
+        await tick();
+
+        expect(lookupInvoice).toHaveBeenCalledTimes(2);
+        expect(onPaid).not.toHaveBeenCalled();
+    });
+
+    it('does not fire for a settled invoice with nothing paid', async () => {
+        lookupInvoice.mockResolvedValue(settled(0));
+        const onPaid = jest.fn();
+        lnd.watchInvoicePaid({ rHash: 'AQID' }, onPaid);
+
+        await tick();
+
+        expect(onPaid).not.toHaveBeenCalled();
+    });
+
+    it('stops polling once unsubscribed', async () => {
+        lookupInvoice.mockResolvedValue(open());
+        const unsubscribe = lnd.watchInvoicePaid({ rHash: 'AQID' }, jest.fn());
+
+        await tick();
+        unsubscribe();
+        await tick();
+        await tick();
+
+        expect(lookupInvoice).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops polling after firing', async () => {
+        lookupInvoice.mockResolvedValue(settled(7100));
+        const onPaid = jest.fn();
+        lnd.watchInvoicePaid({ rHash: 'AQID' }, onPaid);
+
+        await tick();
+        await tick();
+
+        expect(lookupInvoice).toHaveBeenCalledTimes(1);
+        expect(onPaid).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('LND.watchOnchainReceived', () => {
+    const tx = (amount: string) => ({
+        transactions: [
+            {
+                tx_hash: 'txid1',
+                num_confirmations: 0,
+                dest_addresses: ['bc1qwatched'],
+                output_details: [{ address: 'bc1qwatched', amount }]
+            }
+        ]
+    });
+
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    const tick = async () => {
+        jest.advanceTimersByTime(7000);
+        await Promise.resolve();
+        await Promise.resolve();
+    };
+
+    it('fires when the output covers the watched sat amount', async () => {
+        const lnd = new LND();
+        jest.spyOn(lnd, 'getTransactions').mockResolvedValue(tx('7100'));
+        const onReceived = jest.fn();
+        lnd.watchOnchainReceived(
+            {
+                address: 'bc1qwatched',
+                expectedAmountSat: '7100',
+                numConfPreference: 0
+            },
+            onReceived
+        );
+
+        await tick();
+
+        expect(onReceived).toHaveBeenCalledWith({
+            amountSat: 7100,
+            txid: 'txid1'
+        });
+    });
+
+    it('fires for an amountless watch with no expected amount', async () => {
+        const lnd = new LND();
+        jest.spyOn(lnd, 'getTransactions').mockResolvedValue(tx('500'));
+        const onReceived = jest.fn();
+        lnd.watchOnchainReceived(
+            { address: 'bc1qwatched', numConfPreference: 0 },
+            onReceived
+        );
+
+        await tick();
+
+        expect(onReceived).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not fire for a smaller output', async () => {
+        const lnd = new LND();
+        jest.spyOn(lnd, 'getTransactions').mockResolvedValue(tx('7099'));
+        const onReceived = jest.fn();
+        lnd.watchOnchainReceived(
+            {
+                address: 'bc1qwatched',
+                expectedAmountSat: '7100',
+                numConfPreference: 0
+            },
+            onReceived
+        );
+
+        await tick();
+
+        expect(onReceived).not.toHaveBeenCalled();
+    });
+
+    it('does not treat a NaN expected amount as amountless', async () => {
+        const lnd = new LND();
+        jest.spyOn(lnd, 'getTransactions').mockResolvedValue(tx('500'));
+        const onReceived = jest.fn();
+        lnd.watchOnchainReceived(
+            {
+                address: 'bc1qwatched',
+                expectedAmountSat: NaN,
+                numConfPreference: 0
+            },
+            onReceived
+        );
+
+        await tick();
+
+        expect(onReceived).not.toHaveBeenCalled();
+    });
+});

@@ -957,7 +957,7 @@ export default class LightningNodeConnect {
         };
     };
     watchInvoicePaid = (
-        { rHash }: { rHash: string; value?: string | number },
+        { rHash }: { rHash: string },
         onPaid: (payload: {
             amountSat: number;
             tx?: string;
@@ -1001,11 +1001,11 @@ export default class LightningNodeConnect {
     watchOnchainReceived = (
         {
             address,
-            value,
+            expectedAmountSat,
             numConfPreference
         }: {
             address: string;
-            value?: string | number;
+            expectedAmountSat?: string | number;
             numConfPreference: number;
             blockHeight?: number;
         },
@@ -1032,7 +1032,7 @@ export default class LightningNodeConnect {
                     if (
                         result.dest_addresses.includes(address) &&
                         result.num_confirmations >= numConfPreference &&
-                        Number(result.amount) >= Number(value)
+                        Number(result.amount) >= Number(expectedAmountSat ?? 0)
                     ) {
                         listener.remove();
                         onReceived({

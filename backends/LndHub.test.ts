@@ -84,3 +84,96 @@ describe('LndHub requests', () => {
         );
     });
 });
+
+describe('LndHub.watchInvoicePaid', () => {
+    const invoice = (r_hash: string, ispaid: boolean, amt: number) => ({
+        r_hash,
+        ispaid,
+        amt,
+        payment_request: `lnbc1${r_hash}`,
+        r_preimage: `preimage-${r_hash}`
+    });
+
+    let hub: LndHub;
+    let getInvoices: jest.SpyInstance;
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        hub = new LndHub();
+        getInvoices = jest.spyOn(hub, 'getInvoices');
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    const tick = async () => {
+        jest.advanceTimersByTime(5000);
+        await Promise.resolve();
+        await Promise.resolve();
+    };
+
+    it('fires once the watched invoice is paid', async () => {
+        getInvoices.mockResolvedValue({
+            invoices: [
+                invoice('other', true, 100),
+                invoice('watched', true, 900)
+            ]
+        });
+        const onPaid = jest.fn();
+        hub.watchInvoicePaid({ rHash: 'watched' }, onPaid);
+
+        await tick();
+
+        expect(onPaid).toHaveBeenCalledTimes(1);
+        expect(onPaid).toHaveBeenCalledWith({
+            amountSat: 900,
+            tx: 'lnbc1watched',
+            preimage: 'preimage-watched'
+        });
+    });
+
+    it('does not fire while the watched invoice is unpaid', async () => {
+        getInvoices.mockResolvedValue({
+            invoices: [
+                invoice('other', true, 100),
+                invoice('watched', false, 900)
+            ]
+        });
+        const onPaid = jest.fn();
+        hub.watchInvoicePaid({ rHash: 'watched' }, onPaid);
+
+        await tick();
+
+        expect(onPaid).not.toHaveBeenCalled();
+    });
+
+    it('keeps polling after a failed request', async () => {
+        getInvoices
+            .mockRejectedValueOnce(new Error('unreachable'))
+            .mockResolvedValueOnce({
+                invoices: [invoice('watched', true, 900)]
+            });
+        const onPaid = jest.fn();
+        hub.watchInvoicePaid({ rHash: 'watched' }, onPaid);
+
+        await tick();
+        await tick();
+
+        expect(onPaid).toHaveBeenCalledTimes(1);
+    });
+
+    it('stops polling once unsubscribed', async () => {
+        getInvoices.mockResolvedValue({ invoices: [] });
+        const unsubscribe = hub.watchInvoicePaid(
+            { rHash: 'watched' },
+            jest.fn()
+        );
+
+        await tick();
+        unsubscribe();
+        await tick();
+
+        expect(getInvoices).toHaveBeenCalledTimes(1);
+    });
+});
