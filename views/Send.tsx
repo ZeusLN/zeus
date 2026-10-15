@@ -33,6 +33,7 @@ import UTXOsStore from '../stores/UTXOsStore';
 
 import AmountInput from '../components/AmountInput';
 import Button from '../components/Button';
+import PaymentInFlightNotice from '../components/PaymentInFlightNotice';
 import FeeLimit from '../components/FeeLimit';
 import LoadingIndicator from '../components/LoadingIndicator';
 import {
@@ -1622,6 +1623,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                         </React.Fragment>
                                     )}
                                 <View style={styles.button}>
+                                    <PaymentInFlightNotice
+                                        TransactionsStore={TransactionsStore}
+                                    />
                                     {Number(satAmount) >=
                                     slideToPayThreshold ? (
                                         <SwipeButton
@@ -1705,6 +1709,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                     )}
                     {destination && transactionType === 'BOLT 12' && (
                         <View style={styles.button}>
+                            <PaymentInFlightNotice
+                                TransactionsStore={TransactionsStore}
+                            />
                             <Button
                                 title={localeString('general.proceed')}
                                 onPress={async () => await this.payBolt12()}

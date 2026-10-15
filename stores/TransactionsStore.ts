@@ -130,6 +130,11 @@ export default class TransactionsStore {
     // set when payment tracking stopped before observing a terminal state:
     // the payment may still settle, so the send screen warns against retrying
     @observable public paymentOutcomeUnverified = false;
+    // true once the node has reported the guard-owning payment as in
+    // flight. Only then may the user release the guard to send something
+    // else (releasePaymentInFlight): before that, a retry is most likely
+    // the same payment sent twice by mistake
+    @observable public paymentInFlightConfirmed = false;
 
     // monotonic id assigned to each dispatched payment
     private paymentSequence = 0;
@@ -152,6 +157,9 @@ export default class TransactionsStore {
     private inFlightIsKeysend = false;
     // sequence currently being tracked to a terminal state (null when none)
     private trackingSeq: number | null = null;
+    // payments the user released the guard for, whose late results must
+    // not overwrite the send screen of a payment made after them
+    private releasedSeqs = new Set<number>();
 
     settingsStore: SettingsStore;
     nodeInfoStore: NodeInfoStore;
@@ -181,6 +189,7 @@ export default class TransactionsStore {
         this.inFlightPaymentHash = null;
         this.inFlightDispatchTime = null;
         this.inFlightIsKeysend = false;
+        this.paymentInFlightConfirmed = false;
         this.paymentOutcomeUnverified = false;
         this.error = false;
         this.error_msg = null;
@@ -683,6 +692,7 @@ export default class TransactionsStore {
             this.inFlightPaymentHash = null;
             this.inFlightDispatchTime = Date.now();
             this.inFlightIsKeysend = !!pubkey;
+            this.paymentInFlightConfirmed = false;
         }
         this.paymentStartTime = Date.now();
         this.paymentDuration = null;
@@ -843,6 +853,24 @@ export default class TransactionsStore {
         this.inFlightPaymentHash = null;
         this.inFlightDispatchTime = null;
         this.inFlightIsKeysend = false;
+        this.paymentInFlightConfirmed = false;
+    };
+
+    // Lets the user send another payment while the guard-owning payment is
+    // still pending on the node, e.g. a hold invoice that stays unsettled
+    // by design. Only allowed once the node has reported the payment in
+    // flight, so the user has been shown it is pending, not failed.
+    // Tracking of the released payment stops: its outcome shows in
+    // Activity, and its late results are ignored so they can't overwrite
+    // the next payment's send screen. Returns whether the guard was
+    // released.
+    @action
+    public releasePaymentInFlight = (): boolean => {
+        const seq = this.inFlightOwnerSeq;
+        if (seq === null || !this.paymentInFlightConfirmed) return false;
+        this.releasedSeqs.add(seq);
+        this.clearPaymentInFlight(seq);
+        return true;
     };
 
     // true when payment `seq` still owns the guard and its terminal state
@@ -1015,7 +1043,8 @@ export default class TransactionsStore {
                 await sleep(PAYMENT_TRACK_POLL_MS);
             }
         } finally {
-            this.trackingSeq = null;
+            // a newer payment may have started its own tracking
+            if (this.trackingSeq === seq) this.trackingSeq = null;
             // still the owner means tracking gave up without a terminal
             // state (a terminal result or a new send has already moved the
             // guard on)
@@ -1058,6 +1087,7 @@ export default class TransactionsStore {
     private markPaymentInTransit = () => {
         this.clearPaymentError();
         this.status = 'IN_FLIGHT';
+        this.paymentInFlightConfirmed = true;
     };
 
     public sendPaymentSilently = async ({
@@ -1110,6 +1140,7 @@ export default class TransactionsStore {
 
     @action
     public handlePayment = (result: any, seq?: number) => {
+        if (seq !== undefined && this.releasedSeqs.has(seq)) return;
         this.loading = false;
 
         const implementation = this.settingsStore.implementation;
@@ -1132,6 +1163,7 @@ export default class TransactionsStore {
             this.canTrackPayment(seq)
         ) {
             this.status = 'IN_FLIGHT';
+            if (status === 'IN_FLIGHT') this.paymentInFlightConfirmed = true;
             // a timed-out send may still be on its way to the node; the
             // backend reports when its request can no longer arrive. An
             // IN_FLIGHT result means the node already has the payment.
@@ -1209,6 +1241,7 @@ export default class TransactionsStore {
 
     @action
     public handlePaymentError = (err: Error, seq?: number) => {
+        if (seq !== undefined && this.releasedSeqs.has(seq)) return;
         this.error = true;
         this.loading = false;
         // A rejected dispatch (dropped connection, Tor timeout) doesn't
