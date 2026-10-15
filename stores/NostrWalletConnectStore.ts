@@ -2528,7 +2528,7 @@ export default class NostrWalletConnectStore {
         const invoiceInfo = await BackendUtils.decodePaymentRequest([
             request.invoice
         ]);
-        const { amountSats, fromRequest: zeroAmountInvoice } =
+        const { amountSats, zeroAmountInvoice } =
             await NostrConnectUtils.resolvePayInvoiceAmount({
                 paymentRequest: request.invoice,
                 lightningDecodedPayReq: invoiceInfo,
@@ -2704,6 +2704,15 @@ export default class NostrWalletConnectStore {
 
         const feeSats = Number(payment?.getFee) || Number(fees_paid) || 0;
 
+        // a zero-amount invoice the wallet already settled is debited at
+        // what was paid, not at the amount this request asked for
+        const settledAmountSats =
+            zeroAmountInvoice &&
+            payment &&
+            NostrConnectUtils.isSettledPayment(payment)
+                ? Number(payment.getAmount) || amountSats
+                : amountSats;
+
         // Debit the budget on any evidence of settlement, not only when the
         // payments-list lookup succeeds: with a preimage in hand the payment
         // definitely settled, and skipping finalizePayment on a list miss
@@ -2725,7 +2734,7 @@ export default class NostrWalletConnectStore {
                     }),
                 payment_source: 'lightning',
                 connection,
-                amountSats,
+                amountSats: settledAmountSats,
                 feeSats,
                 paymentHash: paymentHash || payment?.paymentHash
             });

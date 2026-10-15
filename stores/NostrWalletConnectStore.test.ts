@@ -2406,7 +2406,7 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
         jest.spyOn(
             NostrConnectUtils,
             'resolvePayInvoiceAmount'
-        ).mockResolvedValue({ amountSats: 5000, fromRequest: false });
+        ).mockResolvedValue({ amountSats: 5000, zeroAmountInvoice: false });
     });
 
     function buildHandlerStore(nodePayments: Payment[] = []) {
@@ -2502,12 +2502,12 @@ describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices
     const paymentHash = hex64('e');
 
     // exercise the real amount resolver: only the decoded invoice varies
-    const mockInvoiceAmount = (sats: number) => {
-        (NostrConnectUtils.resolvePayInvoiceAmount as any).mockRestore?.();
+    const mockInvoiceAmount = (sats: number, num_msat?: string) => {
         (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue({
             timestamp: String(Math.floor(Date.now() / 1000) - 60),
             expiry: '3600',
-            ...(sats > 0 && { num_satoshis: String(sats) })
+            ...(sats > 0 && { num_satoshis: String(sats) }),
+            ...(num_msat && { num_msat })
         });
         jest.spyOn(NostrConnectUtils, 'decodeInvoiceTags').mockResolvedValue({
             paymentRequest: invoice,
@@ -2522,23 +2522,9 @@ describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices
         });
     };
 
-    beforeEach(() => {
-        (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue({
-            timestamp: String(Math.floor(Date.now() / 1000) - 60),
-            expiry: '3600'
-        });
-        jest.spyOn(NostrConnectUtils, 'decodeInvoiceTags').mockResolvedValue({
-            paymentRequest: invoice,
-            paymentHash,
-            descriptionHash: '',
-            description: '',
-            amount: 0,
-            expiryTime: 0,
-            createdAt: 0,
-            isExpired: false,
-            network: 'bitcoin'
-        });
-    });
+    beforeEach(() => mockInvoiceAmount(0));
+
+    afterEach(() => jest.restoreAllMocks());
 
     function buildHandlerStore(nodePayments: Payment[] = []) {
         return createStore({
@@ -2639,7 +2625,7 @@ describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices
 
         expect(transactionsStore.sendPayment).not.toHaveBeenCalled();
         expect(response.result).toBeUndefined();
-        expect(response.error).toBeDefined();
+        expect(response.error?.code).toBe(Nip47ErrorCode.INSUFFICIENT_BALANCE);
     });
 
     it('checks the node balance against the requested amount', async () => {
@@ -2673,6 +2659,71 @@ describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices
             .calls[0][0];
         expect(call.payment_request).toBe(invoice);
         expect(call.amount).toBeUndefined();
+    });
+
+    it('treats a sub-sat invoice as having an amount', async () => {
+        mockInvoiceAmount(0, '500');
+        const { store, transactionsStore } = buildHandlerStore();
+        const connection = addConnection(store, { maxAmountSats: 100000 });
+
+        await (store as any).handleLightningPayInvoice(connection, {
+            invoice,
+            amount: 7_000_000
+        });
+
+        const call = (transactionsStore.sendPayment as jest.Mock).mock
+            .calls[0][0];
+        expect(call.amount).toBeUndefined();
+    });
+
+    it('records the requested amount when the payment is still in transit', async () => {
+        mockInvoiceAmount(0);
+        jest.spyOn(
+            NostrConnectUtils,
+            'resolveLightningPaymentInTransit'
+        ).mockReturnValue({ inTransit: true } as any);
+        const { store } = buildHandlerStore();
+        const connection = addConnection(store, { maxAmountSats: 100000 });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice, amount: 7_000_000 }
+        );
+
+        expect(response.error).toBeUndefined();
+        expect(response.result?.preimage).toBe('');
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.activity[0].satAmount).toBe(7000);
+        expect(connection.pendingSpendSats).toBe(7000);
+    });
+
+    it('debits what was paid when the invoice was already settled by the wallet', async () => {
+        mockInvoiceAmount(0);
+        const alreadyPaid = new Payment({
+            payment_request: invoice,
+            payment_hash: paymentHash,
+            status: 'SUCCEEDED',
+            value_sat: 3000,
+            fee_sat: '2',
+            payment_preimage: hex64('f')
+        });
+        const { store, transactionsStore } = buildHandlerStore([alreadyPaid]);
+        // the send itself failed: the invoice had been paid already
+        Object.assign(transactionsStore, {
+            payment_preimage: null,
+            payment_error: 'invoice is already paid',
+            status: 'FAILED',
+            isIncomplete: true
+        });
+        const connection = addConnection(store, { maxAmountSats: 100000 });
+
+        await (store as any).handleLightningPayInvoice(connection, {
+            invoice,
+            amount: 7_000_000
+        });
+
+        expect(connection.activity[0].satAmount).toBe(3000);
+        expect(connection.totalSpendSats).toBe(3002);
     });
 });
 

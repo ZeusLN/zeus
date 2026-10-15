@@ -1355,7 +1355,7 @@ describe('NostrConnectUtils', () => {
     });
 });
 
-describe('NostrConnectUtils.getPayInvoiceAmountSats requested amount', () => {
+describe('NostrConnectUtils pay_invoice amount resolution', () => {
     const paymentRequest = 'lnbc1zero-amount';
 
     beforeEach(() => {
@@ -1374,21 +1374,21 @@ describe('NostrConnectUtils.getPayInvoiceAmountSats requested amount', () => {
 
     afterEach(() => jest.restoreAllMocks());
 
-    it('reports whether the amount came from the request', async () => {
+    it('reports whether the invoice is zero-amount', async () => {
         await expect(
             NostrConnectUtils.resolvePayInvoiceAmount({
                 paymentRequest,
                 lightningDecodedPayReq: { num_satoshis: '0' },
                 requestedAmountMsat: 7_000_000
             })
-        ).resolves.toEqual({ amountSats: 7000, fromRequest: true });
+        ).resolves.toEqual({ amountSats: 7000, zeroAmountInvoice: true });
         await expect(
             NostrConnectUtils.resolvePayInvoiceAmount({
                 paymentRequest,
                 lightningDecodedPayReq: { num_satoshis: '5000' },
                 requestedAmountMsat: 7_000_000
             })
-        ).resolves.toEqual({ amountSats: 5000, fromRequest: false });
+        ).resolves.toEqual({ amountSats: 5000, zeroAmountInvoice: false });
     });
 
     it('returns the requested sats for an invoice without an amount', async () => {
@@ -1399,6 +1399,16 @@ describe('NostrConnectUtils.getPayInvoiceAmountSats requested amount', () => {
                 requestedAmountMsat: 7_000_000
             })
         ).resolves.toBe(7000);
+    });
+
+    it('counts a sub-sat invoice as having an amount', async () => {
+        await expect(
+            NostrConnectUtils.resolvePayInvoiceAmount({
+                paymentRequest,
+                lightningDecodedPayReq: { num_satoshis: '0', num_msat: '500' },
+                requestedAmountMsat: 7_000_000
+            })
+        ).resolves.toEqual({ amountSats: 1, zeroAmountInvoice: false });
     });
 
     it('ignores the requested amount when the invoice has one', async () => {

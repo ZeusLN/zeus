@@ -1761,10 +1761,14 @@ export default class NostrConnectUtils {
                 return fromSat;
             }
         }
-        if (decodedPayReq.millisatoshis !== undefined) {
-            const ms = Number(decodedPayReq.millisatoshis) || 0;
+        // a sub-sat amount is still an amount: never report it as none
+        for (const msats of [
+            decodedPayReq.num_msat,
+            decodedPayReq.millisatoshis
+        ]) {
+            const ms = Number(msats) || 0;
             if (ms > 0) {
-                return millisatsToSats(ms);
+                return Math.max(1, millisatsToSats(ms));
             }
         }
         return 0;
@@ -1822,7 +1826,7 @@ export default class NostrConnectUtils {
         decodedInvoice?: any;
         /** Lightning: request `amount` (msat), used for zero-amount invoices */
         requestedAmountMsat?: number;
-    }): Promise<{ amountSats: number; fromRequest: boolean }> {
+    }): Promise<{ amountSats: number; zeroAmountInvoice: boolean }> {
         const {
             paymentRequest,
             lightningDecodedPayReq,
@@ -1836,7 +1840,7 @@ export default class NostrConnectUtils {
                     lightningDecodedPayReq
                 );
             if (fromLightning > 0) {
-                return { amountSats: fromLightning, fromRequest: false };
+                return { amountSats: fromLightning, zeroAmountInvoice: false };
             }
             const { amount } = await NostrConnectUtils.decodeInvoiceTags(
                 paymentRequest
@@ -1848,14 +1852,14 @@ export default class NostrConnectUtils {
                         amount
                     );
                 }
-                return { amountSats: amount, fromRequest: false };
+                return { amountSats: amount, zeroAmountInvoice: false };
             }
             return {
                 amountSats:
                     NostrConnectUtils.satsFromRequestedMsat(
                         requestedAmountMsat
-                    ) || 0,
-                fromRequest: true
+                    ),
+                zeroAmountInvoice: true
             };
         }
 
@@ -1864,12 +1868,15 @@ export default class NostrConnectUtils {
                 decodedInvoice
             );
         if (fromDecoded > 0) {
-            return { amountSats: fromDecoded, fromRequest: false };
+            return { amountSats: fromDecoded, zeroAmountInvoice: false };
         }
         const { amount } = await NostrConnectUtils.decodeInvoiceTags(
             paymentRequest
         );
-        return { amountSats: amount > 0 ? amount : 0, fromRequest: false };
+        return {
+            amountSats: amount > 0 ? amount : 0,
+            zeroAmountInvoice: false
+        };
     }
 
     static async getPayInvoiceAmountSats(params: {
