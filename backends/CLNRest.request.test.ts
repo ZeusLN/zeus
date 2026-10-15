@@ -39,7 +39,7 @@ jest.mock('./CoreLightningRequestHandler', () => ({
 }));
 jest.mock('../utils/LocaleUtils');
 
-import CLNRest from './CLNRest';
+import CLNRest, { satPerVbyteToPerkb } from './CLNRest';
 
 const CONNECTION_ERROR = 'backends.LND.restReq.connectionError';
 const PAYMENT_TIMED_OUT = 'views.SendingLightning.paymentTimedOut';
@@ -575,6 +575,97 @@ describe('CLNRest payment request bodies', () => {
         mockFetch.mockClear();
         await cln.sendKeysend({ pubkey: '02ab', amt: 2, fee_limit_sat: 5 });
         expect(sentBody().body.maxfeepercent).toBe(100);
+    });
+});
+
+describe('CLNRest on-chain fee rate', () => {
+    const sentBody = () => JSON.parse(fetchArgs()[3]);
+
+    beforeEach(() => {
+        mockFetch.mockResolvedValue(blobResponse(200, '{}'));
+    });
+
+    describe('satPerVbyteToPerkb', () => {
+        it('converts sat/vB to sat/kB', () => {
+            expect(satPerVbyteToPerkb('1')).toBe('1000perkb');
+            expect(satPerVbyteToPerkb(12)).toBe('12000perkb');
+            expect(satPerVbyteToPerkb('0.5')).toBe('500perkb');
+        });
+
+        it('avoids float error', () => {
+            // 2.01 * 1000 is 2009.9999999999998 in floating point
+            expect(satPerVbyteToPerkb('2.01')).toBe('2010perkb');
+            expect(satPerVbyteToPerkb(2.01)).toBe('2010perkb');
+            expect(satPerVbyteToPerkb('4.35')).toBe('4350perkb');
+        });
+
+        it('rounds to a whole sat/kB', () => {
+            expect(satPerVbyteToPerkb('1.0005')).toBe('1001perkb');
+            expect(satPerVbyteToPerkb('1.0004')).toBe('1000perkb');
+        });
+
+        it('keeps the old output for missing and empty rates', () => {
+            expect(satPerVbyteToPerkb('')).toBe('0perkb');
+            expect(satPerVbyteToPerkb(null)).toBe('0perkb');
+            expect(satPerVbyteToPerkb(undefined)).toBe('NaNperkb');
+        });
+    });
+
+    it('sends an integer feerate to withdraw', async () => {
+        await cln.sendCoins({
+            addr: 'bcrt1qdest',
+            amount: '5000',
+            sat_per_vbyte: '2.01'
+        } as any);
+
+        expect(fetchArgs()[1]).toBe(
+            'https://node.example.com:3010/v1/withdraw'
+        );
+        expect(sentBody()).toEqual({
+            destination: 'bcrt1qdest',
+            feerate: '2010perkb',
+            satoshi: '5000'
+        });
+    });
+
+    it('sends an integer feerate to withdraw with selected utxos', async () => {
+        await cln.sendCoins({
+            addr: 'bcrt1qdest',
+            amount: '5000',
+            sat_per_vbyte: '2.01',
+            utxos: ['abcd:0']
+        } as any);
+
+        expect(sentBody()).toEqual({
+            destination: 'bcrt1qdest',
+            feerate: '2010perkb',
+            satoshi: '5000',
+            utxos: ['abcd:0']
+        });
+    });
+
+    it('sends an integer feerate to fundchannel', async () => {
+        await cln.openChannelSync({
+            id: '02ab',
+            satoshis: '100000',
+            sat_per_vbyte: '1.0005',
+            privateChannel: false
+        } as any);
+
+        expect(fetchArgs()[1]).toBe(
+            'https://node.example.com:3010/v1/fundchannel'
+        );
+        expect(sentBody().feerate).toBe('1001perkb');
+    });
+
+    it('sends 0perkb to fundchannel without a rate, as before', async () => {
+        await cln.openChannelSync({
+            id: '02ab',
+            satoshis: '100000',
+            privateChannel: false
+        } as any);
+
+        expect(sentBody().feerate).toBe('0perkb');
     });
 });
 
