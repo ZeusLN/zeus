@@ -942,6 +942,7 @@ export default class CLNRest {
     supportsBumpFee = () => false;
     supportsOnchainSendFeeRate = () => true;
     supportsOnchainSendAutoFeeRate = () => false;
+    supportsOnchainSendSubSatFeeRate = () => false;
     supportsChannelOpenFeeRate = () => true;
     supportsChannelOpenMinConfs = () => true;
     supportsFlowLSP = () => false;

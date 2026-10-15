@@ -21,7 +21,7 @@ jest.mock('./LoadingIndicator', () => 'LoadingIndicator');
 jest.mock('../components/TextInput', () => 'TextInput');
 
 import * as React from 'react';
-import { act, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 import OnchainFeeInput from './OnchainFeeInput';
 import { feeStore, settingsStore } from '../stores/Stores';
@@ -148,4 +148,64 @@ describe('OnchainFeeInput fee fetching', () => {
 
         expect(mockedGetOnchainFeesviaMempool).not.toHaveBeenCalled();
     });
+});
+
+const textInput = () =>
+    screen.container.queryAll((n) => n.type === 'TextInput')[0];
+
+describe('OnchainFeeInput manual entry', () => {
+    beforeEach(() => {
+        mutableSettings.settings = {};
+    });
+
+    it.each([
+        ['', true],
+        ['0', true],
+        ['0.5', true],
+        ['1', false],
+        ['2000', false],
+        ['2001', true]
+    ])('flags %p as %p on a whole sat/vB backend', async (fee, error) => {
+        await renderInput({ fee });
+        expect(textInput().props.error).toBe(error);
+        expect(textInput().props.placeholder).toBe(
+            'components.OnchainFeeInput.placeholder'
+        );
+    });
+
+    it.each([
+        ['', false],
+        ['0', false],
+        ['0.05', true],
+        ['0.1', false],
+        ['0.5', false],
+        ['2001', true]
+    ])(
+        'flags %p as %p on a backend with auto and sub-sat rates',
+        async (fee, error) => {
+            await renderInput({ fee, autoFeeRate: true, subSatFeeRate: true });
+            expect(textInput().props.error).toBe(error);
+            expect(textInput().props.placeholder).toBe('general.automatic');
+        }
+    );
+
+    it('reports what the user types', async () => {
+        const { onChangeFee } = await renderInput({ fee: '' });
+        await fireEvent.changeText(textInput(), '0.5');
+        expect(onChangeFee).toHaveBeenCalledWith('0.5');
+    });
+});
+
+describe('OnchainFeeInput with mempool rates', () => {
+    it.each([true, false, undefined])(
+        'passes subSatFeeRate=%p on to EditFee',
+        async (subSatFeeRate) => {
+            await renderInput({ fee: '5', subSatFeeRate });
+            await fireEvent.press(screen.getByText('5'));
+            expect(navigation.navigate).toHaveBeenCalledWith('EditFee', {
+                fee: '5',
+                subSatFeeRate
+            });
+        }
+    );
 });

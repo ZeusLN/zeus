@@ -1,10 +1,14 @@
 import FeeUtils, {
     isPlausibleSatPerVbyte,
+    minSatPerVbyte,
     reverseClaimMinerFee,
+    sanitizeFeeRateInput,
     sanitizeRecommendedFees,
     satPerVbyteToSatPerKwu,
     MAX_REVERSE_CLAIM_FEE,
     MAX_SAT_PER_VBYTE,
+    MIN_SAT_PER_VBYTE,
+    MIN_SUB_SAT_PER_VBYTE,
     NO_FEE_RATE,
     REVERSE_CLAIM_MAX_VSIZE
 } from './FeeUtils';
@@ -322,6 +326,57 @@ describe('FeeUtils', () => {
 
         it('does not impose an upper bound on an explicit rate', () => {
             expect(satPerVbyteToSatPerKwu('5000')).toEqual(1250000);
+        });
+    });
+
+    describe('sub-sat fee rates', () => {
+        it('uses a 1 sat/vB floor unless the backend takes sub-sat rates', () => {
+            expect(minSatPerVbyte()).toEqual(MIN_SAT_PER_VBYTE);
+            expect(minSatPerVbyte(false)).toEqual(1);
+            expect(minSatPerVbyte(true)).toEqual(MIN_SUB_SAT_PER_VBYTE);
+            expect(minSatPerVbyte(true)).toEqual(0.1);
+        });
+
+        it('checks plausibility against the given floor', () => {
+            expect(isPlausibleSatPerVbyte('0.5')).toBe(false);
+            expect(isPlausibleSatPerVbyte('0.5', 0.1)).toBe(true);
+            expect(isPlausibleSatPerVbyte('0.1', 0.1)).toBe(true);
+            expect(isPlausibleSatPerVbyte('0.05', 0.1)).toBe(false);
+            expect(isPlausibleSatPerVbyte(MAX_SAT_PER_VBYTE + 1, 0.1)).toBe(
+                false
+            );
+        });
+    });
+
+    describe('sanitizeFeeRateInput', () => {
+        it('keeps digits only for whole sat/vB backends', () => {
+            expect(sanitizeFeeRateInput('12')).toEqual('12');
+            expect(sanitizeFeeRateInput('007')).toEqual('7');
+            expect(sanitizeFeeRateInput('0')).toEqual('');
+            expect(sanitizeFeeRateInput('1.5')).toEqual('15');
+            expect(sanitizeFeeRateInput('abc')).toEqual('');
+        });
+
+        it('keeps one decimal point for sub-sat backends', () => {
+            expect(sanitizeFeeRateInput('0.5', true)).toEqual('0.5');
+            expect(sanitizeFeeRateInput('12.25', true)).toEqual('12.25');
+            expect(sanitizeFeeRateInput('1.2.3', true)).toEqual('1.23');
+        });
+
+        it('reads a comma as the decimal point', () => {
+            expect(sanitizeFeeRateInput('0,5', true)).toEqual('0.5');
+        });
+
+        it('adds a leading zero and drops extra ones', () => {
+            expect(sanitizeFeeRateInput('.5', true)).toEqual('0.5');
+            expect(sanitizeFeeRateInput('00.25', true)).toEqual('0.25');
+            expect(sanitizeFeeRateInput('007', true)).toEqual('7');
+        });
+
+        it('keeps a trailing point while the user is typing', () => {
+            expect(sanitizeFeeRateInput('5.', true)).toEqual('5.');
+            expect(sanitizeFeeRateInput('0', true)).toEqual('0');
+            expect(sanitizeFeeRateInput('', true)).toEqual('');
         });
     });
 });

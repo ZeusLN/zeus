@@ -9,7 +9,7 @@ import { feeStore, settingsStore } from '../stores/Stores';
 
 import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
-import { isPlausibleSatPerVbyte } from '../utils/FeeUtils';
+import { isPlausibleSatPerVbyte, minSatPerVbyte } from '../utils/FeeUtils';
 
 interface OnchainFeeInputProps {
     navigation: NativeStackNavigationProp<any, any>;
@@ -20,10 +20,19 @@ interface OnchainFeeInputProps {
     // the backend picks its own fee rate when none is set, so an empty
     // field is valid
     autoFeeRate?: boolean;
+    // the backend takes rates below 1 sat/vB
+    subSatFeeRate?: boolean;
 }
 
 export default function OnchainFeeInput(props: OnchainFeeInputProps) {
-    const { fee, onChangeFee, onNavigateAway, navigation, autoFeeRate } = props;
+    const {
+        fee,
+        onChangeFee,
+        onNavigateAway,
+        navigation,
+        autoFeeRate,
+        subSatFeeRate
+    } = props;
     const { settings } = settingsStore;
     const enableMempoolRates = settings?.privacy?.enableMempoolRates;
     const preferredMempoolRate =
@@ -102,7 +111,8 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
                     onPress={() => {
                         if (onNavigateAway) onNavigateAway();
                         navigation.navigate('EditFee', {
-                            fee: newFee
+                            fee: newFee,
+                            subSatFeeRate
                         });
                     }}
                 >
@@ -152,7 +162,12 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
                         onChangeFee(text);
                     }}
                     error={
-                        newFee ? !isPlausibleSatPerVbyte(newFee) : !autoFeeRate
+                        !newFee || newFee === '0'
+                            ? !autoFeeRate
+                            : !isPlausibleSatPerVbyte(
+                                  newFee,
+                                  minSatPerVbyte(subSatFeeRate)
+                              )
                     }
                 />
             )}

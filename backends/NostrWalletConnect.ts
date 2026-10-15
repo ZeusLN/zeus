@@ -261,6 +261,7 @@ export default class NostrWalletConnect {
     supportsBumpFee = () => false;
     supportsOnchainSendFeeRate = () => false;
     supportsOnchainSendAutoFeeRate = () => false;
+    supportsOnchainSendSubSatFeeRate = () => false;
     supportsChannelOpenFeeRate = () => false;
     supportsChannelOpenMinConfs = () => false;
     supportsFlowLSP = () => false;
