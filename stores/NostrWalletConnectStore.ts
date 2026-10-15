@@ -2528,10 +2528,12 @@ export default class NostrWalletConnectStore {
         const invoiceInfo = await BackendUtils.decodePaymentRequest([
             request.invoice
         ]);
-        const amountSats = await NostrConnectUtils.getPayInvoiceAmountSats({
-            paymentRequest: request.invoice,
-            lightningDecodedPayReq: invoiceInfo
-        });
+        const { amountSats, fromRequest: zeroAmountInvoice } =
+            await NostrConnectUtils.resolvePayInvoiceAmount({
+                paymentRequest: request.invoice,
+                lightningDecodedPayReq: invoiceInfo,
+                requestedAmountMsat: request.amount
+            });
 
         if (invoiceInfo.expiry && invoiceInfo.timestamp) {
             const expiryTime =
@@ -2575,6 +2577,15 @@ export default class NostrWalletConnectStore {
             };
         }
 
+        if (amountSats <= 0) {
+            return NostrConnectUtils.createNip47Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.invalidAmount'
+                ),
+                Nip47ErrorCode.INVALID_INVOICE
+            );
+        }
+
         const budgetCheck = this.validateBudgetBeforePayment(
             connection,
             amountSats,
@@ -2604,6 +2615,8 @@ export default class NostrWalletConnectStore {
         this.transactionsStore.reset();
         this.transactionsStore.sendPayment({
             payment_request: request.invoice,
+            // nodes reject an amount for an invoice that already has one
+            amount: zeroAmountInvoice ? amountSats.toString() : undefined,
             fee_limit_sat: PAYMENT_FEE_LIMIT_SATS.toString(),
             timeout_seconds: PAYMENT_TIMEOUT_SECONDS.toString(),
             // service-initiated: don't set or clear the user-facing
