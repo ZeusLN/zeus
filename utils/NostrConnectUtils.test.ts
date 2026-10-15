@@ -1411,6 +1411,34 @@ describe('NostrConnectUtils pay_invoice amount resolution', () => {
         ).resolves.toEqual({ amountSats: 1, zeroAmountInvoice: false });
     });
 
+    it.each([
+        ['CLN amount_msat number', { amount_msat: 500 }],
+        ['CLN amount_msat string', { amount_msat: '500msat' }]
+    ])('counts a sub-sat invoice with the %s shape', async (_n, decoded) => {
+        await expect(
+            NostrConnectUtils.resolvePayInvoiceAmount({
+                paymentRequest,
+                lightningDecodedPayReq: decoded,
+                requestedAmountMsat: 7_000_000
+            })
+        ).resolves.toEqual({ amountSats: 1, zeroAmountInvoice: false });
+    });
+
+    it('counts a sub-sat amount found only in the BOLT11 tags', async () => {
+        (NostrConnectUtils.decodeInvoiceTags as jest.Mock).mockResolvedValue({
+            paymentRequest,
+            amount: 0,
+            amountMsat: 500
+        });
+        await expect(
+            NostrConnectUtils.resolvePayInvoiceAmount({
+                paymentRequest,
+                lightningDecodedPayReq: {},
+                requestedAmountMsat: 7_000_000
+            })
+        ).resolves.toEqual({ amountSats: 1, zeroAmountInvoice: false });
+    });
+
     it('ignores the requested amount when the invoice has one', async () => {
         await expect(
             NostrConnectUtils.getPayInvoiceAmountSats({

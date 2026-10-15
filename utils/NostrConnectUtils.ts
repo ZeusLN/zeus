@@ -628,6 +628,7 @@ export default class NostrConnectUtils {
         descriptionHash: string;
         description: string;
         amount: number;
+        amountMsat?: number;
         expiryTime: number;
         createdAt: number;
         isExpired: boolean;
@@ -660,6 +661,7 @@ export default class NostrConnectUtils {
                 decoded.satoshis ||
                 millisatsToSats(Number(decoded?.millisatoshis)) ||
                 0,
+            amountMsat: Number(decoded?.millisatoshis) || 0,
             expiryTime: expireTime,
             createdAt,
             isExpired,
@@ -1762,11 +1764,14 @@ export default class NostrConnectUtils {
             }
         }
         // a sub-sat amount is still an amount: never report it as none
+        // num_msat: LND, millisatoshis: bolt11 decode, amount_msat: CLN
+        // (a number, or "500msat" on older versions)
         for (const msats of [
             decodedPayReq.num_msat,
-            decodedPayReq.millisatoshis
+            decodedPayReq.millisatoshis,
+            decodedPayReq.amount_msat
         ]) {
-            const ms = Number(msats) || 0;
+            const ms = Number(String(msats ?? '').replace(/msat$/, '')) || 0;
             if (ms > 0) {
                 return Math.max(1, millisatsToSats(ms));
             }
@@ -1842,17 +1847,20 @@ export default class NostrConnectUtils {
             if (fromLightning > 0) {
                 return { amountSats: fromLightning, zeroAmountInvoice: false };
             }
-            const { amount } = await NostrConnectUtils.decodeInvoiceTags(
-                paymentRequest
-            );
-            if (amount > 0) {
+            const { amount, amountMsat } =
+                await NostrConnectUtils.decodeInvoiceTags(paymentRequest);
+            if (amount > 0 || (amountMsat ?? 0) > 0) {
                 if (__DEV__) {
                     console.log(
-                        'NWC: Lightning decode had no amount; using BOLT11 tags:',
-                        amount
+                        'NWC: Lightning decode had no amount; using BOLT11 tags (msat):',
+                        amountMsat ?? amount * 1000
                     );
                 }
-                return { amountSats: amount, zeroAmountInvoice: false };
+                // a sub-sat amount is still an amount
+                return {
+                    amountSats: Math.max(1, amount),
+                    zeroAmountInvoice: false
+                };
             }
             return {
                 amountSats:
