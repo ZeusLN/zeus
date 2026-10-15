@@ -874,22 +874,22 @@ export default class SwapStore {
         // short of the floor for it, the user has to confirm the amount
         // before the preimage is revealed.
         //
-        // A swap created here before onchainAmount was checked at creation
-        // (v13.2.2) stores the host's figure unchecked, so it can't be the
-        // floor either. Its invoice is what this wallet pays, so it sets
-        // the floor the same way a rescued swap's payment does.
+        // A swap created here before the creation check marked it (v13.2.2,
+        // which never checked onchainAmount, and v13.2.3) can't trust its
+        // stored figure as a low floor. A lockup below it still fails, as
+        // the host's own figure, and its invoice, which is what this wallet
+        // pays, adds the same floor a rescued swap's payment does.
         const amountUnchecked = !swap.imported && !swap.onchainAmountVerified;
-        let minAmount: number | undefined = amountUnchecked
-            ? undefined
-            : swap.onchainAmount ?? undefined;
+        let minAmount: number | undefined = swap.onchainAmount ?? undefined;
         let paidAmount: number | undefined;
         let needsConfirmation = false;
-        if (minAmount == null) {
-            const invoiceAmount = amountUnchecked
-                ? invoiceAmountSats(swap.invoice)
-                : undefined;
+        if (minAmount == null || amountUnchecked) {
+            const invoiceAmount =
+                confirmedLockupAmount == null && amountUnchecked
+                    ? invoiceAmountSats(swap.invoice)
+                    : undefined;
             if (confirmedLockupAmount != null) {
-                minAmount = confirmedLockupAmount;
+                minAmount = Math.max(minAmount ?? 0, confirmedLockupAmount);
             } else if (invoiceAmount) {
                 paidAmount = invoiceAmount;
             } else {

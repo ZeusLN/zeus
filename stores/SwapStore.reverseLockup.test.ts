@@ -617,14 +617,17 @@ describe('SwapStore.verifyReverseLockup', () => {
         // 90% of a 100000-sat payment
         const FLOOR = 90000;
 
-        const rescuedSwap = () =>
+        const rescuedSwap = (overrides: any = {}) =>
             storedSwap({
+                imported: true,
+                onchainAmountVerified: undefined,
                 swapTree: undefined,
                 refundPublicKey: undefined,
                 timeoutBlockHeight: undefined,
                 onchainAmount: undefined,
                 tree: VALID.swapTree,
-                serverPublicKey: VALID.refundPublicKey
+                serverPublicKey: VALID.refundPublicKey,
+                ...overrides
             });
 
         const lockedUp = (value: number) =>
@@ -785,6 +788,19 @@ describe('SwapStore.verifyReverseLockup', () => {
             });
         });
 
+        it('ignores an invoice a rescued record carries from the host', async () => {
+            // the v13.2.2 rescue copied every host field, the invoice too
+            const decode = jest.spyOn(Bolt11Utils, 'decode');
+            paid();
+            lockedUp(1000);
+            await expect(
+                verify(rescuedSwap({ invoice: 'lnbc-from-host' }))
+            ).resolves.toEqual(shortOf(100000, 1000));
+            expect(decode).not.toHaveBeenCalled();
+            expect(getPayments).toHaveBeenCalled();
+            decode.mockRestore();
+        });
+
         it('does not look up payments for a swap with an on-chain amount', async () => {
             esplora(200);
             await expect(verify()).resolves.toEqual({ status: 'ok' });
@@ -841,6 +857,27 @@ describe('SwapStore.verifyReverseLockup', () => {
             await expect(verify(legacySwap())).resolves.toEqual({
                 status: 'ok'
             });
+            expect(getPayments).not.toHaveBeenCalled();
+        });
+
+        it('still refuses a lockup below the stored amount', async () => {
+            // above 90% of the invoice, but short of what the host promised
+            lockedUp(95000);
+            await expect(
+                verify(legacySwap({ onchainAmount: ONCHAIN_AMOUNT }))
+            ).resolves.toEqual({ status: 'invalid', reason: 'underfunded' });
+        });
+
+        it('claims once the user confirms the amount, without reading the invoice', async () => {
+            lockedUp(1000);
+            await expect(
+                newStore().verifyReverseLockup(
+                    legacySwap(),
+                    LOCKUP_TX.toHex(),
+                    { confirmedLockupAmount: 1000 }
+                )
+            ).resolves.toEqual({ status: 'ok' });
+            expect(decode).not.toHaveBeenCalled();
             expect(getPayments).not.toHaveBeenCalled();
         });
 
