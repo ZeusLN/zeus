@@ -249,6 +249,27 @@ describe('LnurlPayUtils', () => {
             expect(isLnurlCallbackAllowed(cb).ok).toBe(false);
         });
 
+        // IDNA deletes these code points from a host, and NFKC leaves them
+        // in place, so they have to be stripped separately
+        it.each([
+            'https://12\u00AD7.0.0.1/x',
+            'https://127\u200B.0.0.1/x',
+            'https://127.0.\u20600.1/x',
+            'https://\uFEFF127.0.0.1/x',
+            'https://127.0.0.1\uFE0F/x',
+            'https://12\u034F7.0.0.1/x',
+            'https://12\u180B7.0.0.1/x',
+            'https://12\u31647.0.0.1/x',
+            'https://12\u{E0100}7.0.0.1/x',
+            'https://12\u18067.0.0.1/x',
+            'https://12\u200C7.0.0.1/x',
+            'https://12\u200D7.0.0.1/x',
+            'https://loc\u00ADalhost/x',
+            'https://169.254.\u200B169.254/latest'
+        ])('rejects %j, which IDNA maps to a private host', (cb: string) => {
+            expect(isLnurlCallbackAllowed(cb).ok).toBe(false);
+        });
+
         it('still allows a non-ASCII public domain', () => {
             expect(isLnurlCallbackAllowed('https://bücher.example/cb').ok).toBe(
                 true
@@ -461,8 +482,10 @@ describe('isLnurlEndpointAllowed', () => {
         'https://192.168.0.1/lnurl',
         'https://169.254.169.254/latest',
         'http://cleartext.example/lnurl',
-        'https://１２７.０.０.１/lnurl'
-    ])('refuses a bech32 endpoint pointing at %s', (target) => {
+        'https://１２７.０.０.１/lnurl',
+        'https://12\u00AD7.0.0.1/lnurl',
+        'https://loc\u200Balhost/lnurl'
+    ])('refuses a bech32 endpoint pointing at %j', (target) => {
         expect(isLnurlEndpointAllowed(asLnurl(target)).ok).toBe(false);
     });
 
@@ -493,8 +516,9 @@ describe('isLightningAddressEndpointAllowed', () => {
         'https://192.168.1.1/.well-known/lnurlp/user',
         'https://127.0.0.1/.well-known/lnurlp/user',
         'https://169.254.169.254/.well-known/lnurlp/user',
-        'https://[192.168.1.1]/.well-known/lnurlp/user'
-    ])('refuses %s', (target) => {
+        'https://[192.168.1.1]/.well-known/lnurlp/user',
+        'https://192.168\uFEFF.1.1/.well-known/lnurlp/user'
+    ])('refuses %j', (target) => {
         expect(isLightningAddressEndpointAllowed(target).ok).toBe(false);
     });
 });
