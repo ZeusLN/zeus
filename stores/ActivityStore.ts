@@ -317,7 +317,7 @@ export default class ActivityStore {
             BackendUtils.supportsCashuWallet() &&
             this.settingsStore.settings?.ecash?.enableCashu
         ) {
-            // CDK transaction history (completed)
+            // CDK transaction history (completed, pending and failed receives)
             additions = additions.concat(this.cashuStore.cdkInvoices);
             additions = additions.concat(this.cashuStore.payments || []);
 
