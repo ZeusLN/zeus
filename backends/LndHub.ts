@@ -96,9 +96,10 @@ export default class LndHub extends LND {
 
     // Scans the user's invoice list since LndHub has no per-invoice
     // endpoint returning amount details. rHash arrives in whatever format
-    // getFormattedRhash produced when the invoice was created
+    // getFormattedRhash produced when the invoice was created. A paid
+    // invoice is the signal, with no amount check, as in LND
     watchInvoicePaid = (
-        { rHash, value }: { rHash: string; value?: string | number },
+        { rHash }: { rHash: string },
         onPaid: (payload: {
             amountSat: number;
             tx?: string;
@@ -114,7 +115,6 @@ export default class LndHub extends LND {
                         if (
                             result.getFormattedRhash === rHash &&
                             result.ispaid &&
-                            Number(result.amt) >= Number(value ?? 0) &&
                             Number(result.amt) !== 0
                         ) {
                             clearInterval(interval);

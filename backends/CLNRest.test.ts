@@ -106,10 +106,10 @@ describe('CLNRest.watchInvoicePaid', () => {
         await Promise.resolve();
     };
 
-    it('fires when the paid sat amount covers the watched sat amount', async () => {
+    it('fires once the watched invoice is paid', async () => {
         lookupInvoice.mockResolvedValue(paid(7100));
         const onPaid = jest.fn();
-        cln.watchInvoicePaid({ rHash: 'abcd', value: '7100' }, onPaid);
+        cln.watchInvoicePaid({ rHash: 'abcd' }, onPaid);
 
         await tick();
 
@@ -118,7 +118,7 @@ describe('CLNRest.watchInvoicePaid', () => {
         expect(onPaid.mock.calls[0][0].amountSat).toBe(7100);
     });
 
-    it('fires for an amountless watch with no value', async () => {
+    it('fires for an amountless invoice paid any amount', async () => {
         lookupInvoice.mockResolvedValue(paid(500));
         const onPaid = jest.fn();
         cln.watchInvoicePaid({ rHash: 'abcd' }, onPaid);
@@ -128,12 +128,10 @@ describe('CLNRest.watchInvoicePaid', () => {
         expect(onPaid).toHaveBeenCalledTimes(1);
     });
 
-    it('does not fire while the invoice is unpaid or underpaid', async () => {
-        lookupInvoice
-            .mockResolvedValueOnce(unpaid())
-            .mockResolvedValueOnce(paid(7099));
+    it('does not fire while the invoice is unpaid', async () => {
+        lookupInvoice.mockResolvedValue(unpaid());
         const onPaid = jest.fn();
-        cln.watchInvoicePaid({ rHash: 'abcd', value: '7100' }, onPaid);
+        cln.watchInvoicePaid({ rHash: 'abcd' }, onPaid);
 
         await tick();
         await tick();
@@ -144,10 +142,7 @@ describe('CLNRest.watchInvoicePaid', () => {
 
     it('stops polling once unsubscribed', async () => {
         lookupInvoice.mockResolvedValue(unpaid());
-        const unsubscribe = cln.watchInvoicePaid(
-            { rHash: 'abcd', value: '7100' },
-            jest.fn()
-        );
+        const unsubscribe = cln.watchInvoicePaid({ rHash: 'abcd' }, jest.fn());
 
         await tick();
         unsubscribe();

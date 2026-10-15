@@ -142,10 +142,10 @@ describe('LND.watchInvoicePaid', () => {
         await Promise.resolve();
     };
 
-    it('fires when the paid sat amount covers the watched sat amount', async () => {
+    it('fires once the watched invoice is settled', async () => {
         lookupInvoice.mockResolvedValue(settled(7100));
         const onPaid = jest.fn();
-        lnd.watchInvoicePaid({ rHash: 'AQID', value: '7100' }, onPaid);
+        lnd.watchInvoicePaid({ rHash: 'AQID' }, onPaid);
 
         await tick();
 
@@ -157,23 +157,25 @@ describe('LND.watchInvoicePaid', () => {
         });
     });
 
-    it('fires for an amountless watch (empty or missing value)', async () => {
-        lookupInvoice.mockResolvedValue(settled(500));
-        const onEmpty = jest.fn();
-        const onMissing = jest.fn();
-        lnd.watchInvoicePaid({ rHash: 'AQID', value: '' }, onEmpty);
-        lnd.watchInvoicePaid({ rHash: 'AQID' }, onMissing);
+    it('fires when the node invoice is for less than the Receive amount', async () => {
+        // with the Flow LSP, a 1,000 sat Receive creates a node invoice
+        // for 1,000 minus the LSP fee
+        lookupInvoice.mockResolvedValue(settled(900));
+        const onPaid = jest.fn();
+        lnd.watchInvoicePaid({ rHash: 'AQID' }, onPaid);
 
         await tick();
 
-        expect(onEmpty).toHaveBeenCalledTimes(1);
-        expect(onMissing).toHaveBeenCalledTimes(1);
+        expect(onPaid).toHaveBeenCalledWith({
+            amountSat: 900,
+            tx: 'lnbc1test'
+        });
     });
 
     it('does not fire while the invoice is unpaid', async () => {
         lookupInvoice.mockResolvedValue(open());
         const onPaid = jest.fn();
-        lnd.watchInvoicePaid({ rHash: 'AQID', value: '7100' }, onPaid);
+        lnd.watchInvoicePaid({ rHash: 'AQID' }, onPaid);
 
         await tick();
         await tick();
@@ -182,20 +184,10 @@ describe('LND.watchInvoicePaid', () => {
         expect(onPaid).not.toHaveBeenCalled();
     });
 
-    it('does not fire when less than the watched amount was paid', async () => {
-        lookupInvoice.mockResolvedValue(settled(7099));
+    it('does not fire for a settled invoice with nothing paid', async () => {
+        lookupInvoice.mockResolvedValue(settled(0));
         const onPaid = jest.fn();
-        lnd.watchInvoicePaid({ rHash: 'AQID', value: '7100' }, onPaid);
-
-        await tick();
-
-        expect(onPaid).not.toHaveBeenCalled();
-    });
-
-    it('does not treat a NaN value as amountless', async () => {
-        lookupInvoice.mockResolvedValue(settled(500));
-        const onPaid = jest.fn();
-        lnd.watchInvoicePaid({ rHash: 'AQID', value: NaN }, onPaid);
+        lnd.watchInvoicePaid({ rHash: 'AQID' }, onPaid);
 
         await tick();
 
@@ -204,10 +196,7 @@ describe('LND.watchInvoicePaid', () => {
 
     it('stops polling once unsubscribed', async () => {
         lookupInvoice.mockResolvedValue(open());
-        const unsubscribe = lnd.watchInvoicePaid(
-            { rHash: 'AQID', value: '7100' },
-            jest.fn()
-        );
+        const unsubscribe = lnd.watchInvoicePaid({ rHash: 'AQID' }, jest.fn());
 
         await tick();
         unsubscribe();
@@ -220,7 +209,7 @@ describe('LND.watchInvoicePaid', () => {
     it('stops polling after firing', async () => {
         lookupInvoice.mockResolvedValue(settled(7100));
         const onPaid = jest.fn();
-        lnd.watchInvoicePaid({ rHash: 'AQID', value: '7100' }, onPaid);
+        lnd.watchInvoicePaid({ rHash: 'AQID' }, onPaid);
 
         await tick();
         await tick();
@@ -258,7 +247,7 @@ describe('LND.watchOnchainReceived', () => {
         lnd.watchOnchainReceived(
             {
                 address: 'bc1qwatched',
-                value: '7100',
+                expectedAmountSat: '7100',
                 numConfPreference: 0
             },
             onReceived
@@ -272,7 +261,7 @@ describe('LND.watchOnchainReceived', () => {
         });
     });
 
-    it('fires for an amountless watch with no value', async () => {
+    it('fires for an amountless watch with no expected amount', async () => {
         const lnd = new LND();
         jest.spyOn(lnd, 'getTransactions').mockResolvedValue(tx('500'));
         const onReceived = jest.fn();
@@ -293,7 +282,7 @@ describe('LND.watchOnchainReceived', () => {
         lnd.watchOnchainReceived(
             {
                 address: 'bc1qwatched',
-                value: '7100',
+                expectedAmountSat: '7100',
                 numConfPreference: 0
             },
             onReceived
@@ -304,12 +293,16 @@ describe('LND.watchOnchainReceived', () => {
         expect(onReceived).not.toHaveBeenCalled();
     });
 
-    it('does not treat a NaN value as amountless', async () => {
+    it('does not treat a NaN expected amount as amountless', async () => {
         const lnd = new LND();
         jest.spyOn(lnd, 'getTransactions').mockResolvedValue(tx('500'));
         const onReceived = jest.fn();
         lnd.watchOnchainReceived(
-            { address: 'bc1qwatched', value: NaN, numConfPreference: 0 },
+            {
+                address: 'bc1qwatched',
+                expectedAmountSat: NaN,
+                numConfPreference: 0
+            },
             onReceived
         );
 

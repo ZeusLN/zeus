@@ -759,9 +759,12 @@ export default class LND {
     // Poll lookupInvoice for the watched payment hash instead of scanning
     // the invoice list, which can push the watched invoice out of the
     // window on busy nodes. rHash arrives base64url encoded from the
-    // Receive view; the REST lookup endpoint expects hex
+    // Receive view; the REST lookup endpoint expects hex. A settled
+    // invoice is the signal, with no amount check: LND does not settle a
+    // fixed-amount invoice for less, and with the Flow LSP the node invoice
+    // is for the Receive amount minus the LSP fee
     watchInvoicePaid = (
-        { rHash, value }: { rHash: string; value?: string | number },
+        { rHash }: { rHash: string },
         onPaid: (payload: {
             amountSat: number;
             tx?: string;
@@ -775,11 +778,7 @@ export default class LND {
                 .then((result: any) => {
                     const invoice = new Invoice(result);
                     const amountPaid = invoice.getAmount;
-                    if (
-                        invoice.isPaid &&
-                        Number(amountPaid) >= Number(value ?? 0) &&
-                        Number(amountPaid) !== 0
-                    ) {
+                    if (invoice.isPaid && Number(amountPaid) !== 0) {
                         clearInterval(interval);
                         onPaid({
                             amountSat: Number(amountPaid),
@@ -797,12 +796,12 @@ export default class LND {
     watchOnchainReceived = (
         {
             address,
-            value,
+            expectedAmountSat,
             numConfPreference,
             blockHeight
         }: {
             address: string;
-            value?: string | number;
+            expectedAmountSat?: string | number;
             numConfPreference: number;
             blockHeight?: number;
         },
@@ -827,7 +826,7 @@ export default class LND {
                                 const output = output_details[j];
                                 if (
                                     Number(output.amount) >=
-                                        Number(value ?? 0) &&
+                                        Number(expectedAmountSat ?? 0) &&
                                     output.address === address
                                 ) {
                                     clearInterval(interval);

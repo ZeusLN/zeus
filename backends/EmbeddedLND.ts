@@ -483,7 +483,7 @@ export default class EmbeddedLND extends LND {
 
     // rHash arrives hex encoded from the Receive view
     watchInvoicePaid = (
-        { rHash }: { rHash: string; value?: string | number },
+        { rHash }: { rHash: string },
         onPaid: (payload: {
             amountSat: number;
             tx?: string;
@@ -546,11 +546,11 @@ export default class EmbeddedLND extends LND {
     watchOnchainReceived = (
         {
             address,
-            value,
+            expectedAmountSat,
             numConfPreference
         }: {
             address: string;
-            value?: string | number;
+            expectedAmountSat?: string | number;
             numConfPreference: number;
             blockHeight?: number;
         },
@@ -581,7 +581,8 @@ export default class EmbeddedLND extends LND {
                     if (
                         transaction.dest_addresses.includes(address) &&
                         transaction.num_confirmations > numConfPreference &&
-                        Number(transaction.amount) >= Number(value ?? 0)
+                        Number(transaction.amount) >=
+                            Number(expectedAmountSat ?? 0)
                     ) {
                         listener.remove();
                         onReceived({

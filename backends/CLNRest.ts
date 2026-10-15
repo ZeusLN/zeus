@@ -297,9 +297,11 @@ export default class CLNRest {
     // Poll lookupInvoice for the watched payment hash instead of scanning
     // the invoice list: getInvoices includes unpaid invoices, so on busy
     // nodes the watched invoice can be pushed out of the window before
-    // it is paid. rHash arrives hex encoded from the Receive view
+    // it is paid. rHash arrives hex encoded from the Receive view. A paid
+    // invoice is the signal, with no amount check: CLN does not mark a
+    // fixed-amount invoice paid for less
     watchInvoicePaid = (
-        { rHash, value }: { rHash: string; value?: string | number },
+        { rHash }: { rHash: string },
         onPaid: (payload: {
             amountSat: number;
             tx?: string;
@@ -311,11 +313,7 @@ export default class CLNRest {
                 .then((result: any) => {
                     const invoice = new Invoice(result);
                     const amountPaid = invoice.getAmount;
-                    if (
-                        invoice.isPaid &&
-                        Number(amountPaid) >= Number(value ?? 0) &&
-                        Number(amountPaid) !== 0
-                    ) {
+                    if (invoice.isPaid && Number(amountPaid) !== 0) {
                         clearInterval(interval);
                         onPaid({
                             amountSat: Number(amountPaid),

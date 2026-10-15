@@ -94,34 +94,32 @@ const makeView = (state: { value: string; satAmount: string | number }) => {
 describe('Receive.subscribeInvoice', () => {
     beforeEach(() => jest.clearAllMocks());
 
-    it('watches for the sat amount, not the fiat display amount', () => {
-        // 10,000 KRW is roughly 7,100 sats: a paid 7,100 sat invoice must
+    it('watches on-chain for the sat amount, not the fiat display amount', () => {
+        // 10,000 KRW is roughly 7,100 sats: a 7,100 sat output must
         // satisfy the watcher
         const view = makeView({ value: '10000', satAmount: '7100' });
 
         view.subscribeInvoice('rhash', 'bc1qwatched');
 
-        expect(BackendUtils.watchInvoicePaid).toHaveBeenCalledWith(
-            { rHash: 'rhash', value: '7100' },
-            expect.any(Function)
-        );
         expect(BackendUtils.watchOnchainReceived).toHaveBeenCalledWith(
             expect.objectContaining({
                 address: 'bc1qwatched',
-                value: '7100',
+                expectedAmountSat: '7100',
                 blockHeight: 900000
             }),
             expect.any(Function)
         );
     });
 
-    it('watches for the sat amount when the display unit is BTC', () => {
+    it('watches the invoice by hash alone', () => {
+        // with the Flow LSP the node invoice is for the Receive amount
+        // minus the LSP fee, so no amount can be passed to compare against
         const view = makeView({ value: '0.00007100', satAmount: 7100 });
 
         view.subscribeInvoice('rhash');
 
         expect(BackendUtils.watchInvoicePaid).toHaveBeenCalledWith(
-            { rHash: 'rhash', value: 7100 },
+            { rHash: 'rhash' },
             expect.any(Function)
         );
         expect(BackendUtils.watchOnchainReceived).not.toHaveBeenCalled();
