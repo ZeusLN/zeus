@@ -270,6 +270,7 @@ export default class LndHub extends LND {
     supportsOnchainSendMax = () => false;
     supportsOnchainBatching = () => false;
     supportsChannelBatching = () => false;
+    supportsChannelFundMax = () => false;
     supportsLSPScustomMessage = () => false;
     supportsLSPS1rest = () => false;
     supportsBolt11BlindedRoutes = () => false;
@@ -283,6 +284,7 @@ export default class LndHub extends LND {
     supportInboundFees = () => false;
     supportsDevTools = () => true;
     supportsCashuWallet = () => false;
+    supportsAddressMessageSigning = () => false;
     supportsSettingInvoiceExpiration = () => false;
     supportsNostrWalletConnectService = () => true;
 }

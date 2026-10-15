@@ -140,7 +140,7 @@ grep -rn "supportsMyFeature" views/ components/ stores/
 
 Build the 7-row table for the method: for each of `lnd`, `embedded-lnd`, `ldk-node`, `lightning-node-connect`, `cln-rest`, `lndhub`, `nostr-wallet-connect`, label the method **implemented** (own definition), **deliberately absent** (explicit `=> false` override or no definition on a standalone class, with a gate protecting every call site), or **inherited-leak** (subclass of LND with no override where LND's behavior is wrong for it). Then prove every view call site is unreachable when the capability is false.
 
-**Worked example — the LndHub `supportsChannelFundMax` inherited-leak (present on master today).** Grep output: explicit `=> true` in `LND.ts`, `EmbeddedLND.ts`, `CLNRest.ts`, `LightningNodeConnect.ts`, `LdkNode.ts`; explicit `=> false` in `NostrWalletConnect.ts`; **no override in `LndHub.ts`** → LndHub inherits `true` from LND even though a custodial LNDHub account cannot fund channels at all. The only view call site is `views/OpenChannel.tsx`, and the leak is currently *latent* because LndHub sets `supportsChannelManagement = () => false`, which gates every route into that screen — but the flag itself is wrong, and any new call site trusting `supportsChannelFundMax()` alone would misbehave on LndHub. Classify, then either fix the override or record the masking gate. (Cross-backend crash history and the full capability matrix: zeus-backends-and-capabilities.)
+**Worked example: the LndHub `supportsChannelFundMax` inherited-leak (fixed in #4924).** Grep output before the fix: explicit `=> true` in `LND.ts`, `EmbeddedLND.ts`, `CLNRest.ts`, `LightningNodeConnect.ts`, `LdkNode.ts`; explicit `=> false` in `NostrWalletConnect.ts`; **no override in `LndHub.ts`** → LndHub inherited `true` from LND even though a custodial LNDHub account cannot fund channels at all. The only view call site is `views/OpenChannel.tsx`. A scanned node URI reached that screen without a `supportsChannelManagement` check until #5000 gated the route; after that the leak was *latent*, but the flag was still wrong, and any new call site trusting `supportsChannelFundMax()` alone would have misbehaved on LndHub. `supportsAddressMessageSigning` had the same leak, masked by the `supportsMessageSigning` gate on the Tools menu entry. #4924 overrides both to `false`, and `backends/LndHub.test.ts` now fails when LND gains a flag LndHub does not list. Classify, then either fix the override or record the masking gate. (Cross-backend crash history and the full capability matrix: zeus-backends-and-capabilities.)
 
 Second pattern worth grepping for — **dead dispatch**: `payLightningInvoiceStreaming` is declared in `utils/BackendUtils.ts` but implemented by zero backends (`grep -rn "payLightningInvoiceStreaming" backends/` returns nothing), so it always returns `false`. A completeness audit of a new method should confirm you did not just add another one of these.
 
@@ -268,7 +268,7 @@ All facts verified **2026-07-06** against `master` @ `c5fd094fb` (v13.1.3-alpha)
 | Cited commits still exist / messages match | `git show -s --oneline d416052cd 0e2b89164 b54e8f138 8fc9698a0 c6323fff4 26d4215ea e8e5b8811 a7860aa96 7ed901a10 d8e648b58 3b4cdd0b5 d6af12ae4 f7b2c30a8` |
 | `call()` returns `false` for missing methods | `grep -n "return false" utils/BackendUtils.ts` |
 | Backend inheritance edges | `grep -n "extends" backends/*.ts` |
-| LndHub fund-max leak still present | `grep -n "supportsChannelFundMax" backends/*.ts` (fixed when LndHub.ts gains an override) |
+| LndHub flags cover every LND flag | `npx jest backends/LndHub.test.ts` (fails when LND gains a flag LndHub does not list) |
 | `payLightningInvoiceStreaming` still dead | `grep -rn "payLightningInvoiceStreaming" backends/` (empty = still dead) |
 | Fee rule boundary (5% / ≤1000 sats) | `grep -n "DEFAULT_ROUTING_FEE_PERCENT\|amount > 1000" utils/FeeUtils.ts` |
 | Settings blob keys | `grep -n "STORAGE_KEY\b\|LEGACY_STORAGE_KEY" stores/SettingsStore.ts` |
@@ -284,4 +284,4 @@ All facts verified **2026-07-06** against `master` @ `c5fd094fb` (v13.1.3-alpha)
 | BOLT11 spec vectors present | `grep -n "BOLT11_SPEC" utils/Bolt11Utils.test.ts` |
 | Regression-test rule in docs | `grep -n "would have caught the bug" CONTRIBUTING.md` |
 
-Labeled uncertainties: the LndHub `supportsChannelFundMax` leak is **latent** (masked by `supportsChannelManagement = false`) — reconfirm both flags before citing it; `versionCode 131` and the Docker digest change every release; execution of `build.sh` itself is verified by source read only.
+Labeled uncertainties: `versionCode 131` and the Docker digest change every release; execution of `build.sh` itself is verified by source read only.
