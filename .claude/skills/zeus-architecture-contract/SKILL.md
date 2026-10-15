@@ -224,12 +224,15 @@ EmbeddedLND's own subscription methods are commented out with
 calling the native `lndmobile` `channel.channelAcceptor()` API directly
 instead of going through BackendUtils.
 
-Same hazard, capability edition: `LndHub` overrides ~45 `supports*` flags
-(43 of them to `false`) but does NOT override `supportsChannelFundMax`, so it inherits `true`
-from `LND` (`supportsChannelFundMax = () => true`) — a custodial account
-"supporting" max-funding a channel it cannot open. This is the canonical
-example: when adding ANY method or `supports*` flag to `LND`, immediately ask
-"is this correct for EmbeddedLND and LndHub?" and override in both if not.
+Same hazard, capability edition: `LndHub` overrides ~55 `supports*` flags
+(most of them to `false`). Until #4924 it did not override
+`supportsChannelFundMax` or `supportsAddressMessageSigning`, so both inherited
+`true` from `LND`: a custodial account "supporting" max-funding a channel it
+cannot open. This is the canonical example: when adding ANY method or
+`supports*` flag to `LND`, immediately ask "is this correct for EmbeddedLND and
+LndHub?" and override in both if not. `backends/LndHub.test.ts` holds a golden
+value for every LndHub flag and fails when `LND` gains a flag the table does
+not list.
 
 What breaks if violated: silent wrong-network calls (embedded node issuing
 REST requests to a stale/absent host), or features rendered on backends that
@@ -304,7 +307,7 @@ campaigns). Cite them; don't silently "clean them up".
 | 2 | Stores are constructed once in stores/Stores.ts, deps declared above dependents; cyclic refs only used lazily | `undefined` singleton / require-cycle startup crash |
 | 3 | `BackendUtils.call()` returns `false` for missing methods — gate with `supports*()` before awaiting | `TypeError: .then is not a function`; silent no-ops on typos |
 | 4 | Feature availability gated ONLY by `supports*()`; `implementation` branching reserved for lifecycle/transport mechanics | Cross-backend crashes (historically the top source) |
-| 5 | Every method/flag added to `LND` must be audited for EmbeddedLND + LndHub overrides | Meaningless REST calls from embedded node; LndHub `supportsChannelFundMax` gap |
+| 5 | Every method/flag added to `LND` must be audited for EmbeddedLND + LndHub overrides | Meaningless REST calls from embedded node; LndHub `supportsChannelFundMax` gap (fixed in #4924) |
 | 6 | Back-navigation uses `popTo`, imperative nav uses NavigationService, types use `NativeStackNavigationProp` | Duplicate-screen stacks (PR #2192, `7abc7a971`) |
 | 7 | All persistence through `storage/index.ts` / `zeus-settings-v2`; storage changes are gated | Data loss; see zeus-storage-and-migrations + zeus-change-control |
 | 8 | New Architecture is ON — no legacy Animated/layout patterns | Fabric native crashes (`f08bfc7c5`, `2c55e4f89`) |
@@ -327,7 +330,7 @@ One-line re-verification commands (all read-only):
 | 7-way dispatch + default lnd | `grep -n -A20 'getClass = ' utils/BackendUtils.ts` |
 | `payLightningInvoiceStreaming` still dead | `grep -rn payLightningInvoiceStreaming --include='*.ts*' . \| grep -v node_modules \| grep -v zeus_modules` (only BackendUtils.ts hits ⇒ still dead) |
 | EmbeddedLND/LndHub still extend LND | `grep -n 'extends' backends/*.ts` |
-| LndHub `supportsChannelFundMax` gap | `grep -n supportsChannelFundMax backends/LndHub.ts backends/LND.ts` (no LndHub hit ⇒ gap persists) |
+| LndHub flags cover every LND flag | `npx jest backends/LndHub.test.ts` (the golden-table test fails when LND gains an unlisted flag) |
 | EmbeddedLND subscriptions still disabled | `grep -n -A3 'TODO rewrite subscription logic' backends/EmbeddedLND.ts` |
 | `fetchLock` / `connecting` guards | `grep -n 'fetchLock\|@observable public connecting' stores/SettingsStore.ts views/Wallet/Wallet.tsx` |
 | fetchData reset list | `sed -n '/if (connecting) {/,/CashuStore.reset/p' views/Wallet/Wallet.tsx \| head -25` |

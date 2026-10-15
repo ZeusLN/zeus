@@ -62,7 +62,7 @@ Before promotion, someone other than the author — a reviewer, or an AI model g
 
 | Attack axis | What to try | Real miss it targets |
 |---|---|---|
-| Other 6 backends | Does the fix assume methods/semantics only your backend has? Does a `supports*` flag gate it? Check inherited flags: LndHub extends LND and silently inherits `supportsChannelFundMax = true` with no override (verify: `grep supportsChannelFundMax backends/LndHub.ts` returns nothing) | Missing capability gates are historically the top cross-backend crash source |
+| Other 6 backends | Does the fix assume methods/semantics only your backend has? Does a `supports*` flag gate it? Check inherited flags: LndHub extends LND and silently inherits any flag it does not override (it inherited `supportsChannelFundMax = true` until #4924; `backends/LndHub.test.ts` now fails on an unlisted LND flag) | Missing capability gates are historically the top cross-backend crash source |
 | Both platforms | Run it on iOS AND Android hardware; Fabric rendering, keychain, and background behavior all differ | RN New-Arch fallout; iCloud is iOS-only |
 | Upgrade paths | Fresh install AND legacy→v2 migrated AND already-on-v2 upgraded user; both settings load paths | Invoice-expiry repair re-shipped (`e8e5b8811`; first pass `26d4215ea` covered only the legacy path); iCloud fix left stale synced copies for upgraders, needing a third migration (`46f2bac00`, 2026-01-14) |
 | Re-entrancy/lifecycle | Trigger the flow twice fast; background/foreground mid-flow; kill/restart | `fdad118ed` lifecycle refactor (2025-10-24) caused infinite loading, found only 3 weeks later (`93227029e`) |
@@ -209,7 +209,7 @@ Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha) by direct f
 | Two settings load paths (modern/legacy) | `grep -n 'modernSettings\|LEGACY_STORAGE_KEY' stores/SettingsStore.ts` |
 | Fenced LSPS7 UI | `grep -n -B3 'false && (' views/LSPS7/index.tsx` |
 | ZEUS-3514 / ZEUS-3642 fences | `grep -rn 'ZEUS-3514' views/Wallet/Wallet.tsx; grep -n 'ZEUS-3642' backends/LightningNodeConnect.ts` |
-| LndHub capability-inheritance gap | `grep -n 'supportsChannelFundMax' backends/*.ts` (no LndHub line) |
+| LndHub flags cover every LND flag | `npx jest backends/LndHub.test.ts` (fails when LND gains a flag LndHub does not list) |
 | SQLite/Bolt conservative default | `grep -n 'isSqlite' utils/WalletCreationUtils.ts` |
 | Same-day revert example | `git log --format='%h %ad %s' --date=short -1 285da755a; git log --format='%h %ad %s' --date=short -1 28bc50f5e` |
 | Lifecycle example hashes | `git show --no-patch --format='%h %ad %s' --date=short cc735f923 519dea9ad 88dd94abe f81439ee7 c89b75426 ef4a42112 3c6f4175e d475ef2b4 3e04e6bf2 26d4215ea e8e5b8811 7ed901a10 fdad118ed 93227029e 46f2bac00` |
