@@ -2,9 +2,9 @@ import FeeUtils, {
     hasUsableClaimFee,
     isPlausibleSatPerVbyte,
     sanitizeRecommendedFees,
-    sanitizeSatPerVbyte,
+    satPerVbyteToSatPerKwu,
     MAX_SAT_PER_VBYTE,
-    NO_SAT_PER_VBYTE
+    NO_FEE_RATE
 } from './FeeUtils';
 
 const satoshisPerBTC = 100_000_000;
@@ -234,39 +234,49 @@ describe('FeeUtils', () => {
         });
     });
 
-    describe('sanitizeSatPerVbyte', () => {
-        it('passes through a usable rate', () => {
-            expect(sanitizeSatPerVbyte('5')).toEqual(5);
-            expect(sanitizeSatPerVbyte(5)).toEqual(5);
-            expect(sanitizeSatPerVbyte('1')).toEqual(1);
+    describe('satPerVbyteToSatPerKwu', () => {
+        it('converts sat/vB to sat/kwu', () => {
+            expect(satPerVbyteToSatPerKwu('5')).toEqual(1250);
+            expect(satPerVbyteToSatPerKwu(5)).toEqual(1250);
+            expect(satPerVbyteToSatPerKwu('1')).toEqual(250);
+        });
+
+        it('keeps fractional rates below one sat/vB', () => {
+            expect(satPerVbyteToSatPerKwu('0.5')).toEqual(125);
+            expect(satPerVbyteToSatPerKwu('0.1')).toEqual(25);
+        });
+
+        it('keeps the fractional part of larger rates', () => {
+            expect(satPerVbyteToSatPerKwu('2.9')).toEqual(725);
+            expect(satPerVbyteToSatPerKwu(10.01)).toEqual(2503);
         });
 
         it('returns the sentinel when no rate is supplied', () => {
-            expect(sanitizeSatPerVbyte(undefined)).toEqual(NO_SAT_PER_VBYTE);
-            expect(sanitizeSatPerVbyte(null)).toEqual(NO_SAT_PER_VBYTE);
-            expect(sanitizeSatPerVbyte('')).toEqual(NO_SAT_PER_VBYTE);
+            expect(satPerVbyteToSatPerKwu(undefined)).toEqual(NO_FEE_RATE);
+            expect(satPerVbyteToSatPerKwu(null)).toEqual(NO_FEE_RATE);
+            expect(satPerVbyteToSatPerKwu('')).toEqual(NO_FEE_RATE);
         });
 
-        it('rejects rates below one sat/vB', () => {
-            expect(sanitizeSatPerVbyte(0)).toEqual(NO_SAT_PER_VBYTE);
-            expect(sanitizeSatPerVbyte('0')).toEqual(NO_SAT_PER_VBYTE);
-            expect(sanitizeSatPerVbyte(-1)).toEqual(NO_SAT_PER_VBYTE);
-            expect(sanitizeSatPerVbyte('0.5')).toEqual(NO_SAT_PER_VBYTE);
+        it('returns the sentinel for zero and negative rates', () => {
+            expect(satPerVbyteToSatPerKwu(0)).toEqual(NO_FEE_RATE);
+            expect(satPerVbyteToSatPerKwu('0')).toEqual(NO_FEE_RATE);
+            expect(satPerVbyteToSatPerKwu(-1)).toEqual(NO_FEE_RATE);
+        });
+
+        it('returns the sentinel for a rate that rounds to 0 sat/kwu', () => {
+            expect(satPerVbyteToSatPerKwu('0.001')).toEqual(NO_FEE_RATE);
+            expect(satPerVbyteToSatPerKwu('0.0019')).toEqual(NO_FEE_RATE);
+            expect(satPerVbyteToSatPerKwu('0.004')).toEqual(1);
         });
 
         it('rejects values that are not finite numbers', () => {
-            expect(sanitizeSatPerVbyte('abc')).toEqual(NO_SAT_PER_VBYTE);
-            expect(sanitizeSatPerVbyte(NaN)).toEqual(NO_SAT_PER_VBYTE);
-            expect(sanitizeSatPerVbyte(Infinity)).toEqual(NO_SAT_PER_VBYTE);
-        });
-
-        it('floors fractional rates to whole sat/vB', () => {
-            expect(sanitizeSatPerVbyte('2.9')).toEqual(2);
-            expect(sanitizeSatPerVbyte(10.01)).toEqual(10);
+            expect(satPerVbyteToSatPerKwu('abc')).toEqual(NO_FEE_RATE);
+            expect(satPerVbyteToSatPerKwu(NaN)).toEqual(NO_FEE_RATE);
+            expect(satPerVbyteToSatPerKwu(Infinity)).toEqual(NO_FEE_RATE);
         });
 
         it('does not impose an upper bound on an explicit rate', () => {
-            expect(sanitizeSatPerVbyte('5000')).toEqual(5000);
+            expect(satPerVbyteToSatPerKwu('5000')).toEqual(1250000);
         });
     });
 });

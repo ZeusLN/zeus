@@ -17,12 +17,15 @@ interface OnchainFeeInputProps {
     onChangeFee: (fee: string) => void;
     onFeeError?: (error: boolean) => void;
     onNavigateAway?: () => void;
+    // the backend picks its own fee rate when none is set, so an empty
+    // field is valid
+    autoFeeRate?: boolean;
 }
 
 const DEFAULT_FEE = '10';
 
 export default function OnchainFeeInput(props: OnchainFeeInputProps) {
-    const { fee, onChangeFee, onNavigateAway, navigation } = props;
+    const { fee, onChangeFee, onNavigateAway, navigation, autoFeeRate } = props;
     const { settings } = settingsStore;
     const enableMempoolRates = settings?.privacy?.enableMempoolRates;
     const preferredMempoolRate =
@@ -127,13 +130,19 @@ export default function OnchainFeeInput(props: OnchainFeeInputProps) {
             ) : (
                 <TextInput
                     keyboardType="numeric"
-                    placeholder={DEFAULT_FEE}
+                    placeholder={
+                        autoFeeRate
+                            ? localeString('general.automatic')
+                            : DEFAULT_FEE
+                    }
                     value={newFee}
                     onChangeText={(text: string) => {
                         setNewFee(text);
                         onChangeFee(text);
                     }}
-                    error={!newFee || !isPlausibleSatPerVbyte(newFee)}
+                    error={
+                        newFee ? !isPlausibleSatPerVbyte(newFee) : !autoFeeRate
+                    }
                 />
             )}
         </>

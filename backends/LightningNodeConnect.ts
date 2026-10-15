@@ -1160,6 +1160,7 @@ export default class LightningNodeConnect {
     supportsTaproot = () => this.supports('v0.15.0');
     supportsBumpFee = () => true;
     supportsOnchainSendFeeRate = () => true;
+    supportsOnchainSendAutoFeeRate = () => false;
     supportsChannelOpenFeeRate = () => true;
     supportsChannelOpenMinConfs = () => true;
     supportsFlowLSP = () => false;

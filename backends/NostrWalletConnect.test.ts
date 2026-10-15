@@ -618,6 +618,7 @@ describe('NostrWalletConnect capability flags', () => {
         supportsTaproot: false,
         supportsBumpFee: false,
         supportsOnchainSendFeeRate: false,
+        supportsOnchainSendAutoFeeRate: false,
         supportsChannelOpenFeeRate: false,
         supportsChannelOpenMinConfs: false,
         supportsFlowLSP: false,

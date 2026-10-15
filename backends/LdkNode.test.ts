@@ -420,6 +420,10 @@ describe('LdkNode on-chain fee rate', () => {
         expect(ldk.supportsOnchainSendFeeRate()).toBe(true);
     });
 
+    it('lets the node pick the fee rate when none is set', () => {
+        expect(ldk.supportsOnchainSendAutoFeeRate()).toBe(true);
+    });
+
     it('keeps the channel open fee rate hidden until channel opens apply it', () => {
         expect(ldk.supportsChannelOpenFeeRate()).toBe(false);
     });
@@ -431,9 +435,34 @@ describe('LdkNode on-chain fee rate', () => {
             sat_per_vbyte: '7'
         });
         expect(mockSendToOnchainAddress).toHaveBeenCalledWith(
-            expect.objectContaining({ satPerVbyte: 7 })
+            expect.objectContaining({ satPerKwu: 1750 })
         );
     });
+
+    it('keeps a fractional fee rate below one sat/vB', async () => {
+        await ldk.sendCoins({
+            addr: 'bcrt1q...',
+            amount: '1000',
+            sat_per_vbyte: '0.5'
+        });
+        expect(mockSendToOnchainAddress).toHaveBeenCalledWith(
+            expect.objectContaining({ satPerKwu: 125 })
+        );
+    });
+
+    it.each([undefined, '', '0'])(
+        'passes no fee rate when sat_per_vbyte is %p',
+        async (sat_per_vbyte) => {
+            await ldk.sendCoins({
+                addr: 'bcrt1q...',
+                amount: '1000',
+                sat_per_vbyte
+            });
+            expect(mockSendToOnchainAddress).toHaveBeenCalledWith(
+                expect.objectContaining({ satPerKwu: -1 })
+            );
+        }
+    );
 
     it('passes the user fee rate to sendAllToOnchainAddress', async () => {
         await ldk.sendCoins({
@@ -444,7 +473,7 @@ describe('LdkNode on-chain fee rate', () => {
         expect(mockSendAllToOnchainAddress).toHaveBeenCalledWith(
             'bcrt1q...',
             false,
-            3
+            750
         );
     });
 });

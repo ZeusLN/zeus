@@ -260,6 +260,7 @@ export default class LndHub extends LND {
     supportsTaproot = () => false;
     supportsBumpFee = () => false;
     supportsOnchainSendFeeRate = () => false;
+    supportsOnchainSendAutoFeeRate = () => false;
     supportsChannelOpenFeeRate = () => false;
     supportsChannelOpenMinConfs = () => false;
     supportsFlowLSP = () => false;

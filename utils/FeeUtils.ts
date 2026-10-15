@@ -116,30 +116,33 @@ export default feeUtils;
  * Sentinel meaning "no fee rate supplied - let the node pick its own".
  * Matches the -1 convention used for optional numerics in LdkNodeInjection.
  */
-export const NO_SAT_PER_VBYTE = -1;
+export const NO_FEE_RATE = -1;
+
+/** 1 sat/vB is 250 sat per 1000 weight units (4 WU per vB). */
+const SAT_PER_KWU_PER_SAT_PER_VBYTE = 250;
 
 /**
- * Normalizes a user-supplied on-chain fee rate (sat/vB) for the ldk-node
- * bridge.
+ * Converts a user-supplied on-chain fee rate (sat/vB) to the whole sat/kwu
+ * the ldk-node bridge takes.
  *
- * ldk-node builds its FeeRate with fromSatPerVbUnchecked, which performs no
- * validation, so a missing, zero, negative, fractional-to-zero, or NaN rate
- * must never reach it. Any of those yield NO_SAT_PER_VBYTE so the node falls
- * back to its own fee estimation instead of building a transaction around a
- * nonsense rate.
+ * ldk-node only accepts whole units. Passing sat/kwu keeps fractional sat/vB
+ * rates (0.1 sat/vB is 25 sat/kwu) that a whole sat/vB would drop. A missing,
+ * zero, negative, or NaN rate, or one that rounds to 0 sat/kwu, yields
+ * NO_FEE_RATE so the node falls back to its own fee estimation.
  *
  * Note this deliberately does NOT impose an upper bound: silently lowering a
  * rate the user explicitly typed would misreport what was broadcast. Bounding
  * absurd fee rates is a separate concern that needs its own confirmation UX.
  *
  * @param satPerVbyte - Fee rate as collected by the UI
- * @returns A whole sat/vB rate, or NO_SAT_PER_VBYTE if none applies
+ * @returns The rate in whole sat/kwu, or NO_FEE_RATE if none applies
  */
-export function sanitizeSatPerVbyte(
+export function satPerVbyteToSatPerKwu(
     satPerVbyte?: string | number | null
 ): number {
-    if (satPerVbyte == null || satPerVbyte === '') return NO_SAT_PER_VBYTE;
-    const rate = Math.floor(Number(satPerVbyte));
-    if (!Number.isFinite(rate) || rate < 1) return NO_SAT_PER_VBYTE;
-    return rate;
+    if (satPerVbyte == null || satPerVbyte === '') return NO_FEE_RATE;
+    const rate = Number(satPerVbyte);
+    if (!Number.isFinite(rate)) return NO_FEE_RATE;
+    const satPerKwu = Math.round(rate * SAT_PER_KWU_PER_SAT_PER_VBYTE);
+    return satPerKwu >= 1 ? satPerKwu : NO_FEE_RATE;
 }

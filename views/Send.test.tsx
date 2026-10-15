@@ -17,7 +17,8 @@ jest.mock('../utils/handleAnything', () => ({
 jest.mock('../utils/BackendUtils', () => ({
     supportsOnchainSends: () => true,
     supportsOnchainSendMax: () => true,
-    supportsOnchainSendFeeRate: () => false,
+    supportsOnchainSendFeeRate: jest.fn(() => false),
+    supportsOnchainSendAutoFeeRate: jest.fn(() => false),
     supportsOnchainBatching: () => false,
     supportsCoinControl: () => false,
     supportsKeysend: () => false,
@@ -200,6 +201,53 @@ describe('Send send max toggle', () => {
                 fundMax: false
             })
         );
+    });
+});
+
+describe('Send on-chain fee rate', () => {
+    const supportsOnchainSendFeeRate =
+        BackendUtils.supportsOnchainSendFeeRate as jest.Mock;
+    const supportsOnchainSendAutoFeeRate =
+        BackendUtils.supportsOnchainSendAutoFeeRate as jest.Mock;
+
+    const makeFeeView = (fee: string) => {
+        const view = makeView();
+        amountInputProps(view).onAmountChange('50000', 50000);
+        view.state = { ...view.state, fee };
+        return view;
+    };
+
+    const feeInputProps = (view: Send) =>
+        findByType(view.render(), 'OnchainFeeInput').props;
+
+    beforeEach(() => supportsOnchainSendFeeRate.mockReturnValue(true));
+
+    afterEach(() => {
+        supportsOnchainSendFeeRate.mockReturnValue(false);
+        supportsOnchainSendAutoFeeRate.mockReturnValue(false);
+    });
+
+    describe('on a backend that needs a fee rate', () => {
+        it.each(['', '0'])('blocks Proceed when the fee is %p', (fee) => {
+            const view = makeFeeView(fee);
+            expect(isProceedDisabled(view)).toBe(true);
+            expect(feeInputProps(view).autoFeeRate).toBe(false);
+        });
+
+        it('allows Proceed once a fee is set', () => {
+            expect(isProceedDisabled(makeFeeView('5'))).toBe(false);
+        });
+    });
+
+    describe('on a backend that estimates the fee itself', () => {
+        beforeEach(() => supportsOnchainSendAutoFeeRate.mockReturnValue(true));
+
+        // '0' is what OnchainFeeInput reports when the mempool fetch fails
+        it.each(['', '0'])('allows Proceed when the fee is %p', (fee) => {
+            const view = makeFeeView(fee);
+            expect(isProceedDisabled(view)).toBe(false);
+            expect(feeInputProps(view).autoFeeRate).toBe(true);
+        });
     });
 });
 
