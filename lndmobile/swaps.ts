@@ -225,7 +225,8 @@ export const buildReverseClaimTransaction = async ({
 
 /**
  * Builds and signs a submarine swap refund and returns its hex. Nothing is
- * broadcast.
+ * broadcast. Pays minerFee sats when it is above 0, and feeRate sat/vbyte
+ * otherwise.
  *
  * @throws
  */
@@ -238,6 +239,7 @@ export const buildRefundTransaction = async ({
     privateKey,
     servicePubKey,
     feeRate,
+    minerFee = 0,
     timeoutBlockHeight,
     destinationAddress,
     lockupAddress,
@@ -252,6 +254,7 @@ export const buildRefundTransaction = async ({
     privateKey: string;
     servicePubKey: string;
     feeRate: number;
+    minerFee?: number;
     timeoutBlockHeight: number;
     destinationAddress: string;
     lockupAddress: string;
@@ -267,6 +270,7 @@ export const buildRefundTransaction = async ({
         privateKey,
         servicePubKey,
         feeRate,
+        minerFee,
         timeoutBlockHeight,
         destinationAddress,
         lockupAddress,
