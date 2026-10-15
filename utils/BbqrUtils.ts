@@ -1,5 +1,5 @@
 import { base32 } from '@scure/base';
-import pako from 'pako';
+import { deflate, inflate } from 'pako';
 
 export const FILETYPE_NAMES = {
     P: 'PSBT',
@@ -343,7 +343,7 @@ export function encodeData(raw: Uint8Array, encoding?: Encoding) {
     if (encoding === 'Z') {
         // trial compression, but skip if it embiggens the data
 
-        const compressed = pako.deflate(raw, { windowBits: -10 });
+        const compressed = deflate(raw, { windowBits: -10 });
 
         if (compressed.length >= raw.length) {
             encoding = '2';
@@ -527,7 +527,7 @@ export function decodeData(parts: string[], encoding: Encoding) {
     );
 
     if (encoding === 'Z') {
-        return pako.inflate(bytes, { windowBits: -10 });
+        return inflate(bytes, { windowBits: -10 });
     }
 
     return bytes;
