@@ -753,8 +753,12 @@ export default class Send extends React.Component<SendProps, SendState> {
 
         const supportsOnchainSendFeeRate =
             BackendUtils.supportsOnchainSendFeeRate();
+        const supportsOnchainSendAutoFeeRate =
+            BackendUtils.supportsOnchainSendAutoFeeRate();
         const isInvalidFee =
-            supportsOnchainSendFeeRate && (fee === '0' || !fee);
+            supportsOnchainSendFeeRate &&
+            !supportsOnchainSendAutoFeeRate &&
+            (fee === '0' || !fee);
         // on-chain outputs cannot carry millisats, and VerifyOnChain shows the
         // amount rounded, so stop here rather than fail after the slide
         const isFractionalOnchainAmount =
@@ -1299,6 +1303,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 this.setState({ fee: text })
                                             }
                                             navigation={navigation}
+                                            autoFeeRate={
+                                                supportsOnchainSendAutoFeeRate
+                                            }
                                         />
                                     </>
                                 ) : (

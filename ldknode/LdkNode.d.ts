@@ -536,25 +536,25 @@ export interface ILdkNodeModule {
     sendToOnchainAddress(
         address: string,
         amountSats: number,
-        satPerVbyte: number
+        satPerKwu: number
     ): Promise<string>;
     sendAllToOnchainAddress(
         address: string,
         retainReserve: boolean,
-        satPerVbyte: number
+        satPerKwu: number
     ): Promise<string>;
     listUtxos(): Promise<{ utxos: any[] }>;
     sendToOnchainAddressWithUtxos(
         address: string,
         amountSats: number,
         utxos: Array<{ txid: string; vout: number }>,
-        satPerVbyte: number
+        satPerKwu: number
     ): Promise<{ txid: string }>;
     sendAllToOnchainAddressWithUtxos(
         address: string,
         retainReserve: boolean,
         utxos: Array<{ txid: string; vout: number }>,
-        satPerVbyte: number
+        satPerKwu: number
     ): Promise<{ txid: string }>;
 
     // BOLT11 Payment Methods

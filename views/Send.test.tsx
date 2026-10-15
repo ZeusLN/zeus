@@ -19,7 +19,8 @@ jest.mock('../utils/handleAnything', () => ({
 jest.mock('../utils/BackendUtils', () => ({
     supportsOnchainSends: () => true,
     supportsOnchainSendMax: () => true,
-    supportsOnchainSendFeeRate: () => false,
+    supportsOnchainSendFeeRate: jest.fn(() => false),
+    supportsOnchainSendAutoFeeRate: jest.fn(() => false),
     supportsOnchainBatching: jest.fn(() => false),
     supportsCoinControl: () => false,
     supportsKeysend: jest.fn(() => false),
@@ -252,6 +253,52 @@ describe('Send on-chain fractional sats', () => {
 
         await fireEvent(hosts('AmountInput')[1], 'amountChange', '1000', 1000);
         expect(isProceedDisabled()).toBe(false);
+    });
+});
+
+describe('Send on-chain fee rate', () => {
+    const supportsOnchainSendFeeRate =
+        BackendUtils.supportsOnchainSendFeeRate as jest.Mock;
+    const supportsOnchainSendAutoFeeRate =
+        BackendUtils.supportsOnchainSendAutoFeeRate as jest.Mock;
+
+    const renderWithFee = async (fee: string) => {
+        await renderView();
+        await enterAmount('50000', 50000);
+        await fireEvent(feeInput(), 'changeFee', fee);
+    };
+
+    const feeInput = () => hosts('OnchainFeeInput')[0];
+
+    beforeEach(() => supportsOnchainSendFeeRate.mockReturnValue(true));
+
+    afterEach(() => {
+        supportsOnchainSendFeeRate.mockReturnValue(false);
+        supportsOnchainSendAutoFeeRate.mockReturnValue(false);
+    });
+
+    describe('on a backend that needs a fee rate', () => {
+        it.each(['', '0'])('blocks Proceed when the fee is %p', async (fee) => {
+            await renderWithFee(fee);
+            expect(isProceedDisabled()).toBe(true);
+            expect(feeInput().props.autoFeeRate).toBe(false);
+        });
+
+        it('allows Proceed once a fee is set', async () => {
+            await renderWithFee('5');
+            expect(isProceedDisabled()).toBe(false);
+        });
+    });
+
+    describe('on a backend that estimates the fee itself', () => {
+        beforeEach(() => supportsOnchainSendAutoFeeRate.mockReturnValue(true));
+
+        // '0' is what OnchainFeeInput reports when the mempool fetch fails
+        it.each(['', '0'])('allows Proceed when the fee is %p', async (fee) => {
+            await renderWithFee(fee);
+            expect(isProceedDisabled()).toBe(false);
+            expect(feeInput().props.autoFeeRate).toBe(true);
+        });
     });
 });
 

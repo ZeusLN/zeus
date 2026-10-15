@@ -760,6 +760,7 @@ describe('LND capability flags', () => {
         ['supportsNestedSegWit', true],
         ['supportsBumpFee', true],
         ['supportsOnchainSendFeeRate', true],
+        ['supportsOnchainSendAutoFeeRate', false],
         ['supportsChannelOpenFeeRate', true],
         ['supportsChannelOpenMinConfs', true],
         ['supportsFlowLSP', true],
