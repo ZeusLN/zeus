@@ -7,6 +7,9 @@
   },
   "jest": {
     "preset": "@react-native/jest-preset",
+    "setupFiles": [
+      "<rootDir>/utils/BigNumberConfig.ts"
+    ],
     "moduleNameMapper": {
       "^@react-native/assets-registry/registry$": "react-native/src/asset-registry"
     },
@@ -87,7 +90,7 @@
     "aez": "1.0.1",
     "assert": "2.1.0",
     "bech32": "2.0.0",
-    "bignumber.js": "9.0.2",
+    "bignumber.js": "11.1.5",
     "bip32": "5.0.1",
     "bitcoinjs-lib": "6.1.5",
     "bs58check": "4.0.0",
