@@ -628,6 +628,7 @@ export default class NostrConnectUtils {
         descriptionHash: string;
         description: string;
         amount: number;
+        amountMsat?: number;
         expiryTime: number;
         createdAt: number;
         isExpired: boolean;
@@ -660,6 +661,7 @@ export default class NostrConnectUtils {
                 decoded.satoshis ||
                 millisatsToSats(Number(decoded?.millisatoshis)) ||
                 0,
+            amountMsat: Number(decoded?.millisatoshis) || 0,
             expiryTime: expireTime,
             createdAt,
             isExpired,
@@ -1761,10 +1763,17 @@ export default class NostrConnectUtils {
                 return fromSat;
             }
         }
-        if (decodedPayReq.millisatoshis !== undefined) {
-            const ms = Number(decodedPayReq.millisatoshis) || 0;
+        // a sub-sat amount is still an amount: never report it as none
+        // num_msat: LND, millisatoshis: bolt11 decode, amount_msat: CLN
+        // (a number, or "500msat" on older versions)
+        for (const msats of [
+            decodedPayReq.num_msat,
+            decodedPayReq.millisatoshis,
+            decodedPayReq.amount_msat
+        ]) {
+            const ms = Number(String(msats ?? '').replace(/msat$/, '')) || 0;
             if (ms > 0) {
-                return millisatsToSats(ms);
+                return Math.max(1, millisatsToSats(ms));
             }
         }
         return 0;
@@ -1798,19 +1807,37 @@ export default class NostrConnectUtils {
         return sats;
     }
 
+    private static satsFromRequestedMsat(requestedMsat: unknown): number {
+        if (
+            typeof requestedMsat !== 'number' ||
+            !Number.isFinite(requestedMsat) ||
+            requestedMsat <= 0 ||
+            requestedMsat % 1000 !== 0
+        ) {
+            return 0;
+        }
+        return millisatsToSats(requestedMsat);
+    }
+
     /**
      * Single resolver for NWC pay_invoice: Lightning (wallet payreq decode) or
      * Cashu (decoded Invoice / payreq model).
      */
-    static async getPayInvoiceAmountSats(params: {
+    static async resolvePayInvoiceAmount(params: {
         paymentRequest: string;
         /** Lightning: object from decodePaymentRequest */
         lightningDecodedPayReq?: any;
         /** Cashu: Invoice (or similar) from getPayReq */
         decodedInvoice?: any;
-    }): Promise<number> {
-        const { paymentRequest, lightningDecodedPayReq, decodedInvoice } =
-            params;
+        /** Lightning: request `amount` (msat), used for zero-amount invoices */
+        requestedAmountMsat?: number;
+    }): Promise<{ amountSats: number; zeroAmountInvoice: boolean }> {
+        const {
+            paymentRequest,
+            lightningDecodedPayReq,
+            decodedInvoice,
+            requestedAmountMsat
+        } = params;
 
         if (lightningDecodedPayReq) {
             const fromLightning =
@@ -1818,21 +1845,30 @@ export default class NostrConnectUtils {
                     lightningDecodedPayReq
                 );
             if (fromLightning > 0) {
-                return fromLightning;
+                return { amountSats: fromLightning, zeroAmountInvoice: false };
             }
-            const { amount } = await NostrConnectUtils.decodeInvoiceTags(
-                paymentRequest
-            );
-            if (amount > 0) {
+            const { amount, amountMsat } =
+                await NostrConnectUtils.decodeInvoiceTags(paymentRequest);
+            if (amount > 0 || (amountMsat ?? 0) > 0) {
                 if (__DEV__) {
                     console.log(
-                        'NWC: Lightning decode had no amount; using BOLT11 tags:',
-                        amount
+                        'NWC: Lightning decode had no amount; using BOLT11 tags (msat):',
+                        amountMsat ?? amount * 1000
                     );
                 }
-                return amount;
+                // a sub-sat amount is still an amount
+                return {
+                    amountSats: Math.max(1, amount),
+                    zeroAmountInvoice: false
+                };
             }
-            return 0;
+            return {
+                amountSats:
+                    NostrConnectUtils.satsFromRequestedMsat(
+                        requestedAmountMsat
+                    ),
+                zeroAmountInvoice: true
+            };
         }
 
         const fromDecoded =
@@ -1840,12 +1876,25 @@ export default class NostrConnectUtils {
                 decodedInvoice
             );
         if (fromDecoded > 0) {
-            return fromDecoded;
+            return { amountSats: fromDecoded, zeroAmountInvoice: false };
         }
         const { amount } = await NostrConnectUtils.decodeInvoiceTags(
             paymentRequest
         );
-        return amount > 0 ? amount : 0;
+        return {
+            amountSats: amount > 0 ? amount : 0,
+            zeroAmountInvoice: false
+        };
+    }
+
+    static async getPayInvoiceAmountSats(params: {
+        paymentRequest: string;
+        lightningDecodedPayReq?: any;
+        decodedInvoice?: any;
+        requestedAmountMsat?: number;
+    }): Promise<number> {
+        return (await NostrConnectUtils.resolvePayInvoiceAmount(params))
+            .amountSats;
     }
 
     static async pingRelay(relayUrl: string): Promise<{

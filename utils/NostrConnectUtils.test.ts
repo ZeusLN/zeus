@@ -1354,3 +1354,140 @@ describe('NostrConnectUtils', () => {
         });
     });
 });
+
+describe('NostrConnectUtils pay_invoice amount resolution', () => {
+    const paymentRequest = 'lnbc1zero-amount';
+
+    beforeEach(() => {
+        jest.spyOn(NostrConnectUtils, 'decodeInvoiceTags').mockResolvedValue({
+            paymentRequest,
+            paymentHash: '',
+            descriptionHash: '',
+            description: '',
+            amount: 0,
+            expiryTime: 0,
+            createdAt: 0,
+            isExpired: false,
+            network: 'bitcoin'
+        });
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('reports whether the invoice is zero-amount', async () => {
+        await expect(
+            NostrConnectUtils.resolvePayInvoiceAmount({
+                paymentRequest,
+                lightningDecodedPayReq: { num_satoshis: '0' },
+                requestedAmountMsat: 7_000_000
+            })
+        ).resolves.toEqual({ amountSats: 7000, zeroAmountInvoice: true });
+        await expect(
+            NostrConnectUtils.resolvePayInvoiceAmount({
+                paymentRequest,
+                lightningDecodedPayReq: { num_satoshis: '5000' },
+                requestedAmountMsat: 7_000_000
+            })
+        ).resolves.toEqual({ amountSats: 5000, zeroAmountInvoice: false });
+    });
+
+    it('returns the requested sats for an invoice without an amount', async () => {
+        await expect(
+            NostrConnectUtils.getPayInvoiceAmountSats({
+                paymentRequest,
+                lightningDecodedPayReq: { num_satoshis: '0' },
+                requestedAmountMsat: 7_000_000
+            })
+        ).resolves.toBe(7000);
+    });
+
+    it('counts a sub-sat invoice as having an amount', async () => {
+        await expect(
+            NostrConnectUtils.resolvePayInvoiceAmount({
+                paymentRequest,
+                lightningDecodedPayReq: { num_satoshis: '0', num_msat: '500' },
+                requestedAmountMsat: 7_000_000
+            })
+        ).resolves.toEqual({ amountSats: 1, zeroAmountInvoice: false });
+    });
+
+    it.each([
+        ['CLN amount_msat number', { amount_msat: 500 }],
+        ['CLN amount_msat string', { amount_msat: '500msat' }]
+    ])('counts a sub-sat invoice with the %s shape', async (_n, decoded) => {
+        await expect(
+            NostrConnectUtils.resolvePayInvoiceAmount({
+                paymentRequest,
+                lightningDecodedPayReq: decoded,
+                requestedAmountMsat: 7_000_000
+            })
+        ).resolves.toEqual({ amountSats: 1, zeroAmountInvoice: false });
+    });
+
+    it('counts a sub-sat amount found only in the BOLT11 tags', async () => {
+        (NostrConnectUtils.decodeInvoiceTags as jest.Mock).mockResolvedValue({
+            paymentRequest,
+            amount: 0,
+            amountMsat: 500
+        });
+        await expect(
+            NostrConnectUtils.resolvePayInvoiceAmount({
+                paymentRequest,
+                lightningDecodedPayReq: {},
+                requestedAmountMsat: 7_000_000
+            })
+        ).resolves.toEqual({ amountSats: 1, zeroAmountInvoice: false });
+    });
+
+    it('ignores the requested amount when the invoice has one', async () => {
+        await expect(
+            NostrConnectUtils.getPayInvoiceAmountSats({
+                paymentRequest,
+                lightningDecodedPayReq: { num_satoshis: '5000' },
+                requestedAmountMsat: 90_000_000
+            })
+        ).resolves.toBe(5000);
+    });
+
+    it('ignores the requested amount when only the BOLT11 tags carry one', async () => {
+        (NostrConnectUtils.decodeInvoiceTags as jest.Mock).mockResolvedValue({
+            paymentRequest,
+            amount: 1200
+        });
+        await expect(
+            NostrConnectUtils.getPayInvoiceAmountSats({
+                paymentRequest,
+                lightningDecodedPayReq: {},
+                requestedAmountMsat: 90_000_000
+            })
+        ).resolves.toBe(1200);
+    });
+
+    it.each([
+        ['missing', undefined],
+        ['zero', 0],
+        ['negative', -1000],
+        ['sub-sat', 1500],
+        ['NaN', Number.NaN],
+        ['Infinity', Number.POSITIVE_INFINITY],
+        ['a string', '7000000']
+    ])('returns 0 for a %s requested amount', async (_name, requested) => {
+        await expect(
+            NostrConnectUtils.getPayInvoiceAmountSats({
+                paymentRequest,
+                lightningDecodedPayReq: {},
+                requestedAmountMsat: requested as any
+            })
+        ).resolves.toBe(0);
+    });
+
+    it('does not apply the requested amount to Cashu invoices', async () => {
+        await expect(
+            NostrConnectUtils.getPayInvoiceAmountSats({
+                paymentRequest,
+                decodedInvoice: {},
+                requestedAmountMsat: 7_000_000
+            })
+        ).resolves.toBe(0);
+    });
+});
