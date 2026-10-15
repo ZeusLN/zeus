@@ -2270,6 +2270,8 @@ export default class LdkNode {
     supportsOnchainSendFeeRate = () => true;
     // with no fee rate set, ldk-node estimates one itself
     supportsOnchainSendAutoFeeRate = () => true;
+    // the bridge carries sat/kwu, so rates below 1 sat/vB are kept
+    supportsOnchainSendSubSatFeeRate = () => true;
     // TODO: flip to true when the user's fee rate is applied to channel opens (#4657)
     supportsChannelOpenFeeRate = () => false;
     // ldk-node's channel open calls take no min confs, and fund max

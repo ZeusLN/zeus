@@ -24,8 +24,9 @@ import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import {
     isPlausibleSatPerVbyte,
-    MAX_SAT_PER_VBYTE,
-    MIN_SAT_PER_VBYTE
+    minSatPerVbyte,
+    sanitizeFeeRateInput,
+    MAX_SAT_PER_VBYTE
 } from '../utils/FeeUtils';
 import UrlUtils from '../utils/UrlUtils';
 
@@ -47,6 +48,8 @@ interface EditFeeProps {
         {
             fee: any;
             displayOnly: boolean;
+            // the caller's backend takes rates below 1 sat/vB
+            subSatFeeRate?: boolean;
             onNavigateBack: (fee: any) => {};
         }
     >;
@@ -93,13 +96,15 @@ export default class EditFee extends React.Component<
         const { selectedFee, fee, customFee } = this.state;
         const { navigation, FeeStore, route } = this.props;
         const displayOnly = route.params?.displayOnly;
+        const subSatFeeRate = !!route.params?.subSatFeeRate;
+        const minRate = minSatPerVbyte(subSatFeeRate);
         // A typed rate is never silently corrected: an out-of-range value
         // is surfaced and blocks confirmation, so what gets broadcast is
         // always the number the user actually entered.
         const customFeeInvalid =
             selectedFee === 'custom' &&
             !!customFee &&
-            !isPlausibleSatPerVbyte(customFee);
+            !isPlausibleSatPerVbyte(customFee, minRate);
         const { recommendedFees, loading, error, getOnchainFeesviaMempool } =
             FeeStore;
 
@@ -384,9 +389,10 @@ export default class EditFee extends React.Component<
                                         keyboardType="numeric"
                                         value={this.state.customFee}
                                         onChangeText={(text: string) => {
-                                            text = text
-                                                .replace(/[^0-9]*/g, '')
-                                                .replace(/^0+/, '');
+                                            text = sanitizeFeeRateInput(
+                                                text,
+                                                subSatFeeRate
+                                            );
                                             this.setState({
                                                 customFee: text,
                                                 fee: text,
@@ -413,10 +419,7 @@ export default class EditFee extends React.Component<
                                         {localeString(
                                             'views.EditFee.customFeeOutOfRange'
                                         )
-                                            .replace(
-                                                '{min}',
-                                                String(MIN_SAT_PER_VBYTE)
-                                            )
+                                            .replace('{min}', String(minRate))
                                             .replace(
                                                 '{max}',
                                                 String(MAX_SAT_PER_VBYTE)

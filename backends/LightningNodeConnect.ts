@@ -1161,6 +1161,7 @@ export default class LightningNodeConnect {
     supportsBumpFee = () => true;
     supportsOnchainSendFeeRate = () => true;
     supportsOnchainSendAutoFeeRate = () => false;
+    supportsOnchainSendSubSatFeeRate = () => false;
     supportsChannelOpenFeeRate = () => true;
     supportsChannelOpenMinConfs = () => true;
     supportsFlowLSP = () => false;

@@ -50,6 +50,7 @@ import UTXOPicker from '../components/UTXOPicker';
 import AddressUtils from '../utils/AddressUtils';
 import BackendUtils from '../utils/BackendUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
+import { isPlausibleSatPerVbyte, minSatPerVbyte } from '../utils/FeeUtils';
 import { scanNfcTag } from '../utils/NFCUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -747,10 +748,18 @@ export default class Send extends React.Component<SendProps, SendState> {
             BackendUtils.supportsOnchainSendFeeRate();
         const supportsOnchainSendAutoFeeRate =
             BackendUtils.supportsOnchainSendAutoFeeRate();
+        const supportsOnchainSendSubSatFeeRate =
+            BackendUtils.supportsOnchainSendSubSatFeeRate();
+        // '0' is what OnchainFeeInput reports when the mempool fetch fails
+        const isFeeUnset = !fee || fee === '0';
         const isInvalidFee =
             supportsOnchainSendFeeRate &&
-            !supportsOnchainSendAutoFeeRate &&
-            (fee === '0' || !fee);
+            (isFeeUnset
+                ? !supportsOnchainSendAutoFeeRate
+                : !isPlausibleSatPerVbyte(
+                      fee,
+                      minSatPerVbyte(supportsOnchainSendSubSatFeeRate)
+                  ));
 
         const slideToPayThreshold =
             SettingsStore.settings?.payments?.slideToPayThreshold ??
@@ -1293,6 +1302,9 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             navigation={navigation}
                                             autoFeeRate={
                                                 supportsOnchainSendAutoFeeRate
+                                            }
+                                            subSatFeeRate={
+                                                supportsOnchainSendSubSatFeeRate
                                             }
                                         />
                                     </>

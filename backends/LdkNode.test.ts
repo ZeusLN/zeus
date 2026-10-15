@@ -424,6 +424,10 @@ describe('LdkNode on-chain fee rate', () => {
         expect(ldk.supportsOnchainSendAutoFeeRate()).toBe(true);
     });
 
+    it('takes fee rates below 1 sat/vB', () => {
+        expect(ldk.supportsOnchainSendSubSatFeeRate()).toBe(true);
+    });
+
     it('keeps the channel open fee rate hidden until channel opens apply it', () => {
         expect(ldk.supportsChannelOpenFeeRate()).toBe(false);
     });

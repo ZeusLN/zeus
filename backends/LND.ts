@@ -1040,6 +1040,7 @@ export default class LND {
     supportsBumpFee = () => true;
     supportsOnchainSendFeeRate = () => true;
     supportsOnchainSendAutoFeeRate = () => false;
+    supportsOnchainSendSubSatFeeRate = () => false;
     supportsChannelOpenFeeRate = () => true;
     supportsChannelOpenMinConfs = () => true;
     supportsFlowLSP = () => true;
