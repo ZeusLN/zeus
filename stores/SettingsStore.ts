@@ -306,6 +306,7 @@ export const FIAT_RATES_SOURCE_KEYS = [
 export const BLOCK_EXPLORER_KEYS = [
     { key: 'mempool.space', value: 'mempool.space' },
     { key: 'blockstream.info', value: 'blockstream.info' },
+    { key: 'timechain.live', value: 'Timechain Live' },
     {
         key: 'Custom',
         translateKey: 'views.Settings.Privacy.BlockExplorer.custom',
