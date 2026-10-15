@@ -92,7 +92,7 @@
     "bech32": "2.0.0",
     "bignumber.js": "11.1.5",
     "bip32": "5.0.1",
-    "bitcoinjs-lib": "6.1.5",
+    "bitcoinjs-lib": "7.0.2",
     "bs58check": "4.0.0",
     "buffer": "5.7.1",
     "create-hash": "1.2.0",
