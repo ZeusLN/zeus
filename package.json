@@ -202,7 +202,7 @@
     "pod-install": "0.1.38",
     "prettier": "2.4.1",
     "protobufjs-cli": "2.7.1",
-    "react-native-url-polyfill": "2.0.0",
+    "react-native-url-polyfill": "4.0.0",
     "rn-nodeify": "10.3.0",
     "test-renderer": "1.2.0",
     "typescript": "5.7.3"
