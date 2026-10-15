@@ -1657,11 +1657,11 @@ PODS:
   - react-native-udp (4.1.7):
     - CocoaAsyncSocket
     - React-Core
-  - react-native-vector-icons-feather (13.1.4)
-  - react-native-vector-icons-fontawesome (13.1.4)
-  - react-native-vector-icons-material-design-icons (13.1.4)
-  - react-native-vector-icons-material-icons (13.1.4)
-  - react-native-view-shot (6.1.0):
+  - react-native-vector-icons-feather (13.1.5)
+  - react-native-vector-icons-fontawesome (13.1.5)
+  - react-native-vector-icons-material-design-icons (13.1.5)
+  - react-native-vector-icons-material-icons (13.1.5)
+  - react-native-view-shot (6.1.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2321,7 +2321,7 @@ PODS:
     - ReactNativeDependencies
     - RNWorklets
     - Yoga
-  - RNScreens (4.28.0):
+  - RNScreens (4.29.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2342,9 +2342,9 @@ PODS:
     - ReactCodegen
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
-    - RNScreens/common (= 4.28.0)
+    - RNScreens/common (= 4.29.0)
     - Yoga
-  - RNScreens/common (4.28.0):
+  - RNScreens/common (4.29.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2966,11 +2966,11 @@ SPEC CHECKSUMS:
   react-native-safe-area-context: ee314c3f5766b3555d6b679cd6d0c0b3ce17120d
   react-native-slider: 8ed38813dee46289070f2009680e537161b7df91
   react-native-udp: 806f16ab890dd838bc073afcebd6a221d4965572
-  react-native-vector-icons-feather: ce6037c8381f97c4f40941bc518b24dccc604dd8
-  react-native-vector-icons-fontawesome: b19a84b13d42875ae4e70c2aa0c5db81672378b8
-  react-native-vector-icons-material-design-icons: 9e98e87947156bfe95135fb523b62821486044e3
-  react-native-vector-icons-material-icons: 6d1d8ea28261609bbb975b1e9c51fe54eedfafe6
-  react-native-view-shot: df0f9fea2df2bebe84f48655d9cdf89676a68f83
+  react-native-vector-icons-feather: 97025b189d9584d77215cec3445cec275e92c4f7
+  react-native-vector-icons-fontawesome: c293d5990f222b3e2bb655aa8ab059481a6282e5
+  react-native-vector-icons-material-design-icons: 8d696a2371e2bd5bb5254370c33b5ffbc503e840
+  react-native-vector-icons-material-icons: eaf368e397065aac2cc5a69aeb948c835e186101
+  react-native-view-shot: 843fbf6dc5eddf5a3dbfba648a4b6da2bf049949
   React-NativeModulesApple: fa4d44768bac0eaa2abd459eff27aeefaa1143cf
   React-networking: a7c8ea125700a7256af57914a25fe7a27194a223
   React-oscompat: 66e0be3d66b36c88442cb8c0f1cef5cb9ac00701
@@ -3018,7 +3018,7 @@ SPEC CHECKSUMS:
   RNKeychain: bf4c20ea9a035f99aed8623a56cbfa1c9093634b
   RNReactNativeHapticFeedback: 4e9fb92a6c5d9f6e5ca5b84d56c5de07bc6cc261
   RNReanimated: 91b4ebc6fb5378b8561916fabb2352539fbba08b
-  RNScreens: 639aff03a0b6ae42564e94fe2393f438bd51f39e
+  RNScreens: de199734750567fbececdde6fd4cd5d4c3d5565d
   RNShare: cca9107c0dcfdd92fa228116226d1189663265b4
   RNSVG: aacbdedbac719eef30569be569c9d87e08aaefce
   RNWorklets: 5e812a63fdf4863c1d73e3ad625f8c365d7aacf5
