@@ -14,10 +14,18 @@ jest.mock('../utils/TorUtils', () => ({
 }));
 
 const mockCloseChannel = jest.fn();
+const mockSendPaymentV2Sync = jest.fn();
+const mockSendKeysendPaymentV2 = jest.fn();
 jest.mock('../lndmobile/LndMobileInjection', () => ({
     __esModule: true,
     default: {
-        index: { listPeers: jest.fn() },
+        index: {
+            listPeers: jest.fn(),
+            sendPaymentV2Sync: (...args: any[]) =>
+                mockSendPaymentV2Sync(...args),
+            sendKeysendPaymentV2: (...args: any[]) =>
+                mockSendKeysendPaymentV2(...args)
+        },
         channel: {
             closeChannel: (...args: any[]) => mockCloseChannel(...args),
             // test events carry the decoded update as JSON
@@ -66,6 +74,7 @@ import lndMobile from '../lndmobile/LndMobileInjection';
 import { lnrpc } from '../proto/lightning';
 import EmbeddedLND from './EmbeddedLND';
 import Peer from '../models/Peer';
+import { isNodeResponse } from '../utils/PaymentLookupUtils';
 
 const PUBKEY =
     '02aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -265,5 +274,32 @@ describe('EmbeddedLND.closeChannel', () => {
         expect(close.settled).toBe(true);
         expect(close.error).toBeUndefined();
         expect(listening()).toBe(false);
+    });
+});
+
+describe('EmbeddedLND payment rejections', () => {
+    // lndmobile rejects with the stream's error, which may be a string
+    it('tags a rejected invoice payment as a response from the node', async () => {
+        mockSendPaymentV2Sync.mockRejectedValue('invoice expired');
+
+        const error = await new EmbeddedLND()
+            .payLightningInvoice({ payment_request: 'lnbc1fake' })
+            .catch((e: any) => e);
+
+        expect(error.message).toBe('invoice expired');
+        expect(isNodeResponse(error)).toBe(true);
+    });
+
+    it('tags a rejected keysend as a response from the node', async () => {
+        mockSendKeysendPaymentV2.mockRejectedValue(
+            new Error('insufficient local balance')
+        );
+
+        const error = await new EmbeddedLND()
+            .sendKeysend({ pubkey: PUBKEY, amt: 1000 })
+            .catch((e: any) => e);
+
+        expect(error.message).toBe('insufficient local balance');
+        expect(isNodeResponse(error)).toBe(true);
     });
 });

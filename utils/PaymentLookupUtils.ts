@@ -20,6 +20,24 @@ export const paymentLookupInconclusiveError = () => {
 export const isPaymentLookupInconclusive = (error: unknown): boolean =>
     (error as Error)?.name === INCONCLUSIVE_ERROR_NAME;
 
+// A send request rejected by the node itself (an HTTP error status, or an
+// in-process call on embedded LND) was processed, not left in transit. LND
+// records a payment before dispatching any HTLC, so after such a rejection
+// one lookup finding no record shows the payment was never sent; a
+// transport failure (timeout, dropped connection) needs repeated answers
+// because the request may still reach the node. String rejections are
+// wrapped so they can carry the tag.
+export const markNodeResponded = (error: unknown): unknown => {
+    const tagged = typeof error === 'string' ? new Error(error) : error;
+    if (tagged && typeof tagged === 'object') {
+        (tagged as any).nodeResponded = true;
+    }
+    return tagged;
+};
+
+export const isNodeResponse = (error: unknown): boolean =>
+    (error as any)?.nodeResponded === true;
+
 type PaymentsPageRequest = {
     maxPayments: number;
     reversed: boolean;

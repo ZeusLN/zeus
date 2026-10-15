@@ -1,7 +1,10 @@
 import LND from './LND';
 import OpenChannelRequest from '../models/OpenChannelRequest';
 import Base64Utils from './../utils/Base64Utils';
-import { findPaymentByHash } from './../utils/PaymentLookupUtils';
+import {
+    findPaymentByHash,
+    markNodeResponded
+} from './../utils/PaymentLookupUtils';
 
 import lndMobile from '../lndmobile/LndMobileInjection';
 import { decodeSubscribeTransactionsResult } from '../lndmobile/onchain';
@@ -258,7 +261,10 @@ export default class EmbeddedLND extends LND {
             dest: data.dest
         };
 
-        return await sendPaymentV2Sync(sendPaymentReq);
+        // in-process call: a rejection comes from lnd, never from transport
+        return await sendPaymentV2Sync(sendPaymentReq).catch((error) => {
+            throw markNodeResponded(error);
+        });
     };
     sendKeysend = async (data: any) =>
         await sendKeysendPaymentV2({
@@ -271,6 +277,8 @@ export default class EmbeddedLND extends LND {
             max_parts: data.max_parts,
             cltv_limit: data.cltv_limit,
             amp: data.amp
+        }).catch((error) => {
+            throw markNodeResponded(error);
         });
     // override LND's REST implementation with an on-device lookup
     lookupPayment = async (data: {

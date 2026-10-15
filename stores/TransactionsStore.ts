@@ -19,6 +19,7 @@ import { localeString } from '../utils/LocaleUtils';
 import { checkGraphSyncBeforePayment } from '../utils/GraphSyncUtils';
 import { deriveExpectedPaymentHash } from '../utils/LncPayUtils';
 import {
+    isNodeResponse,
     isPaymentLookupInconclusive,
     paymentCreationTimeMs
 } from '../utils/PaymentLookupUtils';
@@ -49,7 +50,9 @@ export const PAYMENT_TRACK_MAX_MS = 10 * 60 * 1000;
 export const PAYMENT_TRACK_MAX_FAILURES = 3;
 // consecutive "node answered, no record" results required before concluding
 // the dispatch never reached the node: a single lookup can miss a payment
-// whose dispatch request is still in transit (e.g. a slow Tor circuit)
+// whose dispatch request is still in transit (e.g. a slow Tor circuit).
+// When the node itself rejected the send request, the request isn't in
+// transit and one such answer is enough
 export const PAYMENT_TRACK_MAX_NOT_FOUND = 3;
 // how far before the recorded dispatch time lookupPayment's
 // creation_date_start filter reaches, to absorb clock skew between the
@@ -862,9 +865,13 @@ export default class TransactionsStore {
     // request has no such deadline (e.g. an LNC stream that is never
     // cancelled): repeated no-record answers then end tracking as
     // unverified, never as not sent.
+    //
+    // `requiredNotFound` is how many consecutive no-record answers conclude
+    // the payment never reached the node.
     private trackPaymentToTerminal = async (
         seq: number,
-        neverDispatchedAfter: number | null
+        neverDispatchedAfter: number | null,
+        requiredNotFound: number = PAYMENT_TRACK_MAX_NOT_FOUND
     ) => {
         if (this.trackingSeq === seq) return;
         const payment_hash = this.inFlightPaymentHash;
@@ -949,18 +956,20 @@ export default class TransactionsStore {
                     // no-record answer, so keep polling until the ceiling
                 } else if (!lookupFailed) {
                     // the node answered and has no record of the payment.
-                    // One such answer isn't proof the dispatch never reached
-                    // it: the send request may still be in transit (a slow
-                    // Tor circuit can deliver it after a fresh-connection
-                    // lookup returns). Only conclude never-dispatched after
-                    // repeated no-record answers with no sighting between,
-                    // all given once the request's deadline has passed.
+                    // Unless the node rejected the send request, one such
+                    // answer isn't proof the dispatch never reached it: the
+                    // request may still be in transit (a slow Tor circuit
+                    // can deliver it after a fresh-connection lookup
+                    // returns). Only conclude never-dispatched after
+                    // requiredNotFound no-record answers with no sighting
+                    // between, all given once the request's deadline has
+                    // passed.
                     if (
                         neverDispatchedAfter !== null &&
                         Date.now() < neverDispatchedAfter
                     ) {
                         // the request may still arrive: not evidence yet
-                    } else if (++notFound >= PAYMENT_TRACK_MAX_NOT_FOUND) {
+                    } else if (++notFound >= requiredNotFound) {
                         neverDispatched = neverDispatchedAfter !== null;
                         return;
                     }
@@ -1183,8 +1192,16 @@ export default class TransactionsStore {
         // tracker replaces this error with the real outcome.
         if (seq !== undefined && this.canTrackPayment(seq)) {
             // the rejection settled the request, so no-record answers
-            // count from now on
-            this.trackPaymentToTerminal(seq, Date.now());
+            // count from now on. A rejection from the node itself (e.g. an
+            // expired invoice) means the request was processed, and LND
+            // records a payment before dispatching it, so one no-record
+            // answer shows it was never sent. A transport failure may
+            // still deliver the request, so it needs repeated answers.
+            this.trackPaymentToTerminal(
+                seq,
+                Date.now(),
+                isNodeResponse(err) ? 1 : PAYMENT_TRACK_MAX_NOT_FOUND
+            );
         } else {
             this.clearPaymentInFlight(seq);
         }
