@@ -25,6 +25,11 @@ import {
     toWalletrpcAddressTypeName
 } from '../utils/LndUtils';
 import VersionUtils from '../utils/VersionUtils';
+import {
+    DEFAULT_MAX_TRANSACTIONS,
+    getNewestTransactions,
+    TransactionPageRequest
+} from '../utils/OnchainTransactionUtils';
 
 import { Hash as sha256Hash } from 'fast-sha256';
 import BigNumber from 'bignumber.js';
@@ -274,17 +279,34 @@ export default class LightningNodeConnect {
         }
     };
 
-    getTransactions = async (data: any) =>
-        await this.lnc.lnd.lightning
-            .getTransactions({
-                maxTransactions: data?.max_transactions || 500
-            })
-            .then((data: lnrpc.TransactionDetails) => {
-                const formatted = snakeize(data);
-                return {
-                    transactions: formatted.transactions.reverse()
-                };
-            });
+    getTransactions = async (data?: Partial<TransactionPageRequest> | null) => {
+        const fetchPage = async (request: TransactionPageRequest) =>
+            await this.lnc.lnd.lightning
+                .getTransactions({
+                    startHeight: request.start_height,
+                    endHeight: request.end_height,
+                    maxTransactions: request.max_transactions
+                })
+                .then(
+                    (data: lnrpc.TransactionDetails) =>
+                        snakeize(data).transactions || []
+                );
+        const transactions =
+            data?.start_height !== undefined || data?.end_height !== undefined
+                ? await fetchPage({
+                      start_height: data.start_height,
+                      end_height: data.end_height,
+                      max_transactions:
+                          data.max_transactions ?? DEFAULT_MAX_TRANSACTIONS
+                  })
+                : await getNewestTransactions({
+                      fetchPage,
+                      limit: data?.max_transactions ?? DEFAULT_MAX_TRANSACTIONS
+                  });
+        return {
+            transactions: transactions.reverse()
+        };
+    };
     getChannels = async () =>
         await this.lnc.lnd.lightning
             .listChannels({})
