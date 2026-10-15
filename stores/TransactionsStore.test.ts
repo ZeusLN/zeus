@@ -651,6 +651,107 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
         expect(store.error).toBe(true);
     });
 
+    // an earlier attempt's success for the same invoice, created before
+    // this attempt's dispatch minus the stale-attempt slack
+    const staleSuccess = () => ({
+        status: 'SUCCEEDED',
+        payment_hash: HASH,
+        payment_preimage: 'deadbeef',
+        creation_date: String(
+            Math.floor(
+                (Date.now() - PAYMENT_STALE_ATTEMPT_SLACK_MS - 60_000) / 1000
+            )
+        )
+    });
+
+    it('releases the guard without tracking when the node refuses a duplicate payment', async () => {
+        // re-paying an invoice that already settled: LND refuses the send
+        // with AlreadyExists before dispatching anything
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            markNodeResponded(new Error('invoice is already paid'), 6)
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue({
+            status: 'SUCCEEDED',
+            payment_hash: HASH,
+            payment_preimage: 'deadbeef',
+            // the earlier attempt settled seconds ago, inside the slack
+            creation_date: String(Math.floor((Date.now() - 10_000) / 1000))
+        });
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+
+        // the earlier attempt's success must not show as this attempt's
+        expect(BackendUtils.lookupPayment).not.toHaveBeenCalled();
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.status).not.toBe('SUCCEEDED');
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe('invoice is already paid');
+    });
+
+    it('treats a duplicate refusal from embedded LND the same way', async () => {
+        const refusal = new Error('payment is in transition');
+        (refusal as any).grpcCode = 'AlreadyExists';
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            markNodeResponded(refusal, 'AlreadyExists')
+        );
+
+        const store = newStore('embedded-lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+
+        expect(BackendUtils.lookupPayment).not.toHaveBeenCalled();
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.error_msg).toBe('payment is in transition');
+    });
+
+    it("treats an earlier attempt's succeeded record as no record of this attempt", async () => {
+        // the refusal was lost in transit, so only the lookup sees the
+        // earlier success
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            new Error('connection closed')
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(
+            staleSuccess()
+        );
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+        expect(store.status).not.toBe('SUCCEEDED');
+
+        for (let i = 1; i < PAYMENT_TRACK_MAX_NOT_FOUND; i++) {
+            await advancePoll();
+        }
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.status).not.toBe('SUCCEEDED');
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe('connection closed');
+    });
+
+    it('trusts a keysend success regardless of its creation time', async () => {
+        // a keysend hash is new to this attempt, so an old-looking creation
+        // time can only be clock skew; showing it as not sent would invite
+        // a retry that pays again under a fresh hash
+        // LND REST sends keysend through payLightningInvoice
+        (BackendUtils.payLightningInvoice as jest.Mock).mockRejectedValue(
+            new Error('connection closed')
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue(
+            staleSuccess()
+        );
+
+        const store = newStore('lnd');
+        store.sendPayment({ pubkey: '02' + 'ab'.repeat(32), amount: '1000' });
+        await flush();
+
+        expect(BackendUtils.lookupPayment).toHaveBeenCalledTimes(1);
+        expect(store.paymentInFlight).toBe(false);
+        expect(store.status).toBe('SUCCEEDED');
+        expect(store.error).toBe(false);
+    });
+
     it('shows a timed-out payment the node never recorded as not sent', async () => {
         (BackendUtils.payLightningInvoice as jest.Mock).mockImplementation(() =>
             Promise.resolve({

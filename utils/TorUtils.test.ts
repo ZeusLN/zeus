@@ -14,7 +14,10 @@ jest.mock('react-native-fs', () => ({
 
 import { RnTor } from 'react-native-nitro-tor';
 import { doTorRequest, isOnionHttpsUrl, RequestMethod } from './TorUtils';
-import { isNodeResponse } from './PaymentLookupUtils';
+import {
+    isNodeResponse,
+    isPaymentRefusedAsDuplicate
+} from './PaymentLookupUtils';
 
 describe('TorUtils', () => {
     describe('isOnionHttpsUrl', () => {
@@ -122,6 +125,25 @@ describe('doTorRequest errors', () => {
 
         expect(error.message).toBe('invoice expired');
         expect(isNodeResponse(error)).toBe(true);
+        expect(isPaymentRefusedAsDuplicate(error)).toBe(false);
+    });
+
+    it("tags a stream's AlreadyExists error chunk as a duplicate refusal", async () => {
+        (RnTor.httpPost as jest.Mock).mockResolvedValue({
+            status_code: 409,
+            body: JSON.stringify({
+                error: { code: 6, message: 'invoice is already paid' }
+            })
+        });
+
+        const error = await doTorRequest(
+            'https://node.onion:8080/v2/router/send',
+            RequestMethod.POST,
+            '{}'
+        ).catch((e: any) => e);
+
+        expect(error.message).toBe('invoice is already paid');
+        expect(isPaymentRefusedAsDuplicate(error)).toBe(true);
     });
 
     it('does not tag a transport failure', async () => {

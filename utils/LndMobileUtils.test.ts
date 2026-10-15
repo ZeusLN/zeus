@@ -68,7 +68,11 @@ jest.mock('./SleepUtils', () => ({
 import lndMobile from '../lndmobile/LndMobileInjection';
 import { lnrpc } from '../proto/lightning';
 import { settingsStore } from '../stores/Stores';
-import { createLndWallet, LndMobileEventEmitter } from './LndMobileUtils';
+import {
+    checkLndStreamErrorResponse,
+    createLndWallet,
+    LndMobileEventEmitter
+} from './LndMobileUtils';
 
 const mockRandomBytes = jest.fn<Uint8Array, [number]>();
 const entropy = Uint8Array.from(
@@ -222,4 +226,22 @@ describe('createLndWallet password generation', () => {
             expect(settingsStore.walletJustCreated).toBe(false);
         }
     );
+});
+
+describe('checkLndStreamErrorResponse', () => {
+    it('keeps the gRPC code name on the returned error', () => {
+        const error = checkLndStreamErrorResponse('RouterSendPaymentV2', {
+            error_code: 'AlreadyExists',
+            error_desc: 'invoice is already paid'
+        }) as Error;
+
+        expect(error.message).toBe('invoice is already paid');
+        expect((error as any).grpcCode).toBe('AlreadyExists');
+    });
+
+    it('returns null for a data event', () => {
+        expect(
+            checkLndStreamErrorResponse('RouterSendPaymentV2', { data: 'AA==' })
+        ).toBeNull();
+    });
 });

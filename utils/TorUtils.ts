@@ -1,6 +1,6 @@
 import { RnTor } from 'react-native-nitro-tor';
 import RNFS from 'react-native-fs';
-import { markNodeResponded } from './PaymentLookupUtils';
+import { grpcErrorCode, markNodeResponded } from './PaymentLookupUtils';
 
 const SOCKS_PORT = 9056;
 const TARGET_PORT = 9057;
@@ -144,7 +144,7 @@ const doTorRequest = async (
             `HTTP ${response.status_code}`;
         // an error status means the request was processed, not left in
         // transit
-        throw markNodeResponded(new Error(message));
+        throw markNodeResponded(new Error(message), grpcErrorCode(parsedBody));
     }
 
     return parsedBody;

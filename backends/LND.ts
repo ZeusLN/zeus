@@ -13,6 +13,7 @@ import { localeString } from './../utils/LocaleUtils';
 import { toLnrpcAddressType } from './../utils/LndUtils';
 import {
     findPaymentByHash,
+    grpcErrorCode,
     markNodeResponded
 } from './../utils/PaymentLookupUtils';
 import { Hash as sha256Hash } from 'fast-sha256';
@@ -110,15 +111,18 @@ export default class LND {
                     } else {
                         // an error status means the request was processed,
                         // not left in transit
+                        let grpcCode: unknown;
                         try {
                             const errorInfo = response.json();
+                            grpcCode = grpcErrorCode(errorInfo);
                             throw markNodeResponded(
                                 new Error(
                                     (errorInfo.error &&
                                         errorInfo.error.message) ||
                                         errorInfo.message ||
                                         errorInfo.error
-                                )
+                                ),
+                                grpcCode
                             );
                         } catch (e) {
                             if (
@@ -126,7 +130,8 @@ export default class LND {
                                 typeof response.data === 'string'
                             ) {
                                 throw markNodeResponded(
-                                    new Error(response.data)
+                                    new Error(response.data),
+                                    grpcCode
                                 );
                             } else {
                                 throw markNodeResponded(
@@ -134,7 +139,8 @@ export default class LND {
                                         localeString(
                                             'backends.LND.restReq.connectionError'
                                         )
-                                    )
+                                    ),
+                                    grpcCode
                                 );
                             }
                         }
