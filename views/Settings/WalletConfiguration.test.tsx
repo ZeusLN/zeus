@@ -83,6 +83,9 @@ import WalletConfiguration from './WalletConfiguration';
 import { confirmAction } from '../../utils/ActionUtils';
 
 const LNDHUB_IMPORT = 'lndhub://alice:secret@https://lndhub.example.com';
+const LNDCONNECT_IMPORT =
+    'lndconnect://new-node.example.com:8080?macaroon=AgEDbG5k';
+const CLNREST_IMPORT = 'clnrest+https://new-cln.example.com:3010?rune=newrune';
 
 // Opens the screen on an existing node at index 1, so a save neither
 // reconnects (the active node is 0) nor creates a new entry
@@ -187,6 +190,76 @@ describe('WalletConfiguration', () => {
                     name: 'views.Settings.AddEditNode.import'
                 })
             ).not.toBeOnTheScreen();
+        });
+    });
+
+    describe('lndconnect clipboard import', () => {
+        it('switches to LND and clears the rune and lndhub login of a previous config', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(
+                LNDCONNECT_IMPORT
+            );
+            const { updateSettings } = await renderView(
+                {
+                    implementation: 'cln-rest',
+                    host: 'https://my-cln.example.com',
+                    port: '3010',
+                    rune: 'rune',
+                    lndhubUrl: 'https://lndhub.example.com',
+                    username: 'alice',
+                    password: 'secret',
+                    certVerification: true
+                },
+                { clipboard: true }
+            );
+
+            await pressButton('views.Settings.AddEditNode.import');
+            expect(interfaceDropdown().props.selectedValue).toBe('lnd');
+
+            await save();
+
+            expect(savedNode(updateSettings)).toMatchObject({
+                implementation: 'lnd',
+                host: 'https://new-node.example.com',
+                port: '8080',
+                macaroonHex: '0201036c6e64',
+                rune: '',
+                lndhubUrl: '',
+                username: '',
+                password: ''
+            });
+        });
+    });
+
+    describe('clnrest clipboard import', () => {
+        it('clears the macaroon and lndhub login of a previous config', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(
+                CLNREST_IMPORT
+            );
+            const { updateSettings } = await renderView(
+                {
+                    ...LND_NODE,
+                    lndhubUrl: 'https://lndhub.example.com',
+                    username: 'alice',
+                    password: 'secret'
+                },
+                { clipboard: true }
+            );
+
+            await pressButton('views.Settings.AddEditNode.import');
+            expect(interfaceDropdown().props.selectedValue).toBe('cln-rest');
+
+            await save();
+
+            expect(savedNode(updateSettings)).toMatchObject({
+                implementation: 'cln-rest',
+                host: 'https://new-cln.example.com',
+                port: '3010',
+                rune: 'newrune',
+                macaroonHex: '',
+                lndhubUrl: '',
+                username: '',
+                password: ''
+            });
         });
     });
 
