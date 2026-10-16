@@ -757,7 +757,10 @@ describe('LSPStore.getZeroConfFee superseded requests', () => {
         answers[1].resolve(quote(2000000, 'second'));
         answers[0].resolve(quote(0, 'first'));
 
-        await expect(second).resolves.toBe(2000);
+        await expect(second).resolves.toEqual({
+            feeSats: 2000,
+            feeId: 'second'
+        });
         await expect(first).rejects.toBeUndefined();
         expect(store.zeroConfFee).toBe(2000);
         expect(store.feeId).toBe('second');
@@ -787,7 +790,10 @@ describe('LSPStore.getZeroConfFee superseded requests', () => {
             json: () => ({ message: 'no' })
         });
 
-        await expect(latest).resolves.toBe(10);
+        await expect(latest).resolves.toEqual({
+            feeSats: 10,
+            feeId: 'latest'
+        });
         await expect(failed).rejects.toBeUndefined();
         await expect(rejected).rejects.toBeUndefined();
         expect(store.zeroConfFee).toBe(10);
@@ -800,8 +806,35 @@ describe('LSPStore.getZeroConfFee superseded requests', () => {
         const request = store.getZeroConfFee(50000000);
         answers[0].resolve(quote(1500000, 'only'));
 
-        await expect(request).resolves.toBe(1500);
+        await expect(request).resolves.toEqual({
+            feeSats: 1500,
+            feeId: 'only'
+        });
         expect(store.zeroConfFee).toBe(1500);
         expect(store.feeId).toBe('only');
+    });
+});
+
+describe('LSPStore.getZeroConfInvoice', () => {
+    it('sends the fee_id of the quote it is given, not the shared one', async () => {
+        const store = makeStore();
+        store.feeId = 'later-preview';
+        jest.mocked(ReactNativeBlobUtil.fetch).mockReset();
+        jest.mocked(ReactNativeBlobUtil.fetch).mockResolvedValue({
+            info: () => ({ status: 400 }),
+            json: () => ({ message: 'rejected' })
+        } as any);
+
+        await expect(
+            store.getZeroConfInvoice('lnbc-inner', {
+                feeSats: 2000,
+                feeId: 'accepted-quote'
+            })
+        ).rejects.toBeUndefined();
+
+        const body = JSON.parse(
+            jest.mocked(ReactNativeBlobUtil.fetch).mock.calls[0][3] as string
+        );
+        expect(body.fee_id).toBe('accepted-quote');
     });
 });

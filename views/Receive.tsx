@@ -750,19 +750,29 @@ export default class Receive extends React.Component<
     };
 
     // An LNURL-withdraw invoice is submitted as soon as it is created, so the
-    // LSP fee has to be accepted before that rather than shown next to it
-    confirmLspFee = (feeSats: number, amountSats: string) =>
-        new Promise<boolean>((resolve) => {
+    // LSP fee has to be accepted before that rather than shown next to it.
+    // A fee that the amount doesn't cover is added on top, as InvoicesStore
+    // prices it.
+    confirmLspFee = (feeSats: number, amountSats: string) => {
+        const amount = new BigNumber(amountSats);
+        const message = amount.gt(feeSats)
+            ? localeString('views.Receive.lspFeeConfirmWithdrawal')
+                  .replace('{fee}', numberWithCommas(feeSats))
+                  .replace(
+                      '{amount}',
+                      numberWithCommas(amount.minus(feeSats).toString())
+                  )
+            : localeString('views.Receive.lspFeeOnTopConfirmWithdrawal')
+                  .replace('{fee}', numberWithCommas(feeSats))
+                  .replace(
+                      '{total}',
+                      numberWithCommas(amount.plus(feeSats).toString())
+                  )
+                  .replace('{amount}', numberWithCommas(amount.toString()));
+        return new Promise<boolean>((resolve) => {
             Alert.alert(
                 localeString('general.lsp'),
-                localeString('views.Receive.lspFeeConfirmWithdrawal')
-                    .replace('{fee}', numberWithCommas(feeSats))
-                    .replace(
-                        '{amount}',
-                        numberWithCommas(
-                            new BigNumber(amountSats).minus(feeSats).toString()
-                        )
-                    ),
+                message,
                 [
                     {
                         text: localeString('general.cancel'),
@@ -777,6 +787,7 @@ export default class Receive extends React.Component<
                 { cancelable: false }
             );
         });
+    };
 
     scanNfc = async () => {
         const str = await scanNfcTag(this.props.ModalStore);

@@ -157,6 +157,18 @@ describe('Receive LNURL-withdraw LSP fee', () => {
         await expect(accepted).resolves.toBe(true);
     });
 
+    it('explains a fee the withdrawal amount does not cover as added on top', async () => {
+        jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        const view = makeView({ value: '1000', satAmount: '1000' });
+
+        const answer = view.confirmLspFee(3000, '1000');
+        expect((Alert.alert as jest.Mock).mock.calls[0][1]).toBe(
+            'views.Receive.lspFeeOnTopConfirmWithdrawal'
+        );
+        pressAlertButton('general.confirm');
+        await expect(answer).resolves.toBe(true);
+    });
+
     it('passes the confirmation to the store on an NFC withdraw with a keyed-in amount', async () => {
         (getSatAmount as jest.Mock).mockReturnValue(50000);
         (handleAnything as unknown as jest.Mock).mockResolvedValue([
