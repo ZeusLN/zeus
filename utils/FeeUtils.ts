@@ -70,18 +70,53 @@ export const sanitizeRecommendedFees = (
 };
 
 /**
- * Whether a reverse swap has a fee its claim can be built with.
- *
- * The claim pays the host-quoted claim miner fee when there is one and
- * ignores the rate. Only without that quote does it fall back to the
- * rate from the Swaps screen, and an unusable rate there would become
- * 2 sat/vB at claim time, which can fail to confirm before the swap
- * times out.
+ * Size in vB of the largest reverse swap claim: a script-path spend of the
+ * taproot lockup (signature, preimage, claim leaf, control block) to a
+ * taproot address. To a P2WPKH address it is 140 vB.
  */
-export const hasUsableClaimFee = (
-    claimMinerFee: unknown,
+export const REVERSE_CLAIM_MAX_VSIZE = 152;
+
+/**
+ * The most a reverse swap claim may pay: the fee rate ceiling above, on
+ * the largest claim. A larger quote is not a plausible fee.
+ */
+export const MAX_REVERSE_CLAIM_FEE =
+    MAX_SAT_PER_VBYTE * REVERSE_CLAIM_MAX_VSIZE;
+
+/**
+ * The fee, in sats, a reverse swap's claim pays.
+ *
+ * The native claim pays a fixed fee exactly and ignores the rate, so this
+ * number alone decides whether the claim relays and confirms before the
+ * swap times out. The host's quote is kept when it pays at least the rate
+ * for the largest claim, and raised to that otherwise, since a lower fee
+ * may not relay or confirm in time. It is decided when the swap is
+ * created and stored with it, so the amount shown before paying is the
+ * amount the claim pays out.
+ *
+ * Returns undefined, and the swap must not be started or claimed, when the
+ * rate is not a plausible sat/vB or the quote is not a number between 0
+ * and MAX_REVERSE_CLAIM_FEE. A missing quote counts as 0, so the claim
+ * pays the floor.
+ */
+export const reverseClaimMinerFee = (
+    quote: unknown,
     feeRate: unknown
-): boolean => Number(claimMinerFee) > 0 || isPlausibleSatPerVbyte(feeRate);
+): number | undefined => {
+    if (!isPlausibleSatPerVbyte(feeRate)) return undefined;
+    const quoted = quote == null ? 0 : Number(quote);
+    if (
+        typeof quote === 'boolean' ||
+        !Number.isFinite(quoted) ||
+        quoted < 0 ||
+        quoted > MAX_REVERSE_CLAIM_FEE
+    ) {
+        return undefined;
+    }
+    // the native claim takes whole sat/vB
+    const floor = Math.ceil(Number(feeRate)) * REVERSE_CLAIM_MAX_VSIZE;
+    return Math.max(Math.ceil(quoted), floor);
+};
 
 class FeeUtils {
     static DEFAULT_ROUTING_FEE_PERCENT = 0.05;

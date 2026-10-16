@@ -33,7 +33,6 @@ import ModalBox from '../../components/ModalBox';
 import Switch from '../../components/Switch';
 
 import { font } from '../../utils/FontUtils';
-import { hasUsableClaimFee } from '../../utils/FeeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { reAuthNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -153,6 +152,12 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
     private isNavigatingAway = false;
     private _unsubscribe?: () => void;
 
+    // The claim fee createReverseSwap will store at the rate set below.
+    // Without a usable rate the swap cannot start, and the quote is shown.
+    reverseClaimFeeShown = (): number =>
+        this.props.SwapStore.getReverseClaimMinerFee(this.state.fee) ??
+        (this.props.SwapStore.reverseInfo?.fees?.minerFees?.claim || 0);
+
     checkIsValid = () => {
         const { reverse, invoice, inputSats, outputSats } = this.state;
         const { SwapStore } = this.props;
@@ -169,7 +174,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
         const serviceFeePct = info?.fees?.percentage || 0;
         const networkFeeBigNum = this.state.reverse
-            ? new BigNumber(info?.fees?.minerFees?.claim || 0).plus(
+            ? new BigNumber(this.reverseClaimFeeShown()).plus(
                   info?.fees?.minerFees?.lockup || 0
               )
             : new BigNumber(info?.fees?.minerFees || 0);
@@ -215,12 +220,12 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 ? true
                 : currentInputSatsBN.isLessThanOrEqualTo(maxSendAmount));
 
-        // The reverse claim is broadcast without asking, so it needs a fee
-        // before the swap starts: the host's claim miner fee, or else a
+        // The reverse claim is broadcast without asking, so its fee is
+        // decided before the swap starts, from the host's quote and a
         // usable rate from the fee section above
         const feeRateUsable =
             !reverse ||
-            hasUsableClaimFee(SwapStore.claimMinerFee, this.state.fee);
+            SwapStore.getReverseClaimMinerFee(this.state.fee) !== undefined;
 
         const newIsValid =
             invoiceAddressValid &&
@@ -424,9 +429,9 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                             : SwapStore.subInfo;
                         const serviceFeePct = info?.fees?.percentage || 0;
                         const networkFeeBigNum = initialReverse
-                            ? new BigNumber(
-                                  info?.fees?.minerFees?.claim || 0
-                              ).plus(info?.fees?.minerFees?.lockup || 0)
+                            ? new BigNumber(this.reverseClaimFeeShown()).plus(
+                                  info?.fees?.minerFees?.lockup || 0
+                              )
                             : new BigNumber(info?.fees?.minerFees || 0);
                         const networkFee = networkFeeBigNum.toNumber();
 
@@ -832,7 +837,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
 
         const serviceFeePct = info?.fees?.percentage || 0;
         const networkFeeBigNum = reverse
-            ? new BigNumber(info?.fees?.minerFees?.claim || 0).plus(
+            ? new BigNumber(this.reverseClaimFeeShown()).plus(
                   info?.fees?.minerFees?.lockup || 0
               )
             : new BigNumber(info?.fees?.minerFees || 0);

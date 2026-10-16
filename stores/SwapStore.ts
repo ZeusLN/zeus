@@ -11,6 +11,7 @@ import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
 import UrlUtils from '../utils/UrlUtils';
+import { reverseClaimMinerFee } from '../utils/FeeUtils';
 import {
     SWAPS_KEY,
     REVERSE_SWAPS_KEY,
@@ -202,6 +203,11 @@ export default class SwapStore {
     @computed get claimMinerFee(): number {
         return this.reverseInfo?.fees?.minerFees?.claim || 0;
     }
+
+    // The claim fee a reverse swap started now at this rate would store
+    // and pay, or undefined if it must not start (see reverseClaimMinerFee)
+    getReverseClaimMinerFee = (feeRate: unknown): number | undefined =>
+        reverseClaimMinerFee(this.reverseInfo?.fees?.minerFees?.claim, feeRate);
 
     getReverseSwapReceiveAmount = (
         onchainAmount: number | undefined,
@@ -581,6 +587,20 @@ export default class SwapStore {
         const { implementation } = this.settingsStore;
         const { nodeInfo } = this.nodeInfoStore;
         const nodePubkey = nodeInfo.nodeId;
+
+        // Decided once, before the invoice exists, and stored with the
+        // swap: the Swaps screen showed this fee, and the claim pays it
+        const claimMinerFee = this.getReverseClaimMinerFee(fee);
+        if (claimMinerFee === undefined) {
+            runInAction(() => {
+                this.apiError = localeString(
+                    'views.Swaps.invalidReverseSwapResponse'
+                );
+                this.loading = false;
+            });
+            return;
+        }
+
         try {
             initEccLib(ecc);
             console.log('Creating reverse swap using rescue key...');
@@ -710,7 +730,9 @@ export default class SwapStore {
             responseData.type = SwapType.Reverse;
             responseData.preimage = preimage;
             responseData.destinationAddress = destinationAddress;
-            responseData.claimMinerFee = this.claimMinerFee;
+            responseData.claimMinerFee = claimMinerFee;
+            // kept so a swap reopened later claims at the rate chosen here
+            responseData.claimFeeRate = Number(fee);
 
             await this.saveReverseSwaps(
                 responseData,
