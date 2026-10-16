@@ -28,7 +28,8 @@ import { verifyBiometry } from '../utils/BiometricUtils';
 import {
     blockNavigationDuringWipe,
     clearAllData,
-    isWipePending
+    isWipePending,
+    markWipePending
 } from '../utils/DataClearUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { restartApp } from '../utils/RestartUtils';
@@ -196,14 +197,12 @@ export default class Lockscreen extends React.Component<
             shareIntentData
         } = route.params ?? {};
 
-        // Finish a wipe that did not complete before anything else, POS
-        // and biometrics included: a wipe started by an earlier launch that
-        // was cut short, or a lockout whose final attempt was saved before
-        // the wipe started
-        if (
-            (await isWipePending()) ||
-            (settings?.authenticationAttempts ?? 0) >= maxAuthenticationAttempts
-        ) {
+        // Finish a wipe started by an earlier launch that was cut short,
+        // before anything else, POS and biometrics included. A saved
+        // attempt count at the limit does not wipe here: the last attempt
+        // may have been a correct entry whose reset was not saved, so it
+        // only means the next wrong entry wipes.
+        if (await isWipePending()) {
             this.setState({ wiping: true });
             await this.authenticationFailure();
             return;
@@ -477,6 +476,8 @@ export default class Lockscreen extends React.Component<
             // the configs being wiped) before the restart lands. Keeping
             // loggedIn false holds every auth gate shut for the duration,
             // and the wipe guard pins the user to the wiping screen.
+            // Save the pending wipe before the screen changes (see below).
+            await markWipePending();
             this.setState({ wiping: true });
             await this.deleteNodes();
         } else {
@@ -484,8 +485,11 @@ export default class Lockscreen extends React.Component<
                 authenticationAttempts
             });
             if (authenticationAttempts >= maxAuthenticationAttempts) {
-                // see the duress branch: loggedIn must stay false so the
-                // wallet UI stays gated while the wipe runs
+                // Save the pending wipe before the screen changes, so that
+                // closing the app once the wrong entry shows cannot stop
+                // the wipe. See the duress branch: loggedIn must stay false
+                // so the wallet UI stays gated while the wipe runs.
+                await markWipePending();
                 this.setState({ wiping: true });
                 // wipe node configs, passwords, and pins
                 await this.authenticationFailure();
