@@ -2612,12 +2612,18 @@ export default class NostrWalletConnectStore {
             );
         }
 
+        // the fee cap is limited to the budget left after the amount
+        const feeLimitSats = connection.feeLimitSatsForPayment(
+            amountSats,
+            PAYMENT_FEE_LIMIT_SATS
+        );
+
         this.transactionsStore.reset();
         this.transactionsStore.sendPayment({
             payment_request: request.invoice,
             // nodes reject an amount for an invoice that already has one
             amount: zeroAmountInvoice ? amountSats.toString() : undefined,
-            fee_limit_sat: PAYMENT_FEE_LIMIT_SATS.toString(),
+            fee_limit_sat: feeLimitSats.toString(),
             timeout_seconds: PAYMENT_TIMEOUT_SECONDS.toString(),
             // service-initiated: don't set or clear the user-facing
             // double-submission guard (paymentInFlight)
@@ -2640,6 +2646,7 @@ export default class NostrWalletConnectStore {
                 rawInvoice: request.invoice,
                 connection,
                 amountSats,
+                feeLimitSats,
                 payment_source: 'lightning',
                 payment: inTransitResult.payment,
                 paymentHash: paymentHash || inTransitResult.payment?.paymentHash
@@ -3463,6 +3470,7 @@ export default class NostrWalletConnectStore {
         rawInvoice,
         connection,
         amountSats,
+        feeLimitSats,
         payment_source,
         payment,
         paymentHash: passedPaymentHash
@@ -3470,6 +3478,7 @@ export default class NostrWalletConnectStore {
         rawInvoice: string;
         connection: NWCConnection;
         amountSats: number;
+        feeLimitSats?: number;
         payment_source: ConnectionPaymentSourceType;
         payment?: Payment | CashuPayment | null;
         paymentHash?: string;
@@ -3488,6 +3497,7 @@ export default class NostrWalletConnectStore {
                 id,
                 type: 'pay_invoice',
                 satAmount: amountSats,
+                ...(feeLimitSats !== undefined ? { feeLimitSats } : {}),
                 status: 'pending',
                 payment_source,
                 createdAt: new Date(),
