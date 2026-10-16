@@ -394,6 +394,11 @@ export default class InvoicesStore {
 
         if (customPreimage) req.preimage = customPreimage;
 
+        // The quote this invoice is priced with. lspStore.zeroConfFee is
+        // shared with the screens and can hold another request's quote by
+        // the time it would be read again.
+        let lspFeeSats = 0;
+
         if (
             BackendUtils.supportsFlowLSP() &&
             lspRequested &&
@@ -422,15 +427,20 @@ export default class InvoicesStore {
             }
 
             try {
-                await this.lspStore.getZeroConfFee(
-                    Number(new BigNumber(value).times(1000))
-                );
-            } catch (e) {}
+                lspFeeSats =
+                    (await this.lspStore.getZeroConfFee(
+                        Number(new BigNumber(value).times(1000))
+                    )) || 0;
+            } catch (e) {
+                // no quote, or a newer fee request has replaced this one
+                runInAction(() => {
+                    this.creatingInvoice = false;
+                });
+                return;
+            }
 
-            if (new BigNumber(value).gt(this.lspStore.zeroConfFee || 0)) {
-                req.value = new BigNumber(value).minus(
-                    this.lspStore.zeroConfFee || 0
-                );
+            if (new BigNumber(value).gt(lspFeeSats)) {
+                req.value = new BigNumber(value).minus(lspFeeSats);
             }
         }
 
@@ -481,7 +491,8 @@ export default class InvoicesStore {
                 ) {
                     try {
                         const response = await this.lspStore.getZeroConfInvoice(
-                            invoice.getPaymentRequest
+                            invoice.getPaymentRequest,
+                            lspFeeSats
                         );
                         jit_bolt11 = response as string;
                     } catch (e: any) {

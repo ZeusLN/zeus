@@ -516,7 +516,10 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             const { LSPStore } = this.props;
             const outputSats = new BigNumber(this.state.outputSats);
             if (outputSats.isGreaterThan(0)) {
-                LSPStore.getZeroConfFee(outputSats.toNumber() * 1000);
+                // errors are surfaced through LSPStore.flow_error
+                LSPStore.getZeroConfFee(outputSats.toNumber() * 1000).catch(
+                    () => {}
+                );
             } else {
                 LSPStore.resetFee();
             }
