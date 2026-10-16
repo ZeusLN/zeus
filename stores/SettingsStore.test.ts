@@ -112,6 +112,7 @@ import SettingsStore, {
     isOlympusPeer
 } from './SettingsStore';
 import { themeColor } from '../utils/ThemeUtils';
+import isEqual from 'lodash/isEqual';
 
 const StorageMock: any = jest.requireMock('../storage');
 
@@ -425,6 +426,47 @@ describe('SettingsStore.updateSettings', () => {
         // the persisted blob.
         expect(StorageMock._backing[STORAGE_KEY]).not.toContain('abandon');
         expect(StorageMock._backing[STORAGE_KEY]).not.toContain('hunter2');
+    });
+
+    // WalletConfiguration saves a node built from form state, so unset
+    // fields are undefined. Storage drops those keys; if memory kept them,
+    // deleting the wallet before the next settings load could not find
+    // its config (deleteNodeConfig matches with isEqual) and left it
+    // behind after wiping the wallet's data (#4969).
+    it('keeps in memory what was persisted when a write has undefined values', async () => {
+        seedSettings({ nodes: [{ implementation: 'lnd', host: 'a' }] });
+        const store = new SettingsStore();
+        await store.getSettings();
+
+        const savedNode = {
+            implementation: 'lnd',
+            host: 'b',
+            rune: undefined,
+            lndDir: undefined
+        };
+        const returned = await store.updateSettings((current: any) => ({
+            nodes: [...current.nodes, savedNode],
+            fiat: undefined
+        }));
+
+        expect(store.settings).toStrictEqual(persistedSettings());
+        expect(returned).toStrictEqual(persistedSettings());
+
+        const deletedNode = store.settings.nodes![1];
+        await store.updateSettings((current: any) => {
+            const freshIndex = current.nodes.findIndex((node: any) =>
+                isEqual(node, deletedNode)
+            );
+            return {
+                nodes: current.nodes.filter(
+                    (_: any, i: number) => i !== freshIndex
+                )
+            };
+        });
+
+        expect(persistedSettings().nodes).toEqual([
+            { implementation: 'lnd', host: 'a' }
+        ]);
     });
 
     it('keeps memory consistent with disk when the write is blocked', async () => {
