@@ -489,7 +489,6 @@ export default class SwapDetails extends React.Component<
                 const result = await this.createReverseClaimTransaction(
                     createdResponse,
                     keys,
-                    endpoint,
                     swapData.lockupAddress!,
                     swapData.claimDestinationAddress || '',
                     swapData.preimage,
@@ -825,7 +824,6 @@ export default class SwapDetails extends React.Component<
     createReverseClaimTransaction = async (
         createdResponse: any,
         keys: any,
-        endpoint: string,
         lockupAddress: string,
         destinationAddress: string,
         preimage: any,
@@ -877,7 +875,6 @@ export default class SwapDetails extends React.Component<
                     lockupAddress,
                     destinationAddress: claimAddress
                 }),
-                endpoint,
                 transactionHex,
                 feeRate: Number(fee || 2),
                 minerFee,
