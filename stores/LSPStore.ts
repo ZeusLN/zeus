@@ -904,9 +904,13 @@ export default class LSPStore {
                     const decoded = response.result;
                     runInAction(() => this.handleCustomMessages(decoded));
                 },
+                // LND.ts passes a string (the certificate warning) when the
+                // socket errors, and the stream's error object when the
+                // server sends one.
                 (error: any) => {
                     console.error(
-                        'sub custom messages error: ' + error.message
+                        'sub custom messages error: ' +
+                            (typeof error === 'string' ? error : error?.message)
                     );
                 }
             );
