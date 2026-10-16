@@ -9,6 +9,7 @@ import { stopLnd } from './LndMobileUtils';
 import BackendUtils from './BackendUtils';
 import { signMessageNodePubkey } from '../lndmobile/wallet';
 import Base64Utils from './Base64Utils';
+import { IN_APP_RESTART } from './InAppRestartUtils';
 import { sleep } from './SleepUtils';
 import { zipFolder, unzipFile, encryptFile, decryptFile } from './ZipUtils';
 
@@ -330,7 +331,7 @@ export const uploadChannelBackupToOlympus = async (
                         [
                             {
                                 text: localeString('views.Wallet.restart'),
-                                onPress: () => RNRestart.Restart()
+                                onPress: () => RNRestart.Restart(IN_APP_RESTART)
                             }
                         ],
                         { cancelable: false }
@@ -345,7 +346,7 @@ export const uploadChannelBackupToOlympus = async (
                         [
                             {
                                 text: localeString('views.Wallet.restart'),
-                                onPress: () => RNRestart.Restart()
+                                onPress: () => RNRestart.Restart(IN_APP_RESTART)
                             }
                         ],
                         { cancelable: false }
@@ -360,7 +361,7 @@ export const uploadChannelBackupToOlympus = async (
                     [
                         {
                             text: localeString('views.Wallet.restart'),
-                            onPress: () => RNRestart.Restart()
+                            onPress: () => RNRestart.Restart(IN_APP_RESTART)
                         }
                     ],
                     { cancelable: false }
@@ -702,7 +703,7 @@ export const exportChannelDb = async (
                 [
                     {
                         text: localeString('views.Wallet.restart'),
-                        onPress: () => RNRestart.Restart()
+                        onPress: () => RNRestart.Restart(IN_APP_RESTART)
                     }
                 ],
                 { cancelable: false }
@@ -737,7 +738,7 @@ export const exportChannelDb = async (
                     [
                         {
                             text: localeString('views.Wallet.restart'),
-                            onPress: () => RNRestart.Restart()
+                            onPress: () => RNRestart.Restart(IN_APP_RESTART)
                         }
                     ],
                     { cancelable: false }
@@ -763,7 +764,7 @@ export const exportChannelDb = async (
                     [
                         {
                             text: localeString('views.Wallet.restart'),
-                            onPress: () => RNRestart.Restart()
+                            onPress: () => RNRestart.Restart(IN_APP_RESTART)
                         }
                     ],
                     { cancelable: false }
@@ -782,7 +783,7 @@ export const exportChannelDb = async (
             [
                 {
                     text: localeString('views.Wallet.restart'),
-                    onPress: () => RNRestart.Restart()
+                    onPress: () => RNRestart.Restart(IN_APP_RESTART)
                 }
             ],
             { cancelable: false }
