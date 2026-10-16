@@ -291,3 +291,20 @@ describe('CLNRest.getPayments', () => {
         expect(payment.amount_sent_msat).toBeNull();
     });
 });
+
+describe('CLNRest.createWithdrawalRequest', () => {
+    it('takes the amount in sats and requests it in msat', async () => {
+        const cln = new CLNRest();
+        cln.postRequest = jest.fn().mockResolvedValue({ bolt12: 'lnr1...' });
+
+        await cln.createWithdrawalRequest({
+            amount: '100',
+            description: 'pocket money'
+        });
+
+        expect(cln.postRequest).toHaveBeenCalledWith('/v1/invoicerequest', {
+            amount: 100_000,
+            description: 'pocket money'
+        });
+    });
+});

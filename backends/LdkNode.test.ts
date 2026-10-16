@@ -2,6 +2,7 @@ const mockListPayments = jest.fn();
 const mockSendBolt11 = jest.fn();
 const mockSendSpontaneousPayment = jest.fn();
 const mockBolt12SendUsingAmount = jest.fn();
+const mockBolt12InitiateRefund = jest.fn();
 const mockListChannels = jest.fn();
 const mockCloseChannel = jest.fn();
 const mockForceCloseChannel = jest.fn();
@@ -27,7 +28,9 @@ jest.mock('../ldknode/LdkNodeInjection', () => ({
         },
         bolt12: {
             bolt12SendUsingAmount: (...args: any[]) =>
-                mockBolt12SendUsingAmount(...args)
+                mockBolt12SendUsingAmount(...args),
+            bolt12InitiateRefund: (...args: any[]) =>
+                mockBolt12InitiateRefund(...args)
         }
     }
 }));
@@ -395,5 +398,21 @@ describe('LdkNode.closeChannel', () => {
         expect(close.settled).toBe(true);
         expect(close.error).toBeUndefined();
         expect(unsubscribed).toBe(true);
+    });
+});
+
+describe('LdkNode.createWithdrawalRequest', () => {
+    it('takes the amount in sats and initiates the refund in msat', async () => {
+        mockBolt12InitiateRefund.mockResolvedValue('lnr1...');
+
+        const result = await new LdkNode().createWithdrawalRequest({
+            amount: '100',
+            description: 'pocket money'
+        });
+
+        expect(result).toEqual({ bolt12: 'lnr1...' });
+        expect(mockBolt12InitiateRefund).toHaveBeenCalledWith(
+            expect.objectContaining({ amountMsat: 100_000 })
+        );
     });
 });

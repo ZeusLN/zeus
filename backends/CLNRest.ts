@@ -668,7 +668,8 @@ export default class CLNRest {
         description: string;
     }) => {
         return this.postRequest('/v1/invoicerequest', {
-            amount: Number(amount),
+            // invoicerequest reads a bare number as msat
+            amount: Number(amount) * 1000,
             description
         });
     };
