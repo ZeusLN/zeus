@@ -285,10 +285,19 @@ export default class WalletConfiguration extends React.Component<
             const { host, port, macaroonHex } =
                 ConnectionFormatUtils.processLndConnectUrl(suggestImport);
 
+            // An lndconnect string describes an LND REST node. Clear the
+            // credentials left over from a typed or saved config: they
+            // are saved with the node, and a Core Lightning rune would be
+            // sent to the imported host.
             this.setState({
                 host,
                 port,
-                macaroonHex,
+                macaroonHex: macaroonHex || '',
+                rune: '',
+                lndhubUrl: '',
+                username: '',
+                password: '',
+                implementation: 'lnd',
                 suggestImport: '',
                 importError: '',
                 enableTor: host.includes('.onion')
@@ -356,10 +365,15 @@ export default class WalletConfiguration extends React.Component<
                 implementation: Implementations;
             } = ConnectionFormatUtils.processCLNRestConnectUrl(suggestImport);
 
+            // Same for the macaroon and lndhub login of a previous config
             this.setState({
                 host,
                 rune,
                 port,
+                macaroonHex: '',
+                lndhubUrl: '',
+                username: '',
+                password: '',
                 enableTor,
                 implementation,
                 suggestImport: '',
