@@ -116,6 +116,7 @@ import DateTime from './views/Settings/DateTime';
 import CertInstallInstructions from './views/Settings/CertInstallInstructions';
 import Support from './views/Settings/Support';
 import Help from './views/Settings/Help';
+import Diagnostics from './views/Settings/Diagnostics';
 import SocialMedia from './views/Settings/SocialMedia';
 import Sponsors from './views/Settings/Sponsors';
 import Olympians from './views/Settings/Olympians';
@@ -763,6 +764,12 @@ export default class App extends React.PureComponent {
                                                             <Stack.Screen
                                                                 name="Help" // @ts-ignore:next-line
                                                                 component={Help}
+                                                            />
+                                                            <Stack.Screen
+                                                                name="Diagnostics" // @ts-ignore:next-line
+                                                                component={
+                                                                    Diagnostics
+                                                                }
                                                             />
                                                             <Stack.Screen
                                                                 name="Sponsors" // @ts-ignore:next-line
