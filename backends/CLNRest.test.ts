@@ -23,6 +23,7 @@ jest.mock('./CoreLightningRequestHandler', () => ({
 }));
 
 import CLNRest from './CLNRest';
+import Payment from '../models/Payment';
 
 // CLNRest's own `getURL` is not reachable with ws=true today — its single
 // caller passes no ws argument — so these lock in the anchored behaviour
@@ -149,5 +150,144 @@ describe('CLNRest.watchInvoicePaid', () => {
         await tick();
 
         expect(lookupInvoice).toHaveBeenCalledTimes(1);
+    });
+});
+
+// Runs the query getPayments sends to /v1/sql against an in-memory SQLite
+// sendpays table (CLN's sql plugin is SQLite too), one row per payment part.
+describe('CLNRest.getPayments', () => {
+    const { DatabaseSync } = require('node:sqlite');
+
+    const getPaymentsFor = async (
+        parts: Array<{ hash: string; groupid: number; status: string }>
+    ) => {
+        const db = new DatabaseSync(':memory:');
+        db.exec(
+            `create table sendpays (created_index integer primary key,
+            payment_hash text, groupid integer, partid integer, status text,
+            destination text, created_at integer, description text,
+            bolt11 text, bolt12 text, amount_sent_msat integer,
+            amount_msat integer, payment_preimage text)`
+        );
+        const insert = db.prepare(
+            `insert into sendpays (payment_hash, groupid, partid, status,
+            created_at, amount_sent_msat, amount_msat, payment_preimage)
+            values (?, ?, ?, ?, 0, 5000500, 5000000, ?)`
+        );
+        parts.forEach((p, i) =>
+            insert.run(
+                p.hash,
+                p.groupid,
+                i,
+                p.status,
+                p.status === 'complete' ? 'aa'.repeat(32) : null
+            )
+        );
+
+        const cln = new CLNRest();
+        (cln as any).postRequest = jest.fn(
+            async (_route: string, { query }: { query: string }) => ({
+                rows: db
+                    .prepare(query)
+                    .all()
+                    .map((row: any) => Object.values(row))
+            })
+        );
+        const { payments } = await cln.getPayments();
+        return payments;
+    };
+
+    const paymentsFor = async (
+        parts: Array<{ hash: string; groupid: number; status: string }>
+    ) =>
+        Object.fromEntries(
+            (await getPaymentsFor(parts)).map((p: any) => [
+                p.payment_hash,
+                p.status
+            ])
+        );
+
+    it('reports an MPP group with failed and pending parts as pending', async () => {
+        expect(
+            await paymentsFor([
+                { hash: 'mpp', groupid: 1, status: 'failed' },
+                { hash: 'mpp', groupid: 1, status: 'pending' },
+                { hash: 'mpp', groupid: 1, status: 'pending' }
+            ])
+        ).toEqual({ mpp: 'pending' });
+    });
+
+    it('reports a group with any complete part as complete', async () => {
+        expect(
+            await paymentsFor([
+                { hash: 'mpp', groupid: 1, status: 'failed' },
+                { hash: 'mpp', groupid: 1, status: 'complete' },
+                { hash: 'mpp', groupid: 1, status: 'complete' }
+            ])
+        ).toEqual({ mpp: 'complete' });
+    });
+
+    it('reports a group whose parts all failed as failed', async () => {
+        expect(
+            await paymentsFor([
+                { hash: 'mpp', groupid: 1, status: 'failed' },
+                { hash: 'mpp', groupid: 1, status: 'failed' }
+            ])
+        ).toEqual({ mpp: 'failed' });
+    });
+
+    it('reports single-part payments by their own status', async () => {
+        expect(
+            await paymentsFor([
+                { hash: 'a', groupid: 1, status: 'complete' },
+                { hash: 'b', groupid: 2, status: 'pending' },
+                { hash: 'c', groupid: 3, status: 'failed' }
+            ])
+        ).toEqual({ a: 'complete', b: 'pending', c: 'failed' });
+    });
+
+    // each part carries amount_msat 5000000 and amount_sent_msat 5000500
+    it('sums the in-flight parts of a pending group, skipping failed ones', async () => {
+        const [payment] = await getPaymentsFor([
+            { hash: 'mpp', groupid: 1, status: 'failed' },
+            { hash: 'mpp', groupid: 1, status: 'pending' },
+            { hash: 'mpp', groupid: 1, status: 'pending' }
+        ]);
+
+        expect(payment.amount_msat).toBe(10000000);
+        expect(payment.amount_sent_msat).toBe(10001000);
+    });
+
+    it('counts pending parts of a complete group in both amounts', async () => {
+        const [payment] = await getPaymentsFor([
+            { hash: 'mpp', groupid: 1, status: 'complete' },
+            { hash: 'mpp', groupid: 1, status: 'pending' }
+        ]);
+
+        expect(payment.status).toBe('complete');
+        expect(payment.amount_msat).toBe(10000000);
+        expect(payment.amount_sent_msat).toBe(10001000);
+        expect(new Payment(payment).getFee).toBe('1');
+    });
+
+    it('skips failed parts of a complete group', async () => {
+        const [payment] = await getPaymentsFor([
+            { hash: 'mpp', groupid: 1, status: 'failed' },
+            { hash: 'mpp', groupid: 1, status: 'complete' },
+            { hash: 'mpp', groupid: 1, status: 'complete' }
+        ]);
+
+        expect(payment.amount_msat).toBe(10000000);
+        expect(payment.amount_sent_msat).toBe(10001000);
+    });
+
+    it('reports no amount for a group whose parts all failed', async () => {
+        const [payment] = await getPaymentsFor([
+            { hash: 'mpp', groupid: 1, status: 'failed' },
+            { hash: 'mpp', groupid: 1, status: 'failed' }
+        ]);
+
+        expect(payment.amount_msat).toBe(0);
+        expect(payment.amount_sent_msat).toBeNull();
     });
 });
