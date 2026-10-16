@@ -1180,4 +1180,128 @@ describe('TransactionsStore releasePaymentInFlight', () => {
         expect(store.loading).toBe(true);
         expect(store.paymentInFlight).toBe(true);
     });
+
+    // the send request never answers, so the backstop starts tracking and
+    // the node reports the payment in flight
+    const startHungPayment = async (store: TransactionsStore) => {
+        const first = deferred();
+        (BackendUtils.payLightningInvoice as jest.Mock).mockReturnValueOnce(
+            first.promise
+        );
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue({
+            status: 'IN_FLIGHT',
+            payment_hash: HASH
+        });
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await jest.advanceTimersByTimeAsync((60 + 60) * 1000);
+        expect(store.paymentInFlightConfirmed).toBe(true);
+        return first;
+    };
+
+    it("ignores the released payment's send request rejecting late", async () => {
+        const store = newStore('lnd');
+        const first = await startHungPayment(store);
+        expect(store.releasePaymentInFlight()).toBe(true);
+
+        const Bolt11Utils = require('../utils/Bolt11Utils').default;
+        (Bolt11Utils.decode as jest.Mock).mockReturnValueOnce({
+            payment_hash: HASH2
+        });
+        (BackendUtils.payLightningInvoice as jest.Mock).mockReturnValueOnce(
+            new Promise(() => {})
+        );
+        store.sendPayment({ payment_request: 'lnbc1other' });
+        await flush();
+
+        first.reject(new Error('stream closed'));
+        await flush();
+        expect(store.error).toBe(false);
+        expect(store.error_msg).toBeNull();
+        expect(store.loading).toBe(true);
+        expect(store.paymentInFlight).toBe(true);
+    });
+
+    it("clears loading when the released payment's send request is still open", async () => {
+        const store = newStore('lnd');
+        await startHungPayment(store);
+        expect(store.loading).toBe(true);
+
+        expect(store.releasePaymentInFlight()).toBe(true);
+        expect(store.loading).toBe(false);
+    });
+
+    it('leaves loading to a background payment still running at release', async () => {
+        const store = newStore('lnd');
+        await startHungPayment(store);
+
+        // e.g. an NWC payment, which waits for loading to clear
+        const background = deferred();
+        (BackendUtils.payLightningInvoice as jest.Mock).mockReturnValueOnce(
+            background.promise
+        );
+        store.sendPayment({
+            payment_request: 'lnbc1other',
+            background: true
+        });
+        await flush();
+
+        expect(store.releasePaymentInFlight()).toBe(true);
+        expect(store.loading).toBe(true);
+
+        background.resolve({
+            status: 'SUCCEEDED',
+            payment_hash: HASH2,
+            payment_preimage: 'beefdead'
+        });
+        await flush();
+        expect(store.loading).toBe(false);
+    });
+
+    it("keeps one tracker for the next payment when the released payment's tracker exits", async () => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockResolvedValueOnce({
+            status: 'IN_FLIGHT',
+            payment_hash: HASH
+        });
+        // the released payment's tracker is mid-lookup
+        const firstLookup = deferred();
+        (BackendUtils.lookupPayment as jest.Mock).mockReturnValueOnce(
+            firstLookup.promise
+        );
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake' });
+        await flush();
+        expect(store.releasePaymentInFlight()).toBe(true);
+
+        // a second payment that stays in flight and is tracked
+        const Bolt11Utils = require('../utils/Bolt11Utils').default;
+        (Bolt11Utils.decode as jest.Mock).mockReturnValueOnce({
+            payment_hash: HASH2
+        });
+        (BackendUtils.payLightningInvoice as jest.Mock).mockResolvedValueOnce({
+            status: 'IN_FLIGHT',
+            payment_hash: HASH2
+        });
+        (BackendUtils.lookupPayment as jest.Mock).mockResolvedValue({
+            status: 'IN_FLIGHT',
+            payment_hash: HASH2
+        });
+        store.sendPayment({ payment_request: 'lnbc1other' });
+        await flush();
+
+        // the released tracker's lookup answers and it exits
+        firstLookup.resolve({ status: 'IN_FLIGHT', payment_hash: HASH });
+        await flush();
+
+        // the second payment's backstop must see its tracker still running
+        await jest.advanceTimersByTimeAsync((60 + 60) * 1000);
+        const lookups = (BackendUtils.lookupPayment as jest.Mock).mock.calls
+            .length;
+        await advancePoll();
+        expect(
+            (BackendUtils.lookupPayment as jest.Mock).mock.calls.length -
+                lookups
+        ).toBe(1);
+        expect(store.paymentInFlight).toBe(true);
+    });
 });
