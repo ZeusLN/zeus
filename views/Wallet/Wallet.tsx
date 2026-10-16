@@ -88,6 +88,7 @@ import {
 
 import Storage from '../../storage';
 import { autoPurgeLegacyKeychain } from '../../utils/KeychainPurgeUtils';
+import { isWipePending } from '../../utils/DataClearUtils';
 
 import AlertStore from '../../stores/AlertStore';
 import BalanceStore from '../../stores/BalanceStore';
@@ -413,6 +414,13 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             this.setState({ loading: true });
             const { SettingsStore, navigation } = this.props;
             const { posStatus, setPosStatus, initialStart } = SettingsStore;
+
+            // A wipe cut short by the end of the process is finished by the
+            // Lockscreen, before the settings it had not cleared are loaded
+            if (await isWipePending()) {
+                navigation.navigate('Lockscreen');
+                return;
+            }
 
             // This awaits on settings, so should await on Tor being bootstrapped before making requests
             const settings = await SettingsStore.getSettings();
