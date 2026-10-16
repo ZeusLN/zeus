@@ -1406,6 +1406,84 @@ describe('getLdkNodeLspConfig', () => {
             getLdkNodeLspConfig({} as any, 'signet').trustedPeers0conf
         ).toEqual([DEFAULT_LSPS1_PUBKEY_TESTNET]);
     });
+
+    describe('LSPS2', () => {
+        const lsps2Pubkey =
+            '02a8a7efb269645f1ca1e39637e72f74d45e8ec766c80cc184531d5453149695e6';
+        const lsps2Settings = (pubkey: string, host: string) =>
+            ({
+                lsps2PubkeyMutinynet: pubkey,
+                lsps2HostMutinynet: host,
+                lsps2Token: 'jit'
+            } as any);
+
+        it('has no LSPS2 LSP by default', () => {
+            for (const network of ['mainnet', 'testnet', 'mutinynet']) {
+                const config = getLdkNodeLspConfig({} as any, network);
+                expect(config.lsps2Config).toBeUndefined();
+                expect(config.trustedPeers0conf).toHaveLength(1);
+            }
+        });
+
+        it('registers and trusts a valid LSPS2 LSP on its own network', () => {
+            const settings = lsps2Settings(lsps2Pubkey, '127.0.0.1:9735');
+
+            expect(getLdkNodeLspConfig(settings, 'mutinynet')).toEqual(
+                expect.objectContaining({
+                    lsps2Config: {
+                        nodeId: lsps2Pubkey,
+                        address: '127.0.0.1:9735',
+                        token: 'jit'
+                    },
+                    trustedPeers0conf: [
+                        DEFAULT_LSPS1_PUBKEY_MUTINYNET,
+                        lsps2Pubkey
+                    ]
+                })
+            );
+            expect(
+                getLdkNodeLspConfig(settings, 'mainnet').lsps2Config
+            ).toBeUndefined();
+        });
+
+        it('trims and lowercases what the user typed', () => {
+            const config = getLdkNodeLspConfig(
+                lsps2Settings(
+                    ` ${lsps2Pubkey.toUpperCase()} `,
+                    ' 127.0.0.1:9735 '
+                ),
+                'mutinynet'
+            );
+            expect(config.lsps2Config?.nodeId).toEqual(lsps2Pubkey);
+            expect(config.lsps2Config?.address).toEqual('127.0.0.1:9735');
+        });
+
+        it.each([
+            ['a half-typed pubkey', lsps2Pubkey.slice(0, 40), '127.0.0.1:9735'],
+            ['a pubkey off the curve', `02${'f'.repeat(64)}`, '127.0.0.1:9735'],
+            ['a host without a port', lsps2Pubkey, '127.0.0.1'],
+            ['a host with port 0', lsps2Pubkey, '127.0.0.1:0']
+        ])('ignores %s', (_, pubkey, host) => {
+            const config = getLdkNodeLspConfig(
+                lsps2Settings(pubkey, host),
+                'mutinynet'
+            );
+            expect(config.lsps2Config).toBeUndefined();
+            expect(config.trustedPeers0conf).toEqual([
+                DEFAULT_LSPS1_PUBKEY_MUTINYNET
+            ]);
+        });
+
+        it('trusts an LSPS2 LSP that is also the LSPS1 node once', () => {
+            const config = getLdkNodeLspConfig(
+                lsps2Settings(DEFAULT_LSPS1_PUBKEY_MUTINYNET, '127.0.0.1:9735'),
+                'mutinynet'
+            );
+            expect(config.trustedPeers0conf).toEqual([
+                DEFAULT_LSPS1_PUBKEY_MUTINYNET
+            ]);
+        });
+    });
 });
 
 describe('SettingsStore.externalInputAuthRequired', () => {

@@ -1373,10 +1373,8 @@ export default class WalletConfiguration extends React.Component<
                 | 'mutinynet';
 
             const { SettingsStore } = this.props;
-            const { lsps1Config, trustedPeers0conf } = getLdkNodeLspConfig(
-                SettingsStore.settings,
-                networkType
-            );
+            const { lsps1Config, lsps2Config, trustedPeers0conf } =
+                getLdkNodeLspConfig(SettingsStore.settings, networkType);
 
             const response = await createLdkNodeWallet({
                 nodeDir: ldkNodeDir,
@@ -1392,6 +1390,7 @@ export default class WalletConfiguration extends React.Component<
                         ? DEFAULT_SCORER_URL
                         : ldkScorerUrl,
                 lsps1Config,
+                lsps2Config,
                 trustedPeers0conf,
                 vssServerUrl: ldkVssServer || DEFAULT_VSS_SERVER,
                 // If an existing seed is being imported, this is a restore:
