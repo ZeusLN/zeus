@@ -325,6 +325,7 @@ describe('CashuStore melting into our own invoice', () => {
         jest.spyOn(store, 'createMeltQuoteCDK').mockResolvedValue({
             fee_reserve: 0
         } as any);
+        jest.spyOn(store, 'estimateMeltInputFee').mockResolvedValue(0);
         return { store, isInvoicePaid };
     };
 
@@ -1190,6 +1191,7 @@ describe('CashuStore meltCDK and sweepMint melt state', () => {
         store.syncCDKBalances = jest.fn().mockResolvedValue(undefined);
         // payment proof has its own tests above
         store.isOwnInvoicePaid = jest.fn().mockResolvedValue(true);
+        store.estimateMeltInputFee = jest.fn().mockResolvedValue(0);
         return store;
     };
 
@@ -1319,6 +1321,7 @@ describe('CashuStore self-custody claim', () => {
         store.syncCDKBalances = jest.fn().mockResolvedValue(undefined);
         // payment proof has its own tests above
         store.isOwnInvoicePaid = jest.fn().mockResolvedValue(true);
+        store.estimateMeltInputFee = jest.fn().mockResolvedValue(0);
         return store;
     };
 
