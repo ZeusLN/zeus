@@ -125,7 +125,7 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
             BackendUtils,
             ...ldk,
             ...lnd,
-            getLspConfigForNetwork: () => ({}),
+            getLdkNodeLspConfig: () => ({ trustedPeers0conf: [] }),
             DEFAULT_SCORER_URL: 'scorer',
             DEFAULT_VSS_SERVER: 'vss',
             localeString: (s: string) => s,
