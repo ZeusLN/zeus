@@ -8,7 +8,8 @@ import {
     getFeePercentage,
     getSatAmount,
     feeLimitSatsToMaxRoutingFeeMsat,
-    getFeeLimitSatsFromPercent
+    getFeeLimitSatsFromPercent,
+    defaultMaxRoutingFeeMsat
 } from './AmountUtils';
 import { settingsStore, fiatStore, unitsStore } from '../stores/Stores';
 import { SATS_PER_BTC } from './UnitsUtils';
@@ -1282,6 +1283,18 @@ describe('AmountUtils', () => {
             expect(
                 getFeeLimitSatsFromPercent('5.0', '2100000000000000000000000')
             ).toBe('105000000000000000000000');
+        });
+    });
+
+    describe('defaultMaxRoutingFeeMsat', () => {
+        it("matches LDK's default cap of 1% plus 50 sats", () => {
+            expect(defaultMaxRoutingFeeMsat(1_000_000)).toBe(60_000);
+            expect(defaultMaxRoutingFeeMsat(5_000_000)).toBe(100_000);
+            expect(defaultMaxRoutingFeeMsat(0)).toBe(50_000);
+        });
+
+        it('rounds down to a whole millisat value', () => {
+            expect(defaultMaxRoutingFeeMsat(1_000_099)).toBe(60_000);
         });
     });
 });

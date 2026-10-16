@@ -438,6 +438,20 @@ export function getFeeLimitSatsFromPercent(
 }
 
 /**
+ * LDK's default routing fee cap for a payment: 1% of the amount plus 50 sats.
+ *
+ * ldk-node applies this itself when a BOLT 11 or BOLT 12 payment is sent
+ * without `maxTotalRoutingFeeMsat`, but routes a keysend sent without one
+ * with no fee cap, so keysends pass it explicitly.
+ *
+ * @param amountMsat - Payment amount in millisatoshis
+ * @returns Fee cap in millisatoshis
+ */
+export function defaultMaxRoutingFeeMsat(amountMsat: number): number {
+    return Math.floor(amountMsat / 100) + 50_000;
+}
+
+/**
  * Converts an amount in the current display unit (sats, BTC, or fiat) to satoshis
  * @param amount - The amount to convert (as string or number)
  * @param forceUnit - Optional unit override ('sats', 'BTC', or 'fiat')

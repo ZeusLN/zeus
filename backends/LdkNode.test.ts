@@ -165,6 +165,20 @@ describe('LdkNode routing fee limit', () => {
         }
     );
 
+    it.each([
+        ['no fee limit', undefined],
+        ['an empty fee limit', ''],
+        ['an unparsable fee limit', NaN]
+    ])(
+        "sends a keysend with LDK's default cap for %s",
+        async (_name, fee_limit_sat) => {
+            // 1% of 5,000 sats plus 50 sats
+            expect(await sentFeeLimit('sendKeysend', fee_limit_sat)).toBe(
+                100_000
+            );
+        }
+    );
+
     it.each(['payLightningInvoice', 'payOffer'] as const)(
         '%s leaves the cap to ldk-node when no limit is set',
         async (method) => {
