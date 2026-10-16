@@ -266,14 +266,19 @@ describe('SwapStore.createReverseSwap claim fee', () => {
         fees: { percentage: 0.5, minerFees: { claim, lockup: 400 } }
     });
 
-    const create = async (fee: string, claimQuote: any) => {
+    const create = async (
+        fee: string,
+        claimQuote: any,
+        invoiceAmount = INVOICE_AMOUNT,
+        onchainAmount = 99100
+    ) => {
         storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
         const { outputScript: _outputScript, ...details } = VALID;
         fetchMock.mockResolvedValueOnce({
             data: JSON.stringify({
                 id: 'reverse-swap',
                 invoice: 'lnbc-provider-invoice',
-                onchainAmount: 99100,
+                onchainAmount,
                 ...details
             })
         });
@@ -287,7 +292,7 @@ describe('SwapStore.createReverseSwap claim fee', () => {
         const navigation = { navigate: jest.fn() };
         await store.createReverseSwap(
             'bc1qdestination',
-            INVOICE_AMOUNT,
+            invoiceAmount,
             fee,
             navigation
         );
@@ -358,6 +363,43 @@ describe('SwapStore.createReverseSwap claim fee', () => {
             expect(navigation.navigate).not.toHaveBeenCalled();
         }
     );
+
+    // 100000 less 500 service and 400 lockup fees: the host locks up 99100
+    it('refuses, before asking the host, a fee rate whose claim fee takes the whole lockup', async () => {
+        // 652 x 152 = 99104 sats
+        const { store, navigation, stored } = await create('652', 300);
+
+        expect(store.apiError).toBe('views.Swaps.reverseClaimFeeExceedsAmount');
+        expect(store.loading).toBe(false);
+        expect(fetchMock).not.toHaveBeenCalled();
+        expect(stored).toHaveLength(0);
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('starts a swap whose claim fee leaves some of the lockup', async () => {
+        // 651 x 152 = 98952 sats
+        const { store, stored } = await create('651', 300);
+
+        expect(store.apiError).toBe('');
+        expect(stored).toHaveLength(1);
+        expect(stored[0].claimMinerFee).toBe(98952);
+    });
+
+    it('refuses a lockup above the quoted amount but not above the claim fee', async () => {
+        // 4500 less 23 service and 400 lockup fees is 4077. The host's 3790
+        // passes the quote check (above 4077 - 300), but the 25 x 152 = 3800
+        // sat claim fee would take all of it
+        const { store, navigation, stored } = await create(
+            '25',
+            300,
+            4500,
+            3790
+        );
+
+        expect(store.apiError).toBe('views.Swaps.invalidReverseSwapResponse');
+        expect(stored).toHaveLength(0);
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
 });
 
 describe('SwapStore.verifyReverseLockup', () => {
