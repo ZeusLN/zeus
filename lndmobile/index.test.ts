@@ -77,7 +77,7 @@ describe('listPayments', () => {
         expect(String(options().creation_date_start)).toBe('1700000000');
         expect(String(options().max_payments)).toBe('50');
         expect(options().include_incomplete).toBe(true);
-        expect(options().reversed).toBeUndefined();
+        expect(options().reversed).toBe(false);
     });
 
     it('omits creation_date_start without a bound', async () => {
@@ -85,5 +85,29 @@ describe('listPayments', () => {
 
         expect(options().creation_date_start).toBeUndefined();
         expect(options().reversed).toBe(true);
+    });
+
+    it('requests the newest 1000 payments by default', async () => {
+        await listPayments();
+
+        expect((sendCommand as jest.Mock).mock.calls[0][0].method).toBe(
+            'ListPayments'
+        );
+        expect(options().reversed).toBe(true);
+        expect(options().include_incomplete).toBe(true);
+        expect(String(options().max_payments)).toBe('1000');
+    });
+
+    it('requests the newest page when only maxPayments is given', async () => {
+        await listPayments({ maxPayments: 50 });
+
+        expect(options().reversed).toBe(true);
+        expect(String(options().max_payments)).toBe('50');
+    });
+
+    it('pages forward from the oldest payment when reversed is false', async () => {
+        await listPayments({ reversed: false });
+
+        expect(options().reversed).toBe(false);
     });
 });

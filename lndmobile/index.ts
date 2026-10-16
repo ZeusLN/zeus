@@ -646,7 +646,9 @@ export const listPayments = async (params?: {
         options: {
             include_incomplete: true,
             max_payments: Long.fromValue(params?.maxPayments ?? 1000),
-            ...(params?.reversed && { reversed: params.reversed }),
+            // without reversed, lnd pages forward from the oldest payment
+            // and never returns those made after the first max_payments
+            reversed: params?.reversed ?? true,
             ...(params?.creationDateStart && {
                 creation_date_start: Long.fromValue(params.creationDateStart)
             })
