@@ -1211,10 +1211,9 @@ export default class CashuStore {
             const fee = Number(quote.fee_reserve) || 0;
             const quoteAmount = Number(quote.amount) || amountToPay;
             if (quoteAmount + fee > balance) {
-                this.meltQuotes = [];
                 return [];
             }
-            const result = [
+            return [
                 {
                     mintUrl,
                     meltQuote: {
@@ -1225,10 +1224,7 @@ export default class CashuStore {
                     useRegularMelt: true
                 }
             ];
-            this.meltQuotes = result;
-            return result;
         } catch {
-            this.meltQuotes = [];
             return [];
         }
     };
@@ -1274,7 +1270,6 @@ export default class CashuStore {
         );
 
         if (amountToPay <= 0) {
-            this.meltQuotes = [];
             this.multiMintPlannerSkips = [];
             return [];
         }
@@ -1309,7 +1304,6 @@ export default class CashuStore {
         }
 
         if (fundedSelectedMints.length === 0) {
-            this.meltQuotes = [];
             return [];
         }
 
@@ -1393,7 +1387,6 @@ export default class CashuStore {
         });
 
         if (candidates.length === 0) {
-            this.meltQuotes = [];
             return [];
         }
 
@@ -1521,11 +1514,7 @@ export default class CashuStore {
             }
         }
 
-        const nextMeltQuotes: {
-            mintUrl: string;
-            meltQuote: CDKMeltQuote;
-            useRegularMelt?: boolean;
-        }[] = allocations.map((a) => ({
+        return allocations.map((a) => ({
             mintUrl: a.mintUrl,
             meltQuote: {
                 ...a.quote,
@@ -1533,9 +1522,6 @@ export default class CashuStore {
                 fee_reserve: a.fee
             }
         }));
-
-        this.meltQuotes = nextMeltQuotes;
-        return nextMeltQuotes;
     };
 
     @action
@@ -4221,6 +4207,11 @@ export default class CashuStore {
         this.paymentRequest = bolt11Invoice;
         this.feeEstimate = undefined;
         this.getPayReqError = undefined;
+        // The quotes in the store must always belong to paymentRequest:
+        // the previous invoice's are still payable, and would be melted
+        // by a caller that pays before this invoice's have arrived
+        this.meltQuotes = [];
+        this.meltQuote = undefined;
 
         try {
             if (__DEV__) {
@@ -4262,8 +4253,6 @@ export default class CashuStore {
             // be paid, and the quote requests would needlessly disclose
             // the invoice to the mint(s)
             if (payReq.isExpiredNow()) {
-                this.meltQuotes = [];
-                this.meltQuote = undefined;
                 return;
             }
 
@@ -4302,7 +4291,8 @@ export default class CashuStore {
                 ? normalizedMultiMintPaymentAmt || 0
                 : rawPaymentAmt;
 
-            let singleMeltQuote: typeof this.meltQuote;
+            let singleMeltQuote: CashuStore['meltQuote'];
+            let multiMintMeltQuotes: CashuStore['meltQuotes'] = [];
             let computedPayReqError: string | undefined;
 
             // Left undefined (rather than 0) in the no-amount branch below so
@@ -4319,7 +4309,6 @@ export default class CashuStore {
                 computedPayReqError = localeString(
                     'stores.CashuStore.noAmountInvoiceNotSupported'
                 );
-                this.meltQuotes = [];
             } else if (isMultiMint) {
                 if (paymentAmt > 0) {
                     if (__DEV__) {
@@ -4333,6 +4322,7 @@ export default class CashuStore {
                             invoice: bolt11Invoice,
                             amountToPay: paymentAmt
                         });
+                    multiMintMeltQuotes = preparedQuotes;
 
                     const totalAllocated = preparedQuotes.reduce(
                         (sum, { meltQuote }) =>
@@ -4350,7 +4340,6 @@ export default class CashuStore {
                         0
                     );
                 } else {
-                    this.meltQuotes = [];
                     totalFeeEstimate = 0;
                 }
             } else {
@@ -4396,7 +4385,6 @@ export default class CashuStore {
                         : undefined;
 
                 totalFeeEstimate = Number(singleMeltQuote.fee_reserve) || 0;
-                this.meltQuotes = [];
             }
 
             if (requestId !== this.getPayReqRequestId) {
@@ -4406,6 +4394,7 @@ export default class CashuStore {
             runInAction(() => {
                 this.payReq = payReq;
                 this.meltQuote = singleMeltQuote;
+                this.meltQuotes = multiMintMeltQuotes;
                 this.feeEstimate = totalFeeEstimate;
                 this.getPayReqError = computedPayReqError;
             });
@@ -4445,10 +4434,13 @@ export default class CashuStore {
     @action
     public payLnInvoiceFromEcash = async ({
         amount,
+        paymentRequest,
         isDonationPayment = false,
         onProgress
     }: {
         amount?: string;
+        // The invoice the caller reviewed or validated: nothing else is paid
+        paymentRequest?: string;
         isDonationPayment?: boolean;
         onProgress?: MultimintProgressCallback;
     }) => {
@@ -4463,9 +4455,28 @@ export default class CashuStore {
             this.paymentStartTime = Date.now();
         }
 
+        // Every getPayReq call (send screens, links, the NWC service)
+        // replaces these. Read them once, before the first await, so that
+        // what is checked here is what gets melted and recorded.
+        const { payReq, meltQuote, feeEstimate } = this;
+        const bolt11 = this.paymentRequest;
+
         try {
-            const rawPaymentAmt = this.payReq?.getRequestAmount
-                ? this.payReq?.getRequestAmount
+            if (paymentRequest !== undefined && paymentRequest !== bolt11) {
+                if (!isDonationPayment) {
+                    runInAction(() => {
+                        this.paymentError = true;
+                        this.paymentErrorMsg = localeString(
+                            'views.PaymentRequest.payReqChanged'
+                        );
+                        this.loading = false;
+                    });
+                }
+                return;
+            }
+
+            const rawPaymentAmt = payReq?.getRequestAmount
+                ? payReq?.getRequestAmount
                 : Number(amount);
 
             const shouldUseMultiMint =
@@ -4505,7 +4516,7 @@ export default class CashuStore {
 
             const paymentAmt = rawPaymentAmt;
 
-            if (!this.meltQuote) {
+            if (!meltQuote) {
                 runInAction(() => {
                     this.paymentError = true;
                     this.paymentErrorMsg = localeString(
@@ -4518,8 +4529,8 @@ export default class CashuStore {
 
             // Check balance via CDK
             const balance = await CashuDevKit.getMintBalance(mintUrl);
-            const amountToPay = this.feeEstimate
-                ? this.feeEstimate + paymentAmt
+            const amountToPay = feeEstimate
+                ? feeEstimate + paymentAmt
                 : paymentAmt;
 
             if (balance < amountToPay) {
@@ -4536,19 +4547,16 @@ export default class CashuStore {
             }
 
             // Use existing melt quote directly instead of meltCDK
-            const meltResult = await CashuDevKit.melt(
-                mintUrl,
-                this.meltQuote.quote
-            );
+            const meltResult = await CashuDevKit.melt(mintUrl, meltQuote.quote);
 
             const realFee = meltResult.fee_paid;
             const paymentPreimage = meltResult.preimage || '';
 
             const payment = new CashuPayment({
-                ...this.payReq,
-                bolt11: this.paymentRequest,
+                ...payReq,
+                bolt11,
                 meltResponse: {
-                    quote: this.meltQuote,
+                    quote: meltQuote,
                     change: meltResult.change
                 },
                 amount: meltResult.amount,
@@ -4613,6 +4621,7 @@ export default class CashuStore {
         onProgress?: MultimintProgressCallback;
     }): Promise<CashuPayment | undefined> => {
         const paymentRequest = this.paymentRequest;
+        const payReq = this.payReq;
         const emptyMints: MintProgressInfo[] = [];
         const plannedMeltQuotes = [...this.meltQuotes];
 
@@ -4763,7 +4772,7 @@ export default class CashuStore {
                             '';
 
                         const payment = new CashuPayment({
-                            ...this.payReq,
+                            ...payReq,
                             bolt11: paymentRequest,
                             meltResponse: {
                                 quote: {
