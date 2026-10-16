@@ -48,7 +48,6 @@ const submarineDefaults = {
 };
 
 const reverseDefaults = {
-    endpoint: 'https://swaps.zeuslsp.com/api/v2',
     transactionHex: 'tx-hex',
     feeRate: 2,
     minerFee: 100
@@ -104,7 +103,7 @@ describe('ReverseClaimTransaction.build', () => {
 
         expect(claim).toBeInstanceOf(ReverseClaimTransaction);
         expect(claim).toMatchObject({
-            endpoint: 'https://swaps.zeuslsp.com/api/v2',
+            endpoint: '',
             swapId: 'swap-id-456',
             claimLeaf: 'claim-leaf',
             refundLeaf: 'refund-leaf',
@@ -117,6 +116,43 @@ describe('ReverseClaimTransaction.build', () => {
             feeRate: 2,
             minerFee: 100
         });
+    });
+
+    // With an endpoint the native claim sends the preimage to the host
+    // in a co-signing request, and waits for it, before broadcasting
+    it('gives the native claim no endpoint, so it makes no request to the host', async () => {
+        const claim = ReverseClaimTransaction.build({
+            swap: reverseSwap({
+                endpoint: 'https://swaps.zeuslsp.com/api/v2'
+            } as any),
+            ...reverseDefaults,
+            // a caller still passing the host is ignored
+            ...({ endpoint: 'https://swaps.zeuslsp.com/api/v2' } as any)
+        });
+        expect(claim!.endpoint).toBe('');
+
+        const LncModule = {
+            buildReverseClaimTransaction: jest
+                .fn()
+                .mockResolvedValue('claimhex')
+        };
+        let swaps: any;
+        jest.isolateModules(() => {
+            jest.doMock('react-native', () => ({
+                NativeModules: { LncModule }
+            }));
+            swaps = require('../lndmobile/swaps');
+        });
+        await swaps.buildReverseClaimTransaction({
+            ...claim!,
+            network: 'mainnet'
+        });
+
+        // the endpoint is the native call's first argument
+        expect(LncModule.buildReverseClaimTransaction).toHaveBeenCalledTimes(1);
+        expect(LncModule.buildReverseClaimTransaction.mock.calls[0][0]).toBe(
+            ''
+        );
     });
 
     it.each([

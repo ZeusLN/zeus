@@ -306,6 +306,20 @@ describe('SwapDetails reverse claim', () => {
         expect(nativeClaim).toHaveBeenCalledTimes(1);
     });
 
+    it('builds the claim without the host endpoint', async () => {
+        await renderView();
+        nativeClaim.mockResolvedValue(undefined);
+
+        await sendConfirmedLockup();
+
+        // with the host's endpoint the native claim would post the
+        // preimage there before broadcasting
+        expect(
+            (ReverseClaimTransaction.build as jest.Mock).mock.calls[0][0]
+        ).not.toHaveProperty('endpoint');
+        expect(nativeClaim).toHaveBeenCalledTimes(1);
+    });
+
     it('claims a swap created on this device to the address picked for it', async () => {
         await renderView({ destinationAddress: 'bc1qpicked' });
         nativeClaim.mockResolvedValue(undefined);

@@ -1006,7 +1006,6 @@ export default class SwapDetails extends React.Component<
                         lockupAddress,
                         destinationAddress: claimAddress
                     }),
-                    endpoint,
                     transactionHex,
                     feeRate: Number(fee || 2),
                     minerFee
