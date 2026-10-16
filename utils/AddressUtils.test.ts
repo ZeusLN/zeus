@@ -21,7 +21,7 @@ jest.mock('../stores/Stores', () => ({
     }
 }));
 
-import AddressUtils from './AddressUtils';
+import AddressUtils, { CUSTODIAL_LNDHUBS } from './AddressUtils';
 import { nodeInfoStore } from '../stores/Stores';
 import { walletrpc } from '../proto/lightning';
 
@@ -1131,15 +1131,6 @@ describe('AddressUtils', () => {
             it('processes LNDHub account addreses properly', () => {
                 expect(
                     AddressUtils.processLNDHubAddress(
-                        'lndhub://9a1e4e972f732352c75e:4a1e4e172f732352c75e'
-                    )
-                ).toEqual({
-                    host: 'https://lndhub.io',
-                    username: '9a1e4e972f732352c75e',
-                    password: '4a1e4e172f732352c75e'
-                });
-                expect(
-                    AddressUtils.processLNDHubAddress(
                         'lndhub://9a1e4e972f732352c75e:4a1e4e172f732352c75e@https://test-domain.org:4324'
                     )
                 ).toEqual({
@@ -1157,6 +1148,26 @@ describe('AddressUtils', () => {
                     host: 'https://mybtcpayserver.com/plugins/lnbank/api/lndhub'
                 });
             });
+            it('returns no host for an account without @host', () => {
+                const result = AddressUtils.processLNDHubAddress(
+                    'lndhub://9a1e4e972f732352c75e:4a1e4e172f732352c75e'
+                );
+
+                expect(result).toEqual({
+                    username: '9a1e4e972f732352c75e',
+                    password: '4a1e4e172f732352c75e'
+                });
+                // toEqual skips undefined properties
+                expect(result.host).toBeUndefined();
+            });
+
+            it('does not list the defunct BlueWallet hosts as custodial', () => {
+                expect(CUSTODIAL_LNDHUBS).not.toContain('https://lndhub.io');
+                expect(CUSTODIAL_LNDHUBS).not.toContain(
+                    'https://lndhub.herokuapp.com'
+                );
+            });
+
             it('processes hosts from Umbrel', () => {
                 expect(
                     AddressUtils.processLNDHubAddress(

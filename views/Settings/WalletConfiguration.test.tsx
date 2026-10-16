@@ -190,6 +190,27 @@ describe('WalletConfiguration', () => {
         });
     });
 
+    describe('lndhub clipboard import without a host', () => {
+        it('imports the credentials and leaves the URL empty', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(
+                'lndhub://alice:secret'
+            );
+            await renderView(LND_NODE, { clipboard: true });
+
+            await pressButton('views.Settings.AddEditNode.import');
+
+            expect(
+                screen.container.queryAll((n) => n.type === 'ErrorMessage')
+            ).toHaveLength(0);
+            expect(interfaceDropdown().props.selectedValue).toBe('lndhub');
+            expect(screen.getByPlaceholderText('https://')).toHaveDisplayValue(
+                ''
+            );
+            expect(screen.getByDisplayValue('alice')).toBeOnTheScreen();
+            expect(screen.getByDisplayValue('secret')).toBeOnTheScreen();
+        });
+    });
+
     describe('implementation dropdown', () => {
         it('clears the previous server address and credentials', async () => {
             // existingAccount shows the username and password fields
