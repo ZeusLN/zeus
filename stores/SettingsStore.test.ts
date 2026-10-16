@@ -108,6 +108,7 @@ import SettingsStore, {
     SETTINGS_WRITE_DEBOUNCE_MS,
     STORAGE_KEY,
     THEME_KEYS,
+    getLdkNodeLspConfig,
     getLspConfigForNetwork,
     isOlympusPeer
 } from './SettingsStore';
@@ -1262,6 +1263,49 @@ describe('getLspConfigForNetwork', () => {
             expect(config.defaultPubkey).toEqual(pubkey);
         }
     );
+});
+
+describe('getLdkNodeLspConfig', () => {
+    const customPubkey =
+        '02aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
+
+    it('uses the default LSPS1 node and trusts it once', () => {
+        expect(getLdkNodeLspConfig({} as any, 'mainnet')).toEqual({
+            lsps1Config: {
+                nodeId: DEFAULT_LSPS1_PUBKEY_MAINNET,
+                address: DEFAULT_LSPS1_HOST_MAINNET,
+                token: null
+            },
+            trustedPeers0conf: [DEFAULT_LSPS1_PUBKEY_MAINNET]
+        });
+    });
+
+    it('trusts a custom LSPS1 node alongside the default LSP', () => {
+        const config = getLdkNodeLspConfig(
+            {
+                lsps1PubkeyMutinynet: customPubkey,
+                lsps1HostMutinynet: '127.0.0.1:9735',
+                lsps1Token: 'token'
+            } as any,
+            'mutinynet'
+        );
+
+        expect(config.lsps1Config).toEqual({
+            nodeId: customPubkey,
+            address: '127.0.0.1:9735',
+            token: 'token'
+        });
+        expect(config.trustedPeers0conf).toEqual([
+            DEFAULT_LSPS1_PUBKEY_MUTINYNET,
+            customPubkey
+        ]);
+    });
+
+    it('resolves signet to the testnet LSP', () => {
+        expect(
+            getLdkNodeLspConfig({} as any, 'signet').trustedPeers0conf
+        ).toEqual([DEFAULT_LSPS1_PUBKEY_TESTNET]);
+    });
 });
 
 describe('SettingsStore.externalInputAuthRequired', () => {

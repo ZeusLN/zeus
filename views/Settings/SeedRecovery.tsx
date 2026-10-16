@@ -79,7 +79,7 @@ import SettingsStore, {
     SWAP_HOST_KEYS_MAINNET,
     SWAP_HOST_KEYS_TESTNET,
     EMBEDDED_NODE_NETWORK_KEYS,
-    getLspConfigForNetwork,
+    getLdkNodeLspConfig,
     Settings
 } from '../../stores/SettingsStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
@@ -773,34 +773,10 @@ export default class SeedRecovery extends React.PureComponent<
                 const nodeDir = uuidv4();
 
                 try {
-                    // Get LSPS1 config from settings based on network
                     const { SettingsStore } = this.props;
                     const { settings } = SettingsStore;
-                    const lspConfig = getLspConfigForNetwork(
-                        settings,
-                        network || 'mainnet'
-                    );
-                    const lsps1Token = settings.lsps1Token;
-
-                    const lsps1Config =
-                        lspConfig.lsps1Pubkey && lspConfig.lsps1Host
-                            ? {
-                                  nodeId: lspConfig.lsps1Pubkey,
-                                  address: lspConfig.lsps1Host,
-                                  token: lsps1Token || null
-                              }
-                            : undefined;
-
-                    // Always include Flow LSP pubkey as trusted 0-conf peer
-                    const flowLspPubkey = lspConfig.defaultPubkey;
-
-                    const trustedPeers = [flowLspPubkey];
-                    if (
-                        lsps1Config?.nodeId &&
-                        lsps1Config.nodeId !== flowLspPubkey
-                    ) {
-                        trustedPeers.push(lsps1Config.nodeId);
-                    }
+                    const { lsps1Config, trustedPeers0conf } =
+                        getLdkNodeLspConfig(settings, network || 'mainnet');
 
                     const networkType = network as
                         | 'mainnet'
@@ -817,7 +793,7 @@ export default class SeedRecovery extends React.PureComponent<
                         rgsServerUrl: getDefaultRgsServer(networkType),
                         scorerUrl: DEFAULT_SCORER_URL,
                         lsps1Config,
-                        trustedPeers0conf: trustedPeers,
+                        trustedPeers0conf,
                         vssServerUrl:
                             this.props.route.params?.vssServer ||
                             DEFAULT_VSS_SERVER,

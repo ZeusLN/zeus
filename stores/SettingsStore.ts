@@ -1423,6 +1423,38 @@ export function isOlympusPeer(
     return config.lsps1Pubkey === config.defaultPubkey;
 }
 
+export interface LdkNodeLspConfig {
+    lsps1Config?: {
+        nodeId: string;
+        address: string;
+        token: string | null;
+    };
+    trustedPeers0conf: string[];
+}
+
+export function getLdkNodeLspConfig(
+    settings: Settings,
+    network: string
+): LdkNodeLspConfig {
+    const lspConfig = getLspConfigForNetwork(settings, network);
+
+    const lsps1Config =
+        lspConfig.lsps1Pubkey && lspConfig.lsps1Host
+            ? {
+                  nodeId: lspConfig.lsps1Pubkey,
+                  address: lspConfig.lsps1Host,
+                  token: settings.lsps1Token || null
+              }
+            : undefined;
+
+    const trustedPeers0conf = [lspConfig.defaultPubkey];
+    if (lsps1Config?.nodeId && lsps1Config.nodeId !== lspConfig.defaultPubkey) {
+        trustedPeers0conf.push(lsps1Config.nodeId);
+    }
+
+    return { lsps1Config, trustedPeers0conf };
+}
+
 // Swaps
 export const DEFAULT_SWAP_HOST_MAINNET = 'https://satsrouting.exchange/v2';
 export const DEFAULT_SWAP_HOST_TESTNET =
