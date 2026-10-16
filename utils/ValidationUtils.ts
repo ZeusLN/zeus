@@ -1,3 +1,5 @@
+import ecc from '@bitcoinerlab/secp256k1';
+
 // we  incorporate domains (incl. optional subdomains), IPv4, IPv6 and local hostnames ('localhost' etc.)
 const HOST_REGEX =
     /^(([a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z]{2,}|\b(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\b|\[(?:(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,7}:|(?:[0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|(?:[0-9a-fA-F]{1,4}:){1,5}(?::[0-9a-fA-F]{1,4}){1,2}|(?:[0-9a-fA-F]{1,4}:){1,4}(?::[0-9a-fA-F]{1,4}){1,3}|(?:[0-9a-fA-F]{1,4}:){1,3}(?::[0-9a-fA-F]{1,4}){1,4}|(?:[0-9a-fA-F]{1,4}:){1,2}(?::[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:(?:(?::[0-9a-fA-F]{1,4}){1,6})|:(?:(?::[0-9a-fA-F]{1,4}){1,7}|:))\]|[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?)$/;
@@ -214,6 +216,37 @@ const validateNodeHost = (host: string): boolean => {
     return ipv4Regex.test(host) || hostnameRegex.test(host);
 };
 
+// A compressed public key on the curve, as ldk-node parses a peer's node id
+const isValidPeerPubkey = (pubkey: string): boolean =>
+    /^0[23][0-9a-fA-F]{64}$/.test(pubkey) &&
+    ecc.isPoint(Buffer.from(pubkey, 'hex'));
+
+// host:port as ldk-node parses a peer address: IPv4, [IPv6], a v3 onion or a
+// hostname of at most 255 characters, with the port required
+const isValidPeerAddress = (address: string): boolean => {
+    const match = address.match(/^(.+):(\d{1,5})$/);
+    if (!match || !isValidPort(match[2])) return false;
+    const host = match[1];
+    if (host.startsWith('[')) {
+        return host.endsWith(']') && isValidPeerIPv6(host.slice(1, -1));
+    }
+    if (host.endsWith('.onion')) return /^[a-z2-7]{56}\.onion$/i.test(host);
+    return host.length <= 255 && !host.includes(':') && validateNodeHost(host);
+};
+
+// Eight groups, or a single :: standing for at least one zero group
+const isValidPeerIPv6 = (ipv6: string): boolean => {
+    const halves = ipv6.split('::');
+    if (halves.length > 2) return false;
+    const groupsOf = (s: string) => (s === '' ? [] : s.split(':'));
+    const head = groupsOf(halves[0]);
+    const tail = halves.length === 2 ? groupsOf(halves[1]) : [];
+    if (![...head, ...tail].every(isValidHex)) return false;
+    return halves.length === 2
+        ? head.length + tail.length <= 7
+        : head.length === 8;
+};
+
 const isValidIPv6 = (ipv6: string): boolean => {
     if (!ipv6) return false;
 
@@ -252,7 +285,9 @@ const ValidationUtils = {
     isValidNostrWalletConnectUrl,
     isValidNwcServiceRelayUrl,
     validateNodePubkey,
-    validateNodeHost
+    validateNodeHost,
+    isValidPeerPubkey,
+    isValidPeerAddress
 };
 
 export default ValidationUtils;
