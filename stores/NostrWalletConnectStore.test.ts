@@ -2381,6 +2381,31 @@ describe('NostrWalletConnectStore timeout-failed pay_invoice reconcile', () => {
         ).toBe(true);
         expect(connection.pendingSpendSats).toBe(10000);
     });
+
+    it('keeps an unlisted hold after its invoice has expired', async () => {
+        const { store } = storeWithNodePayments([]);
+        const hour = 60 * 60 * 1000;
+        const connection = addConnection(store, {
+            maxAmountSats: 10000,
+            activity: [
+                {
+                    id: 'lnbc1expired-invoice-hold',
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    satAmount: 10000,
+                    createdAt: new Date(Date.now() - 25 * hour),
+                    expiresAt: new Date(Date.now() - 25 * hour + 600_000)
+                }
+            ]
+        });
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.pendingSpendSats).toBe(10000);
+        expect(connection.canSpend(1)).toBe(false);
+    });
 });
 
 describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () => {
