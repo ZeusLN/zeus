@@ -7,7 +7,7 @@ import {
     Text,
     TouchableOpacity
 } from 'react-native';
-import { ButtonGroup } from '@rneui/themed';
+import { ButtonGroup, Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
@@ -411,6 +411,21 @@ export default class AddOrEditNWCConnection extends React.Component<
                     title: localeString('general.confirm'),
                     callback: () => this.togglePermission('sign_message')
                 }
+            ]
+        });
+    };
+
+    showBudgetInfo = () => {
+        const { ModalStore } = this.props;
+        ModalStore.toggleInfoModal({
+            title: localeString('views.Settings.NostrWalletConnect.budget'),
+            text: [
+                localeString(
+                    'views.Settings.NostrWalletConnect.budgetInfo.reason'
+                ),
+                localeString(
+                    'views.Settings.NostrWalletConnect.budgetInfo.limit'
+                )
             ]
         });
     };
@@ -1096,6 +1111,16 @@ export default class AddOrEditNWCConnection extends React.Component<
                                     <Body bold>
                                         {localeString('views.BumpFee.budget')}
                                     </Body>
+                                    <Icon
+                                        name="info"
+                                        onPress={this.showBudgetInfo}
+                                        color={themeColor('text')}
+                                        underlayColor="transparent"
+                                        size={22}
+                                        accessibilityLabel={localeString(
+                                            'views.Settings.NostrWalletConnect.budgetInfo.accessibilityLabel'
+                                        )}
+                                    />
                                 </View>
                                 <View
                                     style={styles.sectionDescriptionContainer}
@@ -1501,7 +1526,8 @@ const styles = StyleSheet.create({
     sectionTitleContainer: {
         marginHorizontal: 15,
         flexDirection: 'row',
-        justifyContent: 'space-between',
+        justifyContent: 'flex-start',
+        gap: 5,
         alignItems: 'center'
     },
     sectionDescriptionContainer: {

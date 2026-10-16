@@ -1353,6 +1353,49 @@ describe('NostrConnectUtils', () => {
             ).toBe(false);
         });
     });
+
+    describe('hasPaymentPermissions', () => {
+        it('is true when pay_invoice is granted', () => {
+            expect(
+                NostrConnectUtils.hasPaymentPermissions([
+                    'get_info',
+                    'pay_invoice'
+                ])
+            ).toBe(true);
+        });
+
+        it('is false for read-only permissions', () => {
+            expect(
+                NostrConnectUtils.hasPaymentPermissions(
+                    NostrConnectUtils.getReadOnlyPermissions()
+                )
+            ).toBe(false);
+        });
+
+        it('is false for no permissions', () => {
+            expect(NostrConnectUtils.hasPaymentPermissions([])).toBe(false);
+        });
+    });
+
+    describe('getBudgetRenewalIndex', () => {
+        it('returns the index of a known renewal key', () => {
+            const options = NostrConnectUtils.getBudgetRenewalOptions();
+            const last = options.length - 1;
+            expect(
+                NostrConnectUtils.getBudgetRenewalIndex(options[last].key)
+            ).toBe(last);
+        });
+
+        it('returns 0 for an unknown key', () => {
+            expect(NostrConnectUtils.getBudgetRenewalIndex('fortnightly')).toBe(
+                0
+            );
+        });
+
+        it('returns 0 when no renewal is set', () => {
+            expect(NostrConnectUtils.getBudgetRenewalIndex(undefined)).toBe(0);
+        });
+    });
 });
 
 describe('NostrConnectUtils pay_invoice amount resolution', () => {
