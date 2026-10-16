@@ -2381,6 +2381,31 @@ describe('NostrWalletConnectStore timeout-failed pay_invoice reconcile', () => {
         ).toBe(true);
         expect(connection.pendingSpendSats).toBe(10000);
     });
+
+    it('keeps an unlisted hold after its invoice has expired', async () => {
+        const { store } = storeWithNodePayments([]);
+        const hour = 60 * 60 * 1000;
+        const connection = addConnection(store, {
+            maxAmountSats: 10000,
+            activity: [
+                {
+                    id: 'lnbc1expired-invoice-hold',
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    satAmount: 10000,
+                    createdAt: new Date(Date.now() - 25 * hour),
+                    expiresAt: new Date(Date.now() - 25 * hour + 600_000)
+                }
+            ]
+        });
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.pendingSpendSats).toBe(10000);
+        expect(connection.canSpend(1)).toBe(false);
+    });
 });
 
 describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () => {
@@ -2494,6 +2519,165 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
         expect(connection.activity[0].status).toBe('success');
         expect(connection.activity[0].isBudgetDebited).toBe(true);
         expect(connection.totalSpendSats).toBe(5010);
+    });
+});
+
+describe('NostrWalletConnectStore handleLightningPayInvoice fee cap', () => {
+    beforeEach(() => {
+        (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue({
+            timestamp: String(Math.floor(Date.now() / 1000) - 60),
+            expiry: '3600'
+        });
+        jest.spyOn(NostrConnectUtils, 'decodeInvoiceTags').mockImplementation(
+            async (invoice: string) => ({
+                paymentRequest: invoice,
+                paymentHash: '',
+                descriptionHash: '',
+                description: '',
+                amount: 5000,
+                expiryTime: 0,
+                createdAt: 0,
+                isExpired: false,
+                network: 'bitcoin'
+            })
+        );
+        jest.spyOn(
+            NostrConnectUtils,
+            'resolvePayInvoiceAmount'
+        ).mockResolvedValue({ amountSats: 5000, zeroAmountInvoice: false });
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    function buildHandlerStore() {
+        return createStore({
+            transactionsStore: {
+                reset: jest.fn(),
+                sendPayment: jest.fn(),
+                payment_hash: null,
+                payment_preimage: null,
+                payment_fee: 0,
+                status: null,
+                isIncomplete: null,
+                error: false,
+                payment_error: null,
+                loading: false
+            },
+            balanceStore: {
+                getLightningBalance: jest
+                    .fn()
+                    .mockResolvedValue({ lightningBalance: 100000 })
+            },
+            paymentsStore: {
+                payments: [],
+                getPayments: jest.fn().mockResolvedValue([])
+            }
+        });
+    }
+
+    const sentFeeLimits = (transactionsStore: any) =>
+        (transactionsStore.sendPayment as jest.Mock).mock.calls.map(
+            (call) => call[0].fee_limit_sat
+        );
+
+    it('limits the fee cap to the budget left after the amount', async () => {
+        const { store, transactionsStore } = buildHandlerStore();
+        const connection = addConnection(store, { maxAmountSats: 5400 });
+
+        await (store as any).handleLightningPayInvoice(connection, {
+            invoice: 'lnbc1fee-cap-a'
+        });
+
+        expect(sentFeeLimits(transactionsStore)).toEqual(['400']);
+    });
+
+    it('keeps the full fee cap when the connection has no budget', async () => {
+        const { store, transactionsStore } = buildHandlerStore();
+        const connection = addConnection(store, {});
+
+        await (store as any).handleLightningPayInvoice(connection, {
+            invoice: 'lnbc1fee-cap-a'
+        });
+
+        expect(sentFeeLimits(transactionsStore)).toEqual(['1000']);
+    });
+
+    it('holds the fee cap of an in-flight payment against later payments', async () => {
+        jest.spyOn(
+            NostrConnectUtils,
+            'resolveLightningPaymentInTransit'
+        ).mockReturnValue({ inTransit: true } as any);
+        const { store, transactionsStore } = buildHandlerStore();
+        const connection = addConnection(store, { maxAmountSats: 11000 });
+
+        await (store as any).handleLightningPayInvoice(connection, {
+            invoice: 'lnbc1fee-cap-a'
+        });
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.activity[0].feeLimitSats).toBe(1000);
+        expect(connection.pendingSpendSats).toBe(6000);
+
+        await (store as any).handleLightningPayInvoice(connection, {
+            invoice: 'lnbc1fee-cap-b'
+        });
+        expect(connection.pendingSpendSats).toBe(11000);
+
+        const third = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice: 'lnbc1fee-cap-c' }
+        );
+
+        // sent: 5000 + 1000 and 5000 + 0, within the 11000 sat budget
+        expect(sentFeeLimits(transactionsStore)).toEqual(['1000', '0']);
+        expect(third.error?.code).toBe(Nip47ErrorCode.INSUFFICIENT_BALANCE);
+    });
+
+    it('says the budget limited the fee cap when the payment fails', async () => {
+        const { store, transactionsStore } = buildHandlerStore();
+        transactionsStore.payment_error = 'No route found.';
+        const connection = addConnection(store, { maxAmountSats: 5400 });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice: 'lnbc1fee-cap-a' }
+        );
+
+        const expected =
+            'No route found. stores.NostrWalletConnectStore.error.feeLimitReducedByBudget';
+        expect(response.error).toEqual({
+            code: Nip47ErrorCode.FAILED_TO_PAY_INVOICE,
+            message: expected
+        });
+        expect(connection.activity[0].status).toBe('failed');
+        expect(connection.activity[0].error).toBe(expected);
+    });
+
+    it('leaves the error unchanged when the full fee cap was sent', async () => {
+        const { store, transactionsStore } = buildHandlerStore();
+        transactionsStore.payment_error = 'No route found.';
+        const connection = addConnection(store, { maxAmountSats: 6000 });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice: 'lnbc1fee-cap-a' }
+        );
+
+        expect(sentFeeLimits(transactionsStore)).toEqual(['1000']);
+        expect(response.error?.message).toBe('No route found.');
+    });
+
+    it('leaves an invoice-state error unchanged when the fee cap was reduced', async () => {
+        const { store, transactionsStore } = buildHandlerStore();
+        transactionsStore.payment_error = 'invoice expired';
+        const connection = addConnection(store, { maxAmountSats: 5400 });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice: 'lnbc1fee-cap-a' }
+        );
+
+        expect(response.error?.message).toBe('invoice expired');
+        expect(connection.activity).toHaveLength(0);
     });
 });
 
@@ -2694,7 +2878,8 @@ describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices
         expect(response.result?.preimage).toBe('');
         expect(connection.activity[0].status).toBe('pending');
         expect(connection.activity[0].satAmount).toBe(7000);
-        expect(connection.pendingSpendSats).toBe(7000);
+        // the amount plus the 1000 sat fee cap it was sent with
+        expect(connection.pendingSpendSats).toBe(8000);
     });
 
     it('debits what was paid when the invoice was already settled by the wallet', async () => {

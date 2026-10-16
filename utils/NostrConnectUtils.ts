@@ -1017,23 +1017,15 @@ export default class NostrConnectUtils {
         );
     }
 
-    /** Max hold when the node never lists the payment (LndHub, paginated history). */
-    static readonly UNRESOLVED_PAY_INVOICE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-
-    /** Grace after bolt11 expiry before abandoning an unresolved hold. */
-    static readonly UNRESOLVED_PAY_INVOICE_INVOICE_GRACE_MS =
-        24 * 60 * 60 * 1000;
-
-    static resolveBolt11ExpiryTimeMs(invoice: string): number | undefined {
-        try {
-            const decoded = Bolt11Utils.decode(invoice);
-            const expiry = decoded.timeExpireDate;
-            if (expiry == null || expiry <= 0) return undefined;
-            return expiry * 1000;
-        } catch {
-            return undefined;
-        }
-    }
+    /**
+     * Max hold when the node never lists the payment (LndHub, paginated
+     * history). Must outlast an outgoing HTLC: LND and Core Lightning allow
+     * a route time lock of up to 2016 blocks (about two weeks) by default.
+     * The invoice expiry is not used, since it does not limit how long an
+     * HTLC that was already sent stays unresolved.
+     */
+    static readonly UNRESOLVED_PAY_INVOICE_MAX_AGE_MS =
+        21 * 24 * 60 * 60 * 1000;
 
     /** True when an unresolved pay_invoice hold should be released. */
     static isPayInvoiceHoldAbandoned(
@@ -1051,26 +1043,10 @@ export default class NostrConnectUtils {
         const createdAt = activity.createdAt?.getTime();
         if (!createdAt) return false;
 
-        if (
+        return (
             nowMs >=
             createdAt + NostrConnectUtils.UNRESOLVED_PAY_INVOICE_MAX_AGE_MS
-        ) {
-            return true;
-        }
-
-        const expiryMs =
-            activity.expiresAt?.getTime() ??
-            NostrConnectUtils.resolveBolt11ExpiryTimeMs(activity.id);
-        if (
-            expiryMs &&
-            nowMs >=
-                expiryMs +
-                    NostrConnectUtils.UNRESOLVED_PAY_INVOICE_INVOICE_GRACE_MS
-        ) {
-            return true;
-        }
-
-        return false;
+        );
     }
 
     static isSettledPayment(payment: Payment): boolean {

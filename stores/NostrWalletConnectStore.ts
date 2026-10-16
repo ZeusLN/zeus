@@ -2612,12 +2612,18 @@ export default class NostrWalletConnectStore {
             );
         }
 
+        // the fee cap is limited to the budget left after the amount
+        const feeLimitSats = connection.feeLimitSatsForPayment(
+            amountSats,
+            PAYMENT_FEE_LIMIT_SATS
+        );
+
         this.transactionsStore.reset();
         this.transactionsStore.sendPayment({
             payment_request: request.invoice,
             // nodes reject an amount for an invoice that already has one
             amount: zeroAmountInvoice ? amountSats.toString() : undefined,
-            fee_limit_sat: PAYMENT_FEE_LIMIT_SATS.toString(),
+            fee_limit_sat: feeLimitSats.toString(),
             timeout_seconds: PAYMENT_TIMEOUT_SECONDS.toString(),
             // service-initiated: don't set or clear the user-facing
             // double-submission guard (paymentInFlight)
@@ -2640,6 +2646,7 @@ export default class NostrWalletConnectStore {
                 rawInvoice: request.invoice,
                 connection,
                 amountSats,
+                feeLimitSats,
                 payment_source: 'lightning',
                 payment: inTransitResult.payment,
                 paymentHash: paymentHash || inTransitResult.payment?.paymentHash
@@ -2691,14 +2698,30 @@ export default class NostrWalletConnectStore {
                 paymentError.error &&
                 paymentError.error.code === Nip47ErrorCode.FAILED_TO_PAY_INVOICE
             ) {
+                // a fee cap cut by the budget can be the reason no route was
+                // found, so say so. Timeouts and invoice-state errors are
+                // matched on their exact text and keep it.
+                const message = String(paymentError.error.message);
+                const errorMessage =
+                    feeLimitSats < PAYMENT_FEE_LIMIT_SATS &&
+                    !NostrConnectUtils.isPaymentTimedOutMessage(message) &&
+                    !NostrConnectUtils.isIgnorableError(message)
+                        ? `${message.replace(/\.$/, '')}. ${localeString(
+                              'stores.NostrWalletConnectStore.error.feeLimitReducedByBudget',
+                              { feeLimit: feeLimitSats.toString() }
+                          )}`
+                        : message;
                 await this.recordFailedPayment({
                     rawInvoice: request.invoice,
                     connection,
                     amountSats,
                     payment_source: 'lightning',
-                    errorMessage: paymentError.error?.message
+                    errorMessage
                 });
-                return paymentError;
+                return NostrConnectUtils.createNip47Error(
+                    errorMessage,
+                    Nip47ErrorCode.FAILED_TO_PAY_INVOICE
+                );
             }
         }
 
@@ -3463,6 +3486,7 @@ export default class NostrWalletConnectStore {
         rawInvoice,
         connection,
         amountSats,
+        feeLimitSats,
         payment_source,
         payment,
         paymentHash: passedPaymentHash
@@ -3470,6 +3494,7 @@ export default class NostrWalletConnectStore {
         rawInvoice: string;
         connection: NWCConnection;
         amountSats: number;
+        feeLimitSats?: number;
         payment_source: ConnectionPaymentSourceType;
         payment?: Payment | CashuPayment | null;
         paymentHash?: string;
@@ -3488,6 +3513,7 @@ export default class NostrWalletConnectStore {
                 id,
                 type: 'pay_invoice',
                 satAmount: amountSats,
+                ...(feeLimitSats !== undefined ? { feeLimitSats } : {}),
                 status: 'pending',
                 payment_source,
                 createdAt: new Date(),

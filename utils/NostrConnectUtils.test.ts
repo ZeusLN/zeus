@@ -1335,16 +1335,22 @@ describe('NostrConnectUtils', () => {
             ).toBe(true);
         });
 
-        it('abandons after invoice expiry plus grace', () => {
+        it('keeps a hold whose invoice expired long ago', () => {
             const activity = baseActivity();
-            activity.expiresAt = new Date(
-                now -
-                    NostrConnectUtils.UNRESOLVED_PAY_INVOICE_INVOICE_GRACE_MS -
-                    1000
-            );
+            activity.createdAt = new Date(now - 13 * 24 * 60 * 60 * 1000);
+            activity.expiresAt = new Date(now - 13 * 24 * 60 * 60 * 1000);
             expect(
                 NostrConnectUtils.isPayInvoiceHoldAbandoned(activity, now)
-            ).toBe(true);
+            ).toBe(false);
+        });
+
+        it('keeps a hold for the longest HTLC time lock', () => {
+            const activity = baseActivity();
+            // 2016 blocks at 10 minutes each
+            activity.createdAt = new Date(now - 2016 * 10 * 60 * 1000);
+            expect(
+                NostrConnectUtils.isPayInvoiceHoldAbandoned(activity, now)
+            ).toBe(false);
         });
 
         it('keeps a recent unresolved hold', () => {
