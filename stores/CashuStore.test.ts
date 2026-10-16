@@ -341,6 +341,12 @@ describe('CashuStore melt quotes belong to the loaded invoice', () => {
         lnbc1first: 90000,
         lnbc1second: 100
     };
+    // Different fees, so a payer that reads the other invoice's fee
+    // reaches a different balance decision
+    const fees: { [invoice: string]: number } = {
+        lnbc1first: 5000,
+        lnbc1second: 10
+    };
 
     // The mint answers a quote request when the test calls answer[invoice]()
     const storeWithMint = (multiMint = false) => {
@@ -363,7 +369,7 @@ describe('CashuStore melt quotes belong to the loaded invoice', () => {
                         resolve({
                             id: `quote for ${invoice}`,
                             amount: amounts[invoice],
-                            fee_reserve: 0
+                            fee_reserve: fees[invoice]
                         } as any);
                 })
         );
@@ -387,7 +393,11 @@ describe('CashuStore melt quotes belong to the loaded invoice', () => {
     beforeEach(() => {
         jest.spyOn(console, 'log').mockImplementation(() => {});
         jest.spyOn(Bolt11Utils, 'decode').mockImplementation(
-            (invoice) => ({ num_satoshis: amounts[invoice] } as any)
+            (invoice) =>
+                ({
+                    num_satoshis: amounts[invoice],
+                    payment_hash: `hash of ${invoice}`
+                } as any)
         );
         Object.assign(CashuDevKit, {
             // only the first mint is funded: the multi-mint planner falls
@@ -415,7 +425,9 @@ describe('CashuStore melt quotes belong to the loaded invoice', () => {
 
             expect(store.meltQuote).toBeUndefined();
             expect(store.meltQuotes).toEqual([]);
-            await store.payLnInvoiceFromEcash({});
+            await store.payLnInvoiceFromEcash({
+                paymentRequest: 'lnbc1second'
+            });
             expect(CashuDevKit.melt).not.toHaveBeenCalled();
         }
     );
@@ -433,7 +445,9 @@ describe('CashuStore melt quotes belong to the loaded invoice', () => {
             await superseded;
 
             expect(store.paymentRequest).toBe('lnbc1second');
-            await store.payLnInvoiceFromEcash({});
+            await store.payLnInvoiceFromEcash({
+                paymentRequest: 'lnbc1second'
+            });
             expect(CashuDevKit.melt).toHaveBeenCalledTimes(1);
             expect(CashuDevKit.melt).toHaveBeenCalledWith(
                 mints[0],
@@ -461,14 +475,34 @@ describe('CashuStore melt quotes belong to the loaded invoice', () => {
         }
     );
 
+    it.each([false, true])(
+        'pays nothing when the caller did not say which invoice (multi-mint: %p)',
+        async (multiMint) => {
+            const wallet = storeWithMint(multiMint);
+            const { store } = wallet;
+            await load(wallet, 'lnbc1second');
+
+            await expect(
+                store.payLnInvoiceFromEcash({ paymentRequest: undefined })
+            ).resolves.toBeUndefined();
+
+            expect(CashuDevKit.melt).not.toHaveBeenCalled();
+            expect(store.paymentError).toBe(true);
+            expect(store.paymentErrorMsg).toBe(
+                'stores.CashuStore.noPaymentRequestAvailable'
+            );
+        }
+    );
+
     it('melts and records the invoice it was started for when another one is loaded meanwhile', async () => {
         const wallet = storeWithMint();
         const { store } = wallet;
         await load(wallet, 'lnbc1second');
+        // Enough for lnbc1second and its fee, not for lnbc1first's fee
         (CashuDevKit.getMintBalance as jest.Mock).mockImplementation(
             async () => {
                 await load(wallet, 'lnbc1first');
-                return 100000;
+                return 1000;
             }
         );
 
@@ -476,11 +510,42 @@ describe('CashuStore melt quotes belong to the loaded invoice', () => {
             paymentRequest: 'lnbc1second'
         });
 
+        expect(store.paymentRequest).toBe('lnbc1first');
         expect(CashuDevKit.melt).toHaveBeenCalledTimes(1);
         expect(CashuDevKit.melt).toHaveBeenCalledWith(
             mints[0],
             'quote for lnbc1second'
         );
         expect(payment?.getPaymentRequest).toBe('lnbc1second');
+        expect(payment?.paymentHash).toBe('hash of lnbc1second');
+        expect(payment?.meltResponse.quote?.quote).toBe(
+            'quote for lnbc1second'
+        );
+    });
+
+    it('records the invoice it was started for when another one is loaded during a multi-mint melt', async () => {
+        const wallet = storeWithMint(true);
+        const { store } = wallet;
+        await load(wallet, 'lnbc1second');
+        (CashuDevKit.melt as jest.Mock).mockImplementation(async () => {
+            await load(wallet, 'lnbc1first');
+            return { amount: 100, fee_paid: 0 };
+        });
+
+        const payment = await store.payLnInvoiceFromEcash({
+            paymentRequest: 'lnbc1second'
+        });
+
+        expect(store.paymentRequest).toBe('lnbc1first');
+        expect(CashuDevKit.melt).toHaveBeenCalledTimes(1);
+        expect(CashuDevKit.melt).toHaveBeenCalledWith(
+            mints[0],
+            'quote for lnbc1second'
+        );
+        expect(payment?.getPaymentRequest).toBe('lnbc1second');
+        expect(payment?.paymentHash).toBe('hash of lnbc1second');
+        expect(payment?.meltResponse.quote?.quote).toBe(
+            'quote for lnbc1second'
+        );
     });
 });

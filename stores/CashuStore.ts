@@ -4439,8 +4439,9 @@ export default class CashuStore {
         onProgress
     }: {
         amount?: string;
-        // The invoice the caller reviewed or validated: nothing else is paid
-        paymentRequest?: string;
+        // The invoice the caller reviewed or validated: nothing else is
+        // paid, and nothing at all when it is undefined
+        paymentRequest: string | undefined;
         isDonationPayment?: boolean;
         onProgress?: MultimintProgressCallback;
     }) => {
@@ -4462,12 +4463,14 @@ export default class CashuStore {
         const bolt11 = this.paymentRequest;
 
         try {
-            if (paymentRequest !== undefined && paymentRequest !== bolt11) {
+            if (!paymentRequest || paymentRequest !== bolt11) {
                 if (!isDonationPayment) {
                     runInAction(() => {
                         this.paymentError = true;
                         this.paymentErrorMsg = localeString(
-                            'views.PaymentRequest.payReqChanged'
+                            paymentRequest
+                                ? 'views.PaymentRequest.payReqChanged'
+                                : 'stores.CashuStore.noPaymentRequestAvailable'
                         );
                         this.loading = false;
                     });
