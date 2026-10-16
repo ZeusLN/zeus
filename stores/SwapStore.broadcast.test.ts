@@ -7,9 +7,13 @@ jest.mock('../utils/ThemeUtils', () => ({
 jest.mock('../utils/LocaleUtils', () => ({
     localeString: (s: string) => s
 }));
+const mockServesNetwork = jest.fn(() => true);
 jest.mock('../utils/UrlUtils', () => ({
     __esModule: true,
-    default: { getMempoolApiUrl: () => 'https://mempool.test/api' }
+    default: {
+        getMempoolApiUrl: () => 'https://mempool.test/api',
+        mempoolServesNetwork: () => mockServesNetwork()
+    }
 }));
 jest.mock('react-native-blob-util', () => ({
     __esModule: true,
@@ -121,6 +125,7 @@ const routes = (byUrl: { [url: string]: any }) =>
 beforeEach(() => {
     for (const key of Object.keys(storageBacking)) delete storageBacking[key];
     jest.clearAllMocks();
+    mockServesNetwork.mockReturnValue(true);
 });
 
 describe('SwapStore.broadcastSwapTransaction', () => {
@@ -246,6 +251,45 @@ describe('SwapStore.broadcastSwapTransaction', () => {
         });
     });
 
+    describe('when the mempool instance is not on the node network', () => {
+        beforeEach(() => mockServesNetwork.mockReturnValue(false));
+
+        it('sends the transaction to the swap host only', async () => {
+            routes({
+                [HOST_TX]: respond(201, JSON.stringify({ id: CLAIM_TXID }))
+            });
+
+            await expect(
+                newStore().broadcastSwapTransaction(CLAIM_HEX, HOST)
+            ).resolves.toBe(CLAIM_TXID);
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+            expect(fetchMock).toHaveBeenCalledWith(
+                'POST',
+                HOST_TX,
+                expect.anything(),
+                expect.anything()
+            );
+        });
+
+        it('does not look the transaction up there when the host rejects it', async () => {
+            routes({
+                [HOST_TX]: respond(400, 'bad-txns-inputs-missingorspent')
+            });
+
+            await expect(
+                newStore().broadcastSwapTransaction(CLAIM_HEX, HOST)
+            ).rejects.toThrow(/swaps\.test.*missingorspent/);
+            expect(fetchMock).toHaveBeenCalledTimes(1);
+        });
+
+        it('throws without a request when there is no host either', async () => {
+            await expect(
+                newStore().broadcastSwapTransaction(CLAIM_HEX)
+            ).rejects.toThrow('no broadcast endpoint for this network');
+            expect(fetchMock).not.toHaveBeenCalled();
+        });
+    });
+
     it('rejects a transaction it cannot decode without sending it', async () => {
         await expect(
             newStore().broadcastSwapTransaction('not hex', HOST)
@@ -279,6 +323,87 @@ describe('SwapStore claim storage', () => {
         }
     );
 
+    it('keeps a claim saved while the status is being written', async () => {
+        storageBacking[REVERSE_SWAPS_KEY] = JSON.stringify([
+            {
+                id: 'swap',
+                type: 'Reverse',
+                status: 'transaction.confirmed'
+            }
+        ]);
+        const store = newStore();
+
+        // invoice.settled arrives while the claim is being saved
+        await Promise.all([
+            store.updateSwapStatus('swap', 'invoice.settled' as any, false),
+            store.saveClaimTransaction('swap', CLAIM_HEX)
+        ]);
+
+        expect(JSON.parse(storageBacking[REVERSE_SWAPS_KEY])).toEqual([
+            {
+                id: 'swap',
+                type: 'Reverse',
+                status: 'invoice.settled',
+                claimTransactionHex: CLAIM_HEX
+            }
+        ]);
+    });
+
+    it('keeps a txid saved while swap statuses are being refreshed', async () => {
+        storageBacking[REVERSE_SWAPS_KEY] = JSON.stringify([
+            {
+                id: 'swap',
+                type: 'Reverse',
+                status: 'invoice.settled',
+                endpoint: HOST,
+                nodePubkey: 'node-pubkey',
+                claimTransactionHex: CLAIM_HEX
+            }
+        ]);
+        let answerStatus: (value: any) => void = () => {};
+        fetchMock.mockImplementation(
+            () => new Promise((resolve) => (answerStatus = resolve))
+        );
+        const store = newStore();
+
+        const refresh = store.fetchAndUpdateSwaps();
+        // the status request is out; the claim broadcast finishes meanwhile
+        await new Promise((resolve) => setImmediate(resolve));
+        await store.saveClaimTxid('swap', CLAIM_TXID);
+        answerStatus({
+            json: async () => ({ status: 'transaction.confirmed' })
+        });
+        await refresh;
+
+        const [stored] = JSON.parse(storageBacking[REVERSE_SWAPS_KEY]);
+        expect(stored).toMatchObject({
+            status: 'transaction.confirmed',
+            claimTransactionHex: CLAIM_HEX,
+            claimTxid: CLAIM_TXID
+        });
+        expect(store.swaps.map((swap: any) => swap.claimTxid)).toEqual([
+            CLAIM_TXID
+        ]);
+    });
+
+    it('keeps writing after a write fails', async () => {
+        storageBacking[REVERSE_SWAPS_KEY] = JSON.stringify([{ id: 'swap' }]);
+        (Storage.getItem as jest.Mock).mockRejectedValueOnce(
+            new Error('keychain locked')
+        );
+        const store = newStore();
+
+        await expect(
+            store.saveClaimTransaction('swap', CLAIM_HEX)
+        ).rejects.toThrow('keychain locked');
+        await expect(store.saveClaimTxid('swap', CLAIM_TXID)).resolves.toBe(
+            true
+        );
+        expect(JSON.parse(storageBacking[REVERSE_SWAPS_KEY])).toEqual([
+            { id: 'swap', claimTxid: CLAIM_TXID }
+        ]);
+    });
+
     it('writes nothing when no swap matches', async () => {
         storageBacking[REVERSE_SWAPS_KEY] = JSON.stringify([{ id: 'other' }]);
 
@@ -291,36 +416,50 @@ describe('SwapStore claim storage', () => {
 
 describe('SwapStore.getReverseLockupTransactionHex', () => {
     const URL = `${HOST}/swap/reverse/swap/transaction`;
+    const reply = (status: number, body: any = {}) => ({
+        info: () => ({ status }),
+        json: () => body
+    });
 
     it('returns the lockup hex from the host', async () => {
-        fetchMock.mockResolvedValue({
-            info: () => ({ status: 200 }),
-            json: () => ({ id: 'lockup', hex: 'lockuphex' })
-        });
+        fetchMock.mockResolvedValue(
+            reply(200, { id: 'lockup', hex: 'lockuphex' })
+        );
 
         await expect(
             newStore().getReverseLockupTransactionHex('swap', HOST)
-        ).resolves.toBe('lockuphex');
+        ).resolves.toEqual({ status: 'found', hex: 'lockuphex' });
         expect(fetchMock).toHaveBeenCalledWith('GET', URL);
     });
 
+    it.each([400, 404])(
+        'reports no lockup when the host answers %i',
+        async (status) => {
+            fetchMock.mockResolvedValue(
+                reply(status, { error: 'could not find lockup' })
+            );
+            await expect(
+                newStore().getReverseLockupTransactionHex('swap', HOST)
+            ).resolves.toEqual({ status: 'none' });
+        }
+    );
+
     it.each([
-        [
-            'an error status',
-            { info: () => ({ status: 404 }), json: () => ({}) }
-        ],
-        ['no hex', { info: () => ({ status: 200 }), json: () => ({ id: 'x' }) }]
-    ])('returns nothing for %s', async (_, response) => {
+        ['a timeout status', reply(408)],
+        ['rate limiting', reply(429)],
+        ['a server error', reply(502)],
+        ['an answer without a hex', reply(200, { id: 'x' })]
+    ])('reports the host unavailable on %s', async (_, response) => {
         fetchMock.mockResolvedValue(response);
         await expect(
             newStore().getReverseLockupTransactionHex('swap', HOST)
-        ).resolves.toBeUndefined();
+        ).resolves.toEqual({ status: 'unavailable' });
     });
 
-    it('returns nothing when the request fails', async () => {
+    it('reports the host unavailable when the request fails', async () => {
         fetchMock.mockRejectedValue(new Error('offline'));
         await expect(
             newStore().getReverseLockupTransactionHex('swap', HOST)
-        ).resolves.toBeUndefined();
+        ).resolves.toEqual({ status: 'unavailable' });
     });
 });

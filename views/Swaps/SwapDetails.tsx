@@ -621,15 +621,31 @@ export default class SwapDetails extends React.Component<
                 await claimIfLockupVerified('');
                 return;
             }
-            const lockupHex = await SwapStore.getReverseLockupTransactionHex(
+            const lockup = await SwapStore.getReverseLockupTransactionHex(
                 createdResponse.id,
                 endpoint
             );
-            if (!lockupHex) {
+            if (stopped || submitted) return;
+            if (lockup.status === 'none') {
                 stopRechecks();
                 return;
             }
-            await claimIfLockupVerified(lockupHex);
+            // The screen would otherwise rest on invoice.settled, which
+            // looks finished, with the lockup still unclaimed
+            if (lockup.status === 'unavailable') {
+                this.setState({
+                    lockupNotice: localeString(
+                        'views.SwapDetails.lockupVerificationUnavailable'
+                    )
+                });
+                clearTimeout(lockupRecheck);
+                lockupRecheck = setTimeout(
+                    recoverSettledClaim,
+                    LOCKUP_RECHECK_MS
+                );
+                return;
+            }
+            await claimIfLockupVerified(lockup.hex);
         };
 
         console.log('Connecting to WebSocket for updates...');
@@ -936,8 +952,7 @@ export default class SwapDetails extends React.Component<
                     endpoint,
                     transactionHex,
                     feeRate: Number(fee || 2),
-                    minerFee,
-                    isTestnet: !!this.props.NodeInfoStore!.nodeInfo.isTestNet
+                    minerFee
                 });
                 // build fails closed on a swap missing the material a valid
                 // claim needs; say so rather than leaving the screen spinning

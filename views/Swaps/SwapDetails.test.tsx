@@ -130,7 +130,9 @@ const renderView = async (
         saveClaimTransaction: jest.fn().mockResolvedValue(true),
         saveClaimTxid: jest.fn().mockResolvedValue(true),
         broadcastSwapTransaction: jest.fn().mockResolvedValue('claim-txid'),
-        getReverseLockupTransactionHex: jest.fn()
+        getReverseLockupTransactionHex: jest
+            .fn()
+            .mockResolvedValue({ status: 'none' })
     };
     const view = await render(
         <SwapDetails
@@ -171,6 +173,8 @@ const sendConfirmedLockup = () =>
     });
 
 const sendStatus = (status: string) => sendUpdate({ status });
+
+const FOUND = { status: 'found', hex: 'lockuphex' };
 
 const advance = (ms: number) =>
     act(async () => {
@@ -521,7 +525,7 @@ describe('SwapDetails lockup verification retry wiring', () => {
 
         it('fetches the lockup and claims it through the usual checks', async () => {
             const { store } = await renderView();
-            store.getReverseLockupTransactionHex.mockResolvedValue('lockuphex');
+            store.getReverseLockupTransactionHex.mockResolvedValue(FOUND);
 
             await sendStatus('invoice.settled');
             await advance(2000);
@@ -544,7 +548,7 @@ describe('SwapDetails lockup verification retry wiring', () => {
 
         it('treats a lockup already spent as done, not as an error', async () => {
             const { store } = await renderView();
-            store.getReverseLockupTransactionHex.mockResolvedValue('lockuphex');
+            store.getReverseLockupTransactionHex.mockResolvedValue(FOUND);
             store.verifyReverseLockup.mockResolvedValue({
                 status: 'invalid',
                 reason: 'lockup-spent'
@@ -560,7 +564,7 @@ describe('SwapDetails lockup verification retry wiring', () => {
 
         it('still reports any other failed check', async () => {
             const { store } = await renderView();
-            store.getReverseLockupTransactionHex.mockResolvedValue('lockuphex');
+            store.getReverseLockupTransactionHex.mockResolvedValue(FOUND);
             store.verifyReverseLockup.mockResolvedValue({
                 status: 'invalid',
                 reason: 'refund-deadline'
@@ -577,12 +581,100 @@ describe('SwapDetails lockup verification retry wiring', () => {
 
         it('does nothing more when the host has no lockup to give', async () => {
             const { store } = await renderView();
-            store.getReverseLockupTransactionHex.mockResolvedValue(undefined);
+
+            await sendStatus('invoice.settled');
+            await advance(120000);
+
+            expect(store.getReverseLockupTransactionHex).toHaveBeenCalledTimes(
+                1
+            );
+            expect(store.verifyReverseLockup).not.toHaveBeenCalled();
+            expect(nativeClaim).not.toHaveBeenCalled();
+            expect(noticeShown()).toBeUndefined();
+        });
+
+        it('asks the host again when it cannot be reached, and says so', async () => {
+            const { store } = await renderView();
+            store.getReverseLockupTransactionHex
+                .mockResolvedValueOnce({ status: 'unavailable' })
+                .mockResolvedValueOnce({ status: 'unavailable' })
+                .mockResolvedValue(FOUND);
 
             await sendStatus('invoice.settled');
 
+            expect(noticeShown()).toBe(
+                'views.SwapDetails.lockupVerificationUnavailable'
+            );
             expect(store.verifyReverseLockup).not.toHaveBeenCalled();
-            expect(nativeClaim).not.toHaveBeenCalled();
+
+            await advance(60000);
+            expect(store.getReverseLockupTransactionHex).toHaveBeenCalledTimes(
+                2
+            );
+            expect(store.verifyReverseLockup).not.toHaveBeenCalled();
+
+            await advance(60000);
+            await advance(2000);
+            expect(store.getReverseLockupTransactionHex).toHaveBeenCalledTimes(
+                3
+            );
+            expect(store.verifyReverseLockup).toHaveBeenCalledWith(
+                expect.anything(),
+                'lockuphex',
+                expect.anything()
+            );
+            expect(nativeClaim).toHaveBeenCalledTimes(1);
+            expect(store.saveClaimTxid).toHaveBeenCalledWith(
+                'swap',
+                'claim-txid'
+            );
+            expect(noticeShown()).toBeUndefined();
+        });
+
+        it('stops asking the host once the screen is closed', async () => {
+            const { store, unmount } = await renderView();
+            store.getReverseLockupTransactionHex.mockResolvedValue({
+                status: 'unavailable'
+            });
+
+            await sendStatus('invoice.settled');
+            await unmount();
+            await jest.advanceTimersByTimeAsync(180000);
+
+            expect(store.getReverseLockupTransactionHex).toHaveBeenCalledTimes(
+                1
+            );
+        });
+
+        it('does not schedule another try when the screen closes during the request', async () => {
+            const { store, unmount } = await renderView();
+            let answer!: (value: any) => void;
+            store.getReverseLockupTransactionHex.mockReturnValueOnce(
+                new Promise((resolve) => {
+                    answer = resolve;
+                })
+            );
+
+            let settled!: Promise<void>;
+            await act(async () => {
+                settled = socket.onmessage({
+                    data: JSON.stringify({
+                        event: 'update',
+                        args: [{ status: 'invoice.settled' }]
+                    })
+                });
+            });
+            await unmount();
+            const timers = jest.getTimerCount();
+            answer({ status: 'unavailable' });
+            await settled;
+
+            expect(jest.getTimerCount()).toBe(timers);
+            await jest.advanceTimersByTimeAsync(180000);
+
+            expect(store.getReverseLockupTransactionHex).toHaveBeenCalledTimes(
+                1
+            );
         });
 
         it('leaves a claim still being built to finish', async () => {
