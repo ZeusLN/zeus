@@ -137,11 +137,13 @@ export default class Swap extends BaseModel {
     /**
      * What the pay button and QR code hand over. A rescued submarine swap has
      * none: /swap/restore returns no invoice, so nothing ties its address to
-     * a payment to this wallet. It is only there to be refunded.
+     * a payment to this wallet. It is only there to be refunded. Swaps saved
+     * before bip21 was rebuilt on creation may lack it and fall back to the
+     * lockup address.
      */
     @computed get qrCodeValue(): string | undefined {
         if (this.isSubmarineSwap) {
-            return this.imported ? undefined : this.bip21;
+            return this.imported ? undefined : this.bip21 || this.lockupAddress;
         }
         if (this.isReverseSwap) {
             return this.invoice;

@@ -1216,4 +1216,15 @@ describe('SwapDetails submarine pay button', () => {
             expect(payButtons()).toHaveLength(shown ? 1 : 0);
         }
     );
+
+    it('shows the pay button for a swap created on this device without bip21', async () => {
+        await renderView({
+            type: SwapType.Submarine,
+            imported: false,
+            lockupAddress: 'bc1pswap'
+        });
+        await sendStatus('invoice.set');
+
+        expect(payButtons()).toHaveLength(1);
+    });
 });
