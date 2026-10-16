@@ -57,6 +57,7 @@ jest.mock('../storage', () => ({
 }));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { autorun } from 'mobx';
 import {
     NWCWalletService,
     NWCWalletServiceKeyPair,
@@ -761,6 +762,34 @@ describe('NostrWalletConnectStore request gate', () => {
         });
         expect(isSubscribed(connection)).toBe(false);
         expect(connection.lastUsed).toBeUndefined();
+        expect(balanceStore.getLightningBalance).not.toHaveBeenCalled();
+    });
+
+    it('answers RESTRICTED once the connection has expired while a screen observes it', async () => {
+        const {
+            store,
+            balanceStore,
+            connections: [connection]
+        } = await startService([{ expiresAt: new Date(Date.now() + 60_000) }]);
+        const client = clientFor(connection);
+        // NWCConnectionsList reads isExpired in render while mounted
+        const dispose = autorun(() =>
+            store.connections.map((c) => c.isExpired)
+        );
+        jest.setSystemTime(Date.now() + 120_000);
+
+        const response = await client.getBalance();
+        dispose();
+
+        expect(response).toEqual({
+            result: undefined,
+            error: {
+                code: 'RESTRICTED',
+                message:
+                    'views.Settings.NostrWalletConnect.error.connectionExpired'
+            }
+        });
+        expect(isSubscribed(connection)).toBe(false);
         expect(balanceStore.getLightningBalance).not.toHaveBeenCalled();
     });
 
