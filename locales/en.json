@@ -2364,6 +2364,7 @@
     "stores.CashuStore.claimError.inconsistentLocking": "Token is locked to multiple different wallets",
     "stores.CashuStore.errorMintingToken": "Error minting token",
     "stores.CashuStore.errorPayingInvoice": "Error paying invoice",
+    "stores.CashuStore.invoiceNotPaid": "The mint reported the payment as sent, but it did not reach your wallet",
     "stores.CashuStore.errorDeletingData": "Error deleting Cashu data",
     "stores.CashuStore.invalidToken": "Invalid Cashu token",
     "stores.CashuStore.sweepError": "Error sweeping funds",
