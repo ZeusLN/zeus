@@ -23,7 +23,10 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import OnchainFeeInput from '../../components/OnchainFeeInput';
 import { Row } from '../../components/layout/Row';
 import Screen from '../../components/Screen';
-import { ErrorMessage } from '../../components/SuccessErrorMessage';
+import {
+    ErrorMessage,
+    WarningMessage
+} from '../../components/SuccessErrorMessage';
 import Switch from '../../components/Switch';
 import Text from '../../components/Text';
 import TextInput from '../../components/TextInput';
@@ -260,6 +263,7 @@ export default class ChannelView extends React.Component<
         const {
             navigation,
             SettingsStore,
+            LSPStore,
             ModalStore,
             NodeInfoStore,
             ChannelsStore
@@ -486,7 +490,18 @@ export default class ChannelView extends React.Component<
                                 )}: ${confs.current} / ${confs.total}`}
                             </Text>
                         )}
-                        {!!renewalInfo.maxExtensionInBlocks && (
+                        {LSPStore.getExtendableChannelsError &&
+                            remotePubkey === LSPStore.getLSPSPubkey() &&
+                            !renewalInfo.maxExtensionInBlocks &&
+                            !renewalInfo.expirationBlock && (
+                                <WarningMessage
+                                    message={localeString(
+                                        'views.Channel.lease.fetchError'
+                                    )}
+                                />
+                            )}
+                        {(!!renewalInfo.maxExtensionInBlocks ||
+                            !!renewalInfo.expirationBlock) && (
                             <>
                                 <Row
                                     justify="space-between"
@@ -594,42 +609,46 @@ export default class ChannelView extends React.Component<
                                             </Text>
                                         </TouchableOpacity>
                                     )}
-                                    <ElementButton
-                                        title={
-                                            renewalInfo.expiresInBlocks
-                                                ? localeString(
-                                                      'views.Channel.lease.extendLease'
-                                                  )
-                                                : localeString(
-                                                      'views.Channel.lease.purchaseLease'
-                                                  )
-                                        }
-                                        onPress={() => {
-                                            navigation.navigate('LSPS7', {
-                                                chanId: renewalInfo.scid,
-                                                maxExtensionInBlocks:
-                                                    renewalInfo.maxExtensionInBlocks,
-                                                expirationBlock:
-                                                    renewalInfo.expirationBlock
-                                            });
-                                        }}
-                                        ViewComponent={LinearGradient as any}
-                                        linearGradientProps={{
-                                            colors: [
-                                                'rgb(180, 26, 20)',
-                                                'rgb(255, 169, 0)'
-                                            ],
-                                            start: { x: 0, y: 0.5 },
-                                            end: { x: 1, y: 0.5 }
-                                        }}
-                                        buttonStyle={{
-                                            borderRadius: 5
-                                        }}
-                                        titleStyle={{
-                                            ...styles.text,
-                                            fontSize: 15
-                                        }}
-                                    />
+                                    {!!renewalInfo.maxExtensionInBlocks && (
+                                        <ElementButton
+                                            title={
+                                                renewalInfo.expiresInBlocks
+                                                    ? localeString(
+                                                          'views.Channel.lease.extendLease'
+                                                      )
+                                                    : localeString(
+                                                          'views.Channel.lease.purchaseLease'
+                                                      )
+                                            }
+                                            onPress={() => {
+                                                navigation.navigate('LSPS7', {
+                                                    chanId: renewalInfo.scid,
+                                                    maxExtensionInBlocks:
+                                                        renewalInfo.maxExtensionInBlocks,
+                                                    expirationBlock:
+                                                        renewalInfo.expirationBlock
+                                                });
+                                            }}
+                                            ViewComponent={
+                                                LinearGradient as any
+                                            }
+                                            linearGradientProps={{
+                                                colors: [
+                                                    'rgb(180, 26, 20)',
+                                                    'rgb(255, 169, 0)'
+                                                ],
+                                                start: { x: 0, y: 0.5 },
+                                                end: { x: 1, y: 0.5 }
+                                            }}
+                                            buttonStyle={{
+                                                borderRadius: 5
+                                            }}
+                                            titleStyle={{
+                                                ...styles.text,
+                                                fontSize: 15
+                                            }}
+                                        />
+                                    )}
                                 </Row>
 
                                 <Divider
