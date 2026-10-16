@@ -32,7 +32,12 @@ jest.mock('../../utils/NavigationUtils', () => ({
     reAuthNavigation: jest.fn()
 }));
 jest.mock('../../utils/PhotoUtils', () => ({ getPhoto: jest.fn() }));
-jest.mock('../../utils/DataClearUtils', () => ({}));
+jest.mock('../../utils/DataClearUtils', () => ({
+    clearCDKDatabase: jest.fn(() => Promise.resolve()),
+    clearCDKDatabaseForNode: jest.fn(() => Promise.resolve()),
+    clearNodeKeychainData: jest.fn(() => Promise.resolve()),
+    deleteNodeDataDirectoryWithRetry: jest.fn(() => Promise.resolve(true))
+}));
 jest.mock('../../utils/LndMobileUtils', () => ({}));
 jest.mock('../../utils/LdkNodeUtils', () => ({
     getDefaultEsploraServer: jest.fn(() => ''),
@@ -227,6 +232,96 @@ describe('WalletConfiguration', () => {
                 macaroonHex: '',
                 rune: ''
             });
+        });
+    });
+
+    describe('wallet deletion', () => {
+        const OTHER_NODE = { ...LND_NODE, host: 'https://other.example.com' };
+
+        // Opens the saved wallet at index 0 and confirms "Delete Wallet"
+        const deleteWallet = async (nodes: any[], active: boolean) => {
+            const calls: string[] = [];
+            const settings = { nodes, selectedNode: 0, privacy: {} };
+            const SettingsStore = {
+                settings,
+                updateSettings: jest.fn(async (update: any) => {
+                    calls.push('updateSettings');
+                    return {
+                        ...settings,
+                        ...(typeof update === 'function'
+                            ? update(settings)
+                            : update)
+                    };
+                }),
+                setConnectingStatus: jest.fn()
+            };
+            const NostrWalletConnectStore = {
+                deleteCurrentWalletConnections: jest.fn(async () => {
+                    calls.push('deleteCurrentWalletConnections');
+                }),
+                deleteAllConnectionData: jest.fn(async () => {
+                    calls.push('deleteAllConnectionData');
+                })
+            };
+            const navigation = {
+                goBack: jest.fn(),
+                navigate: jest.fn(),
+                popTo: jest.fn(),
+                reset: jest.fn()
+            };
+            await render(
+                <WalletConfiguration
+                    {...({
+                        navigation,
+                        route: {
+                            params: {
+                                node: nodes[0],
+                                index: 0,
+                                active,
+                                saved: true
+                            }
+                        },
+                        SettingsStore,
+                        NostrWalletConnectStore
+                    } as any)}
+                />
+            );
+            await pressButton(
+                'views.Settings.WalletConfiguration.deleteWallet'
+            );
+            const [, , confirm] = (confirmAction as jest.Mock).mock.calls[0];
+            await act(async () => confirm.onPress());
+            return { calls, navigation };
+        };
+
+        it("deletes the active wallet's NWC connections before removing its config", async () => {
+            const { calls, navigation } = await deleteWallet(
+                [LND_NODE, OTHER_NODE],
+                true
+            );
+
+            expect(calls).toEqual([
+                'deleteCurrentWalletConnections',
+                'updateSettings'
+            ]);
+            expect(navigation.popTo).toHaveBeenCalledWith('Wallets');
+        });
+
+        it('removes all NWC connection data with the last wallet', async () => {
+            const { calls, navigation } = await deleteWallet([LND_NODE], true);
+
+            expect(calls).toEqual([
+                'deleteCurrentWalletConnections',
+                'updateSettings',
+                'deleteAllConnectionData'
+            ]);
+            expect(navigation.reset).toHaveBeenCalled();
+        });
+
+        it('keeps NWC connections of the active wallet when another wallet is deleted', async () => {
+            const { calls } = await deleteWallet([LND_NODE, OTHER_NODE], false);
+
+            expect(calls).toEqual(['updateSettings']);
         });
     });
 

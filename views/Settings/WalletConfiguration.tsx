@@ -58,6 +58,7 @@ import ShowHideToggle from '../../components/ShowHideToggle';
 
 import BalanceStore from '../../stores/BalanceStore';
 import ChannelsStore from '../../stores/ChannelsStore';
+import NostrWalletConnectStore from '../../stores/NostrWalletConnectStore';
 import SyncStore from '../../stores/SyncStore';
 import SettingsStore, {
     INTERFACE_KEYS,
@@ -98,6 +99,7 @@ interface WalletConfigurationProps {
     navigation: NativeStackNavigationProp<any, any>;
     BalanceStore: BalanceStore;
     ChannelsStore: ChannelsStore;
+    NostrWalletConnectStore: NostrWalletConnectStore;
     SettingsStore: SettingsStore;
     SyncStore: SyncStore;
     route: Route<
@@ -191,7 +193,13 @@ const ScanBadge = ({ onPress }: { onPress: () => void }) => (
     </TouchableOpacity>
 );
 
-@inject('BalanceStore', 'ChannelsStore', 'SettingsStore', 'SyncStore')
+@inject(
+    'BalanceStore',
+    'ChannelsStore',
+    'NostrWalletConnectStore',
+    'SettingsStore',
+    'SyncStore'
+)
 @observer
 export default class WalletConfiguration extends React.Component<
     WalletConfigurationProps,
@@ -852,7 +860,8 @@ export default class WalletConfiguration extends React.Component<
     deleteNodeConfig = async () => {
         if (this.state.deletingWallet) return;
         this.setState({ deletingWallet: true });
-        const { SettingsStore, navigation } = this.props;
+        const { SettingsStore, NostrWalletConnectStore, navigation } =
+            this.props;
         const { updateSettings, embeddedLndStarted, settings } = SettingsStore;
         const { index, implementation, lndDir, ldkNodeDir, active } =
             this.state;
@@ -860,6 +869,13 @@ export default class WalletConfiguration extends React.Component<
         const deletedNode = index != null ? nodes?.[index] : undefined;
 
         try {
+            // Delete the active wallet's NWC connections first, while the
+            // wallet they are matched by is still the current one, so they
+            // are no longer served now or when the same node is added again
+            if (active) {
+                await NostrWalletConnectStore.deleteCurrentWalletConnections();
+            }
+
             // If deleting active embedded LND wallet, stop it first
             if (
                 active &&
@@ -963,6 +979,9 @@ export default class WalletConfiguration extends React.Component<
                 // (legacy shared db, any per-wallet dbs whose seeds are no
                 // longer recoverable, and WAL/SHM sidecars).
                 await clearCDKDatabase();
+                // Also drop NWC connections of wallets deleted while
+                // inactive, which could not be matched to their wallet
+                await NostrWalletConnectStore.deleteAllConnectionData();
                 // reset, not navigate/replace: this screen is normally
                 // reached several pushes deep (Menu/Wallets ->
                 // WalletConfiguration), and once its last wallet is
