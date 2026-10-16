@@ -1284,7 +1284,11 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 },
                 isCurrent
             );
-            if (!fetched || !isCurrent()) return;
+            if (!isCurrent()) return;
+            if (!fetched) {
+                if (connecting) setConnectingStatus(false);
+                return;
+            }
         } else if (implementation === 'nostr-wallet-connect') {
             let error;
             if (connecting) {
@@ -1361,6 +1365,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         if (
             lightningAddress.enabled &&
             !NodeInfoStore.testnet &&
+            // all ZEUS Pay calls authenticate with the node pubkey; without
+            // it (connection failure) they can only fail server-side
+            NodeInfoStore.nodeInfo?.identity_pubkey &&
             BackendUtils.supportsLightningAddress()
         ) {
             if (connecting) {
