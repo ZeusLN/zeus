@@ -726,3 +726,82 @@ describe('LSPStore embedded LND listeners', () => {
         expect(store.customMessagesSubscriber).toBeTruthy();
     });
 });
+
+// zeroConfFee prices the invoice, bounds the wrapped invoice and is the fee
+// shown to the user, so only the latest fee request may write it
+describe('LSPStore.getZeroConfFee superseded requests', () => {
+    let answers: {
+        resolve: (response: any) => void;
+        reject: (error: Error) => void;
+    }[];
+
+    const quote = (fee_amount_msat: number, id: string) => ({
+        info: () => ({ status: 200 }),
+        json: () => ({ fee_amount_msat, id })
+    });
+
+    beforeEach(() => {
+        answers = [];
+        jest.mocked(ReactNativeBlobUtil.fetch).mockImplementation(
+            () =>
+                new Promise((resolve, reject) => {
+                    answers.push({ resolve, reject });
+                }) as any
+        );
+    });
+
+    it('ignores a quote that arrives after a newer request', async () => {
+        const store = makeStore();
+        const first = store.getZeroConfFee(100000000);
+        const second = store.getZeroConfFee(100000000);
+        answers[1].resolve(quote(2000000, 'second'));
+        answers[0].resolve(quote(0, 'first'));
+
+        await expect(second).resolves.toBe(2000);
+        await expect(first).rejects.toBeUndefined();
+        expect(store.zeroConfFee).toBe(2000);
+        expect(store.feeId).toBe('second');
+        expect(store.flow_error).toBe(false);
+    });
+
+    it('ignores a quote that arrives after resetFee', async () => {
+        const store = makeStore();
+        const request = store.getZeroConfFee(100000000);
+        store.resetFee();
+        answers[0].resolve(quote(1000000, 'first'));
+
+        await expect(request).rejects.toBeUndefined();
+        expect(store.zeroConfFee).toBeUndefined();
+        expect(store.feeId).toBeUndefined();
+    });
+
+    it('ignores errors from requests that have been replaced', async () => {
+        const store = makeStore();
+        const rejected = store.getZeroConfFee(100000000);
+        const failed = store.getZeroConfFee(100000000);
+        const latest = store.getZeroConfFee(100000000);
+        answers[2].resolve(quote(10000, 'latest'));
+        answers[1].reject(new Error('timeout'));
+        answers[0].resolve({
+            info: () => ({ status: 500 }),
+            json: () => ({ message: 'no' })
+        });
+
+        await expect(latest).resolves.toBe(10);
+        await expect(failed).rejects.toBeUndefined();
+        await expect(rejected).rejects.toBeUndefined();
+        expect(store.zeroConfFee).toBe(10);
+        expect(store.flow_error).toBe(false);
+        expect(store.flow_error_msg).toBe('');
+    });
+
+    it('still records the quote of the latest request', async () => {
+        const store = makeStore();
+        const request = store.getZeroConfFee(50000000);
+        answers[0].resolve(quote(1500000, 'only'));
+
+        await expect(request).resolves.toBe(1500);
+        expect(store.zeroConfFee).toBe(1500);
+        expect(store.feeId).toBe('only');
+    });
+});
