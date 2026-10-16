@@ -689,7 +689,7 @@ describe('Swap.claimDestinationAddress', () => {
         ).toBeUndefined();
     });
 
-    it('uses an address the wallet generated for a rescued swap', () => {
+    it('does not trust a persisted wallet-origin marker on a rescued swap', () => {
         expect(
             new Swap({
                 id: 's',
@@ -697,7 +697,7 @@ describe('Swap.claimDestinationAddress', () => {
                 destinationAddress: 'bc1qwallet',
                 claimAddressFromWallet: true
             }).claimDestinationAddress
-        ).toBe('bc1qwallet');
+        ).toBeUndefined();
     });
 
     it('replaces a host address stored by an earlier rescue with a wallet address', async () => {
@@ -715,9 +715,10 @@ describe('Swap.claimDestinationAddress', () => {
         });
 
         expect(address).toBe('bc1qwallet');
-        // a later attempt claims to the same wallet address
-        expect(new Swap(getStored(SWAPS_KEY)[0]).claimDestinationAddress).toBe(
-            'bc1qwallet'
-        );
+        // A saved marker cannot distinguish a wallet address from a legacy
+        // host field. A later attempt must resolve through the wallet again.
+        expect(
+            new Swap(getStored(SWAPS_KEY)[0]).claimDestinationAddress
+        ).toBeUndefined();
     });
 });
