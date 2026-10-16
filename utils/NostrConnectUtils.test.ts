@@ -606,6 +606,40 @@ describe('NostrConnectUtils', () => {
                     )
                 ).toBeUndefined();
             });
+
+            // CLN lists one entry per pay/xpay call, oldest first
+            const clnAttempt = (status: string, preimage = ZERO_PREIMAGE) =>
+                new Payment({
+                    bolt11: INVOICE_A,
+                    payment_hash: HASH_A,
+                    status,
+                    preimage
+                });
+
+            it('prefers a pending attempt over an earlier failed one', () => {
+                const found = NostrConnectUtils.findPaymentForInvoice(
+                    INVOICE_A,
+                    [clnAttempt('failed'), clnAttempt('pending')]
+                );
+                expect(found?.status).toBe('pending');
+            });
+
+            it('prefers a settled attempt over an earlier failed one', () => {
+                const found = NostrConnectUtils.findPaymentForInvoice(
+                    INVOICE_A,
+                    [clnAttempt('failed'), clnAttempt('complete', hex64('9'))]
+                );
+                expect(found?.status).toBe('complete');
+            });
+
+            it('returns the first attempt when every attempt failed', () => {
+                const first = clnAttempt('failed');
+                const found = NostrConnectUtils.findPaymentForInvoice(
+                    INVOICE_A,
+                    [first, clnAttempt('failed')]
+                );
+                expect(found).toBe(first);
+            });
         });
 
         describe('findInTransitPaymentForInvoice', () => {
@@ -827,6 +861,19 @@ describe('NostrConnectUtils', () => {
                     expect(result).toEqual({
                         inTransit: true,
                         payment: retried
+                    });
+                });
+
+                it('holds budget when CLN lists a pending retry after a failed attempt', () => {
+                    const pending = paymentFixtures.pendingCln();
+                    const result = resolve({
+                        payments: [paymentFixtures.failedCln(), pending],
+                        paymentState: storeState.timedOut()
+                    });
+
+                    expect(result).toEqual({
+                        inTransit: true,
+                        payment: pending
                     });
                 });
 

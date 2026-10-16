@@ -2163,6 +2163,32 @@ describe('NostrWalletConnectStore timeout-failed pay_invoice reconcile', () => {
         expect(connection.canSpend(10000)).toBe(true);
     });
 
+    it('keeps the hold when CLN lists a pending retry after a failed attempt', async () => {
+        const invoice = 'lnbc1cln-retry-after-failure';
+        const paymentHash = hex64('7');
+        // CLN lists one entry per pay/xpay call, oldest first
+        const clnAttempt = (status: string) =>
+            new Payment({
+                bolt11: invoice,
+                payment_hash: paymentHash,
+                status
+            });
+        const { store } = storeWithNodePayments([
+            clnAttempt('failed'),
+            clnAttempt('pending')
+        ]);
+        const connection = addConnection(store, {
+            maxAmountSats: 10000,
+            activity: [timeoutFailedActivity(invoice, { paymentHash })]
+        });
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.pendingSpendSats).toBe(10000);
+        expect(connection.canSpend(1)).toBe(false);
+    });
+
     it('keeps the hold when lnd lists a failed attempt next to a retry in flight', async () => {
         const invoice = 'lnbc1lnd-retry-in-flight';
         const paymentHash = hex64('6');

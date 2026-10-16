@@ -3045,11 +3045,10 @@ export default class NostrWalletConnectStore {
         );
 
         for (const activity of pending) {
-            const payment = payments.find(
-                (p) =>
-                    p.getPaymentRequest === activity.id ||
-                    (!!activity.paymentHash &&
-                        p.paymentHash === activity.paymentHash)
+            const payment = NostrConnectUtils.findPaymentForInvoice(
+                activity.id,
+                payments,
+                activity.paymentHash
             );
             if (!payment) {
                 if (this.abandonStaleUnresolvedPayInvoiceHold(activity)) {
