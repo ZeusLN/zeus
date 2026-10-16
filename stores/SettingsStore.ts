@@ -1175,6 +1175,11 @@ export const THEME_KEYS = [
         value: 'blacked-out'
     },
     {
+        key: 'Monochrome',
+        translateKey: 'views.Settings.Theme.monochrome',
+        value: 'monochrome'
+    },
+    {
         key: 'Scarlet',
         translateKey: 'views.Settings.Theme.scarlet',
         value: 'scarlet'
