@@ -84,6 +84,10 @@ const protectedNavigation = async (
     disactivatePOS?: boolean,
     routeParams?: any
 ) => {
+    // Until the session has started, settings may not reflect the stored
+    // PIN or POS mode yet, so this cannot decide whether to ask for the PIN
+    if (!settingsStore.sessionStarted()) return;
+
     const { posStatus, settings, setPosStatus } = settingsStore;
     const loginRequired = settings && (settings.passphrase || settings.pin);
     const posEnabled = posStatus === 'active';
