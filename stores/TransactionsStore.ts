@@ -47,10 +47,20 @@ export interface SendPaymentReq {
     message?: string;
     amp?: boolean;
     timeout_seconds?: string;
-    // service-initiated payments (e.g. the NWC service path) neither set nor
-    // clear paymentInFlight, so the double-submission guard stays scoped to
-    // user-initiated sends
-    background?: boolean;
+}
+
+// Outcome of one payment, keyed like the observables handlePayment assigns
+// it to. Keys that don't apply to the outcome are left unset.
+export interface PaymentOutcome {
+    noteKey: string;
+    payment_preimage: string;
+    payment_hash?: string;
+    payment_fee: string;
+    isIncomplete: boolean;
+    status?: string | number;
+    error?: boolean;
+    error_msg?: string;
+    payment_error?: string;
 }
 
 export default class TransactionsStore {
@@ -91,8 +101,8 @@ export default class TransactionsStore {
     private paymentSequence = 0;
     // sequence of the payment that set paymentInFlight (null when none);
     // completion callbacks and the backstop timer only clear the flag on
-    // behalf of that payment, so overlapping payments (e.g. a background
-    // NWC payment finishing while a user payment is still in flight)
+    // behalf of that payment, so overlapping payments (e.g. one that
+    // outlived its backstop finishing while the next is still in flight)
     // can't disarm each other's guard
     private inFlightOwnerSeq: number | null = null;
 
@@ -591,25 +601,22 @@ export default class TransactionsStore {
         last_hop_pubkey,
         message,
         amp,
-        timeout_seconds,
-        background
+        timeout_seconds
     }: SendPaymentReq) => {
         // Guard against double-submission: if a payment is already in flight,
         // ignore the new request. Without this a rapid double-tap (or a
         // re-fired swipe) dispatches two payments, and keysend in particular
         // generates a fresh preimage per call, defeating every backend's
-        // same-hash duplicate protection. Background (service-initiated)
-        // payments bypass the guard and never own the flag: their concurrency
-        // control lives in the service (e.g. the NWC payment queue).
-        if (this.paymentInFlight && !background) {
+        // same-hash duplicate protection. Service-initiated payments (e.g.
+        // the NWC service) don't come through here: they pay via
+        // sendPaymentSilently, which leaves this store's state alone.
+        if (this.paymentInFlight) {
             return;
         }
 
         const seq = ++this.paymentSequence;
-        if (!background) {
-            this.paymentInFlight = true;
-            this.inFlightOwnerSeq = seq;
-        }
+        this.paymentInFlight = true;
+        this.inFlightOwnerSeq = seq;
         this.paymentStartTime = Date.now();
         this.paymentDuration = null;
         this.loading = true;
@@ -719,10 +726,8 @@ export default class TransactionsStore {
         // that gets no timeout_seconds), the flag would otherwise stay set
         // and block all sends until the next reconnect. Clear it once the
         // payment's timeout plus a grace period has elapsed.
-        if (!background) {
-            const backstopMs = ((data.timeout_seconds ?? 300) + 60) * 1000;
-            setTimeout(() => this.clearPaymentInFlight(seq), backstopMs);
-        }
+        const backstopMs = ((data.timeout_seconds ?? 300) + 60) * 1000;
+        setTimeout(() => this.clearPaymentInFlight(seq), backstopMs);
 
         const payFunc = offer
             ? BackendUtils.payOffer
@@ -755,11 +760,13 @@ export default class TransactionsStore {
 
     public sendPaymentSilently = async ({
         payment_request,
+        amount,
         fee_limit_sat,
         max_parts,
         timeout_seconds
     }: {
         payment_request: string;
+        amount?: string;
         fee_limit_sat?: number;
         max_parts?: string;
         timeout_seconds?: number;
@@ -768,6 +775,9 @@ export default class TransactionsStore {
 
         if (payment_request) {
             data.payment_request = payment_request;
+        }
+        if (amount) {
+            data.amt = Number(amount);
         }
 
         if (max_parts) {
@@ -801,32 +811,21 @@ export default class TransactionsStore {
             });
     };
 
+    // TODO modify enum settings for embedded LND
+    private getResultStatus = (result: any) =>
+        this.settingsStore.implementation === 'embedded-lnd'
+            ? lnrpc.Payment.PaymentStatus[result.status]
+            : result.status;
+
     @action
     public handlePayment = (result: any, seq?: number) => {
         this.loading = false;
         this.clearPaymentInFlight(seq);
         this.payment_route = result.payment_route;
+        // keys the outcome leaves unset keep their current values
+        Object.assign(this, this.getPaymentOutcome(result));
 
-        const payment = new Payment(result);
-        this.noteKey = payment.getNoteKey;
-        this.payment_preimage = payment.getPreimage;
-        this.payment_hash = payment.resolvedPaymentHash;
-        this.payment_fee = payment.getFee;
-        this.isIncomplete = payment.isIncomplete;
-
-        const implementation = this.settingsStore.implementation;
-
-        // TODO modify enum settings for embedded LND
-        const status =
-            implementation === 'embedded-lnd'
-                ? lnrpc.Payment.PaymentStatus[result.status]
-                : result.status;
-
-        const isKeysend =
-            result?.htlcs?.[0]?.route?.hops?.[0]?.custom_records?.[
-                keySendPreimageType
-            ] != null;
-
+        const status = this.getResultStatus(result);
         const isSuccess = status === 'complete' || status === 'SUCCEEDED';
 
         if (isSuccess) {
@@ -838,6 +837,29 @@ export default class TransactionsStore {
         if (isSuccess && this.paymentStartTime && !this.paymentDuration) {
             this.paymentDuration = (Date.now() - this.paymentStartTime) / 1000;
         }
+    };
+
+    // Derives a payment's outcome from the backend's response without
+    // writing to this store's observables, which belong to the payment the
+    // user is watching. Service-initiated payments (e.g. NWC) pay via
+    // sendPaymentSilently and take their outcome from here.
+    public getPaymentOutcome = (result: any): PaymentOutcome => {
+        const payment = new Payment(result);
+        const outcome: PaymentOutcome = {
+            noteKey: payment.getNoteKey,
+            payment_preimage: payment.getPreimage,
+            payment_hash: payment.resolvedPaymentHash,
+            payment_fee: payment.getFee,
+            isIncomplete: payment.isIncomplete
+        };
+
+        const implementation = this.settingsStore.implementation;
+        const status = this.getResultStatus(result);
+
+        const isKeysend =
+            result?.htlcs?.[0]?.route?.hops?.[0]?.custom_records?.[
+                keySendPreimageType
+            ] != null;
 
         // TODO add message for in-flight transactions
         if (
@@ -848,8 +870,8 @@ export default class TransactionsStore {
             (status && status === 'FAILED') ||
             (result.payment_error && result.payment_error !== '')
         ) {
-            this.error = true;
-            this.payment_error =
+            outcome.error = true;
+            outcome.payment_error =
                 (implementation === 'embedded-lnd'
                     ? errorToUserFriendly(
                           lnrpc.PaymentFailureReason[result.failure_reason]
@@ -867,11 +889,13 @@ export default class TransactionsStore {
         }
         // lndhub
         if (result.error) {
-            this.error = true;
-            this.error_msg = errorToUserFriendly(result.message);
+            outcome.error = true;
+            outcome.error_msg = errorToUserFriendly(result.message);
         } else {
-            this.status = result.status || 'complete';
+            outcome.status = result.status || 'complete';
         }
+
+        return outcome;
     };
 
     @action

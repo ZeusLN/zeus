@@ -224,3 +224,103 @@ describe('TransactionsStore.sendPayment with an offer', () => {
         expect(payLightningInvoice).toHaveBeenCalledTimes(1);
     });
 });
+
+describe('TransactionsStore.getPaymentOutcome', () => {
+    it('derives a successful outcome without writing to the store', () => {
+        const store = newStore('lnd');
+
+        const outcome = store.getPaymentOutcome({
+            payment_hash: 'ab'.repeat(32),
+            payment_preimage: 'cd'.repeat(32),
+            fee_sat: '3',
+            status: 'SUCCEEDED'
+        });
+
+        expect(outcome).toEqual(
+            expect.objectContaining({
+                payment_hash: 'ab'.repeat(32),
+                payment_preimage: 'cd'.repeat(32),
+                payment_fee: '3',
+                isIncomplete: false,
+                status: 'SUCCEEDED'
+            })
+        );
+        expect(outcome.error).toBeUndefined();
+        expect(store.payment_hash).toBeUndefined();
+        expect(store.payment_preimage).toBeUndefined();
+        expect(store.status).toBeUndefined();
+    });
+
+    it('marks a failed payment as an error', () => {
+        const store = newStore('lnd');
+
+        const outcome = store.getPaymentOutcome({
+            payment_hash: 'ab'.repeat(32),
+            status: 'FAILED',
+            failure_reason: 'FAILURE_REASON_NO_ROUTE'
+        });
+
+        expect(outcome.error).toBe(true);
+        expect(outcome.payment_error).toBeTruthy();
+        expect(outcome.status).toBe('FAILED');
+        expect(store.error).toBe(false);
+    });
+
+    it('reports an LndHub error message', () => {
+        const store = newStore('lndhub');
+
+        const outcome = store.getPaymentOutcome({
+            error: true,
+            message: 'not enough balance'
+        });
+
+        expect(outcome.error).toBe(true);
+        expect(outcome.error_msg).toBe('not enough balance');
+        expect(outcome.status).toBeUndefined();
+    });
+});
+
+describe('TransactionsStore.sendPaymentSilently', () => {
+    beforeEach(() => {
+        jest.useFakeTimers();
+        payLightningInvoice.mockReset();
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it("leaves the state of the user's own payment alone", async () => {
+        const userPayment = deferred();
+        payLightningInvoice.mockReturnValueOnce(userPayment.promise);
+        payLightningInvoice.mockResolvedValueOnce({
+            payment_hash: 'ab'.repeat(32),
+            payment_preimage: 'cd'.repeat(32),
+            fee_sat: '3',
+            status: 'SUCCEEDED'
+        });
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbcrt1user' });
+
+        const result = await store.sendPaymentSilently({
+            payment_request: 'lnbcrt1service',
+            amount: '7000'
+        });
+
+        expect(payLightningInvoice).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+                payment_request: 'lnbcrt1service',
+                amt: 7000
+            })
+        );
+        expect(store.getPaymentOutcome(result).payment_preimage).toBe(
+            'cd'.repeat(32)
+        );
+        expect(store.loading).toBe(true);
+        expect(store.paymentInFlight).toBe(true);
+        expect(store.payment_hash).toBeNull();
+        expect(store.payment_preimage).toBeNull();
+        expect(store.status).toBeNull();
+    });
+});
