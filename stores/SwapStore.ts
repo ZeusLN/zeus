@@ -11,7 +11,10 @@ import { themeColor } from '../utils/ThemeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
 import UrlUtils from '../utils/UrlUtils';
-import { reverseClaimMinerFee } from '../utils/FeeUtils';
+import {
+    isPlausibleSatPerVbyte,
+    reverseClaimMinerFee
+} from '../utils/FeeUtils';
 import {
     SWAPS_KEY,
     REVERSE_SWAPS_KEY,
@@ -592,9 +595,12 @@ export default class SwapStore {
         // swap: the Swaps screen showed this fee, and the claim pays it
         const claimMinerFee = this.getReverseClaimMinerFee(fee);
         if (claimMinerFee === undefined) {
+            // without a usable rate the problem is ours, not the host's
             runInAction(() => {
                 this.apiError = localeString(
-                    'views.Swaps.invalidReverseSwapResponse'
+                    isPlausibleSatPerVbyte(fee)
+                        ? 'views.Swaps.invalidReverseSwapResponse'
+                        : 'views.Swaps.reverseClaimFeeRateRequired'
                 );
                 this.loading = false;
             });

@@ -407,6 +407,59 @@ describe('SwapDetails reverse claim fee', () => {
         expect(errorShown()).toBe('views.SwapDetails.claimFailed');
     });
 
+    it('shows and claims the fee at the current mempool rate, looked up once', async () => {
+        const FeeStore = {
+            getOnchainFeesviaMempool: jest
+                .fn()
+                .mockResolvedValue({ fastestFee: 30 })
+        };
+        const { store } = await renderView(
+            { claimMinerFee: 1, onchainAmount: 99100 },
+            {},
+            { FeeStore }
+        );
+
+        // the amount shown already uses the rate the claim will pay
+        expect(store.getReverseSwapReceiveAmount).toHaveBeenLastCalledWith(
+            99100,
+            30 * 152
+        );
+
+        nativeClaim.mockResolvedValue(undefined);
+        await sendConfirmedLockup();
+
+        expect(claimedFee()).toBe(30 * 152);
+        expect(FeeStore.getOnchainFeesviaMempool).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+        ['fails', jest.fn().mockRejectedValue(new Error('offline'))],
+        [
+            'returns no usable rate',
+            jest.fn().mockResolvedValue({ fastestFee: 0 })
+        ]
+    ])(
+        'shows and claims the 2 sat/vB floor when the rate lookup %s',
+        async (_, getOnchainFeesviaMempool) => {
+            const { store } = await renderView(
+                { claimMinerFee: 1, onchainAmount: 99100 },
+                {},
+                { FeeStore: { getOnchainFeesviaMempool } }
+            );
+
+            expect(store.getReverseSwapReceiveAmount).toHaveBeenLastCalledWith(
+                99100,
+                2 * 152
+            );
+
+            nativeClaim.mockResolvedValue(undefined);
+            await sendConfirmedLockup();
+
+            expect(claimedFee()).toBe(2 * 152);
+            expect(nativeClaim).toHaveBeenCalledTimes(1);
+        }
+    );
+
     it('shows the amount the claim pays out', async () => {
         const { store } = await renderView({
             claimMinerFee: 1,

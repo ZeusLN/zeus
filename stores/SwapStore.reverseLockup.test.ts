@@ -312,18 +312,43 @@ describe('SwapStore.createReverseSwap claim fee', () => {
     });
 
     it.each([
-        ['a claim quote above the maximum', '25', 2000 * 152 + 1],
-        ['a claim quote that is not a number', '25', 'abc'],
-        ['no usable fee rate', '', 300],
-        ['a fee rate of 0', '0', 300]
+        [
+            'a claim quote above the maximum',
+            '25',
+            2000 * 152 + 1,
+            'views.Swaps.invalidReverseSwapResponse'
+        ],
+        [
+            'a claim quote that is not a number',
+            '25',
+            'abc',
+            'views.Swaps.invalidReverseSwapResponse'
+        ],
+        // the host is not at fault here, so the error asks for a rate
+        [
+            'no usable fee rate',
+            '',
+            300,
+            'views.Swaps.reverseClaimFeeRateRequired'
+        ],
+        [
+            'a fee rate of 0',
+            '0',
+            300,
+            'views.Swaps.reverseClaimFeeRateRequired'
+        ],
+        [
+            'an implausible fee rate',
+            '100000',
+            300,
+            'views.Swaps.reverseClaimFeeRateRequired'
+        ]
     ])(
         'refuses to start a swap with %s',
-        async (_, fee: string, quote: any) => {
+        async (_, fee: string, quote: any, error: string) => {
             const { store, navigation, stored } = await create(fee, quote);
 
-            expect(store.apiError).toBe(
-                'views.Swaps.invalidReverseSwapResponse'
-            );
+            expect(store.apiError).toBe(error);
             expect(store.loading).toBe(false);
             // the host was never asked for an invoice
             expect(fetchMock).not.toHaveBeenCalled();
