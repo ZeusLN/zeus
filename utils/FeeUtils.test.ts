@@ -1,8 +1,10 @@
 import FeeUtils, {
-    hasUsableClaimFee,
     isPlausibleSatPerVbyte,
+    reverseClaimMinerFee,
     sanitizeRecommendedFees,
-    MAX_SAT_PER_VBYTE
+    MAX_REVERSE_CLAIM_FEE,
+    MAX_SAT_PER_VBYTE,
+    REVERSE_CLAIM_MAX_VSIZE
 } from './FeeUtils';
 
 const satoshisPerBTC = 100_000_000;
@@ -211,24 +213,59 @@ describe('FeeUtils', () => {
         });
     });
 
-    describe('hasUsableClaimFee', () => {
-        it('accepts a quoted claim miner fee whatever the rate', () => {
-            // the claim pays the quoted fee and ignores the rate, so a
-            // failed or rejected mempool fetch must not block the swap
-            expect(hasUsableClaimFee(462, '')).toBe(true);
-            expect(hasUsableClaimFee(462, undefined)).toBe(true);
-            expect(hasUsableClaimFee(462, '0')).toBe(true);
+    describe('reverseClaimMinerFee', () => {
+        it('raises a quote too low to relay to the rate on the largest claim', () => {
+            // 1 sat for a 140 to 152 vB claim is under 0.01 sat/vB
+            expect(reverseClaimMinerFee(1, '25')).toBe(25 * 152);
+            expect(reverseClaimMinerFee(0, '25')).toBe(25 * 152);
+            expect(REVERSE_CLAIM_MAX_VSIZE).toBe(152);
         });
 
-        it('needs a plausible rate without a quoted claim miner fee', () => {
-            expect(hasUsableClaimFee(0, '12')).toBe(true);
-            expect(hasUsableClaimFee(undefined, '12')).toBe(true);
-            expect(hasUsableClaimFee(0, '')).toBe(false);
-            expect(hasUsableClaimFee(0, '0')).toBe(false);
-            expect(hasUsableClaimFee(undefined, undefined)).toBe(false);
-            expect(hasUsableClaimFee(0, String(MAX_SAT_PER_VBYTE + 1))).toBe(
-                false
+        it('keeps a quote at or above the floor', () => {
+            expect(reverseClaimMinerFee(4000, '25')).toBe(4000);
+            expect(reverseClaimMinerFee(3800, '25')).toBe(3800);
+            expect(reverseClaimMinerFee(300, 1)).toBe(300);
+        });
+
+        it('rounds a fractional rate and quote up', () => {
+            expect(reverseClaimMinerFee(0, '12.5')).toBe(13 * 152);
+            expect(reverseClaimMinerFee(4000.2, '12.5')).toBe(4001);
+        });
+
+        it('pays the rate when there is no quote', () => {
+            // legacy and rescued swaps carry no claim fee
+            expect(reverseClaimMinerFee(undefined, 2)).toBe(304);
+            expect(reverseClaimMinerFee(null, '10')).toBe(1520);
+        });
+
+        it('needs a plausible rate', () => {
+            // without one there is no floor to check the quote against
+            expect(reverseClaimMinerFee(462, '')).toBeUndefined();
+            expect(reverseClaimMinerFee(462, undefined)).toBeUndefined();
+            expect(reverseClaimMinerFee(462, '0')).toBeUndefined();
+            expect(reverseClaimMinerFee(462, 'abc')).toBeUndefined();
+            expect(
+                reverseClaimMinerFee(462, String(MAX_SAT_PER_VBYTE + 1))
+            ).toBeUndefined();
+        });
+
+        it('refuses a quote above the plausible maximum', () => {
+            expect(MAX_REVERSE_CLAIM_FEE).toBe(MAX_SAT_PER_VBYTE * 152);
+            expect(reverseClaimMinerFee(MAX_REVERSE_CLAIM_FEE, '25')).toBe(
+                MAX_REVERSE_CLAIM_FEE
             );
+            expect(
+                reverseClaimMinerFee(MAX_REVERSE_CLAIM_FEE + 1, '25')
+            ).toBeUndefined();
+            expect(reverseClaimMinerFee(98800, '25')).toBe(98800);
+        });
+
+        it('refuses a quote that is not a fee', () => {
+            expect(reverseClaimMinerFee(-1, '25')).toBeUndefined();
+            expect(reverseClaimMinerFee('abc', '25')).toBeUndefined();
+            expect(reverseClaimMinerFee(NaN, '25')).toBeUndefined();
+            expect(reverseClaimMinerFee(Infinity, '25')).toBeUndefined();
+            expect(reverseClaimMinerFee(true, '25')).toBeUndefined();
         });
     });
 });

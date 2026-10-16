@@ -161,7 +161,9 @@ describe('SwapStore.createReverseSwap response verification', () => {
 
     const create = async (
         responseOverrides: any = {},
-        tip: any = TIMEOUT - 100
+        tip: any = TIMEOUT - 100,
+        fee = '2',
+        reverseInfo: any = REVERSE_INFO
     ) => {
         storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
         const { outputScript: _outputScript, ...details } = VALID;
@@ -180,12 +182,12 @@ describe('SwapStore.createReverseSwap response verification', () => {
         });
 
         const store = newStore();
-        store.reverseInfo = REVERSE_INFO;
+        store.reverseInfo = reverseInfo;
         const navigation = { navigate: jest.fn() };
         const result = await store.createReverseSwap(
             'bc1qdestination',
             INVOICE_AMOUNT,
-            '2',
+            fee,
             navigation
         );
         const stored = storageBacking[REVERSE_SWAPS_KEY]
@@ -249,6 +251,84 @@ describe('SwapStore.createReverseSwap response verification', () => {
                 'views.Swaps.invalidReverseSwapResponse'
             );
             expect(store.loading).toBe(false);
+            expect(stored).toHaveLength(0);
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        }
+    );
+});
+
+describe('SwapStore.createReverseSwap claim fee', () => {
+    const INVOICE_AMOUNT = 100000;
+    // a refused swap leaves its queued host response unused
+    afterEach(() => fetchMock.mockReset());
+
+    const withClaimQuote = (claim: any) => ({
+        fees: { percentage: 0.5, minerFees: { claim, lockup: 400 } }
+    });
+
+    const create = async (fee: string, claimQuote: any) => {
+        storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
+        const { outputScript: _outputScript, ...details } = VALID;
+        fetchMock.mockResolvedValueOnce({
+            data: JSON.stringify({
+                id: 'reverse-swap',
+                invoice: 'lnbc-provider-invoice',
+                onchainAmount: 99100,
+                ...details
+            })
+        });
+        fetchMock.mockResolvedValue({
+            info: () => ({ status: 200 }),
+            text: () => String(TIMEOUT - 100)
+        });
+
+        const store = newStore();
+        store.reverseInfo = withClaimQuote(claimQuote);
+        const navigation = { navigate: jest.fn() };
+        await store.createReverseSwap(
+            'bc1qdestination',
+            INVOICE_AMOUNT,
+            fee,
+            navigation
+        );
+        const stored = storageBacking[REVERSE_SWAPS_KEY]
+            ? JSON.parse(storageBacking[REVERSE_SWAPS_KEY])
+            : [];
+        return { store, navigation, stored };
+    };
+
+    it.each([
+        ['raises a 1 sat quote to the rate on the largest claim', 1, 25 * 152],
+        ['keeps a quote above that', 4000, 4000]
+    ])('%s', async (_, quote, expected) => {
+        const { store, navigation, stored } = await create('25', quote);
+
+        // the Swaps screen showed the same fee before the swap started
+        expect(store.getReverseClaimMinerFee('25')).toBe(expected);
+        expect(stored).toHaveLength(1);
+        expect(stored[0].claimMinerFee).toBe(expected);
+        expect(stored[0].claimFeeRate).toBe(25);
+        expect(
+            navigation.navigate.mock.calls[0][1].swapData.claimMinerFee
+        ).toBe(expected);
+    });
+
+    it.each([
+        ['a claim quote above the maximum', '25', 2000 * 152 + 1],
+        ['a claim quote that is not a number', '25', 'abc'],
+        ['no usable fee rate', '', 300],
+        ['a fee rate of 0', '0', 300]
+    ])(
+        'refuses to start a swap with %s',
+        async (_, fee: string, quote: any) => {
+            const { store, navigation, stored } = await create(fee, quote);
+
+            expect(store.apiError).toBe(
+                'views.Swaps.invalidReverseSwapResponse'
+            );
+            expect(store.loading).toBe(false);
+            // the host was never asked for an invoice
+            expect(fetchMock).not.toHaveBeenCalled();
             expect(stored).toHaveLength(0);
             expect(navigation.navigate).not.toHaveBeenCalled();
         }
