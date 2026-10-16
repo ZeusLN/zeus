@@ -194,6 +194,7 @@ import {
     clearNodeKeychainData,
     deleteNodeDataDirectoryWithRetry,
     isWipePending,
+    markWipePending,
     CASHU_KEY_SUFFIXES
 } from './DataClearUtils';
 import { deleteLndWallet } from './LndMobileUtils';
@@ -859,5 +860,15 @@ describe('clearAllData pending-wipe record', () => {
 
         mockEncryptedStorage.failGet = true;
         expect(await isWipePending()).toBe(false);
+    });
+
+    it('markWipePending saves the record and does not throw when it cannot', async () => {
+        await markWipePending();
+        expect(await isWipePending()).toBe(true);
+
+        mockEncryptedStorage.items.clear();
+        mockEncryptedStorage.failSet = true;
+        await expect(markWipePending()).resolves.toBeUndefined();
+        expect(warnedAbout('Error recording the pending wipe')).toBe(true);
     });
 });

@@ -48,7 +48,8 @@ jest.mock('../utils/BiometricUtils', () => ({
 jest.mock('../utils/DataClearUtils', () => ({
     blockNavigationDuringWipe: jest.fn(),
     clearAllData: jest.fn(),
-    isWipePending: jest.fn()
+    isWipePending: jest.fn(),
+    markWipePending: jest.fn()
 }));
 jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/RestartUtils', () => ({
@@ -59,7 +60,11 @@ jest.mock('../utils/ThemeUtils', () => ({
 }));
 
 import { verifyBiometry } from '../utils/BiometricUtils';
-import { clearAllData, isWipePending } from '../utils/DataClearUtils';
+import {
+    clearAllData,
+    isWipePending,
+    markWipePending
+} from '../utils/DataClearUtils';
 import { restartApp } from '../utils/RestartUtils';
 import Lockscreen from './Lockscreen';
 
@@ -115,14 +120,14 @@ const renderLockscreen = async (
         popTo: jest.fn(),
         replace: jest.fn()
     };
-    await render(
+    const { unmount } = await render(
         <Lockscreen
             SettingsStore={SettingsStore as any}
             navigation={navigation as any}
             route={{ params: {} } as any}
         />
     );
-    return { SettingsStore, navigation };
+    return { SettingsStore, navigation, unmount };
 };
 
 const submitPin = () =>
@@ -135,6 +140,7 @@ let errorSpy: jest.SpyInstance;
 beforeEach(() => {
     jest.clearAllMocks();
     (isWipePending as jest.Mock).mockResolvedValue(false);
+    (markWipePending as jest.Mock).mockResolvedValue(undefined);
     errorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 });
 
@@ -281,18 +287,112 @@ describe('Lockscreen failed attempts', () => {
         expect(SettingsStore.setLoginStatus).not.toHaveBeenCalled();
     });
 
-    it('wipes on launch when the saved attempts reached the limit', async () => {
-        const saved: any = { pin: PIN, authenticationAttempts: 5 };
-        const updateSettings = makeUpdateSettings(saved);
+    it('saves the pending wipe before the wiping screen shows', async () => {
+        const saved: any = { pin: PIN, authenticationAttempts: 4 };
+        const record = deferred();
+        (markWipePending as jest.Mock).mockReturnValue(record.promise);
+        await renderLockscreen(makeUpdateSettings(saved), { settings: saved });
+
+        await submitWrongPin();
+
+        expect(markWipePending).toHaveBeenCalledTimes(1);
+        expect(screen.getByRole('button', { name: 'Submit PIN' })).toBeTruthy();
+        expect(clearAllData).not.toHaveBeenCalled();
+
+        await act(async () => record.resolve());
+
+        expect(screen.queryByRole('button', { name: 'Submit PIN' })).toBeNull();
+        expect(clearAllData).toHaveBeenCalledTimes(1);
+    });
+
+    it('saves the pending wipe before the wiping screen shows for the duress PIN', async () => {
+        const saved: any = { pin: PIN, duressPin: '0000' };
+        const record = deferred();
+        (markWipePending as jest.Mock).mockReturnValue(record.promise);
+        await renderLockscreen(makeUpdateSettings(saved), { settings: saved });
+
+        await submitWrongPin();
+
+        expect(markWipePending).toHaveBeenCalledTimes(1);
+        expect(screen.getByRole('button', { name: 'Submit PIN' })).toBeTruthy();
+        expect(clearAllData).not.toHaveBeenCalled();
+
+        await act(async () => record.resolve());
+
+        expect(screen.queryByRole('button', { name: 'Submit PIN' })).toBeNull();
+        expect(clearAllData).toHaveBeenCalledTimes(1);
+    });
+});
+
+// The attempt is saved before the entry is checked, and a correct entry's
+// reset can fail or be cut short. A saved count at the limit therefore does
+// not show that the last entry was wrong, and must not wipe by itself.
+describe('Lockscreen with a saved count at the limit', () => {
+    it('does not wipe on the next launch when a correct entry could not reset the count', async () => {
+        const saved: any = { pin: PIN, authenticationAttempts: 4 };
+        let resetFails = true;
+        const updateSettings = makeUpdateSettings(saved, async (patch) => {
+            if (isReset(patch) && resetFails) {
+                throw new Error('keychain unavailable');
+            }
+        });
+        const first = await renderLockscreen(updateSettings, {
+            settings: saved
+        });
+        await submitPin();
+
+        expect(first.navigation.pop).toHaveBeenCalledTimes(1);
+        expect(saved.authenticationAttempts).toBe(5);
+
+        // the next launch
+        await first.unmount();
+        resetFails = false;
         const { SettingsStore, navigation } = await renderLockscreen(
             updateSettings,
+            { settings: saved }
+        );
+
+        expect(clearAllData).not.toHaveBeenCalled();
+        expect(screen.getByRole('button', { name: 'Submit PIN' })).toBeTruthy();
+
+        await submitPin();
+
+        expect(clearAllData).not.toHaveBeenCalled();
+        expect(SettingsStore.setLoginStatus).toHaveBeenCalledWith(true);
+        expect(navigation.pop).toHaveBeenCalledTimes(1);
+        expect(saved.authenticationAttempts).toBe(0);
+    });
+
+    it('does not wipe on launch after a correct entry ended before its reset, and still offers biometrics', async () => {
+        // the app ended between saving the fifth attempt and the reset
+        const saved: any = { pin: PIN, authenticationAttempts: 5 };
+        (verifyBiometry as jest.Mock).mockResolvedValue(true);
+        const { SettingsStore } = await renderLockscreen(
+            makeUpdateSettings(saved),
             { biometry: true, settings: saved }
         );
 
+        expect(clearAllData).not.toHaveBeenCalled();
+        expect(verifyBiometry).toHaveBeenCalledTimes(1);
+        expect(SettingsStore.setLoginStatus).toHaveBeenCalledWith(true);
+        expect(saved.authenticationAttempts).toBe(0);
+    });
+
+    it('wipes on the next wrong entry', async () => {
+        const saved: any = { pin: PIN, authenticationAttempts: 5 };
+        const { SettingsStore, navigation } = await renderLockscreen(
+            makeUpdateSettings(saved),
+            { settings: saved }
+        );
+
+        expect(clearAllData).not.toHaveBeenCalled();
+
+        await submitWrongPin();
+
+        expect(saved.authenticationAttempts).toBe(6);
+        expect(markWipePending).toHaveBeenCalledTimes(1);
         expect(clearAllData).toHaveBeenCalledTimes(1);
         expect(restartApp).toHaveBeenCalledTimes(1);
-        expect(verifyBiometry).not.toHaveBeenCalled();
-        expect(screen.queryByRole('button', { name: 'Submit PIN' })).toBeNull();
         expect(SettingsStore.setLoginStatus).not.toHaveBeenCalled();
         expect(navigation.pop).not.toHaveBeenCalled();
     });

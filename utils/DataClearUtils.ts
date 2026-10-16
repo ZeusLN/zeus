@@ -153,7 +153,12 @@ const WIPE_PENDING_KEY = 'wipe-pending';
 // is not reported as an interrupted one
 let wipeRunning = false;
 
-async function setWipePending(): Promise<void> {
+/**
+ * Saves the pending-wipe record. clearAllData() saves it itself; the
+ * Lockscreen also saves it as soon as it decides to wipe, before anything
+ * on screen changes, so the decision is on disk before the user can see it.
+ */
+export async function markWipePending(): Promise<void> {
     try {
         await EncryptedStorage.setItem(WIPE_PENDING_KEY, 'true');
     } catch (e) {
@@ -729,7 +734,7 @@ export async function clearAllData(): Promise<void> {
     // 0b. Record the wipe before anything is cleared, so that a launch after
     // the process ends mid-wipe finishes it (see isWipePending)
     wipeRunning = true;
-    await setWipePending();
+    await markWipePending();
 
     // 1. First, try to get settings to find node-specific data
     let settings: any = null;
@@ -826,7 +831,7 @@ export async function clearAllData(): Promise<void> {
         await EncryptedStorage.clear();
         // clear() also removed the pending-wipe record, and steps 7 and 8
         // are still to run
-        await setWipePending();
+        await markWipePending();
         MigrationUtils.clearConfirmedFlags();
         console.log('[ClearData] EncryptedStorage cleared');
     } catch (e) {
