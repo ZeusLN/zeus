@@ -1066,6 +1066,41 @@ export default class CashuStore {
         return result;
     };
 
+    /**
+     * Upper bound on the NUT-02 input fees CDK pays to melt
+     * `inputsNeeded` sats (quote amount + fee reserve) from a mint. CDK
+     * either spends an exact proof set or first swaps unspent proofs
+     * into exact denominations and then melts those, so the bound is the
+     * fee on every unspent proof plus the fee on one proof per bit of
+     * `inputsNeeded`. Fees are summed in ppk and rounded up once, as CDK
+     * does.
+     */
+    public estimateMeltInputFee = async (
+        mintUrl: string,
+        inputsNeeded: number
+    ): Promise<number> => {
+        const keysets = await CashuDevKit.getMintKeysets(mintUrl);
+        const feePpkById: Record<string, number> = {};
+        let maxActivePpk = 0;
+        for (const keyset of keysets) {
+            const ppk = Number(keyset.input_fee_ppk) || 0;
+            feePpkById[keyset.id] = ppk;
+            if (keyset.active && ppk > maxActivePpk) maxActivePpk = ppk;
+        }
+        if (Object.values(feePpkById).every((ppk) => ppk === 0)) return 0;
+
+        const proofs = await CashuDevKit.getUnspentProofs(mintUrl);
+        const swapPpk = proofs.reduce(
+            (sum, proof) => sum + (feePpkById[proof.keyset_id] ?? maxActivePpk),
+            0
+        );
+        const meltProofCount = Math.max(
+            1,
+            Math.ceil(inputsNeeded).toString(2).length
+        );
+        return Math.ceil((swapPpk + maxActivePpk * meltProofCount) / 1000);
+    };
+
     public getMintName = (mintUrl: string): string => {
         const normalizedMintUrl = this.normalizeMintUrl(mintUrl);
         return (
@@ -5353,15 +5388,21 @@ export default class CashuStore {
 
                 try {
                     // The mint may credit less than face value (input fees),
-                    // so size the sweep from what was actually received
-                    const receiveAmtSat = receivedAmt - meltQuote.fee_reserve;
+                    // so size the sweep from what was actually received,
+                    // minus the input fees the melt itself will pay
+                    const inputFee = await this.estimateMeltInputFee(
+                        mintUrl,
+                        receivedAmt
+                    );
+                    const receiveAmtSat =
+                        receivedAmt - meltQuote.fee_reserve - inputFee;
                     if (receiveAmtSat <= 0) {
                         throw new Error(
                             localeString('stores.CashuStore.feeExceedsAmt')
                         );
                     }
 
-                    if (meltQuote.fee_reserve > 0 || receivedAmt !== tokenAmt) {
+                    if (receiveAmtSat !== tokenAmt) {
                         // Recreate invoice with adjusted amount
                         invoice = await this.invoicesStore.createInvoice({
                             ...invoiceParams,
@@ -5556,10 +5597,14 @@ export default class CashuStore {
             }
 
             // 3. Calculate actual receive amount and create final invoice
-            const receiveAmtSat = amountToSweep - feeReserve;
+            const inputFee = await this.estimateMeltInputFee(
+                mintUrl,
+                amountToSweep
+            );
+            const receiveAmtSat = amountToSweep - feeReserve - inputFee;
             if (receiveAmtSat <= 0) {
                 console.warn(
-                    `Sweep ${mintUrl}: Fee reserve (${feeReserve}) exceeds or equals amount to sweep (${amountToSweep}). Cannot sweep.`
+                    `Sweep ${mintUrl}: Fee reserve (${feeReserve}) plus input fees (${inputFee}) exceed or equal amount to sweep (${amountToSweep}). Cannot sweep.`
                 );
                 this.loading = false;
                 return false;
