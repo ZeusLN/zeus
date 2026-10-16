@@ -46,6 +46,7 @@ interface MultimintPaymentProps {
         'MultimintPayment',
         {
             paymentAmount?: string;
+            paymentRequest?: string;
             donationAmount?: string;
             enableDonations?: boolean;
         }
@@ -228,6 +229,7 @@ export default class MultimintPayment extends React.Component<
 
             const payment = await CashuStore!!.payLnInvoiceFromEcash({
                 amount: route.params?.paymentAmount,
+                paymentRequest: route.params?.paymentRequest,
                 onProgress: this.onProgressUpdate
             });
 
@@ -292,6 +294,7 @@ export default class MultimintPayment extends React.Component<
             await CashuStore?.getPayReq(paymentRequest, isDonationPayment);
             const donationPayment = await CashuStore?.payLnInvoiceFromEcash({
                 amount: donationAmount,
+                paymentRequest,
                 isDonationPayment
             });
 

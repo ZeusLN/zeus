@@ -210,7 +210,7 @@ export default class CashuPaymentRequest extends React.Component<
         }
     }
 
-    sendPayment = ({ amount }: SendPaymentReq) => {
+    sendPayment = ({ payment_request, amount }: SendPaymentReq) => {
         const { SettingsStore, navigation } = this.props;
         const { settings } = SettingsStore;
 
@@ -224,7 +224,8 @@ export default class CashuPaymentRequest extends React.Component<
                 donationAmount > 0 && {
                     donationAmount: donationAmount.toString()
                 }),
-            paymentAmount: amount ? amount : undefined
+            paymentAmount: amount ? amount : undefined,
+            paymentRequest: payment_request
         });
     };
 
@@ -240,6 +241,8 @@ export default class CashuPaymentRequest extends React.Component<
         // screen when this confirmation began. Reset the swipe knob so the
         // gesture doesn't stick; the render path shows the
         // payment-request-changed warning in place of the pay controls.
+        // They are also handed the reviewed invoice, so that they refuse one
+        // swapped in between here and their mount.
         if (
             this.state.reviewedPaymentRequest !== '' &&
             CashuStore.paymentRequest !== this.state.reviewedPaymentRequest
@@ -277,6 +280,7 @@ export default class CashuPaymentRequest extends React.Component<
         if (isMultiMint) {
             navigation.navigate('MultimintPayment', {
                 paymentAmount,
+                paymentRequest: CashuStore.paymentRequest,
                 enableDonations,
                 ...(enableDonations &&
                     donationAmount > 0 && {
@@ -288,6 +292,7 @@ export default class CashuPaymentRequest extends React.Component<
 
         // Call sendPayment with the freshest values
         this.sendPayment({
+            payment_request: CashuStore.paymentRequest,
             amount: paymentAmount
         });
     };

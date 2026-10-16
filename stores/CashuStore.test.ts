@@ -30,6 +30,7 @@ import CashuStore from './CashuStore';
 import Storage, { getRawItem } from '../storage';
 import CashuDevKit from '../cashu-cdk';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
+import Bolt11Utils from '../utils/Bolt11Utils';
 import * as SchedulingUtils from '../utils/SchedulingUtils';
 
 // BIP-39 zero-entropy test vector, never a real wallet.
@@ -331,5 +332,155 @@ describe('CashuStore NDK instance', () => {
 
         expect(MockNDK).toHaveBeenCalledTimes(2);
         expect(connect).toHaveBeenCalledTimes(2);
+    });
+});
+
+describe('CashuStore melt quotes belong to the loaded invoice', () => {
+    const mints = ['https://mint.one', 'https://mint.two'];
+    const amounts: { [invoice: string]: number } = {
+        lnbc1first: 90000,
+        lnbc1second: 100
+    };
+
+    // The mint answers a quote request when the test calls answer[invoice]()
+    const storeWithMint = (multiMint = false) => {
+        const store = new CashuStore(
+            { settings: { ecash: { enableMultiMint: multiMint } } } as any,
+            {} as any,
+            {} as any,
+            { checkAndTriggerRatingModal: jest.fn() } as any
+        );
+        store.mintUrls = mints;
+        store.selectedMintUrl = mints[0];
+        store.multiMintSelectedUrls = multiMint ? mints : [];
+        store.cashuWallets = { [mints[0]]: {} as any };
+        store.mintBalances = { [mints[0]]: 100000 };
+        const answer: { [invoice: string]: () => void } = {};
+        jest.spyOn(store, 'createMeltQuoteCDK').mockImplementation(
+            (_, invoice) =>
+                new Promise((resolve) => {
+                    answer[invoice] = () =>
+                        resolve({
+                            id: `quote for ${invoice}`,
+                            amount: amounts[invoice],
+                            fee_reserve: 0
+                        } as any);
+                })
+        );
+        jest.spyOn(store as any, 'ensureMintAdded').mockResolvedValue(
+            undefined
+        );
+        jest.spyOn(store, 'syncCDKBalances').mockResolvedValue(undefined);
+        return { store, answer };
+    };
+    const flush = () => new Promise((resolve) => setImmediate(resolve));
+    const load = async (
+        { store, answer }: ReturnType<typeof storeWithMint>,
+        invoice: string
+    ) => {
+        const loaded = store.getPayReq(invoice);
+        await flush();
+        answer[invoice]();
+        await loaded;
+    };
+
+    beforeEach(() => {
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+        jest.spyOn(Bolt11Utils, 'decode').mockImplementation(
+            (invoice) => ({ num_satoshis: amounts[invoice] } as any)
+        );
+        Object.assign(CashuDevKit, {
+            // only the first mint is funded: the multi-mint planner falls
+            // back to one regular quote
+            getBalances: jest.fn().mockResolvedValue({ [mints[0]]: 100000 }),
+            getMintBalance: jest.fn().mockResolvedValue(100000),
+            melt: jest.fn().mockResolvedValue({ amount: 0, fee_paid: 0 }),
+            restore: jest.fn().mockResolvedValue(0)
+        });
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it.each([false, true])(
+        'drops the quote of the previous invoice when another one is loaded (multi-mint: %p)',
+        async (multiMint) => {
+            const wallet = storeWithMint(multiMint);
+            const { store } = wallet;
+            await load(wallet, 'lnbc1first');
+            expect(
+                multiMint ? store.meltQuotes[0].meltQuote.id : store.meltQuote
+            ).toBeTruthy();
+
+            store.getPayReq('lnbc1second');
+
+            expect(store.meltQuote).toBeUndefined();
+            expect(store.meltQuotes).toEqual([]);
+            await store.payLnInvoiceFromEcash({});
+            expect(CashuDevKit.melt).not.toHaveBeenCalled();
+        }
+    );
+
+    it.each([false, true])(
+        'does not store the quote of a superseded invoice (multi-mint: %p)',
+        async (multiMint) => {
+            const wallet = storeWithMint(multiMint);
+            const { store, answer } = wallet;
+            const superseded = store.getPayReq('lnbc1first');
+            await flush();
+            await load(wallet, 'lnbc1second');
+
+            answer.lnbc1first();
+            await superseded;
+
+            expect(store.paymentRequest).toBe('lnbc1second');
+            await store.payLnInvoiceFromEcash({});
+            expect(CashuDevKit.melt).toHaveBeenCalledTimes(1);
+            expect(CashuDevKit.melt).toHaveBeenCalledWith(
+                mints[0],
+                'quote for lnbc1second'
+            );
+        }
+    );
+
+    it.each([false, true])(
+        'pays nothing when the caller validated another invoice (multi-mint: %p)',
+        async (multiMint) => {
+            const wallet = storeWithMint(multiMint);
+            const { store } = wallet;
+            await load(wallet, 'lnbc1second');
+
+            await expect(
+                store.payLnInvoiceFromEcash({ paymentRequest: 'lnbc1first' })
+            ).resolves.toBeUndefined();
+
+            expect(CashuDevKit.melt).not.toHaveBeenCalled();
+            expect(store.paymentError).toBe(true);
+            expect(store.paymentErrorMsg).toBe(
+                'views.PaymentRequest.payReqChanged'
+            );
+        }
+    );
+
+    it('melts and records the invoice it was started for when another one is loaded meanwhile', async () => {
+        const wallet = storeWithMint();
+        const { store } = wallet;
+        await load(wallet, 'lnbc1second');
+        (CashuDevKit.getMintBalance as jest.Mock).mockImplementation(
+            async () => {
+                await load(wallet, 'lnbc1first');
+                return 100000;
+            }
+        );
+
+        const payment = await store.payLnInvoiceFromEcash({
+            paymentRequest: 'lnbc1second'
+        });
+
+        expect(CashuDevKit.melt).toHaveBeenCalledTimes(1);
+        expect(CashuDevKit.melt).toHaveBeenCalledWith(
+            mints[0],
+            'quote for lnbc1second'
+        );
+        expect(payment?.getPaymentRequest).toBe('lnbc1second');
     });
 });
