@@ -89,17 +89,14 @@ export default class CreateWithdrawalRequest extends Component<
             const isBTC = units === 'BTC';
             const isFiat = units === 'fiat';
 
+            // backends take sats and convert to msat themselves
             let satsAmount: string;
             if (isBTC) {
-                satsAmount = (
-                    Number(getSatAmount(value, 'BTC')) * 1000
-                ).toString();
+                satsAmount = getSatAmount(value, 'BTC').toString();
             } else if (isFiat) {
-                satsAmount = (
-                    Number(getSatAmount(value, 'fiat')) * 1000
-                ).toString();
+                satsAmount = getSatAmount(value, 'fiat').toString();
             } else {
-                satsAmount = (parseInt(value) * 1000).toString();
+                satsAmount = parseInt(value).toString();
             }
 
             this.setState({
@@ -242,6 +239,7 @@ export default class CreateWithdrawalRequest extends Component<
                                 themeColor('invertQrIcons') ? ZIconWhite : ZIcon
                             }
                             satAmount={satsAmount}
+                            displayAmount
                         />
                     </View>
                 ) : (
