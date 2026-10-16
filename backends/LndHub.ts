@@ -287,4 +287,7 @@ export default class LndHub extends LND {
     supportsAddressMessageSigning = () => false;
     supportsSettingInvoiceExpiration = () => false;
     supportsNostrWalletConnectService = () => true;
+    // /gettxs takes no filters and only returns settled payments, so the
+    // inherited LND flag must not leak through.
+    supportsPaymentsCreationDateFilter = () => false;
 }
