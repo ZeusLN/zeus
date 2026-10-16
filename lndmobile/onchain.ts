@@ -98,12 +98,20 @@ export const walletBalance = async ({
  */
 export const sendCoins = async (
     address: string,
-    sat: number,
-    feeRate?: number,
+    sat: number | string,
+    feeRate?: number | string,
     spend_unconfirmed?: boolean,
     send_all?: boolean,
     outpoints?: Array<lnrpc.IOutPoint>
 ): Promise<lnrpc.SendCoinsResponse> => {
+    // Callers pass strings from the Send view. Long.fromValue parses a
+    // string without regard to a decimal point ('100000.001' becomes
+    // 10000001), so convert to a number first and refuse fractional sats.
+    const amount = Number(sat);
+    if (!send_all && !(Number.isSafeInteger(amount) && amount > 0)) {
+        throw new Error('Amount must be a whole number of satoshis');
+    }
+
     const response = await sendCommand<
         lnrpc.ISendCoinsRequest,
         lnrpc.SendCoinsRequest,
@@ -114,8 +122,10 @@ export const sendCoins = async (
         method: 'SendCoins',
         options: {
             addr: address,
-            amount: send_all ? undefined : Long.fromValue(sat),
-            sat_per_vbyte: feeRate ? Long.fromValue(feeRate) : undefined,
+            amount: send_all ? undefined : Long.fromNumber(amount),
+            sat_per_vbyte: feeRate
+                ? Long.fromNumber(Number(feeRate))
+                : undefined,
             spend_unconfirmed,
             send_all,
             outpoints
