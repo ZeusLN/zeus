@@ -107,6 +107,8 @@ interface SwapState {
     showRescueKeyBtn: boolean;
     enableLSP: boolean;
     flowLspNotConfigured: boolean;
+    // the amount field the user set last, kept when the network fee changes
+    lastEditedAmount: 'input' | 'output';
 }
 
 @inject(
@@ -147,17 +149,95 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         isIntroModalVisible: false,
         showRescueKeyBtn: false,
         enableLSP: true,
-        flowLspNotConfigured: true
+        flowLspNotConfigured: true,
+        lastEditedAmount: 'input' as 'input' | 'output'
     };
 
     private isNavigatingAway = false;
     private _unsubscribe?: () => void;
+    // the network fee the current amounts were worked out with
+    private amountsNetworkFee?: number;
 
     // The claim fee createReverseSwap will store at the rate set below.
     // Without a usable rate the swap cannot start, and the quote is shown.
     reverseClaimFeeShown = (): number =>
         this.props.SwapStore.getReverseClaimMinerFee(this.state.fee) ??
         (this.props.SwapStore.reverseInfo?.fees?.minerFees?.claim || 0);
+
+    // The miner fees taken from the amount: for a reverse swap the claim
+    // fee above plus the host's lockup fee
+    networkFeeSats = (reverse: boolean): number => {
+        const { subInfo, reverseInfo } = this.props.SwapStore;
+        return reverse
+            ? new BigNumber(this.reverseClaimFeeShown())
+                  .plus(reverseInfo?.fees?.minerFees?.lockup || 0)
+                  .toNumber()
+            : new BigNumber(subInfo?.fees?.minerFees || 0).toNumber();
+    };
+
+    satsDisplay = (sats: BigNumber): string => {
+        if (!sats.isGreaterThan(0)) return '';
+        const { units } = this.props.UnitsStore;
+        if (units === 'fiat') {
+            const { fiat } = this.props.SettingsStore.settings;
+            const { fiatRates } = this.props.FiatStore;
+            const fiatEntry =
+                fiat && fiatRates
+                    ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                    : null;
+            const rate = fiatEntry ? fiatEntry.rate : 0;
+            return sats.div(SATS_PER_BTC).times(rate).toFixed(2);
+        }
+        if (units === 'BTC') return sats.div(SATS_PER_BTC).toFixed(8);
+        if (units === 'sats') return sats.toFixed(0);
+        return '';
+    };
+
+    // Works out the amount the user did not set again, keeping the one they
+    // set, after the network fee changed: a new fee rate, or a mempool rate
+    // or host quote that arrived after the amount was entered
+    recalculateAmounts = () => {
+        const { reverse, lastEditedAmount, inputSats, outputSats } = this.state;
+        const { subInfo, reverseInfo } = this.props.SwapStore;
+        const info: any = reverse ? reverseInfo : subInfo;
+        const serviceFeePct = info?.fees?.percentage || 0;
+        const networkFee = this.networkFeeSats(reverse);
+
+        if (lastEditedAmount === 'output') {
+            const output = new BigNumber(outputSats || 0);
+            const input = calculateSendAmount(
+                output,
+                serviceFeePct,
+                networkFee,
+                reverse
+            );
+            this.setState({
+                inputSats: input,
+                inputDisplay: this.satsDisplay(input),
+                serviceFeeSats: bigCeil(
+                    (reverse ? input : output).times(serviceFeePct).div(100)
+                )
+            });
+        } else {
+            const input = new BigNumber(inputSats || 0);
+            const output = calculateReceiveAmount(
+                input,
+                serviceFeePct,
+                networkFee,
+                reverse
+            );
+            this.setState({
+                outputSats: output,
+                outputDisplay: this.satsDisplay(output),
+                serviceFeeSats: calculateServiceFeeOnSend(
+                    input,
+                    serviceFeePct,
+                    networkFee,
+                    reverse
+                )
+            });
+        }
+    };
 
     checkIsValid = () => {
         const { reverse, invoice, inputSats, outputSats } = this.state;
@@ -174,12 +254,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         const info: any = reverse ? reverseInfo : subInfo;
 
         const serviceFeePct = info?.fees?.percentage || 0;
-        const networkFeeBigNum = this.state.reverse
-            ? new BigNumber(this.reverseClaimFeeShown()).plus(
-                  info?.fees?.minerFees?.lockup || 0
-              )
-            : new BigNumber(info?.fees?.minerFees || 0);
-        const networkFee = networkFeeBigNum.toNumber();
+        const networkFee = this.networkFeeSats(this.state.reverse);
 
         const minThreshold = info?.limits?.minimal || 0;
         const maxThreshold = info?.limits?.maximal || 0;
@@ -360,6 +435,20 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             return;
         }
 
+        const networkFee = this.networkFeeSats(this.state.reverse);
+        const networkFeeChanged =
+            this.amountsNetworkFee !== undefined &&
+            networkFee !== this.amountsNetworkFee &&
+            prevState.reverse === this.state.reverse;
+        this.amountsNetworkFee = networkFee;
+        if (
+            networkFeeChanged &&
+            (new BigNumber(this.state.inputSats || 0).isGreaterThan(0) ||
+                new BigNumber(this.state.outputSats || 0).isGreaterThan(0))
+        ) {
+            this.recalculateAmounts();
+        }
+
         // Existing fee fetching logic
         if (!prevState.reverse && this.state.reverse) {
             try {
@@ -429,12 +518,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                             ? SwapStore.reverseInfo
                             : SwapStore.subInfo;
                         const serviceFeePct = info?.fees?.percentage || 0;
-                        const networkFeeBigNum = initialReverse
-                            ? new BigNumber(this.reverseClaimFeeShown()).plus(
-                                  info?.fees?.minerFees?.lockup || 0
-                              )
-                            : new BigNumber(info?.fees?.minerFees || 0);
-                        const networkFee = networkFeeBigNum.toNumber();
+                        const networkFee = this.networkFeeSats(initialReverse);
 
                         const newOutputSats = new BigNumber(
                             initialAmountSats || 0
@@ -488,6 +572,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                             {
                                 invoice: initialInvoice,
                                 reverse: initialReverse,
+                                lastEditedAmount: 'output',
                                 outputSats: newOutputSats,
                                 outputDisplay: newOutputDisplay,
                                 inputSats: newInputSats,
@@ -837,12 +922,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
 
         const serviceFeePct = info?.fees?.percentage || 0;
-        const networkFeeBigNum = reverse
-            ? new BigNumber(this.reverseClaimFeeShown()).plus(
-                  info?.fees?.minerFees?.lockup || 0
-              )
-            : new BigNumber(info?.fees?.minerFees || 0);
-        const networkFee = networkFeeBigNum.toNumber();
+        const networkFee = this.networkFeeSats(reverse);
 
         const SwapsPaneBtn = () => (
             <TouchableOpacity
@@ -1172,6 +1252,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                             networkFee,
                                                                             reverse
                                                                         ),
+                                                                    lastEditedAmount:
+                                                                        'input',
                                                                     inputSats:
                                                                         satAmountNew.toNumber(),
                                                                     outputSats,
@@ -1415,6 +1497,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                             bigCeil(
                                                                                 serviceFeeSats
                                                                             ),
+                                                                        lastEditedAmount:
+                                                                            'output',
                                                                         inputSats:
                                                                             input,
                                                                         outputSats:
@@ -1788,6 +1872,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                     networkFee,
                                                                     reverse
                                                                 ),
+                                                            lastEditedAmount:
+                                                                'input',
                                                             inputSats:
                                                                 satAmountNew.toNumber(),
                                                             outputSats,
@@ -1930,6 +2016,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                     networkFee,
                                                                     reverse
                                                                 ),
+                                                            lastEditedAmount:
+                                                                'input',
                                                             inputSats:
                                                                 satAmountNew.toNumber(),
                                                             outputSats,

@@ -606,6 +606,24 @@ export default class SwapStore {
             });
             return;
         }
+        // the host locks up the amount less its service and lockup fees,
+        // and the claim pays its fee from that
+        const fees = this.reverseInfo?.fees;
+        const expectedLockup = calculateReceiveAmount(
+            new BigNumber(invoiceAmount || 0),
+            fees?.percentage || 0,
+            Number(fees?.minerFees?.lockup) || 0,
+            true
+        );
+        if (expectedLockup.isLessThanOrEqualTo(claimMinerFee)) {
+            runInAction(() => {
+                this.apiError = localeString(
+                    'views.Swaps.reverseClaimFeeExceedsAmount'
+                );
+                this.loading = false;
+            });
+            return;
+        }
 
         try {
             initEccLib(ecc);
@@ -679,7 +697,6 @@ export default class SwapStore {
             // provider must lock up more than the amount the Swaps screen
             // showed. Otherwise a host could point the claim at an output
             // it controls and still learn the preimage when we claim.
-            const fees = this.reverseInfo?.fees;
             const minOnchainAmount = calculateReceiveAmount(
                 new BigNumber(invoiceAmount),
                 fees?.percentage || 0,
@@ -708,6 +725,22 @@ export default class SwapStore {
                 console.error(
                     'Reverse swap response verification failed:',
                     responseCheck.reason
+                );
+                return;
+            }
+
+            // the claim pays claimMinerFee from the lockup, so a lockup no
+            // larger than it leaves nothing to receive
+            if (!(Number(responseData.onchainAmount) > claimMinerFee)) {
+                runInAction(() => {
+                    this.apiError = localeString(
+                        'views.Swaps.invalidReverseSwapResponse'
+                    );
+                    this.loading = false;
+                });
+                console.error(
+                    'Reverse swap response verification failed:',
+                    'lockup-below-claim-fee'
                 );
                 return;
             }
