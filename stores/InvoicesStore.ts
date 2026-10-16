@@ -313,9 +313,14 @@ export default class InvoicesStore {
         // useLsp is the caller's own decision. Receive passes it because
         // its LSP switch writes enableLSP through the settings queue, so
         // settings.enableLSP can still hold the old value when the user
-        // taps Create invoice right after flipping the switch.
+        // taps Create invoice right after flipping the switch. A caller
+        // that does not decide only gets the LSP where the screens show
+        // the LSP switch and fee.
         const lspRequested =
-            useLsp ?? (!!this.settingsStore.settings?.enableLSP || !!forceLsp);
+            useLsp ??
+            ((!!this.settingsStore.settings?.enableLSP || !!forceLsp) &&
+                !this.nodeInfoStore.flowLspNotConfigured()
+                    .flowLspNotConfigured);
 
         this.lspStore?.resetFee();
         this.payment_request = null;

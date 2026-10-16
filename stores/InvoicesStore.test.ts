@@ -324,13 +324,17 @@ describe('InvoicesStore.createInvoice LSP decision', () => {
         flow_error: false
     });
 
-    const create = async (enableLSP: boolean, params: any) => {
+    const create = async (
+        enableLSP: boolean,
+        params: any,
+        flowLspNotConfigured = false
+    ) => {
         const lspStore = lspStoreMock();
         const store = new InvoicesStore(
             { settings: { enableLSP } } as any,
             lspStore as any,
             {} as any,
-            {} as any
+            { flowLspNotConfigured: () => ({ flowLspNotConfigured }) } as any
         );
         (BackendUtils.supportsFlowLSP as jest.Mock).mockReturnValue(true);
         // stop right after the LSP fee step
@@ -367,6 +371,23 @@ describe('InvoicesStore.createInvoice LSP decision', () => {
         expect((await create(false, {})).getZeroConfFee).not.toHaveBeenCalled();
         expect(
             (await create(false, { forceLsp: true })).getZeroConfFee
+        ).toHaveBeenCalled();
+    });
+
+    it('skips the LSP where it is not configured when the caller does not decide', async () => {
+        // e.g. LND REST without certificate verification: no screen shows
+        // the LSP switch or fee there
+        expect(
+            (await create(true, {}, true)).getZeroConfFee
+        ).not.toHaveBeenCalled();
+        expect(
+            (await create(false, { forceLsp: true }, true)).getZeroConfFee
+        ).not.toHaveBeenCalled();
+    });
+
+    it('lets a caller that decides use the LSP regardless', async () => {
+        expect(
+            (await create(false, { useLsp: true }, true)).getZeroConfFee
         ).toHaveBeenCalled();
     });
 });
