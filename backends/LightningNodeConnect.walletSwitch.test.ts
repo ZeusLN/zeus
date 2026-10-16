@@ -172,7 +172,8 @@ function setup() {
             },
             themeColor: () => '#000',
             isLightTheme: () => false,
-            autoPurgeLegacyKeychain: jest.fn()
+            autoPurgeLegacyKeychain: jest.fn(),
+            isWipePending: async () => false
         }
     );
     const view = new Wallet();
