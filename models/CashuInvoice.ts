@@ -42,13 +42,22 @@ export default class CashuInvoice extends BaseModel {
         mint_url: string;
         timestamp: number;
         memo?: string;
-        state: string;
+        // absent before CDK 0.18, when every recorded transaction is completed
+        state?: string;
     }): CashuInvoice {
+        // only a completed record is paid; an unrecognised state (the iOS
+        // bridge reports "Unknown" for a status it does not know) stays
+        // unpaid so it cannot show as received without being in the balance
+        const completed = tx.state === undefined || tx.state === 'Completed';
         const invoice = new CashuInvoice({
             quote: tx.id,
             request: '',
-            state: tx.state === 'Pending' ? 'UNPAID' : 'PAID',
-            paid: tx.state !== 'Pending' && tx.state !== 'Failed',
+            state: completed
+                ? 'PAID'
+                : tx.state === 'Failed'
+                ? 'FAILED'
+                : 'UNPAID',
+            paid: completed,
             mintUrl: tx.mint_url,
             expires_at: tx.timestamp,
             fromCDK: true,
@@ -76,9 +85,19 @@ export default class CashuInvoice extends BaseModel {
 
     @computed public get isPaid(): boolean {
         if (this.fromCDK) {
-            return this.state !== 'UNPAID' && this.state !== 'Failed';
+            return this.state !== 'UNPAID' && this.state !== 'FAILED';
         }
         return this.paid || this.state === 'PAID' || false;
+    }
+
+    @computed public get isFailed(): boolean {
+        return !!this.fromCDK && this.state === 'FAILED';
+    }
+
+    // CDK history records carry a transaction id, not a mint quote id, so
+    // there is no quote to poll the mint with
+    @computed public get shouldPollMint(): boolean {
+        return !this.isPaid && !this.fromCDK;
     }
 
     @computed public get key(): string {
@@ -155,8 +174,9 @@ export default class CashuInvoice extends BaseModel {
     }
 
     @computed public get isExpired(): boolean {
-        // CDK transactions from history are completed, not expired
-        if (this.fromCDK) return false;
+        // CDK transactions from history are not expired; a failed one is
+        // closed out like an expired request so it does not render as pending
+        if (this.fromCDK) return this.isFailed;
 
         const getExpiryTimestamp = this.getExpiryUnixTimestamp();
 

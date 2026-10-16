@@ -61,9 +61,9 @@ export default class CashuInvoiceView extends React.Component<
         const { checkInvoicePaid, initializeWallet, cashuWallets } =
             CashuStore!!;
         const invoice = route.params?.invoice;
-        const { mintUrl, quote, isPaid } = invoice;
+        const { mintUrl, quote, shouldPollMint } = invoice;
 
-        if (!isPaid) {
+        if (shouldPollMint) {
             if (__DEV__) {
                 console.log('invoice not paid last time checked, checking...', {
                     quote,

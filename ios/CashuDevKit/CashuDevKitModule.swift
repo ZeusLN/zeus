@@ -340,6 +340,19 @@ class CashuDevKitModule: RCTEventEmitter {
         }
     }
 
+    private func transactionStatusToString(_ status: TransactionStatus) -> String {
+        switch status {
+        case .pending:
+            return "Pending"
+        case .completed:
+            return "Completed"
+        case .failed:
+            return "Failed"
+        @unknown default:
+            return "Unknown"
+        }
+    }
+
     private func currencyUnitToString(_ unit: CurrencyUnit) -> String {
         switch unit {
         case .sat:
@@ -1645,7 +1658,8 @@ class CashuDevKitModule: RCTEventEmitter {
                         "amount": tx.amount.value,
                         "mint_url": tx.mintUrl.url,
                         "timestamp": tx.timestamp,
-                        "fee": tx.fee.value
+                        "fee": tx.fee.value,
+                        "state": transactionStatusToString(tx.status)
                     ]
                     if let memo = tx.memo {
                         result["memo"] = memo
