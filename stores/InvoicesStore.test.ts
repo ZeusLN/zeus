@@ -89,6 +89,119 @@ describe('InvoicesStore.isInvoicePaid', () => {
     });
 });
 
+// PaymentRequest renders pay_req and pays paymentRequest,
+// so the two must always describe the same invoice
+describe('InvoicesStore superseded decode requests', () => {
+    let settle: {
+        [request: string]: {
+            resolve: (data: any) => void;
+            reject: (error: Error) => void;
+        };
+    };
+
+    beforeEach(() => {
+        settle = {};
+        (BackendUtils.decodePaymentRequest as jest.Mock).mockImplementation(
+            ([request]: string[]) =>
+                new Promise((resolve, reject) => {
+                    settle[request] = { resolve, reject };
+                })
+        );
+    });
+
+    it('ignores a decode response that arrives after a newer getPayReq', async () => {
+        const store = newStore();
+        const first = store.getPayReq('lnbc-first');
+        const second = store.getPayReq('lnbc-second');
+        settle['lnbc-second'].resolve({ num_satoshis: '1000000' });
+        settle['lnbc-first'].resolve({ num_satoshis: '10' });
+        await Promise.all([first, second]);
+
+        expect(store.paymentRequest).toBe('lnbc-second');
+        expect(store.pay_req!.getPaymentRequest).toBe('lnbc-second');
+        expect(store.pay_req!.getRequestAmount).toBe(1000000);
+    });
+
+    it('keeps the latest request when a repeated decode shares the earlier in-flight response', async () => {
+        // restReq hands an identical request the promise already in flight,
+        // so first, second, first is answered in the order first, second
+        const pending: { [request: string]: Promise<any> } = {};
+        (BackendUtils.decodePaymentRequest as jest.Mock).mockImplementation(
+            ([request]: string[]) => {
+                if (!pending[request]) {
+                    pending[request] = new Promise((resolve, reject) => {
+                        settle[request] = { resolve, reject };
+                    });
+                }
+                return pending[request];
+            }
+        );
+
+        const store = newStore();
+        const calls = [
+            store.getPayReq('lnbc-first'),
+            store.getPayReq('lnbc-second'),
+            store.getPayReq('lnbc-first')
+        ];
+        settle['lnbc-first'].resolve({ num_satoshis: '1000000' });
+        settle['lnbc-second'].resolve({ num_satoshis: '10' });
+        await Promise.all(calls);
+
+        expect(store.paymentRequest).toBe('lnbc-first');
+        expect(store.pay_req!.getPaymentRequest).toBe('lnbc-first');
+        expect(store.pay_req!.getRequestAmount).toBe(1000000);
+        expect(store.loading).toBe(false);
+    });
+
+    it('stays loading when only the superseded request has been answered', async () => {
+        const store = newStore();
+        const first = store.getPayReq('lnbc-first');
+        store.getPayReq('lnbc-second');
+        settle['lnbc-first'].resolve({ num_satoshis: '10' });
+        await first;
+
+        expect(store.pay_req).toBeNull();
+        expect(store.loading).toBe(true);
+    });
+
+    it('ignores a decode error that arrives after a newer getPayReq', async () => {
+        const store = newStore();
+        const first = store.getPayReq('lnbc-first');
+        const second = store.getPayReq('lnbc-second');
+        settle['lnbc-second'].resolve({ num_satoshis: '1000000' });
+        settle['lnbc-first'].reject(new Error('decode failed'));
+        await Promise.all([first, second]);
+
+        expect(store.getPayReqError).toBeNull();
+        expect(store.pay_req!.getPaymentRequest).toBe('lnbc-second');
+    });
+
+    it('ignores a getWithdrawalReq outcome that arrives after a newer getPayReq', async () => {
+        const store = newStore();
+        const first = store.getWithdrawalReq('lnr-first');
+        const second = store.getPayReq('lnbc-second');
+        settle['lnbc-second'].resolve({ num_satoshis: '1000000' });
+        settle['lnr-first'].reject(new Error('decode failed'));
+        await Promise.all([first, second]);
+
+        expect(store.getPayReqError).toBeNull();
+        expect(store.pay_req!.getPaymentRequest).toBe('lnbc-second');
+    });
+
+    it('ignores a getPayReq response that arrives after a newer getWithdrawalReq', async () => {
+        const store = newStore();
+        const first = store.getPayReq('lnbc-first');
+        const second = store.getWithdrawalReq('lnr-second');
+        settle['lnr-second'].resolve({ invreq_amount_msat: 1000 });
+        settle['lnbc-first'].resolve({ num_satoshis: '10' });
+        await Promise.all([first, second]);
+
+        expect(store.paymentRequest).toBe('lnr-second');
+        expect(store.pay_req).toBeNull();
+        expect(store.withdrawal_req).not.toBeNull();
+    });
+});
+
 // ZEUS-2223 / ZEUS-2932: imported accounts live under a single key scope;
 // lnd rejects address requests whose type doesn't match it
 describe('InvoicesStore.getNewAddress', () => {
