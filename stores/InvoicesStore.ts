@@ -741,6 +741,10 @@ export default class InvoicesStore {
 
         return BackendUtils.decodePaymentRequest([paymentRequest])
             .then((data: any) => {
+                // drop the response of a superseded request: applying it
+                // would leave pay_req (what the user reviews) describing a
+                // different invoice than paymentRequest (what gets paid)
+                if (this.paymentRequest !== paymentRequest) return;
                 runInAction(() => {
                     // thread the original bolt11 string through: several
                     // backends' decode responses omit it, leaving the
@@ -752,6 +756,7 @@ export default class InvoicesStore {
                 return;
             })
             .catch((error: Error) => {
+                if (this.paymentRequest !== paymentRequest) return;
                 const error_friendly = errorToUserFriendly(error);
                 runInAction(() => {
                     this.pay_req = null;
@@ -770,6 +775,8 @@ export default class InvoicesStore {
 
         return BackendUtils.decodePaymentRequest([withdrawalReq])
             .then((data: any) => {
+                // same guard as getPayReq: both share paymentRequest
+                if (this.paymentRequest !== withdrawalReq) return;
                 runInAction(() => {
                     this.withdrawal_req = new WithdrawalRequest(data);
                     this.getPayReqError = null;
@@ -778,6 +785,7 @@ export default class InvoicesStore {
                 return;
             })
             .catch((error: Error) => {
+                if (this.paymentRequest !== withdrawalReq) return;
                 const error_friendly = errorToUserFriendly(error);
                 runInAction(() => {
                     this.withdrawal_req = null;
