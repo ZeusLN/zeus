@@ -26,7 +26,10 @@ jest.mock('../utils/LndUtils', () => ({
     toWalletrpcAddressTypeName: jest.fn()
 }));
 jest.mock('../utils/NFCUtils', () => ({ scanNfcTag: jest.fn() }));
-jest.mock('../utils/UnitsUtils', () => ({ SATS_PER_BTC: 100000000 }));
+jest.mock('../utils/UnitsUtils', () => ({
+    SATS_PER_BTC: 100000000,
+    numberWithCommas: (x: string | number) => `${x}`
+}));
 jest.mock('../utils/AmountUtils', () => ({ getAmountFromSats: jest.fn() }));
 jest.mock('../utils/ExpiryUtils', () => ({
     ExpirationPreset: {},
@@ -75,8 +78,11 @@ jest.mock('../assets/images/SVG/Gear.svg', () => 'Gear');
 jest.mock('../assets/images/SVG/NFC-alt.svg', () => 'NfcIcon');
 
 import * as React from 'react';
+import { Alert } from 'react-native';
 import Receive from './Receive';
 import BackendUtils from '../utils/BackendUtils';
+import handleAnything from '../utils/handleAnything';
+import { getSatAmount } from '../components/AmountInput';
 
 // value is in the display unit (here fiat), satAmount in sats, as set by
 // AmountInput's onAmountChange
@@ -123,5 +129,58 @@ describe('Receive.subscribeInvoice', () => {
             expect.any(Function)
         );
         expect(BackendUtils.watchOnchainReceived).not.toHaveBeenCalled();
+    });
+});
+
+describe('Receive LNURL-withdraw LSP fee', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    const pressAlertButton = (text: string) => {
+        const buttons = (Alert.alert as jest.Mock).mock.calls[0][2];
+        buttons.find((b: any) => b.text === text).onPress();
+    };
+
+    it('shows the fee and the amount left, and resolves with the choice', async () => {
+        jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        const view = makeView({ value: '50000', satAmount: '50000' });
+
+        const declined = view.confirmLspFee(2000, '50000');
+        expect((Alert.alert as jest.Mock).mock.calls[0][1]).toBe(
+            'views.Receive.lspFeeConfirmWithdrawal'
+        );
+        pressAlertButton('general.cancel');
+        await expect(declined).resolves.toBe(false);
+
+        (Alert.alert as jest.Mock).mockClear();
+        const accepted = view.confirmLspFee(2000, '50000');
+        pressAlertButton('general.confirm');
+        await expect(accepted).resolves.toBe(true);
+    });
+
+    it('passes the confirmation to the store on an NFC withdraw with a keyed-in amount', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(50000);
+        (handleAnything as unknown as jest.Mock).mockResolvedValue([
+            'Receive',
+            { lnurlParams: { defaultDescription: { memo: '' } } }
+        ]);
+        const createUnifiedInvoice = jest.fn(() => new Promise(() => {}));
+        const view = new Receive({
+            navigation: { navigate: jest.fn() },
+            route: { params: { amount: '50000' } },
+            SettingsStore: { settings: {} },
+            NodeInfoStore: { nodeInfo: {} },
+            InvoicesStore: { createUnifiedInvoice }
+        } as unknown as React.ComponentProps<typeof Receive>);
+        view.state = { ...view.state, lspIsActive: true };
+
+        view.validateAddress('lnurl1withdraw');
+        await new Promise(process.nextTick);
+
+        expect(createUnifiedInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({
+                useLsp: true,
+                confirmLspFee: view.confirmLspFee
+            })
+        );
     });
 });
