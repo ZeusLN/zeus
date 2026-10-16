@@ -3,6 +3,7 @@ import { Platform, View } from 'react-native';
 
 import { StealthAppContainer } from '../views/Stealth';
 import StealthModeUtils, { StealthApp } from '../utils/StealthModeUtils';
+import { markStartupPhase } from '../utils/StartupTimingUtils';
 import Storage from '../storage';
 
 interface StealthModeWrapperProps {
@@ -39,18 +40,21 @@ const StealthModeWrapper: React.FC<StealthModeWrapperProps> = ({
     }, []);
 
     const checkStealthStatus = async () => {
+        markStartupPhase('stealthCheckStart');
         // Only check on Android. This gate is also load-bearing for iOS
         // keychain migrations: it keeps this pre-getSettings Storage read off
         // iOS, where reading before keychainDesyncMigration has populated the
         // device-local partition would see empty data (see SettingsStore).
         if (Platform.OS !== 'android') {
             setIsLoading(false);
+            markStartupPhase('stealthGateCleared');
             return;
         }
 
         try {
             // Check native stealth status first (most reliable)
             const nativeActive = await StealthModeUtils.isStealthModeActive();
+            markStartupPhase('stealthNativeChecked');
 
             // Get JS settings to cross-reference
             const settingsStr = await Storage.getItem(STORAGE_KEY);
@@ -82,6 +86,7 @@ const StealthModeWrapper: React.FC<StealthModeWrapperProps> = ({
             console.error('Error checking stealth status:', error);
         } finally {
             setIsLoading(false);
+            markStartupPhase('stealthGateCleared');
         }
     };
 

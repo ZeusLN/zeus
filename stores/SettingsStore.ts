@@ -11,6 +11,10 @@ import { getSupportedBiometryType } from '../utils/BiometricUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { SETTINGS_VERSION } from '../utils/SettingsVersion';
+import {
+    markStartupPhase,
+    sealStartupTiming
+} from '../utils/StartupTimingUtils';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
 import {
     DEFAULT_SCORER_URL,
@@ -2090,6 +2094,7 @@ export default class SettingsStore {
         silentUpdate: boolean = false,
         fromQueue: boolean = false
     ) => {
+        markStartupPhase('getSettingsFirstCall');
         if (!silentUpdate) this.loading = true;
         try {
             // ORDER IS LOAD-BEARING. keychainDesyncMigration must run BEFORE
@@ -2129,6 +2134,7 @@ export default class SettingsStore {
                     );
                 }
             }
+            markStartupPhase('settingsBlobRead');
 
             if (modernSettings) {
                 console.log('attempting to load modern settings');
@@ -2141,6 +2147,7 @@ export default class SettingsStore {
                     parsedSettings,
                     fromQueue
                 );
+                markStartupPhase('settingsMigrationsChecked');
             } else {
                 console.log('attempting to load legacy settings');
 
@@ -2171,6 +2178,7 @@ export default class SettingsStore {
         } finally {
             this.isMigrating = false;
             if (!silentUpdate) this.loading = false;
+            markStartupPhase('settingsLoaded');
         }
 
         return this.settings;
@@ -2754,6 +2762,12 @@ export default class SettingsStore {
             BackendUtils.clearCachedCalls();
             // remove fetchLock on reconnect
             this.fetchLock = false;
+        }
+        if (!status) {
+            // First completed connect ends the startup window; collection
+            // stops here so steady-state operation records nothing
+            markStartupPhase('connectComplete');
+            sealStartupTiming();
         }
         this.connecting = status;
         return this.connecting;
