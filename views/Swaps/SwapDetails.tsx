@@ -28,7 +28,10 @@ import { Row } from '../../components/layout/Row';
 import Text from '../../components/Text';
 
 import BackendUtils from '../../utils/BackendUtils';
-import { reverseClaimMinerFee } from '../../utils/FeeUtils';
+import {
+    isPlausibleSatPerVbyte,
+    reverseClaimMinerFee
+} from '../../utils/FeeUtils';
 import handleAnything from '../../utils/handleAnything';
 import { localeString, pascalToHumanReadable } from '../../utils/LocaleUtils';
 import { sleep } from '../../utils/SleepUtils';
@@ -86,6 +89,8 @@ interface SwapDetailsState {
     swapTreeToggle: boolean;
     swapData: Swap;
     lockupNotice: string | null;
+    // the current rate, for a reverse swap with none stored
+    currentClaimFeeRate?: number;
 }
 
 // how often to re-check an unconfirmed or unreachable lockup
@@ -161,6 +166,8 @@ export default class SwapDetails extends React.Component<
                 return;
             }
 
+            // the claim awaits this same lookup
+            this.loadCurrentClaimFeeRate();
             this.getReverseSwapUpdates(swapData, swapData.isSubmarineSwap);
         }
     }
@@ -936,16 +943,30 @@ export default class SwapDetails extends React.Component<
         );
     };
 
+    private currentClaimFeeRateLookup?: Promise<number | undefined>;
+
     // The rate the Swaps screen would pre-fill now, for a swap that has
-    // none stored
-    currentClaimFeeRate = async (): Promise<number | undefined> => {
+    // none stored. Looked up once and kept in state, so the amount shown
+    // and the claim use the same rate. Undefined if none is needed or the
+    // lookup fails, and then both use the 2 sat/vB floor.
+    loadCurrentClaimFeeRate = (): Promise<number | undefined> => {
+        if (!this.currentClaimFeeRateLookup) {
+            this.currentClaimFeeRateLookup = this.fetchCurrentClaimFeeRate();
+        }
+        return this.currentClaimFeeRateLookup;
+    };
+
+    fetchCurrentClaimFeeRate = async (): Promise<number | undefined> => {
         const { swapData } = this.state;
         if (swapData?.claimFeeRate != null || this.props.route.params.fee) {
             return undefined;
         }
         try {
             const fees = await this.props.FeeStore?.getOnchainFeesviaMempool();
-            return fees?.fastestFee;
+            const rate = fees?.fastestFee;
+            if (!isPlausibleSatPerVbyte(rate)) return undefined;
+            this.setState({ currentClaimFeeRate: Number(rate) });
+            return Number(rate);
         } catch (e) {
             console.log('Error fetching fee rates for claim', e);
             return undefined;
@@ -992,7 +1013,7 @@ export default class SwapDetails extends React.Component<
 
             if (!claimHex) {
                 const minerFee = this.claimMinerFee(
-                    await this.currentClaimFeeRate()
+                    await this.loadCurrentClaimFeeRate()
                 );
                 if (minerFee === undefined) {
                     this.setState({
@@ -1375,8 +1396,10 @@ export default class SwapDetails extends React.Component<
                                         sats={
                                             SwapStore?.getReverseSwapReceiveAmount(
                                                 swapData?.getAmount,
-                                                this.claimMinerFee() ??
-                                                    swapData?.claimMinerFee
+                                                this.claimMinerFee(
+                                                    this.state
+                                                        .currentClaimFeeRate
+                                                ) ?? swapData?.claimMinerFee
                                             ) || 0
                                         }
                                         sensitive

@@ -33,6 +33,7 @@ import ModalBox from '../../components/ModalBox';
 import Switch from '../../components/Switch';
 
 import { font } from '../../utils/FontUtils';
+import { isPlausibleSatPerVbyte } from '../../utils/FeeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { reAuthNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -2352,7 +2353,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                         >
                                                             <KeyValue
                                                                 keyValue={localeString(
-                                                                    'views.Swaps.setFeeRate'
+                                                                    'views.Swaps.setClaimFeeRate'
                                                                 )}
                                                             />
                                                         </View>
@@ -2376,6 +2377,13 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                     </Row>
                                                 </View>
                                             </TouchableOpacity>
+                                            {!isPlausibleSatPerVbyte(fee) && (
+                                                <ErrorMessage
+                                                    message={localeString(
+                                                        'views.Swaps.reverseClaimFeeRateRequired'
+                                                    )}
+                                                />
+                                            )}
                                             {feeSettingToggle && (
                                                 <>
                                                     <Text
