@@ -107,22 +107,19 @@ export class ReverseClaimTransaction extends ClaimTransaction {
     destinationAddress: string;
     feeRate: number;
     minerFee: number;
-    isTestnet: boolean;
 
     static build({
         swap,
         endpoint,
         transactionHex,
         feeRate,
-        minerFee,
-        isTestnet
+        minerFee
     }: {
         swap: Swap;
         endpoint: string;
         transactionHex: string;
         feeRate: number;
         minerFee: number;
-        isTestnet: boolean;
     }): ReverseClaimTransaction | null {
         const privateKey = privateKeyFromKeys(swap.keys);
         const claimLeaf = swap.swapTreeDetails?.claimLeaf?.output;
@@ -162,8 +159,7 @@ export class ReverseClaimTransaction extends ClaimTransaction {
             lockupAddress,
             destinationAddress,
             feeRate,
-            minerFee,
-            isTestnet
+            minerFee
         });
     }
 }

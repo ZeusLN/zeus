@@ -648,8 +648,7 @@ describe('rescued reverse swap, from storage to claim', () => {
             endpoint: 'https://swaps.example.com',
             transactionHex: '00',
             feeRate: 2,
-            minerFee: 200,
-            isTestnet: false
+            minerFee: 200
         });
 
         const childPrivateKey = HDKey.fromMasterSeed(

@@ -249,18 +249,6 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
      }
   }
 
-  @ReactMethod
-  fun createReverseClaimTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, privateKey: String, servicePubKey: String, preimageHex: String, transactionHex: String, lockupAddress: String, destinationAddress: String, feeRate: Int, minerFee: Int, isTestnet: Boolean?, promise: Promise) {
-     Log.d("createReverseClaimTransaction called", "");
-
-     try {
-         Lndmobile.createReverseClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, preimageHex, transactionHex, lockupAddress, destinationAddress, feeRate, minerFee, isTestnet ?: false)
-         promise.resolve(null)
-     } catch (e: Exception) {
-         promise.reject("CREATE_REVERSE_CLAIM_ERROR", e.toString())
-     }
-  }
-
   // Builds and signs a reverse swap claim and returns its hex without
   // broadcasting it; the app stores it and broadcasts it itself
   @ReactMethod
@@ -282,18 +270,6 @@ class LncModule(reactContext: ReactApplicationContext) : ReactContextBaseJavaMod
          promise.resolve(txHex)
      } catch (e: Exception) {
          promise.reject("BUILD_REFUND_ERROR", e.toString())
-     }
-  }
-
-  @ReactMethod
-  fun createRefundTransaction(endpoint: String, swapId: String, claimLeaf: String, refundLeaf: String, transactionHex: String, privateKey: String, servicePubKey: String, feeRate: Int, timeoutBlockHeight: Int, destinationAddress: String, lockupAddress: String, cooperative: Boolean?, isTestnet: Boolean?, promise: Promise) {
-     Log.d("createRefundTransaction called", "");
-
-     try {
-         var txid = Lndmobile.createRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, feeRate, timeoutBlockHeight, destinationAddress, lockupAddress, cooperative ?: false, isTestnet ?: false)
-         promise.resolve(txid)
-     } catch (e: Exception) {
-         promise.reject("CREATE_REFUND_ERROR", e.toString())
      }
   }
 }

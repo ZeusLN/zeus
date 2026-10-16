@@ -297,58 +297,6 @@ RCT_EXPORT_METHOD(createClaimTransaction:(NSString *)endpoint
     }
 }
 
-RCT_EXPORT_METHOD(createReverseClaimTransaction:(NSString *)endpoint
-                 swapId:(NSString *)swapId
-                 claimLeaf:(NSString *)claimLeaf
-                 refundLeaf:(NSString *)refundLeaf
-                 privateKey:(NSString *)privateKey
-                 servicePubKey:(NSString *)servicePubKey
-                 preimageHex:(NSString *)preimageHex
-                 transactionHex:(NSString *)transactionHex
-                 lockupAddress:(NSString *)lockupAddress
-                 destinationAddress:(NSString *)destinationAddress
-                 feeRate:(NSInteger)feeRate
-                 minerFee:(NSInteger)minerFee
-                 isTestnet:(BOOL)isTestnet
-                 resolver:(RCTPromiseResolveBlock)resolve
-                 rejecter:(RCTPromiseRejectBlock)reject)
-{
-    NSError *error;
-    LndmobileCreateReverseClaimTransaction(endpoint, swapId, claimLeaf, refundLeaf, privateKey, servicePubKey, preimageHex, transactionHex, lockupAddress, destinationAddress, feeRate, minerFee, isTestnet, &error);
-    if (error) {
-        NSLog(@"createReverseClaimTransaction error   %@",   error);
-        reject(@"createReverseClaimTransaction_error", error.localizedDescription, error);
-    } else {
-        resolve(@"Success");
-    }
-}
-
-RCT_EXPORT_METHOD(createRefundTransaction:(NSString *)endpoint
-                 swapId:(NSString *)swapId
-                 claimLeaf:(NSString *)claimLeaf
-                 refundLeaf:(NSString *)refundLeaf
-                 transactionHex:(NSString *)transactionHex
-                 privateKey:(NSString *)privateKey
-                 servicePubKey:(NSString *)servicePubKey
-                 feeRate:(NSInteger)feeRate
-                 timeoutBlockHeight:(NSInteger)timeoutBlockHeight
-                 destinationAddress:(NSString *)destinationAddress
-                 lockupAddress:(NSString *)lockupAddress
-                 cooperative:(BOOL)cooperative
-                 isTestnet:(BOOL)isTestnet
-                 resolver:(RCTPromiseResolveBlock)resolve
-                 rejecter:(RCTPromiseRejectBlock)reject)
-{
-    NSError *error;
-    NSString *txid = LndmobileCreateRefundTransaction(endpoint, swapId, claimLeaf, refundLeaf, transactionHex, privateKey, servicePubKey, feeRate, timeoutBlockHeight, destinationAddress, lockupAddress, cooperative, isTestnet, &error);
-    if (error) {
-        NSLog(@"createRefundTransaction error   %@",   error);
-        reject(@"createRefundTransaction_error", error.localizedDescription, error);
-    } else {
-        resolve(txid); 
-    }
-}
-
 // Builds and signs a reverse swap claim and returns its hex without
 // broadcasting it; the app stores it and broadcasts it itself
 RCT_EXPORT_METHOD(buildReverseClaimTransaction:(NSString *)endpoint
