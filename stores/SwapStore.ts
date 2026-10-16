@@ -332,8 +332,14 @@ export default class SwapStore {
             .replace(/\b[a-z]/g, (char) => char.toUpperCase()); // Capitalize first letter of each word
     };
 
+    // Number of the latest getSwapFees call. An older call that finishes
+    // later must not replace the quote the Swaps screen shows.
+    private swapFeesRequest = 0;
+
     @action
     public getSwapFees = async () => {
+        const request = ++this.swapFeesRequest;
+        const superseded = () => request !== this.swapFeesRequest;
         this.loading = true;
         this.apiError = '';
         const host = this.getHost;
@@ -344,6 +350,7 @@ export default class SwapStore {
                 `${host}/swap/submarine`,
                 this.getHeaders
             );
+            if (superseded()) return;
             const status = response.info().status;
             if (status == 200) {
                 const data = response.json();
@@ -365,6 +372,7 @@ export default class SwapStore {
                 return;
             }
         } catch (e) {
+            if (superseded()) return;
             console.error('Error fetching submarine swap fees:', e);
             this.apiError = localeString('views.Swaps.fetchFeesFailed');
         }
@@ -375,6 +383,7 @@ export default class SwapStore {
                 `${host}/swap/reverse`,
                 this.getHeaders
             );
+            if (superseded()) return;
             const status = response.info().status;
             if (status == 200) {
                 const data = response.json();
@@ -396,6 +405,7 @@ export default class SwapStore {
                 return;
             }
         } catch (e) {
+            if (superseded()) return;
             console.error('Error fetching reverse swap fees:', e);
             this.apiError = localeString('views.Swaps.fetchFeesFailed');
         }
@@ -581,6 +591,11 @@ export default class SwapStore {
         const { implementation } = this.settingsStore;
         const { nodeInfo } = this.nodeInfoStore;
         const nodePubkey = nodeInfo.nodeId;
+        // Read the quote the Swaps screen showed before the first await:
+        // a getSwapFees call that finishes during creation replaces
+        // reverseInfo, and the checks below must use the quote the user saw
+        const fees = this.reverseInfo?.fees;
+        const claimMinerFee = this.claimMinerFee;
         try {
             initEccLib(ecc);
             console.log('Creating reverse swap using rescue key...');
@@ -650,18 +665,22 @@ export default class SwapStore {
             // Verify the rest of the response before saving or paying: the
             // swap tree must pay our key against our preimage hash, the
             // lockup address must be that tree's taproot output, and the
-            // provider must lock up more than the amount the Swaps screen
-            // showed. Otherwise a host could point the claim at an output
+            // provider must lock up at least the amount the Swaps screen
+            // showed plus the claim fee, which the claim pays out of the
+            // lockup. Otherwise a host could point the claim at an output
             // it controls and still learn the preimage when we claim.
-            const fees = this.reverseInfo?.fees;
             const minOnchainAmount = calculateReceiveAmount(
                 new BigNumber(invoiceAmount),
                 fees?.percentage || 0,
-                new BigNumber(fees?.minerFees?.claim || 0)
+                new BigNumber(claimMinerFee)
                     .plus(fees?.minerFees?.lockup || 0)
                     .toNumber(),
                 true
-            ).toNumber();
+            )
+                // a negative claim quote must not lower the minimum below
+                // the amount shown
+                .plus(Math.max(claimMinerFee, 0))
+                .toNumber();
             const responseCheck = verifyReverseSwapResponse({
                 swapTree: responseData.swapTree,
                 lockupAddress: responseData.lockupAddress,
@@ -710,7 +729,7 @@ export default class SwapStore {
             responseData.type = SwapType.Reverse;
             responseData.preimage = preimage;
             responseData.destinationAddress = destinationAddress;
-            responseData.claimMinerFee = this.claimMinerFee;
+            responseData.claimMinerFee = claimMinerFee;
 
             await this.saveReverseSwaps(
                 responseData,

@@ -321,6 +321,17 @@ describe('SwapStore.verifyReverseLockup', () => {
         await expect(verify()).resolves.toEqual({ status: 'ok' });
     });
 
+    it('refuses a swap stored with an on-chain amount that is not a number', async () => {
+        // [Infinity] is saved as [null], which compares as 0
+        esplora(200);
+        await expect(
+            verify(storedSwap({ onchainAmount: [Infinity] }))
+        ).resolves.toEqual({
+            status: 'invalid',
+            reason: 'onchain-amount-invalid'
+        });
+    });
+
     it('looks the lockup up on the mempool instance, not the provider', async () => {
         esplora(200);
         await verify();
@@ -777,5 +788,130 @@ describe('SwapStore.verifyReverseLockup', () => {
             await expect(verify()).resolves.toEqual({ status: 'ok' });
             expect(getPayments).not.toHaveBeenCalled();
         });
+    });
+});
+
+describe('SwapStore.createReverseSwap on-chain amount minimum', () => {
+    const INVOICE_AMOUNT = 100000;
+    // 0.5% service fee, 300 sat claim and 400 sat lockup fee: the Swaps
+    // screen shows 98800 sats to receive, and the claim pays 300 of the
+    // lockup, so the provider has to lock up 99100
+    const REVERSE_INFO = {
+        fees: { percentage: 0.5, minerFees: { claim: 300, lockup: 400 } }
+    };
+
+    const create = async ({
+        onchainAmount = '99100',
+        reverseInfo = REVERSE_INFO,
+        duringRequest
+    }: {
+        // the raw JSON text of the provider's onchainAmount
+        onchainAmount?: string;
+        reverseInfo?: any;
+        duringRequest?: (store: SwapStore) => void;
+    } = {}) => {
+        storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
+        const { outputScript: _outputScript, ...details } = VALID;
+        const data = JSON.stringify({
+            id: 'reverse-swap',
+            invoice: 'lnbc-provider-invoice',
+            onchainAmount: 0,
+            ...details
+        }).replace('"onchainAmount":0', `"onchainAmount":${onchainAmount}`);
+
+        const store = newStore();
+        store.reverseInfo = reverseInfo;
+        fetchMock.mockImplementation(async (method: string) => {
+            if (method === 'POST') {
+                duringRequest?.(store);
+                return { data };
+            }
+            return {
+                info: () => ({ status: 200 }),
+                text: () => String(TIMEOUT - 100)
+            };
+        });
+        const navigation = { navigate: jest.fn() };
+        await store.createReverseSwap(
+            'bc1qdestination',
+            INVOICE_AMOUNT,
+            // at 1 sat/vB any claim fee floor stays below the 300 quoted
+            '1',
+            navigation
+        );
+        const stored = storageBacking[REVERSE_SWAPS_KEY]
+            ? JSON.parse(storageBacking[REVERSE_SWAPS_KEY])
+            : [];
+        return { store, navigation, stored };
+    };
+
+    const expectRefused = ({ store, navigation, stored }: any) => {
+        expect(store.apiError).toBe('views.Swaps.invalidReverseSwapResponse');
+        expect(store.loading).toBe(false);
+        expect(stored).toHaveLength(0);
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    };
+
+    it('accepts the amount shown plus the claim fee', async () => {
+        const { store, stored } = await create();
+        expect(store.apiError).toBe('');
+        expect(stored).toHaveLength(1);
+        expect(stored[0].onchainAmount).toBe(99100);
+        expect(stored[0].claimMinerFee).toBe(300);
+    });
+
+    it.each(['98801', '99099'])(
+        'refuses %s, which leaves less than the amount shown after the claim fee',
+        async (onchainAmount) => {
+            expectRefused(await create({ onchainAmount }));
+        }
+    );
+
+    it.each(['1e999', '[1e999]', '"99100"', '99100.5', '[99100]'])(
+        'refuses an on-chain amount of %s',
+        async (onchainAmount) => {
+            expectRefused(await create({ onchainAmount }));
+        }
+    );
+
+    it('does not let a negative claim quote lower the minimum below the amount shown', async () => {
+        // still 700 sats of miner fees and 98800 shown
+        const reverseInfo = {
+            fees: {
+                percentage: 0.5,
+                minerFees: { claim: -98000, lockup: 98700 }
+            }
+        };
+        expectRefused(await create({ onchainAmount: '98799', reverseInfo }));
+    });
+
+    it('checks against the quote read before the request, not one that arrives during it', async () => {
+        const result = await create({
+            onchainAmount: '1000',
+            duringRequest: (store) => {
+                store.reverseInfo = {
+                    fees: {
+                        percentage: 0.5,
+                        minerFees: { claim: 300, lockup: 300000 }
+                    }
+                };
+            }
+        });
+        expectRefused(result);
+    });
+
+    it('stores the claim fee from the quote read before the request', async () => {
+        const { stored } = await create({
+            duringRequest: (store) => {
+                store.reverseInfo = {
+                    fees: {
+                        percentage: 0.5,
+                        minerFees: { claim: 5000, lockup: 400 }
+                    }
+                };
+            }
+        });
+        expect(stored).toHaveLength(1);
+        expect(stored[0].claimMinerFee).toBe(300);
     });
 });

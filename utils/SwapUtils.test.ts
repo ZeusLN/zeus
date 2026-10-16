@@ -765,6 +765,22 @@ describe('SwapUtils', () => {
                 ).toBe(true);
             });
 
+            it('accepts an on-chain amount equal to the minimum', () => {
+                expect(
+                    verifyReverseSwapResponse(
+                        response({ minOnchainAmount: 100000 })
+                    ).valid
+                ).toBe(true);
+            });
+
+            it('accepts a stored swap with no on-chain amount and no minimum', () => {
+                expect(
+                    verifyReverseSwapResponse(
+                        response({ onchainAmount: undefined })
+                    ).valid
+                ).toBe(true);
+            });
+
             it.each([
                 [
                     'the lockup address is another taproot address',
@@ -848,6 +864,41 @@ describe('SwapUtils', () => {
                     'the on-chain amount is missing but a minimum is set',
                     { onchainAmount: undefined, minOnchainAmount: 99000 },
                     'onchain-amount-low'
+                ],
+                [
+                    'the on-chain amount is one sat below the minimum',
+                    { onchainAmount: 98999, minOnchainAmount: 99000 },
+                    'onchain-amount-low'
+                ],
+                [
+                    'the on-chain amount is Infinity',
+                    { onchainAmount: Infinity, minOnchainAmount: 99000 },
+                    'onchain-amount-invalid'
+                ],
+                [
+                    'the on-chain amount is an array',
+                    { onchainAmount: [Infinity], minOnchainAmount: 99000 },
+                    'onchain-amount-invalid'
+                ],
+                [
+                    'the on-chain amount is a numeric string',
+                    { onchainAmount: '100000', minOnchainAmount: 99000 },
+                    'onchain-amount-invalid'
+                ],
+                [
+                    'the on-chain amount is not a whole number',
+                    { onchainAmount: 99000.5, minOnchainAmount: 99000 },
+                    'onchain-amount-invalid'
+                ],
+                [
+                    'a stored on-chain amount is [null]',
+                    { onchainAmount: [null] },
+                    'onchain-amount-invalid'
+                ],
+                [
+                    'a stored on-chain amount is 0',
+                    { onchainAmount: 0 },
+                    'onchain-amount-invalid'
                 ],
                 [
                     'the swap tree is missing',
