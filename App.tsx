@@ -238,6 +238,7 @@ import LSPServicesList from './views/Settings/LSPServicesList';
 // LSPS1
 import LSPS1 from './views/LSPS1/index';
 import LSPS1Settings from './views/LSPS1/Settings';
+import LSPS2Settings from './views/LSPS2/Settings';
 import OrdersPane from './views/LSPS1/OrdersPane';
 import LSPS1Order from './views/LSPS1/Order';
 import LSPPaymentAwait from './views/LSPS/LSPPaymentAwait';
@@ -1499,6 +1500,12 @@ export default class App extends React.PureComponent {
                                                                 name="LSPS1Settings" // @ts-ignore:next-line
                                                                 component={
                                                                     LSPS1Settings
+                                                                }
+                                                            />
+                                                            <Stack.Screen
+                                                                name="LSPS2Settings" // @ts-ignore:next-line
+                                                                component={
+                                                                    LSPS2Settings
                                                                 }
                                                             />
                                                             <Stack.Screen
