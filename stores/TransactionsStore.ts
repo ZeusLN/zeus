@@ -160,6 +160,10 @@ export default class TransactionsStore {
     // payments the user released the guard for, whose late results must
     // not overwrite the send screen of a payment made after them
     private releasedSeqs = new Set<number>();
+    // payments whose send request hasn't answered yet, background ones
+    // included. `loading` is shared by all of them, so releasing one may
+    // only clear it when none of the others is still waiting on it.
+    private pendingSendSeqs = new Set<number>();
 
     settingsStore: SettingsStore;
     nodeInfoStore: NodeInfoStore;
@@ -676,6 +680,7 @@ export default class TransactionsStore {
         }
 
         const seq = ++this.paymentSequence;
+        this.pendingSendSeqs.add(seq);
         if (!background) {
             this.paymentInFlight = true;
             this.inFlightOwnerSeq = seq;
@@ -860,6 +865,13 @@ export default class TransactionsStore {
         if (seq === null || !this.paymentInFlightConfirmed) return false;
         this.releasedSeqs.add(seq);
         this.clearPaymentInFlight(seq);
+        // the released payment's send request may still be open (a hung
+        // LNC stream or Tor request). Its late result is ignored, so it
+        // would otherwise leave `loading` set for other screens that read
+        // it. A background payment still running owns the flag (NWC waits
+        // for it to clear), so leave it to that payment's result.
+        this.pendingSendSeqs.delete(seq);
+        if (this.pendingSendSeqs.size === 0) this.loading = false;
         return true;
     };
 
@@ -1130,6 +1142,7 @@ export default class TransactionsStore {
 
     @action
     public handlePayment = (result: any, seq?: number) => {
+        if (seq !== undefined) this.pendingSendSeqs.delete(seq);
         if (seq !== undefined && this.releasedSeqs.has(seq)) return;
         this.loading = false;
 
@@ -1231,6 +1244,7 @@ export default class TransactionsStore {
 
     @action
     public handlePaymentError = (err: Error, seq?: number) => {
+        if (seq !== undefined) this.pendingSendSeqs.delete(seq);
         if (seq !== undefined && this.releasedSeqs.has(seq)) return;
         this.error = true;
         this.loading = false;
