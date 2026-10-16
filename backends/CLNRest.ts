@@ -87,10 +87,18 @@ export default class CLNRest {
                     // undefined keeps doTorRequest's own default; only
                     // request-scoped deadlines (payments) override it
                     timeout
-                ).then((response: any) => {
-                    calls.delete(id);
-                    return response;
-                })
+                )
+                    .then((response: any) => {
+                        calls.delete(id);
+                        return response;
+                    })
+                    .catch((error: any) => {
+                        // evict rejected requests too, otherwise every
+                        // subsequent identical call gets the same cached
+                        // rejection until the next reconnect clears the map
+                        calls.delete(id);
+                        throw error;
+                    })
             );
         } else {
             const timeoutPromise = new Promise((_, reject) => {
