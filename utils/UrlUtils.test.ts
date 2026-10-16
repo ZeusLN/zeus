@@ -25,12 +25,13 @@ jest.mock('../stores/SettingsStore', () => ({
     DEFAULT_MEMPOOL_INSTANCE: 'electrs.zeusln.com'
 }));
 
-import { modalStore, settingsStore } from '../stores/Stores';
+import { modalStore, nodeInfoStore, settingsStore } from '../stores/Stores';
 import UrlUtils from './UrlUtils';
 
 const mainnet = { isMutinynet: false, isTestNet: false };
 const testnet = { isMutinynet: false, isTestNet: true };
 const mutinynet = { isMutinynet: true, isTestNet: false };
+const testnet4 = { isMutinynet: false, isTestNet: true, isTestNet4: true };
 
 describe('UrlUtils', () => {
     describe('getMempoolApiUrl', () => {
@@ -65,6 +66,18 @@ describe('UrlUtils', () => {
             );
         });
 
+        it('uses mempool.space testnet4 on testnet4', () => {
+            expect(UrlUtils.getMempoolApiUrl(testnet4)).toEqual(
+                'https://mempool.space/testnet4/api'
+            );
+            settingsStore.settings.privacy = {
+                mempoolInstance: 'mempool.space'
+            };
+            expect(UrlUtils.getMempoolApiUrl(testnet4)).toEqual(
+                'https://mempool.space/testnet4/api'
+            );
+        });
+
         it('uses mutinynet.com on mutinynet', () => {
             expect(UrlUtils.getMempoolApiUrl(mutinynet)).toEqual(
                 'https://mutinynet.com/api'
@@ -83,6 +96,9 @@ describe('UrlUtils', () => {
                 'https://mempool.mynode.local/api'
             );
             expect(UrlUtils.getMempoolApiUrl(mutinynet)).toEqual(
+                'https://mempool.mynode.local/api'
+            );
+            expect(UrlUtils.getMempoolApiUrl(testnet4)).toEqual(
                 'https://mempool.mynode.local/api'
             );
         });
@@ -156,6 +172,35 @@ describe('UrlUtils', () => {
         it('uses the default explorer when no custom one is set', () => {
             UrlUtils.goToBlockExplorerTXID('abc');
             expect(lastUrl()).toEqual('https://mempool.space/tx/abc');
+        });
+
+        it('adds the network path on testnet3 and testnet4', () => {
+            const originalNodeInfo = nodeInfoStore.nodeInfo;
+            try {
+                (nodeInfoStore as any).nodeInfo = testnet;
+                UrlUtils.goToBlockExplorerTXID('abc');
+                expect(lastUrl()).toEqual(
+                    'https://mempool.space/testnet/tx/abc'
+                );
+
+                (nodeInfoStore as any).nodeInfo = testnet4;
+                UrlUtils.goToBlockExplorerTXID('abc');
+                expect(lastUrl()).toEqual(
+                    'https://mempool.space/testnet4/tx/abc'
+                );
+                // the views' testnet argument is NodeInfoStore.testnet,
+                // which is also true on testnet4
+                UrlUtils.goToBlockExplorerTXID('abc', true);
+                expect(lastUrl()).toEqual(
+                    'https://mempool.space/testnet4/tx/abc'
+                );
+
+                (nodeInfoStore as any).nodeInfo = mutinynet;
+                UrlUtils.goToBlockExplorerTXID('abc', true);
+                expect(lastUrl()).toEqual('https://mutinynet.com/tx/abc');
+            } finally {
+                (nodeInfoStore as any).nodeInfo = originalNodeInfo;
+            }
         });
 
         it('uses a custom explorer with a scheme', () => {

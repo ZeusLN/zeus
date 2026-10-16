@@ -22,6 +22,7 @@ jest.mock('../stores/Stores', () => ({
 }));
 
 import AddressUtils from './AddressUtils';
+import NodeInfo from '../models/NodeInfo';
 import { nodeInfoStore } from '../stores/Stores';
 import { walletrpc } from '../proto/lightning';
 
@@ -612,6 +613,20 @@ describe('AddressUtils', () => {
             // Signet alone was not enough for Sweep.tsx, Swaps/index.tsx
             // and the BIP21 + lightning branch of handleAnything
             setNodeInfo({ isSigNet: true });
+            testNetworks.forEach((address) =>
+                expect(AddressUtils.isValidBitcoinAddressForNode(address)).toBe(
+                    true
+                )
+            );
+            mainnet.forEach((address) =>
+                expect(AddressUtils.isValidBitcoinAddressForNode(address)).toBe(
+                    false
+                )
+            );
+        });
+
+        it('accepts only test network addresses on a CLN testnet4 node', () => {
+            setNodeInfo(new NodeInfo({ network: 'testnet4' }));
             testNetworks.forEach((address) =>
                 expect(AddressUtils.isValidBitcoinAddressForNode(address)).toBe(
                     true
@@ -1714,6 +1729,11 @@ describe('AddressUtils', () => {
             ['testnet', { isTestNet: true }, testnetAddresses],
             // CLN reports signet as network: 'signet'
             ['signet', { isSigNet: true }, testnetAddresses],
+            [
+                'CLN testnet4',
+                new NodeInfo({ network: 'testnet4' }),
+                testnetAddresses
+            ],
             [
                 'regtest',
                 { isRegTest: true },

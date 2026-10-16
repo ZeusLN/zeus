@@ -23,6 +23,7 @@ const withScheme = (host: string): string =>
 const getMempoolApiUrl = (nodeInfo: {
     isMutinynet: boolean;
     isTestNet: boolean;
+    isTestNet4?: boolean;
 }): string => {
     const privacy = settingsStore?.settings?.privacy;
     // No stored selection resolves to DEFAULT_MEMPOOL_INSTANCE. This
@@ -45,6 +46,7 @@ const getMempoolApiUrl = (nodeInfo: {
     }
     if (nodeInfo.isMutinynet) return 'https://mutinynet.com/api';
     // electrs.zeusln.com is mainnet-only; testnet3 lives at mempool.space/testnet
+    if (nodeInfo.isTestNet4) return 'https://mempool.space/testnet4/api';
     if (nodeInfo.isTestNet) return 'https://mempool.space/testnet/api';
     return `https://${
         instance === 'mempool.space'
@@ -59,6 +61,7 @@ const getMempoolApiUrl = (nodeInfo: {
 const getMempoolInstanceHost = (nodeInfo: {
     isMutinynet: boolean;
     isTestNet: boolean;
+    isTestNet4?: boolean;
 }): string => {
     try {
         return new URL(getMempoolApiUrl(nodeInfo)).host;
@@ -75,17 +78,20 @@ const goToBlockExplorer = (
     const { settings } = settingsStore;
     const { privacy } = settings;
     const custom = privacy && privacy.defaultBlockExplorer === 'Custom';
-    const { isMutinynet } = nodeInfoStore.nodeInfo;
+    const { isMutinynet, isTestNet4 } = nodeInfoStore.nodeInfo;
     const host =
         custom && privacy.customBlockExplorer
             ? privacy.customBlockExplorer
             : isMutinynet
             ? 'mutinynet.com'
             : (privacy && privacy.defaultBlockExplorer) || 'mempool.space';
-    const network =
-        !isMutinynet && (nodeInfoStore.nodeInfo.isTestNet || testnet)
-            ? 'testnet/'
-            : '';
+    const network = isMutinynet
+        ? ''
+        : isTestNet4
+        ? 'testnet4/'
+        : nodeInfoStore.nodeInfo.isTestNet || testnet
+        ? 'testnet/'
+        : '';
 
     // Read the convention hint off the raw host, before it is stripped below.
     // Currently '...#mempool.space' is the only meaningful hint: it tells us
