@@ -158,9 +158,7 @@ export default class WIFSweeper extends React.Component<
                             }}
                         >
                             <TextInput
-                                placeholder={localeString(
-                                    'views.Wif.enterPrivateKeyPlaceholder'
-                                )}
+                                placeholder="L4mE..."
                                 value={privateKey}
                                 onChangeText={(text: string) => {
                                     const isWifValid =
