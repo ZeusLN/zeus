@@ -2713,6 +2713,12 @@ export default class SettingsStore {
         !!this.loginMethodConfigured() &&
         (!this.loggedIn || this.posStatus === 'active');
 
+    // False from a cold start until Wallet has acted on the stored settings
+    // (logged in, or switched to POS mode), and again while locked. Before
+    // that, settings may still hold the in-memory defaults (no PIN, POS
+    // disabled), so a navigation cannot tell whether it needs the Lockscreen.
+    public sessionStarted = () => this.loggedIn || this.posStatus === 'active';
+
     public isPosEnabled = () =>
         (this.settings?.pos?.posEnabled || PosEnabled.Disabled) !==
         PosEnabled.Disabled;

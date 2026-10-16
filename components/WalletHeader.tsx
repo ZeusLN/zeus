@@ -411,6 +411,13 @@ export default class WalletHeader extends React.Component<
             SyncStore,
             NostrWalletConnectStore
         } = this.props;
+
+        // On a cold start this header is drawn before the stored PIN and
+        // POS mode have been acted on, so offer no controls until then
+        if (!SettingsStore!.sessionStarted()) {
+            return <Header containerStyle={{ marginTop: insets.top }} />;
+        }
+
         const { sentTokens } = CashuStore!!;
         const { pendingHTLCs } = ChannelsStore!;
         const {

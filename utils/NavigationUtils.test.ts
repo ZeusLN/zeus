@@ -3,7 +3,8 @@ jest.mock('../stores/Stores', () => ({
         posStatus: 'inactive',
         settings: {},
         setPosStatus: jest.fn(),
-        loginMethodConfigured: jest.fn()
+        loginMethodConfigured: jest.fn(),
+        sessionStarted: jest.fn()
     }
 }));
 
@@ -25,6 +26,7 @@ describe('NavigationUtils', () => {
         navigation = { navigate: jest.fn() };
         mockSettingsStore.posStatus = 'inactive';
         mockSettingsStore.settings = {};
+        mockSettingsStore.sessionStarted.mockReturnValue(true);
     });
 
     describe('reAuthNavigation', () => {
@@ -96,6 +98,28 @@ describe('NavigationUtils', () => {
             await protectedNavigation(navigation, 'Menu');
 
             expect(navigation.navigate).toHaveBeenCalledWith('Menu', undefined);
+        });
+
+        it('does nothing before the session has started', async () => {
+            // cold start: settings still hold the in-memory defaults (no PIN,
+            // POS disabled) and posStatus is 'unselected'
+            mockSettingsStore.sessionStarted.mockReturnValue(false);
+            mockSettingsStore.posStatus = 'unselected';
+
+            await protectedNavigation(navigation, 'Menu');
+            await protectedNavigation(navigation, 'Wallets');
+
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        });
+
+        it('does nothing on a till whose settings loaded before POS mode started', async () => {
+            mockSettingsStore.sessionStarted.mockReturnValue(false);
+            mockSettingsStore.posStatus = 'unselected';
+            mockSettingsStore.settings = { pin: '1234' };
+
+            await protectedNavigation(navigation, 'Menu');
+
+            expect(navigation.navigate).not.toHaveBeenCalled();
         });
 
         it('deactivates POS when requested on ungated navigation', async () => {
