@@ -2975,6 +2975,34 @@ describe('NostrWalletConnectStore wallet deletion', () => {
         expect(await client.getInfo()).toEqual(UNAUTHORIZED);
     });
 
+    it('deleteCurrentWalletConnections deletes stored connections the service has not loaded', async () => {
+        const current = connectionData();
+        const otherWallet = connectionData(OTHER_WALLET);
+        storedItems.set(
+            NWC_CONNECTIONS_KEY,
+            JSON.stringify([current, otherWallet])
+        );
+        storedItems.set(
+            NWC_CLIENT_KEYS,
+            JSON.stringify({
+                [current.pubkey]: hex64('3'),
+                [otherWallet.pubkey]: hex64('9')
+            })
+        );
+        // Wallet deleted before initializeService loaded its connections
+        const { store } = createStore();
+        expect(store.connections).toEqual([]);
+
+        await store.deleteCurrentWalletConnections();
+
+        expect(persistedConnections().map((c) => c.id)).toEqual([
+            OTHER_WALLET.id
+        ]);
+        expect(storedClientKeys()).toEqual({
+            [otherWallet.pubkey]: hex64('9')
+        });
+    });
+
     it('deleteCurrentWalletConnections leaves a re-added node with no connections', async () => {
         const { store } = await startService();
 
