@@ -119,6 +119,22 @@ describe('ErrorUtils', () => {
             );
         });
 
+        // LND.restReq rejects with the node's message rather than the raw
+        // JSON body; NodeInfoStore passes error.toString(), so the input
+        // here is "Error: <message>"
+        it('Maps the bare LND macaroon verification message', () => {
+            const message =
+                'verification failed: signature mismatch after caveat verification';
+            const invalidMacaroon =
+                "Invalid macaroon. Please check that you've entered the correct macaroon for this node.";
+            expect(errorToUserFriendly(new Error(message))).toEqual(
+                invalidMacaroon
+            );
+            expect(
+                errorToUserFriendly(new Error(message).toString() as any)
+            ).toEqual(invalidMacaroon);
+        });
+
         it('Returns normal error message for unhandled errorContext', () => {
             expect(
                 errorToUserFriendly(
