@@ -1,10 +1,5 @@
 import * as React from 'react';
-import {
-    BackHandler,
-    NativeEventSubscription,
-    Text,
-    View
-} from 'react-native';
+import { BackHandler, NativeEventSubscription, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';

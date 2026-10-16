@@ -3,10 +3,9 @@ import {
     Dimensions,
     PanResponder,
     PanResponderCallbacks,
-    StyleSheet,
-    View
+    StyleSheet
 } from 'react-native';
-import renderer, { act } from 'react-test-renderer';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 
 jest.mock('@react-navigation/native', () => ({
     useFocusEffect: jest.fn()
@@ -29,19 +28,9 @@ beforeEach(() => {
 
 afterEach(() => jest.restoreAllMocks());
 
-const render = (onSwipeSuccess: () => void) => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-        tree = renderer.create(<SwipeButton onSwipeSuccess={onSwipeSuccess} />);
-    });
-    return tree!;
-};
-
-const layout = (tree: renderer.ReactTestRenderer, width: number) =>
-    act(() => {
-        tree.root.findAllByType(View)[0].props.onLayout({
-            nativeEvent: { layout: { width, height: 50, x: 0, y: 0 } }
-        });
+const layout = (width: number) =>
+    fireEvent(screen.root!, 'layout', {
+        nativeEvent: { layout: { width, height: 50, x: 0, y: 0 } }
     });
 
 const swipe = (dx: number) =>
@@ -52,41 +41,39 @@ const swipe = (dx: number) =>
 describe('SwipeButton', () => {
     // Send wraps the button in alignItems: 'center'. Without stretching, the
     // track shrinks to its label and a few points of drag would pay.
-    it('stretches its track across a centering parent', () => {
-        const tree = render(jest.fn());
-        const style = StyleSheet.flatten(
-            tree.root.findAllByType(View)[0].props.style
-        );
+    it('stretches its track across a centering parent', async () => {
+        await render(<SwipeButton onSwipeSuccess={jest.fn()} />);
+        const style = StyleSheet.flatten(screen.root!.props.style);
         expect(style.alignSelf).toBe('stretch');
     });
 
     // A 300pt track leaves 250pt of travel for the 50pt knob, so a swipe
     // completes past 237.5pt.
-    it('completes a swipe to the end of a track narrower than the window', () => {
+    it('completes a swipe to the end of a track narrower than the window', async () => {
         expect(Dimensions.get('window').width - 40).toBeGreaterThan(300);
         const onSwipeSuccess = jest.fn();
-        const tree = render(onSwipeSuccess);
-        layout(tree, 300);
-        swipe(240);
+        await render(<SwipeButton onSwipeSuccess={onSwipeSuccess} />);
+        await layout(300);
+        await swipe(240);
         expect(onSwipeSuccess).toHaveBeenCalledTimes(1);
     });
 
-    it('does not complete a swipe that stops short of the end', () => {
+    it('does not complete a swipe that stops short of the end', async () => {
         const onSwipeSuccess = jest.fn();
-        const tree = render(onSwipeSuccess);
-        layout(tree, 300);
-        swipe(230);
+        await render(<SwipeButton onSwipeSuccess={onSwipeSuccess} />);
+        await layout(300);
+        await swipe(230);
         expect(onSwipeSuccess).not.toHaveBeenCalled();
     });
 
-    it('uses the new track length after a resize', () => {
+    it('uses the new track length after a resize', async () => {
         const onSwipeSuccess = jest.fn();
-        const tree = render(onSwipeSuccess);
-        layout(tree, 300);
-        layout(tree, 500);
-        swipe(240);
+        await render(<SwipeButton onSwipeSuccess={onSwipeSuccess} />);
+        await layout(300);
+        await layout(500);
+        await swipe(240);
         expect(onSwipeSuccess).not.toHaveBeenCalled();
-        swipe(430);
+        await swipe(430);
         expect(onSwipeSuccess).toHaveBeenCalledTimes(1);
     });
 });

@@ -2,8 +2,8 @@ jest.mock('mobx-react', () => ({
     observer: (component: any) => component
 }));
 import React from 'react';
-import { Text, View } from 'react-native';
-import renderer, { act } from 'react-test-renderer';
+import { Text } from 'react-native';
+import { render, screen } from '@testing-library/react-native';
 
 jest.mock('./LinearGradient', () => 'LinearGradient');
 jest.mock('../utils/ThemeUtils', () => ({
@@ -13,18 +13,15 @@ jest.mock('../utils/ThemeUtils', () => ({
 import Screen from './Screen';
 import { MAX_CONTENT_WIDTH } from '../utils/LayoutUtils';
 
-const contentStyle = (element: React.ReactElement) => {
-    let tree: renderer.ReactTestRenderer;
-    act(() => {
-        tree = renderer.create(element);
-    });
-    return tree!.root.findByType(View).props.style;
+const contentStyle = async (element: React.ReactElement) => {
+    await render(element);
+    return screen.getByText('content').parent!.props.style;
 };
 
 describe('Screen', () => {
-    it('lets content fill the window by default', () => {
+    it('lets content fill the window by default', async () => {
         expect(
-            contentStyle(
+            await contentStyle(
                 <Screen>
                     <Text>content</Text>
                 </Screen>
@@ -32,9 +29,9 @@ describe('Screen', () => {
         ).toEqual({ flex: 1 });
     });
 
-    it('centers content in a limited-width column with limitWidth', () => {
+    it('centers content in a limited-width column with limitWidth', async () => {
         expect(
-            contentStyle(
+            await contentStyle(
                 <Screen limitWidth>
                     <Text>content</Text>
                 </Screen>
