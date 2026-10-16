@@ -1875,7 +1875,7 @@ export default class NostrWalletConnectStore {
             if (mutationRejection !== undefined) {
                 return mutationRejection;
             }
-            if (connection.isExpired) {
+            if (connection.isExpiredNow()) {
                 this.unsubscribeFromConnection(connectionId);
                 return NostrConnectUtils.createNip47Error(
                     localeString(
