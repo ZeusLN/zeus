@@ -8,7 +8,12 @@ jest.mock('../stores/Stores', () => ({
 }));
 
 import { settingsStore } from '../stores/Stores';
-import { protectedNavigation, reAuthNavigation } from './NavigationUtils';
+import {
+    POS_ROUTES,
+    posRouteGuard,
+    protectedNavigation,
+    reAuthNavigation
+} from './NavigationUtils';
 
 const mockSettingsStore = settingsStore as any;
 
@@ -106,6 +111,174 @@ describe('NavigationUtils', () => {
                 'Wallet',
                 undefined
             );
+        });
+    });
+
+    describe('posRouteGuard', () => {
+        // Stand-in for the stack router: navigate pushes (or updates the
+        // params of the focused route of the same name), pop removes the
+        // focused route
+        let keyCount = 0;
+        const original: any = {
+            getStateForAction: jest.fn((state: any, action: any) => {
+                if (action.type === 'NAVIGATE') {
+                    const { name, params } = action.payload;
+                    const top = state.routes[state.index];
+                    if (top.name === name) {
+                        const routes = [...state.routes];
+                        routes[state.index] = { ...top, params };
+                        return { ...state, routes };
+                    }
+                    const routes = [
+                        ...state.routes,
+                        { key: `${name}-${++keyCount}`, name, params }
+                    ];
+                    return { ...state, routes, index: routes.length - 1 };
+                }
+                if (action.type === 'POP') {
+                    if (state.routes.length < 2) return null;
+                    const routes = state.routes.slice(0, -1);
+                    return { ...state, routes, index: routes.length - 1 };
+                }
+                return null;
+            })
+        };
+        const router = posRouteGuard(original);
+        const options: any = {};
+
+        const stackOf = (...names: string[]): any => ({
+            key: 'stack',
+            index: names.length - 1,
+            routeNames: [],
+            routes: names.map((name) => ({ key: `${name}-0`, name })),
+            stale: false,
+            type: 'stack',
+            preloadedRoutes: []
+        });
+        const navigate = (name: string, params?: any): any => ({
+            type: 'NAVIGATE',
+            payload: { name, params }
+        });
+        const top = (state: any) => state.routes[state.index];
+
+        beforeEach(() => {
+            mockSettingsStore.posStatus = 'active';
+            mockSettingsStore.loginMethodConfigured.mockReturnValue(true);
+        });
+
+        it.each([
+            ['Invoice', { invoice: { r_hash: 'aa' } }],
+            ['Transaction', { transaction: { tx: 'bb' } }],
+            ['Wallets', undefined],
+            ['WalletConfiguration', { index: 0 }],
+            ['LightningAddress', { skipStatus: true }],
+            ['Mints', undefined],
+            ['Swaps', { initialReverse: true }],
+            ['LnurlPay', { lnurlParams: { tag: 'payRequest' } }]
+        ])(
+            'opens the Lockscreen instead of %s during a POS session with a PIN',
+            (name, params) => {
+                const state = stackOf('Wallet', 'Activity');
+
+                const next: any = router.getStateForAction!(
+                    state,
+                    navigate(name, params),
+                    options
+                );
+
+                expect(next.routes.map((r: any) => r.name)).toEqual([
+                    'Wallet',
+                    'Activity',
+                    'Lockscreen'
+                ]);
+                expect(top(next).params).toEqual({
+                    pendingNavigation: { screen: name, params }
+                });
+            }
+        );
+
+        it.each(POS_ROUTES.filter((name) => name !== 'Wallet'))(
+            'lets a POS session open %s',
+            (name) => {
+                const state = stackOf('Wallet');
+
+                const next: any = router.getStateForAction!(
+                    state,
+                    navigate(name, { amount: '10' }),
+                    options
+                );
+
+                expect(top(next).name).toBe(name);
+                expect(top(next).params).toEqual({ amount: '10' });
+            }
+        );
+
+        it('lets a POS session go back to the POS view', () => {
+            const state = stackOf('Wallet', 'Receive');
+
+            const next: any = router.getStateForAction!(
+                state,
+                { type: 'POP' } as any,
+                options
+            );
+
+            expect(next.routes.map((r: any) => r.name)).toEqual(['Wallet']);
+        });
+
+        it('only updates the pending screen when the Lockscreen is already in front', () => {
+            const state = stackOf('Wallet', 'Lockscreen');
+
+            const next: any = router.getStateForAction!(
+                state,
+                navigate('Menu'),
+                options
+            );
+
+            expect(next.routes.map((r: any) => r.name)).toEqual([
+                'Wallet',
+                'Lockscreen'
+            ]);
+            expect(top(next).params).toEqual({
+                pendingNavigation: { screen: 'Menu', params: undefined }
+            });
+        });
+
+        it('leaves navigation alone when POS is not active', () => {
+            mockSettingsStore.posStatus = 'inactive';
+            const state = stackOf('Wallet', 'Activity');
+
+            const next: any = router.getStateForAction!(
+                state,
+                navigate('Invoice'),
+                options
+            );
+
+            expect(top(next).name).toBe('Invoice');
+        });
+
+        it('leaves navigation alone in POS mode without a login method', () => {
+            mockSettingsStore.loginMethodConfigured.mockReturnValue(false);
+            const state = stackOf('Wallet', 'Activity');
+
+            const next: any = router.getStateForAction!(
+                state,
+                navigate('Invoice'),
+                options
+            );
+
+            expect(top(next).name).toBe('Invoice');
+        });
+
+        it('passes on actions the stack does not handle', () => {
+            const state = stackOf('Wallet');
+
+            expect(
+                router.getStateForAction!(
+                    state,
+                    { type: 'POP' } as any,
+                    options
+                )
+            ).toBeNull();
         });
     });
 });
