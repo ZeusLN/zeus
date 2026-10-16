@@ -2180,7 +2180,13 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                     settings
                                                                         ?.invoices
                                                                         ?.expirySeconds ||
-                                                                    '3600'
+                                                                    '3600',
+                                                                // only where the LSP switch and fee are shown
+                                                                useLsp:
+                                                                    !!enableLSP &&
+                                                                    BackendUtils.supportsFlowLSP() &&
+                                                                    !flowLspNotConfigured &&
+                                                                    !reverse
                                                             }
                                                         );
 
