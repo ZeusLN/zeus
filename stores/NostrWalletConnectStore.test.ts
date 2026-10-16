@@ -2163,6 +2163,31 @@ describe('NostrWalletConnectStore timeout-failed pay_invoice reconcile', () => {
         expect(connection.canSpend(10000)).toBe(true);
     });
 
+    it('keeps the hold when lnd lists a failed attempt next to a retry in flight', async () => {
+        const invoice = 'lnbc1lnd-retry-in-flight';
+        const paymentHash = hex64('6');
+        const { store } = storeWithNodePayments([
+            new Payment({
+                payment_request: invoice,
+                payment_hash: paymentHash,
+                status: 'IN_FLIGHT',
+                failure_reason: 'FAILURE_REASON_NONE',
+                payment_preimage: hex64('0'),
+                htlcs: [{ status: 'FAILED' }, { status: 'IN_FLIGHT' }]
+            })
+        ]);
+        const connection = addConnection(store, {
+            maxAmountSats: 10000,
+            activity: [timeoutFailedActivity(invoice, { paymentHash })]
+        });
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.pendingSpendSats).toBe(10000);
+        expect(connection.canSpend(1)).toBe(false);
+    });
+
     it('does not debit a genuine route failure that never settled', async () => {
         const { store } = storeWithNodePayments([]);
         const connection = addConnection(store, {

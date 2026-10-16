@@ -121,6 +121,17 @@ const paymentFixtures = {
             payment_preimage: ZERO_PREIMAGE
         }),
 
+    /** LND-style: first HTLC failed, retry still in flight */
+    retriedInFlightHtlc: () =>
+        new Payment({
+            payment_request: INVOICE_A,
+            payment_hash: HASH_A,
+            status: 'IN_FLIGHT',
+            failure_reason: 'FAILURE_REASON_NONE',
+            payment_preimage: ZERO_PREIMAGE,
+            htlcs: [{ status: 'FAILED' }, { status: 'IN_FLIGHT' }]
+        }),
+
     /** Another invoice — used to verify lookup does not cross-match */
     otherInvoiceInFlight: () =>
         new Payment({
@@ -804,6 +815,19 @@ describe('NostrConnectUtils', () => {
 
                     expect(result.inTransit).toBe(false);
                     expect(result.payment).toBe(failed);
+                });
+
+                it('holds budget when lnd lists a failed attempt next to a retry in flight', () => {
+                    const retried = paymentFixtures.retriedInFlightHtlc();
+                    const result = resolve({
+                        payments: [retried],
+                        paymentState: storeState.timedOut()
+                    });
+
+                    expect(result).toEqual({
+                        inTransit: true,
+                        payment: retried
+                    });
                 });
 
                 it('returns not inTransit when CLN lists a failed sendpay', () => {
