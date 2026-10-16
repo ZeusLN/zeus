@@ -24,6 +24,14 @@ import Storage from '../storage';
 export const LEGACY_LSPS1_ORDERS_KEY = 'orderResponses';
 export const LSPS_ORDERS_KEY = 'zeus-lsps1-orders';
 
+// One /api/v1/fee answer. The proposal has to send the id of the quote the
+// invoice was priced with, so callers keep this rather than reading the
+// shared zeroConfFee/feeId, which a newer request or a reset can replace.
+export interface ZeroConfFeeQuote {
+    feeSats: number | undefined;
+    feeId: string | undefined;
+}
+
 const CUSTOM_MESSAGE_TYPE = 37913;
 const JSON_RPC_VERSION = '2.0';
 
@@ -463,7 +471,7 @@ export default class LSPStore {
         const { settings } = this.settingsStore;
         const requestId = ++this.feeRequestId;
 
-        return new Promise<number | undefined>((resolve, reject) => {
+        return new Promise<ZeroConfFeeQuote>((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'post',
                 `${this.getFlowHost()}/api/v1/fee`,
@@ -500,8 +508,8 @@ export default class LSPStore {
                         return;
                     }
                     if (status == 200) {
-                        runInAction(() => {
-                            this.zeroConfFee =
+                        const quote: ZeroConfFeeQuote = {
+                            feeSats:
                                 data.fee_amount_msat !== undefined
                                     ? Number.parseInt(
                                           (
@@ -509,11 +517,15 @@ export default class LSPStore {
                                               1000
                                           ).toString()
                                       )
-                                    : undefined;
-                            this.feeId = data.id;
+                                    : undefined,
+                            feeId: data.id
+                        };
+                        runInAction(() => {
+                            this.zeroConfFee = quote.feeSats;
+                            this.feeId = quote.feeId;
                             this.flow_error = false;
                         });
-                        resolve(this.zeroConfFee);
+                        resolve(quote);
                     } else {
                         runInAction(() => {
                             this.flow_error = true;
@@ -643,10 +655,13 @@ export default class LSPStore {
     };
 
     @action
-    // quotedFeeSats is the quote bolt11 was priced with. The caller passes
-    // it so a quote that has replaced zeroConfFee since can't move the
-    // verification bound.
-    public getZeroConfInvoice = (bolt11: string, quotedFeeSats: number) => {
+    // quote is the one bolt11 was priced with. The caller passes it so a
+    // quote that has replaced zeroConfFee/feeId since can't change the
+    // fee_id sent or move the verification bound.
+    public getZeroConfInvoice = (
+        bolt11: string,
+        quote: { feeSats: number; feeId: string | undefined }
+    ) => {
         this.flow_error = false;
         this.flow_error_msg = '';
         this.showLspSettings = false;
@@ -665,7 +680,7 @@ export default class LSPStore {
                     : { 'Content-Type': 'application/json' },
                 JSON.stringify({
                     bolt11,
-                    fee_id: this.feeId,
+                    fee_id: quote.feeId,
                     simpleTaproot:
                         settings.requestSimpleTaproot &&
                         BackendUtils.supportsSimpleTaprootChannels(),
@@ -705,7 +720,7 @@ export default class LSPStore {
                         const check = verifyWrappedInvoice(
                             bolt11,
                             data.jit_bolt11,
-                            quotedFeeSats
+                            quote.feeSats
                         );
                         if (!check.valid) {
                             runInAction(() => {

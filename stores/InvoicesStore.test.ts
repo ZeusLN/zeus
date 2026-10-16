@@ -319,7 +319,7 @@ describe('InvoicesStore.createInvoice LSP decision', () => {
     const lspStoreMock = () => ({
         resetFee: jest.fn(),
         info: { pubkey: 'lsp', connection_methods: [] },
-        getZeroConfFee: jest.fn(() => Promise.resolve()),
+        getZeroConfFee: jest.fn(() => Promise.resolve({})),
         zeroConfFee: 0,
         flow_error: false
     });
@@ -399,11 +399,14 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
         domain: 'service.example'
     };
 
+    const quote = (feeSats: number, feeId = `quote-${feeSats}`) =>
+        Promise.resolve({ feeSats, feeId });
+
     const setup = (lspStoreOverrides: any = {}) => {
         const lspStore: any = {
             resetFee: jest.fn(),
             info: { pubkey: 'lsp', connection_methods: [] },
-            getZeroConfFee: jest.fn(() => Promise.resolve(2000)),
+            getZeroConfFee: jest.fn(() => quote(2000)),
             getZeroConfInvoice: jest.fn(() => Promise.resolve('lnbc-wrapped')),
             // another request's quote, still held by the shared store
             zeroConfFee: 40000,
@@ -470,7 +473,7 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
 
         expect(lspStore.getZeroConfInvoice).toHaveBeenCalledWith(
             'lnbc-inner',
-            2000
+            expect.objectContaining({ feeSats: 2000, feeId: 'quote-2000' })
         );
         expect(result!.paymentRequest).toBe('lnbc-wrapped');
     });
@@ -494,7 +497,7 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
 
     it('creates no invoice for a negative quote', async () => {
         const { store, lspStore } = setup({
-            getZeroConfFee: jest.fn(() => Promise.resolve(-5000))
+            getZeroConfFee: jest.fn(() => quote(-5000))
         });
 
         await store.createInvoice({
@@ -510,7 +513,7 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
     it('still adds a fee above the amount on top for a regular receive', async () => {
         // shown next to the invoice before it is shared
         const { store, lspStore } = setup({
-            getZeroConfFee: jest.fn(() => Promise.resolve(3000))
+            getZeroConfFee: jest.fn(() => quote(3000))
         });
 
         await store.createInvoice({
@@ -522,7 +525,31 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
         expect(requestedValue()).toBe('1000');
         expect(lspStore.getZeroConfInvoice).toHaveBeenCalledWith(
             'lnbc-inner',
-            3000
+            expect.objectContaining({ feeSats: 3000, feeId: 'quote-3000' })
+        );
+    });
+
+    it('sends the fee_id of its own quote when the shared one changes while the invoice is created', async () => {
+        const { store, lspStore } = setup();
+        // a newer preview quote lands while the node creates the invoice
+        (BackendUtils.createInvoice as jest.Mock).mockImplementation(() => {
+            lspStore.zeroConfFee = 9000;
+            lspStore.feeId = 'later-preview';
+            return Promise.resolve({
+                payment_request: 'lnbc-inner',
+                r_hash: 'hash'
+            });
+        });
+
+        await store.createInvoice({
+            memo: '',
+            value: '50000',
+            expirySeconds: '3600'
+        });
+
+        expect(lspStore.getZeroConfInvoice).toHaveBeenCalledWith(
+            'lnbc-inner',
+            expect.objectContaining({ feeSats: 2000, feeId: 'quote-2000' })
         );
     });
 
@@ -581,7 +608,7 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
 
         it('shows a fee of all but 1 sat to the caller and stops when declined', async () => {
             const { store } = setup({
-                getZeroConfFee: jest.fn(() => Promise.resolve(49999))
+                getZeroConfFee: jest.fn(() => quote(49999))
             });
             const confirmLspFee = jest.fn(() => Promise.resolve(false));
 
@@ -602,10 +629,10 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
             ['equal to', 50000],
             ['above', 60000]
         ])(
-            'refuses a fee %s the amount without asking',
+            'asks before adding a fee %s the amount on top',
             async (_label, fee) => {
                 const { store, lspStore } = setup({
-                    getZeroConfFee: jest.fn(() => Promise.resolve(fee))
+                    getZeroConfFee: jest.fn(() => quote(fee))
                 });
                 const confirmLspFee = jest.fn(() => Promise.resolve(true));
 
@@ -617,19 +644,162 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
                     confirmLspFee
                 });
 
-                expect(confirmLspFee).not.toHaveBeenCalled();
-                expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
-                expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
-                expect(lspStore.flow_error).toBe(true);
-                expect(lspStore.flow_error_msg).toBe(
-                    'stores.InvoicesStore.lspFeeNotBelowWithdrawal'
+                expect(confirmLspFee).toHaveBeenCalledWith(fee, '50000');
+                expect(requestedValue()).toBe('50000');
+                expect(lspStore.getZeroConfInvoice).toHaveBeenCalledWith(
+                    'lnbc-inner',
+                    expect.objectContaining({ feeSats: fee })
                 );
+                expect(submittedInvoice()).toBe('lnbc-wrapped');
             }
         );
 
+        it('sends the fee_id of the accepted quote when another quote lands during the confirmation', async () => {
+            const { store, lspStore } = setup();
+            const confirmLspFee = jest.fn(() => {
+                lspStore.zeroConfFee = 9000;
+                lspStore.feeId = 'later-preview';
+                return Promise.resolve(true);
+            });
+
+            await store.createInvoice({
+                memo: '',
+                value: '50000',
+                expirySeconds: '3600',
+                lnurl: lnurl as any,
+                confirmLspFee
+            });
+
+            expect(lspStore.getZeroConfInvoice).toHaveBeenCalledWith(
+                'lnbc-inner',
+                expect.objectContaining({ feeSats: 2000, feeId: 'quote-2000' })
+            );
+        });
+
+        describe('when the confirmation outlasts the quote', () => {
+            let now: number;
+
+            beforeEach(() => {
+                now = 1_000_000;
+                jest.spyOn(Date, 'now').mockImplementation(() => now);
+            });
+
+            afterEach(() => {
+                jest.restoreAllMocks();
+            });
+
+            // the user answers after the LSP has dropped the fee_id
+            const slowAnswer = (answers: boolean[]) =>
+                jest.fn(() => {
+                    now += 5 * 60 * 1000;
+                    return Promise.resolve(answers.shift()!);
+                });
+
+            it('fetches a new quote and does not ask again for the same fee', async () => {
+                const { store, lspStore } = setup({
+                    getZeroConfFee: jest
+                        .fn()
+                        .mockReturnValueOnce(quote(2000, 'expired'))
+                        .mockReturnValueOnce(quote(2000, 'fresh'))
+                });
+                const confirmLspFee = slowAnswer([true]);
+
+                await store.createInvoice({
+                    memo: '',
+                    value: '50000',
+                    expirySeconds: '3600',
+                    lnurl: lnurl as any,
+                    confirmLspFee
+                });
+
+                expect(confirmLspFee).toHaveBeenCalledTimes(1);
+                expect(requestedValue()).toBe('48000');
+                expect(lspStore.getZeroConfInvoice).toHaveBeenCalledWith(
+                    'lnbc-inner',
+                    expect.objectContaining({ feeSats: 2000, feeId: 'fresh' })
+                );
+            });
+
+            it('asks again when the new fee is lower, since it can change the amount received', async () => {
+                // 3000 was added on top of 1000; 500 would be deducted
+                const { store, lspStore } = setup({
+                    getZeroConfFee: jest
+                        .fn()
+                        .mockReturnValueOnce(quote(3000, 'expired'))
+                        .mockReturnValueOnce(quote(500, 'fresh'))
+                });
+                const confirmLspFee = jest
+                    .fn()
+                    .mockImplementationOnce(() => {
+                        now += 5 * 60 * 1000;
+                        return Promise.resolve(true);
+                    })
+                    .mockImplementationOnce(() => Promise.resolve(true));
+
+                await store.createInvoice({
+                    memo: '',
+                    value: '1000',
+                    expirySeconds: '3600',
+                    lnurl: lnurl as any,
+                    confirmLspFee
+                });
+
+                expect(confirmLspFee).toHaveBeenNthCalledWith(1, 3000, '1000');
+                expect(confirmLspFee).toHaveBeenNthCalledWith(2, 500, '1000');
+                expect(requestedValue()).toBe('500');
+                expect(lspStore.getZeroConfInvoice).toHaveBeenCalledWith(
+                    'lnbc-inner',
+                    expect.objectContaining({ feeSats: 500, feeId: 'fresh' })
+                );
+            });
+
+            it('asks again when the new fee is higher, and stops when that is declined', async () => {
+                const { store } = setup({
+                    getZeroConfFee: jest
+                        .fn()
+                        .mockReturnValueOnce(quote(2000, 'expired'))
+                        .mockReturnValueOnce(quote(2500, 'fresh'))
+                });
+                const confirmLspFee = slowAnswer([true, false]);
+
+                await store.createInvoice({
+                    memo: '',
+                    value: '50000',
+                    expirySeconds: '3600',
+                    lnurl: lnurl as any,
+                    confirmLspFee
+                });
+
+                expect(confirmLspFee).toHaveBeenNthCalledWith(1, 2000, '50000');
+                expect(confirmLspFee).toHaveBeenNthCalledWith(2, 2500, '50000');
+                expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
+                expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+            });
+
+            it('creates nothing when the new quote cannot be fetched', async () => {
+                const { store } = setup({
+                    getZeroConfFee: jest
+                        .fn()
+                        .mockReturnValueOnce(quote(2000, 'expired'))
+                        .mockImplementationOnce(() => Promise.reject())
+                });
+
+                await store.createInvoice({
+                    memo: '',
+                    value: '50000',
+                    expirySeconds: '3600',
+                    lnurl: lnurl as any,
+                    confirmLspFee: slowAnswer([true])
+                });
+
+                expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
+                expect(store.creatingInvoice).toBe(false);
+            });
+        });
+
         it('submits without asking when the LSP charges no fee', async () => {
             const { store } = setup({
-                getZeroConfFee: jest.fn(() => Promise.resolve(0))
+                getZeroConfFee: jest.fn(() => quote(0))
             });
             const confirmLspFee = jest.fn(() => Promise.resolve(false));
 

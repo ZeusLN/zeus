@@ -10,7 +10,7 @@ import Invoice from '../models/Invoice';
 import Channel from '../models/Channel';
 import ChannelInfo from '../models/ChannelInfo';
 import SettingsStore from './SettingsStore';
-import LSPStore from './LSPStore';
+import LSPStore, { ZeroConfFeeQuote } from './LSPStore';
 import BackendUtils from '../utils/BackendUtils';
 import { toWalletrpcAddressTypeName } from '../utils/LndUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -19,6 +19,10 @@ import LdkNodeInjection from '../ldknode/LdkNodeInjection';
 import ChannelsStore from './ChannelsStore';
 import NodeInfoStore from './NodeInfoStore';
 import WithdrawalRequest from '../models/WithdrawalRequest';
+
+// Olympus forgets a fee_id 5 to 6 minutes after quoting it. A quote older
+// than this when an LNURL-withdraw fee is accepted is fetched again.
+const LSP_FEE_QUOTE_MAX_AGE_MS = 4 * 60 * 1000;
 
 export default class InvoicesStore {
     @observable paymentRequest: string;
@@ -412,10 +416,14 @@ export default class InvoicesStore {
 
         if (customPreimage) req.preimage = customPreimage;
 
-        // The quote this invoice is priced with. lspStore.zeroConfFee is
-        // shared with the screens and can hold another request's quote by
-        // the time it would be read again.
-        let lspFeeSats = 0;
+        // The quote this invoice is priced with: its fee and the fee_id the
+        // proposal sends. lspStore.zeroConfFee/feeId are shared with the
+        // screens and can hold another request's quote by the time they
+        // would be read again.
+        let lspQuote: { feeSats: number; feeId: string | undefined } = {
+            feeSats: 0,
+            feeId: undefined
+        };
 
         if (
             BackendUtils.supportsFlowLSP() &&
@@ -444,61 +452,73 @@ export default class InvoicesStore {
                 } catch (e) {}
             }
 
-            try {
-                lspFeeSats =
-                    (await this.lspStore.getZeroConfFee(
+            // undefined when there is no usable quote: the request failed
+            // (flow_error is set), was replaced, or returned a negative fee
+            const fetchQuote = async () => {
+                let quote: ZeroConfFeeQuote;
+                try {
+                    quote = await this.lspStore.getZeroConfFee(
                         Number(new BigNumber(value).times(1000))
-                    )) || 0;
-            } catch (e) {
-                // no quote, or a newer fee request has replaced this one
-                runInAction(() => {
-                    this.creatingInvoice = false;
-                });
-                return;
-            }
-
-            if (!(lspFeeSats >= 0)) {
-                runInAction(() => {
-                    this.lspStore.flow_error = true;
-                    this.lspStore.flow_error_msg = localeString(
-                        'stores.LSPStore.getInfoResponseError'
                     );
-                    this.creatingInvoice = false;
-                });
-                return;
-            }
-
-            if (lnurl && lspFeeSats > 0) {
-                // An LNURL-withdraw invoice is submitted to the service as
-                // soon as it is wrapped, before any screen can show the fee
-                // next to it. A fee at or above the amount would leave
-                // nothing, or be charged on top of the amount the user
-                // entered; otherwise the caller has to show the fee and get
-                // it accepted first.
-                if (!new BigNumber(value).gt(lspFeeSats)) {
+                } catch (e) {
+                    return;
+                }
+                const feeSats = quote.feeSats || 0;
+                if (!(feeSats >= 0)) {
                     runInAction(() => {
                         this.lspStore.flow_error = true;
                         this.lspStore.flow_error_msg = localeString(
-                            'stores.InvoicesStore.lspFeeNotBelowWithdrawal'
-                        ).replace('{fee}', lspFeeSats.toString());
-                        this.creatingInvoice = false;
+                            'stores.LSPStore.getInfoResponseError'
+                        );
                     });
                     return;
                 }
-                const accepted = confirmLspFee
-                    ? await confirmLspFee(lspFeeSats, value)
-                    : false;
-                if (!accepted) {
-                    runInAction(() => {
+                return { feeSats, feeId: quote.feeId, quotedAt: Date.now() };
+            };
+
+            let quote = await fetchQuote();
+
+            if (quote && lnurl && quote.feeSats > 0) {
+                // An LNURL-withdraw invoice is submitted to the service as
+                // soon as it is wrapped, before any screen can show the fee
+                // next to it, so the caller has to show the fee and get it
+                // accepted first. A fee at or above the amount is added on
+                // top, as for any other receive.
+                while (quote) {
+                    const accepted = confirmLspFee
+                        ? await confirmLspFee(quote.feeSats, value)
+                        : false;
+                    if (!accepted) {
+                        quote = undefined;
                         this.lspStore.resetFee();
-                        this.creatingInvoice = false;
-                    });
-                    return;
+                        break;
+                    }
+                    if (
+                        Date.now() - quote.quotedAt <
+                        LSP_FEE_QUOTE_MAX_AGE_MS
+                    ) {
+                        break;
+                    }
+                    // The user took long enough for the LSP to forget the
+                    // quote. Ask again unless the new fee is the same: even
+                    // a lower one can change the amount received, when it
+                    // is deducted where the accepted one was added on top.
+                    const acceptedFeeSats: number = quote.feeSats;
+                    quote = await fetchQuote();
+                    if (quote?.feeSats === acceptedFeeSats) break;
                 }
             }
 
-            if (new BigNumber(value).gt(lspFeeSats)) {
-                req.value = new BigNumber(value).minus(lspFeeSats);
+            if (!quote) {
+                runInAction(() => {
+                    this.creatingInvoice = false;
+                });
+                return;
+            }
+            lspQuote = quote;
+
+            if (new BigNumber(value).gt(lspQuote.feeSats)) {
+                req.value = new BigNumber(value).minus(lspQuote.feeSats);
             }
         }
 
@@ -550,7 +570,7 @@ export default class InvoicesStore {
                     try {
                         const response = await this.lspStore.getZeroConfInvoice(
                             invoice.getPaymentRequest,
-                            lspFeeSats
+                            lspQuote
                         );
                         jit_bolt11 = response as string;
                     } catch (e: any) {
