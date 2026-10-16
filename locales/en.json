@@ -283,6 +283,7 @@
     "components.QRCodeScanner.chooseFromGallery": "Choose from gallery",
     "components.QRCodeScanner.flashOn": "Flash on",
     "components.QRCodeScanner.flashOff": "Flash off",
+    "components.OnchainFeeInput.placeholder": "Enter fee rate",
     "views.RawTxHex.broadcastToInstance": "Broadcast to {{instance}}",
     "models.Channel.unknownId": "Unknown Channel ID",
     "models.Invoice.noMemo": "No memo",
