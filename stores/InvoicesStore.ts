@@ -190,7 +190,8 @@ export default class InvoicesStore {
         noLsp,
         forceLsp,
         useLsp,
-        skipOnchain
+        skipOnchain,
+        confirmLspFee
     }: {
         memo: string;
         value: string;
@@ -207,6 +208,10 @@ export default class InvoicesStore {
         forceLsp?: boolean;
         useLsp?: boolean;
         skipOnchain?: boolean;
+        confirmLspFee?: (
+            feeSats: number,
+            amountSats: string
+        ) => Promise<boolean>;
     }) => {
         this.creatingInvoice = true;
         return this.createInvoice({
@@ -222,7 +227,8 @@ export default class InvoicesStore {
             customPreimage,
             noLsp,
             forceLsp,
-            useLsp
+            useLsp,
+            confirmLspFee
         })
             .then((result) => {
                 if (!result?.rHash || !result?.paymentRequest) {
@@ -294,7 +300,8 @@ export default class InvoicesStore {
         customPreimage,
         noLsp,
         forceLsp,
-        useLsp
+        useLsp,
+        confirmLspFee
     }: {
         memo: string;
         value: string;
@@ -309,6 +316,12 @@ export default class InvoicesStore {
         noLsp?: boolean;
         forceLsp?: boolean;
         useLsp?: boolean;
+        // Asked before an LNURL-withdraw invoice priced with an LSP fee is
+        // created and submitted; without it such an invoice is not created.
+        confirmLspFee?: (
+            feeSats: number,
+            amountSats: string
+        ) => Promise<boolean>;
     }) => {
         // useLsp is the caller's own decision. Receive passes it because
         // its LSP switch writes enableLSP through the settings queue, so
@@ -442,6 +455,46 @@ export default class InvoicesStore {
                     this.creatingInvoice = false;
                 });
                 return;
+            }
+
+            if (!(lspFeeSats >= 0)) {
+                runInAction(() => {
+                    this.lspStore.flow_error = true;
+                    this.lspStore.flow_error_msg = localeString(
+                        'stores.LSPStore.getInfoResponseError'
+                    );
+                    this.creatingInvoice = false;
+                });
+                return;
+            }
+
+            if (lnurl && lspFeeSats > 0) {
+                // An LNURL-withdraw invoice is submitted to the service as
+                // soon as it is wrapped, before any screen can show the fee
+                // next to it. A fee at or above the amount would leave
+                // nothing, or be charged on top of the amount the user
+                // entered; otherwise the caller has to show the fee and get
+                // it accepted first.
+                if (!new BigNumber(value).gt(lspFeeSats)) {
+                    runInAction(() => {
+                        this.lspStore.flow_error = true;
+                        this.lspStore.flow_error_msg = localeString(
+                            'stores.InvoicesStore.lspFeeNotBelowWithdrawal'
+                        ).replace('{fee}', lspFeeSats.toString());
+                        this.creatingInvoice = false;
+                    });
+                    return;
+                }
+                const accepted = confirmLspFee
+                    ? await confirmLspFee(lspFeeSats, value)
+                    : false;
+                if (!accepted) {
+                    runInAction(() => {
+                        this.lspStore.resetFee();
+                        this.creatingInvoice = false;
+                    });
+                    return;
+                }
             }
 
             if (new BigNumber(value).gt(lspFeeSats)) {
