@@ -776,7 +776,7 @@ export default class SeedRecovery extends React.PureComponent<
                 try {
                     const { SettingsStore } = this.props;
                     const { settings } = SettingsStore;
-                    const { lsps1Config, trustedPeers0conf } =
+                    const { lsps1Config, lsps2Config, trustedPeers0conf } =
                         getLdkNodeLspConfig(settings, network || 'mainnet');
 
                     const networkType = network as
@@ -794,6 +794,7 @@ export default class SeedRecovery extends React.PureComponent<
                         rgsServerUrl: getDefaultRgsServer(networkType),
                         scorerUrl: DEFAULT_SCORER_URL,
                         lsps1Config,
+                        lsps2Config,
                         trustedPeers0conf,
                         vssServerUrl:
                             this.props.route.params?.vssServer ||
