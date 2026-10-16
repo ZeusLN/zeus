@@ -45,6 +45,11 @@ import {
     preimageHexFrom
 } from '../models/ClaimTransaction';
 
+export type ReverseLockupFetch =
+    | { status: 'found'; hex: string }
+    | { status: 'none' }
+    | { status: 'unavailable' };
+
 export type ReverseLockupCheck = {
     // 'confirm-amount': every check passed, but nothing trusted says how
     // much the lockup should hold; ask the user before claiming
@@ -173,6 +178,18 @@ export default class SwapStore {
 
     nodeInfoStore: NodeInfoStore;
     settingsStore: SettingsStore;
+
+    // Every read-modify-write of SWAPS_KEY or REVERSE_SWAPS_KEY runs
+    // through withSwapStorage, one at a time. Without it, a write that read
+    // the list before another write landed puts its stale copy back, which
+    // can drop a stored claim or its txid.
+    private swapStorageQueue: Promise<unknown> = Promise.resolve();
+
+    private withSwapStorage = <T>(update: () => Promise<T>): Promise<T> => {
+        const run = this.swapStorageQueue.then(update, update);
+        this.swapStorageQueue = run.catch(() => undefined);
+        return run;
+    };
 
     constructor(nodeInfoStore: NodeInfoStore, settingsStore: SettingsStore) {
         this.nodeInfoStore = nodeInfoStore;
@@ -428,18 +445,23 @@ export default class SwapStore {
                     timeoutBlockHeight: data.timeoutBlockHeight,
                     timeoutEta: data.timeoutEta
                 };
-                const storedSwaps = await Storage.getItem(SWAPS_KEY);
-                const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
-                const updatedSwaps = swaps.map((swap: any) =>
-                    swap.id === id
-                        ? {
-                              ...swap,
-                              lockupTransaction
-                          }
-                        : swap
-                );
+                await this.withSwapStorage(async () => {
+                    const storedSwaps = await Storage.getItem(SWAPS_KEY);
+                    const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+                    const updatedSwaps = swaps.map((swap: any) =>
+                        swap.id === id
+                            ? {
+                                  ...swap,
+                                  lockupTransaction
+                              }
+                            : swap
+                    );
 
-                await Storage.setItem(SWAPS_KEY, JSON.stringify(updatedSwaps));
+                    await Storage.setItem(
+                        SWAPS_KEY,
+                        JSON.stringify(updatedSwaps)
+                    );
+                });
                 return lockupTransaction;
             } else {
                 console.log('getLockupTransaction - not found', data);
@@ -542,10 +564,6 @@ export default class SwapStore {
         nodePubkey: string
     ) => {
         try {
-            // Retrieve existing swaps
-            const storedSwaps = await Storage.getItem(SWAPS_KEY);
-            const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
-
             // Adding the new properties to the swap
             const enrichedSwap = {
                 ...newSwap,
@@ -557,11 +575,17 @@ export default class SwapStore {
                 serviceProvider: this.getServiceProvider
             };
 
-            // Add the enriched swap to the beginning of array
-            swaps.unshift(enrichedSwap);
+            await this.withSwapStorage(async () => {
+                // Retrieve existing swaps
+                const storedSwaps = await Storage.getItem(SWAPS_KEY);
+                const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
 
-            // Save the updated swaps array back to Encrypted Storage
-            await Storage.setItem(SWAPS_KEY, JSON.stringify(swaps));
+                // Add the enriched swap to the beginning of array
+                swaps.unshift(enrichedSwap);
+
+                // Save the updated swaps array back to Encrypted Storage
+                await Storage.setItem(SWAPS_KEY, JSON.stringify(swaps));
+            });
             console.log('Swap saved successfully to Encrypted Storage.');
         } catch (error: any) {
             console.error('Error saving swap to storage:', error);
@@ -1008,10 +1032,6 @@ export default class SwapStore {
         nodePubkey: string
     ) => {
         try {
-            // Retrieve existing swaps
-            const storedSwaps = await Storage.getItem(REVERSE_SWAPS_KEY);
-            const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
-
             // Adding the new properties to the swap
             const enrichedSwap = {
                 ...newSwap,
@@ -1024,11 +1044,17 @@ export default class SwapStore {
                 serviceProvider: this.getServiceProvider
             };
 
-            // Add the enriched swap to the beginning of array
-            swaps.unshift(enrichedSwap);
+            await this.withSwapStorage(async () => {
+                // Retrieve existing swaps
+                const storedSwaps = await Storage.getItem(REVERSE_SWAPS_KEY);
+                const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
 
-            // Save the updated swaps array back to Encrypted Storage
-            await Storage.setItem(REVERSE_SWAPS_KEY, JSON.stringify(swaps));
+                // Add the enriched swap to the beginning of array
+                swaps.unshift(enrichedSwap);
+
+                // Save the updated swaps array back to Encrypted Storage
+                await Storage.setItem(REVERSE_SWAPS_KEY, JSON.stringify(swaps));
+            });
             console.log(
                 'Reverse swap saved successfully to Encrypted Storage.'
             );
@@ -1056,9 +1082,12 @@ export default class SwapStore {
                 ? JSON.parse(storedReverseSwaps)
                 : [];
 
-            const allSwaps = [...submarineSwaps, ...reverseSwaps];
+            // Statuses are fetched against this snapshot, then merged into
+            // a fresh read below: other fields may be written to the stored
+            // swaps while the requests are out
+            const statuses = new Map<string, SwapState>();
 
-            for (const swap of allSwaps) {
+            for (const swap of [...submarineSwaps, ...reverseSwaps]) {
                 if (!swap?.id) continue;
 
                 const skipStatusesForSubmarineSwap = [
@@ -1094,7 +1123,7 @@ export default class SwapStore {
 
                     const result = await response.json();
                     if (result?.status) {
-                        swap.status = result.status;
+                        statuses.set(swap.id, result.status);
                     }
                 } catch (err: any) {
                     console.warn(
@@ -1104,21 +1133,38 @@ export default class SwapStore {
                 }
             }
 
-            const updatedSubmarineSwaps = allSwaps.filter(
-                (s) => s.type === SwapType.Submarine
-            );
-            const updatedReverseSwaps = allSwaps.filter(
-                (s) => s.type === SwapType.Reverse
-            );
+            const allSwaps: any[] = await this.withSwapStorage(async () => {
+                const latestSubmarineSwaps = await Storage.getItem(SWAPS_KEY);
+                const latestReverseSwaps = await Storage.getItem(
+                    REVERSE_SWAPS_KEY
+                );
+                const merged = [
+                    ...(latestSubmarineSwaps
+                        ? JSON.parse(latestSubmarineSwaps)
+                        : []),
+                    ...(latestReverseSwaps
+                        ? JSON.parse(latestReverseSwaps)
+                        : [])
+                ].map((swap: any) =>
+                    swap?.id && statuses.has(swap.id)
+                        ? { ...swap, status: statuses.get(swap.id) }
+                        : swap
+                );
 
-            await Storage.setItem(
-                SWAPS_KEY,
-                JSON.stringify(updatedSubmarineSwaps)
-            );
-            await Storage.setItem(
-                REVERSE_SWAPS_KEY,
-                JSON.stringify(updatedReverseSwaps)
-            );
+                await Storage.setItem(
+                    SWAPS_KEY,
+                    JSON.stringify(
+                        merged.filter((s) => s.type === SwapType.Submarine)
+                    )
+                );
+                await Storage.setItem(
+                    REVERSE_SWAPS_KEY,
+                    JSON.stringify(
+                        merged.filter((s) => s.type === SwapType.Reverse)
+                    )
+                );
+                return merged;
+            });
 
             // Filter swaps to current pubkey or implementation
             const swaps = allSwaps.filter((swap: any) => {
@@ -1150,24 +1196,25 @@ export default class SwapStore {
         failureReason?: string
     ) => {
         try {
-            let storedSwaps: any;
             const key = isSubmarineSwap ? SWAPS_KEY : REVERSE_SWAPS_KEY;
-            storedSwaps = await Storage.getItem(key);
-            const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+            await this.withSwapStorage(async () => {
+                const storedSwaps = await Storage.getItem(key);
+                const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
 
-            const updatedSwaps = swaps.map((swap: any) =>
-                swap.id === swapId
-                    ? {
-                          ...swap,
-                          status,
-                          ...(isSubmarineSwap && failureReason
-                              ? { failureReason }
-                              : {})
-                      }
-                    : swap
-            );
+                const updatedSwaps = swaps.map((swap: any) =>
+                    swap.id === swapId
+                        ? {
+                              ...swap,
+                              status,
+                              ...(isSubmarineSwap && failureReason
+                                  ? { failureReason }
+                                  : {})
+                          }
+                        : swap
+                );
 
-            await Storage.setItem(key, JSON.stringify(updatedSwaps));
+                await Storage.setItem(key, JSON.stringify(updatedSwaps));
+            });
             console.log(
                 `Updated ${
                     isSubmarineSwap ? `swap` : `reverse swap`
@@ -1197,31 +1244,16 @@ export default class SwapStore {
         destinationAddress: string
     ): Promise<boolean> => {
         try {
-            for (const key of [REVERSE_SWAPS_KEY, SWAPS_KEY]) {
-                const storedSwaps = await Storage.getItem(key);
-                const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
-
-                if (!swaps.some((swap: any) => swap?.id === swapId)) continue;
-
-                const updatedSwaps = swaps.map((swap: any) =>
-                    swap?.id === swapId
-                        ? {
-                              ...swap,
-                              destinationAddress,
-                              claimAddressFromWallet: true
-                          }
-                        : swap
-                );
-
-                await Storage.setItem(key, JSON.stringify(updatedSwaps));
+            const updated = await this.updateStoredSwap(swapId, {
+                destinationAddress,
+                claimAddressFromWallet: true
+            });
+            if (updated) {
                 console.log(
                     `Updated destination address for swap ID ${swapId}`
                 );
-                return true;
             }
-
-            console.error(`No stored swap found for swap ID ${swapId}`);
-            return false;
+            return updated;
         } catch (error) {
             console.error(
                 'Error updating swap destination address in storage:',
@@ -1239,25 +1271,26 @@ export default class SwapStore {
     private updateStoredSwap = async (
         swapId: string,
         fields: { [key: string]: any }
-    ): Promise<boolean> => {
-        for (const key of [REVERSE_SWAPS_KEY, SWAPS_KEY]) {
-            const storedSwaps = await Storage.getItem(key);
-            const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
-            if (!swaps.some((swap: any) => swap?.id === swapId)) continue;
+    ): Promise<boolean> =>
+        this.withSwapStorage(async () => {
+            for (const key of [REVERSE_SWAPS_KEY, SWAPS_KEY]) {
+                const storedSwaps = await Storage.getItem(key);
+                const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+                if (!swaps.some((swap: any) => swap?.id === swapId)) continue;
 
-            await Storage.setItem(
-                key,
-                JSON.stringify(
-                    swaps.map((swap: any) =>
-                        swap?.id === swapId ? { ...swap, ...fields } : swap
+                await Storage.setItem(
+                    key,
+                    JSON.stringify(
+                        swaps.map((swap: any) =>
+                            swap?.id === swapId ? { ...swap, ...fields } : swap
+                        )
                     )
-                )
-            );
-            return true;
-        }
-        console.error(`No stored swap found for swap ID ${swapId}`);
-        return false;
-    };
+                );
+                return true;
+            }
+            console.error(`No stored swap found for swap ID ${swapId}`);
+            return false;
+        });
 
     /**
      * Stores a reverse swap's signed claim before it is first broadcast.
@@ -1277,7 +1310,8 @@ export default class SwapStore {
      * instance, then to the swap host if that fails. A transaction that is
      * already in the mempool or a block counts as broadcast, including one
      * whose outputs are spent, which bitcoind rejects as missing inputs.
-     * Returns the txid, or throws with both errors.
+     * The mempool instance is skipped when it is not on the node's network.
+     * Returns the txid, or throws with every error.
      */
     public broadcastSwapTransaction = async (
         txHex: string,
@@ -1286,50 +1320,75 @@ export default class SwapStore {
         const txid = Transaction.fromHex(txHex).getId();
         const errors: string[] = [];
 
-        const apiUrl = UrlUtils.getMempoolApiUrl(this.nodeInfoStore.nodeInfo);
+        const { nodeInfo } = this.nodeInfoStore;
+        const apiUrl = UrlUtils.mempoolServesNetwork(nodeInfo)
+            ? UrlUtils.getMempoolApiUrl(nodeInfo)
+            : undefined;
+
+        if (
+            apiUrl &&
+            (await this.postTransaction(
+                `${apiUrl}/tx`,
+                { 'Content-Type': 'text/plain' },
+                txHex,
+                [200],
+                errors
+            ))
+        ) {
+            return txid;
+        }
+
+        if (
+            endpoint &&
+            (await this.postTransaction(
+                `${endpoint}/chain/BTC/transaction`,
+                { 'Content-Type': 'application/json' },
+                JSON.stringify({ hex: txHex }),
+                [200, 201],
+                errors
+            ))
+        ) {
+            return txid;
+        }
+
+        if (apiUrl && (await this.isTransactionKnown(apiUrl, txid))) {
+            return txid;
+        }
+
+        if (!errors.length) {
+            errors.push('no broadcast endpoint for this network');
+        }
+        throw new Error(errors.join('; '));
+    };
+
+    // Whether a broadcast endpoint took the transaction or already has it.
+    // Anything else is added to errors with the response text.
+    private postTransaction = async (
+        url: string,
+        headers: { [key: string]: string },
+        body: string,
+        okStatuses: number[],
+        errors: string[]
+    ): Promise<boolean> => {
         try {
             const response = await ReactNativeBlobUtil.fetch(
                 'POST',
-                `${apiUrl}/tx`,
-                { 'Content-Type': 'text/plain' },
-                txHex
+                url,
+                headers,
+                body
             );
             const httpStatus = response.info().status;
             const text = String((await response.text()) || '');
-            if (httpStatus === 200 || isAlreadyBroadcastError(text)) {
-                return txid;
-            }
-            errors.push(`${apiUrl}: ${httpStatus} ${text}`);
+            if (
+                okStatuses.includes(httpStatus) ||
+                isAlreadyBroadcastError(text)
+            )
+                return true;
+            errors.push(`${url}: ${httpStatus} ${text}`);
         } catch (e: any) {
-            errors.push(`${apiUrl}: ${e?.message ?? e}`);
+            errors.push(`${url}: ${e?.message ?? e}`);
         }
-
-        if (endpoint) {
-            try {
-                const response = await ReactNativeBlobUtil.fetch(
-                    'POST',
-                    `${endpoint}/chain/BTC/transaction`,
-                    { 'Content-Type': 'application/json' },
-                    JSON.stringify({ hex: txHex })
-                );
-                const httpStatus = response.info().status;
-                const text = String((await response.text()) || '');
-                if (
-                    httpStatus === 200 ||
-                    httpStatus === 201 ||
-                    isAlreadyBroadcastError(text)
-                ) {
-                    return txid;
-                }
-                errors.push(`${endpoint}: ${httpStatus} ${text}`);
-            } catch (e: any) {
-                errors.push(`${endpoint}: ${e?.message ?? e}`);
-            }
-        }
-
-        if (await this.isTransactionKnown(apiUrl, txid)) return txid;
-
-        throw new Error(errors.join('; '));
+        return false;
     };
 
     // Whether the mempool instance has the transaction in its mempool or
@@ -1354,22 +1413,37 @@ export default class SwapStore {
      * The lockup transaction of a reverse swap, from its host. Used to
      * claim a swap whose invoice was settled before the claim was
      * broadcast; the invoice.settled update carries no transaction.
+     *
+     * 'none' is the host answering that it has no lockup for the swap.
+     * A failed request, a server error or an answer without a hex is
+     * 'unavailable', and worth asking again.
      */
     public getReverseLockupTransactionHex = async (
         id: string,
         endpoint: string
-    ): Promise<string | undefined> => {
+    ): Promise<ReverseLockupFetch> => {
         try {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
                 `${endpoint}/swap/reverse/${id}/transaction`
             );
-            if (response.info().status !== 200) return undefined;
+            const httpStatus = response.info().status;
+            if (
+                httpStatus >= 400 &&
+                httpStatus < 500 &&
+                httpStatus !== 408 &&
+                httpStatus !== 429
+            ) {
+                return { status: 'none' };
+            }
+            if (httpStatus !== 200) return { status: 'unavailable' };
             const hex = response.json()?.hex;
-            return typeof hex === 'string' && hex ? hex : undefined;
+            return typeof hex === 'string' && hex
+                ? { status: 'found', hex }
+                : { status: 'unavailable' };
         } catch (e) {
             console.error('Could not fetch the reverse swap lockup', e);
-            return undefined;
+            return { status: 'unavailable' };
         }
     };
 
@@ -1417,33 +1491,35 @@ export default class SwapStore {
     @action
     public updateSwapOnRefund = async (swapId: string, txid: string) => {
         try {
-            // Retrieve the swaps from encrypted storage
-            const storedSwaps = await Storage.getItem(SWAPS_KEY);
-            if (!storedSwaps) {
-                throw new Error('No swaps found in storage');
-            }
+            await this.withSwapStorage(async () => {
+                // Retrieve the swaps from encrypted storage
+                const storedSwaps = await Storage.getItem(SWAPS_KEY);
+                if (!storedSwaps) {
+                    throw new Error('No swaps found in storage');
+                }
 
-            // Parse the swaps array
-            const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
+                // Parse the swaps array
+                const swaps = storedSwaps ? JSON.parse(storedSwaps) : [];
 
-            // Find the swap by swapId
-            const swapIndex = swaps.findIndex(
-                (swap: any) => swap.id === swapId
-            );
-            if (swapIndex === -1) {
-                throw new Error(`Swap with ID ${swapId} not found`);
-            }
+                // Find the swap by swapId
+                const swapIndex = swaps.findIndex(
+                    (swap: any) => swap.id === swapId
+                );
+                if (swapIndex === -1) {
+                    throw new Error(`Swap with ID ${swapId} not found`);
+                }
 
-            // Update the swap
-            swaps[swapIndex].status = SwapState.TransactionRefunded;
-            swaps[swapIndex].txid = txid;
+                // Update the swap
+                swaps[swapIndex].status = SwapState.TransactionRefunded;
+                swaps[swapIndex].txid = txid;
 
-            // Save the updated swaps back to encrypted storage
-            await Storage.setItem(SWAPS_KEY, JSON.stringify(swaps));
+                // Save the updated swaps back to encrypted storage
+                await Storage.setItem(SWAPS_KEY, JSON.stringify(swaps));
 
-            console.log(
-                `Swap ${swapId} updated in storage: status=${swaps[swapIndex].status}`
-            );
+                console.log(
+                    `Swap ${swapId} updated in storage: status=${swaps[swapIndex].status}`
+                );
+            });
         } catch (error) {
             console.error('Error updating swap in storage:', error);
             throw error;
@@ -1666,51 +1742,64 @@ export default class SwapStore {
                 const importedSwaps = JSON.parse(response.data || '[]');
 
                 if (importedSwaps.length > 0) {
-                    // Rescued swaps are written to SWAPS_KEY whatever their
-                    // type and only re-filed by the next fetchAndUpdateSwaps,
-                    // so a swap rescued before can be under either key
-                    const storedSubmarineSwaps = await Storage.getItem(
-                        SWAPS_KEY
-                    );
-                    const storedReverseSwaps = await Storage.getItem(
-                        REVERSE_SWAPS_KEY
-                    );
-                    const { submarineSwaps, reverseSwaps } = dedupeStoredSwaps(
-                        storedSubmarineSwaps
-                            ? JSON.parse(storedSubmarineSwaps)
-                            : [],
-                        storedReverseSwaps ? JSON.parse(storedReverseSwaps) : []
-                    );
-                    const existingSwaps = [...submarineSwaps, ...reverseSwaps];
-
-                    const newSwaps: any[] = [];
-                    for (const swap of importedSwaps) {
-                        const rescued = this.buildRescuedSwap(swap, mnemonic, {
-                            implementation,
-                            nodePubkey,
-                            host
-                        });
-                        if (!rescued) continue;
-
-                        const existing = existingSwaps.find(
-                            (s: any) => s?.id === rescued.id
+                    await this.withSwapStorage(async () => {
+                        // Rescued swaps are written to SWAPS_KEY whatever
+                        // their type and only re-filed by the next
+                        // fetchAndUpdateSwaps, so a swap rescued before can
+                        // be under either key
+                        const storedSubmarineSwaps = await Storage.getItem(
+                            SWAPS_KEY
                         );
-                        if (!existing) {
-                            newSwaps.push(rescued);
-                            existingSwaps.push(rescued);
-                        } else if (rescued.type === SwapType.Reverse) {
-                            repairRescuedPreimage(existing, rescued);
-                        }
-                    }
+                        const storedReverseSwaps = await Storage.getItem(
+                            REVERSE_SWAPS_KEY
+                        );
+                        const { submarineSwaps, reverseSwaps } =
+                            dedupeStoredSwaps(
+                                storedSubmarineSwaps
+                                    ? JSON.parse(storedSubmarineSwaps)
+                                    : [],
+                                storedReverseSwaps
+                                    ? JSON.parse(storedReverseSwaps)
+                                    : []
+                            );
+                        const existingSwaps = [
+                            ...submarineSwaps,
+                            ...reverseSwaps
+                        ];
 
-                    await Storage.setItem(
-                        SWAPS_KEY,
-                        JSON.stringify([...submarineSwaps, ...newSwaps])
-                    );
-                    await Storage.setItem(
-                        REVERSE_SWAPS_KEY,
-                        JSON.stringify(reverseSwaps)
-                    );
+                        const newSwaps: any[] = [];
+                        for (const swap of importedSwaps) {
+                            const rescued = this.buildRescuedSwap(
+                                swap,
+                                mnemonic,
+                                {
+                                    implementation,
+                                    nodePubkey,
+                                    host
+                                }
+                            );
+                            if (!rescued) continue;
+
+                            const existing = existingSwaps.find(
+                                (s: any) => s?.id === rescued.id
+                            );
+                            if (!existing) {
+                                newSwaps.push(rescued);
+                                existingSwaps.push(rescued);
+                            } else if (rescued.type === SwapType.Reverse) {
+                                repairRescuedPreimage(existing, rescued);
+                            }
+                        }
+
+                        await Storage.setItem(
+                            SWAPS_KEY,
+                            JSON.stringify([...submarineSwaps, ...newSwaps])
+                        );
+                        await Storage.setItem(
+                            REVERSE_SWAPS_KEY,
+                            JSON.stringify(reverseSwaps)
+                        );
+                    });
                     console.log('Rescued swaps saved to storage');
                     return { success: true };
                 } else {
