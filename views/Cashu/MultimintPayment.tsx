@@ -120,9 +120,15 @@ export default class MultimintPayment extends React.Component<
             this.donationToSend
         );
 
+        // The mints listed here are only the ones in the invoice's plan, and
+        // the planner stops once the invoice is covered. getPayReq counted
+        // every mint the invoice and the donation can be drawn from.
+        const spendableBalance =
+            Number(CashuStore?.payReqMintBalance) || totalSelectedBalance;
+
         const hasNoMintsSelected = effectiveMints.length === 0;
         const hasInsufficientBalance =
-            totalNeeded > totalSelectedBalance && totalSelectedBalance > 0;
+            totalNeeded > spendableBalance && spendableBalance > 0;
 
         this.paymentAmountSat = requestAmount;
         this.paymentHash = CashuStore?.payReq?.payment_hash;

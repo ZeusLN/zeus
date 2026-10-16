@@ -1096,7 +1096,7 @@ describe('CashuStore payReqMintBalance and payReqAmount', () => {
         expect(store.payReqAmount).toBe(1000);
     });
 
-    it('leaves both at 0 when the invoice is split across two mints', async () => {
+    it('sets the balance of both mints and the invoice amount when the invoice is split across two mints', async () => {
         const store = newStore({
             balances: { [A]: 600, [B]: 500 },
             selected: [A, B]
@@ -1110,8 +1110,65 @@ describe('CashuStore payReqMintBalance and payReqAmount', () => {
 
         expect(planOf(store).map(({ mintUrl }) => mintUrl)).toEqual([A, B]);
         expect(store.getPayReqError).toBeUndefined();
-        expect(store.payReqMintBalance).toBe(0);
-        expect(store.payReqAmount).toBe(0);
+        expect(store.payReqMintBalance).toBe(1100);
+        expect(store.payReqAmount).toBe(1000);
+    });
+
+    it('counts the funded mints the planner stopped before', async () => {
+        invoiceFor({ num_satoshis: '75' });
+        const store = newStore({
+            balances: { [A]: 89, [B]: 50 },
+            selected: [A, B]
+        });
+        mintApi({
+            [A]: () => ({ fee: 2 }),
+            [B]: () => ({ fee: 2 })
+        });
+
+        await store.getPayReq(INVOICE);
+
+        // A alone covers the invoice, so B is never probed
+        expect(planOf(store).map(({ mintUrl }) => mintUrl)).toEqual([A]);
+        expect(store.payReqMintBalance).toBe(139);
+        expect(store.payReqAmount).toBe(75);
+    });
+
+    it('leaves out a funded mint without MPP that is not in the plan', async () => {
+        const store = newStore({
+            balances: { [A]: 600, [B]: 500, [C]: 300 },
+            selected: [A, B, C],
+            mpp: [A, B]
+        });
+        mintApi({
+            [A]: () => ({ fee: 1 }),
+            [B]: () => ({ fee: 1 })
+        });
+
+        await store.getPayReq(INVOICE);
+
+        expect(planOf(store).map(({ mintUrl }) => mintUrl)).toEqual([A, B]);
+        expect(store.payReqMintBalance).toBe(1100);
+    });
+
+    it('counts a mint without MPP when the planner falls back to a regular melt on it', async () => {
+        const store = newStore({
+            balances: { [A]: 2000, [B]: 50 },
+            selected: [A, B],
+            mpp: [B]
+        });
+        mintApi({
+            [B]: () => ({ fee: 1 })
+        });
+
+        await store.getPayReq(INVOICE);
+
+        // B can't cover 1000 over MPP, so A pays the invoice alone
+        expect(planOf(store)).toEqual([
+            { mintUrl: A, amount: 1000, fee: 3, regular: true }
+        ]);
+        expect(store.getPayReqError).toBeUndefined();
+        expect(store.payReqMintBalance).toBe(2050);
+        expect(store.payReqAmount).toBe(1000);
     });
 
     it('resets both when a good invoice is followed by an expired one', async () => {
