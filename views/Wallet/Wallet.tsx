@@ -748,10 +748,8 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
 
             if (ldkMnemonic && ldkNodeDir) {
-                const { lsps1Config, trustedPeers0conf } = getLdkNodeLspConfig(
-                    settings,
-                    ldkNetwork || 'mainnet'
-                );
+                const { lsps1Config, lsps2Config, trustedPeers0conf } =
+                    getLdkNodeLspConfig(settings, ldkNetwork || 'mainnet');
 
                 console.log('[LDK startup] calling startLdkNodeWallet');
                 let ldkResult;
@@ -772,6 +770,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                                 ? DEFAULT_SCORER_URL
                                 : ldkScorerUrl,
                         lsps1Config,
+                        lsps2Config,
                         trustedPeers0conf,
                         vssServerUrl: ldkVssServer || DEFAULT_VSS_SERVER,
                         skipInit: justCreated,
