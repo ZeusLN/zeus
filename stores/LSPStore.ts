@@ -47,8 +47,8 @@ export default class LSPStore {
     @observable public showLspSettings: boolean = false;
     @observable public channelAcceptor: any;
     @observable public customMessagesSubscriber: any;
-    // bumped by reset() so a Flow info reply for the previous connection
-    // doesn't write to the next one
+    // bumped by reset() and by every Flow info request, so only the latest
+    // request for the current connection writes its reply
     private flowInfoGeneration = 0;
     // LSPS1
     @observable public getInfoId: string;
@@ -315,11 +315,14 @@ export default class LSPStore {
         return `${prefix}: HTTP ${status}`;
     };
 
-    // Rejects without writing anything if reset() ran while the request
-    // was in flight: the reply belongs to the previous connection, and the
-    // caller no longer waits for it before the next connect resets the store
+    // Rejects without writing anything if reset() ran or a newer request
+    // started while the request was in flight. After reset() the reply
+    // belongs to the previous connection, and the caller no longer waits for
+    // it before the next connect resets the store. Each wallet refresh starts
+    // a request without waiting for the last one, so a timeout from an older
+    // request could otherwise land after a newer success and set flow_error
     public getLSPInfo = () => {
-        const generation = this.flowInfoGeneration;
+        const generation = ++this.flowInfoGeneration;
         const isCurrent = () => this.flowInfoGeneration === generation;
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(

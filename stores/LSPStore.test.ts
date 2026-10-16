@@ -501,6 +501,62 @@ describe('LSPStore.getLSPInfo across reset', () => {
         expect(store.info).toEqual(lspInfo);
         expect(connectPeer).toHaveBeenCalledTimes(1);
     });
+
+    describe('overlapping requests', () => {
+        let fetches: Array<{
+            resolve: (value: any) => void;
+            reject: (error: any) => void;
+        }>;
+
+        beforeEach(() => {
+            fetches = [];
+            jest.mocked(ReactNativeBlobUtil.fetch).mockImplementation(
+                () =>
+                    new Promise((resolve, reject) => {
+                        fetches.push({ resolve, reject });
+                    }) as any
+            );
+        });
+
+        it('drops a failure from an older request after a newer success', async () => {
+            const { store, connectPeer } = makeInfoStore();
+
+            const older = store.getLSPInfo();
+            const newer = store.getLSPInfo();
+            fetches[1].resolve(okResponse);
+            await expect(newer).resolves.toEqual(lspInfo);
+            fetches[0].reject(new Error('timed out'));
+            await expect(older).rejects.toBeUndefined();
+            await settle();
+
+            expect(store.info).toEqual(lspInfo);
+            expect(store.flow_error).toBe(false);
+            expect(store.flow_error_msg).toBe('');
+            expect(store.showLspSettings).toBe(false);
+            expect(connectPeer).toHaveBeenCalledTimes(1);
+        });
+
+        it('drops a success from an older request after a newer failure', async () => {
+            const { store, connectPeer } = makeInfoStore();
+
+            const older = store.getLSPInfo();
+            const newer = store.getLSPInfo();
+            fetches[1].resolve({
+                info: () => ({ status: 403 }),
+                json: () => ({ message: 'unavailable in your country' }),
+                text: () => ''
+            });
+            await expect(newer).rejects.toBeUndefined();
+            fetches[0].resolve(okResponse);
+            await expect(older).rejects.toBeUndefined();
+            await settle();
+
+            expect(store.info).toEqual({});
+            expect(store.flow_error).toBe(true);
+            expect(store.showLspSettings).toBe(true);
+            expect(connectPeer).not.toHaveBeenCalled();
+        });
+    });
 });
 
 describe('LSPStore remote LND sockets', () => {
