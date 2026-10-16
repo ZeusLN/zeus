@@ -1113,13 +1113,24 @@ export default class NostrConnectUtils {
         return FAILURE_REASON_LOCALE_KEYS[name] || 'error.paymentFailed';
     }
 
+    // CLN lists one entry per pay/xpay call, so an invoice retried after a
+    // failure has the old failed attempt next to the live one. Return the
+    // attempt that decides the outcome: settled, else in flight, else the
+    // first match.
     static findPaymentForInvoice<T extends Payment>(
         invoice: string,
         payments: T[],
         paymentHash?: string | null
     ): T | undefined {
-        return payments.find((p) =>
+        const attempts = payments.filter((p) =>
             NostrConnectUtils.matchesPaymentRequest(p, invoice, paymentHash)
+        );
+        return (
+            attempts.find((p) => NostrConnectUtils.isSettledPayment(p)) ||
+            attempts.find((p) =>
+                NostrConnectUtils.isListedPaymentInTransit(p)
+            ) ||
+            attempts[0]
         );
     }
 
@@ -1266,9 +1277,6 @@ export default class NostrConnectUtils {
             if (listed && NostrConnectUtils.isSettledPayment(listed)) {
                 return { inTransit: false, payment: listed };
             }
-            if (listed && NostrConnectUtils.isListedPaymentFailed(listed)) {
-                return { inTransit: false, payment: listed };
-            }
             // Timeout / still-loading with no listed outcome: the HTLC may
             // still settle. Treat as in-flight so budget is held via
             // pendingSpendSats instead of recording a terminal failure.
@@ -1280,6 +1288,11 @@ export default class NostrConnectUtils {
             }
             if (listed && NostrConnectUtils.isListedPaymentInTransit(listed)) {
                 return { inTransit: true, payment: listed };
+            }
+            // Checked after in-transit so a payment the node still lists as
+            // in flight keeps its budget hold
+            if (listed && NostrConnectUtils.isListedPaymentFailed(listed)) {
+                return { inTransit: false, payment: listed };
             }
         }
 

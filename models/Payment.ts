@@ -196,6 +196,13 @@ export default class Payment extends BaseModel {
         )
             return true;
         if (!this.htlcs) return false;
+        // lnd keeps the payment IN_FLIGHT while it retries, including
+        // between attempts when no HTLC is out
+        if (
+            this.status === 'IN_FLIGHT' ||
+            Number(this.status) === lnrpc.Payment.PaymentStatus.IN_FLIGHT
+        )
+            return true;
         let inTransit = false;
         for (const htlc of this.htlcs) {
             if (
@@ -211,6 +218,9 @@ export default class Payment extends BaseModel {
 
     @computed public get isFailed(): boolean {
         if (!this.isIncomplete) return false;
+        // lnd lists failed HTLC attempts next to a retry that can still
+        // settle, so a payment in transit has not failed
+        if (this.isInTransit) return false;
         let isFailed = false;
         if (this.htlcs) {
             for (const htlc of this.htlcs) {

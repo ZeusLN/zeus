@@ -121,6 +121,17 @@ const paymentFixtures = {
             payment_preimage: ZERO_PREIMAGE
         }),
 
+    /** LND-style: first HTLC failed, retry still in flight */
+    retriedInFlightHtlc: () =>
+        new Payment({
+            payment_request: INVOICE_A,
+            payment_hash: HASH_A,
+            status: 'IN_FLIGHT',
+            failure_reason: 'FAILURE_REASON_NONE',
+            payment_preimage: ZERO_PREIMAGE,
+            htlcs: [{ status: 'FAILED' }, { status: 'IN_FLIGHT' }]
+        }),
+
     /** Another invoice — used to verify lookup does not cross-match */
     otherInvoiceInFlight: () =>
         new Payment({
@@ -595,6 +606,40 @@ describe('NostrConnectUtils', () => {
                     )
                 ).toBeUndefined();
             });
+
+            // CLN lists one entry per pay/xpay call, oldest first
+            const clnAttempt = (status: string, preimage = ZERO_PREIMAGE) =>
+                new Payment({
+                    bolt11: INVOICE_A,
+                    payment_hash: HASH_A,
+                    status,
+                    preimage
+                });
+
+            it('prefers a pending attempt over an earlier failed one', () => {
+                const found = NostrConnectUtils.findPaymentForInvoice(
+                    INVOICE_A,
+                    [clnAttempt('failed'), clnAttempt('pending')]
+                );
+                expect(found?.status).toBe('pending');
+            });
+
+            it('prefers a settled attempt over an earlier failed one', () => {
+                const found = NostrConnectUtils.findPaymentForInvoice(
+                    INVOICE_A,
+                    [clnAttempt('failed'), clnAttempt('complete', hex64('9'))]
+                );
+                expect(found?.status).toBe('complete');
+            });
+
+            it('returns the first attempt when every attempt failed', () => {
+                const first = clnAttempt('failed');
+                const found = NostrConnectUtils.findPaymentForInvoice(
+                    INVOICE_A,
+                    [first, clnAttempt('failed')]
+                );
+                expect(found).toBe(first);
+            });
         });
 
         describe('findInTransitPaymentForInvoice', () => {
@@ -804,6 +849,32 @@ describe('NostrConnectUtils', () => {
 
                     expect(result.inTransit).toBe(false);
                     expect(result.payment).toBe(failed);
+                });
+
+                it('holds budget when lnd lists a failed attempt next to a retry in flight', () => {
+                    const retried = paymentFixtures.retriedInFlightHtlc();
+                    const result = resolve({
+                        payments: [retried],
+                        paymentState: storeState.timedOut()
+                    });
+
+                    expect(result).toEqual({
+                        inTransit: true,
+                        payment: retried
+                    });
+                });
+
+                it('holds budget when CLN lists a pending retry after a failed attempt', () => {
+                    const pending = paymentFixtures.pendingCln();
+                    const result = resolve({
+                        payments: [paymentFixtures.failedCln(), pending],
+                        paymentState: storeState.timedOut()
+                    });
+
+                    expect(result).toEqual({
+                        inTransit: true,
+                        payment: pending
+                    });
                 });
 
                 it('returns not inTransit when CLN lists a failed sendpay', () => {

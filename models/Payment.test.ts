@@ -105,6 +105,86 @@ describe('Payment.getAmount with partial HTLC success', () => {
     });
 });
 
+describe('Payment.isFailed / isInTransit with retried HTLC attempts', () => {
+    const zeroPreimage =
+        '0000000000000000000000000000000000000000000000000000000000000000';
+
+    it.each([
+        ['string', 'IN_FLIGHT', 'FAILED', 'IN_FLIGHT'],
+        ['embedded LND enum', 1, 2, 0]
+    ])(
+        'is in transit, not failed, while a retry is out (%s statuses)',
+        (_label, status, failed, inFlight) => {
+            const payment = new Payment({
+                status,
+                failure_reason: 'FAILURE_REASON_NONE',
+                payment_preimage: zeroPreimage,
+                htlcs: [{ status: failed }, { status: inFlight }]
+            });
+
+            expect(payment.isInTransit).toBe(true);
+            expect(payment.isFailed).toBe(false);
+        }
+    );
+
+    it('is in transit, not failed, between two attempts', () => {
+        const payment = new Payment({
+            status: 'IN_FLIGHT',
+            failure_reason: 'FAILURE_REASON_NONE',
+            value_sat: 50000,
+            payment_preimage: zeroPreimage,
+            htlcs: [{ status: 'FAILED', route: { total_amt: 50000 } }]
+        });
+
+        expect(payment.isInTransit).toBe(true);
+        expect(payment.isFailed).toBe(false);
+        // shown at the amount being paid, like any payment in transit
+        expect(payment.getAmount).toBe(50000);
+    });
+
+    it('is in transit while a part is out after a failure reason is set', () => {
+        const payment = new Payment({
+            status: 'IN_FLIGHT',
+            failure_reason: 'FAILURE_REASON_TIMEOUT',
+            payment_preimage: zeroPreimage,
+            htlcs: [{ status: 'FAILED' }, { status: 'IN_FLIGHT' }]
+        });
+
+        expect(payment.isInTransit).toBe(true);
+        expect(payment.isFailed).toBe(false);
+    });
+
+    it.each([
+        ['string', 'FAILED', 'FAILURE_REASON_NO_ROUTE', 'FAILED'],
+        ['embedded LND enum', 3, 2, 2]
+    ])(
+        'is failed once lnd reports the payment failed (%s statuses)',
+        (_label, status, failureReason, failed) => {
+            const payment = new Payment({
+                status,
+                failure_reason: failureReason,
+                payment_preimage: zeroPreimage,
+                htlcs: [{ status: failed }, { status: failed }]
+            });
+
+            expect(payment.isInTransit).toBe(false);
+            expect(payment.isFailed).toBe(true);
+        }
+    );
+
+    it('is neither once settled', () => {
+        const payment = new Payment({
+            status: 'SUCCEEDED',
+            failure_reason: 'FAILURE_REASON_NONE',
+            payment_preimage: 'ab'.repeat(32),
+            htlcs: [{ status: 'FAILED' }, { status: 'SUCCEEDED' }]
+        });
+
+        expect(payment.isInTransit).toBe(false);
+        expect(payment.isFailed).toBe(false);
+    });
+});
+
 describe('Payment.resolvedPaymentHash', () => {
     // BOLT11 spec reference vector; its payment_hash is
     // 0001020304050607080900010203040506070809000102030405060708090102
