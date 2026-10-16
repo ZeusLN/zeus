@@ -2631,6 +2631,54 @@ describe('NostrWalletConnectStore handleLightningPayInvoice fee cap', () => {
         expect(sentFeeLimits(transactionsStore)).toEqual(['1000', '0']);
         expect(third.error?.code).toBe(Nip47ErrorCode.INSUFFICIENT_BALANCE);
     });
+
+    it('says the budget limited the fee cap when the payment fails', async () => {
+        const { store, transactionsStore } = buildHandlerStore();
+        transactionsStore.payment_error = 'No route found.';
+        const connection = addConnection(store, { maxAmountSats: 5400 });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice: 'lnbc1fee-cap-a' }
+        );
+
+        const expected =
+            'No route found. stores.NostrWalletConnectStore.error.feeLimitReducedByBudget';
+        expect(response.error).toEqual({
+            code: Nip47ErrorCode.FAILED_TO_PAY_INVOICE,
+            message: expected
+        });
+        expect(connection.activity[0].status).toBe('failed');
+        expect(connection.activity[0].error).toBe(expected);
+    });
+
+    it('leaves the error unchanged when the full fee cap was sent', async () => {
+        const { store, transactionsStore } = buildHandlerStore();
+        transactionsStore.payment_error = 'No route found.';
+        const connection = addConnection(store, { maxAmountSats: 6000 });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice: 'lnbc1fee-cap-a' }
+        );
+
+        expect(sentFeeLimits(transactionsStore)).toEqual(['1000']);
+        expect(response.error?.message).toBe('No route found.');
+    });
+
+    it('leaves an invoice-state error unchanged when the fee cap was reduced', async () => {
+        const { store, transactionsStore } = buildHandlerStore();
+        transactionsStore.payment_error = 'invoice expired';
+        const connection = addConnection(store, { maxAmountSats: 5400 });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice: 'lnbc1fee-cap-a' }
+        );
+
+        expect(response.error?.message).toBe('invoice expired');
+        expect(connection.activity).toHaveLength(0);
+    });
 });
 
 describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices', () => {

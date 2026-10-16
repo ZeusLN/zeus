@@ -2698,14 +2698,30 @@ export default class NostrWalletConnectStore {
                 paymentError.error &&
                 paymentError.error.code === Nip47ErrorCode.FAILED_TO_PAY_INVOICE
             ) {
+                // a fee cap cut by the budget can be the reason no route was
+                // found, so say so. Timeouts and invoice-state errors are
+                // matched on their exact text and keep it.
+                const message = String(paymentError.error.message);
+                const errorMessage =
+                    feeLimitSats < PAYMENT_FEE_LIMIT_SATS &&
+                    !NostrConnectUtils.isPaymentTimedOutMessage(message) &&
+                    !NostrConnectUtils.isIgnorableError(message)
+                        ? `${message.replace(/\.$/, '')}. ${localeString(
+                              'stores.NostrWalletConnectStore.error.feeLimitReducedByBudget',
+                              { feeLimit: feeLimitSats.toString() }
+                          )}`
+                        : message;
                 await this.recordFailedPayment({
                     rawInvoice: request.invoice,
                     connection,
                     amountSats,
                     payment_source: 'lightning',
-                    errorMessage: paymentError.error?.message
+                    errorMessage
                 });
-                return paymentError;
+                return NostrConnectUtils.createNip47Error(
+                    errorMessage,
+                    Nip47ErrorCode.FAILED_TO_PAY_INVOICE
+                );
             }
         }
 
