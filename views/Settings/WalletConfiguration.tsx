@@ -66,7 +66,7 @@ import SettingsStore, {
     Settings,
     Node,
     Implementations,
-    getLspConfigForNetwork
+    getLdkNodeLspConfig
 } from '../../stores/SettingsStore';
 
 import Scan from '../../assets/images/SVG/Scan.svg';
@@ -1326,28 +1326,9 @@ export default class WalletConfiguration extends React.Component<
                 | 'regtest'
                 | 'mutinynet';
 
-            // Get LSPS1 config from settings based on network
             const { SettingsStore } = this.props;
-            const { settings } = SettingsStore;
-            const lspConfig = getLspConfigForNetwork(settings, networkType);
-            const lsps1Token = settings.lsps1Token;
-
-            const lsps1Config =
-                lspConfig.lsps1Pubkey && lspConfig.lsps1Host
-                    ? {
-                          nodeId: lspConfig.lsps1Pubkey,
-                          address: lspConfig.lsps1Host,
-                          token: lsps1Token || null
-                      }
-                    : undefined;
-
-            // Always include Flow LSP pubkey as trusted 0-conf peer
-            const flowLspPubkey = lspConfig.defaultPubkey;
-
-            const trustedPeers = [flowLspPubkey];
-            if (lsps1Config?.nodeId && lsps1Config.nodeId !== flowLspPubkey) {
-                trustedPeers.push(lsps1Config.nodeId);
-            }
+            const { lsps1Config, lsps2Config, trustedPeers0conf } =
+                getLdkNodeLspConfig(SettingsStore.settings, networkType);
 
             const response = await createLdkNodeWallet({
                 nodeDir: ldkNodeDir,
@@ -1363,7 +1344,8 @@ export default class WalletConfiguration extends React.Component<
                         ? DEFAULT_SCORER_URL
                         : ldkScorerUrl,
                 lsps1Config,
-                trustedPeers0conf: trustedPeers,
+                lsps2Config,
+                trustedPeers0conf,
                 vssServerUrl: ldkVssServer || DEFAULT_VSS_SERVER,
                 // If an existing seed is being imported, this is a restore:
                 // a VSS failure must not silently produce an empty wallet

@@ -52,6 +52,8 @@ RCT_EXTERN_METHOD(openChannelFundMax:(NSString *)nodeId address:(NSString *)addr
 RCT_EXTERN_METHOD(openChannelWithUtxos:(NSString *)nodeId address:(NSString *)address channelAmountSats:(nonnull NSNumber *)channelAmountSats pushToCounterpartyMsat:(nonnull NSNumber *)pushToCounterpartyMsat announceChannel:(BOOL)announceChannel utxos:(NSArray *)utxos resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(closeChannel:(NSString *)userChannelId counterpartyNodeId:(NSString *)counterpartyNodeId resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(forceCloseChannel:(NSString *)userChannelId counterpartyNodeId:(NSString *)counterpartyNodeId reason:(NSString *)reason resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(spliceIn:(NSString *)userChannelId counterpartyNodeId:(NSString *)counterpartyNodeId spliceAmountSats:(nonnull NSNumber *)spliceAmountSats resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(spliceOut:(NSString *)userChannelId counterpartyNodeId:(NSString *)counterpartyNodeId address:(NSString *)address spliceAmountSats:(nonnull NSNumber *)spliceAmountSats resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 
 // On-chain Methods
 RCT_EXTERN_METHOD(newOnchainAddress:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
@@ -64,6 +66,8 @@ RCT_EXTERN_METHOD(sendAllToOnchainAddressWithUtxos:(NSString *)address retainRes
 // BOLT11 Payment Methods
 RCT_EXTERN_METHOD(receiveBolt11:(double)amountMsat invoiceDescription:(NSString *)invoiceDescription expirySecs:(double)expirySecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(receiveVariableAmountBolt11:(NSString *)invoiceDescription expirySecs:(double)expirySecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(receiveViaJitChannel:(double)amountMsat invoiceDescription:(NSString *)invoiceDescription expirySecs:(double)expirySecs maxLspFeeLimitMsat:(double)maxLspFeeLimitMsat resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
+RCT_EXTERN_METHOD(receiveVariableAmountViaJitChannel:(NSString *)invoiceDescription expirySecs:(double)expirySecs maxProportionalLspFeeLimitPpmMsat:(double)maxProportionalLspFeeLimitPpmMsat resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(sendBolt11:(NSString *)invoice maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount paymentTimeoutSecs:(double)paymentTimeoutSecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 RCT_EXTERN_METHOD(sendBolt11UsingAmount:(NSString *)invoice amountMsat:(double)amountMsat maxTotalRoutingFeeMsat:(double)maxTotalRoutingFeeMsat maxPathCount:(double)maxPathCount paymentTimeoutSecs:(double)paymentTimeoutSecs resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
 

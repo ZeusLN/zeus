@@ -666,3 +666,69 @@ describe('validateNodeHost', () => {
         expect(ValidationUtils.validateNodeHost('')).toBe(false);
     });
 });
+
+describe('isValidPeerPubkey', () => {
+    const pubkey =
+        '032ae843e4d7d177f151d021ac8044b0636ec72b1ce3ffcde5c04748db2517ab03';
+
+    it('accepts a compressed key on the curve', () => {
+        expect(ValidationUtils.isValidPeerPubkey(pubkey)).toBe(true);
+        expect(ValidationUtils.isValidPeerPubkey(pubkey.toUpperCase())).toBe(
+            true
+        );
+    });
+
+    it('rejects keys ldk-node cannot parse', () => {
+        // x above the field prime: right shape, not a point
+        expect(ValidationUtils.isValidPeerPubkey(`02${'f'.repeat(64)}`)).toBe(
+            false
+        );
+        expect(ValidationUtils.isValidPeerPubkey(`04${pubkey.slice(2)}`)).toBe(
+            false
+        );
+        expect(ValidationUtils.isValidPeerPubkey(pubkey.slice(0, 65))).toBe(
+            false
+        );
+        expect(ValidationUtils.isValidPeerPubkey(` ${pubkey}`)).toBe(false);
+        expect(ValidationUtils.isValidPeerPubkey('')).toBe(false);
+    });
+});
+
+describe('isValidPeerAddress', () => {
+    it('accepts IPv4, bracketed IPv6 and hostnames with a port', () => {
+        expect(ValidationUtils.isValidPeerAddress('127.0.0.1:9735')).toBe(true);
+        expect(ValidationUtils.isValidPeerAddress('[::1]:9735')).toBe(true);
+        expect(ValidationUtils.isValidPeerAddress('[2001:db8::1]:9735')).toBe(
+            true
+        );
+        expect(ValidationUtils.isValidPeerAddress('lsp.example.com:9735')).toBe(
+            true
+        );
+        expect(ValidationUtils.isValidPeerAddress('localhost:1')).toBe(true);
+        expect(ValidationUtils.isValidPeerAddress('localhost:65535')).toBe(
+            true
+        );
+    });
+
+    it('rejects addresses ldk-node cannot parse', () => {
+        expect(ValidationUtils.isValidPeerAddress('127.0.0.1')).toBe(false);
+        expect(ValidationUtils.isValidPeerAddress('127.0.0.1:')).toBe(false);
+        expect(ValidationUtils.isValidPeerAddress('127.0.0.1:0')).toBe(false);
+        expect(ValidationUtils.isValidPeerAddress('127.0.0.1:65536')).toBe(
+            false
+        );
+        expect(ValidationUtils.isValidPeerAddress('2001:db8::1:9735')).toBe(
+            false
+        );
+        expect(ValidationUtils.isValidPeerAddress('[2001:db8::1:9735')).toBe(
+            false
+        );
+        expect(ValidationUtils.isValidPeerAddress('lsp example.com:9735')).toBe(
+            false
+        );
+        expect(ValidationUtils.isValidPeerAddress(' 127.0.0.1:9735')).toBe(
+            false
+        );
+        expect(ValidationUtils.isValidPeerAddress('')).toBe(false);
+    });
+});
