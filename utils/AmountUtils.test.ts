@@ -1213,12 +1213,9 @@ describe('AmountUtils', () => {
             expect(feeLimitSatsToMaxRoutingFeeMsat('')).toBeUndefined();
         });
 
-        it('treats a numeric 0 as "no limit", matching the previous behavior', () => {
-            expect(feeLimitSatsToMaxRoutingFeeMsat(0)).toBeUndefined();
-        });
-
-        it('treats an explicit "0" string as a real cap of zero', () => {
+        it('treats a limit of 0 as a real cap of zero', () => {
             expect(feeLimitSatsToMaxRoutingFeeMsat('0')).toBe(0);
+            expect(feeLimitSatsToMaxRoutingFeeMsat(0)).toBe(0);
         });
 
         it('returns undefined rather than forwarding an unusable value', () => {

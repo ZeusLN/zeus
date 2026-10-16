@@ -395,8 +395,9 @@ export function millisatsToSats(millisats: number): number {
  * value ldk-node expects.
  *
  * Returns undefined when no limit was supplied or the value is unusable, so
- * ldk-node applies its own default rather than being handed a nonsense cap.
- * Note that an explicitly supplied '0' is a real cap of zero, not "no limit".
+ * the caller can apply a default rather than send a nonsense cap.
+ * A limit of 0, as '0' or as the number 0, is a real cap of zero, not
+ * "no limit".
  *
  * @param feeLimitSat - Fee limit in satoshis, as collected by FeeLimit
  * @returns Fee limit in millisatoshis, or undefined if none applies
@@ -404,7 +405,7 @@ export function millisatsToSats(millisats: number): number {
 export function feeLimitSatsToMaxRoutingFeeMsat(
     feeLimitSat?: string | number | null
 ): number | undefined {
-    if (!feeLimitSat) return undefined;
+    if (feeLimitSat == null || feeLimitSat === '') return undefined;
     const msats = satsToMillisats(Number(feeLimitSat));
     return Number.isFinite(msats) && msats >= 0 ? msats : undefined;
 }
