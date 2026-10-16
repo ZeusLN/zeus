@@ -233,11 +233,12 @@ export default class CashuStore {
     @observable public paymentError?: boolean;
     @observable public paymentErrorMsg?: string;
     @observable public feeEstimate?: number;
-    // Inputs of the single-mint sufficiency check run by getPayReq(), exposed
-    // so the payment view can extend it with the donation that is sent from
-    // the same mint right after the invoice is paid. Both stay 0 when that
-    // check did not run: multi-mint plans its own coverage in
-    // MultimintPayment, which refuses to start when the mints fall short.
+    // Inputs of the sufficiency check run by getPayReq(), exposed so the
+    // payment views can extend it with the donation that is sent from the
+    // same mints right after the invoice is paid: the balance the payment
+    // can be drawn from (the one mint, or every mint the multi-mint planner
+    // can use) and the amount quoted for the invoice. Both stay 0 when
+    // getPayReq did not quote the invoice.
     @observable public payReqMintBalance: number = 0;
     @observable public payReqAmount: number = 0;
     @observable public meltQuotes: {
@@ -1097,6 +1098,34 @@ export default class CashuStore {
                 m.unit?.toLowerCase() === 'sat'
             );
         });
+    };
+
+    // The balance a multi-mint payment and the donation after it can be
+    // drawn from: the mints in the payment's plan, and every other funded
+    // selected mint that supports MPP. With two or more funded mints the
+    // planner splits only across MPP mints, but its regular melt fallback
+    // can put a mint without MPP into the plan.
+    private multiMintSpendableBalance = (plannedMintUrls: string[]): number => {
+        const planned = new Set(
+            plannedMintUrls.map((mintUrl) => this.normalizeMintUrl(mintUrl))
+        );
+        const uniqueSelectedMints = Array.from(
+            new Set(
+                this.multiMintSelectedUrls.map((mintUrl) =>
+                    this.normalizeMintUrl(mintUrl)
+                )
+            )
+        );
+
+        return uniqueSelectedMints
+            .filter(
+                (mintUrl) =>
+                    planned.has(mintUrl) || this.mintSupportsMpp(mintUrl)
+            )
+            .reduce(
+                (sum, mintUrl) => sum + Number(this.mintBalances[mintUrl] || 0),
+                0
+            );
     };
 
     // Builds the user-facing "not enough funds" message, augmenting it
@@ -4362,6 +4391,12 @@ export default class CashuStore {
                             sum + (Number(meltQuote.fee_reserve) || 0),
                         0
                     );
+                    // The planner stops once the invoice is covered, so the
+                    // plan can leave out mints that would pay the donation
+                    mintBalanceChecked = this.multiMintSpendableBalance(
+                        preparedQuotes.map(({ mintUrl }) => mintUrl)
+                    );
+                    amountChecked = paymentAmt;
                 } else {
                     this.meltQuotes = [];
                     totalFeeEstimate = 0;

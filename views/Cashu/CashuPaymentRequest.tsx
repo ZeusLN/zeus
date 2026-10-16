@@ -419,7 +419,7 @@ export default class CashuPaymentRequest extends React.Component<
         // value the sending views are handed, so what is checked here and
         // what is sent are the same number.
         const donationToCover = this.resolveDonationToSend();
-        // payReqMintBalance is 0 when the single-mint check did not run, and
+        // payReqMintBalance is 0 when getPayReq did not quote the invoice, and
         // getPayReqError already covers the invoice falling short on its own.
         const donationLeavesTooLittle =
             !getPayReqError &&
