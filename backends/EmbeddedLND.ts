@@ -64,7 +64,8 @@ const {
     newAddress,
     newChangeAddress,
     getTransactions,
-    sendCoins
+    sendCoins,
+    estimateFee
 } = lndMobile.onchain;
 
 const {
@@ -106,6 +107,12 @@ export default class EmbeddedLND extends LND {
             data.spend_unconfirmed,
             data.send_all,
             data.outpoints
+        );
+    estimateOnchainFee = async (data: any) =>
+        await estimateFee(
+            data.addr_to_amount,
+            data.target_conf,
+            data.spend_unconfirmed
         );
     sendCustomMessage = async (data: any) =>
         await sendCustomMessage(data.peer, data.type, data.data);
@@ -616,6 +623,7 @@ export default class EmbeddedLND extends LND {
     supportsLnurlAuth = () => true;
     supportsOnchainBalance = () => true;
     supportsOnchainSends = () => true;
+    supportsOnchainFeeEstimation = () => true;
     supportsOnchainReceiving = () => true;
     supportsUnconfirmedTransactionOrigin = () => true;
     supportsLightningSends = () => true;
