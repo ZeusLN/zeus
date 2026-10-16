@@ -7,6 +7,12 @@ jest.mock('socket.io-client', () => ({ io: jest.fn() }));
 jest.mock('./CashuStore', () => ({}));
 jest.mock('./NodeInfoStore', () => ({}));
 jest.mock('./SettingsStore', () => ({}));
+jest.mock('./ChannelsStore', () => ({}));
+jest.mock('./LSPStore', () => ({}));
+jest.mock('../utils/TorUtils', () => ({
+    doTorRequestRaw: jest.fn(),
+    RequestMethod: { GET: 'GET', POST: 'POST', DELETE: 'DELETE' }
+}));
 jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
     default: { signMessage: jest.fn() }
@@ -72,7 +78,9 @@ const newStore = () =>
     new LightningAddressStore(
         cashuStore as any,
         { nodeInfo: { identity_pubkey: NODE_PUBKEY } } as any,
-        settingsStore as any
+        settingsStore as any,
+        { channels: [] } as any,
+        {} as any
     );
 
 const flushPromises = () => new Promise((resolve) => setImmediate(resolve));
