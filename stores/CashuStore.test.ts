@@ -280,6 +280,154 @@ describe('CashuStore checkAndSweepMints', () => {
     });
 });
 
+describe('CashuStore melting into our own invoice', () => {
+    const mintUrl = 'https://mint.example.com';
+    const preimage = '11'.repeat(32);
+    // sha256(preimage)
+    const paymentHash =
+        '02d449a31fbb267c8f352e9968a79e3e5fc95c1bbeaa502fd6454ebde5a4bedc';
+    const token = { mint: mintUrl, getAmount: 1000, proofs: [] } as any;
+
+    const storeWith = (nodeSaysPaid: boolean) => {
+        const isInvoicePaid = jest.fn().mockResolvedValue(nodeSaysPaid);
+        const store = new CashuStore(
+            {} as any,
+            {
+                createInvoice: jest
+                    .fn()
+                    .mockResolvedValue({ paymentRequest: 'lnbc1invoice' }),
+                isInvoicePaid
+            } as any,
+            {} as any,
+            {} as any
+        );
+        store.cdkInitialized = true;
+        jest.spyOn(store, 'isOffline', 'get').mockReturnValue(false);
+        jest.spyOn(store, 'receiveTokenCDK').mockResolvedValue(
+            undefined as any
+        );
+        jest.spyOn(store, 'syncCDKBalances').mockResolvedValue(
+            undefined as any
+        );
+        jest.spyOn(store, 'createMeltQuoteCDK').mockResolvedValue({
+            fee_reserve: 0
+        } as any);
+        return { store, isInvoicePaid };
+    };
+
+    const claimWithMeltPreimage = async (
+        meltPreimage: string | undefined,
+        nodeSaysPaid: boolean
+    ) => {
+        const { store, isInvoicePaid } = storeWith(nodeSaysPaid);
+        jest.spyOn(store, 'meltCDK').mockResolvedValue({
+            state: 'Paid',
+            amount: 1000,
+            fee_paid: 0,
+            preimage: meltPreimage
+        } as any);
+        const result = await store.claimToken('cashuB...', token, true);
+        return { store, result, isInvoicePaid };
+    };
+
+    beforeEach(() => {
+        jest.spyOn(Bolt11Utils, 'decode').mockReturnValue({
+            payment_hash: paymentHash
+        } as any);
+        (CashuDevKit.isValidToken as jest.Mock).mockResolvedValue(true);
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('reports a self-custody claim as received when the preimage matches the invoice', async () => {
+        const { result, isInvoicePaid } = await claimWithMeltPreimage(
+            preimage,
+            false
+        );
+
+        expect(result).toEqual({ success: true, errorMessage: '' });
+        expect(isInvoicePaid).not.toHaveBeenCalled();
+    });
+
+    it('fails a self-custody claim when the preimage does not match and the node has no payment', async () => {
+        const { store, result, isInvoicePaid } = await claimWithMeltPreimage(
+            '00'.repeat(32),
+            false
+        );
+
+        expect(result).toEqual({
+            success: false,
+            errorMessage: 'stores.CashuStore.invoiceNotPaid'
+        });
+        expect(isInvoicePaid).toHaveBeenCalledWith(paymentHash);
+        expect(store.loading).toBe(false);
+    });
+
+    it('fails a self-custody claim when the mint returns no preimage and the node has no payment', async () => {
+        const { result } = await claimWithMeltPreimage(undefined, false);
+
+        expect(result.success).toBe(false);
+        expect(result.errorMessage).toBe('stores.CashuStore.invoiceNotPaid');
+    });
+
+    it('asks the node when the mint returns no preimage', async () => {
+        const { result, isInvoicePaid } = await claimWithMeltPreimage(
+            undefined,
+            true
+        );
+
+        expect(result).toEqual({ success: true, errorMessage: '' });
+        expect(isInvoicePaid).toHaveBeenCalledWith(paymentHash);
+    });
+
+    it('ignores a preimage that is not 32 bytes of hex', async () => {
+        const { result } = await claimWithMeltPreimage('not-a-preimage', false);
+
+        expect(result.success).toBe(false);
+    });
+
+    const sweepWithMeltPreimage = async (
+        meltPreimage: string | undefined,
+        nodeSaysPaid: boolean
+    ) => {
+        const { store } = storeWith(nodeSaysPaid);
+        (CashuDevKit.getMintBalance as jest.Mock).mockResolvedValue(1000);
+        (CashuDevKit.createMeltQuote as jest.Mock).mockResolvedValue({
+            id: 'quote-1',
+            fee_reserve: 10
+        });
+        (CashuDevKit.melt as jest.Mock).mockResolvedValue({
+            state: 'Paid',
+            amount: 990,
+            fee_paid: 0,
+            preimage: meltPreimage
+        });
+        const swept = await store.sweepMint(mintUrl);
+        return { store, swept };
+    };
+
+    it('reports a sweep as done when the preimage matches the invoice', async () => {
+        const { store, swept } = await sweepWithMeltPreimage(preimage, false);
+
+        expect(swept).toBe(true);
+        expect(store.error).toBeFalsy();
+    });
+
+    it('fails a sweep when the preimage does not match and the node has no payment', async () => {
+        const { store, swept } = await sweepWithMeltPreimage(
+            '00'.repeat(32),
+            false
+        );
+
+        expect(swept).toBe(false);
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toContain('stores.CashuStore.invoiceNotPaid');
+    });
+});
+
 describe('CashuStore NDK instance', () => {
     const MockNDK = NDK as unknown as jest.Mock;
     let connect: jest.Mock;
@@ -1010,6 +1158,8 @@ describe('CashuStore meltCDK and sweepMint melt state', () => {
         store.mintUrls = [mintUrl];
         store.ensureMintAdded = jest.fn().mockResolvedValue(undefined);
         store.syncCDKBalances = jest.fn().mockResolvedValue(undefined);
+        // payment proof has its own tests above
+        store.isOwnInvoicePaid = jest.fn().mockResolvedValue(true);
         return store;
     };
 
@@ -1137,6 +1287,8 @@ describe('CashuStore self-custody claim', () => {
             expiry: 9999999999
         });
         store.syncCDKBalances = jest.fn().mockResolvedValue(undefined);
+        // payment proof has its own tests above
+        store.isOwnInvoicePaid = jest.fn().mockResolvedValue(true);
         return store;
     };
 

@@ -28,6 +28,7 @@ import {
     Relay
 } from 'nostr-tools';
 import { schnorr } from '@noble/curves/secp256k1.js';
+import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 
 import NostrUtils from '../utils/NostrUtils';
@@ -1107,6 +1108,31 @@ export default class CashuStore {
         await this.untrackPendingMelt(quote.id);
 
         return result;
+    };
+
+    /**
+     * Whether an invoice created on our own node was paid. A melt result
+     * alone only says the mint reported it paid; the preimage proves it,
+     * since only our node knows it until the invoice is settled.
+     */
+    private isOwnInvoicePaid = async (
+        paymentRequest: string,
+        preimage?: string
+    ): Promise<boolean> => {
+        const paymentHash = Bolt11Utils.decode(paymentRequest).payment_hash;
+        if (!paymentHash) return false;
+
+        if (
+            preimage &&
+            /^[0-9a-fA-F]{64}$/.test(preimage) &&
+            bytesToHex(sha256(hexToBytes(preimage))) ===
+                paymentHash.toLowerCase()
+        ) {
+            return true;
+        }
+
+        // NUT-05 lets mints omit the preimage, so ask the node itself
+        return await this.invoicesStore.isInvoicePaid(paymentHash);
     };
 
     public getMintName = (mintUrl: string): string => {
@@ -5868,8 +5894,12 @@ export default class CashuStore {
                 // a failed claim: the ecash is in the wallet and the proofs
                 // are spent, so reporting failure would send the user looking
                 // for a token they already hold and cannot claim again.
+                let melted: CDKMelted | undefined;
                 try {
-                    await this.meltCDK(mintUrl, invoice.paymentRequest);
+                    melted = await this.meltCDK(
+                        mintUrl,
+                        invoice.paymentRequest
+                    );
                 } catch (e: any) {
                     console.error('CDK claimToken self-custody sweep:', e);
                     await this.syncCDKBalances(true);
@@ -5884,6 +5914,21 @@ export default class CashuStore {
                 }
 
                 await this.syncCDKBalances(true); // Include transactions for activity
+
+                // The melt resolving only means the mint reported it paid
+                const paid = await this.isOwnInvoicePaid(
+                    invoice.paymentRequest,
+                    melted?.preimage
+                );
+                if (!paid) {
+                    this.loading = false;
+                    return {
+                        success: false,
+                        errorMessage: localeString(
+                            'stores.CashuStore.invoiceNotPaid'
+                        )
+                    };
+                }
             } else {
                 // Regular receive via CDK
                 await this.receiveTokenCDK(encodedToken, signingKey, mintUrl);
@@ -6111,6 +6156,16 @@ export default class CashuStore {
             }
 
             await this.untrackPendingMelt(finalMeltQuote.id);
+
+            // 7. Confirm the payment reached our node
+            const paid = await this.isOwnInvoicePaid(
+                finalInvoice.paymentRequest,
+                meltResponse?.preimage
+            );
+            if (!paid)
+                throw new Error(
+                    localeString('stores.CashuStore.invoiceNotPaid')
+                );
 
             if (__DEV__) {
                 console.log(
