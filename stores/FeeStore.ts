@@ -268,9 +268,7 @@ export default class FeeStore {
 
                         this.forwardingEvents.forEach((event: ForwardEvent) => {
                             this.earnedDuringTimeframe =
-                                this.earnedDuringTimeframe.plus(
-                                    Number(event.fee_msat) / 1000
-                                );
+                                this.earnedDuringTimeframe.plus(event.feeSat);
                         });
 
                         this.lastOffsetIndex = data.last_offset_index;
@@ -311,6 +309,7 @@ export default class FeeStore {
                     );
                     runInAction(() => {
                         this.forwardingHistoryError = false;
+                        this.loading = false;
                     });
                     return this.getForwardingHistory(params);
                 }

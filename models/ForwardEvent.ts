@@ -43,8 +43,10 @@ export default class ForwardEvent extends BaseModel {
         return this.amt_out || Number(this.out_msat) / 1000;
     }
 
-    @computed public get feeSat(): string | number {
-        return Number(this.fee_msat) / 1000;
+    @computed public get feeSat(): number {
+        // LND and LNC carry fee_msat and fee (sats); CLN carries fee_msat
+        if (this.fee_msat != null) return Number(this.fee_msat) / 1000;
+        return Number(this.fee) || 0;
     }
 
     @computed public get inChannelId(): string {
