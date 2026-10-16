@@ -12,6 +12,7 @@ import libraryVersions from '../fetch-libraries-versions.json';
 import LdkNodeInjection from '../ldknode/LdkNodeInjection';
 import Base64Utils from '../utils/Base64Utils';
 import { feeLimitSatsToMaxRoutingFeeMsat } from '../utils/AmountUtils';
+import { satPerVbyteToSatPerKwu } from '../utils/FeeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import type {
     Network,
@@ -1221,6 +1222,11 @@ export default class LdkNode {
     sendCoins = async (data: any): Promise<any> => {
         let txid: string;
 
+        // The fee rate the user set in the UI. Anything unusable becomes the
+        // "no rate" sentinel so ldk-node falls back to its own estimation
+        // rather than being handed a nonsense FeeRate.
+        const satPerKwu = satPerVbyteToSatPerKwu(data.sat_per_vbyte);
+
         if (data.utxos?.length > 0) {
             const outpoints = data.utxos.map((s: string) => {
                 const [utxoTxid, vout] = s.split(':');
@@ -1232,7 +1238,8 @@ export default class LdkNode {
                         {
                             address: data.addr,
                             retainReserve: false,
-                            utxos: outpoints
+                            utxos: outpoints,
+                            satPerKwu
                         }
                     );
             } else {
@@ -1241,18 +1248,22 @@ export default class LdkNode {
                         {
                             address: data.addr,
                             amountSats: Number(data.amount),
-                            utxos: outpoints
+                            utxos: outpoints,
+                            satPerKwu
                         }
                     );
             }
         } else if (data.send_all) {
             txid = await LdkNodeInjection.onchain.sendAllToOnchainAddress(
-                data.addr
+                data.addr,
+                false,
+                satPerKwu
             );
         } else {
             txid = await LdkNodeInjection.onchain.sendToOnchainAddress({
                 address: data.addr,
-                amountSats: Number(data.amount)
+                amountSats: Number(data.amount),
+                satPerKwu
             });
         }
 
@@ -2256,8 +2267,11 @@ export default class LdkNode {
     supportsNestedSegWit = () => false;
     supportsTaproot = () => false; // LDK Node's BDK wallet uses BIP-84 descriptors, so it can only hand out P2WPKH addresses
     supportsBumpFee = () => false;
-    // TODO: flip to true when the user's fee rate is applied to on-chain sends (#4354)
-    supportsOnchainSendFeeRate = () => false;
+    supportsOnchainSendFeeRate = () => true;
+    // with no fee rate set, ldk-node estimates one itself
+    supportsOnchainSendAutoFeeRate = () => true;
+    // the bridge carries sat/kwu, so rates below 1 sat/vB are kept
+    supportsOnchainSendSubSatFeeRate = () => true;
     // TODO: flip to true when the user's fee rate is applied to channel opens (#4657)
     supportsChannelOpenFeeRate = () => false;
     // ldk-node's channel open calls take no min confs, and fund max

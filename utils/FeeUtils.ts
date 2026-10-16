@@ -12,6 +12,16 @@ export const MIN_SAT_PER_VBYTE = 1;
 export const MAX_SAT_PER_VBYTE = 2000;
 
 /**
+ * Lowest rate on backends that take rates below 1 sat/vB
+ * (supportsOnchainSendSubSatFeeRate). It is Bitcoin Core's default
+ * minrelaytxfee since v30, so a lower rate would not relay.
+ */
+export const MIN_SUB_SAT_PER_VBYTE = 0.1;
+
+export const minSatPerVbyte = (subSatFeeRate?: boolean): number =>
+    subSatFeeRate ? MIN_SUB_SAT_PER_VBYTE : MIN_SAT_PER_VBYTE;
+
+/**
  * Keys of the mempool `/v1/fees/recommended` response. Every consumer
  * falls back to `fastestFee`, so a response without it is unusable.
  */
@@ -23,13 +33,32 @@ export const RECOMMENDED_FEE_KEYS = [
     'minimumFee'
 ] as const;
 
-export const isPlausibleSatPerVbyte = (value: unknown): boolean => {
+export const isPlausibleSatPerVbyte = (
+    value: unknown,
+    minRate: number = MIN_SAT_PER_VBYTE
+): boolean => {
     const rate = Number(value);
     return (
-        Number.isFinite(rate) &&
-        rate >= MIN_SAT_PER_VBYTE &&
-        rate <= MAX_SAT_PER_VBYTE
+        Number.isFinite(rate) && rate >= minRate && rate <= MAX_SAT_PER_VBYTE
     );
+};
+
+/**
+ * Cleans a typed fee rate. Whole sat/vB backends keep digits only. With
+ * subSatFeeRate a single decimal point is kept, and a comma is read as one.
+ */
+export const sanitizeFeeRateInput = (
+    text: string,
+    subSatFeeRate?: boolean
+): string => {
+    if (!subSatFeeRate) return text.replace(/[^0-9]/g, '').replace(/^0+/, '');
+    const [whole, ...rest] = text
+        .replace(/,/g, '.')
+        .replace(/[^0-9.]/g, '')
+        .split('.');
+    const digits = whole.replace(/^0+(?=\d)/, '');
+    if (rest.length === 0) return digits;
+    return `${digits || '0'}.${rest.join('')}`;
 };
 
 /**
@@ -111,3 +140,38 @@ class FeeUtils {
 
 const feeUtils = new FeeUtils();
 export default feeUtils;
+
+/**
+ * Sentinel meaning "no fee rate supplied - let the node pick its own".
+ * Matches the -1 convention used for optional numerics in LdkNodeInjection.
+ */
+export const NO_FEE_RATE = -1;
+
+/** 1 sat/vB is 250 sat per 1000 weight units (4 WU per vB). */
+const SAT_PER_KWU_PER_SAT_PER_VBYTE = 250;
+
+/**
+ * Converts a user-supplied on-chain fee rate (sat/vB) to the whole sat/kwu
+ * the ldk-node bridge takes.
+ *
+ * ldk-node only accepts whole units. Passing sat/kwu keeps fractional sat/vB
+ * rates (0.1 sat/vB is 25 sat/kwu) that a whole sat/vB would drop. A missing,
+ * zero, negative, or NaN rate, or one that rounds to 0 sat/kwu, yields
+ * NO_FEE_RATE so the node falls back to its own fee estimation.
+ *
+ * Note this deliberately does NOT impose an upper bound: silently lowering a
+ * rate the user explicitly typed would misreport what was broadcast. Bounding
+ * absurd fee rates is a separate concern that needs its own confirmation UX.
+ *
+ * @param satPerVbyte - Fee rate as collected by the UI
+ * @returns The rate in whole sat/kwu, or NO_FEE_RATE if none applies
+ */
+export function satPerVbyteToSatPerKwu(
+    satPerVbyte?: string | number | null
+): number {
+    if (satPerVbyte == null || satPerVbyte === '') return NO_FEE_RATE;
+    const rate = Number(satPerVbyte);
+    if (!Number.isFinite(rate)) return NO_FEE_RATE;
+    const satPerKwu = Math.round(rate * SAT_PER_KWU_PER_SAT_PER_VBYTE);
+    return satPerKwu >= 1 ? satPerKwu : NO_FEE_RATE;
+}
