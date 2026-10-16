@@ -810,6 +810,18 @@ export default class Receive extends React.Component<
                 try {
                     const [route, props] = response;
                     const { lnurlParams } = props;
+                    // NFC reads here are for LNURL-withdraw (e.g. a Bolt
+                    // Card) only; ignore anything else. Check the route as
+                    // well as the tag: for a Lightning address the tag comes
+                    // from the server, and the route is LnurlPay whatever
+                    // it says. With ecash enabled, a withdraw request opens
+                    // ChoosePaymentMethod instead of Receive.
+                    if (
+                        !['Receive', 'ChoosePaymentMethod'].includes(route) ||
+                        lnurlParams?.tag !== 'withdrawRequest'
+                    ) {
+                        return;
+                    }
                     const { memo } = lnurlParams.defaultDescription;
 
                     // if an amount was entered on the keypad screen before scanning
