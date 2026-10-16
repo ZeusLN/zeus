@@ -735,6 +735,37 @@ export default class NostrWalletConnectStore {
     };
 
     /**
+     * Stops the service and deletes every connection of the current wallet,
+     * including its client key. Called when the wallet's config is deleted,
+     * before the config is removed: connections are matched by the wallet's
+     * node pubkey and implementation, which are only known while it is the
+     * current wallet.
+     */
+    public deleteCurrentWalletConnections = async (): Promise<void> => {
+        await this.reset(true);
+        await this.loadConnections();
+        for (const { id } of [...this.connections]) {
+            await this.deleteConnection(id);
+        }
+    };
+
+    /**
+     * Stops the service and removes all stored NWC connections, client keys
+     * and service keys. Called when the last wallet config is deleted, so
+     * connections of wallets that could not be matched above (for example
+     * a wallet deleted while another one was active) do not remain.
+     */
+    public deleteAllConnectionData = async (): Promise<void> => {
+        await this.reset(true);
+        runInAction(() => {
+            this.connections = [];
+        });
+        await Storage.removeItem(NWC_CONNECTIONS_KEY);
+        await Storage.removeItem(NWC_CLIENT_KEYS);
+        await Storage.removeItem(NWC_SERVICE_KEYS);
+    };
+
+    /**
      * Update an existing NWC connection with new parameters.
      * @param connectionId The unique identifier of the connection to update.
      * @param updates Partial object containing the fields to update.
