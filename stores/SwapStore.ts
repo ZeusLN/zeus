@@ -19,12 +19,17 @@ import {
     isValidRescueKey,
     verifyReverseSwapInvoice,
     verifyReverseSwapResponse,
+    verifySubmarineSwapResponse,
     checkLockupOutput,
     MIN_REVERSE_SWAP_CLAIM_BLOCKS,
+    MAX_SUBMARINE_SWAP_TIMEOUT_BLOCKS,
+    bigCeil,
     calculateReceiveAmount,
+    calculateSendAmount,
     deriveSwapPreimage,
     rescuedLockupFloor
 } from '../utils/SwapUtils';
+import AddressUtils from '../utils/AddressUtils';
 import BackendUtils from '../utils/BackendUtils';
 import Bolt11Utils from '../utils/Bolt11Utils';
 
@@ -456,6 +461,8 @@ export default class SwapStore {
         const { implementation } = this.settingsStore;
         const { nodeInfo } = this.nodeInfoStore;
         const nodePubkey = nodeInfo.nodeId;
+        // the fees the Swaps screen showed when the user started the swap
+        const fees = this.subInfo?.fees;
         try {
             console.log('Creating submarine swap using rescue key...');
 
@@ -492,6 +499,78 @@ export default class SwapStore {
                 console.error('Error in API response:', responseData.error);
                 return;
             }
+
+            // Verify the response before saving it or showing an address to
+            // fund: the swap tree must pay the host only against our
+            // invoice's payment hash and refund our key, the address must be
+            // that tree's taproot output, and the host must not ask for more
+            // than the amount the Swaps screen showed, as for a reverse swap.
+            const decodedInvoice = Bolt11Utils.decode(invoice);
+            // the provider rounds msat to the nearest sat, so round up here
+            const invoiceSats = bigCeil(
+                new BigNumber(decodedInvoice.num_msat).div(1000)
+            );
+            const responseCheck = verifySubmarineSwapResponse({
+                swapTree: responseData.swapTree,
+                address: responseData.address,
+                serverPubKey: responseData.claimPublicKey,
+                timeoutBlockHeight: responseData.timeoutBlockHeight,
+                expectedAmount: responseData.expectedAmount,
+                ourPubKey: Buffer.from(keys.publicKey),
+                preimageHash: Buffer.from(
+                    decodedInvoice.payment_hash || '',
+                    'hex'
+                ),
+                maxExpectedAmount: calculateSendAmount(
+                    invoiceSats,
+                    fees?.percentage || 0,
+                    fees?.minerFees || 0,
+                    false
+                ).toNumber(),
+                bech32Prefix:
+                    AddressUtils.bitcoinNetworkForNode(nodeInfo).bech32
+            });
+            if (!responseCheck.valid) {
+                runInAction(() => {
+                    this.apiError = localeString(
+                        'views.Swaps.invalidReverseSwapResponse'
+                    );
+                    this.loading = false;
+                });
+                console.error(
+                    'Submarine swap response verification failed:',
+                    responseCheck.reason
+                );
+                return;
+            }
+
+            const timeout = await this.verifySubmarineSwapTimeout(
+                responseData.timeoutBlockHeight,
+                UrlUtils.getMempoolApiUrl(nodeInfo)
+            );
+            if (timeout.status !== 'ok') {
+                runInAction(() => {
+                    this.apiError = localeString(
+                        timeout.status === 'unavailable'
+                            ? 'views.SwapDetails.lockupVerificationUnavailable'
+                            : 'views.Swaps.invalidReverseSwapResponse'
+                    );
+                    this.loading = false;
+                });
+                console.error(
+                    'Submarine swap timeout verification failed:',
+                    timeout.reason
+                );
+                return;
+            }
+
+            // The pay button and QR code use the BIP21 URI. Build it from the
+            // verified address and amount instead of using the host's.
+            responseData.bip21 = `bitcoin:${
+                responseData.address
+            }?amount=${new BigNumber(responseData.expectedAmount)
+                .shiftedBy(-8)
+                .toFixed()}`;
 
             // Add the creation date to the response
             const createdAt = new Date().toISOString();
@@ -746,10 +825,12 @@ export default class SwapStore {
 
     // Fetch a fresh tip from the same independent observer used for the
     // lockup. The wallet's cached height may be stale or absent (LndHub/NWC).
-    private verifyReverseSwapDeadline = async (
-        timeoutBlockHeight: number,
+    private fetchTipHeight = async (
         apiUrl: string
-    ): Promise<ReverseLockupCheck> => {
+    ): Promise<
+        | { status: 'ok'; height: number }
+        | { status: 'unavailable'; reason: string }
+    > => {
         try {
             const response = await ReactNativeBlobUtil.fetch(
                 'GET',
@@ -763,13 +844,38 @@ export default class SwapStore {
             if (!Number.isSafeInteger(height) || height <= 0) {
                 return { status: 'unavailable', reason: 'invalid-tip' };
             }
-            if (timeoutBlockHeight - height < MIN_REVERSE_SWAP_CLAIM_BLOCKS) {
-                return { status: 'invalid', reason: 'refund-deadline' };
-            }
-            return { status: 'ok' };
+            return { status: 'ok', height };
         } catch {
             return { status: 'unavailable', reason: 'tip-unavailable' };
         }
+    };
+
+    private verifyReverseSwapDeadline = async (
+        timeoutBlockHeight: number,
+        apiUrl: string
+    ): Promise<ReverseLockupCheck> => {
+        const tip = await this.fetchTipHeight(apiUrl);
+        if (tip.status !== 'ok') return tip;
+        if (timeoutBlockHeight - tip.height < MIN_REVERSE_SWAP_CLAIM_BLOCKS) {
+            return { status: 'invalid', reason: 'refund-deadline' };
+        }
+        return { status: 'ok' };
+    };
+
+    // Until its timeout a submarine swap's coins only come back if the
+    // provider co-signs the refund, so the timeout must be ahead of the tip
+    // and no further than MAX_SUBMARINE_SWAP_TIMEOUT_BLOCKS.
+    private verifySubmarineSwapTimeout = async (
+        timeoutBlockHeight: number,
+        apiUrl: string
+    ): Promise<ReverseLockupCheck> => {
+        const tip = await this.fetchTipHeight(apiUrl);
+        if (tip.status !== 'ok') return tip;
+        const blocksLeft = timeoutBlockHeight - tip.height;
+        if (blocksLeft <= 0 || blocksLeft > MAX_SUBMARINE_SWAP_TIMEOUT_BLOCKS) {
+            return { status: 'invalid', reason: 'refund-timeout' };
+        }
+        return { status: 'ok' };
     };
 
     /**
