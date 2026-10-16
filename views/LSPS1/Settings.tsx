@@ -11,6 +11,7 @@ import Screen from '../../components/Screen';
 import TextInput from '../../components/TextInput';
 
 import BackendUtils from '../../utils/BackendUtils';
+import { IN_APP_RESTART } from '../../utils/InAppRestartUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
@@ -118,7 +119,7 @@ export default class LSPS1Settings extends React.Component<
                 },
                 {
                     text: localeString('views.LSPS1.restartNow'),
-                    onPress: () => RNRestart.restart()
+                    onPress: () => RNRestart.restart(IN_APP_RESTART)
                 }
             ]
         );

@@ -19,6 +19,16 @@ jest.mock('./handleAnything', () => ({
     default: jest.fn(() => Promise.resolve(mockHandleAnythingResult))
 }));
 
+let mockRestartReason: string | null = null;
+jest.mock('react-native-restart', () => ({
+    __esModule: true,
+    default: { getReason: () => Promise.resolve(mockRestartReason) }
+}));
+
+import { Linking, Platform } from 'react-native';
+
+import handleAnything from './handleAnything';
+import { IN_APP_RESTART } from './InAppRestartUtils';
 import LinkingUtils from './LinkingUtils';
 
 const flushPromises = () => new Promise(setImmediate);
@@ -234,7 +244,7 @@ describe('LinkingUtils share intents', () => {
 });
 
 describe('LinkingUtils.handleInitialUrl', () => {
-    const { Linking, NativeModules, Platform } = require('react-native');
+    const { NativeModules } = require('react-native');
     const { processSharedQRImageFast } = require('./ShareIntentProcessor');
     const originalOS = Platform.OS;
     const payload = {
@@ -245,6 +255,8 @@ describe('LinkingUtils.handleInitialUrl', () => {
 
     const mockInitialUrl = (url: string | null) =>
         jest.spyOn(Linking, 'getInitialURL').mockResolvedValue(url);
+    const handledUrls = () =>
+        (handleAnything as jest.Mock).mock.calls.map(([url]) => url);
 
     beforeEach(() => {
         jest.clearAllMocks();
@@ -257,6 +269,7 @@ describe('LinkingUtils.handleInitialUrl', () => {
             clearSharedIntent: jest.fn().mockResolvedValue(true)
         };
         processSharedQRImageFast.mockResolvedValue(null);
+        mockRestartReason = null;
     });
 
     afterEach(() => {
@@ -414,5 +427,49 @@ describe('LinkingUtils.handleInitialUrl', () => {
         expect(processSharedQRImageFast).toHaveBeenCalled();
         expect(navigation.navigate).not.toHaveBeenCalled();
         expect(navigation.popTo).not.toHaveBeenCalled();
+    });
+
+    // Linking.getInitialURL() keeps returning the launch URL; on iOS also
+    // across an in-app restart, which reloads JS in the same process
+
+    it('handles the launch URL when iOS launched the app', async () => {
+        Platform.OS = 'ios';
+        const navigation = makeNavigation(['Wallet']);
+        mockInitialUrl('lndconnect://first.example:8080?macaroon=AgED');
+
+        await LinkingUtils.handleInitialUrl(navigation as any);
+        await flushPromises();
+
+        expect(handledUrls()).toEqual([
+            'lndconnect://first.example:8080?macaroon=AgED'
+        ]);
+    });
+
+    it('ignores the launch URL after an in-app restart on iOS', async () => {
+        Platform.OS = 'ios';
+        const navigation = makeNavigation(['Wallet']);
+        mockInitialUrl('lndconnect://second.example:8080?macaroon=AgED');
+        mockRestartReason = IN_APP_RESTART;
+
+        await LinkingUtils.handleInitialUrl(navigation as any);
+        await flushPromises();
+
+        expect(handledUrls()).toEqual([]);
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('handles the launch URL on Android regardless of the restart reason', async () => {
+        // Android restarts the whole process, so the launch intent is new
+        Platform.OS = 'android';
+        const navigation = makeNavigation(['Wallet']);
+        mockInitialUrl('lndconnect://third.example:8080?macaroon=AgED');
+        mockRestartReason = IN_APP_RESTART;
+
+        await LinkingUtils.handleInitialUrl(navigation as any);
+        await flushPromises();
+
+        expect(handledUrls()).toEqual([
+            'lndconnect://third.example:8080?macaroon=AgED'
+        ]);
     });
 });

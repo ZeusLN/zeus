@@ -4,6 +4,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { localeString } from './LocaleUtils';
 import handleAnything from './handleAnything';
 import { processSharedQRImageFast } from './ShareIntentProcessor';
+import { startedByInAppRestart } from './InAppRestartUtils';
 import { settingsStore } from '../stores/Stores';
 
 // Payment status screens that must never be popped out from under an
@@ -62,7 +63,13 @@ class LinkingUtils {
             }
 
             if (url) {
-                if (url !== this.lastHandledUrl) {
+                // After an in-app restart on iOS this is still the URL that
+                // launched the process, already handled by the previous JS
+                // runtime and possibly from before a data wipe
+                if (
+                    url !== this.lastHandledUrl &&
+                    !(await startedByInAppRestart())
+                ) {
                     this.handleDeepLink(url, navigation);
                 }
                 return;
