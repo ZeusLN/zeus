@@ -871,9 +871,15 @@ export default class WalletConfiguration extends React.Component<
         try {
             // Delete the active wallet's NWC connections first, while the
             // wallet they are matched by is still the current one, so they
-            // are no longer served now or when the same node is added again
+            // are no longer served now or when the same node is added again.
+            // Best effort: a storage failure here must not block the
+            // deletion, and the last-wallet sweep below removes leftovers.
             if (active) {
-                await NostrWalletConnectStore.deleteCurrentWalletConnections();
+                try {
+                    await NostrWalletConnectStore.deleteCurrentWalletConnections();
+                } catch (error) {
+                    console.error('Error deleting NWC connections:', error);
+                }
             }
 
             // If deleting active embedded LND wallet, stop it first
@@ -980,8 +986,14 @@ export default class WalletConfiguration extends React.Component<
                 // longer recoverable, and WAL/SHM sidecars).
                 await clearCDKDatabase();
                 // Also drop NWC connections of wallets deleted while
-                // inactive, which could not be matched to their wallet
-                await NostrWalletConnectStore.deleteAllConnectionData();
+                // inactive, which could not be matched to their wallet.
+                // Best effort: the config is already gone, so a failure
+                // here must not keep the user on this screen.
+                try {
+                    await NostrWalletConnectStore.deleteAllConnectionData();
+                } catch (error) {
+                    console.error('Error deleting NWC connection data:', error);
+                }
                 // reset, not navigate/replace: this screen is normally
                 // reached several pushes deep (Menu/Wallets ->
                 // WalletConfiguration), and once its last wallet is

@@ -239,7 +239,11 @@ describe('WalletConfiguration', () => {
         const OTHER_NODE = { ...LND_NODE, host: 'https://other.example.com' };
 
         // Opens the saved wallet at index 0 and confirms "Delete Wallet"
-        const deleteWallet = async (nodes: any[], active: boolean) => {
+        const deleteWallet = async (
+            nodes: any[],
+            active: boolean,
+            nwcOverrides: Record<string, jest.Mock> = {}
+        ) => {
             const calls: string[] = [];
             const settings = { nodes, selectedNode: 0, privacy: {} };
             const SettingsStore = {
@@ -261,7 +265,8 @@ describe('WalletConfiguration', () => {
                 }),
                 deleteAllConnectionData: jest.fn(async () => {
                     calls.push('deleteAllConnectionData');
-                })
+                }),
+                ...nwcOverrides
             };
             const navigation = {
                 goBack: jest.fn(),
@@ -322,6 +327,43 @@ describe('WalletConfiguration', () => {
             const { calls } = await deleteWallet([LND_NODE, OTHER_NODE], false);
 
             expect(calls).toEqual(['updateSettings']);
+        });
+
+        it('still deletes the wallet when its NWC connections cannot be deleted', async () => {
+            const consoleError = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
+            const { calls, navigation } = await deleteWallet(
+                [LND_NODE, OTHER_NODE],
+                true,
+                {
+                    deleteCurrentWalletConnections: jest.fn(() =>
+                        Promise.reject(new Error('storage failure'))
+                    )
+                }
+            );
+
+            expect(calls).toEqual(['updateSettings']);
+            expect(navigation.popTo).toHaveBeenCalledWith('Wallets');
+            consoleError.mockRestore();
+        });
+
+        it('still leaves the screen when NWC data cannot be removed with the last wallet', async () => {
+            const consoleError = jest
+                .spyOn(console, 'error')
+                .mockImplementation(() => {});
+            const { calls, navigation } = await deleteWallet([LND_NODE], true, {
+                deleteAllConnectionData: jest.fn(() =>
+                    Promise.reject(new Error('storage failure'))
+                )
+            });
+
+            expect(calls).toEqual([
+                'deleteCurrentWalletConnections',
+                'updateSettings'
+            ]);
+            expect(navigation.reset).toHaveBeenCalled();
+            consoleError.mockRestore();
         });
     });
 
