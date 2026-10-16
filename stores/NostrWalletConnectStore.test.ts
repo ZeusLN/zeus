@@ -2524,9 +2524,13 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
         expect(response.result?.preimage).toBe(hex64('d'));
         expect(connection.activity[0].paymentHash).toBe(paymentHash);
         expect(connection.totalSpendSats).toBe(5010);
-        expect(transactionsStore.sendPaymentSilently).toHaveBeenCalledWith(
-            expect.objectContaining({ payment_request: invoice })
-        );
+        expect(transactionsStore.sendPaymentSilently).toHaveBeenCalledWith({
+            payment_request: invoice,
+            amount: undefined,
+            max_parts: '1',
+            fee_limit_sat: 1000,
+            timeout_seconds: 120
+        });
         // the user's payment screen is left alone
         expect(transactionsStore.reset).not.toHaveBeenCalled();
         expect(transactionsStore.sendPayment).not.toHaveBeenCalled();
@@ -2545,10 +2549,12 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
                 maxAmountSats: 100000
             });
 
-            const pendingResponse = (store as any).handleLightningPayInvoice(
-                connection,
-                { invoice }
-            );
+            let settled = false;
+            const pendingResponse = (store as any)
+                .handleLightningPayInvoice(connection, { invoice })
+                .finally(() => {
+                    settled = true;
+                });
             await jest.advanceTimersByTimeAsync(10_000);
 
             // a payment the user made from the wallet UI settles meanwhile
@@ -2561,7 +2567,11 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
                 isIncomplete: false
             });
 
-            await jest.advanceTimersByTimeAsync(125_000);
+            // the request waits out the 125 s ceiling
+            await jest.advanceTimersByTimeAsync(114_999);
+            expect(settled).toBe(false);
+            await jest.advanceTimersByTimeAsync(1);
+            expect(settled).toBe(true);
             const response = await pendingResponse;
 
             expect(response.error).toBeUndefined();
@@ -2594,7 +2604,9 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
 
         expect(response.result).toBeUndefined();
         expect(response.error?.code).toBe(Nip47ErrorCode.FAILED_TO_PAY_INVOICE);
+        expect(response.error?.message).toBe('no route');
         expect(connection.activity[0].status).toBe('failed');
+        expect(connection.activity[0].error).toBe('no route');
         expect(connection.totalSpendSats).toBe(0);
     });
 });
