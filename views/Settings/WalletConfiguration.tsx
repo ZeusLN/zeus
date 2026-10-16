@@ -106,7 +106,7 @@ interface WalletConfigurationProps {
             node: Node;
             index: any;
             active: boolean;
-            tor: boolean;
+            enableTor: boolean;
             saved: boolean;
             newEntry: boolean;
             photo: string;
@@ -434,7 +434,7 @@ export default class WalletConfiguration extends React.Component<
         const node = route.params.node ?? this.state.node;
         const index = route.params.index ?? this.state.index;
         const active = route.params.active ?? this.state.active;
-        const tor = route.params.tor ?? this.state.enableTor;
+        const tor = route.params.enableTor ?? this.state.enableTor;
         const saved = route.params.saved ?? this.state.saved;
         const newEntry = route.params.newEntry ?? this.state.newEntry;
         const newPhoto = route.params.photo ?? this.state.photo;
