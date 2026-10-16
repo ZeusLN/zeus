@@ -151,7 +151,16 @@ class MigrationsUtils {
             if (existingData) return existingData;
 
             // 2. Read from old keychain (local first, then cloud)
-            const credentials = await this.readFromOldKeychain(key);
+            let credentials;
+            try {
+                credentials = await this.readFromOldKeychain(key);
+            } catch (readError: any) {
+                const error: any = new Error(
+                    `Read failed for ${key}: ${readError?.message ?? readError}`
+                );
+                error.isKeychainReadError = true;
+                throw error;
+            }
             if (!credentials) return null;
 
             console.log(`[Migration] Moving ${key} to Local Storage...`);
@@ -200,19 +209,43 @@ class MigrationsUtils {
     /**
      * Reads from old keychain (without zeus: prefix).
      * Tries local keychain first, then cloud keychain as fallback.
+     *
+     * Resolves to a falsy value only when the key does not exist. A read
+     * error (e.g. errSecInteractionNotAllowed while the device is locked)
+     * throws, so the caller can leave its flag unset and retry on the next
+     * launch instead of treating the key as absent. A failed local read
+     * does not fall back to the cloud copy, which may be older.
      */
     private async readFromOldKeychain(key: string) {
-        try {
-            // Try local keychain first
-            const localCreds = await Keychain.getInternetCredentials(key);
-            if (localCreds) return localCreds;
+        // Try local keychain first
+        const localCreds = await Keychain.getInternetCredentials(key);
+        if (localCreds) return localCreds;
 
-            // Fallback to cloud keychain
-            return await Keychain.getInternetCredentials(key, {
-                cloudSync: true
-            });
-        } catch (e) {
-            console.warn(`[Migration] Read error for ${key}`, e);
+        // Fallback to cloud keychain
+        return await Keychain.getInternetCredentials(key, {
+            cloudSync: true
+        });
+    }
+
+    /**
+     * migrateKey for the keychain cloud sync passes: a read failure is
+     * recorded in `failed` instead of thrown, so one unreadable key does not
+     * stop the remaining keys from copying. Callers set their flag only when
+     * nothing failed; on the retry, keys that already landed are skipped by
+     * migrateKey's copy-if-missing check. Write and verify failures still
+     * abort the pass: each copy waits 500 ms on iOS and the migration runs
+     * on every settings load, so carrying on after a storage that keeps
+     * rejecting writes would add that wait for every remaining key.
+     */
+    private async migrateKeyOrRecord(
+        key: string,
+        failed: string[]
+    ): Promise<string | null> {
+        try {
+            return await this.migrateKey(key);
+        } catch (e: any) {
+            if (!e?.isKeychainReadError) throw e;
+            failed.push(key);
             return null;
         }
     }
@@ -251,7 +284,7 @@ class MigrationsUtils {
         // }
     }
 
-    private async migrateCashuForNode(lndDir: string) {
+    private async migrateCashuForNode(lndDir: string, failed: string[]) {
         console.log(`Migrating Cashu data for node: ${lndDir}`);
 
         const cashuKeys = [
@@ -268,31 +301,38 @@ class MigrationsUtils {
         ];
 
         for (const key of cashuKeys) {
-            await this.migrateKey(key);
+            await this.migrateKeyOrRecord(key, failed);
         }
 
-        const mintUrlsJson = await this.migrateKey(`${lndDir}-cashu-mintUrls`);
+        const mintUrlsJson = await this.migrateKeyOrRecord(
+            `${lndDir}-cashu-mintUrls`,
+            failed
+        );
 
-        if (mintUrlsJson) {
-            try {
-                const mintUrls = JSON.parse(mintUrlsJson);
-                if (Array.isArray(mintUrls)) {
-                    for (const mintUrl of mintUrls) {
-                        const walletId = `${lndDir}==${mintUrl}`;
-                        const walletKeys = [
-                            `${walletId}-mintInfo`,
-                            `${walletId}-counter`,
-                            `${walletId}-proofs`,
-                            `${walletId}-balance`,
-                            `${walletId}-pubkey`
-                        ];
-                        for (const wKey of walletKeys) {
-                            await this.migrateKey(wKey);
-                        }
-                    }
-                }
-            } catch (e) {
-                console.warn(`Failed to parse mintUrls for ${lndDir}`, e);
+        if (!mintUrlsJson) return;
+
+        // Only the parse is guarded: a per-mint write failure must reach
+        // keychainCloudSyncMigration so the Cashu flag stays unset
+        let mintUrls;
+        try {
+            mintUrls = JSON.parse(mintUrlsJson);
+        } catch (e) {
+            console.warn(`Failed to parse mintUrls for ${lndDir}`, e);
+            return;
+        }
+        if (!Array.isArray(mintUrls)) return;
+
+        for (const mintUrl of mintUrls) {
+            const walletId = `${lndDir}==${mintUrl}`;
+            const walletKeys = [
+                `${walletId}-mintInfo`,
+                `${walletId}-counter`,
+                `${walletId}-proofs`,
+                `${walletId}-balance`,
+                `${walletId}-pubkey`
+            ];
+            for (const wKey of walletKeys) {
+                await this.migrateKeyOrRecord(wKey, failed);
             }
         }
     }
@@ -1576,7 +1616,11 @@ class MigrationsUtils {
             if (hasMigrated !== 'true') {
                 console.log('Attempting keychain cloud sync migration...');
 
-                const settingsData = await this.migrateKey(STORAGE_KEY);
+                const failed: string[] = [];
+                const settingsData = await this.migrateKeyOrRecord(
+                    STORAGE_KEY,
+                    failed
+                );
 
                 if (settingsData) {
                     settingsStore.isMigrating = true;
@@ -1605,15 +1649,18 @@ class MigrationsUtils {
                 ];
 
                 for (const key of migrationKeys) {
-                    await this.migrateKey(key);
+                    await this.migrateKeyOrRecord(key, failed);
                 }
 
-                const notesListJson = await this.migrateKey(NOTES_KEY);
+                const notesListJson = await this.migrateKeyOrRecord(
+                    NOTES_KEY,
+                    failed
+                );
                 if (notesListJson) {
                     const noteKeys = JSON.parse(notesListJson);
                     if (Array.isArray(noteKeys)) {
                         for (const noteKey of noteKeys) {
-                            await this.migrateKey(noteKey);
+                            await this.migrateKeyOrRecord(noteKey, failed);
                         }
                     }
                 }
@@ -1632,11 +1679,21 @@ class MigrationsUtils {
                                 )}`;
                                 const hostKey = `${baseKey}:host`;
 
-                                await this.migrateKey(baseKey);
-                                await this.migrateKey(hostKey);
+                                await this.migrateKeyOrRecord(baseKey, failed);
+                                await this.migrateKeyOrRecord(hostKey, failed);
                             }
                         }
                     }
+                }
+
+                if (failed.length > 0) {
+                    // Flag stays unset so the migration retries on the next
+                    // launch. The Cashu pass waits too: it reads the node
+                    // list from the migrated settings blob.
+                    console.error(
+                        `Keychain cloud sync migration incomplete (${failed.length} keys failed)`
+                    );
+                    return;
                 }
 
                 await this.writeFlag(KEYCHAIN_MIGRATION_KEY);
@@ -1648,33 +1705,35 @@ class MigrationsUtils {
             const cashuMigration = await this.readFlag(CASHU_MIGRATION_KEY);
 
             if (cashuMigration !== 'true') {
-                // Only run the Cashu keychain migration if the main keychain
-                // migration actually ran this time (hasMigrated was not 'true'
-                // when we entered). If the main migration was already done from
-                // a prior launch, there can't be unmigrated Cashu data in the
-                // old keychain — skip the expensive keychain reads.
-                if (hasMigrated !== 'true') {
-                    console.log('Running Cashu Multi-Node Migration...');
+                // Runs whenever its own flag is unset, including when the
+                // main flag was set on an earlier launch: a failed or
+                // interrupted Cashu pass leaves that state behind. Installs
+                // with both flags set never reach this block.
+                console.log('Running Cashu Multi-Node Migration...');
 
-                    const settingsJson = await Storage.getItem(STORAGE_KEY);
-                    if (settingsJson) {
-                        settingsStore.isMigrating = true;
-                        const settings = JSON.parse(settingsJson);
-                        if (settings.nodes && Array.isArray(settings.nodes)) {
-                            for (const node of settings.nodes) {
-                                if (node.implementation === 'embedded-lnd') {
-                                    const lndDir = node.lndDir || 'lnd';
-                                    await this.migrateCashuForNode(lndDir);
-                                }
+                const failed: string[] = [];
+                const settingsJson = await Storage.getItem(STORAGE_KEY);
+                if (settingsJson) {
+                    settingsStore.isMigrating = true;
+                    const settings = JSON.parse(settingsJson);
+                    if (settings.nodes && Array.isArray(settings.nodes)) {
+                        for (const node of settings.nodes) {
+                            if (node.implementation === 'embedded-lnd') {
+                                const lndDir = node.lndDir || 'lnd';
+                                await this.migrateCashuForNode(lndDir, failed);
                             }
                         }
                     }
-                    console.log('Cashu Migration Completed.');
-                } else {
-                    console.log(
-                        'Skipping Cashu migration - main keychain migration was already done.'
-                    );
                 }
+
+                if (failed.length > 0) {
+                    console.error(
+                        `Cashu keychain migration incomplete (${failed.length} keys failed)`
+                    );
+                    return;
+                }
+
+                console.log('Cashu Migration Completed.');
                 await this.writeFlag(CASHU_MIGRATION_KEY);
             }
         } catch (error) {

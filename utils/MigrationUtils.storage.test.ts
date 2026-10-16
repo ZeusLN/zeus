@@ -565,7 +565,7 @@ describe('keychainCloudSyncMigration', () => {
         expect(flagsSet()).toEqual({ main: undefined, cashu: undefined });
     });
 
-    it('keeps the proofs source when a per-mint write fails', async () => {
+    it('leaves the Cashu flag unset when a per-mint write fails, then finishes on the next run', async () => {
         seedLegacy();
         failWritesTo(`lnd2==${MINT_B}-proofs`, 'throw');
 
@@ -577,11 +577,31 @@ describe('keychainCloudSyncMigration', () => {
             MINT_KEYS[`lnd==${MINT_A}-proofs`]
         );
         expectSourcesIntact();
+        // Before the fix this was caught as a mintUrls parse error and the
+        // Cashu flag was set
+        expect(flagsSet()).toEqual({ main: 'true', cashu: undefined });
+
+        mockKeychain.fault = null;
+        await MigrationUtils.keychainCloudSyncMigration();
+
+        expectAllMigrated();
+        expectSourcesIntact();
+        expect(flagsSet()).toEqual({ main: 'true', cashu: 'true' });
     });
 
-    it.todo(
-        'BUG: a per-mint write failure is caught as a mintUrls parse error, so the rest of that mint list is skipped and the Cashu flag is set'
-    );
+    it('skips a node whose mintUrls does not parse and still migrates the other node', async () => {
+        seedLegacy();
+        mockKeychain.local.set('lnd-cashu-mintUrls', 'not json');
+
+        await MigrationUtils.keychainCloudSyncMigration();
+
+        expect(local('lnd-cashu-mintUrls')).toBe('not json');
+        expect(local(`lnd==${MINT_A}-proofs`)).toBeUndefined();
+        expect(local(`lnd2==${MINT_B}-proofs`)).toBe(
+            MINT_KEYS[`lnd2==${MINT_B}-proofs`]
+        );
+        expect(flagsSet()).toEqual({ main: 'true', cashu: 'true' });
+    });
 
     it.todo(
         'verify read-back returning a different value than written: master only checks truthiness and sets the flag (fixed by #4736)'
@@ -624,11 +644,242 @@ describe('keychainCloudSyncMigration', () => {
         expect(flagsSet().main).toBe('true');
     });
 
-    it.todo(
-        'BUG: an old-keychain read error is swallowed as "key absent", so the key is skipped and the flag is set'
-    );
+    // Throws from every read of one unprefixed (legacy) server in one
+    // partition, as iOS does with errSecInteractionNotAllowed while the
+    // device is locked
+    const failLegacyReadsOf = (key: string, partition: Partition) => {
+        mockKeychain.fault = (op, server, p) => {
+            if (op === 'get' && server === key && p === partition) {
+                throw new Error('errSecInteractionNotAllowed');
+            }
+        };
+    };
 
-    it.todo(
-        'BUG: a failed Cashu pass is never retried, because the next boot sees the main flag set and marks the Cashu flag without migrating'
-    );
+    it('fresh install: sets both flags without writing anything', async () => {
+        await MigrationUtils.keychainCloudSyncMigration();
+
+        expect(flagsSet()).toEqual({ main: 'true', cashu: 'true' });
+        expect(Keychain.setInternetCredentials).not.toHaveBeenCalled();
+        expect(mockKeychain.local.size).toBe(0);
+    });
+
+    it('leaves the main flag unset when an old-keychain read throws, and copies the key on the next boot', async () => {
+        seedLegacy();
+        failLegacyReadsOf('zeus-contacts-v2', 'local');
+
+        await expect(
+            MigrationUtils.keychainCloudSyncMigration()
+        ).resolves.toBeUndefined();
+
+        expect(local('zeus-contacts-v2')).toBeUndefined();
+        expect(flagsSet().main).toBeUndefined();
+        // Keys around the failed one still land
+        expect(local(SETTINGS_KEY)).toBe(SETTINGS);
+        expect(local('zeus-units-v2')).toBe(UNITS);
+        expect(local('note-a')).toBe(NOTE_A);
+        expectSourcesIntact();
+
+        // Next boot: the device is unlocked
+        mockKeychain.fault = null;
+        MigrationUtils.clearConfirmedFlags();
+        await MigrationUtils.keychainCloudSyncMigration();
+
+        expectAllMigrated();
+        expectSourcesIntact();
+        expect(flagsSet()).toEqual({ main: 'true', cashu: 'true' });
+    });
+
+    it('leaves the main flag unset when the cloud fallback read throws', async () => {
+        seedLegacy();
+        failLegacyReadsOf('note-a', 'sync');
+
+        await MigrationUtils.keychainCloudSyncMigration();
+
+        expect(local('note-a')).toBeUndefined();
+        expect(local('zeus-notes-v2')).toBe(NOTES);
+        expect(flagsSet().main).toBeUndefined();
+        expectSourcesIntact();
+    });
+
+    it('does not fall back to the cloud copy when the local read throws', async () => {
+        seedLegacy();
+        // A stale synchronizable copy next to the unreadable local one
+        mockKeychain.sync.set('zeus-contacts-v2', '[{"name":"stale"}]');
+        failLegacyReadsOf('zeus-contacts-v2', 'local');
+
+        await MigrationUtils.keychainCloudSyncMigration();
+
+        expect(local('zeus-contacts-v2')).toBeUndefined();
+        expect(flagsSet().main).toBeUndefined();
+
+        mockKeychain.fault = null;
+        await MigrationUtils.keychainCloudSyncMigration();
+
+        expect(local('zeus-contacts-v2')).toBe(CONTACTS);
+    });
+
+    it('an unreadable key does not stop later keys from copying', async () => {
+        seedLegacy();
+        failLegacyReadsOf(SETTINGS_KEY, 'local');
+
+        await MigrationUtils.keychainCloudSyncMigration();
+
+        expect(local(SETTINGS_KEY)).toBeUndefined();
+        expect(local('zeus-contacts-v2')).toBe(CONTACTS);
+        expect(local('zeus-units-v2')).toBe(UNITS);
+        expect(local('note-a')).toBe(NOTE_A);
+        expect(flagsSet().main).toBeUndefined();
+        expectSourcesIntact();
+    });
+
+    it('a persistent write failure stops the pass at the first key on every run', async () => {
+        // Each copy waits 500 ms on iOS and the migration runs on every
+        // settings load, so a storage that keeps rejecting writes must not
+        // add that wait for every remaining key
+        seedLegacy();
+        failWritesTo(SETTINGS_KEY, 'throw');
+        const { sleep } = require('./SleepUtils');
+
+        for (let boot = 0; boot < 2; boot++) {
+            (sleep as jest.Mock).mockClear();
+            MigrationUtils.clearConfirmedFlags();
+            await expect(
+                MigrationUtils.keychainCloudSyncMigration()
+            ).resolves.toBeUndefined();
+            expect((sleep as jest.Mock).mock.calls.length).toBeLessThanOrEqual(
+                1
+            );
+            expect(local(SETTINGS_KEY)).toBeUndefined();
+            expect(local('zeus-contacts-v2')).toBeUndefined();
+            expect(flagsSet().main).toBeUndefined();
+            expect(flagsSet().cashu).toBeUndefined();
+        }
+        expectSourcesIntact();
+    });
+
+    it('a persistent read error retries on every run with a fixed cost and never throws', async () => {
+        seedLegacy();
+        failLegacyReadsOf('zeus-contacts-v2', 'local');
+        const getMock = Keychain.getInternetCredentials as jest.Mock;
+        const setMock = Keychain.setInternetCredentials as jest.Mock;
+        const { sleep } = require('./SleepUtils');
+
+        const reads: number[] = [];
+        const writes: number[] = [];
+        const sleeps: number[] = [];
+        for (let boot = 0; boot < 3; boot++) {
+            getMock.mockClear();
+            setMock.mockClear();
+            (sleep as jest.Mock).mockClear();
+            MigrationUtils.clearConfirmedFlags();
+            await expect(
+                MigrationUtils.keychainCloudSyncMigration()
+            ).resolves.toBeUndefined();
+            reads.push(getMock.mock.calls.length);
+            writes.push(setMock.mock.calls.length);
+            sleeps.push((sleep as jest.Mock).mock.calls.length);
+            expect(flagsSet().main).toBeUndefined();
+        }
+
+        // The first run copies everything else; later runs only re-check
+        // (one zeus: read per key, two legacy reads for absent keys) and
+        // neither write nor sleep
+        expect(writes[0]).toBeGreaterThan(0);
+        expect(writes.slice(1)).toEqual([0, 0]);
+        expect(sleeps.slice(1)).toEqual([0, 0]);
+        expect(reads[1]).toBe(reads[2]);
+        expect(reads[1]).toBeLessThan(100);
+        // The Cashu pass waits for the main pass, so it never ran
+        expect(flagsSet().cashu).toBeUndefined();
+        expect(local('lnd-cashu-seed-phrase')).toBeUndefined();
+        expectSourcesIntact();
+    });
+
+    it('retries the Cashu pass on the next boot when a Cashu write failed', async () => {
+        seedLegacy();
+        failWritesTo('lnd-cashu-seed-phrase', 'throw');
+
+        await MigrationUtils.keychainCloudSyncMigration();
+
+        expect(local('lnd-cashu-seed-phrase')).toBeUndefined();
+        expect(flagsSet()).toEqual({ main: 'true', cashu: undefined });
+        expectSourcesIntact();
+
+        mockKeychain.fault = null;
+        MigrationUtils.clearConfirmedFlags();
+        await MigrationUtils.keychainCloudSyncMigration();
+
+        expectAllMigrated();
+        expectSourcesIntact();
+        expect(flagsSet()).toEqual({ main: 'true', cashu: 'true' });
+    });
+
+    describe('main flag set, Cashu flag unset', () => {
+        const NEWER_MINTS = '["https://mint.newer.example"]';
+        const LEGACY_MINTS = '["https://mint.legacy.example"]';
+        const LEGACY_WALLET = 'lnd==https://mint.legacy.example';
+
+        const seedMainOnly = () => {
+            seedLegacy();
+            mockKeychain.local.set('lnd-cashu-mintUrls', LEGACY_MINTS);
+            mockKeychain.local.set(`${LEGACY_WALLET}-counter`, '7');
+            // The main pass already ran on an earlier boot
+            mockEncrypted.data.set(CLOUD_SYNC_FLAG, 'true');
+            mockKeychain.local.set(`zeus:${SETTINGS_KEY}`, SETTINGS);
+            mockKeychain.local.set(`zeus:zeus-contacts-v2`, CONTACTS);
+            // The app has written a newer value since
+            mockKeychain.local.set('zeus:lnd-cashu-mintUrls', NEWER_MINTS);
+        };
+
+        // seedMainOnly replaces the legacy lnd-cashu-mintUrls source
+        const expectMainOnlySourcesIntact = () => {
+            for (const [k, v] of Object.entries(LEGACY_LOCAL)) {
+                expect(mockKeychain.local.get(k)).toBe(
+                    k === 'lnd-cashu-mintUrls' ? LEGACY_MINTS : v
+                );
+            }
+            for (const [k, v] of Object.entries(LEGACY_SYNC)) {
+                expect(mockKeychain.sync.get(k)).toBe(v);
+            }
+        };
+
+        it('runs the Cashu pass once without re-running the main pass or overwriting newer values', async () => {
+            seedMainOnly();
+
+            await MigrationUtils.keychainCloudSyncMigration();
+
+            expect(local('lnd-cashu-seed-phrase')).toBe(CASHU_SEED);
+            expect(local('lnd-cashu-mintUrls')).toBe(NEWER_MINTS);
+            // Per-mint keys follow the zeus: mint list, not the legacy one
+            expect(local(`${LEGACY_WALLET}-counter`)).toBeUndefined();
+            // The second node's list has no newer copy, so its mints migrate
+            expect(local(`lnd2==${MINT_B}-proofs`)).toBe(
+                MINT_KEYS[`lnd2==${MINT_B}-proofs`]
+            );
+            // The main pass did not run: units was never copied
+            expect(local('zeus-units-v2')).toBeUndefined();
+            expect(flagsSet()).toEqual({ main: 'true', cashu: 'true' });
+            expectMainOnlySourcesIntact();
+
+            // Both flags set: nothing touches the keychain again
+            (Keychain.getInternetCredentials as jest.Mock).mockClear();
+            await MigrationUtils.keychainCloudSyncMigration();
+            expect(Keychain.getInternetCredentials).not.toHaveBeenCalled();
+        });
+
+        it('is idempotent: re-running the Cashu pass leaves the same state', async () => {
+            seedMainOnly();
+
+            await MigrationUtils.keychainCloudSyncMigration();
+            const afterFirst = new Map(mockKeychain.local);
+
+            mockEncrypted.data.delete(CASHU_FLAG);
+            MigrationUtils.clearConfirmedFlags();
+            (Keychain.setInternetCredentials as jest.Mock).mockClear();
+            await MigrationUtils.keychainCloudSyncMigration();
+
+            expect(Keychain.setInternetCredentials).not.toHaveBeenCalled();
+            expect(new Map(mockKeychain.local)).toEqual(afterFirst);
+        });
+    });
 });
