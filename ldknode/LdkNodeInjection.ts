@@ -933,6 +933,7 @@ const initializeNode = async ({
     scorerUrl,
     listeningAddresses,
     lsps1Config,
+    lsps2Config,
     trustedPeers0conf,
     vssConfig,
     vssKey,
@@ -951,6 +952,12 @@ const initializeNode = async ({
         address: string;
         token?: string | null;
     };
+    // a dedicated LSPS2 LSP; without one the LSPS1 node is used
+    lsps2Config?: {
+        nodeId: string;
+        address: string;
+        token?: string | null;
+    };
     trustedPeers0conf?: string[];
     vssConfig?: {
         url: string;
@@ -958,7 +965,7 @@ const initializeNode = async ({
     };
     vssKey?: { privateKey: Uint8Array; publicKey: Uint8Array };
     failOnVssError?: boolean;
-}): Promise<{ vssError?: string }> => {
+}): Promise<{ vssError?: string; lsps2NodeId?: string }> => {
     const t0 = Date.now();
     const elapsed = () => `${Date.now() - t0}ms`;
     console.log('LDK Node: Initializing...');
@@ -1002,18 +1009,6 @@ const initializeNode = async ({
             );
         }
 
-        // Also configure LSPS2 with the same LSP for JIT channels
-        try {
-            await setLiquiditySourceLsps2({
-                nodeId: lsps1Config.nodeId,
-                address: lsps1Config.address,
-                token: lsps1Config.token
-            });
-            console.log('LDK Node: LSPS2 liquidity source configured');
-        } catch (e) {
-            console.log('LDK Node: LSPS2 configuration failed');
-        }
-
         // Also configure LSPS7 with the same LSP for channel lease extensions
         try {
             await setLiquiditySourceLsps7({
@@ -1024,6 +1019,30 @@ const initializeNode = async ({
             console.log('LDK Node: LSPS7 liquidity source configured');
         } catch (e) {
             console.log('LDK Node: LSPS7 configuration failed');
+        }
+    }
+
+    // Without a dedicated LSPS2 LSP the LSPS1 node stays the LSPS2 source.
+    // That registration is load-bearing for Flow: ldk-node gives only the
+    // LSPS2 LSP's inbound channels 100% max HTLC value in flight (10%
+    // otherwise), and Flow sends most of a new channel in one HTLC.
+    const lsps2Source = lsps2Config ?? lsps1Config;
+    let lsps2NodeId: string | undefined;
+    if (lsps2Source && lsps2Source.nodeId && lsps2Source.address) {
+        try {
+            await setLiquiditySourceLsps2({
+                nodeId: lsps2Source.nodeId,
+                address: lsps2Source.address,
+                token: lsps2Source.token
+            });
+            if (lsps2Config) lsps2NodeId = lsps2Config.nodeId;
+            console.log(
+                `LDK Node: LSPS2 liquidity source configured${
+                    lsps2Config ? ' (dedicated LSP)' : ''
+                }`
+            );
+        } catch (e) {
+            console.log('LDK Node: LSPS2 configuration failed');
         }
     }
 
@@ -1109,7 +1128,7 @@ const initializeNode = async ({
             Date.now() - t0
         }ms`
     );
-    return { vssError };
+    return { vssError, lsps2NodeId };
 };
 
 // ============================================================================
@@ -1396,6 +1415,11 @@ export interface ILdkNodeInjections {
                 address: string;
                 token?: string | null;
             };
+            lsps2Config?: {
+                nodeId: string;
+                address: string;
+                token?: string | null;
+            };
             trustedPeers0conf?: string[];
             vssConfig?: {
                 url: string;
@@ -1406,7 +1430,7 @@ export interface ILdkNodeInjections {
                 publicKey: Uint8Array;
             };
             failOnVssError?: boolean;
-        }) => Promise<{ vssError?: string }>;
+        }) => Promise<{ vssError?: string; lsps2NodeId?: string }>;
     };
 }
 
