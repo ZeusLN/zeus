@@ -1443,20 +1443,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             }
         }
 
-        if (BackendUtils.supportsFlowLSP()) {
-            if (
-                SettingsStore.settings.enableLSP &&
-                (implementation !== 'lnd' ||
-                    !this.props.NodeInfoStore.flowLspNotConfigured)
-            ) {
-                await LSPStore.getLSPInfo();
-                if (!isCurrent()) return;
-            }
-            if (BackendUtils.supportsLSPScustomMessage()) {
-                LSPStore.subscribeCustomMessages();
-            }
-            LSPStore.initChannelAcceptor();
-        }
+        LSPStore.initFlowLSP();
 
         if (connecting && BackendUtils.supportsNostrWalletConnectService()) {
             try {

@@ -91,6 +91,10 @@ function setup(selectedNode: number) {
     jest.spyOn(settings, 'setConnectingStatus');
 
     const repairMissingChannelEdges = jest.fn(async () => {});
+    const LinkingUtils = {
+        handleInitialUrl: jest.fn(),
+        processPendingDeepLink: jest.fn()
+    };
     const Wallet = sourceMethods(
         'views/Wallet/Wallet.tsx',
         'Wallet',
@@ -111,7 +115,7 @@ function setup(selectedNode: number) {
             matchesLndErrorCode,
             retryOnTransientError,
             restartNeeded: jest.fn(),
-            LinkingUtils: { processPendingDeepLink: jest.fn() },
+            LinkingUtils,
             Storage: { getItem: async () => false },
             CHANNEL_MIGRATION_ACTIVE: 'test-migration-flag',
             processSharedQRImageFast: async () => null,
@@ -167,6 +171,7 @@ function setup(selectedNode: number) {
     view.props.NotesStore.loadNoteKeys = jest.fn();
     view.props.UnitsStore.getUnits = jest.fn();
     view.props.SwapStore.fetchAndUpdateSwaps = jest.fn();
+    view.props.LSPStore.initFlowLSP = jest.fn();
     view.state = { initialLoad: false, unlocked: true };
     view.setState = (patch: any) => Object.assign(view.state, patch);
     view.processPendingShareIntent = jest.fn();
@@ -180,7 +185,8 @@ function setup(selectedNode: number) {
         refresh,
         ldk,
         lnd,
-        repairMissingChannelEdges
+        repairMissingChannelEdges,
+        LinkingUtils
     };
 }
 
@@ -285,6 +291,26 @@ it('a transient embedded LND retry stops once another wallet is selected', async
     } finally {
         jest.useRealTimers();
     }
+});
+
+// An unreachable Flow LSP used to throw out of fetchDataCore and skip
+// everything after it, including the initial deep link (#4779). The Flow
+// setup now runs in LSPStore.initFlowLSP without being awaited
+describe('Flow LSP startup', () => {
+    it('sets up Flow LSP and still handles the initial deep link', async () => {
+        const { view, runner, refresh, LinkingUtils } = setup(1);
+        const { LSPStore } = view.props;
+        // fails the refresh if fetchDataCore awaits it again
+        LSPStore.getLSPInfo = jest.fn(() => Promise.reject());
+        view.state.initialLoad = true;
+        await runner.run(refresh);
+
+        expect(LSPStore.initFlowLSP).toHaveBeenCalledTimes(1);
+        expect(view.state.initialLoad).toBe(false);
+        expect(LinkingUtils.handleInitialUrl).toHaveBeenCalledTimes(1);
+        expect(LinkingUtils.processPendingDeepLink).toHaveBeenCalledTimes(1);
+        expect(view.processPendingGraphSyncPayment).toHaveBeenCalledTimes(1);
+    });
 });
 
 // Resetting or rebuilding the SQLite graph drops our own channel edges, so
