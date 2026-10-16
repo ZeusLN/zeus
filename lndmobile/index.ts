@@ -786,7 +786,9 @@ export const getNetworkInfo = async (): Promise<lnrpc.NetworkInfo> => {
 /**
  * @throws
  */
-export const listInvoices = async (): Promise<lnrpc.ListInvoiceResponse> => {
+export const listInvoices = async (
+    numMaxInvoices: number = 1000
+): Promise<lnrpc.ListInvoiceResponse> => {
     const response = await sendCommand<
         lnrpc.IListInvoiceRequest,
         lnrpc.ListInvoiceRequest,
@@ -797,7 +799,7 @@ export const listInvoices = async (): Promise<lnrpc.ListInvoiceResponse> => {
         method: 'ListInvoices',
         options: {
             reversed: true,
-            num_max_invoices: Long.fromValue(1000)
+            num_max_invoices: Long.fromValue(numMaxInvoices)
         }
     });
     return response;
