@@ -23,10 +23,11 @@ jest.mock('../storage', () => ({
     KEY_PREFIX: 'zeus:'
 }));
 
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { validateMnemonic } from '@scure/bip39';
 import NDK from '@nostr-dev-kit/ndk';
 import CashuStore from './CashuStore';
+import CashuToken from '../models/CashuToken';
 import Storage, { getRawItem } from '../storage';
 import CashuDevKit from '../cashu-cdk';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
@@ -245,6 +246,183 @@ describe('CashuStore checkAndSweepMints', () => {
         });
         await store.checkAndSweepMints();
         expect(sweepMint).toHaveBeenCalledWith('https://mint.example.com');
+    });
+});
+
+describe('CashuStore offline token claims', () => {
+    const knownMint = 'https://mint.example.com';
+    const unknownMint = 'https://mint.unknown.example.com';
+    const tokenFrom = (mint: string) =>
+        new CashuToken({ mint, encodedToken: `cashuA-${mint}`, value: 21 });
+    const storeWith = (isOffline: boolean) => {
+        const store = newStore();
+        store.mintUrls = [knownMint];
+        jest.spyOn(store, 'isOffline', 'get').mockReturnValue(isOffline);
+        return store;
+    };
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('queues a plain receive while offline', async () => {
+        const store = storeWith(true);
+        const token = tokenFrom(knownMint);
+
+        await expect(
+            store.claimToken(token.encodedToken!, token)
+        ).resolves.toMatchObject({
+            success: true,
+            warningMessage: 'cashu.offlinePending.bannerMessageSingular'
+        });
+        expect(store.offlinePendingTokens).toHaveLength(1);
+    });
+
+    it('refuses a self-custody receive while offline', async () => {
+        const store = storeWith(true);
+        const token = tokenFrom(unknownMint);
+
+        await expect(
+            store.claimToken(token.encodedToken!, token, true)
+        ).resolves.toEqual({
+            success: false,
+            errorMessage: 'cashu.offlinePending.selfCustodyUnavailable'
+        });
+        expect(store.offlinePendingTokens).toHaveLength(0);
+        expect(store.loading).toBe(false);
+    });
+
+    it('only sweeps queued tokens whose mint is configured', async () => {
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+        jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        const store = storeWith(false);
+        store.cdkInitialized = true;
+        store.offlinePendingTokens = [
+            tokenFrom(unknownMint),
+            tokenFrom(knownMint)
+        ];
+        const ensureMintAdded = jest
+            .spyOn(store as any, 'ensureMintAdded')
+            .mockResolvedValue(undefined);
+        const receiveTokenCDK = jest
+            .spyOn(store, 'receiveTokenCDK')
+            .mockResolvedValue(21);
+        jest.spyOn(store, 'syncCDKBalances').mockResolvedValue(undefined);
+
+        await store.sweepOfflinePendingTokens();
+
+        expect(ensureMintAdded).toHaveBeenCalledTimes(1);
+        expect(ensureMintAdded).toHaveBeenCalledWith(knownMint);
+        expect(receiveTokenCDK).toHaveBeenCalledTimes(1);
+        expect(store.offlinePendingTokens.map((t) => t.mint)).toEqual([
+            unknownMint
+        ]);
+    });
+});
+
+describe('CashuStore sweepOfflinePendingTokens', () => {
+    const token = (name: string, amount: number) =>
+        new CashuToken({
+            mint: 'https://mint.example.com',
+            unit: 'sat',
+            encodedToken: `cashuA${name}`,
+            proofs: [{ amount, secret: name, C: '02', id: '00' }]
+        });
+    const first = token('first', 1000);
+    const second = token('second', 50000);
+
+    // Queues `first`, then starts a sweep that is left awaiting the mint
+    const startSweep = async () => {
+        const store = newStore();
+        store.cdkInitialized = true;
+        store.mintUrls = ['https://mint.example.com'];
+        jest.spyOn(store, 'isOffline', 'get').mockReturnValue(false);
+        jest.spyOn(store as any, 'ensureMintAdded').mockResolvedValue(
+            undefined
+        );
+        jest.spyOn(store, 'syncCDKBalances').mockResolvedValue(undefined);
+        let resolve!: (amount: number) => void;
+        let reject!: (e: any) => void;
+        jest.spyOn(store, 'receiveTokenCDK').mockReturnValue(
+            new Promise<number>((res, rej) => {
+                resolve = res;
+                reject = rej;
+            })
+        );
+        await store.claimTokenOffline(first.encodedToken!, first);
+        const sweep = store.sweepOfflinePendingTokens();
+        return { store, sweep, resolve, reject };
+    };
+    const queued = (store: CashuStore) =>
+        store.offlinePendingTokens.map((t) => t.encodedToken);
+    const persisted = () =>
+        (Storage.setItem as jest.Mock).mock.calls
+            .filter(([key]) => key === 'lnd-cashu-offline-pending-tokens')
+            .pop()[1]
+            .map((t: CashuToken) => t.encodedToken);
+
+    beforeEach(() => {
+        (Storage.setItem as jest.Mock).mockReset().mockResolvedValue(true);
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('keeps a token queued while an aborted sweep awaited the mint', async () => {
+        const { store, sweep, reject } = await startSweep();
+
+        await store.claimTokenOffline(second.encodedToken!, second);
+        reject({ type: 'Network', message: 'network error' });
+        await sweep;
+
+        const expected = [first.encodedToken, second.encodedToken];
+        expect(queued(store)).toEqual(expected);
+        expect(persisted()).toEqual(expected);
+        expect(store.offlinePendingBalance).toBe(51000);
+    });
+
+    it('keeps a token queued while a successful sweep awaited the mint', async () => {
+        const { store, sweep, resolve } = await startSweep();
+
+        await store.claimTokenOffline(second.encodedToken!, second);
+        resolve(1000);
+        await sweep;
+
+        expect(queued(store)).toEqual([second.encodedToken]);
+        expect(persisted()).toEqual([second.encodedToken]);
+        expect(store.offlinePendingBalance).toBe(50000);
+    });
+
+    it('does not restore a token removed while the sweep awaited the mint', async () => {
+        const { store, sweep, reject } = await startSweep();
+
+        await store.removeOfflinePendingToken(first.encodedToken!);
+        reject({ type: 'Network', message: 'network error' });
+        await sweep;
+
+        expect(queued(store)).toEqual([]);
+        expect(persisted()).toEqual([]);
+        expect(store.offlinePendingBalance).toBe(0);
+    });
+
+    it('moves an already spent token out of the queue', async () => {
+        const { store, sweep, reject } = await startSweep();
+
+        reject({ message: 'Token already spent' });
+        await sweep;
+
+        expect(queued(store)).toEqual([]);
+        expect(store.offlineSpentTokens.map((t) => t.encodedToken)).toEqual([
+            first.encodedToken
+        ]);
+    });
+
+    it('keeps a token that failed for another reason', async () => {
+        const { store, sweep, reject } = await startSweep();
+
+        reject({ message: 'mint error' });
+        await sweep;
+
+        expect(queued(store)).toEqual([first.encodedToken]);
     });
 });
 
