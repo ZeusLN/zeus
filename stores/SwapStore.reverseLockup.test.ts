@@ -795,20 +795,30 @@ describe('SwapStore.createReverseSwap on-chain amount minimum', () => {
     const INVOICE_AMOUNT = 100000;
     // 0.5% service fee, 300 sat claim and 400 sat lockup fee: the Swaps
     // screen shows 98800 sats to receive, and the claim pays 300 of the
-    // lockup, so the provider has to lock up 99100
+    // lockup, so the provider has to lock up 99100, less 1 sat of
+    // rounding slack
     const REVERSE_INFO = {
+        hash: 'quote-hash',
         fees: { percentage: 0.5, minerFees: { claim: 300, lockup: 400 } }
     };
 
     const create = async ({
         onchainAmount = '99100',
+        invoiceAmount = INVOICE_AMOUNT,
         reverseInfo = REVERSE_INFO,
-        duringRequest
+        duringRequest,
+        responseData,
+        feesResponse = { status: 200, json: { BTC: { BTC: REVERSE_INFO } } }
     }: {
         // the raw JSON text of the provider's onchainAmount
         onchainAmount?: string;
+        invoiceAmount?: number;
         reverseInfo?: any;
         duringRequest?: (store: SwapStore) => void;
+        // replaces the whole POST /swap/reverse response body
+        responseData?: string;
+        // what GET /swap/submarine and /swap/reverse return
+        feesResponse?: { status: number; json: any };
     } = {}) => {
         storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
         const { outputScript: _outputScript, ...details } = VALID;
@@ -821,10 +831,16 @@ describe('SwapStore.createReverseSwap on-chain amount minimum', () => {
 
         const store = newStore();
         store.reverseInfo = reverseInfo;
-        fetchMock.mockImplementation(async (method: string) => {
+        fetchMock.mockImplementation(async (method: string, url: string) => {
             if (method === 'POST') {
                 duringRequest?.(store);
-                return { data };
+                return { data: responseData ?? data };
+            }
+            if (/\/swap\/(submarine|reverse)$/.test(url)) {
+                return {
+                    info: () => ({ status: feesResponse.status }),
+                    json: () => feesResponse.json
+                };
             }
             return {
                 info: () => ({ status: 200 }),
@@ -834,7 +850,7 @@ describe('SwapStore.createReverseSwap on-chain amount minimum', () => {
         const navigation = { navigate: jest.fn() };
         await store.createReverseSwap(
             'bc1qdestination',
-            INVOICE_AMOUNT,
+            invoiceAmount,
             // at 1 sat/vB any claim fee floor stays below the 300 quoted
             '1',
             navigation
@@ -860,12 +876,48 @@ describe('SwapStore.createReverseSwap on-chain amount minimum', () => {
         expect(stored[0].claimMinerFee).toBe(300);
     });
 
-    it.each(['98801', '99099'])(
+    it('accepts one sat less, for the provider rounding its fee up', async () => {
+        const { store, stored } = await create({ onchainAmount: '99099' });
+        expect(store.apiError).toBe('');
+        expect(stored).toHaveLength(1);
+    });
+
+    it.each(['98801', '99098'])(
         'refuses %s, which leaves less than the amount shown after the claim fee',
         async (onchainAmount) => {
             expectRefused(await create({ onchainAmount }));
         }
     );
+
+    describe('at a fee rate Boltz rounds up past the exact fee', () => {
+        // Boltz computes Math.ceil(0.07 / 100 * 1000000) = 701, one sat
+        // more than the exact 700, and locks up 1000000 - 701 - 400
+        const reverseInfo = {
+            fees: { percentage: 0.07, minerFees: { claim: 300, lockup: 400 } }
+        };
+        const invoiceAmount = 1000000;
+
+        it('accepts what Boltz locks up', async () => {
+            expect(Math.ceil((0.07 / 100) * invoiceAmount)).toBe(701);
+            const { store, stored } = await create({
+                onchainAmount: '998899',
+                invoiceAmount,
+                reverseInfo
+            });
+            expect(store.apiError).toBe('');
+            expect(stored).toHaveLength(1);
+        });
+
+        it('refuses one sat less', async () => {
+            expectRefused(
+                await create({
+                    onchainAmount: '998898',
+                    invoiceAmount,
+                    reverseInfo
+                })
+            );
+        });
+    });
 
     it.each(['1e999', '[1e999]', '"99100"', '99100.5', '[99100]'])(
         'refuses an on-chain amount of %s',
@@ -913,5 +965,59 @@ describe('SwapStore.createReverseSwap on-chain amount minimum', () => {
         });
         expect(stored).toHaveLength(1);
         expect(stored[0].claimMinerFee).toBe(300);
+    });
+
+    describe('pair hash', () => {
+        const postedBody = () => {
+            const post = fetchMock.mock.calls.find(
+                ([method]: any[]) => method === 'POST'
+            );
+            return JSON.parse(post[3]);
+        };
+
+        it('sends the hash of the quote the user saw', async () => {
+            await create({
+                duringRequest: (store) => {
+                    store.reverseInfo = { ...REVERSE_INFO, hash: 'newer' };
+                }
+            });
+            expect(postedBody().pairHash).toBe('quote-hash');
+        });
+
+        it('sends no pair hash when the quote has none', async () => {
+            const { hash: _hash, ...reverseInfo } = REVERSE_INFO;
+            const { stored } = await create({ reverseInfo });
+            expect(postedBody()).not.toHaveProperty('pairHash');
+            expect(stored).toHaveLength(1);
+        });
+
+        it('refreshes the quote and asks to retry when the fees changed', async () => {
+            const newQuote = {
+                hash: 'new-hash',
+                fees: {
+                    percentage: 0.5,
+                    minerFees: { claim: 300, lockup: 500 }
+                }
+            };
+            const { store, navigation, stored } = await create({
+                responseData: JSON.stringify({ error: 'invalid pair hash' }),
+                feesResponse: { status: 200, json: { BTC: { BTC: newQuote } } }
+            });
+            expect(store.reverseInfo).toEqual(newQuote);
+            expect(store.apiError).toBe('views.Swaps.swapFeesChanged');
+            expect(store.loading).toBe(false);
+            expect(stored).toHaveLength(0);
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        });
+
+        it('shows the fetch error when the refresh fails', async () => {
+            const { store, stored } = await create({
+                responseData: JSON.stringify({ error: 'invalid pair hash' }),
+                feesResponse: { status: 200, json: {} }
+            });
+            expect(store.apiError).toBe('views.Swaps.fetchFeesFailed');
+            expect(store.loading).toBe(false);
+            expect(stored).toHaveLength(0);
+        });
     });
 });

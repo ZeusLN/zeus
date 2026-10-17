@@ -68,6 +68,9 @@ interface SubmarineSwapInfo {
 }
 
 interface ReverseSwapInfo {
+    // identifies the quote; sent back on creation so the provider refuses
+    // a swap priced with fees other than the ones the user saw
+    hash?: string;
     fees?: {
         percentage?: number;
         minerFees?: {
@@ -80,6 +83,16 @@ interface ReverseSwapInfo {
         maximal?: number;
     };
 }
+
+// Error the provider returns when the pair hash sent on creation no
+// longer matches its current quote
+const INVALID_PAIR_HASH_ERROR = 'invalid pair hash';
+
+// Boltz computes the service fee as Math.ceil(percentage / 100 * amount)
+// in floating point, which can land just above a whole number and charge
+// one sat more than the exact fee (0.07% of 1,000,000 sats gives 701).
+// The lockup minimum allows for that one sat.
+const REVERSE_LOCKUP_ROUNDING_SLACK = 1;
 
 // The fields a rescued swap takes from the host's /swap/restore response,
 // at the top level and inside claimDetails/refundDetails
@@ -595,6 +608,7 @@ export default class SwapStore {
         // a getSwapFees call that finishes during creation replaces
         // reverseInfo, and the checks below must use the quote the user saw
         const fees = this.reverseInfo?.fees;
+        const pairHash = this.reverseInfo?.hash;
         const claimMinerFee = this.claimMinerFee;
         try {
             initEccLib(ecc);
@@ -610,7 +624,8 @@ export default class SwapStore {
                 from: 'BTC',
                 claimPublicKey: Buffer.from(keys.publicKey).toString('hex'),
                 preimageHash: crypto.sha256(preimage).toString('hex'),
-                ...(this.referralId && { referralId: this.referralId })
+                ...(this.referralId && { referralId: this.referralId }),
+                ...(typeof pairHash === 'string' && { pairHash })
             });
 
             console.log('Data before sending to API:', data);
@@ -626,6 +641,21 @@ export default class SwapStore {
 
             const responseData = JSON.parse(response.data);
             console.log('Created reverse swap:', responseData);
+
+            // The provider's fees changed since the quote: fetch the new
+            // quote so the Swaps screen shows it, and ask the user to retry
+            if (responseData?.error === INVALID_PAIR_HASH_ERROR) {
+                await this.getSwapFees();
+                runInAction(() => {
+                    if (!this.apiError) {
+                        this.apiError = localeString(
+                            'views.Swaps.swapFeesChanged'
+                        );
+                    }
+                    this.loading = false;
+                });
+                return;
+            }
 
             // Handle API errors
             if (responseData?.error) {
@@ -667,7 +697,7 @@ export default class SwapStore {
             // lockup address must be that tree's taproot output, and the
             // provider must lock up at least the amount the Swaps screen
             // showed plus the claim fee, which the claim pays out of the
-            // lockup. Otherwise a host could point the claim at an output
+            // lockup, less REVERSE_LOCKUP_ROUNDING_SLACK. Otherwise a host could point the claim at an output
             // it controls and still learn the preimage when we claim.
             const minOnchainAmount = calculateReceiveAmount(
                 new BigNumber(invoiceAmount),
@@ -677,9 +707,11 @@ export default class SwapStore {
                     .toNumber(),
                 true
             )
-                // a negative claim quote must not lower the minimum below
-                // the amount shown
-                .plus(Math.max(claimMinerFee, 0))
+                // neither the slack nor a negative claim quote may lower
+                // the minimum below the amount shown
+                .plus(
+                    Math.max(claimMinerFee - REVERSE_LOCKUP_ROUNDING_SLACK, 0)
+                )
                 .toNumber();
             const responseCheck = verifyReverseSwapResponse({
                 swapTree: responseData.swapTree,
