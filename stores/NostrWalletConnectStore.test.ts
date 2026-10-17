@@ -2902,3 +2902,114 @@ describe('NostrWalletConnectStore cashu pay_invoice preimage', () => {
         expect(response.result.preimage).toBe(preimage);
     });
 });
+
+describe('NostrWalletConnectStore LndHub wallet identity', () => {
+    const LNBITS_URL = 'https://lnbits.example/lndhub/ext/';
+    const ADMIN_KEY = 'a'.repeat(32);
+    const OTHER_ADMIN_KEY = 'b'.repeat(32);
+    const LEGACY_PUBKEY = `lndhub:${LNBITS_URL}:admin`;
+
+    const lnbitsWallet = (password: string) => ({
+        implementation: 'lndhub',
+        lndhubUrl: LNBITS_URL,
+        username: 'admin',
+        password
+    });
+
+    // an LNbits wallet is open: LndHub has no node pubkey
+    function buildLndHubStore(nodes: object[] = [lnbitsWallet(ADMIN_KEY)]) {
+        const harness = createStore({
+            settingsStore: {
+                connecting: false,
+                implementation: 'lndhub',
+                lndhubUrl: LNBITS_URL,
+                username: 'admin',
+                password: ADMIN_KEY,
+                settings: {
+                    locale: 'en',
+                    ecash: { enableCashu: false },
+                    lightningAddress: { enabled: false },
+                    nodes
+                }
+            },
+            nodeInfoStore: { nodeInfo: {}, getNodeInfo: jest.fn() }
+        });
+        return harness;
+    }
+
+    function storeConnections(nodePubkey: string) {
+        const data = connectionData({ nodePubkey, implementation: 'lndhub' });
+        storedItems.set(NWC_CONNECTIONS_KEY, JSON.stringify([data]));
+        return data;
+    }
+
+    const storedNodePubkeys = () =>
+        JSON.parse(storedItems.get(NWC_CONNECTIONS_KEY)!).map(
+            (c: any) => c.nodePubkey
+        );
+
+    it('serves a connection on the wallet it was created on', async () => {
+        const { store } = buildLndHubStore();
+        const data = storeConnections((store as any).getCurrentWalletPubkey());
+
+        await store.loadConnections();
+
+        expect(store.connections.map((c) => c.id)).toEqual([data.id]);
+        expect(
+            store.getConnection({ connectionId: data.id }).connection
+        ).toBeDefined();
+    });
+
+    it('does not serve it on another wallet with the same server and login', async () => {
+        const { store, settingsStore } = buildLndHubStore([
+            lnbitsWallet(ADMIN_KEY),
+            lnbitsWallet(OTHER_ADMIN_KEY)
+        ]);
+        const data = storeConnections((store as any).getCurrentWalletPubkey());
+        await store.loadConnections();
+
+        settingsStore.password = OTHER_ADMIN_KEY;
+
+        expect(
+            store.getConnection({ connectionId: data.id }).connection
+        ).toBeUndefined();
+        await store.loadConnections();
+        expect(store.connections).toEqual([]);
+    });
+
+    it('does not put the password in the wallet identity', () => {
+        const { store } = buildLndHubStore();
+        const identity = (store as any).getCurrentWalletPubkey();
+
+        expect(identity).toContain(LNBITS_URL);
+        expect(identity).not.toContain(ADMIN_KEY);
+    });
+
+    it('rebinds connections stored under the old identity to the only saved wallet with that server and login', async () => {
+        const { store } = buildLndHubStore([
+            lnbitsWallet(ADMIN_KEY),
+            { implementation: 'lnd', host: 'node.example' }
+        ]);
+        const data = storeConnections(LEGACY_PUBKEY);
+        const identity = (store as any).getCurrentWalletPubkey();
+
+        await store.loadConnections();
+
+        expect(store.connections.map((c) => c.id)).toEqual([data.id]);
+        expect(store.connections[0].nodePubkey).toBe(identity);
+        expect(storedNodePubkeys()).toEqual([identity]);
+    });
+
+    it('leaves connections stored under the old identity alone while two saved wallets share the server and login', async () => {
+        const { store } = buildLndHubStore([
+            lnbitsWallet(ADMIN_KEY),
+            lnbitsWallet(OTHER_ADMIN_KEY)
+        ]);
+        storeConnections(LEGACY_PUBKEY);
+
+        await store.loadConnections();
+
+        expect(store.connections).toEqual([]);
+        expect(storedNodePubkeys()).toEqual([LEGACY_PUBKEY]);
+    });
+});
