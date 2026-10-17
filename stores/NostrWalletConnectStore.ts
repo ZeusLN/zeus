@@ -1008,6 +1008,9 @@ export default class NostrWalletConnectStore {
 
     @action
     public loadConnections = async () => {
+        // storage lags behind memory while a save is scheduled; write it
+        // first so the reload doesn't drop changes such as a budget debit
+        await this.flushScheduledSave();
         try {
             const connectionsData = await Storage.getItem(NWC_CONNECTIONS_KEY);
             if (connectionsData) {
@@ -1048,8 +1051,13 @@ export default class NostrWalletConnectStore {
             this._scheduledSave = null;
         }
     }
+    // Leave a scheduled save in place: it writes the state as of when it
+    // fires, so every change reaches storage within
+    // SAVE_CONNECTIONS_DEBOUNCE_MS. Restarting the timer on each call would
+    // let a steady stream of requests (each marks its connection as used)
+    // put off the save indefinitely.
     private scheduleSave(): void {
-        this.cancelScheduledSave();
+        if (this._scheduledSave !== null) return;
         this._scheduledSave = setTimeout(() => {
             this._scheduledSave = null;
             this.saveConnections().catch((err) =>
@@ -3486,6 +3494,9 @@ export default class NostrWalletConnectStore {
                 ...(paymentHash ? { paymentHash } : {})
             });
         });
+        // write the debit now instead of on the timer, so it is not lost if
+        // the process ends before the timer fires
+        await this.flushScheduledSave();
         this.scheduleMaxBudgetRefresh();
         NostrConnectUtils.notifyOutgoingNwcPayment(amountSats, connection.name);
     }
@@ -3534,6 +3545,8 @@ export default class NostrWalletConnectStore {
                 // isBudgetDebited intentionally unset — held via pendingSpendSats
             });
         });
+        // the hold counts against the budget, so write it now like a debit
+        await this.flushScheduledSave();
     }
 
     private async recordFailedPayment({
@@ -4059,6 +4072,12 @@ export default class NostrWalletConnectStore {
                     void this.reconcileAllPendingPayInvoiceActivities();
                 }
 
+                // without the persistent service the process may be killed
+                // before a scheduled save fires, so write it now
+                if (nextAppState === 'background') {
+                    void this.flushScheduledSave();
+                }
+
                 if (!this.persistentNWCServiceEnabled) {
                     return;
                 }
@@ -4066,7 +4085,6 @@ export default class NostrWalletConnectStore {
                 try {
                     const { NostrConnectModule } = NativeModules;
                     if (nextAppState === 'background') {
-                        void this.flushScheduledSave();
                         await NostrConnectModule.startBackgroundMonitoring();
                     } else if (nextAppState === 'active') {
                         await NostrConnectModule.stopBackgroundMonitoring();
