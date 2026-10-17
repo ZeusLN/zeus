@@ -31,7 +31,9 @@ const nodes = [
     { implementation: 'cln-rest', host: 'd' }
 ];
 
-function setup(selectedNode: number) {
+// With realLogin, the login and session methods are the production ones
+// instead of stubs, so a test can read sessionStarted() after startup
+function setup(selectedNode: number, { realLogin = false } = {}) {
     const BackendUtils = {
         supportsAccounts: () => false,
         supportsLightningAddress: () => false,
@@ -59,7 +61,17 @@ function setup(selectedNode: number) {
             'setConnectingStatus',
             'acquireFetchLock',
             'releaseFetchLock',
-            'setInitialStart'
+            'setInitialStart',
+            ...(realLogin
+                ? [
+                      'loginRequired',
+                      'loginMethodConfigured',
+                      'isBiometryConfigured',
+                      'setLoginStatus',
+                      'setPosStatus',
+                      'sessionStarted'
+                  ]
+                : [])
         ],
         { BackendUtils }
     );
@@ -81,12 +93,16 @@ function setup(selectedNode: number) {
         ldkMnemonic: 'm',
         ldkNodeDir: 'a',
         error: false,
-        errorMsg: ''
+        errorMsg: '',
+        loggedIn: false,
+        posStatus: 'unselected'
     });
     settings.getSettings = jest.fn(async () => settings.settings);
     settings.setChannelMigrating = jest.fn();
-    settings.loginRequired = () => false;
-    settings.setLoginStatus = jest.fn();
+    if (!realLogin) {
+        settings.loginRequired = () => false;
+        settings.setLoginStatus = jest.fn();
+    }
     settings.updateSettings = jest.fn(async () => {});
     jest.spyOn(settings, 'setConnectingStatus');
 
@@ -127,11 +143,15 @@ function setup(selectedNode: number) {
             themeColor: () => '#000',
             isLightTheme: () => false,
             autoPurgeLegacyKeychain: jest.fn(),
+            PosEnabled: { Disabled: 'disabled', Standalone: 'standalone' },
             repairMissingChannelEdges
         }
     );
     const view = new Wallet();
-    view.props = { SettingsStore: settings };
+    view.props = {
+        SettingsStore: settings,
+        navigation: { navigate: jest.fn(), isFocused: () => true }
+    };
     for (const name of [
         'AlertStore',
         'NodeInfoStore',
@@ -172,6 +192,7 @@ function setup(selectedNode: number) {
     view.props.UnitsStore.getUnits = jest.fn();
     view.props.SwapStore.fetchAndUpdateSwaps = jest.fn();
     view.props.LSPStore.initFlowLSP = jest.fn();
+    view.props.PosStore.getOrders = jest.fn();
     view.state = { initialLoad: false, unlocked: true };
     view.setState = (patch: any) => Object.assign(view.state, patch);
     view.processPendingShareIntent = jest.fn();
@@ -415,5 +436,49 @@ describe('channel edge repair', () => {
         await flush();
 
         expect(ctx.repairMissingChannelEdges).not.toHaveBeenCalled();
+    });
+});
+
+// protectedNavigation and the WalletHeader controls wait for
+// SettingsStore.sessionStarted(). Startup is what makes it true on a wallet
+// without a PIN, so these pin that down on the production startup path.
+describe('session start', () => {
+    it('starts the session on a wallet with no login method', async () => {
+        const { settings, runner, refresh } = setup(1, { realLogin: true });
+        expect(settings.sessionStarted()).toBe(false);
+
+        await runner.run(refresh);
+
+        expect(settings.loggedIn).toBe(true);
+        expect(settings.sessionStarted()).toBe(true);
+    });
+
+    it('starts the session on a till with no login method', async () => {
+        const { settings, runner, refresh } = setup(1, { realLogin: true });
+        settings.settings = {
+            ...settings.settings,
+            pos: { posEnabled: 'standalone' }
+        };
+
+        await runner.run(refresh);
+
+        expect(settings.posStatus).toBe('active');
+        expect(settings.sessionStarted()).toBe(true);
+    });
+
+    it('leaves the session unstarted and opens the Lockscreen when a PIN is set', async () => {
+        const { settings, view, runner, refresh } = setup(1, {
+            realLogin: true
+        });
+        settings.settings = { ...settings.settings, pin: '1234' };
+
+        await runner.run(refresh);
+
+        expect(settings.loggedIn).toBe(false);
+        expect(settings.sessionStarted()).toBe(false);
+        expect(view.props.navigation.navigate).toHaveBeenCalledWith(
+            'Lockscreen',
+            { shareIntentData: undefined }
+        );
     });
 });
