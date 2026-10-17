@@ -131,15 +131,31 @@ export default class NostrConnectUtils {
         return ['payment_received', 'payment_sent', 'hold_invoice_accepted'];
     }
 
+    // Stored on the connection and parsed by calculateCustomExpiryDate, so
+    // these must not follow the app language. getTimeUnitOptions has the
+    // translated labels for the dropdown.
     static get TIME_UNITS(): TimeUnit[] {
-        return [
-            localeString('time.hours'),
-            localeString('time.days'),
-            localeString('time.weeks'),
-            localeString('time.months'),
-            localeString('time.years')
-        ];
+        return ['Hours', 'Days', 'Weeks', 'Months', 'Years'];
     }
+
+    static getTimeUnitOptions(): { key: string; value: TimeUnit }[] {
+        return NostrConnectUtils.TIME_UNITS.map((unit) => ({
+            key: localeString(`time.${unit.toLowerCase()}`),
+            value: unit
+        }));
+    }
+
+    // Earlier versions stored the translated label instead of the unit. A
+    // label that cannot be mapped back gets the shortest unit so that a
+    // mismatch never extends a connection.
+    static normalizeTimeUnit(unit: string): TimeUnit {
+        return (
+            NostrConnectUtils.getTimeUnitOptions().find(
+                (option) => option.value === unit || option.key === unit
+            )?.value || 'Hours'
+        );
+    }
+
     static getAvailablePermissions(): IndividualPermissionOption[] {
         return [
             {
@@ -321,25 +337,27 @@ export default class NostrConnectUtils {
 
     static calculateCustomExpiryDate(value: number, unit: TimeUnit): Date {
         const now = new Date();
-        const unitLower = unit.toLowerCase();
 
-        if (unitLower.includes('hours')) {
-            return new Date(now.getTime() + value * 60 * 60 * 1000);
-        } else if (unitLower.includes('days')) {
-            return new Date(now.getTime() + value * 24 * 60 * 60 * 1000);
-        } else if (unitLower.includes('weeks')) {
-            return new Date(now.getTime() + value * 7 * 24 * 60 * 60 * 1000);
-        } else if (unitLower.includes('months')) {
-            const newDate = new Date(now);
-            newDate.setMonth(newDate.getMonth() + value);
-            return newDate;
-        } else if (unitLower.includes('years')) {
-            const newDate = new Date(now);
-            newDate.setFullYear(newDate.getFullYear() + value);
-            return newDate;
+        switch (NostrConnectUtils.normalizeTimeUnit(unit)) {
+            case 'Hours':
+                return new Date(now.getTime() + value * 60 * 60 * 1000);
+            case 'Days':
+                return new Date(now.getTime() + value * 24 * 60 * 60 * 1000);
+            case 'Weeks':
+                return new Date(
+                    now.getTime() + value * 7 * 24 * 60 * 60 * 1000
+                );
+            case 'Months': {
+                const newDate = new Date(now);
+                newDate.setMonth(newDate.getMonth() + value);
+                return newDate;
+            }
+            case 'Years': {
+                const newDate = new Date(now);
+                newDate.setFullYear(newDate.getFullYear() + value);
+                return newDate;
+            }
         }
-
-        return new Date(now.getTime() + value * 24 * 60 * 60 * 1000);
     }
 
     static calculateExpiryDays(expiresAt: Date, createdAt: Date): string {
@@ -588,7 +606,8 @@ export default class NostrConnectUtils {
                     customExpiryUnit
                 ),
                 customExpiryValue,
-                customExpiryUnit
+                customExpiryUnit:
+                    NostrConnectUtils.normalizeTimeUnit(customExpiryUnit)
             };
         }
 
