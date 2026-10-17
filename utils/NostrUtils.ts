@@ -154,11 +154,20 @@ class NostrUtils {
      * NIP-05 names are case-insensitive, but nostr-tools looks them up
      * case-sensitively in nostr.json, whose keys are lowercase, so the
      * identifier is lowercased first.
+     * nostr-tools sends the request through the OS HTTP stack, whatever the
+     * wallet's Tor setting. That stack cannot reach an onion service and
+     * would only send the onion address to the system's DNS resolver, so
+     * .onion identifiers are not looked up.
      * @param identifier - The NIP-05 identifier to look up
      * @returns The profile pointer, or null if the lookup found nothing
      */
-    queryNip05Profile = (identifier: string) =>
-        nip05.queryProfile(identifier.toLowerCase());
+    queryNip05Profile = async (identifier: string) => {
+        const normalized = identifier.toLowerCase();
+        if (/\.onion\.?$/.test(normalized)) {
+            return null;
+        }
+        return nip05.queryProfile(normalized);
+    };
 }
 
 const nostrUtils = new NostrUtils();
