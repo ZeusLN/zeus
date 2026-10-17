@@ -309,3 +309,45 @@ describe('RefundSwap refund button', () => {
         ).toBeDisabled();
     });
 });
+
+describe('RefundSwap raw details', () => {
+    const rawDetails = async () => {
+        await render(
+            <RefundSwap
+                {...({
+                    navigation: { navigate: jest.fn(), setParams: jest.fn() },
+                    route: { params: { swapData: { ...SWAP } } },
+                    SwapStore: {},
+                    NodeInfoStore: { nodeInfo: { isTestNet: false } },
+                    InvoicesStore: {}
+                } as any)}
+            />
+        );
+        return screen.container
+            .queryAll((n) => n.type === 'KeyValue')
+            .map((n) => n.props);
+    };
+
+    it('does not show the refund private key', async () => {
+        const rows = await rawDetails();
+
+        expect(rows.map((row) => row.keyValue)).not.toContain('privateKey');
+        expect(rows.map((row) => row.value)).not.toContain(
+            SWAP.refundPrivateKey
+        );
+    });
+
+    it('still shows the public swap details', async () => {
+        const rows = await rawDetails();
+
+        expect(rows).toContainEqual(
+            expect.objectContaining({
+                keyValue: 'servicePubKey',
+                value: SWAP.servicePubKey
+            })
+        );
+        expect(rows).toContainEqual(
+            expect.objectContaining({ keyValue: 'swapId', value: SWAP.id })
+        );
+    });
+});
