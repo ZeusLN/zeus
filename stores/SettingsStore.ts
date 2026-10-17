@@ -83,6 +83,7 @@ interface PrivacySettings {
     enableMempoolRates?: boolean;
     mempoolInstance?: string;
     customMempoolInstance?: string;
+    screenCaptureProtection?: boolean;
     // Stealth Mode (Android only)
     stealthMode?: boolean;
     stealthApp?: 'zeus' | 'calculator' | 'vpn' | 'qrscanner' | 'notepad';
@@ -1567,6 +1568,7 @@ export const DEFAULT_SETTINGS: Settings = {
         enableMempoolRates: true,
         mempoolInstance: DEFAULT_MEMPOOL_INSTANCE,
         customMempoolInstance: '',
+        screenCaptureProtection: false,
         stealthMode: false,
         stealthApp: 'calculator',
         stealthPinLength: 5,
