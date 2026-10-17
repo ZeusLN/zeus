@@ -35,6 +35,9 @@ export interface LnurlCheckResult {
 // lowercased per LUD-16. The username is lowercased too, except for
 // cryptoqr.net, whose usernames carry URL-encoded data where hex digit casing
 // matters for the server-side lookup. .onion is served over http.
+// The username must stay one path segment, so it is percent-encoded.
+// cryptoqr.net usernames are already encoded (strictUriEncode in
+// handleAnything), so there only '/', '\', '?', '#' and an encoded dot are.
 export const getLnurlpUrl = (address: string) => {
     const [username, domain] = address.split('@');
     const normalizedDomain = domain.toLowerCase();
@@ -42,7 +45,9 @@ export const getLnurlpUrl = (address: string) => {
     const isCryptoQR =
         normalizedDomain === 'cryptoqr.net' ||
         normalizedDomain.endsWith('.cryptoqr.net');
-    const normalizedUsername = isCryptoQR ? username : username.toLowerCase();
+    const normalizedUsername = isCryptoQR
+        ? username.replace(/[/\\?#]|%2e/gi, (c) => encodeURIComponent(c))
+        : encodeURIComponent(username.toLowerCase());
     const origin = `${isOnion ? 'http' : 'https'}://${normalizedDomain}`;
     return {
         url: `${origin}/.well-known/lnurlp/${normalizedUsername}`,

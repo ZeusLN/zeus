@@ -45,6 +45,43 @@ describe('LnurlPayUtils', () => {
             );
         });
 
+        it('keeps a username with URL syntax inside /.well-known/lnurlp/', () => {
+            // %2e%2e is an encoded '..', which URL parsers and servers
+            // resolve like a literal one
+            expect(
+                getLnurlpUrl('%2e%2e/%2e%2e/uploads/mallory.json@good.example')
+                    .url
+            ).toBe(
+                'https://good.example/.well-known/lnurlp/%252e%252e%2F%252e%252e%2Fuploads%2Fmallory.json'
+            );
+            expect(
+                getLnurlpUrl('%2e%2e/%2e%2e/uploads/mallory.json@cryptoqr.net')
+                    .url
+            ).toBe(
+                'https://cryptoqr.net/.well-known/lnurlp/%252e%252e%2F%252e%252e%2Fuploads%2Fmallory.json'
+            );
+
+            for (const address of [
+                '%2E%2E/%2E%2E/out?url=https%3a//evil.example/p.json@good.example',
+                'a/.%2e/.%2e/.%2e/uploads/mallory.json#@good.example',
+                '"\\..\\..\\..\\uploads\\mallory.json"@good.example',
+                'José@ejemplo.com',
+                '⚡️@dplus.plus',
+                '%2E%2E%2F%2E%2E%2Fuploads%2Fmallory.json@cryptoqr.net',
+                'a/.%2e/.%2e/.%2e/out?url=p.json#@cryptoqr.net',
+                '"\\..\\..\\..\\uploads\\mallory.json"@cryptoqr.net'
+            ]) {
+                const { url, origin } = getLnurlpUrl(address);
+                const path = url.slice(`${origin}/.well-known/lnurlp/`.length);
+                expect(url).toBe(`${origin}/.well-known/lnurlp/${path}`);
+                expect(path).not.toMatch(/[/\\?#]|%2e/i);
+                // a WHATWG parser resolves dot segments; none must be left
+                expect(new URL(url).pathname).toMatch(
+                    /^\/\.well-known\/lnurlp\/[^/]+$/
+                );
+            }
+        });
+
         it('uses http for an uppercase .onion domain', () => {
             const onion =
                 'zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion';
