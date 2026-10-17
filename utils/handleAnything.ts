@@ -260,8 +260,10 @@ const merchantConfigs = [
         }
     },
     {
+        // The zap.pe tail is a single character class: a nested quantifier
+        // such as `(.*\n?)*` backtracks exponentially on a `\r` in the tail.
         identifierRegex:
-            /(?<identifier>^((.*zapper\.com.*)|(.*\.wigroup\..*)|(.{2}\/.{4}\/.{20})|(.*payat\.io.*)|(.*(paynow\.netcash|paynow\.sagepay)\.co\.za.*)|(SK-\d{1,}-\d{23})|(\d{20})|(.*\d+\.zap\.pe(.*\n?)*)|(.*transactionjunction\.co\.za.*)|(CRSTPC-\d+-\d+-\d+-\d+-\d+))$)/iu,
+            /(?<identifier>^((.*zapper\.com.*)|(.*\.wigroup\..*)|(.{2}\/.{4}\/.{20})|(.*payat\.io.*)|(.*(paynow\.netcash|paynow\.sagepay)\.co\.za.*)|(SK-\d{1,}-\d{23})|(\d{20})|(.*\d+\.zap\.pe[^\r\u2028\u2029]*)|(.*transactionjunction\.co\.za.*)|(CRSTPC-\d+-\d+-\d+-\d+-\d+))$)/iu,
         domains: {
             mainnet: 'cryptoqr.net',
             signet: 'staging.cryptoqr.net',
@@ -301,8 +303,10 @@ const merchantConfigs = [
         }
     },
     {
+        // A bare Scan to Pay code is exactly ten digits. Ten digits inside
+        // other text (e.g. a SeedQR) must not be sent to the gateway.
         identifierRegex:
-            /(?<identifier>.*(?:scantopay\.io|\d{10}|payat\.io|UMPQR|\.oltio\.co\.za|easypay).*)/iu,
+            /(?<identifier>^\d{10}$|.*(?:scantopay\.io|za\.co\.mp|payat\.io|UMPQR|\.oltio\.co\.za|easypay).*)/iu,
         domains: {
             mainnet: 'cryptoqr.net',
             signet: 'staging.cryptoqr.net',

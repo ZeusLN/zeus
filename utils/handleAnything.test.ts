@@ -2023,6 +2023,27 @@ describe('handleAnything', () => {
                 }
             ]);
         });
+
+        it('should reject a SeedQR without sending it to the merchant gateway', async () => {
+            // 12 word BIP 39 seed, four digits per word index
+            const seedQR = '052818190979191606401336164118140553141215261068';
+            mockProcessBIP21Uri.mockImplementation((value: string) => ({
+                value
+            }));
+            mockIsValidLightningAddress = true;
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({ status: 404 })
+            });
+            const fetchSpy = jest
+                .spyOn(global, 'fetch')
+                .mockRejectedValue(new Error('DoH'));
+
+            await expect(handleAnything(seedQR)).rejects.toThrow();
+
+            expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+            expect(fetchSpy).not.toHaveBeenCalled();
+            fetchSpy.mockRestore();
+        });
     });
 
     // Regression tests: These tests would have FAILED on master where merchant QR
@@ -2510,6 +2531,20 @@ describe('handleAnything', () => {
             expect(isMerchantQR('CRSTPC-1-2-3-4-5')).toBe(true);
         });
 
+        it('returns true for multi-line zap.pe QR codes', () => {
+            expect(isMerchantQR('http://5.zap.pe?t=4&i=test\nline\n')).toBe(
+                true
+            );
+        });
+
+        it('rejects a zap.pe QR code with a carriage return in linear time', () => {
+            // 28 characters before the \r take seconds with a nested
+            // quantifier in the zap.pe tail
+            const start = Date.now();
+            expect(isMerchantQR(`1.zap.pe${'a'.repeat(28)}\rx`)).toBe(false);
+            expect(Date.now() - start).toBeLessThan(500);
+        });
+
         it('returns true for SnapScan QR codes', () => {
             expect(
                 isMerchantQR('https://pos-staging.snapscan.io/qr/N0utvgph')
@@ -2525,8 +2560,31 @@ describe('handleAnything', () => {
                 isMerchantQR('https://app.scantopay.io/qr?qrcode=8784599487')
             ).toBe(true);
             expect(isMerchantQR('0337704903')).toBe(true);
+            expect(isMerchantQR('00020126260008za.co.mp01108472685626')).toBe(
+                true
+            );
             expect(isMerchantQR('UMPQR123456')).toBe(true);
             expect(isMerchantQR('easypay789')).toBe(true);
+        });
+
+        it('returns false for input that merely contains ten digits in a row', () => {
+            // SeedQR, 12 and 24 words
+            const seedQR = '052818190979191606401336164118140553141215261068';
+            expect(isMerchantQR(seedQR)).toBe(false);
+            expect(isMerchantQR(seedQR + seedQR)).toBe(false);
+            // 32 byte secret in hex
+            expect(
+                isMerchantQR(
+                    'a3f1c07b1234567890de5b9c2f4a6e8d0b1c3d5e7f9a0b2c4d6e8f0a1b3c5d7e'
+                )
+            ).toBe(false);
+            // legacy NWC scheme
+            expect(
+                isMerchantQR(
+                    'nostrwalletconnect://abc123?relay=wss://relay.example.com&secret=a3f1c07b1234567890de'
+                )
+            ).toBe(false);
+            expect(isMerchantQR('03377049031')).toBe(false);
         });
 
         it('returns false for null/empty input', () => {
