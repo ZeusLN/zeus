@@ -2660,7 +2660,7 @@ export default class NostrWalletConnectStore {
             };
         }
 
-        const preimage = this.transactionsStore.payment_preimage;
+        const preimage = this.getTransactionsStorePreimage();
         const fees_paid = this.transactionsStore.payment_fee;
 
         const payment =
@@ -2742,7 +2742,8 @@ export default class NostrWalletConnectStore {
 
         return {
             result: {
-                preimage: preimage || payment?.getPreimage || '',
+                preimage:
+                    preimage || NostrConnectUtils.getSettledPreimage(payment),
                 fees_paid: satsToMillisats(feeSats)
             },
             error: undefined
@@ -3297,6 +3298,14 @@ export default class NostrWalletConnectStore {
         };
     }
 
+    // LND reports an unsettled payment (FAILED, IN_FLIGHT) with an all-zero
+    // preimage, which isIncomplete flags: that is not proof of settlement.
+    private getTransactionsStorePreimage(): string | null {
+        return this.transactionsStore.isIncomplete
+            ? null
+            : this.transactionsStore.payment_preimage;
+    }
+
     private checkPaymentErrors(
         errorCode: Nip47ErrorCode,
         timeoutMessage?: string,
@@ -3329,7 +3338,7 @@ export default class NostrWalletConnectStore {
                 errorCode
             );
         }
-        const preimage = this.transactionsStore.payment_preimage;
+        const preimage = this.getTransactionsStorePreimage();
         const paymentCompleted = !this.transactionsStore.loading;
         const hasPaymentHash = !!this.transactionsStore.payment_hash;
         const hasSuccessStatus =
