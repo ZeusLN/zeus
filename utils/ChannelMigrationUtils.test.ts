@@ -72,11 +72,15 @@ jest.mock('react-native', () => ({
     Platform: { OS: 'android', select: (opts: any) => opts.android }
 }));
 
+import { Alert } from 'react-native';
+
 import {
     graphDataExists,
     validateChannelBackupFile,
+    handleExportChannels,
     importChannelDb
 } from './ChannelMigrationUtils';
+import { sourceMethods } from '../backends/lncTestUtils';
 
 describe('ChannelMigrationUtils', () => {
     beforeEach(() => {
@@ -198,6 +202,59 @@ describe('ChannelMigrationUtils', () => {
             expect(result.valid).toBe(false);
             expect(result.error).toBe(
                 'views.Tools.migration.import.fileNotFound'
+            );
+        });
+    });
+
+    describe('handleExportChannels', () => {
+        // Runs the production handlers of the two screens that start an
+        // export. The Olympus upload is for SQLite wallets only; a wallet
+        // config without isSqlite (created before v0.12.3) runs on bolt.
+        const exportButtons = (
+            [path, className]: string[],
+            isSqlite?: boolean
+        ) => {
+            const Screen = sourceMethods(
+                path,
+                className,
+                ['handleExportChannels'],
+                { handleExportChannels, Alert, localeString: (s: string) => s }
+            );
+            const screen = new Screen();
+            screen.props = {
+                SettingsStore: {
+                    isSqlite,
+                    lndDir: 'lnd',
+                    embeddedLndNetwork: 'Mainnet',
+                    seedPhrase: ['seed']
+                },
+                NodeInfoStore: { nodeInfo: { identity_pubkey: 'pubkey' } },
+                SyncStore: { isSyncing: false }
+            };
+            screen.handleExportChannels();
+            return (Alert.alert as jest.Mock).mock.calls[0][2].map(
+                (button: any) => button.text
+            );
+        };
+
+        describe.each([
+            ['views/Tools/index.tsx', 'Tools'],
+            ['views/Settings/Seed.tsx', 'Seed']
+        ])('%s', (...screen) => {
+            it('offers the Olympus upload to SQLite wallets', () => {
+                expect(exportButtons(screen, true)).toContain(
+                    'views.Tools.migration.export.olympus'
+                );
+            });
+
+            it.each([false, undefined])(
+                'does not offer the Olympus upload when isSqlite is %s',
+                (isSqlite) => {
+                    expect(exportButtons(screen, isSqlite)).toEqual([
+                        'general.cancel',
+                        'general.ok'
+                    ]);
+                }
             );
         });
     });
