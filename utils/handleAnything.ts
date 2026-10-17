@@ -493,6 +493,12 @@ const handleAnything = async (
     } else if (!hasAt && AddressUtils.isValidNoffer(value)) {
         if (isClipboardValue) return true;
         return ['ClinkPay', { noffer: value }];
+    } else if (!hasAt && AddressUtils.isPsbt(value)) {
+        // A PSBT's base64 text can contain any substring (its output scripts
+        // and previous transactions come from other parties), so check it
+        // before the branches that search the text (clnrest+, lndconnect,
+        // findlnurl).
+        return ['PSBT', { psbt: value }];
     } else if (value.includes('clnrest://') || value.includes('clnrest+')) {
         if (isClipboardValue) return true;
         const { host, port, rune, implementation, enableTor } =
@@ -1072,8 +1078,6 @@ const handleAnything = async (
                 }
             ];
         }
-    } else if (AddressUtils.isPsbt(value)) {
-        return ['PSBT', { psbt: value }];
     } else if (AddressUtils.isValidTxHex(value)) {
         return ['TxHex', { txHex: value }];
     } else if (
