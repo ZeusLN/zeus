@@ -20,6 +20,7 @@ import {
 import ChannelsStore from '../stores/ChannelsStore';
 import NodeInfoStore from '../stores/NodeInfoStore';
 
+import { getLnurlHost } from '../utils/LnurlPayUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import NodeUriUtils from '../utils/NodeUriUtils';
@@ -84,7 +85,7 @@ export default class LnurlChannel extends React.Component<
         const { pubkey, host } = NodeUriUtils.processNodeUri(lnurl.uri);
         return {
             uri: lnurl.uri,
-            domain: lnurl.domain,
+            domain: getLnurlHost(lnurl.callback),
             node_pubkey_string: pubkey,
             host,
             k1: lnurl.k1,
