@@ -2414,7 +2414,7 @@ export default class SettingsStore {
     public createAccount = (
         host: string,
         certVerification: boolean,
-        enableTor?: boolean
+        enableTor: boolean
     ) => {
         const url = `${host}/create`;
         const headers = {
