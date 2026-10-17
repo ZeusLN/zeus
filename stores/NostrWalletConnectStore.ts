@@ -19,6 +19,7 @@ import {
 } from '@getalby/sdk';
 
 import { getPublicKey, generateSecretKey } from 'nostr-tools';
+import { sha256 } from '@noble/hashes/sha256';
 import { bytesToHex } from '@noble/hashes/utils';
 
 import {
@@ -980,9 +981,14 @@ export default class NostrWalletConnectStore {
         const nodeId = this.nodeInfoStore.nodeInfo?.nodeId;
         if (nodeId) return nodeId;
 
-        const { implementation, lndhubUrl, username } = this.settingsStore;
-        if (implementation === 'lndhub' && lndhubUrl && username) {
-            return `lndhub:${lndhubUrl}:${username}`;
+        // The login alone does not name an LndHub account: on LNbits every
+        // wallet logs in as "admin" (or "invoice") and the password, the
+        // wallet's API key, selects the wallet.
+        const { implementation, lndhubUrl, username, password } =
+            this.settingsStore;
+        if (implementation === 'lndhub' && lndhubUrl && username && password) {
+            const account = bytesToHex(sha256(`${username}:${password}`));
+            return `lndhub:${lndhubUrl}:${account}`;
         }
         return '';
     }
@@ -1006,12 +1012,56 @@ export default class NostrWalletConnectStore {
         );
     }
 
+    /**
+     * Identity LndHub connections were stored under before the account was
+     * hashed in: server and login only. Every wallet of an LNbits server
+     * shares it, so a connection stored under it can only be claimed for the
+     * open wallet while no other saved wallet has the same server and login.
+     */
+    private getLegacyLndHubWalletPubkey(): string {
+        const { implementation, lndhubUrl, username, settings } =
+            this.settingsStore;
+        if (implementation !== 'lndhub' || !lndhubUrl || !username) {
+            return '';
+        }
+        const sameLogin = (settings?.nodes || []).filter(
+            (node) =>
+                (node.implementation || 'lnd') === 'lndhub' &&
+                node.lndhubUrl === lndhubUrl &&
+                node.username === username
+        );
+        return sameLogin.length === 1 ? `lndhub:${lndhubUrl}:${username}` : '';
+    }
+
+    /** Rebinds legacy LndHub connections to the open wallet's identity. */
+    private migrateLegacyLndHubConnections(
+        connections: NWCConnectionData[]
+    ): boolean {
+        const currentNodePubkey = this.getCurrentWalletPubkey();
+        const legacyNodePubkey = this.getLegacyLndHubWalletPubkey();
+        if (!currentNodePubkey || !legacyNodePubkey) return false;
+
+        let migrated = false;
+        for (const c of connections) {
+            if (
+                c.implementation === 'lndhub' &&
+                c.nodePubkey === legacyNodePubkey
+            ) {
+                c.nodePubkey = currentNodePubkey;
+                migrated = true;
+            }
+        }
+        return migrated;
+    }
+
     @action
     public loadConnections = async () => {
         try {
             const connectionsData = await Storage.getItem(NWC_CONNECTIONS_KEY);
             if (connectionsData) {
                 const connections = JSON.parse(connectionsData);
+                const migrated =
+                    this.migrateLegacyLndHubConnections(connections);
                 runInAction(() => {
                     const filtered = this.hasWalletContext()
                         ? connections.filter((c: NWCConnectionData) =>
@@ -1023,6 +1073,7 @@ export default class NostrWalletConnectStore {
                         (data: NWCConnectionData) => new NWCConnection(data)
                     );
                 });
+                if (migrated) await this.saveConnections();
                 await this.checkAndResetAllBudgets();
             } else {
                 runInAction(() => {
