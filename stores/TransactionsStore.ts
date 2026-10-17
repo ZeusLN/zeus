@@ -495,7 +495,10 @@ export default class TransactionsStore {
             transactionRequest.utxos &&
             transactionRequest.utxos.length > 0 &&
             transactionRequest.account === 'default' &&
-            BackendUtils.supportsOnchainSendMax()
+            BackendUtils.supportsOnchainSendMax() &&
+            // SendCoins pays a single address; batched sends have to go
+            // through fundPsbt below or the additional outputs are dropped
+            !transactionRequest.additional_outputs?.length
         ) {
             const outpoints: OutPoint[] = [];
             transactionRequest.utxos.forEach((input) => {
