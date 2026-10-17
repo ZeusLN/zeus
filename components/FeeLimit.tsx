@@ -201,7 +201,7 @@ export default class FeeLimit extends React.Component<
                                     opacity: feeOption == 'percent' ? 1 : 0.25
                                 }}
                             >
-                                <Amount sats={percentAmount} />
+                                <Amount sats={percentAmount || 0} />
                             </Text>
                         </Row>
                         {displayFeeRecommendation && this.feeRecommendation()}
