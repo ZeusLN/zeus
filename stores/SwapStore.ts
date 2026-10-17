@@ -105,6 +105,11 @@ const pickFields = (source: any, fields: string[]): { [key: string]: any } => {
 
 const hasPreimage = (swap: any) => !!preimageHexFrom(swap?.preimage);
 
+// Activity and the swaps list wait for the status polls of every stored
+// swap, so the host of any one of them must not be able to hold them up.
+// RNBlobUtil's native default (60s) only measures inactivity.
+const SWAP_STATUS_TIMEOUT_MS = 10000;
+
 /**
  * Keeps one stored entry per swap ID. Running the rescue again used to
  * append a second copy of a reverse swap already re-filed under
@@ -1057,8 +1062,13 @@ export default class SwapStore {
 
             const allSwaps = [...submarineSwaps, ...reverseSwaps];
 
-            for (const swap of allSwaps) {
-                if (!swap?.id) continue;
+            const pollStatus = async (swap: any) => {
+                if (!swap?.id) return;
+
+                // stored before only strings were accepted as a status
+                if (swap.status && typeof swap.status !== 'string') {
+                    delete swap.status;
+                }
 
                 const skipStatusesForSubmarineSwap = [
                     SwapState.InvoiceFailedToPay,
@@ -1077,22 +1087,34 @@ export default class SwapStore {
                     (swap.type === SwapType.Reverse &&
                         skipStatusesForReverseSwap.includes(swap.status));
 
-                if (shouldSkip) continue;
+                if (shouldSkip) return;
 
                 // poll the server the swap was created on; the currently
                 // selected provider may differ (e.g. after the ZEUS ->
                 // Boltz host migration) and won't know this swap's ID
                 const host = swap.endpoint || this.getHost;
 
+                let timer: ReturnType<typeof setTimeout> | undefined;
                 try {
-                    const response = await ReactNativeBlobUtil.fetch(
+                    const request = ReactNativeBlobUtil.fetch(
                         'GET',
                         `${host}/swap/${swap.id}`,
                         this.getHeaders
                     );
+                    const response = await Promise.race([
+                        request,
+                        new Promise<never>((_, reject) => {
+                            timer = setTimeout(() => {
+                                request.cancel?.();
+                                reject(new Error('Request timeout'));
+                            }, SWAP_STATUS_TIMEOUT_MS);
+                        })
+                    ]);
 
+                    // The host can answer with any JSON. The status is
+                    // stored and later used as text and as an object key.
                     const result = await response.json();
-                    if (result?.status) {
+                    if (result?.status && typeof result.status === 'string') {
                         swap.status = result.status;
                     }
                 } catch (err: any) {
@@ -1100,8 +1122,14 @@ export default class SwapStore {
                         `Failed to fetch status for swap ${swap.id}`,
                         err
                     );
+                } finally {
+                    clearTimeout(timer);
                 }
-            }
+            };
+
+            // poll all hosts at once, so slow ones cost one timeout in
+            // total rather than one per stored swap
+            await Promise.all(allSwaps.map(pollStatus));
 
             const updatedSubmarineSwaps = allSwaps.filter(
                 (s) => s.type === SwapType.Submarine
@@ -1148,6 +1176,8 @@ export default class SwapStore {
         isSubmarineSwap: boolean,
         failureReason?: string
     ) => {
+        // status and failureReason come from the host's WebSocket message
+        if (typeof status !== 'string') return;
         try {
             let storedSwaps: any;
             const key = isSubmarineSwap ? SWAPS_KEY : REVERSE_SWAPS_KEY;
@@ -1159,7 +1189,9 @@ export default class SwapStore {
                     ? {
                           ...swap,
                           status,
-                          ...(isSubmarineSwap && failureReason
+                          ...(isSubmarineSwap &&
+                          failureReason &&
+                          typeof failureReason === 'string'
                               ? { failureReason }
                               : {})
                       }
@@ -1417,6 +1449,7 @@ export default class SwapStore {
         // a host that could set the claim address would be paid the lockup
         // and get the preimage to settle the hold invoice.
         const swapDetails = pickFields(swap, RESCUE_SWAP_FIELDS);
+        if (typeof swapDetails.status !== 'string') delete swapDetails.status;
         const hostDetails = pickFields(details, RESCUE_DETAIL_FIELDS);
 
         const { keyIndex } = details;
