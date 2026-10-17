@@ -453,8 +453,8 @@ class CashuDevKit {
 
     /**
      * Execute a partial melt from a specific mint.
-     * Creates its own melt quote directly with the mint API
-     * to get the actual fee, then sends all proofs.
+     * Creates its own MPP melt quote with the mint to get the actual fee,
+     * then lets CDK select proofs for the partial amount plus fee reserve.
      * @param mintUrl - The mint to melt from
      * @param bolt11 - The BOLT11 invoice to pay
      * @param mppAmountMsat - Partial amount in millisats for this mint
