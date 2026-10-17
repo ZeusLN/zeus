@@ -28,12 +28,19 @@ jest.mock('../lndmobile/log', () => () => ({
     w: jest.fn(),
     e: jest.fn()
 }));
-jest.mock('../lndmobile/index', () => ({}));
+jest.mock('../lndmobile/index', () => ({
+    ELndMobileStatusCodes: {
+        STATUS_SERVICE_BOUND: 1,
+        STATUS_PROCESS_STARTED: 2
+    }
+}));
 jest.mock('../lndmobile/LndMobileInjection', () => ({
     index: {
         writeConfig: jest.fn().mockResolvedValue(undefined),
         initialize: jest.fn().mockResolvedValue(undefined),
         startLnd: jest.fn().mockResolvedValue(undefined),
+        checkStatus: jest.fn(),
+        stopLnd: jest.fn(),
         subscribeState: jest.fn(),
         decodeState: jest.fn()
     },
@@ -65,12 +72,15 @@ jest.mock('./SleepUtils', () => ({
     sleep: jest.fn().mockResolvedValue(undefined)
 }));
 
+import { NativeModules } from 'react-native';
+
 import lndMobile from '../lndmobile/LndMobileInjection';
 import { lnrpc } from '../proto/lightning';
 import { settingsStore } from '../stores/Stores';
 import {
     checkLndStreamErrorResponse,
     createLndWallet,
+    deleteLndWallet,
     LndMobileEventEmitter
 } from './LndMobileUtils';
 
@@ -243,5 +253,56 @@ describe('checkLndStreamErrorResponse', () => {
         expect(
             checkLndStreamErrorResponse('RouterSendPaymentV2', { data: 'AA==' })
         ).toBeNull();
+    });
+});
+
+describe('deleteLndWallet', () => {
+    const originalLndMobileTools = NativeModules.LndMobileTools;
+    const deleteLndDirectory = jest.fn();
+    const killLnd = jest.fn();
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        NativeModules.LndMobileTools = { deleteLndDirectory, killLnd } as any;
+        deleteLndDirectory.mockReset().mockResolvedValue(null);
+        killLnd.mockReset().mockResolvedValue(true);
+        // Mirror iOS: startLnd sets the native started flag and only killLnd
+        // clears it, so LND reports running until killLnd has been called.
+        jest.mocked(lndMobile.index.checkStatus).mockImplementation(async () =>
+            killLnd.mock.calls.length ? 1 : 3
+        );
+    });
+
+    afterEach(() => {
+        NativeModules.LndMobileTools = originalLndMobileTools;
+    });
+
+    it('deletes the directory once LND is stopped', async () => {
+        jest.mocked(lndMobile.index.stopLnd).mockResolvedValue('');
+
+        await expect(deleteLndWallet('wallet-dir')).resolves.toBe(true);
+
+        expect(killLnd).toHaveBeenCalledTimes(1);
+        expect(deleteLndDirectory).toHaveBeenCalledWith('wallet-dir');
+    });
+
+    it('deletes the directory when StopDaemon is refused without a wallet', async () => {
+        // lnd's RPC interceptor after a restore that failed at InitWallet
+        jest.mocked(lndMobile.index.stopLnd).mockRejectedValue(
+            new Error(
+                'rpc error: code = Unknown desc = wallet not created, create one to enable full RPC access'
+            )
+        );
+
+        await expect(deleteLndWallet('wallet-dir')).resolves.toBe(true);
+
+        expect(deleteLndDirectory).toHaveBeenCalledWith('wallet-dir');
+    });
+
+    it('reports a failed deletion', async () => {
+        jest.mocked(lndMobile.index.stopLnd).mockResolvedValue('');
+        deleteLndDirectory.mockRejectedValue(new Error('error deleting'));
+
+        await expect(deleteLndWallet('wallet-dir')).resolves.toBe(false);
     });
 });
