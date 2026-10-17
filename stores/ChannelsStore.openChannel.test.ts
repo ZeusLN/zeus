@@ -733,7 +733,8 @@ describe('ChannelsStore.openChannel through openChannelStream', () => {
                 }
             ])
         );
-        expect(store.pending_chan_ids).toEqual(['chan-2']);
+        // lnd finalized the newer open, which ends its funding flow
+        expect(store.pending_chan_ids).toEqual([]);
         expect(store.channelSuccess).toBe(true);
         expect(store.openingChannel).toBe(false);
     });
