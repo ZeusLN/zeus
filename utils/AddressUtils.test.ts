@@ -1125,6 +1125,27 @@ describe('AddressUtils', () => {
                     AddressUtils.isValidLightningAddress('⚡️@test@example.com')
                 ).toBeFalsy();
             });
+
+            it('rejects quoted local parts and bracketed domain literals', () => {
+                // callers split on '@', so the first two would be fetched
+                // from evil.com while the address ends in @good.com
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        '"x@evil.com@"@good.com'
+                    )
+                ).toBeFalsy();
+                expect(
+                    AddressUtils.isValidLightningAddress(
+                        '"x@evil.com/"@good.com'
+                    )
+                ).toBeFalsy();
+                expect(
+                    AddressUtils.isValidLightningAddress('"x"@good.com')
+                ).toBeFalsy();
+                expect(
+                    AddressUtils.isValidLightningAddress('x@[1.2.3.4]')
+                ).toBeFalsy();
+            });
         });
 
         describe('processLNDHubAddress', () => {
@@ -1781,6 +1802,37 @@ describe('AddressUtils', () => {
             expect(
                 AddressUtils.isValidWithdrawalRequest(invalidString)
             ).toBeFalsy();
+        });
+    });
+
+    describe('regex backtracking', () => {
+        // These run synchronously on whatever is on the clipboard, so a
+        // non-match must not cost more than one pass over the input
+        it.each([
+            [
+                'isValidLightningPaymentRequest',
+                AddressUtils.isValidLightningPaymentRequest,
+                `lnbc${'1'.repeat(40000)}!`
+            ],
+            [
+                'isValidLightningOffer',
+                AddressUtils.isValidLightningOffer,
+                `lno${'1'.repeat(40000)}!`
+            ],
+            [
+                'isValidLNDHubAddress',
+                AddressUtils.isValidLNDHubAddress,
+                `lndhub://a:b@https://${'a'.repeat(40000)}!`
+            ],
+            [
+                'isValidLightningAddress',
+                AddressUtils.isValidLightningAddress,
+                `a@[1.1.1.a:${'\\a'.repeat(28)}!`
+            ]
+        ])('%s rejects a hostile non-match quickly', (_, isValid, input) => {
+            const start = Date.now();
+            expect(isValid(input)).toBeFalsy();
+            expect(Date.now() - start).toBeLessThan(1000);
         });
     });
 });
