@@ -21,7 +21,14 @@ export default class UnitsStore {
 
     public getUnits = async () => {
         const units = await Storage.getItem(UNIT_KEY);
-        if (units) this.units = units;
+        if (!units) return;
+        // fiat must not be the unit while fiat is off: Conversion draws no
+        // sat line then, leaving a fiat estimate as the only amount on screen
+        if (units === 'fiat' && !this.settingsStore.settings.fiatEnabled) {
+            await this.setUnits('sats');
+        } else {
+            this.units = units;
+        }
     };
 
     public changeUnits = async () => {

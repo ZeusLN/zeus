@@ -114,9 +114,12 @@ export default class Currency extends React.Component<
                                     await updateSettings({
                                         fiatEnabled: newFiatEnabled
                                     });
+                                    // stored, unlike resetUnits(), so the
+                                    // wallet does not come back in fiat
+                                    // at the next start
                                     if (!newFiatEnabled) {
                                         if (UnitsStore.units === 'fiat') {
-                                            UnitsStore.resetUnits();
+                                            await UnitsStore.setUnits('sats');
                                         }
                                     }
                                 }}
