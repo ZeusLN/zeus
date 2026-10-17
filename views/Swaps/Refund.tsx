@@ -23,6 +23,7 @@ import {
 } from '../../components/SuccessErrorMessage';
 import { Row } from '../../components/layout/Row';
 
+import AddressUtils from '../../utils/AddressUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString, pascalToHumanReadable } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -485,7 +486,9 @@ export default class RefundSwap extends React.Component<
                         containerStyle={{ marginTop: 20 }}
                         secondary
                         disabled={
-                            !destinationAddress ||
+                            !AddressUtils.isValidBitcoinAddressForNode(
+                                destinationAddress
+                            ) ||
                             this.state.loading ||
                             fetchingAddress
                         }
