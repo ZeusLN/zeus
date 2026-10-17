@@ -46,7 +46,8 @@ jest.mock('../utils/MigrationUtils', () => ({
         .fn()
         .mockImplementation(async (settings: any) => settings),
     legacySettingsMigrations: jest.fn().mockResolvedValue({}),
-    storageMigrationV2: jest.fn().mockResolvedValue(undefined)
+    storageMigrationV2: jest.fn().mockResolvedValue(undefined),
+    retryLegacySiblingMigration: jest.fn().mockResolvedValue(undefined)
 }));
 jest.mock('../utils/TorUtils', () => ({
     doTorRequest: jest.fn(),
@@ -1140,6 +1141,21 @@ describe('SettingsStore.getSettings', () => {
         expect(settings.nodes?.[0].host).toEqual('example.com');
         // Read-only fallback: the local partition must not be written
         expect(StorageMock._backing[STORAGE_KEY]).toBeUndefined();
+    });
+
+    it('retries the legacy storage migration on the modern path', async () => {
+        const MigrationUtilsMock: any = jest.requireMock(
+            '../utils/MigrationUtils'
+        );
+        MigrationUtilsMock.retryLegacySiblingMigration.mockClear();
+        seedSettings({ fiat: 'USD', locale: 'en' });
+        const store = new SettingsStore();
+
+        await store.getSettings();
+
+        expect(
+            MigrationUtilsMock.retryLegacySiblingMigration
+        ).toHaveBeenCalledWith(store.settings);
     });
 });
 

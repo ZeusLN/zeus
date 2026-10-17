@@ -101,6 +101,8 @@ const LEGACY_IS_BACKED_UP_KEY = 'backup-complete';
 export const IS_BACKED_UP_KEY = 'backup-complete-v2';
 
 const KEYCHAIN_MIGRATION_KEY = 'ios-keychain-cloud-sync-migration-v1';
+// Set while storageMigrationV2's non-settings keys are not all copied
+const LEGACY_SIBLINGS_PENDING_KEY = 'storage-migration-v2-siblings-pending';
 const CASHU_MIGRATION_KEY = 'ios-keychain-cashu-fix-v1';
 
 import EncryptedStorage from 'react-native-encrypted-storage';
@@ -121,6 +123,13 @@ class MigrationsUtils {
     // so caching saves one keychain read per flag per write (#4903).
     private confirmedFlags = new Set<string>();
 
+    // True once LEGACY_SIBLINGS_PENDING_KEY has read absent, been cleared,
+    // or had its one retry in this process. Only storageMigrationV2 sets
+    // the marker, and it resets this first. getSettings runs before every
+    // settings write, so a key that keeps failing is retried once per
+    // launch instead of on every write.
+    private legacySiblingsSettled = false;
+
     private async readFlag(key: string): Promise<string | null> {
         if (this.confirmedFlags.has(key)) return 'true';
         const value = await EncryptedStorage.getItem(key);
@@ -135,6 +144,7 @@ class MigrationsUtils {
 
     public clearConfirmedFlags(): void {
         this.confirmedFlags.clear();
+        this.legacySiblingsSettled = false;
     }
 
     /**
@@ -920,7 +930,15 @@ class MigrationsUtils {
     }
 
     public async storageMigrationV2(settings: any) {
-        const migrationTasks = [];
+        // Set before any copy, so a run that fails or is interrupted after
+        // zeus-settings-v2 lands is retried from the modern path. getSettings
+        // only takes this legacy path while that blob is absent.
+        this.legacySiblingsSettled = false;
+        try {
+            await EncryptedStorage.setItem(LEGACY_SIBLINGS_PENDING_KEY, 'true');
+        } catch (error) {
+            console.error('Could not set the legacy migration marker', error);
+        }
 
         // Settings migration
         console.log('Attemping settings migration');
@@ -930,7 +948,50 @@ class MigrationsUtils {
                 return writeSuccess;
             }
         );
-        migrationTasks.push(settingsMigration);
+
+        const [settingsResult, siblingsComplete] = await Promise.all([
+            settingsMigration,
+            this.migrateLegacySiblings(settings)
+        ]);
+        return settingsResult !== false && siblingsComplete;
+    }
+
+    /**
+     * Retries the non-settings part of storageMigrationV2 while its marker
+     * is set, once per launch. Called by getSettings on the modern path,
+     * which is the only path once zeus-settings-v2 exists.
+     */
+    public async retryLegacySiblingMigration(settings: any) {
+        if (this.legacySiblingsSettled) return;
+        try {
+            const pending = await EncryptedStorage.getItem(
+                LEGACY_SIBLINGS_PENDING_KEY
+            );
+            if (pending !== 'true') {
+                this.legacySiblingsSettled = true;
+                return;
+            }
+        } catch (error) {
+            console.error('Could not read the legacy migration marker', error);
+            return;
+        }
+        console.log('Retrying legacy storage migration');
+        this.legacySiblingsSettled = true;
+        await this.migrateLegacySiblings(settings);
+    }
+
+    // Writes a legacy value only while the zeus: key is empty. Anything
+    // already under zeus: was written by this app after the legacy store
+    // was last used, so a retry must not overwrite it.
+    private async copyLegacyIfMissing(key: string, value: any) {
+        if (await Storage.getItem(key)) return true;
+        return Storage.setItem(key, value);
+    }
+
+    // Copies every legacy EncryptedStorage key except the settings blob.
+    // Clears the marker and returns true only when no copy failed.
+    private async migrateLegacySiblings(settings: any): Promise<boolean> {
+        const migrationTasks = [];
 
         // Contacts migration
         const contactsMigration = (async () => {
@@ -940,7 +1001,7 @@ class MigrationsUtils {
                 );
                 if (contacts) {
                     console.log('Attemping contacts migration');
-                    const writeSuccess = await Storage.setItem(
+                    const writeSuccess = await this.copyLegacyIfMissing(
                         CONTACTS_KEY,
                         contacts
                     );
@@ -966,7 +1027,7 @@ class MigrationsUtils {
                 if (storedKeys) {
                     const noteKeys = JSON.parse(storedKeys);
                     console.log('Attemping notes migration');
-                    const writeSuccess = await Storage.setItem(
+                    const writeSuccess = await this.copyLegacyIfMissing(
                         NOTES_KEY,
                         noteKeys
                     );
@@ -976,7 +1037,7 @@ class MigrationsUtils {
                     const notesPromises = noteKeys.map(async (key: string) => {
                         const note = await EncryptedStorage.getItem(key);
                         if (note) {
-                            const writeSuccess = await Storage.setItem(
+                            const writeSuccess = await this.copyLegacyIfMissing(
                                 key,
                                 note
                             );
@@ -1017,7 +1078,7 @@ class MigrationsUtils {
                     console.log(
                         'Attemping lightning address activated migration'
                     );
-                    activatedSuccess = await Storage.setItem(
+                    activatedSuccess = await this.copyLegacyIfMissing(
                         ADDRESS_ACTIVATED_STRING,
                         activated
                     );
@@ -1032,7 +1093,7 @@ class MigrationsUtils {
                 );
                 if (hashes) {
                     console.log('Attemping lightning address hashes migration');
-                    hashesSuccess = await Storage.setItem(
+                    hashesSuccess = await this.copyLegacyIfMissing(
                         HASHES_STORAGE_STRING,
                         hashes
                     );
@@ -1064,7 +1125,7 @@ class MigrationsUtils {
                 );
                 if (status) {
                     console.log('Attemping backup status migration');
-                    statusSuccess = await Storage.setItem(
+                    statusSuccess = await this.copyLegacyIfMissing(
                         LAST_CHANNEL_BACKUP_STATUS,
                         status
                     );
@@ -1079,7 +1140,7 @@ class MigrationsUtils {
                 );
                 if (time) {
                     console.log('Attemping backup time migration');
-                    timeSuccess = await Storage.setItem(
+                    timeSuccess = await this.copyLegacyIfMissing(
                         LAST_CHANNEL_BACKUP_TIME,
                         time
                     );
@@ -1110,7 +1171,7 @@ class MigrationsUtils {
                 );
                 if (posHiddenKey) {
                     console.log('Attemping POS hidden key migration');
-                    hiddenKeySuccess = await Storage.setItem(
+                    hiddenKeySuccess = await this.copyLegacyIfMissing(
                         POS_HIDDEN_KEY,
                         posHiddenKey
                     );
@@ -1125,7 +1186,7 @@ class MigrationsUtils {
                 );
                 if (posStandaloneKey) {
                     console.log('Attemping POS standalone key migration');
-                    standaloneKeySuccess = await Storage.setItem(
+                    standaloneKeySuccess = await this.copyLegacyIfMissing(
                         POS_STANDALONE_KEY,
                         posStandaloneKey
                     );
@@ -1140,7 +1201,7 @@ class MigrationsUtils {
                 );
                 if (categories) {
                     console.log('Attemping POS categories migration');
-                    categoriesSuccess = await Storage.setItem(
+                    categoriesSuccess = await this.copyLegacyIfMissing(
                         CATEGORY_KEY,
                         categories
                     );
@@ -1155,7 +1216,7 @@ class MigrationsUtils {
                 );
                 if (products) {
                     console.log('Attemping POS products migration');
-                    productsSuccess = await Storage.setItem(
+                    productsSuccess = await this.copyLegacyIfMissing(
                         PRODUCT_KEY,
                         products
                     );
@@ -1187,7 +1248,10 @@ class MigrationsUtils {
                 const units = await EncryptedStorage.getItem(LEGACY_UNIT_KEY);
                 if (units) {
                     console.log('Attemping units migration');
-                    const writeSuccess = await Storage.setItem(UNIT_KEY, units);
+                    const writeSuccess = await this.copyLegacyIfMissing(
+                        UNIT_KEY,
+                        units
+                    );
                     console.log('Units migration status', writeSuccess);
                     return writeSuccess;
                 }
@@ -1209,7 +1273,7 @@ class MigrationsUtils {
                 );
                 if (accounts) {
                     console.log('Attemping hidden accounts migration');
-                    const writeSuccess = await Storage.setItem(
+                    const writeSuccess = await this.copyLegacyIfMissing(
                         HIDDEN_ACCOUNTS_KEY,
                         accounts
                     );
@@ -1237,7 +1301,7 @@ class MigrationsUtils {
                 );
                 if (currencyCodes) {
                     console.log('Attemping currency codes migration');
-                    const writeSuccess = await Storage.setItem(
+                    const writeSuccess = await this.copyLegacyIfMissing(
                         CURRENCY_CODES_KEY,
                         currencyCodes
                     );
@@ -1265,7 +1329,7 @@ class MigrationsUtils {
                 );
                 if (activityFilters) {
                     console.log('Attemping activity filters migration');
-                    const writeSuccess = await Storage.setItem(
+                    const writeSuccess = await this.copyLegacyIfMissing(
                         ACTIVITY_FILTERS_KEY,
                         activityFilters
                     );
@@ -1295,7 +1359,7 @@ class MigrationsUtils {
                     console.log(
                         'Attemping Embedded LND is backed up migration'
                     );
-                    const writeSuccess = await Storage.setItem(
+                    const writeSuccess = await this.copyLegacyIfMissing(
                         IS_BACKED_UP_KEY,
                         embeddedLndIsBackedUp
                     );
@@ -1323,7 +1387,7 @@ class MigrationsUtils {
                 );
                 if (lsps1orders) {
                     console.log('Attemping LSPS1 orders migration');
-                    const writeSuccess = await Storage.setItem(
+                    const writeSuccess = await this.copyLegacyIfMissing(
                         LSPS_ORDERS_KEY,
                         lsps1orders
                     );
@@ -1344,7 +1408,7 @@ class MigrationsUtils {
         const lncMigration = (async () => {
             try {
                 const migrationPromises =
-                    settings?.nodes.map(async (node: any) => {
+                    settings?.nodes?.map(async (node: any) => {
                         if (node.implementation === 'lightning-node-connect') {
                             const baseKey = `${LNC_STORAGE_KEY}:${hash(
                                 node.pairingPhrase
@@ -1359,10 +1423,11 @@ class MigrationsUtils {
                                 'Attemping LNC base key migration',
                                 baseKey
                             );
-                            const writeSuccess1 = await Storage.setItem(
-                                baseKey,
-                                JSON.parse(baseKeyData)
-                            );
+                            const writeSuccess1 =
+                                await this.copyLegacyIfMissing(
+                                    baseKey,
+                                    JSON.parse(baseKeyData)
+                                );
                             console.log(
                                 'LNC base key migration status',
                                 writeSuccess1
@@ -1376,10 +1441,11 @@ class MigrationsUtils {
                                 'Attemping LNC host key migration',
                                 baseKey
                             );
-                            const writeSuccess2 = await Storage.setItem(
-                                hostKey,
-                                hostKeyData
-                            );
+                            const writeSuccess2 =
+                                await this.copyLegacyIfMissing(
+                                    hostKey,
+                                    hostKeyData
+                                );
                             console.log(
                                 'LNC host key migration status',
                                 writeSuccess2
@@ -1403,7 +1469,20 @@ class MigrationsUtils {
 
         const results = await Promise.all(migrationTasks);
         console.log('storageMigrationV2 completed!', results);
-        return results.every((result) => result === true);
+        // Tasks resolve undefined when there was nothing to copy
+        const complete = results.every((result) => result !== false);
+        if (complete) {
+            try {
+                await EncryptedStorage.removeItem(LEGACY_SIBLINGS_PENDING_KEY);
+                this.legacySiblingsSettled = true;
+            } catch (error) {
+                console.error(
+                    'Could not clear the legacy migration marker',
+                    error
+                );
+            }
+        }
+        return complete;
     }
 
     public async migrateCashuSeedVersion(cashuStore: any) {

@@ -133,6 +133,7 @@ jest.mock('../stores/SettingsStore', () => ({
 }));
 
 import * as Keychain from 'react-native-keychain';
+import EncryptedStorage from 'react-native-encrypted-storage';
 
 import MigrationUtils from './MigrationUtils';
 import { hash } from '../backends/LNC/credentialStore';
@@ -145,6 +146,7 @@ const SETTINGS_KEY = 'zeus-settings-v2';
 const LEGACY_SETTINGS_KEY = 'zeus-settings';
 const CLOUD_SYNC_FLAG = 'ios-keychain-cloud-sync-migration-v1';
 const CASHU_FLAG = 'ios-keychain-cashu-fix-v1';
+const PENDING_FLAG = 'storage-migration-v2-siblings-pending';
 
 const local = (key: string) => mockKeychain.local.get(`zeus:${key}`);
 const enc = (key: string) => mockEncrypted.data.get(key);
@@ -172,11 +174,10 @@ afterEach(() => {
 });
 
 describe('storageMigrationV2', () => {
-    // storageMigrationV2 has no verify or delete step and no flag of its own:
-    // getSettings stops calling it once zeus-settings-v2 exists. Its return
-    // value is not asserted because it is false even on success (it
-    // requires every task to resolve to exactly true, but Storage.setItem
-    // resolves to the keychain result object) and no caller reads it.
+    // storageMigrationV2 has no verify or delete step. getSettings stops
+    // calling it once zeus-settings-v2 exists; from then on the keys other
+    // than the settings blob are retried through
+    // retryLegacySiblingMigration while PENDING_FLAG is set.
     const LNC_PAIRING = 'alpha bravo charlie delta';
     const LNC_BASE = `lnc-rn:${hash(LNC_PAIRING)}`;
     const LNC_HOST = `${LNC_BASE}:host`;
@@ -280,9 +281,12 @@ describe('storageMigrationV2', () => {
     it('copies every legacy key into the zeus: local namespace and keeps the sources', async () => {
         seedLegacy();
 
-        await MigrationUtils.storageMigrationV2(SETTINGS);
+        await expect(MigrationUtils.storageMigrationV2(SETTINGS)).resolves.toBe(
+            true
+        );
 
         expectAllMigrated();
+        expect(enc(PENDING_FLAG)).toBeUndefined();
         expectLegacySourcesIntact();
         // Nothing goes to the synchronizable partition or to unprefixed
         // keychain servers
@@ -297,9 +301,12 @@ describe('storageMigrationV2', () => {
         seedLegacy();
         failWritesTo('zeus-contacts-v2', 'throw');
 
-        await MigrationUtils.storageMigrationV2(SETTINGS);
+        await expect(MigrationUtils.storageMigrationV2(SETTINGS)).resolves.toBe(
+            false
+        );
 
         expect(local('zeus-contacts-v2')).toBeUndefined();
+        expect(enc(PENDING_FLAG)).toBe('true');
         expect(enc('zeus-contacts')).toBe('[{"name":"alice"}]');
         // Independent keys still land
         expect(local('zeus-units-v2')).toBe('sats');
@@ -375,9 +382,135 @@ describe('storageMigrationV2', () => {
         expectLegacySourcesIntact();
     });
 
-    it.todo(
-        'BUG: a failed sibling key is never retried once zeus-settings-v2 lands, because getSettings only re-runs storageMigrationV2 while the blob is absent'
-    );
+    describe('retryLegacySiblingMigration', () => {
+        it('copies a key that failed after zeus-settings-v2 landed, then clears the marker', async () => {
+            seedLegacy();
+            failWritesTo('zeus-contacts-v2', 'throw');
+            await MigrationUtils.storageMigrationV2(SETTINGS);
+            // The blob landed, so getSettings now takes the modern path
+            expect(local(SETTINGS_KEY)).toBeDefined();
+            expect(enc(PENDING_FLAG)).toBe('true');
+
+            mockKeychain.fault = null;
+            await MigrationUtils.retryLegacySiblingMigration(SETTINGS);
+
+            expectAllMigrated();
+            expectLegacySourcesIntact();
+            expect(enc(PENDING_FLAG)).toBeUndefined();
+        });
+
+        it('does not overwrite values the app wrote after the first run', async () => {
+            seedLegacy();
+            failWritesTo('zeus-units-v2', 'false');
+            await MigrationUtils.storageMigrationV2(SETTINGS);
+
+            const NEWER_CONTACTS = '[{"name":"alice"},{"name":"bob"}]';
+            mockKeychain.local.set('zeus:zeus-contacts-v2', NEWER_CONTACTS);
+            mockKeychain.local.set('zeus:note-a', 'edited note');
+            mockKeychain.fault = null;
+
+            await MigrationUtils.retryLegacySiblingMigration(SETTINGS);
+
+            expect(local('zeus-units-v2')).toBe('sats');
+            expect(local('zeus-contacts-v2')).toBe(NEWER_CONTACTS);
+            expect(local('note-a')).toBe('edited note');
+            expect(enc(PENDING_FLAG)).toBeUndefined();
+        });
+
+        it('finishes a run that was interrupted before any key was copied', async () => {
+            seedLegacy();
+            // storageMigrationV2 set the marker and the blob, then the app
+            // was killed
+            mockEncrypted.data.set(PENDING_FLAG, 'true');
+            mockKeychain.local.set(
+                `zeus:${SETTINGS_KEY}`,
+                JSON.stringify(SETTINGS)
+            );
+
+            await MigrationUtils.retryLegacySiblingMigration(SETTINGS);
+
+            expectAllMigrated();
+            expect(enc(PENDING_FLAG)).toBeUndefined();
+        });
+
+        it('keeps the marker while a legacy read still fails', async () => {
+            seedLegacy();
+            mockEncrypted.failGet = (key) => key === 'hidden-accounts';
+            await MigrationUtils.storageMigrationV2(SETTINGS);
+
+            await MigrationUtils.retryLegacySiblingMigration(SETTINGS);
+            expect(local('zeus-hidden-accounts')).toBeUndefined();
+            expect(enc(PENDING_FLAG)).toBe('true');
+
+            // Next launch
+            mockEncrypted.failGet = null;
+            MigrationUtils.clearConfirmedFlags();
+            await MigrationUtils.retryLegacySiblingMigration(SETTINGS);
+            expect(local('zeus-hidden-accounts')).toBe('["acct"]');
+            expect(enc(PENDING_FLAG)).toBeUndefined();
+        });
+
+        it('retries once per launch while a key keeps failing', async () => {
+            seedLegacy();
+            failWritesTo('zeus-contacts-v2', 'throw');
+            await MigrationUtils.storageMigrationV2(SETTINGS);
+            MigrationUtils.clearConfirmedFlags();
+
+            await MigrationUtils.retryLegacySiblingMigration(SETTINGS);
+            (Keychain.getInternetCredentials as jest.Mock).mockClear();
+            (EncryptedStorage.getItem as jest.Mock).mockClear();
+            await MigrationUtils.retryLegacySiblingMigration(SETTINGS);
+
+            expect(Keychain.getInternetCredentials).not.toHaveBeenCalled();
+            expect(EncryptedStorage.getItem).not.toHaveBeenCalled();
+            expect(enc(PENDING_FLAG)).toBe('true');
+        });
+
+        it('does nothing without the marker, and reads it once per process', async () => {
+            // An install migrated before the marker existed: legacy data is
+            // still present but must not be copied again
+            seedLegacy();
+
+            await MigrationUtils.retryLegacySiblingMigration(SETTINGS);
+            await MigrationUtils.retryLegacySiblingMigration(SETTINGS);
+
+            expect(Keychain.setInternetCredentials).not.toHaveBeenCalled();
+            expect(Keychain.getInternetCredentials).not.toHaveBeenCalled();
+            expect(
+                (EncryptedStorage.getItem as jest.Mock).mock.calls.filter(
+                    ([key]) => key === PENDING_FLAG
+                )
+            ).toHaveLength(1);
+        });
+
+        it('clears the marker when the settings have no nodes', async () => {
+            // A fresh install's default settings have no nodes key
+            const { nodes: _nodes, ...noNodes } = SETTINGS;
+            seedLegacy();
+            failWritesTo('zeus-contacts-v2', 'throw');
+            await MigrationUtils.storageMigrationV2(noNodes);
+            expect(enc(PENDING_FLAG)).toBe('true');
+
+            mockKeychain.fault = null;
+            await MigrationUtils.retryLegacySiblingMigration(noNodes);
+
+            expect(local('zeus-contacts-v2')).toBe('[{"name":"alice"}]');
+            expect(enc(PENDING_FLAG)).toBeUndefined();
+        });
+
+        it('skips the retry when the marker cannot be read', async () => {
+            seedLegacy();
+            mockEncrypted.data.set(PENDING_FLAG, 'true');
+            mockEncrypted.failGet = (key) => key === PENDING_FLAG;
+
+            await expect(
+                MigrationUtils.retryLegacySiblingMigration(SETTINGS)
+            ).resolves.toBeUndefined();
+
+            expect(Keychain.setInternetCredentials).not.toHaveBeenCalled();
+            expect(enc(PENDING_FLAG)).toBe('true');
+        });
+    });
 });
 
 describe('keychainCloudSyncMigration', () => {

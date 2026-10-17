@@ -35,7 +35,8 @@ jest.mock('../utils/MigrationUtils', () => ({
     migrateRgsDefaultToZeus: jest.fn().mockResolvedValue(undefined),
     migrateInvoiceExpiryDisplay: jest.fn().mockResolvedValue(undefined),
     legacySettingsMigrations: jest.fn().mockResolvedValue({}),
-    storageMigrationV2: jest.fn().mockResolvedValue(undefined)
+    storageMigrationV2: jest.fn().mockResolvedValue(undefined),
+    retryLegacySiblingMigration: jest.fn().mockResolvedValue(undefined)
 }));
 jest.mock('../utils/TorUtils', () => ({
     doTorRequest: jest.fn(),
