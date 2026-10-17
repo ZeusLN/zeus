@@ -99,6 +99,11 @@ export default class NodeInfoStore {
                         Storage.removeItem(
                             `${nodeInfo.nodeId}-extended-private-keys`
                         ).catch(() => {});
+                        // Same cache, written by those builds while nodeInfo
+                        // had not loaded yet and nodeId was undefined
+                        Storage.removeItem(
+                            'undefined-extended-private-keys'
+                        ).catch(() => {});
                     }
                     resolve(nodeInfo);
                 })

@@ -120,6 +120,9 @@ const STORAGE_KEYS = [
     // enumerate them; at least clear the bare key written when a hash is
     // undefined. Hash-keyed entries are a documented residual.
     'lnurlpay:',
+    // Legacy xprv cache written before node info had loaded (see
+    // clearNodeKeychainData). Listed here too: its wallet's config may be gone.
+    'undefined-extended-private-keys',
     // Legacy keys
     LEGACY_CONTACTS_KEY,
     LEGACY_NOTES_KEY,
@@ -579,7 +582,8 @@ async function clearLncCredentials(pairingPhrase: string) {
  * - Cashu keys, which are namespaced by getNodeDir() (lndDir for LND-family,
  *   ldkNodeDir for LDK) - CashuStore.getNodeDir
  * - LNC pairing credentials, namespaced by sha256(pairingPhrase)
- * - the legacy '<pubkey>-extended-private-keys' xprv cache (KEY-006)
+ * - the legacy '<pubkey>-extended-private-keys' xprv cache (KEY-006), and
+ *   the 'undefined-extended-private-keys' it was filed under without a pubkey
  *
  * Exported so both clearAllData() and single-wallet deletion
  * (WalletConfiguration.deleteNodeConfig) clear the same set of keys.
@@ -619,6 +623,16 @@ export async function clearNodeKeychainData(
     // export screen's decryption failed the same way before its write.
     // Belt and braces: NodeInfoStore also purges the cache at connect
     // time using the runtime nodeId, which is passphrase-independent.
+    //
+    // Those builds read the pubkey off NodeInfoStore without checking that
+    // node info had loaded, so an export made while LND was still starting,
+    // or had failed to start, was cached under the literal
+    // 'undefined-extended-private-keys'. No pubkey leads to that entry and no
+    // build reads it any more, so it goes with any embedded wallet. Not
+    // subject to skipXprvPurge: there is no scrypt to skip.
+    if (node.implementation === 'embedded-lnd') {
+        await clearKey('undefined-extended-private-keys');
+    }
     if (
         !opts?.skipXprvPurge &&
         node.implementation === 'embedded-lnd' &&
