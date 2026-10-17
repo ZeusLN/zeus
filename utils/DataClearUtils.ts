@@ -57,6 +57,7 @@ import {
     purgeLegacyRescueKeyFiles,
     unlinkRescueKeyStagingFile
 } from '../utils/SwapUtils';
+import { purgeNodeConfigStagingFiles } from '../utils/NodeConfigStagingUtils';
 import {
     NWC_CONNECTIONS_KEY,
     NWC_CLIENT_KEYS,
@@ -689,6 +690,22 @@ export async function clearAllData(): Promise<void> {
     // the settings write landed ~20ms after the wipe finished.
     Storage.blockWrites();
 
+    // 0b. Delete anything the node-config export/import flows left staged in
+    // cache. A kill between staging the plaintext node list and unlinking it
+    // leaves every seed phrase sitting there in the clear, and nothing below
+    // touches app cache. A duress wipe that spares seed material is not a
+    // wipe.
+    //
+    // First, because this is the step the wipe is least able to afford
+    // losing and the cheapest to run: a handful of exists/unlink calls on
+    // app-private cache, needing no settings, keychain or node state. The
+    // steps below take seconds on a device (a seed-derived node id per
+    // embedded wallet on iOS, then up to three 500ms retries per node
+    // shutdown), and every one of those seconds is a window in which a
+    // force-stop, which the duress wipe should be expected to race, leaves
+    // the plaintext behind.
+    await purgeNodeConfigStagingFiles();
+
     // 1. First, try to get settings to find node-specific data
     let settings: any = null;
     try {
@@ -730,7 +747,8 @@ export async function clearAllData(): Promise<void> {
     // 2d. Delete any plaintext rescue-key exports. Legacy files live outside
     // the app sandbox (public Downloads on Android, Files-visible Documents
     // on iOS); the save-dialog staging copy lives in app cache, which
-    // nothing else in this flow touches either.
+    // nothing else in this flow touches either. Same argument for hoisting
+    // as the node-config sweep in 0b, if this is ever revisited.
     await purgeLegacyRescueKeyFiles();
     await unlinkRescueKeyStagingFile();
 
