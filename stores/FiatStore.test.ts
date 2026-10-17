@@ -60,13 +60,21 @@ describe('FiatStore', () => {
             expect(store.fiatRates).toBeUndefined();
         });
 
-        it('fetches rates when getFiatRates is called', async () => {
-            const store = newStore(source, true);
-            await settle(store);
-            await store.getFiatRates();
-            expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledTimes(1);
-            expect(store.fiatRates).toHaveLength(1);
-            expect(store.fiatRates![0].code).toBe('USD');
-        });
+        // fiat off covers the currency converter, which fetches on mount
+        // regardless of fiatEnabled
+        it.each([
+            ['on', true],
+            ['off', false]
+        ])(
+            'fetches rates when getFiatRates is called with fiat %s',
+            async (_label, fiatEnabled) => {
+                const store = newStore(source, fiatEnabled);
+                await settle(store);
+                await store.getFiatRates();
+                expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledTimes(1);
+                expect(store.fiatRates).toHaveLength(1);
+                expect(store.fiatRates![0].code).toBe('USD');
+            }
+        );
     });
 });
