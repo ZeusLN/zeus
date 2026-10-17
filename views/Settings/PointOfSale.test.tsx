@@ -41,7 +41,7 @@ jest.mock('../../components/Switch', () => 'Switch');
 jest.mock('../../components/Text', () => 'Text');
 jest.mock('../../components/TextInput', () => {
     const { TextInput } = require('react-native');
-    return (props: any) => <TextInput {...props} />;
+    return (props: any) => <TextInput {...props} editable={!props.locked} />;
 });
 
 import * as React from 'react';
@@ -50,12 +50,12 @@ import PointOfSale from './PointOfSale';
 
 const SQUARE_ACCESS_TOKEN = 'EAAAl-square-access-token';
 
-const renderView = async () => {
+const renderView = async (squareAccessToken = SQUARE_ACCESS_TOKEN) => {
     const settings = {
         fiatEnabled: true,
         pos: {
             posEnabled: 'square',
-            squareAccessToken: SQUARE_ACCESS_TOKEN
+            squareAccessToken
         }
     };
     const SettingsStore = {
@@ -93,9 +93,39 @@ describe('PointOfSale', () => {
         ).toBe(false);
     });
 
-    it('still saves an edited Square access token', async () => {
+    it('does not change the stored Square access token when typing while it is masked', async () => {
         const SettingsStore = await renderView();
 
+        await fireEvent.changeText(
+            screen.getByDisplayValue(SQUARE_ACCESS_TOKEN),
+            'X'
+        );
+
+        expect(
+            SettingsStore.updateSettingsGroupDebounced
+        ).not.toHaveBeenCalled();
+        expect(screen.getByDisplayValue(SQUARE_ACCESS_TOKEN)).toBeTruthy();
+    });
+
+    it('lets a first Square access token be typed while the field is masked', async () => {
+        const SettingsStore = await renderView('');
+        const input = screen
+            .getAllByDisplayValue('')
+            .find((element) => element.props.secureTextEntry)!;
+
+        await fireEvent(input, 'focus');
+        await fireEvent.changeText(input, 'E');
+        await fireEvent.changeText(screen.getByDisplayValue('E'), 'EA');
+
+        expect(
+            SettingsStore.updateSettingsGroupDebounced
+        ).toHaveBeenLastCalledWith('pos', { squareAccessToken: 'EA' });
+    });
+
+    it('still saves an edited Square access token once it is shown', async () => {
+        const SettingsStore = await renderView();
+
+        await fireEvent.press(screen.getByTestId('show-hide-toggle'));
         await fireEvent.changeText(
             screen.getByDisplayValue(SQUARE_ACCESS_TOKEN),
             'EAAAl-new-token'

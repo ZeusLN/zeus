@@ -52,6 +52,7 @@ interface PointOfSaleState {
     enablePrinter: boolean;
     defaultView: string;
     hidden: boolean;
+    squareAccessTokenFocused: boolean;
 }
 
 @inject('SettingsStore')
@@ -72,7 +73,8 @@ export default class PointOfSale extends React.Component<
         taxPercentage: '',
         enablePrinter: false,
         defaultView: 'Products',
-        hidden: true
+        hidden: true,
+        squareAccessTokenFocused: false
     };
 
     async componentDidMount() {
@@ -125,7 +127,8 @@ export default class PointOfSale extends React.Component<
             taxPercentage,
             enablePrinter,
             defaultView,
-            hidden
+            hidden,
+            squareAccessTokenFocused
         } = this.state;
         const { settings, updateSettingsGroup, updateSettingsGroupDebounced } =
             SettingsStore;
@@ -242,6 +245,21 @@ export default class PointOfSale extends React.Component<
                                         autoCapitalize="none"
                                         autoCorrect={false}
                                         secureTextEntry={hidden}
+                                        locked={
+                                            hidden &&
+                                            !!squareAccessToken &&
+                                            !squareAccessTokenFocused
+                                        }
+                                        onFocus={() =>
+                                            this.setState({
+                                                squareAccessTokenFocused: true
+                                            })
+                                        }
+                                        onBlur={() =>
+                                            this.setState({
+                                                squareAccessTokenFocused: false
+                                            })
+                                        }
                                         style={{
                                             flex: 1,
                                             marginRight: 15
