@@ -189,6 +189,14 @@ export default class NWCConnection extends BaseModel {
         }
     }
     @computed public get isExpired(): boolean {
+        return this.isExpiredNow();
+    }
+
+    // plain method, not @computed: the current time is not observable, so
+    // while a mounted screen tracks the computed it keeps returning a stale
+    // "not expired". Use this for the request checks (withGlobalHandler,
+    // validateBudgetBeforePayment)
+    public isExpiredNow(): boolean {
         return this.expiresAt ? new Date() > this.expiresAt : false;
     }
     @computed public get statusText(): string {
@@ -544,7 +552,7 @@ export default class NWCConnection extends BaseModel {
     } {
         this.validateAmount(amountSats);
 
-        if (this.isExpired) {
+        if (this.isExpiredNow()) {
             return {
                 success: false,
                 errorMessage: localeString(
