@@ -885,6 +885,65 @@ describe('NostrWalletConnectStore request gate', () => {
 });
 
 describe('NostrWalletConnectStore concurrent connection changes', () => {
+    it('keeps the connection objects the request handlers use when connections are reloaded', async () => {
+        const {
+            store,
+            connections: [connection, other]
+        } = await startService([{}, {}]);
+        // debited in memory, the debounced save has not run yet
+        connection.trackSpending(5000);
+        store.connections = [connection];
+
+        await store.loadConnections();
+
+        expect(store.connections.map((c) => c.id)).toEqual([
+            connection.id,
+            other.id
+        ]);
+        // compare identity on a boolean: printing NWCConnection instances on
+        // failure runs MobX initializers that affect later tests
+        expect(store.connections[0] === connection).toBe(true);
+        expect(store.connections[0].totalSpendSats).toBe(5000);
+        expect(store.connections[1] === other).toBe(false);
+        expect(store.connections[1]).toBeInstanceOf(NWCConnection);
+    });
+
+    it('keeps a debit made by an in-flight handler when the connection is reloaded and then updated', async () => {
+        const {
+            store,
+            connections: [connection]
+        } = await startService([{ maxAmountSats: 5000 }]);
+        const handler = createHold();
+        const inFlight = (store as any).withGlobalHandler(
+            connection.id,
+            async () => {
+                await handler.wait();
+                connection.trackSpending(5000);
+                (store as any).findAndUpdateConnection(connection);
+                return { result: {}, error: undefined };
+            }
+        );
+        await settle(handler.entered);
+
+        // the edit screen reloads the connections when it gets focus
+        await store.loadConnections();
+        const update = store.updateConnection(connection.id, {
+            name: 'Renamed App',
+            maxAmountSats: 5000
+        });
+        await flushMicrotasks();
+        handler.release();
+        await settle(inFlight);
+        await settle(update);
+
+        const { connection: updated } = store.getConnection({
+            connectionId: connection.id
+        });
+        expect(updated?.name).toBe('Renamed App');
+        expect(updated?.totalSpendSats).toBe(5000);
+        expect(updated?.remainingBudget).toBe(0);
+    });
+
     it('answers UNAUTHORIZED, not RATE_LIMITED, while a relay change is in progress', async () => {
         const {
             store,
