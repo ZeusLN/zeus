@@ -28,12 +28,16 @@ jest.mock('../lndmobile/log', () => () => ({
     w: jest.fn(),
     e: jest.fn()
 }));
-jest.mock('../lndmobile/index', () => ({}));
+jest.mock('../lndmobile/index', () => ({
+    ELndMobileStatusCodes: { STATUS_PROCESS_STARTED: 2 }
+}));
 jest.mock('../lndmobile/LndMobileInjection', () => ({
     index: {
         writeConfig: jest.fn().mockResolvedValue(undefined),
         initialize: jest.fn().mockResolvedValue(undefined),
         startLnd: jest.fn().mockResolvedValue(undefined),
+        stopLnd: jest.fn(),
+        checkStatus: jest.fn(),
         subscribeState: jest.fn(),
         decodeState: jest.fn()
     },
@@ -65,13 +69,16 @@ jest.mock('./SleepUtils', () => ({
     sleep: jest.fn().mockResolvedValue(undefined)
 }));
 
+import { NativeModules } from 'react-native';
 import lndMobile from '../lndmobile/LndMobileInjection';
 import { lnrpc } from '../proto/lightning';
 import { settingsStore } from '../stores/Stores';
+import { isLndError, LndErrorCode } from './LndMobileErrors';
 import {
     checkLndStreamErrorResponse,
     createLndWallet,
-    LndMobileEventEmitter
+    LndMobileEventEmitter,
+    startLnd
 } from './LndMobileUtils';
 
 const mockRandomBytes = jest.fn<Uint8Array, [number]>();
@@ -243,5 +250,61 @@ describe('checkLndStreamErrorResponse', () => {
         expect(
             checkLndStreamErrorResponse('RouterSendPaymentV2', { data: 'AA==' })
         ).toBeNull();
+    });
+});
+
+describe('startLnd while another LND cannot be stopped', () => {
+    const startArgs = {
+        lndDir: 'selected-wallet',
+        walletPassword: password,
+        isTorEnabled: false,
+        isTestnet: false
+    };
+    const originalLndMobileTools = NativeModules.LndMobileTools;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        NativeModules.LndMobileTools = {
+            killLnd: jest.fn().mockResolvedValue(true)
+        } as any;
+        // LND refuses StopDaemon during a recovery rescan and killLnd only
+        // clears the native "started" flag
+        jest.mocked(lndMobile.index.stopLnd).mockRejectedValue(
+            new Error(
+                'wallet recovery in progress, cannot shut down, please wait until rescan finishes'
+            )
+        );
+        jest.mocked(lndMobile.index.checkStatus).mockResolvedValue(1);
+    });
+
+    afterEach(() => {
+        jest.mocked(lndMobile.index.startLnd)
+            .mockReset()
+            .mockResolvedValue(undefined as any);
+        NativeModules.LndMobileTools = originalLndMobileTools;
+    });
+
+    it('fails instead of attaching to the running LND when every attempt is answered "already started"', async () => {
+        jest.mocked(lndMobile.index.startLnd).mockRejectedValue(
+            new Error('lnd already started')
+        );
+
+        const error = await startLnd(startArgs).catch((e) => e);
+
+        expect(isLndError(error, LndErrorCode.LND_START_FAILED)).toBe(true);
+        expect(lndMobile.index.startLnd).toHaveBeenCalledTimes(11);
+        expect(lndMobile.index.subscribeState).not.toHaveBeenCalled();
+    });
+
+    it('still fails when every attempt is answered with another error', async () => {
+        jest.mocked(lndMobile.index.startLnd).mockRejectedValue(
+            new Error('unable to start')
+        );
+
+        const error = await startLnd(startArgs).catch((e) => e);
+
+        expect(isLndError(error, LndErrorCode.LND_START_FAILED)).toBe(true);
+        expect(lndMobile.index.startLnd).toHaveBeenCalledTimes(11);
+        expect(lndMobile.index.subscribeState).not.toHaveBeenCalled();
     });
 });
