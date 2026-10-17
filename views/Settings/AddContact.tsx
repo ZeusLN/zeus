@@ -33,7 +33,7 @@ import ContactStore from '../../stores/ContactStore';
 import LightningBolt from '../../assets/images/SVG/Lightning Bolt.svg';
 import BitcoinIcon from '../../assets/images/SVG/BitcoinIcon.svg';
 import KeySecurity from '../../assets/images/SVG/Key Security.svg';
-import VerifiedAccount from '../../assets/images/SVG/Verified Account.svg';
+import AtSign from '../../assets/images/SVG/AtSign.svg';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 import Scan from '../../assets/images/SVG/Scan.svg';
 import Star from '../../assets/images/SVG/Star.svg';
@@ -725,7 +725,7 @@ export default class AddContact extends React.Component<
             addFieldsToArray(
                 nip05,
                 'nip05',
-                <VerifiedAccount />,
+                <AtSign fill={themeColor('text')} width={22} height={22} />,
                 isValidNIP05,
                 this.onChangeNIP05,
                 localeString('views.Settings.AddContact.nip05')
@@ -848,7 +848,9 @@ export default class AddContact extends React.Component<
                 key: 'NIP-05',
                 translateKey: 'views.Settings.AddContact.nip05',
                 value: 'nip05',
-                icon: <VerifiedAccount />
+                icon: (
+                    <AtSign fill={themeColor('text')} width={22} height={22} />
+                )
             },
             {
                 key: 'Nostr npub',

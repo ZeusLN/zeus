@@ -29,7 +29,7 @@ import ContactStore, { CONTACTS_KEY } from '../stores/ContactStore';
 import LightningBolt from '../assets/images/SVG/Lightning Bolt.svg';
 import BitcoinIcon from '../assets/images/SVG/BitcoinIcon.svg';
 import KeySecurity from '../assets/images/SVG/Key Security.svg';
-import VerifiedAccount from '../assets/images/SVG/Verified Account.svg';
+import AtSign from '../assets/images/SVG/AtSign.svg';
 import EditContact from '../assets/images/SVG/Pen.svg';
 import Star from '../assets/images/SVG/Star.svg';
 import QR from '../assets/images/SVG/QR.svg';
@@ -604,7 +604,13 @@ export default class ContactDetails extends React.Component<
                                             onPress={() =>
                                                 this.handleNostr(value)
                                             }
-                                            icon={<VerifiedAccount />}
+                                            icon={
+                                                <AtSign
+                                                    fill={themeColor('text')}
+                                                    width={22}
+                                                    height={22}
+                                                />
+                                            }
                                         />
                                     )
                                 )}
