@@ -105,6 +105,41 @@ describe('Payment.getAmount with partial HTLC success', () => {
     });
 });
 
+describe('Payment.getFee', () => {
+    it('reads the fee of an LndHub /gettxs row', () => {
+        const payment = new Payment({
+            type: 'paid_invoice',
+            fee: 2,
+            value: 3,
+            timestamp: 1700000000
+        });
+        expect(payment.getFee).toBe('2');
+    });
+
+    it('reads the route fee of an LndHub /payinvoice response', () => {
+        const payment = new Payment({
+            payment_error: '',
+            payment_route: { total_amt: '252501', total_fees: '2501' }
+        });
+        expect(payment.getFee).toBe('2501');
+    });
+
+    it('is 0 for an LndHub payment that paid no fee', () => {
+        expect(new Payment({ fee: 0, value: 1 }).getFee).toBe('0');
+        expect(new Payment({ value: 1 }).getFee).toBe('0');
+        expect(new Payment({ payment_route: {} }).getFee).toBe('0');
+    });
+
+    it('prefers the lnd fee fields', () => {
+        const payment = new Payment({
+            fee: '1',
+            fee_sat: '1',
+            fee_msat: '1500'
+        });
+        expect(payment.getFee).toBe('1.5');
+    });
+});
+
 describe('Payment.resolvedPaymentHash', () => {
     // BOLT11 spec reference vector; its payment_hash is
     // 0001020304050607080900010203040506070809000102030405060708090102

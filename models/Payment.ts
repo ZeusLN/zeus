@@ -53,6 +53,9 @@ export default class Payment extends BaseModel {
     amount?: number;
     fees_paid?: number;
     invoice?: string;
+    // LndHub
+    fee?: string | number;
+    payment_route?: { total_fees?: string | number };
 
     constructor(data?: any, nodes?: any) {
         super(data);
@@ -345,6 +348,13 @@ export default class Payment extends BaseModel {
         // NWC
         if (this.fees_paid) {
             return this.fees_paid.toString();
+        }
+
+        // LndHub: fee on /gettxs rows, payment_route.total_fees on the
+        // /payinvoice response
+        const lndhubFee = Number(this.fee ?? this.payment_route?.total_fees);
+        if (lndhubFee > 0) {
+            return lndhubFee.toString();
         }
 
         return '0';
