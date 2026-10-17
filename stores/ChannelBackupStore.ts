@@ -20,6 +20,7 @@ import {
 import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
+import { localeString } from '../utils/LocaleUtils';
 
 import Storage from '../storage';
 
@@ -28,6 +29,9 @@ export const BACKUPS_HOST = 'https://backups.lnolymp.us';
 // exactly in Wallet.fetchDataCore. The server reply is pinned by a test in
 // olympus-lnd-backups routes/backups.test.js, so change both together.
 export const NO_BACKUP_FOUND = 'No backup found';
+
+// The backup server accepts uploads of up to 100 kB
+const MAX_BACKUP_LENGTH = 1024 * 1024;
 
 export const LEGACY_LAST_CHANNEL_BACKUP_STATUS = 'LAST_CHANNEL_BACKUP_STATUS';
 export const LEGACY_LAST_CHANNEL_BACKUP_TIME = 'LAST_CHANNEL_BACKUP_TIME';
@@ -207,6 +211,15 @@ export default class ChannelBackupStore {
         this.loading = true;
 
         try {
+            if (
+                typeof backup !== 'string' ||
+                backup.length > MAX_BACKUP_LENGTH
+            ) {
+                throw new Error(
+                    localeString('stores.ChannelBackupStore.invalidBackup')
+                );
+            }
+
             const decryptedBytes = CryptoJS.AES.decrypt(
                 backup,
                 this.settingsStore.seedPhrase.toString()
