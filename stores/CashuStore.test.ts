@@ -1,4 +1,11 @@
-jest.mock('./Stores', () => ({}));
+jest.mock('./Stores', () => ({
+    connectivityStore: {
+        isOffline: false,
+        start: jest.fn(),
+        stop: jest.fn(),
+        onReconnect: jest.fn()
+    }
+}));
 jest.mock('./SettingsStore', () => ({
     DEFAULT_NOSTR_RELAYS: ['wss://relay.one', 'wss://relay.two']
 }));
@@ -27,6 +34,7 @@ import { Platform } from 'react-native';
 import { validateMnemonic } from '@scure/bip39';
 import NDK from '@nostr-dev-kit/ndk';
 import CashuStore from './CashuStore';
+import { connectivityStore } from './Stores';
 import Storage, { getRawItem } from '../storage';
 import CashuDevKit from '../cashu-cdk';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
@@ -331,5 +339,113 @@ describe('CashuStore NDK instance', () => {
 
         expect(MockNDK).toHaveBeenCalledTimes(2);
         expect(connect).toHaveBeenCalledTimes(2);
+    });
+});
+
+describe('CashuStore connectivity monitoring', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    it('registers the reconnect callback once across repeated starts and resets', () => {
+        const store = newStore();
+
+        store.startConnectivityMonitoring();
+        store.startConnectivityMonitoring();
+        store.reset();
+        store.startConnectivityMonitoring();
+
+        expect(connectivityStore.onReconnect).toHaveBeenCalledTimes(1);
+        expect(connectivityStore.start).toHaveBeenCalledTimes(3);
+        expect(connectivityStore.stop).toHaveBeenCalledTimes(1);
+    });
+
+    it('sweeps and checks pending items once per reconnect', () => {
+        jest.useFakeTimers();
+        const store = newStore();
+        const sweep = jest
+            .spyOn(store, 'sweepOfflinePendingTokens')
+            .mockResolvedValue(undefined as any);
+        const check = jest
+            .spyOn(store, 'checkPendingItems')
+            .mockResolvedValue(undefined as any);
+
+        store.startConnectivityMonitoring();
+        store.startConnectivityMonitoring();
+        const [[onReconnect]] = (connectivityStore.onReconnect as jest.Mock)
+            .mock.calls;
+        onReconnect();
+        jest.advanceTimersByTime(3000);
+
+        expect(sweep).toHaveBeenCalledTimes(1);
+        expect(check).toHaveBeenCalledTimes(1);
+        jest.useRealTimers();
+        jest.restoreAllMocks();
+    });
+});
+
+describe('CashuStore restoreMintUrlsAtStartup', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+        (Storage.setItem as jest.Mock).mockReset().mockResolvedValue(true);
+    });
+
+    afterEach(() => {
+        (connectivityStore as any).isOffline = false;
+        jest.restoreAllMocks();
+    });
+
+    it('skips the relays while offline', async () => {
+        (connectivityStore as any).isOffline = true;
+        const store = newStore();
+        const restore = jest.spyOn(store, 'nostrRestoreMints');
+
+        await expect(store.restoreMintUrlsAtStartup('dir')).resolves.toBe(null);
+
+        expect(restore).not.toHaveBeenCalled();
+        expect(Storage.setItem).not.toHaveBeenCalled();
+    });
+
+    it('persists the restored mints while online', async () => {
+        const store = newStore();
+        jest.spyOn(store, 'nostrRestoreMints').mockResolvedValue([
+            'https://mint.example.com'
+        ]);
+
+        await expect(store.restoreMintUrlsAtStartup('dir')).resolves.toEqual([
+            'https://mint.example.com'
+        ]);
+
+        expect(Storage.setItem).toHaveBeenCalledWith(
+            'dir-cashu-mintUrls',
+            JSON.stringify(['https://mint.example.com'])
+        );
+    });
+
+    it('still returns the restored mints when persisting them fails', async () => {
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+        (Storage.setItem as jest.Mock).mockRejectedValue(new Error('full'));
+        const store = newStore();
+        jest.spyOn(store, 'nostrRestoreMints').mockResolvedValue([
+            'https://mint.example.com'
+        ]);
+
+        await expect(store.restoreMintUrlsAtStartup('dir')).resolves.toEqual([
+            'https://mint.example.com'
+        ]);
+    });
+
+    it('persists nothing when the backup is empty or the fetch throws', async () => {
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const store = newStore();
+        const restore = jest
+            .spyOn(store, 'nostrRestoreMints')
+            .mockResolvedValueOnce(null)
+            .mockRejectedValueOnce(new Error('relay down'));
+
+        await expect(store.restoreMintUrlsAtStartup('dir')).resolves.toBe(null);
+        await expect(store.restoreMintUrlsAtStartup('dir')).resolves.toBe(null);
+
+        expect(restore).toHaveBeenCalledTimes(2);
+        expect(Storage.setItem).not.toHaveBeenCalled();
     });
 });
