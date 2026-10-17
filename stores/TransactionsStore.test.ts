@@ -224,3 +224,30 @@ describe('TransactionsStore.sendPayment with an offer', () => {
         expect(payLightningInvoice).toHaveBeenCalledTimes(1);
     });
 });
+
+describe('TransactionsStore.sendPaymentSilently fee limit', () => {
+    const feeLimitSent = async (fee_limit_sat?: number | string) => {
+        payLightningInvoice.mockReset().mockResolvedValue({});
+        await newStore().sendPaymentSilently({
+            payment_request: 'lnbc1...',
+            fee_limit_sat
+        });
+        return payLightningInvoice.mock.calls[0][0].fee_limit_sat;
+    };
+
+    it('defaults to 100 sats', async () => {
+        expect(await feeLimitSent()).toBe(100);
+        expect(await feeLimitSent('')).toBe(100);
+        expect(await feeLimitSent('NaN')).toBe(100);
+    });
+
+    it('uses a lower limit, including 0', async () => {
+        expect(await feeLimitSent('5')).toBe(5);
+        expect(await feeLimitSent('0')).toBe(0);
+        expect(await feeLimitSent(0)).toBe(0);
+    });
+
+    it('does not go above the default', async () => {
+        expect(await feeLimitSent('5000')).toBe(100);
+    });
+});
