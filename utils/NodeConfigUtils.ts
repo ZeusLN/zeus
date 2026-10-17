@@ -4,6 +4,7 @@ import * as CryptoJS from 'crypto-js';
 import moment from 'moment';
 
 import SettingsStore, { Node, Settings } from '../stores/SettingsStore';
+import { isLocalPhoto } from './PhotoUtils';
 import { encryptFile, decryptFile } from './ZipUtils';
 
 // Bump when the on-disk export format changes. v1 = legacy CryptoJS
@@ -43,14 +44,23 @@ const safeUnlink = async (path: string): Promise<void> => {
     }
 };
 
+// The wallet list draws the picture of every wallet, selected or not, so a URL
+// in a backup file would be requested each time the list is shown, outside of
+// Tor and without the wallet ever being used. Keep only local pictures.
+const withLocalPhotoOnly = (node: Node): Node =>
+    !node.photo || isLocalPhoto(node.photo)
+        ? node
+        : { ...node, photo: undefined };
+
 export const saveNodeConfigs = async (
     nodes: Node[],
     settingsStore: SettingsStore
 ): Promise<void> => {
+    const nodesToSave = nodes.map(withLocalPhotoOnly);
     // Appended inside the queued update so a write still in the queue
     // cannot be undone by a nodes array copied before it landed
     await settingsStore.updateSettings((current: Settings) => ({
-        nodes: [...(current?.nodes || []), ...nodes]
+        nodes: [...(current?.nodes || []), ...nodesToSave]
     }));
 };
 
