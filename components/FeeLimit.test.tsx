@@ -6,6 +6,13 @@ jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
     default: { supportsCustomFeeLimit: jest.fn() }
 }));
+// FeeLimit imports AmountUtils, which loads the store graph and its native
+// modules
+jest.mock('../stores/Stores', () => ({
+    settingsStore: { settings: {} },
+    fiatStore: {},
+    unitsStore: {}
+}));
 jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/ThemeUtils', () => ({
     themeColor: (key: string) => `theme:${key}`
@@ -136,6 +143,8 @@ describe('FeeLimit percentage', () => {
     it.each([
         ['5.0', 1010, '51'],
         ['0,5', 10_000, '50'],
+        ['5.0', 9, '1'],
+        ['0', 10_000, '0'],
         ['1', 0, '0'],
         ['abc', 10_000, '0']
     ])(
@@ -149,6 +158,44 @@ describe('FeeLimit percentage', () => {
             expect(percentShown()).toBe(limit);
         }
     );
+
+    it.each([
+        ['1', 0],
+        ['abc', 10_000]
+    ])(
+        'reports an empty limit, not a 0 sat cap, for %p of %p sats',
+        async (percent, satAmount) => {
+            const { onFeeLimitSatChange } = await renderFeeLimit({
+                satAmount,
+                feeOption: 'percent',
+                payments: { defaultFeePercentage: percent }
+            });
+
+            expect(onFeeLimitSatChange).toHaveBeenLastCalledWith('');
+        }
+    );
+
+    it('reports an empty limit when the percentage is cleared', async () => {
+        const { onFeeLimitSatChange } = await renderFeeLimit({
+            satAmount: 10_000,
+            feeOption: 'percent'
+        });
+
+        await fireEvent.changeText(percentField(), '');
+
+        expect(percentShown()).toBe('0');
+        expect(onFeeLimitSatChange).toHaveBeenLastCalledWith('');
+    });
+
+    it('reports a 0 sat limit for an explicit 0%', async () => {
+        const { onFeeLimitSatChange } = await renderFeeLimit({
+            satAmount: 10_000,
+            feeOption: 'percent',
+            payments: { defaultFeePercentage: '0' }
+        });
+
+        expect(onFeeLimitSatChange).toHaveBeenLastCalledWith('0');
+    });
 
     it('switches to the percentage on press and reports its limit', async () => {
         const { onFeeLimitSatChange, onFeeOptionChange } = await renderFeeLimit(
