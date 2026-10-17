@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Alert,
     Dimensions,
     ScrollView,
     StyleSheet,
@@ -76,7 +77,7 @@ import BackendUtils from '../utils/BackendUtils';
 import { toWalletrpcAddressTypeName } from '../utils/LndUtils';
 import { scanNfcTag } from '../utils/NFCUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import { SATS_PER_BTC } from '../utils/UnitsUtils';
+import { numberWithCommas, SATS_PER_BTC } from '../utils/UnitsUtils';
 import { getAmountFromSats } from '../utils/AmountUtils';
 import {
     ExpirationPreset,
@@ -748,6 +749,46 @@ export default class Receive extends React.Component<
         });
     };
 
+    // An LNURL-withdraw invoice is submitted as soon as it is created, so the
+    // LSP fee has to be accepted before that rather than shown next to it.
+    // A fee that the amount doesn't cover is added on top, as InvoicesStore
+    // prices it.
+    confirmLspFee = (feeSats: number, amountSats: string) => {
+        const amount = new BigNumber(amountSats);
+        const message = amount.gt(feeSats)
+            ? localeString('views.Receive.lspFeeConfirmWithdrawal')
+                  .replace('{fee}', numberWithCommas(feeSats))
+                  .replace(
+                      '{amount}',
+                      numberWithCommas(amount.minus(feeSats).toString())
+                  )
+            : localeString('views.Receive.lspFeeOnTopConfirmWithdrawal')
+                  .replace('{fee}', numberWithCommas(feeSats))
+                  .replace(
+                      '{total}',
+                      numberWithCommas(amount.plus(feeSats).toString())
+                  )
+                  .replace('{amount}', numberWithCommas(amount.toString()));
+        return new Promise<boolean>((resolve) => {
+            Alert.alert(
+                localeString('general.lsp'),
+                message,
+                [
+                    {
+                        text: localeString('general.cancel'),
+                        style: 'cancel',
+                        onPress: () => resolve(false)
+                    },
+                    {
+                        text: localeString('general.confirm'),
+                        onPress: () => resolve(true)
+                    }
+                ],
+                { cancelable: false }
+            );
+        });
+    };
+
     scanNfc = async () => {
         const str = await scanNfcTag(this.props.ModalStore);
         if (str) this.validateAddress(str);
@@ -783,6 +824,7 @@ export default class Receive extends React.Component<
                             noLsp: !lspIsActive,
                             forceLsp: !!this.props.route.params?.forceLsp,
                             useLsp: lspIsActive,
+                            confirmLspFee: this.confirmLspFee,
                             skipOnchain,
                             ...this.getUnifiedAccountParams()
                         })
@@ -3006,6 +3048,9 @@ export default class Receive extends React.Component<
                                                                 !!route.params
                                                                     ?.forceLsp,
                                                             useLsp: lspIsActive,
+                                                            confirmLspFee:
+                                                                this
+                                                                    .confirmLspFee,
                                                             skipOnchain,
                                                             ...this.getUnifiedAccountParams()
                                                         })
