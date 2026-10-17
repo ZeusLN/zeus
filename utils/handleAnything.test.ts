@@ -167,7 +167,10 @@ jest.mock('nostr-tools', () => ({
         close = jest.fn();
     },
     nip05: { queryProfile: jest.fn() },
-    nip19: { decode: (...args: any[]) => mockNip19Decode(...args) }
+    nip19: {
+        decode: (...args: any[]) => mockNip19Decode(...args),
+        npubEncode: jest.requireActual('nostr-tools').nip19.npubEncode
+    }
 }));
 jest.mock('../stores/SettingsStore', () => ({
     DEFAULT_NOSTR_RELAYS: ['wss://relay.example.com']
@@ -1409,6 +1412,26 @@ describe('handleAnything', () => {
             expect(result[0]).toBe('ContactDetails');
             expect(result[1].isNostrContact).toBe(true);
             expect(result[1].nostrContact.name).toBe('Satoshi');
+            expect(result[1].nostrContact.nostrNpub).toEqual([NPUB]);
+        });
+
+        it('ignores the npub and pubkey a profile claims for itself', async () => {
+            mockNip19Decode.mockReturnValue({ type: 'npub', data: PUBKEY });
+            mockQuerySync.mockResolvedValue([
+                {
+                    id: 'event',
+                    created_at: 1,
+                    content: JSON.stringify({
+                        display_name: 'Satoshi',
+                        npub: 'npub1xnf02f60r9v0e5kty33a404dm79zr7z2eepyrk5gsq3m7pwvsz2sazlpr5',
+                        pubkey: '34d2f5274f1958fcd2cb2463dabeaddf8a21f84ace4241da888023bf05cc8095'
+                    })
+                }
+            ]);
+
+            const result = await handleAnything(NPUB);
+
+            expect(result[1].nostrContact.nostrNpub).toEqual([NPUB]);
         });
 
         it('throws the profile error when the npub does not decode', async () => {

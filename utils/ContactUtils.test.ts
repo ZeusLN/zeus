@@ -1,4 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
+import RNFS from 'react-native-fs';
 import ContactUtils from './ContactUtils';
 
 // Mocking the dependencies
@@ -25,7 +26,8 @@ describe('ContactUtils', () => {
             };
 
             const transformedContact1 = await ContactUtils.transformContactData(
-                mockContact1
+                mockContact1,
+                mockContact1.npub
             );
 
             // Assertions
@@ -58,7 +60,8 @@ describe('ContactUtils', () => {
             };
 
             const transformedContact2 = await ContactUtils.transformContactData(
-                mockContact2
+                mockContact2,
+                mockContact2.npub
             );
 
             // Assertions
@@ -97,5 +100,98 @@ describe('ContactUtils', () => {
             expect(transformedContact).toBeDefined();
             expect(transformedContact).toBeInstanceOf(Object);
         });
+
+        it('takes the npub from the signer, not from the profile content', async () => {
+            const transformedContact: any =
+                await ContactUtils.transformContactData(
+                    {
+                        name: 'Alice (new wallet)',
+                        lud16: 'alice@mallory.example',
+                        npub: 'npub1xnf02f60r9v0e5kty33a404dm79zr7z2eepyrk5gsq3m7pwvsz2sazlpr5',
+                        pubkey: '34d2f5274f1958fcd2cb2463dabeaddf8a21f84ace4241da888023bf05cc8095'
+                    },
+                    'npub1a3vuemsaex2rmshv3h5sr8xlxayehzkan3ucw3sxf8l2rtjyuhpshexnw4'
+                );
+
+            expect(transformedContact.nostrNpub).toEqual([
+                'npub1a3vuemsaex2rmshv3h5sr8xlxayehzkan3ucw3sxf8l2rtjyuhpshexnw4'
+            ]);
+        });
+
+        it('leaves nostrNpub empty when no signer npub is given', async () => {
+            const transformedContact: any =
+                await ContactUtils.transformContactData({
+                    name: 'Mallory',
+                    npub: 'npub1xnf02f60r9v0e5kty33a404dm79zr7z2eepyrk5gsq3m7pwvsz2sazlpr5'
+                });
+
+            expect(transformedContact.nostrNpub).toEqual([]);
+        });
+
+        it('stores the banners of contacts that share a name in separate files', async () => {
+            (uuidv4 as jest.Mock)
+                .mockReturnValueOnce('uuid-1')
+                .mockReturnValueOnce('uuid-2');
+
+            const first: any = await ContactUtils.transformContactData({
+                name: 'Alice',
+                banner: 'https://alice.example/banner.png'
+            });
+            const second: any = await ContactUtils.transformContactData({
+                name: 'Alice',
+                banner: 'https://mallory.example/banner.png'
+            });
+
+            expect(first.banner).toBe('rnfs://nostrContactBanner_uuid-1.png');
+            expect(second.banner).toBe('rnfs://nostrContactBanner_uuid-2.png');
+        });
+
+        it('downloads the picture and banner from public https hosts', async () => {
+            (RNFS.downloadFile as jest.Mock).mockClear();
+
+            const transformedContact: any =
+                await ContactUtils.transformContactData({
+                    name: 'Friend',
+                    picture: 'https://cdn.example/friend.png',
+                    banner: 'https://cdn.example/banner.png'
+                });
+
+            expect(
+                (RNFS.downloadFile as jest.Mock).mock.calls.map(
+                    ([options]) => options.fromUrl
+                )
+            ).toEqual([
+                'https://cdn.example/banner.png',
+                'https://cdn.example/friend.png'
+            ]);
+            expect(transformedContact.photo).toContain('rnfs://');
+            expect(transformedContact.banner).toContain('rnfs://');
+        });
+
+        it.each([
+            'http://cdn.example/cleartext.png',
+            'http://192.168.1.1/cgi-bin/reboot',
+            'https://192.168.1.1/cgi-bin/reboot',
+            'https://127.0.0.1:8443/shutdown',
+            'https://abcdefg.onion/a.png',
+            'file:///data/user/0/app.zeusln.zeus/files/a.png',
+            { not: 'a string' }
+        ])(
+            'does not download a picture or banner from %p',
+            async (imageUrl) => {
+                (RNFS.downloadFile as jest.Mock).mockClear();
+
+                const transformedContact: any =
+                    await ContactUtils.transformContactData({
+                        name: 'Mallory',
+                        picture: imageUrl,
+                        banner: imageUrl
+                    });
+
+                expect(RNFS.downloadFile).not.toHaveBeenCalled();
+                expect(transformedContact.photo).toBe('');
+                expect(transformedContact.banner).toBe('');
+            }
+        );
     });
 });

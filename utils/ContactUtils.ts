@@ -1,10 +1,11 @@
 import { v4 as uuidv4 } from 'uuid';
-import { nip19 } from 'nostr-tools';
 import RNFS from 'react-native-fs';
+
+import { isRemoteImageAllowed } from './LnurlPayUtils';
 
 import Contact from '../models/Contact';
 
-const transformContactData = async (contact: any) => {
+const transformContactData = async (contact: any, npub?: string | null) => {
     try {
         const name = contact?.display_name || contact?.name || '';
         const transformedContact = {
@@ -21,21 +22,17 @@ const transformContactData = async (contact: any) => {
             onchainAddress: [''],
             pubkey: [''],
             nip05: contact?.nip05 ? [contact?.nip05] : [],
-            nostrNpub: contact?.npub
-                ? [contact?.npub]
-                : contact?.pubkey
-                ? [nip19.npubEncode(contact.pubkey)]
-                : [],
+            nostrNpub: npub ? [npub] : [],
             contactId: uuidv4(),
             isFavourite: false,
             banner: '',
             isSelected: false
         };
 
-        if (contact?.banner) {
+        if (isRemoteImageAllowed(contact?.banner).ok) {
             console.log('Downloading banner...');
             const bannerFileName =
-                'nostrContactBanner_' + transformedContact.name + '.png';
+                'nostrContactBanner_' + transformedContact.contactId + '.png';
             const bannerFilePath =
                 RNFS.DocumentDirectoryPath + '/' + bannerFileName;
 
@@ -53,7 +50,7 @@ const transformContactData = async (contact: any) => {
             }
         }
 
-        if (contact?.picture) {
+        if (isRemoteImageAllowed(contact?.picture).ok) {
             console.log('Downloading image...');
             const fileName =
                 'nostrContactPhoto_' + transformedContact.contactId + '.png';
