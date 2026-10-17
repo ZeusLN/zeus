@@ -1041,9 +1041,10 @@ export default class WalletConfiguration extends React.Component<
             );
             const remainingNodes = newSettings?.nodes || [];
 
-            // Delete wallet data after settings are updated. Retried: the
-            // node may still hold file handles while shutting down, which
-            // clears on its own after a moment.
+            // Delete wallet data after settings are updated. Retried: a
+            // node that is still shutting down can keep writing to the
+            // directory for a moment. An LND that refused to stop keeps
+            // running, so the retries can all fail (see the prompt below).
             const dirDeleted = await deleteNodeDataDirectoryWithRetry(
                 deletedNode ?? { implementation, lndDir, ldkNodeDir }
             );

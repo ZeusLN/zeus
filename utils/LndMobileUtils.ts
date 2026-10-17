@@ -327,9 +327,9 @@ const writeLndConfig = async ({
 };
 
 /**
- * Stops LND and deletes its data directory. Returns whether the deletion
- * succeeded so callers that need to know (the duress/lockout wipe) can retry
- * instead of assuming the directory is gone.
+ * Stops LND (best effort) and deletes its data directory. Returns whether the
+ * deletion succeeded so callers that need to know (the duress/lockout wipe)
+ * can retry instead of assuming the directory is gone.
  */
 export async function deleteLndWallet(lndDir: string): Promise<boolean> {
     log.d('Attempting to delete Embedded LND wallet');
@@ -339,6 +339,15 @@ export async function deleteLndWallet(lndDir: string): Promise<boolean> {
     }
     try {
         await stopLnd();
+    } catch (error) {
+        // LND refuses StopDaemon in some states (e.g. "wallet not created"
+        // for a directory that has an admin.macaroon but no wallet.db). A
+        // node that cannot be stopped must not keep the directory from
+        // being deleted. killLnd would not stop it either, so LND can still
+        // be running when the directory is removed.
+        log.e('Failed to stop LND before deleting its directory', [error]);
+    }
+    try {
         await NativeModules.LndMobileTools.deleteLndDirectory(lndDir);
         return true;
     } catch (error) {

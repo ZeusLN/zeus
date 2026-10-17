@@ -653,7 +653,8 @@ async function deleteNodeDataDirectory(node: any): Promise<boolean> {
     }
     try {
         if (node.implementation === 'embedded-lnd') {
-            // deleteLndWallet stops LND before unlinking the directory
+            // deleteLndWallet tries to stop LND itself, and unlinks the
+            // directory even when the stop fails
             return await deleteLndWallet(node.lndDir || 'lnd');
         }
         if (node.implementation === 'ldk-node' && node.ldkNodeDir) {
@@ -671,8 +672,9 @@ async function deleteNodeDataDirectory(node: any): Promise<boolean> {
 
 /**
  * Stops and deletes a single node's on-disk data directory, retrying on
- * failure. The likely cause of failure is a file handle still held by a node
- * that hasn't finished shutting down, which clears on its own after a moment.
+ * failure. A node that hasn't finished shutting down can still be writing to
+ * the directory, which clears on its own after a moment. An LND that refused
+ * to stop keeps running, so in that case every attempt can fail.
  * Returns whether the directory was removed. Exported so single-wallet
  * deletion (WalletConfiguration.deleteNodeConfig) shares the wipe path's
  * retry behavior instead of assuming the first attempt succeeded.
