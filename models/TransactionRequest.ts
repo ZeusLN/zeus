@@ -24,6 +24,7 @@ export default interface TransactionRequest {
     account?: string;
     additional_outputs?: Array<AdditionalOutput>;
     outpoints?: Array<OutPoint>;
+    label?: string;
 }
 
 export type SendPaymentRequest =

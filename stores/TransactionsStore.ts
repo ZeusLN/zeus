@@ -19,6 +19,11 @@ import { localeString } from '../utils/LocaleUtils';
 import { checkGraphSyncBeforePayment } from '../utils/GraphSyncUtils';
 import UrlUtils from '../utils/UrlUtils';
 import { RATING_MODAL_TRIGGER_DELAY } from '../utils/RatingUtils';
+import {
+    findLabeledSend,
+    isRequestTimeout,
+    makeSendLabel
+} from '../utils/OnchainSendUtils';
 
 import { lnrpc } from '../proto/lightning';
 import NodeInfoStore from './NodeInfoStore';
@@ -82,6 +87,9 @@ export default class TransactionsStore {
 
     // in lieu of receiving txid on LND's publishTransaction
     @observable publishSuccess = false;
+    // an on-chain send timed out and was not found among the wallet's
+    // transactions; it may still have been broadcast, so no retry is offered
+    @observable sendOutcomeUnknown = false;
     @observable broadcast_txid: string;
     @observable broadcast_err: string | null;
     // coin control
@@ -89,6 +97,9 @@ export default class TransactionsStore {
 
     // monotonic id assigned to each dispatched payment
     private paymentSequence = 0;
+    // id of the current on-chain send; reset() and the next send change it,
+    // so a late result (e.g. a timeout lookup) for an earlier send is dropped
+    private sendCoinsSeq = 0;
     // sequence of the payment that set paymentInFlight (null when none);
     // completion callbacks and the backstop timer only clear the flag on
     // behalf of that payment, so overlapping payments (e.g. a background
@@ -118,7 +129,9 @@ export default class TransactionsStore {
 
     @action
     public reset = () => {
+        this.sendCoinsSeq++;
         this.loading = false;
+        this.sendOutcomeUnknown = false;
         this.paymentInFlight = false;
         this.inFlightOwnerSeq = null;
         this.error = false;
@@ -478,8 +491,14 @@ export default class TransactionsStore {
 
     @action
     public sendCoins = (transactionRequest: TransactionRequest) => {
+        // also invalidates a lookup still running for an earlier send,
+        // including when this send takes the coin control path
+        const seq = ++this.sendCoinsSeq;
+        const isCurrent = () => seq === this.sendCoinsSeq;
+
         this.funded_psbt = '';
         this.error = false;
+        this.sendOutcomeUnknown = false;
         this.error_msg = null;
         this.txid = null;
         this.publishSuccess = false;
@@ -521,23 +540,69 @@ export default class TransactionsStore {
 
         this.crafting = false;
 
-        BackendUtils.sendCoins(transactionRequest)
-            .then((data: any) => {
-                runInAction(() => {
-                    this.txid = data.txid;
-                    this.publishSuccess = true;
-                    this.loading = false;
-                    this.balanceStore.getCombinedBalance();
-                });
-            })
-            .catch((error: Error) => {
+        // lets a timed out send be found among the wallet's transactions;
+        // only the LND backends label sends
+        const label = BackendUtils.isLNDBased() ? makeSendLabel() : undefined;
+
+        const onSent = (txid: string) =>
+            runInAction(() => {
+                if (!isCurrent()) return;
+                this.txid = txid;
+                this.publishSuccess = true;
+                this.loading = false;
+                this.balanceStore.getCombinedBalance();
+            });
+
+        BackendUtils.sendCoins(
+            label ? { ...transactionRequest, label } : transactionRequest
+        )
+            .then((data: any) => onSent(data.txid))
+            .catch(async (error: Error) => {
+                // a timed out send may still have been broadcast on any
+                // backend (e.g. CLN's withdraw past the 30s REST timeout);
+                // only labeled sends can be looked up
+                if (isRequestTimeout(error)) {
+                    const txid = label
+                        ? await this.findTimedOutSend(label)
+                        : undefined;
+                    if (txid) {
+                        onSent(txid);
+                        return;
+                    }
+                    runInAction(() => {
+                        if (!isCurrent()) return;
+                        this.error_msg = localeString(
+                            'stores.TransactionsStore.sendOutcomeUnknown'
+                        );
+                        this.error = true;
+                        this.sendOutcomeUnknown = true;
+                        this.loading = false;
+                    });
+                    return;
+                }
                 const errorMsg = errorToUserFriendly(error);
                 runInAction(() => {
+                    if (!isCurrent()) return;
                     this.error_msg = errorMsg;
                     this.error = true;
                     this.loading = false;
                 });
             });
+    };
+
+    // The send may have been broadcast before its request timed out. Only
+    // recent blocks and unconfirmed transactions can hold it.
+    private findTimedOutSend = (label: string) => {
+        const height = Number(
+            this.nodeInfoStore.nodeInfo?.currentBlockHeight || 0
+        );
+        return findLabeledSend(
+            () =>
+                BackendUtils.getTransactions(
+                    height > 6 ? { start_height: height - 6 } : undefined
+                ),
+            label
+        );
     };
 
     @action
