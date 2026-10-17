@@ -1,5 +1,11 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, ViewStyle, StyleProp } from 'react-native';
+import {
+    View,
+    StyleSheet,
+    ViewStyle,
+    StyleProp,
+    useWindowDimensions
+} from 'react-native';
 import Svg, {
     Defs,
     LinearGradient as SvgLinearGradient,
@@ -50,6 +56,11 @@ const LinearGradient: React.FC<LinearGradientProps> = ({
         });
     }, [colors, locations]);
 
+    // The native Svg view keeps its first frame when the window is resized
+    // (rotation, folding), leaving the old size painted behind the content.
+    // Re-mount it whenever the window size changes.
+    const { width: windowWidth, height: windowHeight } = useWindowDimensions();
+
     const flatStyle = StyleSheet.flatten(style) || {};
 
     // Extract layout-related styles for the children container
@@ -90,7 +101,10 @@ const LinearGradient: React.FC<LinearGradientProps> = ({
 
     return (
         <View style={containerStyle}>
-            <Svg style={StyleSheet.absoluteFill}>
+            <Svg
+                key={`${windowWidth}x${windowHeight}`}
+                style={StyleSheet.absoluteFill}
+            >
                 <Defs>
                     <SvgLinearGradient
                         id={gradientId}

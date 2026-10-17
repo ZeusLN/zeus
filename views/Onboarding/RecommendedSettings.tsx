@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, ScrollView, Dimensions } from 'react-native';
+import { View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
@@ -18,6 +18,7 @@ import SettingsStore, {
     DEFAULT_FIAT_RATES_SOURCE
 } from '../../stores/SettingsStore';
 
+import { getWindowDimensions } from '../../utils/LayoutUtils';
 import { createOnboardingWallet } from '../../utils/WalletCreationUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
@@ -243,7 +244,7 @@ export default class RecommendedSettings extends React.Component<
                     >
                         <View
                             style={{
-                                width: Dimensions.get('window').width * 0.85,
+                                width: getWindowDimensions().width * 0.85,
                                 maxHeight: 200,
                                 marginTop: 10,
                                 alignSelf: 'center'

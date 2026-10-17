@@ -1,7 +1,6 @@
 import * as React from 'react';
 import {
     BackHandler,
-    Dimensions,
     ImageBackground,
     NativeEventSubscription,
     View
@@ -19,6 +18,7 @@ import { ErrorMessage } from '../components/SuccessErrorMessage';
 
 import SettingsStore, { LOCALE_KEYS } from '../stores/SettingsStore';
 
+import { getWindowDimensions } from '../utils/LayoutUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -94,8 +94,7 @@ export default class IntroSplash extends React.Component<
                         <View style={{ flex: 1, flexDirection: 'column' }}>
                             <View
                                 style={{
-                                    width:
-                                        Dimensions.get('window').width * 0.95,
+                                    width: getWindowDimensions().width * 0.95,
                                     maxHeight: 200,
                                     marginTop: 10,
                                     alignSelf: 'center'

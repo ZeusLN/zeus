@@ -1,7 +1,6 @@
 import * as React from 'react';
 import {
     BackHandler,
-    Dimensions,
     NativeEventSubscription,
     StyleSheet,
     View,
@@ -31,6 +30,7 @@ import ChannelsStore from '../../stores/ChannelsStore';
 import UnitsStore from '../../stores/UnitsStore';
 import PaymentsStore from '../../stores/PaymentsStore';
 
+import { getContentWidth, getWindowDimensions } from '../../utils/LayoutUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import BackendUtils from '../../utils/BackendUtils';
@@ -579,7 +579,8 @@ export default class RebalancingChannels extends React.Component<
     render() {
         const { TransactionsStore, navigation } = this.props;
         const { storedNotes, currentPayment, isInitialProcessing } = this.state;
-        const windowSize = Dimensions.get('window');
+        const windowSize = getWindowDimensions();
+        const contentWidth = getContentWidth(windowSize.width);
 
         const rebalanceData = this.getRebalanceData();
 
@@ -651,7 +652,7 @@ export default class RebalancingChannels extends React.Component<
                                 color: themeColor('text'),
                                 fontFamily: 'PPNeueMontreal-Book',
                                 fontSize:
-                                    windowSize.width * windowSize.scale * 0.016,
+                                    contentWidth * windowSize.scale * 0.016,
                                 marginTop: 20,
                                 textAlign: 'center'
                             }}
@@ -756,7 +757,7 @@ export default class RebalancingChannels extends React.Component<
                                             color: themeColor('text'),
                                             fontFamily: 'PPNeueMontreal-Book',
                                             fontSize:
-                                                windowSize.width *
+                                                contentWidth *
                                                 windowSize.scale *
                                                 0.014,
                                             textAlign: 'center',

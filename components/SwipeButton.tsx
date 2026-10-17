@@ -1,4 +1,4 @@
-import React, { useCallback, useRef } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
     View,
     Text,
@@ -7,7 +7,8 @@ import {
     PanResponder,
     PanResponderGestureState,
     GestureResponderEvent,
-    Dimensions
+    LayoutChangeEvent,
+    useWindowDimensions
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 
@@ -36,11 +37,15 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
     // always see its latest value (e.g. once a payment goes in flight).
     const disabledRef = useRef(disabled);
     disabledRef.current = disabled;
-    const screenWidth = Dimensions.get('window').width;
-
-    const containerWidth = screenWidth - 40;
+    const { width: windowWidth } = useWindowDimensions();
+    // Until the track is measured, assume it spans the window minus its
+    // 20pt side margins. onLayout corrects this on wide or resized windows.
+    const [containerWidth, setContainerWidth] = useState(windowWidth - 40);
     const swipeButtonWidth = 50;
     const maxTranslation = containerWidth - swipeButtonWidth;
+    // the responder is created once, so it reads the track length via a ref
+    const maxTranslationRef = useRef(maxTranslation);
+    maxTranslationRef.current = maxTranslation;
 
     const textOpacity = pan.interpolate({
         inputRange: [0, maxTranslation / 2, maxTranslation],
@@ -82,7 +87,7 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
             },
             onPanResponderMove: (_e, gesture) => {
                 const newValue = gesture.dx;
-                if (newValue >= 0 && newValue <= maxTranslation) {
+                if (newValue >= 0 && newValue <= maxTranslationRef.current) {
                     pan.setValue(newValue);
                 }
             },
@@ -91,14 +96,14 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
                 gesture: PanResponderGestureState
             ) => {
                 if (
-                    gesture.dx > maxTranslation * 0.95 &&
+                    gesture.dx > maxTranslationRef.current * 0.95 &&
                     !disabledRef.current
                 ) {
                     // lock the button in the completed position before
                     // kicking off any work, so it can't be dragged again or
                     // left hanging mid-track while navigation is pending
                     completed.current = true;
-                    pan.setValue(maxTranslation);
+                    pan.setValue(maxTranslationRef.current);
                     onSwipeSuccessRef.current();
                 } else {
                     springBack();
@@ -112,6 +117,9 @@ const SwipeButton: React.FC<SwipeButtonProps> = ({
 
     return (
         <View
+            onLayout={(event: LayoutChangeEvent) =>
+                setContainerWidth(event.nativeEvent.layout.width)
+            }
             style={[
                 styles.container,
                 containerStyle,
@@ -150,6 +158,9 @@ const styles = StyleSheet.create({
         height: 50,
         backgroundColor: '#ccc',
         borderRadius: 5,
+        // Span the parent even when it centers its children (Send does), so
+        // the knob always has the full track to travel.
+        alignSelf: 'stretch',
         marginHorizontal: 20,
         justifyContent: 'center',
         alignItems: 'center',

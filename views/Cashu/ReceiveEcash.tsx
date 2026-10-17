@@ -1,6 +1,5 @@
 import * as React from 'react';
 import {
-    Dimensions,
     Platform,
     ScrollView,
     StyleSheet,
@@ -16,6 +15,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Clipboard from '@react-native-clipboard/clipboard';
 import cloneDeep from 'lodash/cloneDeep';
 
+import { getContentWidth, getWindowDimensions } from '../../utils/LayoutUtils';
 import handleAnything from '../../utils/handleAnything';
 
 import Wordmark from '../../assets/images/SVG/wordmark-black.svg';
@@ -382,7 +382,7 @@ export default class ReceiveEcash extends React.Component<
             nfcSupported
         } = this.state;
 
-        const { width, scale, fontScale } = Dimensions.get('window');
+        const { width, scale, fontScale } = getWindowDimensions();
 
         const {
             createInvoice,
@@ -534,7 +534,10 @@ export default class ReceiveEcash extends React.Component<
                                     <Text
                                         style={{
                                             ...styles.text,
-                                            fontSize: width * scale * 0.017,
+                                            fontSize:
+                                                getContentWidth(width) *
+                                                scale *
+                                                0.017,
                                             alignSelf: 'center',
                                             color: themeColor('text'),
                                             textAlign: 'center'

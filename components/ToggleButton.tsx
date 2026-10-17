@@ -6,7 +6,8 @@ import {
     View,
     Animated,
     Easing,
-    Dimensions
+    Dimensions,
+    LayoutChangeEvent
 } from 'react-native';
 
 import { themeColor } from '../utils/ThemeUtils';
@@ -22,7 +23,20 @@ interface ToggleButtonProps {
     onToggle: (key: string) => void;
 }
 
-export default class ToggleButton extends React.Component<ToggleButtonProps> {
+interface ToggleButtonState {
+    containerWidth: number;
+}
+
+export default class ToggleButton extends React.Component<
+    ToggleButtonProps,
+    ToggleButtonState
+> {
+    // Until the container is measured, assume it spans the window.
+    // onLayout corrects this on wide or resized windows.
+    state = {
+        containerWidth: Dimensions.get('window').width
+    };
+
     animation = new Animated.Value(
         this.props.options.findIndex((opt) => opt.key === this.props.value)
     );
@@ -43,9 +57,8 @@ export default class ToggleButton extends React.Component<ToggleButtonProps> {
 
     render() {
         const { options, value, onToggle } = this.props;
-        const screenWidth = Dimensions.get('window').width;
         const horizontalPadding = 32;
-        const toggleWidth = screenWidth - horizontalPadding;
+        const toggleWidth = this.state.containerWidth - horizontalPadding;
         const thumbWidth = toggleWidth / options.length;
         const styles = getStyles(toggleWidth, thumbWidth);
 
@@ -55,7 +68,14 @@ export default class ToggleButton extends React.Component<ToggleButtonProps> {
         });
 
         return (
-            <View style={styles.container}>
+            <View
+                style={styles.container}
+                onLayout={(event: LayoutChangeEvent) =>
+                    this.setState({
+                        containerWidth: event.nativeEvent.layout.width
+                    })
+                }
+            >
                 <View style={styles.toggleButton}>
                     <Animated.View
                         style={[

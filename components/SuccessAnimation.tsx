@@ -1,11 +1,13 @@
 import React, { useEffect, useRef } from 'react';
-import { Dimensions } from 'react-native';
+import { useWindowDimensions } from 'react-native';
 import Lottie from 'lottie-react-native';
+
+import { getContentWidth } from '../utils/LayoutUtils';
 
 const success = require('../assets/images/Lottie/payment-sent-bounce.json');
 
 function SuccessAnimation() {
-    const windowSize = Dimensions.get('window');
+    const contentWidth = getContentWidth(useWindowDimensions().width);
 
     const animationRef = useRef<Lottie>(null);
 
@@ -25,8 +27,8 @@ function SuccessAnimation() {
             loop={false}
             resizeMode="contain"
             style={{
-                width: windowSize.width * 0.4,
-                height: windowSize.width * 0.4
+                width: contentWidth * 0.4,
+                height: contentWidth * 0.4
             }}
         />
     );

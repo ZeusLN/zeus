@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { View, Dimensions } from 'react-native';
+import { View, Dimensions, EmitterSubscription } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import ModalBox from './ModalBox';
@@ -9,8 +9,6 @@ import CurrencyConverterContent from './CurrencyConverterContent';
 
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface CurrencySelectorModalProps {
     navigation?: NativeStackNavigationProp<any, any>;
@@ -29,6 +27,7 @@ export default class CurrencySelectorModal extends React.Component<
     private converterRef = React.createRef<CurrencyConverterContent>();
     private focusListener: any = null;
     private pendingReopen = false;
+    private dimensionsSubscription?: EmitterSubscription;
 
     constructor(props: CurrencySelectorModalProps) {
         super(props);
@@ -39,6 +38,10 @@ export default class CurrencySelectorModal extends React.Component<
 
     componentDidMount() {
         const { navigation } = this.props;
+        this.dimensionsSubscription = Dimensions.addEventListener(
+            'change',
+            () => this.forceUpdate()
+        );
         if (navigation) {
             this.focusListener = navigation.addListener('focus', () => {
                 if (this.pendingReopen) {
@@ -50,6 +53,7 @@ export default class CurrencySelectorModal extends React.Component<
     }
 
     componentWillUnmount() {
+        this.dimensionsSubscription?.remove();
         if (this.focusListener) {
             this.focusListener();
         }
@@ -116,7 +120,7 @@ export default class CurrencySelectorModal extends React.Component<
             <ModalBox
                 ref={this.modalRef}
                 style={{
-                    height: SCREEN_HEIGHT * 0.9,
+                    height: Dimensions.get('window').height * 0.9,
                     backgroundColor: themeColor('background'),
                     borderTopLeftRadius: 20,
                     borderTopRightRadius: 20
