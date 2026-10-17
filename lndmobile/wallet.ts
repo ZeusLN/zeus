@@ -23,14 +23,16 @@ export const bumpFee = async ({
     sat_per_vbyte?: Long;
     budget?: Long;
 }): Promise<walletrpc.BumpFeeResponse> => {
+    // The BumpFee view passes strings, which Long.fromValue misparses when
+    // they contain a decimal point, so convert them to numbers first
     const options: walletrpc.IBumpFeeRequest = {
         outpoint,
         target_conf,
         immediate,
         sat_per_vbyte: sat_per_vbyte
-            ? Long.fromValue(sat_per_vbyte)
+            ? Long.fromNumber(Number(sat_per_vbyte))
             : undefined,
-        budget: budget ? Long.fromValue(budget) : undefined
+        budget: budget ? Long.fromNumber(Number(budget)) : undefined
     };
     const response = await sendCommand<
         walletrpc.IBumpFeeRequest,
@@ -63,9 +65,9 @@ export const bumpForceCloseFee = async ({
         chan_point,
         immediate,
         starting_feerate: starting_feerate
-            ? Long.fromValue(starting_feerate)
+            ? Long.fromNumber(Number(starting_feerate))
             : undefined,
-        budget: budget ? Long.fromValue(budget) : undefined
+        budget: budget ? Long.fromNumber(Number(budget)) : undefined
     };
     const response = await sendCommand<
         walletrpc.IBumpForceCloseFeeRequest,
