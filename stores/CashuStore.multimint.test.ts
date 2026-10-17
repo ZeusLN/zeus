@@ -603,7 +603,10 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         );
         const onProgress = jest.fn();
 
-        const result = await store.payLnInvoiceFromEcash({ onProgress });
+        const result = await store.payLnInvoiceFromEcash({
+            paymentRequest: INVOICE,
+            onProgress
+        });
 
         expect(cdk.meltPartial).toHaveBeenCalledWith(A, INVOICE, 546000);
         expect(cdk.meltPartial).toHaveBeenCalledWith(B, INVOICE, 454000);
@@ -651,7 +654,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
                 paid(amountMsat / 1000, mintUrl === A ? 0 : 2)
         );
 
-        await store.payLnInvoiceFromEcash({});
+        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
 
         expect(store.paymentFee).toBe(2);
         expect(store.payments!.map((p) => p.fee)).toEqual([0, 2]);
@@ -666,7 +669,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         await store.getPayReq(INVOICE);
         cdk.melt.mockResolvedValue(paid(1000, 2));
 
-        await store.payLnInvoiceFromEcash({});
+        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
 
         expect(cdk.melt).toHaveBeenCalledWith(A, `regular-${A}`);
         expect(cdk.meltPartial).not.toHaveBeenCalled();
@@ -685,7 +688,10 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         });
         const onProgress = jest.fn();
 
-        await store.payLnInvoiceFromEcash({ onProgress });
+        await store.payLnInvoiceFromEcash({
+            paymentRequest: INVOICE,
+            onProgress
+        });
 
         // A Paid part means the payee released the preimage, so the invoice
         // is paid. The history entry only carries A's 546 sats.
@@ -711,7 +717,10 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         });
         const onProgress = jest.fn();
 
-        const result = await store.payLnInvoiceFromEcash({ onProgress });
+        const result = await store.payLnInvoiceFromEcash({
+            paymentRequest: INVOICE,
+            onProgress
+        });
 
         expect(result).toBeUndefined();
         expect(store.paymentSuccess).toBe(false);
@@ -737,7 +746,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
             fee_paid: 0
         });
 
-        await store.payLnInvoiceFromEcash({});
+        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
 
         expect(store.paymentSuccess).toBe(false);
         expect(store.paymentError).toBe(true);
@@ -758,7 +767,10 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         });
         const onProgress = jest.fn();
 
-        await store.payLnInvoiceFromEcash({ onProgress });
+        await store.payLnInvoiceFromEcash({
+            paymentRequest: INVOICE,
+            onProgress
+        });
 
         expect(store.paymentErrorMsg).toBe('stores.CashuStore.meltFeeMismatch');
         expect(localeString).toHaveBeenCalledWith(
@@ -780,7 +792,10 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         expect(store.meltQuotes).toHaveLength(2);
         const onProgress = jest.fn();
 
-        await store.payLnInvoiceFromEcash({ onProgress });
+        await store.payLnInvoiceFromEcash({
+            paymentRequest: INVOICE,
+            onProgress
+        });
 
         expect(cdk.meltPartial).not.toHaveBeenCalled();
         expect(store.paymentError).toBe(true);
@@ -798,7 +813,10 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         store.paymentRequest = INVOICE;
         store.multiMintPlannerSkips = [{ mintUrl: A, reason: 'selfSend' }];
 
-        await store.payLnInvoiceFromEcash({ amount: '1000' });
+        await store.payLnInvoiceFromEcash({
+            paymentRequest: INVOICE,
+            amount: '1000'
+        });
 
         expect(cdk.meltPartial).not.toHaveBeenCalled();
         expect(store.paymentErrorMsg).toBe(
@@ -818,6 +836,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         store.paymentRequest = INVOICE;
 
         await store.payLnInvoiceFromEcash({
+            paymentRequest: INVOICE,
             amount: '1000',
             isDonationPayment: true
         });
@@ -833,7 +852,10 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         store.paymentSuccess = true;
         cdk.meltPartial.mockRejectedValue(new Error('refused'));
 
-        await store.payLnInvoiceFromEcash({ isDonationPayment: true });
+        await store.payLnInvoiceFromEcash({
+            paymentRequest: INVOICE,
+            isDonationPayment: true
+        });
 
         // The other failure branches skip the store error for donations;
         // this one does not, so the store reports success and an error
@@ -851,7 +873,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
             meltQuote: { ...q.meltQuote, state: '' as any }
         }));
 
-        await store.payLnInvoiceFromEcash({});
+        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
 
         // #4696 changes this: an absent state is not Paid
         expect(store.paymentSuccess).toBe(true);
@@ -864,7 +886,7 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
             async (_m: string, _i: string, msat: number) => paid(msat / 1000, 0)
         );
 
-        await store.payLnInvoiceFromEcash({});
+        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
 
         // The planner keeps the mint's JSON reply, which names the quote
         // `quote` (NUT-05), while the executor reads `id`.
