@@ -34,7 +34,7 @@ import { sleep } from '../../utils/SleepUtils';
 import { font } from '../../utils/FontUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
-import { swapWebSocketUrl } from '../../utils/SwapUtils';
+import { nativeSwapEndpoint, swapWebSocketUrl } from '../../utils/SwapUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
 import InvoicesStore from '../../stores/InvoicesStore';
@@ -763,7 +763,7 @@ export default class SwapDetails extends React.Component<
         try {
             const claim = SubmarineClaimTransaction.build({
                 swap: new Swap({ ...createdResponse, keys }),
-                endpoint,
+                endpoint: nativeSwapEndpoint(endpoint),
                 claimTxDetails
             });
             if (!claim) return false;
@@ -877,7 +877,7 @@ export default class SwapDetails extends React.Component<
                     lockupAddress,
                     destinationAddress: claimAddress
                 }),
-                endpoint,
+                endpoint: nativeSwapEndpoint(endpoint),
                 transactionHex,
                 feeRate: Number(fee || 2),
                 minerFee,
