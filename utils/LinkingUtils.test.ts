@@ -26,6 +26,7 @@ const flushPromises = () => new Promise(setImmediate);
 const makeNavigation = (routeNames: string[], focusedIndex?: number) => ({
     navigate: jest.fn(),
     popTo: jest.fn(),
+    replace: jest.fn(),
     getState: jest.fn(() => ({
         index: focusedIndex ?? routeNames.length - 1,
         routes: routeNames.map((name) => ({ name }))
@@ -103,6 +104,51 @@ describe('LinkingUtils.handleDeepLink', () => {
             { lightning: 'lnbc1...', locked: true }
         );
         expect(navigation.popTo).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        ['LnurlPay', { lnurlParams: { callback: 'https://b.example/cb' } }],
+        ['LnurlChannel', { lnurlParams: { callback: 'https://b.example/cb' } }],
+        ['ClinkPay', { noffer: 'noffer1...' }],
+        ['ChoosePaymentMethod', { lightning: 'lnbc1...', locked: true }]
+    ])(
+        'mounts a fresh %s when that screen is focused',
+        async (route, props) => {
+            mockHandleAnythingResult = [route, props];
+            const navigation = makeNavigation(['Wallet', route]);
+
+            LinkingUtils.handleDeepLink(
+                'lightning:lnurl1...',
+                navigation as any
+            );
+            await flushPromises();
+
+            expect(navigation.replace).toHaveBeenCalledWith(route, props);
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        }
+    );
+
+    it('navigates when the focused screen is a different one', async () => {
+        mockHandleAnythingResult = ['LnurlPay', { lnurlParams: {} }];
+        const navigation = makeNavigation(['Wallet', 'LnurlPay', 'Send']);
+
+        LinkingUtils.handleDeepLink('lightning:lnurl1...', navigation as any);
+        await flushPromises();
+
+        expect(navigation.navigate).toHaveBeenCalledWith('LnurlPay', {
+            lnurlParams: {}
+        });
+        expect(navigation.replace).not.toHaveBeenCalled();
+    });
+
+    it('pops to a focused PaymentRequest instead of replacing it', async () => {
+        const navigation = makeNavigation(['Wallet', 'PaymentRequest']);
+
+        LinkingUtils.handleDeepLink('lightning:lnbc1...', navigation as any);
+        await flushPromises();
+
+        expect(navigation.popTo).toHaveBeenCalledWith('PaymentRequest', {});
+        expect(navigation.replace).not.toHaveBeenCalled();
     });
 
     it('defers the deep link while login is required, then dispatches it', async () => {
