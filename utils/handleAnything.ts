@@ -34,7 +34,9 @@ const isAmountlessInvoice = (bolt11: string): boolean => {
         const invoice = new Invoice(Bolt11Utils.decode(bolt11));
         return !invoice.getRequestAmount;
     } catch {
-        return false;
+        // Send an invoice decode() rejects to PaymentRequest, where getPayReq
+        // shows the error. ChoosePaymentMethod would lock it with no amount.
+        return true;
     }
 };
 

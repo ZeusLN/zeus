@@ -316,6 +316,49 @@ describe('handleAnything', () => {
         });
     });
 
+    describe('lightning payment request in ecash mode', () => {
+        // BOLT 11 spec vectors: a valid 2500u invoice, and the same invoice
+        // with the invalid multiplier 'x'
+        const withAmount =
+            'lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpquwpc4curk03c9wlrswe78q4eyqc7d8d0xqzpu9qrsgqhtjpauu9ur7fw2thcl4y9vfvh4m9wlfyz2gem29g5ghe2aak2pm3ps8fdhtceqsaagty2vph7utlgj48u0ged6a337aewvraedendscp573dxr';
+        const invalidMultiplier =
+            'lnbc2500x1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq5xysxxatsyp3k7enxv4jsxqzpusp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygs9qrsgqrrzc4cvfue4zp3hggxp47ag7xnrlr8vgcmkjxk3j5jqethnumgkpqp23z9jclu3v0a7e0aruz366e9wqdykw6dxhdzcjjhldxq0w6wgqcnu43j';
+
+        beforeEach(() => {
+            mockSupportsCashuWallet = true;
+            mockIsValidLightningPaymentRequest = true;
+            (settingsStore.settings as any).ecash = { enableCashu: true };
+            (invoicesStore.getPayReq as jest.Mock).mockClear();
+        });
+
+        afterEach(() => {
+            delete (settingsStore.settings as any).ecash;
+        });
+
+        it('should route an invoice with an amount to a locked ChoosePaymentMethod', async () => {
+            mockProcessBIP21Uri.mockReturnValue({ value: withAmount });
+
+            const result = await handleAnything(withAmount);
+
+            expect(result).toStrictEqual([
+                'ChoosePaymentMethod',
+                { lightning: withAmount, locked: true }
+            ]);
+            expect(invoicesStore.getPayReq).not.toHaveBeenCalled();
+        });
+
+        it('should route an invoice decode() rejects to PaymentRequest', async () => {
+            mockProcessBIP21Uri.mockReturnValue({ value: invalidMultiplier });
+
+            const result = await handleAnything(invalidMultiplier);
+
+            expect(result).toStrictEqual(['PaymentRequest', {}]);
+            expect(invoicesStore.getPayReq).toHaveBeenCalledWith(
+                invalidMultiplier
+            );
+        });
+    });
+
     describe('bitcoin URI with lnurl on a backend without on-chain sends', () => {
         it('should return ChoosePaymentMethod if not from clipboard', async () => {
             const data =

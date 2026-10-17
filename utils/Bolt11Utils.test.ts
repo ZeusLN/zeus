@@ -269,7 +269,7 @@ describe('decode input validation', () => {
         [
             'sub-millisatoshi precision',
             SPEC_INVALID.subMillisatoshi,
-            'Amount is outside of valid range'
+            'Amount is not a whole millisatoshi'
         ],
         [
             'an amount above 21 million BTC',
@@ -307,6 +307,14 @@ describe('decode input validation', () => {
         ).toThrow('Invoice is too short to hold a signature');
     });
 
+    it('reports the length error before the amount error', () => {
+        expect(() =>
+            Bolt11Utils.decode(
+                bech32.encode('lnbc2500x', new Array(110).fill(0), Infinity)
+            )
+        ).toThrow('Invoice is too short to hold a signature');
+    });
+
     // Characterising, not endorsing. decode() does not require the `s`
     // field and does not read feature bits; the node enforces both.
     it.each([
@@ -319,8 +327,8 @@ describe('decode input validation', () => {
         expect(decoded.destination).toMatch(/^0[23][0-9a-f]{64}$/);
     });
 
-    // 15010p is 1501 msat. hrpToSat rejects it, so satoshis is null and
-    // num_satoshis is the msat amount rounded down.
+    // 15010p is 1501 msat, not a whole number of satoshis, so satoshis is
+    // null and num_satoshis is the msat amount rounded down.
     it('rounds a sub-satoshi amount down in num_satoshis', () => {
         const decoded = Bolt11Utils.decode(withPrefix('lnbcrt15010p'));
 
@@ -431,7 +439,6 @@ describe('decode tag fields', () => {
 describe('amount parsing', () => {
     const hrpToMillisat = (hrp: string) =>
         (Bolt11Utils as any).hrpToMillisat(hrp);
-    const hrpToSat = (hrp: string) => (Bolt11Utils as any).hrpToSat(hrp);
 
     it.each([
         ['2500u', '250000000'],
@@ -460,8 +467,13 @@ describe('amount parsing', () => {
         }
     );
 
+    it('rejects a pico amount not ending in 0 as sub-millisatoshi', () => {
+        expect(() => hrpToMillisat('1p')).toThrow(
+            'Amount is not a whole millisatoshi'
+        );
+    });
+
     it.each([
-        ['a pico amount not ending in 0', '1p'],
         ['an amount above 21M BTC', '21000001'],
         ['a milli amount above 21M BTC', '21000000001m']
     ])('rejects %s (%s) as out of range', (_label, hrp) => {
@@ -470,16 +482,15 @@ describe('amount parsing', () => {
         );
     });
 
-    it('rejects a whole-satoshi conversion of a sub-satoshi amount', () => {
-        expect(hrpToMillisat('10p')).toBe('1');
-        expect(() => hrpToSat('10p')).toThrow(
-            'Amount is outside of valid range'
-        );
-    });
+    it.each([
+        ['lnbc2500u', 250000, '250000000'],
+        ['lnbc10000p', 1, '1000'],
+        ['lnbc10p', null, '1']
+    ])('decodes %s to %p sat', (hrp, satoshis, millisatoshis) => {
+        const decoded = Bolt11Utils.decode(withPrefix(hrp));
 
-    it('converts a whole-satoshi amount to satoshis', () => {
-        expect(hrpToSat('2500u')).toBe(250000);
-        expect(hrpToSat('10000p')).toBe(1);
+        expect(decoded.satoshis).toBe(satoshis);
+        expect(decoded.millisatoshis).toBe(millisatoshis);
     });
 });
 
