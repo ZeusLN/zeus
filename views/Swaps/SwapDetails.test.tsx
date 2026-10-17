@@ -486,3 +486,51 @@ describe('SwapDetails lockup verification retry wiring', () => {
         expect(nativeClaim).not.toHaveBeenCalled();
     });
 });
+
+describe('SwapDetails submarine pay button', () => {
+    const payButtons = () => {
+        const found: any[] = [];
+        const walk = (node: any) => {
+            if (!node || typeof node !== 'object') return;
+            if (Array.isArray(node)) return node.forEach(walk);
+            if (
+                node.type === 'Button' &&
+                node.props?.title === 'views.PaymentRequest.payInvoice'
+            ) {
+                found.push(node);
+            }
+            walk(node.children);
+        };
+        walk(screen.toJSON());
+        return found;
+    };
+
+    it.each([
+        ['created on this device', true, false],
+        ['rescued with /swap/restore', false, true]
+    ])(
+        'for an unfunded swap %s, shows the pay button: %s',
+        async (_, shown, imported) => {
+            await renderView({
+                type: SwapType.Submarine,
+                imported,
+                bip21: 'bitcoin:bc1pswap?amount=0.00000424',
+                lockupAddress: 'bc1pswap'
+            });
+            await sendStatus('invoice.set');
+
+            expect(payButtons()).toHaveLength(shown ? 1 : 0);
+        }
+    );
+
+    it('shows the pay button for a swap created on this device without bip21', async () => {
+        await renderView({
+            type: SwapType.Submarine,
+            imported: false,
+            lockupAddress: 'bc1pswap'
+        });
+        await sendStatus('invoice.set');
+
+        expect(payButtons()).toHaveLength(1);
+    });
+});

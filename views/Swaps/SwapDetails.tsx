@@ -1008,6 +1008,10 @@ export default class SwapDetails extends React.Component<
 
         const failure = failureReason || swapData.failureReason;
 
+        const showPayButton =
+            !!swapData.qrCodeValue &&
+            (updates === SwapState.InvoiceSet || updates === SwapState.Created);
+
         const showRefundButton =
             swapData.lockupTransaction &&
             (updates === SwapState.InvoiceFailedToPay ||
@@ -1254,8 +1258,7 @@ export default class SwapDetails extends React.Component<
                     {/* Render Swap Tree */}
                     {this.renderSwapTree(swapData?.swapTree || swapData?.tree)}
                 </ScrollView>
-                {(updates === SwapState.InvoiceSet ||
-                    updates === SwapState.Created) && (
+                {showPayButton && (
                     <Button
                         title={localeString('views.PaymentRequest.payInvoice')}
                         containerStyle={{

@@ -40,6 +40,8 @@ import {
     buildReverseSwapLeaves,
     deriveReverseSwapOutputKey,
     verifyReverseSwapResponse,
+    buildSubmarineSwapLeaves,
+    verifySubmarineSwapResponse,
     checkLockupOutput
 } from './SwapUtils';
 import ecc from '@bitcoinerlab/secp256k1';
@@ -1132,6 +1134,336 @@ describe('SwapUtils', () => {
                     ).toBe(expected);
                 }
             );
+        });
+    });
+
+    describe('verifySubmarineSwapResponse', () => {
+        const hex = (value: string) => Buffer.from(value, 'hex');
+        const pubFromPriv = (priv: string) =>
+            Buffer.from(ecc.pointFromScalar(hex(priv), true)!);
+
+        // submarine vector from boltz-client's pkg/boltz/swaptree_test.go
+        const OUR_PUBKEY = pubFromPriv(
+            '265238cbdc33eafd2ab2c9bfc3b38fcd9b4d610c62973a85ea74662147eeed99'
+        );
+        const SERVER_PUBKEY =
+            '020e9e82ede019c483ef12f0a05a2f602be53a10f72cce88d6975a24592cf9ce07';
+        const PREIMAGE_HASH = hex(
+            '8cc63191120acf891b9eff49136a92c421e833171ace1ee94a0838052f0c0f86'
+        );
+        const TIMEOUT = 828670;
+        const CLAIM_LEAF =
+            'a9140aa6567ec32c5f62f0413be0fddc819f1d6fd0dd88200e9e82ede019c483ef12f0a05a2f602be53a10f72cce88d6975a24592cf9ce07ac';
+        const REFUND_LEAF =
+            '2078711c01248c5db8436e07c43d651355a1415f3f43d4edf2d2147bfa66c20605ad03fea40cb1';
+        const ADDRESS =
+            'bc1px6up6cxg2vhf049x9g0v8wcztc0vvvd25zjqt6qf3streqvuzm7qm0dpkp';
+        const OTHER_PUBKEY = pubFromPriv('01'.repeat(32));
+        const UNRELATED_ADDRESS = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
+        // the right witness program under a non-standard bech32 prefix
+        const NONSTANDARD_ADDRESS = bitcoinAddress.toBech32(
+            Buffer.from(bitcoinAddress.fromBech32(ADDRESS).data),
+            1,
+            'bc1p@example.com?x='
+        );
+
+        // a consistent tree and address for these keys, hash and timeout
+        const swap = ({
+            claimPubKey = hex(SERVER_PUBKEY),
+            refundPubKey = OUR_PUBKEY,
+            preimageHash = PREIMAGE_HASH,
+            timeoutBlockHeight = TIMEOUT
+        } = {}) => {
+            const { claimLeaf, refundLeaf } = buildSubmarineSwapLeaves({
+                claimPubKey,
+                refundPubKey,
+                preimageHash,
+                timeoutBlockHeight
+            });
+            const pubkey = deriveReverseSwapOutputKey({
+                ourPubKey: refundPubKey,
+                serverPubKey: claimPubKey,
+                claimLeaf,
+                refundLeaf
+            });
+            return {
+                swapTree: {
+                    claimLeaf: {
+                        version: 192,
+                        output: claimLeaf.toString('hex')
+                    },
+                    refundLeaf: {
+                        version: 192,
+                        output: refundLeaf.toString('hex')
+                    }
+                },
+                address: payments.p2tr({ pubkey }).address,
+                serverPubKey: claimPubKey.toString('hex'),
+                timeoutBlockHeight
+            };
+        };
+
+        const response = (overrides: any = {}) => ({
+            swapTree: {
+                claimLeaf: { version: 192, output: CLAIM_LEAF },
+                refundLeaf: { version: 192, output: REFUND_LEAF }
+            },
+            address: ADDRESS,
+            serverPubKey: SERVER_PUBKEY,
+            timeoutBlockHeight: TIMEOUT,
+            expectedAmount: 100400,
+            ourPubKey: OUR_PUBKEY,
+            preimageHash: PREIMAGE_HASH,
+            maxExpectedAmount: 100400,
+            bech32Prefix: 'bc',
+            ...overrides
+        });
+
+        it('builds the leaves and address of the boltz-client vector', () => {
+            const built = swap();
+            expect(built.swapTree.claimLeaf.output).toBe(CLAIM_LEAF);
+            expect(built.swapTree.refundLeaf.output).toBe(REFUND_LEAF);
+            expect(built.address).toBe(ADDRESS);
+        });
+
+        it('accepts the boltz-client vector for our key, hash and amount', () => {
+            expect(verifySubmarineSwapResponse(response())).toEqual({
+                valid: true
+            });
+        });
+
+        it('accepts an amount below the quote', () => {
+            expect(
+                verifySubmarineSwapResponse(
+                    response({ expectedAmount: 100399 })
+                )
+            ).toEqual({ valid: true });
+        });
+
+        it('accepts leaves without a version and uppercase hex', () => {
+            expect(
+                verifySubmarineSwapResponse(
+                    response({
+                        swapTree: {
+                            claimLeaf: { output: CLAIM_LEAF.toUpperCase() },
+                            refundLeaf: { output: REFUND_LEAF.toUpperCase() }
+                        },
+                        serverPubKey: SERVER_PUBKEY.toUpperCase()
+                    })
+                )
+            ).toEqual({ valid: true });
+        });
+
+        it('accepts a regtest swap spelled with the regtest prefix', () => {
+            const regtest = bitcoinAddress.toBech32(
+                Buffer.from(bitcoinAddress.fromBech32(ADDRESS).data),
+                1,
+                'bcrt'
+            );
+            expect(
+                verifySubmarineSwapResponse(
+                    response({ address: regtest, bech32Prefix: 'bcrt' })
+                )
+            ).toEqual({ valid: true });
+        });
+
+        it('the non-standard address decodes to the swap witness program', () => {
+            const decoded = bitcoinAddress.fromBech32(NONSTANDARD_ADDRESS);
+            expect(decoded.version).toBe(1);
+            expect(Buffer.from(decoded.data)).toEqual(
+                Buffer.from(bitcoinAddress.fromBech32(ADDRESS).data)
+            );
+        });
+
+        it.each([
+            [
+                'the address is an unrelated address',
+                { address: UNRELATED_ADDRESS },
+                'lockup-address-mismatch'
+            ],
+            [
+                'the address has the right witness program under another prefix',
+                { address: NONSTANDARD_ADDRESS },
+                'lockup-address-mismatch'
+            ],
+            [
+                'the address is for another network',
+                { bech32Prefix: 'tb' },
+                'lockup-address-mismatch'
+            ],
+            [
+                'the address is the taproot output of another swap',
+                { address: swap({ refundPubKey: OTHER_PUBKEY }).address },
+                'lockup-address-mismatch'
+            ],
+            [
+                'the address is a key-path-only output of the server key',
+                {
+                    address: payments.p2tr({
+                        internalPubkey: hex(SERVER_PUBKEY).subarray(1)
+                    }).address
+                },
+                'lockup-address-mismatch'
+            ],
+            [
+                'the address is garbage',
+                { address: 'not-an-address' },
+                'lockup-address-mismatch'
+            ],
+            [
+                'the whole swap refunds another key',
+                swap({ refundPubKey: OTHER_PUBKEY }),
+                'refund-leaf-mismatch'
+            ],
+            [
+                'the whole swap commits to another payment hash',
+                swap({ preimageHash: Buffer.alloc(32, 9) }),
+                'claim-leaf-mismatch'
+            ],
+            [
+                'the claim leaf pays a key other than the stated server key',
+                {
+                    ...swap({ claimPubKey: OTHER_PUBKEY }),
+                    serverPubKey: SERVER_PUBKEY
+                },
+                'claim-leaf-mismatch'
+            ],
+            [
+                'the claim leaf needs no preimage',
+                {
+                    swapTree: {
+                        claimLeaf: {
+                            version: 192,
+                            output: `20${SERVER_PUBKEY.slice(2)}ac`
+                        },
+                        refundLeaf: { version: 192, output: REFUND_LEAF }
+                    }
+                },
+                'claim-leaf-mismatch'
+            ],
+            [
+                'the refund leaf has a later timeout than stated',
+                {
+                    ...swap({ timeoutBlockHeight: TIMEOUT + 1 }),
+                    timeoutBlockHeight: TIMEOUT
+                },
+                'refund-leaf-mismatch'
+            ],
+            [
+                'the timeout is a timestamp',
+                swap({ timeoutBlockHeight: 1700000000 }),
+                'refund-leaf-mismatch'
+            ],
+            [
+                'the timeout is missing',
+                { timeoutBlockHeight: undefined },
+                'refund-leaf-mismatch'
+            ],
+            [
+                'the timeout is a string',
+                { timeoutBlockHeight: String(TIMEOUT) },
+                'refund-leaf-mismatch'
+            ],
+            [
+                'a leaf has a non-tapscript version',
+                {
+                    swapTree: {
+                        claimLeaf: { version: 192, output: CLAIM_LEAF },
+                        refundLeaf: { version: 0xc4, output: REFUND_LEAF }
+                    }
+                },
+                'leaf-version'
+            ],
+            // Buffer.from stops at the first non-hex character
+            [
+                'the claim leaf has trailing non-hex characters',
+                {
+                    swapTree: {
+                        claimLeaf: { version: 192, output: `${CLAIM_LEAF}zz` },
+                        refundLeaf: { version: 192, output: REFUND_LEAF }
+                    }
+                },
+                'claim-leaf-mismatch'
+            ],
+            [
+                'the refund leaf has trailing non-hex characters',
+                {
+                    swapTree: {
+                        claimLeaf: { version: 192, output: CLAIM_LEAF },
+                        refundLeaf: { version: 192, output: `${REFUND_LEAF}zz` }
+                    }
+                },
+                'refund-leaf-mismatch'
+            ],
+            [
+                'the server key has trailing non-hex characters',
+                { serverPubKey: `${SERVER_PUBKEY}zz` },
+                'server-key-encoding'
+            ],
+            [
+                'the server key is uncompressed',
+                {
+                    serverPubKey: Buffer.from(
+                        ecc.pointCompress(hex(SERVER_PUBKEY), false)
+                    ).toString('hex')
+                },
+                'server-key-encoding'
+            ],
+            [
+                'the server key is not a point',
+                { serverPubKey: `02${'ff'.repeat(32)}` },
+                'server-key-encoding'
+            ],
+            [
+                'the expected amount is above the quoted amount',
+                { expectedAmount: 100401 },
+                'expected-amount-high'
+            ],
+            [
+                'the expected amount is missing',
+                { expectedAmount: undefined },
+                'expected-amount-high'
+            ],
+            [
+                'the expected amount is a string',
+                { expectedAmount: '100400' },
+                'expected-amount-high'
+            ],
+            [
+                'the expected amount is not positive',
+                { expectedAmount: 0 },
+                'expected-amount-high'
+            ],
+            [
+                'there is no quoted amount to compare with',
+                { maxExpectedAmount: NaN },
+                'expected-amount-high'
+            ],
+            [
+                'the swap tree is missing',
+                { swapTree: undefined },
+                'missing-fields'
+            ],
+            [
+                'the address is missing',
+                { address: undefined },
+                'missing-fields'
+            ],
+            [
+                'the server key is missing',
+                { serverPubKey: undefined },
+                'missing-fields'
+            ],
+            [
+                'the invoice has no payment hash',
+                { preimageHash: Buffer.alloc(0) },
+                'missing-fields'
+            ]
+        ])('rejects when %s', (_, overrides, reason) => {
+            expect(verifySubmarineSwapResponse(response(overrides))).toEqual({
+                valid: false,
+                reason
+            });
         });
     });
 });
