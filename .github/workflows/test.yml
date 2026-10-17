@@ -17,6 +17,7 @@ jobs:
         uses: actions/setup-node@v7
         with:
           node-version: '24.x'
+          cache: yarn
       - run: yarn install --frozen-lockfile
       - run: yarn run test:coverage --coverageReporters=json-summary
       - name: Upload coverage baseline
