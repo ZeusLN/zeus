@@ -12,6 +12,7 @@ import CashuUtils from './CashuUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
 import ContactUtils from './ContactUtils';
 import { localeString } from './LocaleUtils';
+import { getLnurlHost } from './LnurlPayUtils';
 import NodeUriUtils from './NodeUriUtils';
 import NostrUtils from './NostrUtils';
 import { doTorRequest, RequestMethod } from './TorUtils';
@@ -936,12 +937,10 @@ const handleAnything = async (
         const raw: string = findlnurl(value) || lnurl || value || '';
         return getlnurlParams(raw)
             .then((params: any) => {
-                if (
-                    params.status === 'ERROR' &&
-                    params.domain.endsWith('.onion')
-                ) {
+                const lnurlHost = getLnurlHost(params?.url ?? params?.callback);
+                if (params.status === 'ERROR' && lnurlHost.endsWith('.onion')) {
                     // TODO handle fetching of params with internal Tor
-                    throw new Error(`${params.domain} says: ${params.reason}`);
+                    throw new Error(`${lnurlHost} says: ${params.reason}`);
                 }
 
                 switch (params.tag) {
@@ -1024,7 +1023,7 @@ const handleAnything = async (
                         Alert.alert(
                             localeString('general.error'),
                             params.status === 'ERROR'
-                                ? `${params.domain} says: ${params.reason}`
+                                ? `${lnurlHost} says: ${params.reason}`
                                 : `${localeString(
                                       'utils.handleAnything.unsupportedLnurlType'
                                   )}: ${params.tag}`,

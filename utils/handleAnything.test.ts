@@ -720,6 +720,32 @@ describe('handleAnything', () => {
             alertSpy.mockRestore();
         });
 
+        it('names the host an LNURL error came from', async () => {
+            mockProcessBIP21Uri.mockReturnValue({
+                value: 'lnurlw://other.example/lnurl'
+            });
+            // js-lnurl's getDomain reads shop.example out of this URL
+            mockGetLnurlParamsFn.mockResolvedValue({
+                status: 'ERROR',
+                reason: 'Claim your refund',
+                domain: 'shop.example',
+                url: 'https://other.example\\@shop.example/lnurl'
+            });
+            const alertSpy = jest
+                .spyOn(Alert, 'alert')
+                .mockImplementation(() => void 0);
+
+            await handleAnything('lnurlw://other.example/lnurl');
+
+            expect(alertSpy).toHaveBeenCalledWith(
+                'Error',
+                'other.example says: Claim your refund',
+                expect.any(Array),
+                { cancelable: false }
+            );
+            alertSpy.mockRestore();
+        });
+
         it('should return true if from clipboard', async () => {
             const data =
                 'LIGHTNING:lnurlp://demo.lnbits.com/bitcoinswitch/api/v1/lnurl/bD34dEpKaanBiabk7mEo2D?pin=13';

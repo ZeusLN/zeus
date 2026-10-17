@@ -4009,7 +4009,7 @@ export default class CashuStore {
                     .then((data: any) => {
                         if (data.status === 'ERROR') {
                             Alert.alert(
-                                `[error] ${lnurl.domain} says:`,
+                                `[error] ${u.hostname} says:`,
                                 data.reason,
                                 [
                                     {
