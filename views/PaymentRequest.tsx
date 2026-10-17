@@ -369,7 +369,10 @@ export default class PaymentRequest extends React.Component<
             enableDonations,
             ...(enableDonations &&
                 donationAmount > 0 && {
-                    donationAmount: donationAmount.toString()
+                    donationAmount: donationAmount.toString(),
+                    // The donation is paid without a screen of its own, so
+                    // it is bound by the fee limit approved for this payment
+                    donationFeeLimitSat: feeLimitSat
                 })
         });
     };
