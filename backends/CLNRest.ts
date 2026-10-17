@@ -26,6 +26,18 @@ import Bolt11Utils from '../utils/Bolt11Utils';
 
 const calls = new Map<string, Promise<any>>();
 
+// CLN's feerate takes an integer before the perkb suffix. Float math turns
+// 2.01 sat/vB into 2009.9999999999998perkb, so multiply with BigNumber and
+// round to a whole sat/kB. Number() first keeps the old output for a
+// missing or empty rate, which BigNumber would throw on.
+export const satPerVbyteToPerkb = (
+    satPerVbyte: string | number | null | undefined
+): string =>
+    `${new BigNumber(Number(satPerVbyte))
+        .times(1000)
+        .integerValue(BigNumber.ROUND_HALF_UP)
+        .toFixed()}perkb`;
+
 export default class CLNRest {
     private defaultTimeout: number = 30000;
     getHeaders = (rune: string): any => {
@@ -264,14 +276,14 @@ export default class CLNRest {
         if (data.utxos) {
             request = {
                 destination: data.addr,
-                feerate: `${Number(data.sat_per_vbyte) * 1000}perkb`,
+                feerate: satPerVbyteToPerkb(data.sat_per_vbyte),
                 satoshi: data.amount,
                 utxos: data.utxos
             };
         } else {
             request = {
                 destination: data.addr,
-                feerate: `${Number(data.sat_per_vbyte) * 1000}perkb`,
+                feerate: satPerVbyteToPerkb(data.sat_per_vbyte),
                 satoshi: data.amount
             };
         }
@@ -429,9 +441,7 @@ export default class CLNRest {
 
     openChannelSync = (data: OpenChannelRequest) => {
         let request: any;
-        const feeRate = `${new BigNumber(data.sat_per_vbyte || 0)
-            .times(1000)
-            .toString()}perkb`;
+        const feeRate = satPerVbyteToPerkb(data.sat_per_vbyte || 0);
 
         request = {
             id: data.id,
