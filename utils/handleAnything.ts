@@ -1064,6 +1064,12 @@ const handleAnything = async (
         const contact = JSON.parse(zeusContactData);
 
         if (contact?.contactId) {
+            // ZEUS never exports photo/banner in a card (views/MultiQR.tsx).
+            // In a received card they are remote URLs that ContactDetails
+            // would load as soon as it opens, and again after saving.
+            delete contact.photo;
+            delete contact.banner;
+
             return [
                 'ContactDetails',
                 {
