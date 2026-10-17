@@ -1023,15 +1023,7 @@ export default class ChannelsStore {
                             pending_chan_id,
                             skip_finalize: true
                         }
-                    })
-                        .then((data: any) => {
-                            console.log(`fundingStateStep - data ${i}`, data);
-                            return;
-                        })
-                        .catch((e: any) => {
-                            console.log(`fundingStateStep - err ${i}`, e);
-                            return;
-                        });
+                    });
                 }
 
                 BackendUtils.fundingStateStep({
