@@ -1302,6 +1302,16 @@ export default class LdkNode {
             ? Number(data.value) * 1000
             : 0;
 
+        // the native module converts these to u64 / u32; on iOS a value that
+        // does not fit stops the app instead of rejecting, and both can come
+        // from an NWC make_invoice request
+        if (
+            !(expirySecs >= 0 && expirySecs <= 0xffffffff) ||
+            !(amountMsat >= 0 && amountMsat <= Number.MAX_SAFE_INTEGER)
+        ) {
+            throw new Error(localeString('error.invalidInvoiceAmountOrExpiry'));
+        }
+
         if (amountMsat > 0) {
             invoice = await LdkNodeInjection.bolt11.receiveBolt11({
                 amountMsat,
