@@ -760,7 +760,7 @@ export default class TransactionsStore {
         timeout_seconds
     }: {
         payment_request: string;
-        fee_limit_sat?: number;
+        fee_limit_sat?: number | string;
         max_parts?: string;
         timeout_seconds?: number;
     }) => {
@@ -780,7 +780,15 @@ export default class TransactionsStore {
             this.settingsStore.implementation === 'cln-rest' ||
             this.settingsStore.implementation === 'ldk-node'
         ) {
-            data.fee_limit_sat = Number(fee_limit_sat) || 100;
+            // There is no confirmation screen on this path, so a caller can
+            // only lower the default fee limit, never raise it. A limit of 0
+            // is a limit the user set, not a missing value.
+            const feeLimitSat =
+                fee_limit_sat != null && fee_limit_sat !== ''
+                    ? Number(fee_limit_sat)
+                    : NaN;
+            data.fee_limit_sat =
+                feeLimitSat >= 0 ? Math.min(feeLimitSat, 100) : 100;
             data.timeout_seconds = Number(timeout_seconds) || 60;
         }
 

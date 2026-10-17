@@ -42,7 +42,10 @@ jest.mock('../stores/NodeInfoStore', () => ({}));
 jest.mock('../utils/Base64Utils', () => ({}));
 jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
-    default: { isLocalWallet: () => false }
+    default: {
+        isLocalWallet: () => false,
+        supportsChannelManagement: () => false
+    }
 }));
 jest.mock('../utils/ContactUtils', () => ({
     __esModule: true,
@@ -59,14 +62,18 @@ jest.mock('../utils/AmountUtils', () => ({ getFeePercentage: jest.fn() }));
 
 import * as React from 'react';
 import { BackHandler } from 'react-native';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import SendingLightning from './SendingLightning';
+import { loadDonationLnurl } from '../utils/DonationUtils';
 
 const TRY_AGAIN = 'views.SendingLightning.tryAgain';
 const GO_TO_WALLET = 'views.SendingLightning.goToWallet';
 
-const renderView = async (transactionsState: Record<string, any>) => {
-    const TransactionsStore = {
+const renderView = async (
+    transactionsState: Record<string, any>,
+    params?: Record<string, any>
+) => {
+    const TransactionsStore: any = {
         loading: false,
         error: false,
         error_msg: null,
@@ -84,26 +91,37 @@ const renderView = async (transactionsState: Record<string, any>) => {
         popTo: jest.fn(),
         addListener: jest.fn(() => jest.fn())
     };
-    await render(
+    const element = () => (
         <SendingLightning
             {...({
                 navigation,
-                route: { key: 'SendingLightning', name: 'SendingLightning' },
+                route: {
+                    key: 'SendingLightning',
+                    name: 'SendingLightning',
+                    params
+                },
                 TransactionsStore,
                 ContactStore: { contacts: [] },
                 LnurlPayStore: {},
-                NodeInfoStore: { nodeInfo: {} }
+                NodeInfoStore: { nodeInfo: { isMainNet: !!params } },
+                PaymentsStore: { getPayments: jest.fn() },
+                BalanceStore: { getCombinedBalance: jest.fn() }
             } as any)}
         />
     );
-    return navigation;
+    const { rerender } = await render(element());
+    return {
+        navigation,
+        TransactionsStore,
+        rerender: () => rerender(element())
+    };
 };
 
 describe('SendingLightning retry', () => {
     it('does not offer Try Again while the payment is in transit', async () => {
         // what TransactionsStore holds after LdkNode reports a keysend or
         // BOLT 12 payment still pending at its timeout
-        const navigation = await renderView({ status: 'IN_FLIGHT' });
+        const { navigation } = await renderView({ status: 'IN_FLIGHT' });
 
         expect(
             screen.queryByRole('button', { name: TRY_AGAIN })
@@ -121,7 +139,7 @@ describe('SendingLightning retry', () => {
     });
 
     it('offers Try Again, going back to the previous screen, after a failure', async () => {
-        const navigation = await renderView({
+        const { navigation } = await renderView({
             error: true,
             error_msg: 'RouteNotFound'
         });
@@ -147,7 +165,7 @@ describe('SendingLightning hardware back', () => {
     afterEach(() => jest.restoreAllMocks());
 
     it('returns to the wallet while the payment is in transit', async () => {
-        const navigation = await renderView({ status: 'IN_FLIGHT' });
+        const { navigation } = await renderView({ status: 'IN_FLIGHT' });
 
         expect(onBack()).toBe(true);
 
@@ -156,7 +174,7 @@ describe('SendingLightning hardware back', () => {
     });
 
     it('leaves a failed payment to the default back behavior', async () => {
-        const navigation = await renderView({
+        const { navigation } = await renderView({
             error: true,
             error_msg: 'RouteNotFound'
         });
@@ -164,5 +182,72 @@ describe('SendingLightning hardware back', () => {
         expect(onBack()).toBe(false);
 
         expect(navigation.popTo).not.toHaveBeenCalled();
+    });
+});
+
+describe('SendingLightning donation', () => {
+    // a settled payment followed by a 50 sat donation
+    const paid = {
+        payment_preimage: 'ab'.repeat(32),
+        payment_hash: 'cd'.repeat(32),
+        status: 'SUCCEEDED'
+    };
+    const params = {
+        enableDonations: true,
+        donationAmount: '50',
+        donationFeeLimitSat: '5'
+    };
+
+    beforeEach(() =>
+        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc-donation')
+    );
+
+    const donate = async (result: any) => {
+        // later attempts never settle, so a retry can't change the outcome
+        const sendPaymentSilently = jest
+            .fn()
+            .mockResolvedValueOnce(result)
+            .mockReturnValue(new Promise(() => {}));
+        const { TransactionsStore, rerender } = await renderView(
+            { loading: true, sendPaymentSilently, donationIsPaid: false },
+            params
+        );
+        // the payment settles
+        Object.assign(TransactionsStore, { ...paid, loading: false });
+        await rerender();
+        await act(async () => {
+            await new Promise((resolve) => setImmediate(resolve));
+        });
+        return { TransactionsStore, sendPaymentSilently };
+    };
+
+    it('pays the donation with the fee limit of the payment', async () => {
+        const { sendPaymentSilently } = await donate({ status: 'SUCCEEDED' });
+
+        expect(sendPaymentSilently).toHaveBeenCalledWith({
+            payment_request: 'lnbc-donation',
+            fee_limit_sat: '5'
+        });
+    });
+
+    it('does not mark a donation paid when embedded LND reports it failed', async () => {
+        // lnrpc.Payment as decoded on embedded LND: numeric status, no
+        // payment_error
+        const { TransactionsStore, sendPaymentSilently } = await donate({
+            status: 3,
+            failure_reason: 2
+        });
+
+        expect(sendPaymentSilently).toHaveBeenCalled();
+        expect(TransactionsStore.donationIsPaid).toBe(false);
+    });
+
+    it('marks a settled donation paid', async () => {
+        const { TransactionsStore } = await donate({
+            status: 2,
+            value_sat: '50'
+        });
+
+        expect(TransactionsStore.donationIsPaid).toBe(true);
     });
 });
