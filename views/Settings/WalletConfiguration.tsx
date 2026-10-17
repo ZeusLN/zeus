@@ -894,8 +894,17 @@ export default class WalletConfiguration extends React.Component<
             // wallet. This must happen before updateSettings removes the node
             // config: the hashed LNC keys can only be reconstructed from the
             // pairing phrase stored there, so a crash after the config is gone
-            // would orphan them permanently.
-            await clearNodeKeychainData(deletedNode);
+            // would orphan them permanently. LNC credentials another config
+            // still points to (a copy of this wallet) are kept.
+            await clearNodeKeychainData(deletedNode, {
+                keepLncCredentials:
+                    !!deletedNode?.pairingPhrase &&
+                    nodes!.some(
+                        (n, i) =>
+                            i !== index &&
+                            n.pairingPhrase === deletedNode.pairingPhrase
+                    )
+            });
 
             // Update settings first to clear node references before
             // deleting files — prevents stale references if navigation

@@ -32,7 +32,12 @@ jest.mock('../../utils/NavigationUtils', () => ({
     reAuthNavigation: jest.fn()
 }));
 jest.mock('../../utils/PhotoUtils', () => ({ getPhoto: jest.fn() }));
-jest.mock('../../utils/DataClearUtils', () => ({}));
+jest.mock('../../utils/DataClearUtils', () => ({
+    clearNodeKeychainData: jest.fn(() => Promise.resolve()),
+    clearCDKDatabase: jest.fn(() => Promise.resolve()),
+    clearCDKDatabaseForNode: jest.fn(() => Promise.resolve()),
+    deleteNodeDataDirectoryWithRetry: jest.fn(() => Promise.resolve(true))
+}));
 jest.mock('../../utils/LndMobileUtils', () => ({}));
 jest.mock('../../utils/LdkNodeUtils', () => ({
     getDefaultEsploraServer: jest.fn(() => ''),
@@ -88,6 +93,7 @@ import { confirmAction } from '../../utils/ActionUtils';
 import { createLdkNodeWallet } from '../../utils/LdkNodeUtils';
 import Storage from '../../storage';
 import { CUSTODIAL_LNDHUBS } from '../../utils/AddressUtils';
+import { clearNodeKeychainData } from '../../utils/DataClearUtils';
 
 const LNDHUB_IMPORT = 'lndhub://alice:secret@https://lndhub.example.com';
 
@@ -350,6 +356,75 @@ describe('WalletConfiguration', () => {
                 true,
                 true
             );
+        });
+    });
+
+    describe('deleting an LNC wallet', () => {
+        const LNC_NODE = {
+            implementation: 'lightning-node-connect',
+            nickname: 'Node at home',
+            pairingPhrase:
+                'cherry truth mask employ box silver mass bunker fiscal vote'
+        };
+
+        // Deletes the wallet at index 1 of nodes through the Delete button
+        const deleteSecondWallet = async (nodes: any[]) => {
+            const SettingsStore = {
+                settings: { privacy: { clipboard: false }, nodes },
+                updateSettings: jest.fn((update: any) =>
+                    Promise.resolve(update({ nodes }))
+                ),
+                setConnectingStatus: jest.fn()
+            };
+            await render(
+                <WalletConfiguration
+                    {...({
+                        navigation: {
+                            goBack: jest.fn(),
+                            navigate: jest.fn(),
+                            popTo: jest.fn(),
+                            reset: jest.fn()
+                        },
+                        route: {
+                            params: { node: nodes[1], index: 1, saved: true }
+                        },
+                        SettingsStore
+                    } as any)}
+                />
+            );
+
+            await pressButton(
+                'views.Settings.WalletConfiguration.deleteWallet'
+            );
+            const [, , proceed] = (confirmAction as jest.Mock).mock.calls[0];
+            await act(async () => proceed.onPress());
+        };
+
+        beforeEach(() => {
+            (clearNodeKeychainData as jest.Mock).mockClear();
+        });
+
+        it('keeps the LNC credentials while a copy uses the same pairing phrase', async () => {
+            const copy = { ...LNC_NODE, nickname: 'Node at home copy' };
+            await deleteSecondWallet([LNC_NODE, copy]);
+
+            expect(clearNodeKeychainData).toHaveBeenCalledWith(copy, {
+                keepLncCredentials: true
+            });
+        });
+
+        it('clears the LNC credentials of the last wallet with the pairing phrase', async () => {
+            const other = {
+                ...LNC_NODE,
+                nickname: 'Other node',
+                pairingPhrase:
+                    'ozone ozone ozone ozone ozone ozone ozone ozone ozone ozone'
+            };
+            await deleteSecondWallet([LNC_NODE, other]);
+
+            expect(clearNodeKeychainData).toHaveBeenCalledWith(other, {
+                keepLncCredentials: false
+            });
         });
     });
 

@@ -592,7 +592,7 @@ async function clearLncCredentials(pairingPhrase: string) {
  */
 export async function clearNodeKeychainData(
     node: any,
-    opts?: { skipXprvPurge?: boolean }
+    opts?: { skipXprvPurge?: boolean; keepLncCredentials?: boolean }
 ): Promise<void> {
     if (!node) return;
     if (node.lndDir) {
@@ -613,7 +613,10 @@ export async function clearNodeKeychainData(
     if (node.implementation === 'ldk-node' && !node.ldkNodeDir) {
         await clearCashuDataForNode('ldk');
     }
-    if (node.pairingPhrase) {
+    // LNC credentials are stored per pairing phrase, so configs copied by
+    // Duplicate Wallet, config import or legacy restore share one entry.
+    // The caller sets keepLncCredentials while such a config remains.
+    if (node.pairingPhrase && !opts?.keepLncCredentials) {
         await clearLncCredentials(node.pairingPhrase);
     }
     // Builds between Jan 2025 (ba70ce58f) and the removal in this PR
