@@ -69,6 +69,7 @@ import { PAYMENT_COUNT_KEY, RATING_DISMISSED_KEY } from '../utils/RatingUtils';
 import { deriveEmbeddedNodeId } from './AezeedUtils';
 import { deleteLndWallet } from './LndMobileUtils';
 import { deleteLdkNodeWallet, stopLdkNode } from './LdkNodeUtils';
+import { isValidNodeDir } from './NodeDirUtils';
 import { sleep } from './SleepUtils';
 import hashjs from 'hash.js';
 
@@ -521,6 +522,22 @@ const NODE_DIR_RETRY_DELAY_MS = 500;
  * whether the directory was removed so the caller can retry.
  */
 async function deleteNodeDataDirectory(node: any): Promise<boolean> {
+    const nodeDir =
+        node.implementation === 'embedded-lnd'
+            ? node.lndDir || 'lnd'
+            : node.implementation === 'ldk-node'
+            ? node.ldkNodeDir
+            : undefined;
+    if (nodeDir && !isValidNodeDir(nodeDir)) {
+        // ZEUS never generates such a directory, so there is nothing of
+        // this wallet's to delete. Report success: a retry cannot fix the
+        // value, and deleting the path would reach outside the wallet.
+        console.warn(
+            '[ClearData] Skipping node data directory with invalid name:',
+            nodeDir
+        );
+        return true;
+    }
     try {
         if (node.implementation === 'embedded-lnd') {
             // deleteLndWallet stops LND before unlinking the directory

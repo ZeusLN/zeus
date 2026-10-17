@@ -12,6 +12,7 @@ const log = Log('utils/LndMobileUtils.ts');
 
 import Base64Utils from './Base64Utils';
 import { localeString } from './LocaleUtils';
+import { isValidNodeDir } from './NodeDirUtils';
 import { retry, sleep } from './SleepUtils';
 import { importChannelDb } from './ChannelMigrationUtils';
 
@@ -328,6 +329,10 @@ const writeLndConfig = async ({
  */
 export async function deleteLndWallet(lndDir: string): Promise<boolean> {
     log.d('Attempting to delete Embedded LND wallet');
+    if (!isValidNodeDir(lndDir)) {
+        log.e('Refusing to delete invalid LND directory', [lndDir]);
+        return false;
+    }
     try {
         await stopLnd();
         await NativeModules.LndMobileTools.deleteLndDirectory(lndDir);
