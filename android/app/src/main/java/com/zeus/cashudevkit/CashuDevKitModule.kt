@@ -439,6 +439,9 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
             // Upstream renamed payment_preimage to payment_proof; the bridge
             // key is part of the JS contract and keeps the old name
             quote.paymentProof?.let { put("payment_preimage", it) }
+            // Set while a melt saga still holds the quote, which is when
+            // CDK reports a melt the mint has not settled as Unpaid
+            quote.usedByOperation?.let { put("used_by_operation", it) }
         }
     }
 
