@@ -42,7 +42,7 @@ import {
     verifyReverseSwapResponse,
     checkLockupOutput
 } from './SwapUtils';
-import ecc from '@bitcoinerlab/secp256k1';
+import ecc from '../zeus_modules/noble_ecc';
 
 // regtest BOLT11 vector: 123 sats,
 // payment_hash f2cbe057ae04a29a28b098de1eea199d8f1802810fb4f0269dac84c6f8c8762d
