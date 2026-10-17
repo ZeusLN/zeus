@@ -242,6 +242,9 @@ export default class Receive extends React.Component<
 
     unsubscribeInvoiceWatch: (() => void) | null = null;
     unsubscribeOnchainWatch: (() => void) | null = null;
+    // InvoicesStore is shared with the next Receive view, so work that
+    // completes after this view is gone must not reach it
+    isUnmounted = false;
     hopPickerRef: HopPicker | null;
 
     private getDefaultIndex = (): number => {
@@ -558,6 +561,7 @@ export default class Receive extends React.Component<
     }
 
     componentWillUnmount() {
+        this.isUnmounted = true;
         this.cleanup();
     }
 
@@ -750,18 +754,22 @@ export default class Receive extends React.Component<
 
     scanNfc = async () => {
         const str = await scanNfcTag(this.props.ModalStore);
-        if (str) this.validateAddress(str);
+        if (str && !this.isUnmounted) this.validateAddress(str);
     };
 
     validateAddress = (text: string) => {
-        const { navigation, InvoicesStore, route } = this.props;
-        const { lspIsActive, receiverName } = this.state;
+        const { navigation, InvoicesStore } = this.props;
+        // route.params.amount is in the display unit that was active when it
+        // was passed, and the amount under the QR code toggles that unit:
+        // use the sats it was converted to back then
+        const { lspIsActive, receiverName, satAmount } = this.state;
         const { createUnifiedInvoice } = InvoicesStore;
-        const satAmount = getSatAmount(route.params?.amount);
         const skipOnchain = this.getSkipOnchain();
 
         handleAnything(text, satAmount.toString())
             .then((response) => {
+                // the tag's LNURL server decides when this runs
+                if (this.isUnmounted) return;
                 try {
                     const [route, props] = response;
                     const { lnurlParams } = props;
@@ -801,6 +809,7 @@ export default class Receive extends React.Component<
                                 }
                             )
                             .catch(() => {
+                                if (this.isUnmounted) return;
                                 navigation.navigate(route, {
                                     satAmount,
                                     ...props
@@ -827,7 +836,9 @@ export default class Receive extends React.Component<
         const { orderId, orderTotal, orderTip, exchangeRate, rate } =
             this.state;
 
-        InvoicesStore.setWatchedInvoicePaid(amount);
+        // a watcher callback that was in flight when the watchers were
+        // stopped must not mark the next view's invoice as paid
+        if (!this.isUnmounted) InvoicesStore.setWatchedInvoicePaid(amount);
         BalanceStore.getCombinedBalance();
 
         if (
@@ -852,6 +863,8 @@ export default class Receive extends React.Component<
     };
 
     subscribeInvoice = (rHash?: string, onChainAddress?: string) => {
+        // nothing would stop these watchers anymore
+        if (this.isUnmounted) return;
         const { SettingsStore, NodeInfoStore } = this.props;
         // the on-chain watcher compares against sats; state.value is in the
         // display unit (sats, BTC, or fiat)
