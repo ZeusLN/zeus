@@ -111,7 +111,9 @@ export default class SweepStore {
         );
 
         try {
-            const { privateKey } = wifDecode(this.wif);
+            // Refuse keys encoded for another network; the sweep signs on
+            // the node's network
+            const { privateKey } = wifDecode(this.wif, this.network.wif);
             this.privateKey = Buffer.from(privateKey).toString('hex');
             const publicKey = Buffer.from(getPublicKey(privateKey, true));
 
@@ -124,7 +126,9 @@ export default class SweepStore {
             this.utxos = result.utxos;
             let totalSats = 0;
 
-            this.psbt = new bitcoin.Psbt({ network: this.network });
+            // Built locally and published together with its balance below, so
+            // overlapping calls cannot add inputs to each other's PSBT
+            const psbt = new bitcoin.Psbt({ network: this.network });
 
             // P2TR sweeps are not yet supported — ZEUS-3276
             if (this.addressType === 'p2tr') {
@@ -138,7 +142,6 @@ export default class SweepStore {
             if (this.addressType === 'p2pkh') {
                 for (const utxo of this.utxos) {
                     const { txid, vout } = utxo;
-                    totalSats += utxo.value;
                     const res = await fetch(
                         `${UrlUtils.getMempoolApiUrl(
                             this.nodeInfoStore.nodeInfo
@@ -154,7 +157,23 @@ export default class SweepStore {
 
                     const rawTxHex = await res.text();
 
-                    this.psbt.addInput({
+                    // A legacy signature does not commit to the input value,
+                    // so take it from the funding transaction, which signing
+                    // checks against txid, not from the explorer's listing
+                    const output =
+                        bitcoin.Transaction.fromHex(rawTxHex).outs[vout];
+
+                    if (!output)
+                        throw new Error(
+                            localeString('views.Wif.outputIndexNotFound', {
+                                vout,
+                                txid
+                            })
+                        );
+
+                    totalSats += output.value;
+
+                    psbt.addInput({
                         hash: txid,
                         index: vout,
                         nonWitnessUtxo: Buffer.from(rawTxHex, 'hex')
@@ -193,7 +212,7 @@ export default class SweepStore {
                     const scriptPubKeyHex = output.scriptpubkey;
                     const script = Buffer.from(scriptPubKeyHex, 'hex');
 
-                    this.psbt.addInput({
+                    psbt.addInput({
                         hash: txid,
                         index: vout,
                         witnessUtxo: {
@@ -244,7 +263,7 @@ export default class SweepStore {
 
                     const pubkey = Buffer.from(fullPub);
 
-                    this.psbt.addInput({
+                    psbt.addInput({
                         hash: txid,
                         index: vout,
                         witnessUtxo: {
@@ -258,6 +277,7 @@ export default class SweepStore {
                     });
                 }
             }
+            this.psbt = psbt;
             this.onChainBalance = totalSats;
         } catch (err: any) {
             console.error(err);
@@ -268,6 +288,8 @@ export default class SweepStore {
 
     @action
     async finalizeSweepTransaction(feeRate: string) {
+        this.txHex = null;
+        this.txId = null;
         try {
             this.feeRate = feeRate;
             const privateKey = Buffer.from(this.privateKey, 'hex');
