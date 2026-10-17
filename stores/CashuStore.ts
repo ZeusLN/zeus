@@ -233,6 +233,14 @@ export default class CashuStore {
     @observable public paymentError?: boolean;
     @observable public paymentErrorMsg?: string;
     @observable public feeEstimate?: number;
+    // Inputs of the sufficiency check run by getPayReq(), exposed so the
+    // payment views can extend it with the donation that is sent from the
+    // same mints right after the invoice is paid: the balance the payment
+    // can be drawn from (the one mint, or every mint the multi-mint planner
+    // can use) and the amount quoted for the invoice. Both stay 0 when
+    // getPayReq did not quote the invoice.
+    @observable public payReqMintBalance: number = 0;
+    @observable public payReqAmount: number = 0;
     @observable public meltQuotes: {
         mintUrl: string;
         meltQuote: CDKMeltQuote;
@@ -1092,6 +1100,34 @@ export default class CashuStore {
         });
     };
 
+    // The balance a multi-mint payment and the donation after it can be
+    // drawn from: the mints in the payment's plan, and every other funded
+    // selected mint that supports MPP. With two or more funded mints the
+    // planner splits only across MPP mints, but its regular melt fallback
+    // can put a mint without MPP into the plan.
+    private multiMintSpendableBalance = (plannedMintUrls: string[]): number => {
+        const planned = new Set(
+            plannedMintUrls.map((mintUrl) => this.normalizeMintUrl(mintUrl))
+        );
+        const uniqueSelectedMints = Array.from(
+            new Set(
+                this.multiMintSelectedUrls.map((mintUrl) =>
+                    this.normalizeMintUrl(mintUrl)
+                )
+            )
+        );
+
+        return uniqueSelectedMints
+            .filter(
+                (mintUrl) =>
+                    planned.has(mintUrl) || this.mintSupportsMpp(mintUrl)
+            )
+            .reduce(
+                (sum, mintUrl) => sum + Number(this.mintBalances[mintUrl] || 0),
+                0
+            );
+    };
+
     // Builds the user-facing "not enough funds" message, augmenting it
     // with context when the planner classified a skip the user can act on
     // (e.g. the destination mint refused MPP for its own invoice).
@@ -1924,6 +1960,8 @@ export default class CashuStore {
         this.paymentPreimage = undefined;
         this.getPayReqError = undefined;
         this.feeEstimate = undefined;
+        this.payReqMintBalance = 0;
+        this.payReqAmount = 0;
         this.meltQuotes = [];
         this.meltQuote = undefined;
         this.noteKey = undefined;
@@ -4221,6 +4259,8 @@ export default class CashuStore {
         this.paymentRequest = bolt11Invoice;
         this.feeEstimate = undefined;
         this.getPayReqError = undefined;
+        this.payReqMintBalance = 0;
+        this.payReqAmount = 0;
 
         try {
             if (__DEV__) {
@@ -4309,6 +4349,8 @@ export default class CashuStore {
             // the fee row doesn't render "0 sats" for an invoice that can't
             // be paid; every branch here assigns it before use.
             let totalFeeEstimate: number | undefined;
+            let mintBalanceChecked = 0;
+            let amountChecked = 0;
 
             if (rawPaymentAmt <= 0) {
                 // Zeus doesn't yet wire up CDK's amountless-melt option
@@ -4349,6 +4391,12 @@ export default class CashuStore {
                             sum + (Number(meltQuote.fee_reserve) || 0),
                         0
                     );
+                    // The planner stops once the invoice is covered, so the
+                    // plan can leave out mints that would pay the donation
+                    mintBalanceChecked = this.multiMintSpendableBalance(
+                        preparedQuotes.map(({ mintUrl }) => mintUrl)
+                    );
+                    amountChecked = paymentAmt;
                 } else {
                     this.meltQuotes = [];
                     totalFeeEstimate = 0;
@@ -4396,6 +4444,8 @@ export default class CashuStore {
                         : undefined;
 
                 totalFeeEstimate = Number(singleMeltQuote.fee_reserve) || 0;
+                mintBalanceChecked = mintBalance;
+                amountChecked = Number(singleMeltQuote.amount) || 0;
                 this.meltQuotes = [];
             }
 
@@ -4408,6 +4458,8 @@ export default class CashuStore {
                 this.meltQuote = singleMeltQuote;
                 this.feeEstimate = totalFeeEstimate;
                 this.getPayReqError = computedPayReqError;
+                this.payReqMintBalance = mintBalanceChecked;
+                this.payReqAmount = amountChecked;
             });
             if (__DEV__) {
                 console.log('getPayReq: Success, setting loading = false');
