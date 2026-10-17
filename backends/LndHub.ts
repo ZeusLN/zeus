@@ -57,10 +57,19 @@ export default class LndHub extends LND {
         );
     };
 
+    // BlueWallet LndHub answers a failed login with HTTP 200 and
+    // {"error":true,"code":1,"message":"bad auth"}, which restReq resolves.
+    // Reject it with the body, as restReq does for non-2xx errors, so the
+    // caller reports the failure instead of storing undefined tokens.
     login = (data: LoginRequest) =>
         this.postRequest('/auth?type=auth', {
             login: data.login,
             password: data.password
+        }).then((response: any) => {
+            if (!response || response.error || !response.access_token) {
+                throw new Error(JSON.stringify(response));
+            }
+            return response;
         });
 
     getPayments = () =>
