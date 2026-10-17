@@ -64,6 +64,7 @@ jest.mock('../utils/SleepUtils', () => ({
 }));
 
 import * as React from 'react';
+import { observable, runInAction } from 'mobx';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import PaymentRequest from './PaymentRequest';
 
@@ -87,6 +88,10 @@ const renderView = async ({
     isLightningReadyToSend = jest.fn().mockResolvedValue(true),
     getSettings = jest.fn(async () => ({ payments: {} })),
     payReqOverrides = {},
+    InvoicesStore = {
+        pay_req: { ...payReq, ...payReqOverrides },
+        paymentRequest: 'lnbc10u1example'
+    },
     TransactionsStore = { paymentInFlight: false },
     ref
 }: {
@@ -97,6 +102,7 @@ const renderView = async ({
     lightningBalance?: number;
     isLightningReadyToSend?: jest.Mock;
     getSettings?: jest.Mock;
+    InvoicesStore?: { pay_req: any; paymentRequest: string };
 } = {}) => {
     const BalanceStore = {
         lightningBalance,
@@ -117,10 +123,7 @@ const renderView = async ({
                     settings: { payments: {} },
                     getSettings
                 },
-                InvoicesStore: {
-                    pay_req: { ...payReq, ...payReqOverrides },
-                    paymentRequest: 'lnbc10u1example'
-                },
+                InvoicesStore,
                 NodeInfoStore: { nodeInfo: {}, isLightningReadyToSend },
                 TransactionsStore,
                 LnurlPayStore: {},
@@ -327,5 +330,71 @@ describe('PaymentRequest fee limit', () => {
 
     it('pays with the limit FeeLimit reports', async () => {
         expect(await pay('3')).toMatchObject({ fee_limit_sat: '3' });
+    });
+});
+
+describe('PaymentRequest custom amount', () => {
+    const noAmountPayReq = { ...payReq, getRequestAmount: 0 };
+    const tenSatPayReq = { ...payReq, getRequestAmount: 10 };
+
+    const setup = async (pay_req: any) => {
+        const InvoicesStore = observable(
+            { pay_req, paymentRequest: 'lnbc1noamount' },
+            {},
+            { deep: false }
+        );
+        const sendPayment = jest.fn();
+        const view = await renderView({
+            implementation: 'ldk-node',
+            InvoicesStore,
+            TransactionsStore: { paymentInFlight: false, sendPayment }
+        });
+        return { InvoicesStore, sendPayment, ...view };
+    };
+
+    const amountInputs = () => screen.queryAllByTestId('AmountInput');
+
+    const typeAmount = (sats: string) =>
+        act(async () => amountInputs()[0].props.onAmountChange(sats, sats));
+
+    it('sends the typed amount with a no-amount invoice', async () => {
+        const { sendPayment } = await setup(noAmountPayReq);
+        await typeAmount('100000');
+
+        await fireEvent.press(payButton());
+
+        expect(sendPayment).toHaveBeenCalledWith(
+            expect.objectContaining({
+                payment_request: 'lnbc1noamount',
+                amount: '100000'
+            })
+        );
+    });
+
+    it('does not send a typed amount with a fixed-amount invoice swapped in after it was entered', async () => {
+        const { InvoicesStore, sendPayment } = await setup(noAmountPayReq);
+        await typeAmount('100000');
+
+        // a 10 sat invoice replaces the no-amount one on the open screen
+        await act(async () =>
+            runInAction(() => {
+                InvoicesStore.paymentRequest = 'lnbc100n1tensats';
+                InvoicesStore.pay_req = tenSatPayReq;
+            })
+        );
+        expect(amountInputs()).toHaveLength(0);
+        await fireEvent.press(
+            screen.getByRole('button', {
+                name: 'views.PaymentRequest.reviewNewPayReq'
+            })
+        );
+
+        await fireEvent.press(payButton());
+
+        expect(sendPayment).toHaveBeenCalledTimes(1);
+        expect(sendPayment.mock.calls[0][0]).toMatchObject({
+            payment_request: 'lnbc100n1tensats',
+            amount: undefined
+        });
     });
 });
