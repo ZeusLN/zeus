@@ -8,6 +8,10 @@ jest.mock('../utils/BackendUtils', () => ({
     closeChannel: jest.fn(),
     connectPeer: jest.fn(),
     openChannelSync: jest.fn(),
+    openChannelStream: jest.fn(),
+    fundPsbt: jest.fn(),
+    signPsbt: jest.fn(),
+    fundingStateStep: jest.fn(),
     supportsClosedChannels: () => false,
     supportsPendingChannels: jest.fn(() => false),
     isLNDBased: () => false
@@ -626,5 +630,122 @@ describe('ChannelsStore.connectPeer', () => {
         });
         expect(store.peerSuccess).toBe(true);
         expect(store.errorPeerConnect).toBe(false);
+    });
+});
+
+describe('ChannelsStore batch channel open', () => {
+    let store: ChannelsStore;
+
+    const PSBT = 'cHNidP8BAFICAAAAAQ==';
+
+    // two channels funded by one transaction: A is opened with no_publish,
+    // B last, and B's psbt_finalize is what makes LND publish the batch
+    const batchRequest = () =>
+        ({
+            node_pubkey_string: 'abc',
+            host: 'peer-a.example.com:9735',
+            local_funding_amount: '500000',
+            account: 'default',
+            additionalChannels: [
+                {
+                    node_pubkey_string: 'def',
+                    host: 'peer-b.example.com:9735',
+                    satAmount: '300000'
+                }
+            ]
+        } as any);
+
+    const fundingSteps = () =>
+        jest
+            .mocked(BackendUtils.fundingStateStep)
+            .mock.calls.map(([step]: any) => step);
+
+    const flushPromises = async () => {
+        for (let i = 0; i < 10; i++) {
+            await new Promise<void>((resolve) => setImmediate(resolve));
+        }
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        store = makeStore();
+
+        jest.mocked(BackendUtils.connectPeer).mockResolvedValue({} as any);
+        ['chan-a', 'chan-b'].forEach((pending_chan_id) =>
+            jest.mocked(BackendUtils.openChannelStream).mockResolvedValueOnce({
+                result: {
+                    pending_chan_id,
+                    psbt_fund: {
+                        funding_address: `bc1q${pending_chan_id}`,
+                        funding_amount: 1,
+                        psbt: PSBT
+                    }
+                }
+            } as any)
+        );
+        jest.mocked(BackendUtils.fundPsbt).mockResolvedValue({
+            funded_psbt: PSBT
+        } as any);
+        jest.mocked(BackendUtils.signPsbt).mockResolvedValue({
+            signed_psbt: PSBT
+        } as any);
+    });
+
+    it('finalizes once LND has verified the PSBT for every channel', async () => {
+        jest.mocked(BackendUtils.fundingStateStep).mockResolvedValue({} as any);
+
+        await store.connectPeer(batchRequest());
+        await flushPromises();
+
+        expect(fundingSteps()).toEqual([
+            {
+                psbt_verify: {
+                    funded_psbt: PSBT,
+                    pending_chan_id: 'chan-a',
+                    skip_finalize: true
+                }
+            },
+            {
+                psbt_verify: {
+                    funded_psbt: PSBT,
+                    pending_chan_id: 'chan-b'
+                }
+            },
+            {
+                psbt_finalize: {
+                    signed_psbt: PSBT,
+                    pending_chan_id: 'chan-b'
+                }
+            }
+        ]);
+        expect(store.channelSuccess).toBe(true);
+        expect(store.errorOpenChannel).toBe(false);
+    });
+
+    it('does not finalize when LND fails to verify the PSBT for one of the channels', async () => {
+        jest.mocked(BackendUtils.fundingStateStep).mockImplementation(
+            (step: any) =>
+                step.psbt_verify?.pending_chan_id === 'chan-a'
+                    ? Promise.reject(new Error('Request timeout'))
+                    : Promise.resolve({})
+        );
+
+        await store.connectPeer(batchRequest());
+        await flushPromises();
+
+        // finalizing B would have LND publish a transaction that also pays
+        // A's funding output, for which no channel was negotiated
+        expect(fundingSteps()).toEqual([
+            {
+                psbt_verify: {
+                    funded_psbt: PSBT,
+                    pending_chan_id: 'chan-a',
+                    skip_finalize: true
+                }
+            }
+        ]);
+        expect(store.channelSuccess).toBe(false);
+        expect(store.errorOpenChannel).toBe(true);
+        expect(store.errorMsgChannel).toBe('Request timeout');
     });
 });
