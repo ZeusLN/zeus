@@ -53,6 +53,12 @@ class MobileTools extends ReactContextBaseJavaModule {
       return;
     }
 
+    // Consume the tag. The activity keeps its intent until Android delivers
+    // another one, and this is called again on every resume.
+    Intent intent = getReactApplicationContext().getCurrentActivity().getIntent();
+    intent.removeExtra(NfcAdapter.EXTRA_TAG);
+    intent.removeExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
+
     Ndef ndef = Ndef.get(tag);
     if (ndef == null) {
       promise.resolve(null);
