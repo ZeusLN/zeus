@@ -30,7 +30,6 @@ export interface MeltResponse {
 
 export default class CashuPayment extends Payment {
     public meltResponse: MeltResponse;
-    public fee: number;
     public mintUrl: string;
     public proofs: Proof[];
 
