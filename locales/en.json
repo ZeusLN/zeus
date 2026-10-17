@@ -1790,6 +1790,7 @@
     "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",
     "utils.handleAnything.addressError": "Error fetching address",
     "utils.handleAnything.invalidNoffer": "Could not decode CLINK noffer",
+    "stores.ChannelBackupStore.invalidBackup": "The backup received from the server is not valid",
     "stores.InvoicesStore.errorCreatingInvoice": "Error creating invoice",
     "stores.InvoicesStore.errorGeneratingAddress": "Error generating new address",
     "stores.InvoicesStore.zeroAmountLndhub": "LNDHub instance might not support zero-amount invoices",
