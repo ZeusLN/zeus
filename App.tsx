@@ -329,6 +329,18 @@ export default class App extends React.PureComponent {
         'NostrContacts'
     ];
 
+    constructor(props: {}) {
+        super(props);
+
+        // On Android a persistent LND, LDK Node or NWC service keeps the
+        // process and every store alive after MainActivity is destroyed. The
+        // next MainActivity mounts a new App on the old stores, so end the
+        // login session here: reopening ZEUS asks for the PIN as a cold start
+        // does. Done in the constructor because Wallet's componentDidMount,
+        // which checks the session, runs before App's.
+        settingsStore.setLoginStatus(false);
+    }
+
     private handleBackPress = (navigation: any) => {
         const dialogHasBeenClosed = modalStore.closeVisibleModalDialog();
         if (dialogHasBeenClosed) {
