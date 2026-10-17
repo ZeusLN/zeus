@@ -666,4 +666,136 @@ describe('LightningNodeConnect', () => {
             expect(transactions).toEqual([]);
         });
     });
+
+    describe('watchInvoicePaid', () => {
+        const EVENT = 'invoicesrpc.Invoices.SubscribeSingleInvoice';
+        // contains both characters that differ between base64 and base64url
+        const WATCHED = Buffer.from('fb'.repeat(16) + 'ff'.repeat(16), 'hex');
+        const EARLIER = Buffer.from('aa'.repeat(32), 'hex');
+
+        let listeners: Array<{
+            name: string;
+            handler: (event: any) => void;
+            removed: boolean;
+        }>;
+        const emit = (event: any) =>
+            listeners
+                .filter((l) => l.name === EVENT && !l.removed)
+                .forEach((l) => l.handler(event));
+        const listenerCount = () =>
+            listeners.filter((l) => l.name === EVENT && !l.removed).length;
+        const update = (hash: Buffer, fields: any) => ({
+            result: JSON.stringify({
+                r_hash: hash.toString('base64'),
+                ...fields
+            })
+        });
+
+        const watch = async () => {
+            const backend = new LightningNodeConnect();
+            const lnc = await openWallet(backend, 'phrase-a');
+            lnc.lnd.invoices = { subscribeSingleInvoice: jest.fn(() => EVENT) };
+            const onPaid = jest.fn();
+            const stop = backend.watchInvoicePaid(
+                {
+                    rHash: WATCHED.toString('base64')
+                        .replace(/\+/g, '-')
+                        .replace(/\//g, '_')
+                },
+                onPaid
+            );
+            return { onPaid, stop };
+        };
+
+        beforeEach(() => {
+            listeners = [];
+            NativeModules.LncModule = {
+                addListener: jest.fn(),
+                removeListeners: jest.fn()
+            };
+            jest.spyOn(
+                NativeEventEmitter.prototype,
+                'addListener'
+            ).mockImplementation((name: string, handler: any) => {
+                const listener = { name, handler, removed: false };
+                listeners.push(listener);
+                return {
+                    remove: () => {
+                        listener.removed = true;
+                    }
+                } as any;
+            });
+            jest.spyOn(console, 'error').mockImplementation(() => undefined);
+        });
+
+        afterEach(() => {
+            jest.restoreAllMocks();
+        });
+
+        it('reports the settlement of the watched invoice', async () => {
+            const { onPaid } = await watch();
+
+            emit(update(WATCHED, { settled: false }));
+            expect(onPaid).not.toHaveBeenCalled();
+
+            emit(
+                update(WATCHED, {
+                    settled: true,
+                    amt_paid_sat: '300000',
+                    payment_request: 'lnbc3m1watched',
+                    r_preimage: 'cHJlaW1hZ2U='
+                })
+            );
+
+            expect(onPaid).toHaveBeenCalledTimes(1);
+            expect(onPaid).toHaveBeenCalledWith({
+                amountSat: 300000,
+                tx: 'lnbc3m1watched',
+                preimage: 'cHJlaW1hZ2U='
+            });
+            expect(listenerCount()).toBe(0);
+        });
+
+        it('skips the settlement of an invoice watched earlier', async () => {
+            const { onPaid } = await watch();
+
+            emit(
+                update(EARLIER, {
+                    settled: true,
+                    amt_paid_sat: '100',
+                    payment_request: 'lnbc1u1earlier'
+                })
+            );
+            emit({
+                result: JSON.stringify({ settled: true, amt_paid_sat: '100' })
+            });
+
+            expect(onPaid).not.toHaveBeenCalled();
+            expect(listenerCount()).toBe(1);
+        });
+
+        it('keeps watching when the stream of an earlier invoice ends', async () => {
+            const { onPaid } = await watch();
+
+            emit({ result: 'EOF' });
+            emit({
+                result: 'rpc error: code = Unknown desc = there are no existing invoices'
+            });
+            emit(update(WATCHED, { settled: true, amt_paid_sat: '300000' }));
+
+            expect(onPaid).toHaveBeenCalledTimes(1);
+        });
+
+        it('stops when the session is closed or the caller unsubscribes', async () => {
+            await watch();
+            emit({
+                result: 'rpc error: code = Canceled desc = context canceled'
+            });
+            expect(listenerCount()).toBe(0);
+
+            const { stop } = await watch();
+            stop();
+            expect(listenerCount()).toBe(0);
+        });
+    });
 });
