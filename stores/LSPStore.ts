@@ -1178,6 +1178,9 @@ export default class LSPStore {
         this.loadingLSPS1 = true;
         this.error = false;
         this.error_msg = '';
+        // Invalidated by resetLSPS1Data and by a newer request
+        const requestId = uuidv4();
+        this.getInfoId = requestId;
 
         const endpoint = `${this.getLSPS1Rest()}/api/v1/get_info`;
 
@@ -1185,6 +1188,7 @@ export default class LSPStore {
 
         return ReactNativeBlobUtil.fetch('GET', endpoint)
             .then((response) => {
+                if (this.getInfoId !== requestId) return;
                 runInAction(() => {
                     if (response.info().status === 200) {
                         const responseData = JSON.parse(response.data);
@@ -1215,6 +1219,7 @@ export default class LSPStore {
                 });
             })
             .catch(() => {
+                if (this.getInfoId !== requestId) return;
                 runInAction(() => {
                     this.error = true;
                     this.error_msg = localeString(
@@ -1312,6 +1317,9 @@ export default class LSPStore {
     @action
     public lsps1CreateOrderREST = (state: any) => {
         this.loadingLSPS1 = true;
+        // Invalidated by resetLSPS1Data and by a newer request
+        const requestId = uuidv4();
+        this.createOrderId = requestId;
         const terms = {
             lsp_balance_sat: state.lspBalanceSat.toString(),
             client_balance_sat: state.clientBalanceSat.toString(),
@@ -1343,6 +1351,7 @@ export default class LSPStore {
             data
         )
             .then((response) => {
+                if (this.createOrderId !== requestId) return;
                 const responseData = JSON.parse(response.data);
                 if (responseData.error) {
                     const errorMsg = errorToUserFriendly(responseData.message);
@@ -1371,6 +1380,7 @@ export default class LSPStore {
                     'Error sending (create_order) custom message:',
                     error
                 );
+                if (this.createOrderId !== requestId) return;
                 const errorMsg = errorToUserFriendly(error);
                 runInAction(() => {
                     this.error = true;
@@ -1478,6 +1488,9 @@ export default class LSPStore {
 
     public lsps1GetOrderREST(id: string, RESTHost: string) {
         this.loadingLSPS1 = true;
+        // Only the latest get_order request reports back
+        const requestId = uuidv4();
+        this.getOrderId = requestId;
         const endpoint = `${RESTHost}/api/v1/get_order?order_id=${id}`;
 
         console.log('Sending data to:', endpoint);
@@ -1486,6 +1499,7 @@ export default class LSPStore {
             'Content-Type': 'application/json'
         })
             .then((response) => {
+                if (this.getOrderId !== requestId) return;
                 const responseData = JSON.parse(response.data);
                 console.log('Response received:', responseData);
                 runInAction(() => {
@@ -1500,6 +1514,7 @@ export default class LSPStore {
             })
             .catch((error) => {
                 console.error('Error sending custom message:', error);
+                if (this.getOrderId !== requestId) return;
                 const errorMsg = errorToUserFriendly(error);
                 runInAction(() => {
                     this.error = true;
@@ -1599,6 +1614,9 @@ export default class LSPStore {
         this.loadingLSPS1 = true;
         this.error = false;
         this.error_msg = '';
+        // Invalidated by resetLSPS1Data and by a newer request
+        const requestId = uuidv4();
+        this.createOrderId = requestId;
 
         try {
             const request = {
@@ -1608,6 +1626,7 @@ export default class LSPStore {
                 announce_channel: state.announceChannel || false
             };
             const response = await BackendUtils.requestLsps1Liquidity(request);
+            if (this.createOrderId !== requestId) return;
 
             // LDK Node does not take confirmation targets, and falls back to
             // its own expiry when expiry_blocks is not a number, so those
@@ -1664,6 +1683,7 @@ export default class LSPStore {
                 this.loadingLSPS1 = false;
             });
         } catch (err: any) {
+            if (this.createOrderId !== requestId) return;
             const errorMessage =
                 err?.message || err?.toString() || 'Unknown error';
             runInAction(() => {
@@ -1837,6 +1857,9 @@ export default class LSPStore {
 
         // Use native LSPS7 method if available (LDK Node backend)
         if (BackendUtils.supportsLSPS7native()) {
+            // Invalidated by resetLSPS7Data and by a newer request
+            const requestId = uuidv4();
+            this.createExtensionOrderId = requestId;
             try {
                 const response = await BackendUtils.lsps7CreateOrder({
                     shortChannelId: state.chanId,
@@ -1844,12 +1867,14 @@ export default class LSPStore {
                     token: state.token,
                     refundOnchainAddress: state.refundOnchainAddress
                 });
+                if (this.createExtensionOrderId !== requestId) return;
                 runInAction(() => {
                     this.createExtensionOrderResponse = { result: response };
                     this.loadingLSPS7 = false;
                 });
                 return;
             } catch (error: any) {
+                if (this.createExtensionOrderId !== requestId) return;
                 runInAction(() => {
                     this.error = true;
                     this.error_msg =
