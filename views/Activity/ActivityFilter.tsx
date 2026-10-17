@@ -1299,7 +1299,12 @@ export default class ActivityFilter extends React.Component<
                                         containerStyle={{
                                             borderBottomWidth: 0,
                                             backgroundColor: 'transparent',
-                                            paddingRight: 0
+                                            // ListItem adds a pad spacer after
+                                            // every child but the last (false
+                                            // ones count), so the controls are
+                                            // one fragment and the right inset
+                                            // comes from here instead.
+                                            paddingRight: 16
                                         }}
                                     >
                                         <ListItem.Content>
@@ -1313,128 +1318,133 @@ export default class ActivityFilter extends React.Component<
                                                 {item.label}
                                             </ListItem.Title>
                                         </ListItem.Content>
-                                        {item.type === 'Toggle' && (
-                                            <Switch
-                                                value={item.value}
-                                                onValueChange={() =>
-                                                    this.handleToggle(
-                                                        item.var as string
-                                                    )
-                                                }
-                                            />
-                                        )}
-                                        {item.type === 'Amount' && (
-                                            <View style={{ flex: 1 }}>
-                                                <TextInput
-                                                    keyboardType="numeric"
-                                                    placeholder={
-                                                        item.label ===
-                                                        localeString(
-                                                            'views.ActivityFilter.minimumAmount'
+                                        <>
+                                            {item.type === 'Toggle' && (
+                                                <Switch
+                                                    value={item.value}
+                                                    onValueChange={() =>
+                                                        this.handleToggle(
+                                                            item.var as string
                                                         )
-                                                            ? '0'
-                                                            : localeString(
-                                                                  'views.ActivityFilter.maximumAmountPlaceHolder'
-                                                              )
                                                     }
-                                                    value={
-                                                        item.value ===
-                                                            undefined ||
-                                                        item.value === 0
-                                                            ? ''
-                                                            : String(item.value)
-                                                    }
-                                                    onChangeText={(
-                                                        text: string
-                                                    ) => {
-                                                        const newAmount =
-                                                            text.trim() ===
-                                                                '' &&
-                                                            item.label ===
-                                                                localeString(
-                                                                    'views.ActivityFilter.minimumAmount'
-                                                                )
-                                                                ? 0
-                                                                : text.trim() ===
-                                                                      '' &&
-                                                                  item.label ===
-                                                                      localeString(
-                                                                          'views.ActivityFilter.maximumAmount'
-                                                                      )
-                                                                ? undefined
-                                                                : text.trim() !==
-                                                                  ''
-                                                                ? !isNaN(
-                                                                      Number(
-                                                                          text
-                                                                      )
-                                                                  )
-                                                                    ? Number(
-                                                                          text
-                                                                      )
-                                                                    : 0
-                                                                : 0;
-
-                                                        if (
+                                                />
+                                            )}
+                                            {item.type === 'Amount' && (
+                                                <View style={{ flex: 1 }}>
+                                                    <TextInput
+                                                        keyboardType="numeric"
+                                                        placeholder={
                                                             item.label ===
                                                             localeString(
                                                                 'views.ActivityFilter.minimumAmount'
                                                             )
-                                                        ) {
-                                                            setAmountFilter(
-                                                                newAmount
-                                                            );
-                                                        } else if (
-                                                            item.label ===
-                                                            localeString(
-                                                                'views.ActivityFilter.maximumAmount'
-                                                            )
-                                                        ) {
-                                                            setMaximumAmountFilter(
-                                                                newAmount
-                                                            );
+                                                                ? '0'
+                                                                : localeString(
+                                                                      'views.ActivityFilter.maximumAmountPlaceHolder'
+                                                                  )
                                                         }
-                                                    }}
-                                                    style={{
-                                                        marginBottom: 0,
-                                                        top: 0
-                                                    }}
-                                                />
-                                            </View>
-                                        )}
-                                        {item.type === 'TextInput' && (
-                                            <View style={{ flex: 1 }}>
-                                                <TextInput
-                                                    placeholder={localeString(
-                                                        'views.ActivityFilter.memoPlaceHolder'
-                                                    )}
-                                                    value={item.value}
-                                                    onChangeText={async (
-                                                        text: string
-                                                    ) => {
-                                                        const newMemo = text;
-                                                        const newFilters = {
-                                                            ...filters
-                                                        };
-                                                        newFilters.memo =
-                                                            newMemo;
-                                                        setMemoFilter(
-                                                            newFilters.memo
-                                                        );
-                                                    }}
-                                                    style={{
-                                                        marginBottom: 0,
-                                                        top: 0
-                                                    }}
-                                                />
-                                            </View>
-                                        )}
-                                        {item.type === 'StartDate' && (
-                                            <DateFilter type="startDate" />
-                                        )}
-                                        {item.type === 'EndDate' && (
-                                            <DateFilter type="endDate" />
-                                        )}
+                                                        value={
+                                                            item.value ===
+                                                                undefined ||
+                                                            item.value === 0
+                                                                ? ''
+                                                                : String(
+                                                                      item.value
+                                                                  )
+                                                        }
+                                                        onChangeText={(
+                                                            text: string
+                                                        ) => {
+                                                            const newAmount =
+                                                                text.trim() ===
+                                                                    '' &&
+                                                                item.label ===
+                                                                    localeString(
+                                                                        'views.ActivityFilter.minimumAmount'
+                                                                    )
+                                                                    ? 0
+                                                                    : text.trim() ===
+                                                                          '' &&
+                                                                      item.label ===
+                                                                          localeString(
+                                                                              'views.ActivityFilter.maximumAmount'
+                                                                          )
+                                                                    ? undefined
+                                                                    : text.trim() !==
+                                                                      ''
+                                                                    ? !isNaN(
+                                                                          Number(
+                                                                              text
+                                                                          )
+                                                                      )
+                                                                        ? Number(
+                                                                              text
+                                                                          )
+                                                                        : 0
+                                                                    : 0;
+
+                                                            if (
+                                                                item.label ===
+                                                                localeString(
+                                                                    'views.ActivityFilter.minimumAmount'
+                                                                )
+                                                            ) {
+                                                                setAmountFilter(
+                                                                    newAmount
+                                                                );
+                                                            } else if (
+                                                                item.label ===
+                                                                localeString(
+                                                                    'views.ActivityFilter.maximumAmount'
+                                                                )
+                                                            ) {
+                                                                setMaximumAmountFilter(
+                                                                    newAmount
+                                                                );
+                                                            }
+                                                        }}
+                                                        style={{
+                                                            marginBottom: 0,
+                                                            top: 0
+                                                        }}
+                                                    />
+                                                </View>
+                                            )}
+                                            {item.type === 'TextInput' && (
+                                                <View style={{ flex: 1 }}>
+                                                    <TextInput
+                                                        placeholder={localeString(
+                                                            'views.ActivityFilter.memoPlaceHolder'
+                                                        )}
+                                                        value={item.value}
+                                                        onChangeText={async (
+                                                            text: string
+                                                        ) => {
+                                                            const newMemo =
+                                                                text;
+                                                            const newFilters = {
+                                                                ...filters
+                                                            };
+                                                            newFilters.memo =
+                                                                newMemo;
+                                                            setMemoFilter(
+                                                                newFilters.memo
+                                                            );
+                                                        }}
+                                                        style={{
+                                                            marginBottom: 0,
+                                                            top: 0
+                                                        }}
+                                                    />
+                                                </View>
+                                            )}
+                                            {item.type === 'StartDate' && (
+                                                <DateFilter type="startDate" />
+                                            )}
+                                            {item.type === 'EndDate' && (
+                                                <DateFilter type="endDate" />
+                                            )}
+                                        </>
                                     </ListItem>
                                     {index < FILTERS.length - 1 &&
                                         this.renderSeparator()}
