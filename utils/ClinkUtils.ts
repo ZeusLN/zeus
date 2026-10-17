@@ -7,7 +7,8 @@ import {
     finalizeEvent,
     Relay,
     verifyEvent,
-    nip44
+    nip44,
+    utils as nostrUtils
 } from 'nostr-tools';
 
 // CLINK Offers — successor to LNURL-pay using Nostr as transport.
@@ -480,6 +481,26 @@ const sendAndAwaitResponse = (opts: {
     });
 };
 
+// Whether the host the relay layer would dial is a Tor onion service.
+// Judged on the URL Relay opens its socket to (nostr-tools runs the string
+// through the WHATWG URL parser first), not on the text of the offer: a
+// trailing dot, query, fragment, empty port, backslash, percent-encoded
+// letter or tab would otherwise hide the `.onion` from a plain regex.
+export const isOnionRelay = (relay: string): boolean => {
+    let hostname: string;
+    try {
+        hostname = new URL(nostrUtils.normalizeURL(relay)).hostname;
+    } catch {
+        // Relay's constructor throws on the same input: nothing is dialled
+        return false;
+    }
+    // react-native-url-polyfill does no IDNA mapping but the native socket
+    // stack may: fold fullwidth letters and ideographic full stops to ASCII
+    const host = hostname.normalize('NFKC').replace(/\u3002/g, '.');
+    // a trailing dot is the fully qualified form of the same name
+    return /\.onion\.*$/i.test(host);
+};
+
 // Resolves to a CLINK response: either a success containing a bolt11
 // invoice, or an error containing a code and human-readable message.
 // Throws only on transport failure (no relay reachable / timeout).
@@ -500,7 +521,7 @@ export const requestInvoiceFromNoffer = async (
     }
     // WebSocket-over-Tor is not currently supported by the relay layer.
     // Refuse onion relays explicitly rather than silently leaking traffic.
-    const onion = relays.find((r) => /\.onion(:\d+)?(\/|$)/i.test(r));
+    const onion = relays.find(isOnionRelay);
     if (onion) {
         throw new ClinkRequestError('ONION_NOT_SUPPORTED', onion);
     }
