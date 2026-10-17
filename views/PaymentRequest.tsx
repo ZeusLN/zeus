@@ -459,7 +459,10 @@ export default class PaymentRequest extends React.Component<
         // Call sendPayment with the freshest values
         this.sendPayment({
             payment_request: paymentRequest,
-            amount: satAmount ? satAmount.toString() : undefined,
+            amount:
+                !pay_req?.getRequestAmount && satAmount
+                    ? satAmount.toString()
+                    : undefined,
             max_parts: enableMultiPathPayment ? maxParts : '16',
             max_shard_amt: enableMultiPathPayment ? maxShardAmt : '',
             fee_limit_sat: feeLimitSat,
