@@ -2626,7 +2626,9 @@ export default class NostrWalletConnectStore {
         await this.waitForPaymentCompletion();
 
         const payments: Payment[] = await this.paymentsStore.getPayments();
-        const paymentHash = this.transactionsStore.payment_hash;
+        // a rejected send request leaves no hash in the store
+        const paymentHash =
+            this.transactionsStore.payment_hash || decodedPaymentHash;
         const inTransitResult =
             NostrConnectUtils.resolveLightningPaymentInTransit({
                 invoice: request.invoice,
