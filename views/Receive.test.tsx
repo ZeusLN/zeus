@@ -77,6 +77,9 @@ jest.mock('../assets/images/SVG/NFC-alt.svg', () => 'NfcIcon');
 import * as React from 'react';
 import Receive from './Receive';
 import BackendUtils from '../utils/BackendUtils';
+import handleAnything from '../utils/handleAnything';
+import { scanNfcTag } from '../utils/NFCUtils';
+import { getSatAmount } from '../components/AmountInput';
 
 // value is in the display unit (here fiat), satAmount in sats, as set by
 // AmountInput's onAmountChange
@@ -123,5 +126,175 @@ describe('Receive.subscribeInvoice', () => {
             expect.any(Function)
         );
         expect(BackendUtils.watchOnchainReceived).not.toHaveBeenCalled();
+    });
+});
+
+const withdrawParams = {
+    tag: 'withdrawRequest',
+    callback: 'https://card.example/withdraw',
+    k1: 'k1',
+    minWithdrawable: 1000,
+    maxWithdrawable: 1000000,
+    defaultDescription: 'card'
+};
+const WITHDRAW_RESPONSE = ['Receive', { lnurlParams: withdrawParams }];
+
+const flush = () => new Promise((resolve) => setImmediate(resolve));
+
+// Receive opened from the POS keypad with `amount` in the display unit of
+// that moment, already converted to `satAmount`
+const makeNfcView = (
+    amount: string,
+    satAmount: number,
+    createFails = false
+) => {
+    const navigate = jest.fn();
+    const InvoicesStore = {
+        createUnifiedInvoice: jest.fn(() =>
+            createFails ? Promise.reject(new Error()) : Promise.resolve({})
+        ),
+        setWatchedInvoicePaid: jest.fn(),
+        reset: jest.fn()
+    };
+    const PosStore = { recordPayment: jest.fn(), clearOrderInvoice: jest.fn() };
+    const view = new Receive({
+        navigation: { navigate },
+        route: { params: { amount } },
+        BalanceStore: { getCombinedBalance: jest.fn() },
+        InvoicesStore,
+        LSPStore: { reset: jest.fn() },
+        ModalStore: {},
+        NodeInfoStore: { nodeInfo: { block_height: 900000 } },
+        PosStore,
+        SettingsStore: { posStatus: 'active', settings: {} }
+    } as unknown as React.ComponentProps<typeof Receive>);
+    view.state = { ...view.state, value: amount, satAmount, orderId: 'order' };
+    return { view, navigate, InvoicesStore, PosStore };
+};
+
+describe('Receive NFC scan', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        // the amount under the QR code was tapped, so converting the route
+        // param again reads '25.00' as 25 sats
+        (getSatAmount as jest.Mock).mockImplementation((amount) =>
+            Number(amount || 0)
+        );
+        (scanNfcTag as jest.Mock).mockResolvedValue('tag text');
+        (handleAnything as unknown as jest.Mock).mockResolvedValue(
+            WITHDRAW_RESPONSE
+        );
+    });
+
+    it('withdraws the sats of the invoice on screen, not the route param', async () => {
+        const { view, navigate, InvoicesStore } = makeNfcView('25.00', 25000);
+
+        await view.scanNfc();
+        await flush();
+
+        expect(handleAnything).toHaveBeenCalledWith('tag text', '25000');
+        expect(InvoicesStore.createUnifiedInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ value: '25000', lnurl: withdrawParams })
+        );
+        expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('hands the sats on screen on when creating the invoice fails', async () => {
+        const { view, navigate } = makeNfcView('25.00', 25000, true);
+
+        await view.scanNfc();
+        await flush();
+
+        expect(navigate).toHaveBeenCalledWith('Receive', {
+            satAmount: 25000,
+            lnurlParams: withdrawParams
+        });
+    });
+
+    it('opens the receive screen when no amount was entered', async () => {
+        const { view, navigate, InvoicesStore } = makeNfcView('', 0);
+
+        await view.scanNfc();
+        await flush();
+
+        expect(InvoicesStore.createUnifiedInvoice).not.toHaveBeenCalled();
+        expect(navigate).toHaveBeenCalledWith('Receive', {
+            lnurlParams: withdrawParams
+        });
+    });
+});
+
+// InvoicesStore is shared with whatever Receive view is shown next, so work
+// of a view that was left must not land in it
+describe('Receive after the view was left', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (getSatAmount as jest.Mock).mockImplementation((amount) =>
+            Number(amount || 0)
+        );
+    });
+
+    it.each([
+        ['an amount', '1000', 1000],
+        ['no amount', '', 0]
+    ])(
+        'ignores an LNURL server that answers late, with %s',
+        async (_, amount, satAmount) => {
+            const { view, navigate, InvoicesStore } = makeNfcView(
+                amount,
+                satAmount
+            );
+            let answer: (response: any) => void = () => {};
+            (scanNfcTag as jest.Mock).mockResolvedValue('tag text');
+            (handleAnything as unknown as jest.Mock).mockReturnValue(
+                new Promise((resolve) => (answer = resolve))
+            );
+
+            await view.scanNfc();
+            view.componentWillUnmount();
+            answer(WITHDRAW_RESPONSE);
+            await flush();
+
+            expect(InvoicesStore.createUnifiedInvoice).not.toHaveBeenCalled();
+            expect(navigate).not.toHaveBeenCalled();
+        }
+    );
+
+    it('ignores a tag that is read late', async () => {
+        const { view } = makeNfcView('1000', 1000);
+        let read: (text: string) => void = () => {};
+        (scanNfcTag as jest.Mock).mockReturnValue(
+            new Promise((resolve) => (read = resolve))
+        );
+
+        const scan = view.scanNfc();
+        view.componentWillUnmount();
+        read('tag text');
+        await scan;
+        await flush();
+
+        expect(handleAnything).not.toHaveBeenCalled();
+    });
+
+    it('starts watchers only while mounted', () => {
+        const { view } = makeNfcView('1000', 1000);
+        view.componentWillUnmount();
+
+        view.subscribeInvoice('rhash', 'bc1qexample');
+
+        expect(BackendUtils.watchInvoicePaid).not.toHaveBeenCalled();
+        expect(BackendUtils.watchOnchainReceived).not.toHaveBeenCalled();
+    });
+
+    it('records a late payment for its order without showing it as paid', () => {
+        const { view, InvoicesStore, PosStore } = makeNfcView('1000', 1000);
+        view.componentWillUnmount();
+
+        view.handlePaymentReceived(1000, { type: 'onchain', tx: 'txid' });
+
+        expect(InvoicesStore.setWatchedInvoicePaid).not.toHaveBeenCalled();
+        expect(PosStore.recordPayment).toHaveBeenCalledWith(
+            expect.objectContaining({ orderId: 'order', tx: 'txid' })
+        );
     });
 });
