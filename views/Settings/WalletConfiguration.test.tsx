@@ -87,6 +87,7 @@ import WalletConfiguration from './WalletConfiguration';
 import { confirmAction } from '../../utils/ActionUtils';
 import { createLdkNodeWallet } from '../../utils/LdkNodeUtils';
 import Storage from '../../storage';
+import { CUSTODIAL_LNDHUBS } from '../../utils/AddressUtils';
 
 const LNDHUB_IMPORT = 'lndhub://alice:secret@https://lndhub.example.com';
 
@@ -287,6 +288,68 @@ describe('WalletConfiguration', () => {
             expect(
                 screen.getByDisplayValue(REMOTE_KEY).props.secureTextEntry
             ).toBe(false);
+        });
+    });
+
+    describe('lndhub account creation', () => {
+        const createAccount = jest.fn(() => Promise.resolve({}));
+
+        // A new lndhub wallet with Use Tor on and no account yet
+        const renderForm = async (lndhubUrl: string) => {
+            await render(
+                <WalletConfiguration
+                    {...({
+                        navigation: { goBack: jest.fn(), navigate: jest.fn() },
+                        route: {
+                            params: {
+                                node: {
+                                    implementation: 'lndhub',
+                                    lndhubUrl,
+                                    certVerification: true,
+                                    enableTor: true
+                                },
+                                newEntry: true
+                            }
+                        },
+                        SettingsStore: {
+                            settings: { privacy: { clipboard: false } },
+                            createAccount
+                        }
+                    } as any)}
+                />
+            );
+        };
+
+        beforeEach(() => {
+            createAccount.mockClear();
+        });
+
+        it('passes Use Tor for a custom server', async () => {
+            await renderForm('https://lndhub.example.com');
+
+            await pressButton('views.Settings.AddEditNode.createLndhub');
+
+            expect(createAccount).toHaveBeenCalledWith(
+                'https://lndhub.example.com',
+                true,
+                true
+            );
+        });
+
+        it('passes Use Tor for a listed custodial server after the warning', async () => {
+            const custodialUrl = CUSTODIAL_LNDHUBS[0];
+            await renderForm(custodialUrl);
+
+            await pressButton('views.Settings.AddEditNode.createLndhub');
+            expect(createAccount).not.toHaveBeenCalled();
+
+            await pressButton('views.Settings.AddEditNode.lndhubUnderstand');
+
+            expect(createAccount).toHaveBeenCalledWith(
+                custodialUrl,
+                true,
+                true
+            );
         });
     });
 
