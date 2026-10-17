@@ -494,6 +494,18 @@ describe('clearNodeKeychainData (single-wallet deletion helper)', () => {
         expect(removedKeys()).toContain(`${baseKey}:host`);
     });
 
+    it('keeps the LNC credentials when another config uses the phrase', async () => {
+        const pairingPhrase = 'over hover clever trigger';
+        await clearNodeKeychainData(
+            { implementation: 'lightning-node-connect', pairingPhrase },
+            { keepLncCredentials: true }
+        );
+
+        const baseKey = `lnc-rn:${lncHash(pairingPhrase)}`;
+        expect(removedKeys()).not.toContain(baseKey);
+        expect(removedKeys()).not.toContain(`${baseKey}:host`);
+    });
+
     it('is a no-op for a null node', async () => {
         await expect(clearNodeKeychainData(null)).resolves.toBeUndefined();
         expect(mockedStorageRemoveItem).not.toHaveBeenCalled();
