@@ -17,6 +17,14 @@ import Base64Utils from '../utils/Base64Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { checkGraphSyncBeforePayment } from '../utils/GraphSyncUtils';
+import { deriveExpectedPaymentHash } from '../utils/LncPayUtils';
+import {
+    isNodeResponse,
+    isPaymentLookupInconclusive,
+    isPaymentRefusedAsDuplicate,
+    paymentCreationTimeMs
+} from '../utils/PaymentLookupUtils';
+import { sleep } from '../utils/SleepUtils';
 import UrlUtils from '../utils/UrlUtils';
 import { RATING_MODAL_TRIGGER_DELAY } from '../utils/RatingUtils';
 
@@ -29,6 +37,38 @@ import ModalStore from './ModalStore';
 const keySendPreimageType = '5482373484';
 const keySendMessageType = '34349334';
 const preimageByteLength = 32;
+
+// how often to poll lookupPayment while a payment's outcome is unknown
+export const PAYMENT_TRACK_POLL_MS = 5000;
+// ceiling on how long tracking may hold the send guard: a stuck HTLC can
+// pend until CLTV expiry (hours), and holding the guard that long would
+// lock the user out of all sends
+export const PAYMENT_TRACK_MAX_MS = 10 * 60 * 1000;
+// consecutive failed lookups tolerated before giving up and releasing the
+// guard the way the timed backstop used to. Only applies until the node has
+// answered a lookup: once one has, lookups demonstrably work and later
+// failures are transient, so only the ceiling ends tracking
+export const PAYMENT_TRACK_MAX_FAILURES = 3;
+// consecutive "node answered, no record" results required before concluding
+// the dispatch never reached the node: a single lookup can miss a payment
+// whose dispatch request is still in transit (e.g. a slow Tor circuit).
+// When the node itself rejected the send request, the request isn't in
+// transit and one such answer is enough
+export const PAYMENT_TRACK_MAX_NOT_FOUND = 3;
+// how far before the recorded dispatch time lookupPayment's
+// creation_date_start filter reaches, to absorb clock skew between the
+// device and the node
+export const PAYMENT_LOOKUP_CREATION_SLACK_MS = 10 * 60 * 1000;
+// a terminal record created more than this before the recorded dispatch
+// time belongs to an earlier attempt for the same payment hash, so it's no
+// record of this attempt. LND overwrites a FAILED record when the new
+// attempt reaches it, and refuses a new attempt for a SUCCEEDED one (already
+// paid). Tighter than the lookup slack because the costs of a skewed node
+// clock are bounded here: a genuine failure loses its specific reason, and
+// a genuine invoice success shows as not sent, where a retry is refused by
+// the node as already paid. Keysend records are never treated as stale (see
+// inFlightIsKeysend).
+export const PAYMENT_STALE_ATTEMPT_SLACK_MS = 60 * 1000;
 
 export interface SendPaymentReq {
     payment_request?: string;
@@ -87,6 +127,15 @@ export default class TransactionsStore {
     // coin control
     @observable funded_psbt: string = '';
 
+    // set when payment tracking stopped before observing a terminal state:
+    // the payment may still settle, so the send screen warns against retrying
+    @observable public paymentOutcomeUnverified = false;
+    // true once the node has reported the guard-owning payment as in
+    // flight. Only then may the user release the guard to send something
+    // else (releasePaymentInFlight): before that, a retry is most likely
+    // the same payment sent twice by mistake
+    @observable public paymentInFlightConfirmed = false;
+
     // monotonic id assigned to each dispatched payment
     private paymentSequence = 0;
     // sequence of the payment that set paymentInFlight (null when none);
@@ -95,6 +144,26 @@ export default class TransactionsStore {
     // NWC payment finishing while a user payment is still in flight)
     // can't disarm each other's guard
     private inFlightOwnerSeq: number | null = null;
+    // payment hash (hex) of the guard-owning payment, when known; lets an
+    // ambiguous outcome be tracked to a terminal state via lookupPayment
+    private inFlightPaymentHash: string | null = null;
+    // when the guard-owning payment was dispatched (ms); bounds lookupPayment
+    // scans so a busy node's newer payments can't evict ours from the page
+    private inFlightDispatchTime: number | null = null;
+    // whether the guard-owning payment is a keysend. Its hash comes from a
+    // preimage generated for this attempt, so any record of it is this
+    // attempt's, and a skewed clock must not make a success look stale: a
+    // keysend retry gets a fresh hash and would pay again.
+    private inFlightIsKeysend = false;
+    // sequence currently being tracked to a terminal state (null when none)
+    private trackingSeq: number | null = null;
+    // payments the user released the guard for, whose late results must
+    // not overwrite the send screen of a payment made after them
+    private releasedSeqs = new Set<number>();
+    // payments whose send request hasn't answered yet, background ones
+    // included. `loading` is shared by all of them, so releasing one may
+    // only clear it when none of the others is still waiting on it.
+    private pendingSendSeqs = new Set<number>();
 
     settingsStore: SettingsStore;
     nodeInfoStore: NodeInfoStore;
@@ -121,6 +190,11 @@ export default class TransactionsStore {
         this.loading = false;
         this.paymentInFlight = false;
         this.inFlightOwnerSeq = null;
+        this.inFlightPaymentHash = null;
+        this.inFlightDispatchTime = null;
+        this.inFlightIsKeysend = false;
+        this.paymentInFlightConfirmed = false;
+        this.paymentOutcomeUnverified = false;
         this.error = false;
         this.error_msg = null;
         this.transactions = [];
@@ -606,12 +680,18 @@ export default class TransactionsStore {
         }
 
         const seq = ++this.paymentSequence;
+        this.pendingSendSeqs.add(seq);
         if (!background) {
             this.paymentInFlight = true;
             this.inFlightOwnerSeq = seq;
+            this.inFlightPaymentHash = null;
+            this.inFlightDispatchTime = Date.now();
+            this.inFlightIsKeysend = !!pubkey;
+            this.paymentInFlightConfirmed = false;
         }
         this.paymentStartTime = Date.now();
         this.paymentDuration = null;
+        this.paymentOutcomeUnverified = false;
         this.loading = true;
         this.error_msg = null;
         this.error = false;
@@ -714,14 +794,28 @@ export default class TransactionsStore {
             data.timeout_seconds = Number(timeout_seconds) || 60;
         }
 
+        // Record the dispatched payment's hash (lowercase hex) so an
+        // ambiguous outcome can be tracked to a terminal state. Undefined
+        // for AMP payments, which settle under per-attempt hashes and stay
+        // on the timed backstop.
+        if (!background) {
+            this.inFlightPaymentHash =
+                deriveExpectedPaymentHash({
+                    payment_hash: data.payment_hash,
+                    payment_request,
+                    amp
+                }) || null;
+        }
+
         // Backstop for the in-flight guard: if the completion callback is
         // lost (e.g. a dropped LNC stream, or a hung request on a backend
         // that gets no timeout_seconds), the flag would otherwise stay set
-        // and block all sends until the next reconnect. Clear it once the
-        // payment's timeout plus a grace period has elapsed.
+        // and block all sends until the next reconnect. Once the payment's
+        // timeout plus a grace period has elapsed, try to observe the
+        // payment's actual terminal state before releasing the flag.
         if (!background) {
             const backstopMs = ((data.timeout_seconds ?? 300) + 60) * 1000;
-            setTimeout(() => this.clearPaymentInFlight(seq), backstopMs);
+            setTimeout(() => this.backstopPaymentInFlight(seq), backstopMs);
         }
 
         const payFunc = offer
@@ -751,6 +845,251 @@ export default class TransactionsStore {
         if (seq !== undefined && this.inFlightOwnerSeq !== seq) return;
         this.paymentInFlight = false;
         this.inFlightOwnerSeq = null;
+        this.inFlightPaymentHash = null;
+        this.inFlightDispatchTime = null;
+        this.inFlightIsKeysend = false;
+        this.paymentInFlightConfirmed = false;
+    };
+
+    // Lets the user send another payment while the guard-owning payment is
+    // still pending on the node, e.g. a hold invoice that stays unsettled
+    // by design. Only allowed once the node has reported the payment in
+    // flight, so the user has been shown it is pending, not failed.
+    // Tracking of the released payment stops: its outcome shows in
+    // Activity, and its late results are ignored so they can't overwrite
+    // the next payment's send screen. Returns whether the guard was
+    // released.
+    @action
+    public releasePaymentInFlight = (): boolean => {
+        const seq = this.inFlightOwnerSeq;
+        if (seq === null || !this.paymentInFlightConfirmed) return false;
+        this.releasedSeqs.add(seq);
+        this.clearPaymentInFlight(seq);
+        // the released payment's send request may still be open (a hung
+        // LNC stream or Tor request). Its late result is ignored, so it
+        // would otherwise leave `loading` set for other screens that read
+        // it. A background payment still running owns the flag (NWC waits
+        // for it to clear), so leave it to that payment's result.
+        this.pendingSendSeqs.delete(seq);
+        if (this.pendingSendSeqs.size === 0) this.loading = false;
+        return true;
+    };
+
+    // true when payment `seq` still owns the guard and its terminal state
+    // can be observed via lookupPayment on the active backend
+    private canTrackPayment = (seq: number) =>
+        this.inFlightOwnerSeq === seq &&
+        !!this.inFlightPaymentHash &&
+        !!BackendUtils.supportsPaymentLookup();
+
+    // Fires when the backstop timer elapses without a completion callback
+    // having cleared the guard (dropped LNC stream, hung request). Rather
+    // than blindly releasing the guard while an HTLC may still settle, try
+    // to track the payment to its terminal state first.
+    private backstopPaymentInFlight = (seq: number) => {
+        if (this.inFlightOwnerSeq !== seq) return;
+        if (this.trackingSeq === seq) return; // tracking owns the release
+        if (this.canTrackPayment(seq)) {
+            // the send never settled, so its request may still reach the
+            // node: a no-record answer can't prove it was never dispatched
+            this.trackPaymentToTerminal(seq, null);
+        } else {
+            this.clearPaymentInFlight(seq);
+        }
+    };
+
+    // Polls lookupPayment until the guard-owning payment reaches SUCCEEDED
+    // or FAILED, then surfaces the real outcome through handlePayment
+    // (which also releases the guard). This closes the double-pay window
+    // left by releasing the guard on timers while HTLCs are still pending:
+    // a keysend retry generates a fresh preimage, so node-side same-hash
+    // dedup can't protect against it (issue #4317). Exits released: on a
+    // terminal state, when the payment provably never reached the node,
+    // after PAYMENT_TRACK_MAX_FAILURES failed lookups before the node has
+    // answered any, or at the
+    // PAYMENT_TRACK_MAX_MS ceiling. A release without a terminal state
+    // updates the send screen: never-dispatched shows as not sent, any other
+    // exit leaves the outcome flagged as unverified.
+    //
+    // `neverDispatchedAfter` is the time (ms) after which the send request
+    // can no longer reach the node, so a no-record answer from then on is
+    // evidence it never will. Answers before it don't count. null means the
+    // request has no such deadline (e.g. an LNC stream that is never
+    // cancelled): repeated no-record answers then end tracking as
+    // unverified, never as not sent.
+    //
+    // `requiredNotFound` is how many consecutive no-record answers conclude
+    // the payment never reached the node.
+    private trackPaymentToTerminal = async (
+        seq: number,
+        neverDispatchedAfter: number | null,
+        requiredNotFound: number = PAYMENT_TRACK_MAX_NOT_FOUND
+    ) => {
+        if (this.trackingSeq === seq) return;
+        const payment_hash = this.inFlightPaymentHash;
+        if (!payment_hash) return;
+        // bound the scan to payments created around dispatch, so a not-found
+        // answer means "no record" rather than "evicted from the newest page
+        // by other clients' payments" (the guard only serializes this app's
+        // sends, not a shared node's)
+        const creation_date_start = this.inFlightDispatchTime
+            ? Math.max(
+                  0,
+                  Math.floor(
+                      (this.inFlightDispatchTime -
+                          PAYMENT_LOOKUP_CREATION_SLACK_MS) /
+                          1000
+                  )
+              )
+            : undefined;
+        const dispatchTime = this.inFlightDispatchTime;
+        const isKeysend = this.inFlightIsKeysend;
+        this.trackingSeq = seq;
+        const deadline = Date.now() + PAYMENT_TRACK_MAX_MS;
+        let failures = 0;
+        let notFound = 0;
+        let answered = false;
+        let neverDispatched = false;
+        try {
+            while (this.inFlightOwnerSeq === seq && Date.now() < deadline) {
+                let payment: any = null;
+                let lookupFailed = false;
+                let inconclusive = false;
+                try {
+                    payment = await BackendUtils.lookupPayment({
+                        payment_hash,
+                        creation_date_start
+                    });
+                } catch (e) {
+                    if (isPaymentLookupInconclusive(e)) inconclusive = true;
+                    else lookupFailed = true;
+                }
+                if (this.inFlightOwnerSeq !== seq) return;
+                if (!lookupFailed) answered = true;
+
+                // embedded-lnd statuses are numeric protobuf enums
+                let status =
+                    typeof payment?.status === 'number'
+                        ? lnrpc.Payment.PaymentStatus[payment.status]
+                        : payment?.status;
+
+                if (
+                    (status === 'FAILED' ||
+                        (status === 'SUCCEEDED' && !isKeysend)) &&
+                    dispatchTime
+                ) {
+                    const createdAt = paymentCreationTimeMs(payment);
+                    if (
+                        createdAt !== null &&
+                        createdAt <
+                            dispatchTime - PAYMENT_STALE_ATTEMPT_SLACK_MS
+                    ) {
+                        // an earlier attempt's outcome, not this one's:
+                        // treat it as no record of this attempt
+                        payment = null;
+                        status = undefined;
+                    }
+                }
+
+                if (status === 'SUCCEEDED' || status === 'FAILED') {
+                    // clear any transport error shown while the outcome
+                    // was unknown; handlePayment re-derives error state
+                    // from the payment's actual terminal result
+                    this.clearPaymentError();
+                    this.handlePayment(payment, seq);
+                    return;
+                }
+
+                if (payment) {
+                    notFound = 0;
+                    if (status === 'IN_FLIGHT') {
+                        // outcome is pending, not failed: don't leave a
+                        // stale timeout/transport error on screen
+                        this.markPaymentInTransit();
+                    }
+                } else if (inconclusive) {
+                    // the node answered, but the scan may have missed the
+                    // payment on a truncated page: neither a sighting nor a
+                    // no-record answer, so keep polling until the ceiling
+                } else if (!lookupFailed) {
+                    // the node answered and has no record of the payment.
+                    // Unless the node rejected the send request, one such
+                    // answer isn't proof the dispatch never reached it: the
+                    // request may still be in transit (a slow Tor circuit
+                    // can deliver it after a fresh-connection lookup
+                    // returns). Only conclude never-dispatched after
+                    // requiredNotFound no-record answers with no sighting
+                    // between, all given once the request's deadline has
+                    // passed.
+                    if (
+                        neverDispatchedAfter !== null &&
+                        Date.now() < neverDispatchedAfter
+                    ) {
+                        // the request may still arrive: not evidence yet
+                    } else if (++notFound >= requiredNotFound) {
+                        neverDispatched = neverDispatchedAfter !== null;
+                        return;
+                    }
+                } else if (
+                    !answered &&
+                    ++failures >= PAYMENT_TRACK_MAX_FAILURES
+                ) {
+                    // lookups have never worked on this node: holding the
+                    // guard to the ceiling would lock out sends for nothing.
+                    // Once the node has answered (e.g. reported the payment
+                    // IN_FLIGHT), a short outage must not release the guard
+                    // while an HTLC may be pending (a keysend retry can't be
+                    // deduplicated by the node)
+                    return;
+                }
+                await sleep(PAYMENT_TRACK_POLL_MS);
+            }
+        } finally {
+            // a newer payment may have started its own tracking
+            if (this.trackingSeq === seq) this.trackingSeq = null;
+            // still the owner means tracking gave up without a terminal
+            // state (a terminal result or a new send has already moved the
+            // guard on)
+            if (this.inFlightOwnerSeq === seq) {
+                this.markTrackingStopped(neverDispatched);
+            }
+            this.clearPaymentInFlight(seq);
+        }
+    };
+
+    // Replaces the in-transit state the tracker was maintaining once it
+    // stops without a terminal result, so the send screen doesn't keep
+    // presenting the payment as being followed. A never-dispatched payment
+    // is shown as not sent (retrying is safe). Otherwise the payment may
+    // still settle (e.g. a held HTLC past the tracking ceiling), so it must
+    // not be shown as failed, which invites a retry that can double-pay.
+    @action
+    private markTrackingStopped = (neverDispatched: boolean) => {
+        if (neverDispatched) {
+            if (!this.error) {
+                this.error = true;
+                this.error_msg = localeString(
+                    'views.SendingLightning.paymentNotSent'
+                );
+            }
+            if (this.status === 'IN_FLIGHT') this.status = null;
+        } else {
+            this.paymentOutcomeUnverified = true;
+        }
+    };
+
+    @action
+    private clearPaymentError = () => {
+        this.error = false;
+        this.error_msg = null;
+        this.payment_error = null;
+    };
+
+    @action
+    private markPaymentInTransit = () => {
+        this.clearPaymentError();
+        this.status = 'IN_FLIGHT';
+        this.paymentInFlightConfirmed = true;
     };
 
     public sendPaymentSilently = async ({
@@ -803,7 +1142,44 @@ export default class TransactionsStore {
 
     @action
     public handlePayment = (result: any, seq?: number) => {
+        if (seq !== undefined) this.pendingSendSeqs.delete(seq);
+        if (seq !== undefined && this.releasedSeqs.has(seq)) return;
         this.loading = false;
+
+        const implementation = this.settingsStore.implementation;
+
+        // TODO modify enum settings for embedded LND
+        const status =
+            implementation === 'embedded-lnd'
+                ? lnrpc.Payment.PaymentStatus[result.status]
+                : result.status;
+
+        // A non-terminal result (the send stream ended while HTLCs are
+        // still pending) or a client-side timeout (outcome unknown on the
+        // node) must not release the double-submission guard: a keysend
+        // retry generates a fresh preimage and can double-pay if the
+        // original HTLC later settles. Hold the guard and track the
+        // payment to its terminal state instead (issue #4317).
+        if (
+            seq !== undefined &&
+            (status === 'IN_FLIGHT' || result.payment_timed_out) &&
+            this.canTrackPayment(seq)
+        ) {
+            this.status = 'IN_FLIGHT';
+            if (status === 'IN_FLIGHT') this.paymentInFlightConfirmed = true;
+            // a timed-out send may still be on its way to the node; the
+            // backend reports when its request can no longer arrive. An
+            // IN_FLIGHT result means the node already has the payment.
+            this.trackPaymentToTerminal(
+                seq,
+                result.payment_timed_out &&
+                    typeof result.dispatch_deadline_ms === 'number'
+                    ? result.dispatch_deadline_ms
+                    : null
+            );
+            return;
+        }
+
         this.clearPaymentInFlight(seq);
         this.payment_route = result.payment_route;
 
@@ -813,14 +1189,6 @@ export default class TransactionsStore {
         this.payment_hash = payment.resolvedPaymentHash;
         this.payment_fee = payment.getFee;
         this.isIncomplete = payment.isIncomplete;
-
-        const implementation = this.settingsStore.implementation;
-
-        // TODO modify enum settings for embedded LND
-        const status =
-            implementation === 'embedded-lnd'
-                ? lnrpc.Payment.PaymentStatus[result.status]
-                : result.status;
 
         const isKeysend =
             result?.htlcs?.[0]?.route?.hops?.[0]?.custom_records?.[
@@ -876,9 +1244,38 @@ export default class TransactionsStore {
 
     @action
     public handlePaymentError = (err: Error, seq?: number) => {
+        if (seq !== undefined) this.pendingSendSeqs.delete(seq);
+        if (seq !== undefined && this.releasedSeqs.has(seq)) return;
         this.error = true;
         this.loading = false;
-        this.clearPaymentInFlight(seq);
+        // A rejected dispatch (dropped connection, Tor timeout) doesn't
+        // prove the payment failed on the node: the request may have gone
+        // through before transport was lost. Surface the error, but verify
+        // via lookup before releasing the double-submission guard; if the
+        // payment turns out to be pending or terminal after all, the
+        // tracker replaces this error with the real outcome.
+        if (isPaymentRefusedAsDuplicate(err)) {
+            // the node refused the request because it already has a
+            // payment for this hash, before sending anything for it. The
+            // existing record is an earlier attempt's, so tracking it would
+            // show that attempt's outcome (e.g. an earlier success for an
+            // already-paid invoice) as this one's.
+            this.clearPaymentInFlight(seq);
+        } else if (seq !== undefined && this.canTrackPayment(seq)) {
+            // the rejection settled the request, so no-record answers
+            // count from now on. A rejection from the node itself (e.g. an
+            // expired invoice) means the request was processed, and LND
+            // records a payment before dispatching it, so one no-record
+            // answer shows it was never sent. A transport failure may
+            // still deliver the request, so it needs repeated answers.
+            this.trackPaymentToTerminal(
+                seq,
+                Date.now(),
+                isNodeResponse(err) ? 1 : PAYMENT_TRACK_MAX_NOT_FOUND
+            );
+        } else {
+            this.clearPaymentInFlight(seq);
+        }
         this.error_msg =
             errorToUserFriendly(err) || localeString('error.sendingPayment');
     };

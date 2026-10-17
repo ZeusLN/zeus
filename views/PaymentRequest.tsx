@@ -16,6 +16,7 @@ import { ButtonGroup } from '@rneui/themed';
 import Amount from '../components/Amount';
 import AmountInput from '../components/AmountInput';
 import Button from '../components/Button';
+import PaymentInFlightNotice from '../components/PaymentInFlightNotice';
 import SwipeButton from '../components/SwipeButton';
 import Conversion from '../components/Conversion';
 import FeeLimit from '../components/FeeLimit';
@@ -375,12 +376,23 @@ export default class PaymentRequest extends React.Component<
         });
     };
 
+    // true when the invoice carries no amount and none has been entered
+    isMissingAmount = () => {
+        const requestAmount =
+            this.props.InvoicesStore.pay_req?.getRequestAmount;
+        return !requestAmount && !(Number(this.state.satAmount) > 0);
+    };
+
     triggerPayment = () => {
         const { InvoicesStore, SettingsStore, TransactionsStore } = this.props;
 
         // Guard against double-submission: bail if a payment is already in
         // flight so a rapid double-tap or re-fired swipe can't dispatch twice.
         if (TransactionsStore.paymentInFlight) return;
+
+        // a no-amount invoice can't be paid without an amount: the node
+        // would only reject it after the send guard was taken
+        if (this.isMissingAmount()) return;
 
         const {
             enableMultiPathPayment,
@@ -602,6 +614,7 @@ export default class PaymentRequest extends React.Component<
         const isNoAmountInvoice: boolean = !requestAmount;
 
         const noBalance = this.props.BalanceStore.lightningBalance === 0;
+        const missingAmount = this.isMissingAmount();
 
         // The screen renders whatever invoice is in the shared InvoicesStore,
         // so when the store no longer matches the pinned invoice the user has
@@ -1440,6 +1453,9 @@ export default class PaymentRequest extends React.Component<
                                     <LoadingIndicator size={30} />
                                 </>
                             )}
+                            <PaymentInFlightNotice
+                                TransactionsStore={TransactionsStore}
+                            />
                             {requestAmount &&
                             requestAmount >= slideToPayThreshold ? (
                                 <SwipeButton
@@ -1462,6 +1478,22 @@ export default class PaymentRequest extends React.Component<
                                 />
                             ) : (
                                 <View style={styles.button}>
+                                    {missingAmount && !noBalance && (
+                                        <Text
+                                            style={{
+                                                ...styles.label,
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                ),
+                                                alignSelf: 'center',
+                                                marginBottom: 10
+                                            }}
+                                        >
+                                            {localeString(
+                                                'views.PaymentRequest.enterAmount'
+                                            )}
+                                        </Text>
+                                    )}
                                     <Button
                                         title={localeString(
                                             'views.PaymentRequest.payInvoice'
@@ -1474,7 +1506,8 @@ export default class PaymentRequest extends React.Component<
                                         disabled={
                                             !lightningReadyToSend ||
                                             TransactionsStore.paymentInFlight ||
-                                            noBalance
+                                            noBalance ||
+                                            missingAmount
                                         }
                                     />
                                 </View>
