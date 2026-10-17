@@ -319,7 +319,8 @@ export default class WIFSweeper extends React.Component<
                                 disabled={
                                     !privateKey ||
                                     !this.state.isWifValid ||
-                                    !!SweepStore.destination
+                                    !!SweepStore.destination ||
+                                    onChainAddressloading
                                 }
                             />
                         </View>

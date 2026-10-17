@@ -1152,6 +1152,7 @@
     "views.Wif.invalidPrefix": "Invalid WIF prefix. It must start with K, L, or 5.",
     "views.Wif.invalidLength": "Invalid WIF length. It must be 51 or 52 characters.",
     "views.Wif.invalidFormat": "Invalid wallet import format.",
+    "views.Wif.wrongNetwork": "This private key is for a different Bitcoin network than the connected wallet.",
     "views.Wif.invalidWif": "Error validating WIF",
     "views.Wif.destinationOnChainAddress": "Destination on-chain address",
     "views.Wif.createTransaction": "Create Transaction",

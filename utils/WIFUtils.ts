@@ -1,6 +1,9 @@
-import { localeString } from './LocaleUtils';
+import * as bitcoin from 'bitcoinjs-lib';
 // @ts-ignore:next-line
 import b58 from 'bs58check';
+
+import AddressUtils from './AddressUtils';
+import { localeString } from './LocaleUtils';
 
 export type AddressType = 'p2pkh' | 'p2sh-p2wpkh' | 'p2wpkh' | 'p2tr';
 
@@ -10,7 +13,12 @@ interface ValidationResult {
 }
 
 export class WIFUtils {
-    validateWIF(wif: string): ValidationResult {
+    // The key is swept on the connected node's network, so it must have been
+    // encoded for that network
+    validateWIF(
+        wif: string,
+        network: bitcoin.Network = AddressUtils.bitcoinNetworkForNode()
+    ): ValidationResult {
         const firstChar = wif[0];
 
         if (!['K', 'L', '5', 'c', '9'].includes(firstChar)) {
@@ -56,6 +64,13 @@ export class WIFUtils {
             return {
                 isValid: false,
                 error: localeString('views.Wif.invalidFormat')
+            };
+        }
+
+        if (decoded[0] !== network.wif) {
+            return {
+                isValid: false,
+                error: localeString('views.Wif.wrongNetwork')
             };
         }
 
