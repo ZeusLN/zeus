@@ -1491,6 +1491,11 @@ export default class WalletConfiguration extends React.Component<
             !isLocalImpl &&
             implementation !== 'nostr-wallet-connect';
 
+        // The banner only needs to let the user recognise the string;
+        // the credentials it carries stay masked like the fields below
+        const importPreview =
+            ConnectionFormatUtils.redactConnectionString(suggestImport);
+
         const nostrWalletConnectUrlInvalid =
             implementation === 'nostr-wallet-connect' &&
             !ValidationUtils.isValidNostrWalletConnectUrl(
@@ -1599,9 +1604,9 @@ export default class WalletConfiguration extends React.Component<
                                 padding: 15
                             }}
                         >
-                            {suggestImport.length > 100
-                                ? `${suggestImport.substring(0, 100)}...`
-                                : suggestImport}
+                            {importPreview.length > 100
+                                ? `${importPreview.substring(0, 100)}...`
+                                : importPreview}
                         </Text>
                         <Text style={{ ...styles.whiteText, marginBottom: 10 }}>
                             {localeString(
@@ -2982,6 +2987,9 @@ export default class WalletConfiguration extends React.Component<
                                             </Text>
                                             <TextInput
                                                 value={localKey}
+                                                secureTextEntry={
+                                                    this.state.hidden
+                                                }
                                                 locked={true}
                                             />
                                         </>
@@ -3003,6 +3011,9 @@ export default class WalletConfiguration extends React.Component<
                                             </Text>
                                             <TextInput
                                                 value={remoteKey}
+                                                secureTextEntry={
+                                                    this.state.hidden
+                                                }
                                                 locked={true}
                                             />
                                         </>
