@@ -9,6 +9,13 @@ jest.mock('./LocaleUtils', () => ({
     localeString: (key: string) => require('../locales/en.json')[key]
 }));
 
+// The parsers see text a mint or peer wrote, at any length, on the JS thread
+const expectFast = (parse: () => string, expected: string) => {
+    const start = Date.now();
+    expect(parse()).toEqual(expected);
+    expect(Date.now() - start).toBeLessThan(1000);
+};
+
 describe('ErrorUtils', () => {
     describe('errorToUserFriendly', () => {
         it('Turns error message to user friendly values', () => {
@@ -197,6 +204,20 @@ describe('ErrorUtils', () => {
             ).toEqual('Channel expiry blocks too high in create order request');
         });
 
+        it('handles PascalCased messages ending in an uppercase letter', () => {
+            expect(errorToUserFriendly(new Error('OrderNotFoundA'))).toEqual(
+                'Order not found a'
+            );
+            expect(errorToUserFriendly(new Error('OrderNOTFound'))).toEqual(
+                'OrderNOTFound'
+            );
+        });
+
+        it('rejects a non-PascalCased message without exponential backtracking', () => {
+            const message = `A${'a'.repeat(30)}!`;
+            expectFast(() => errorToUserFriendly(new Error(message)), message);
+        });
+
         it('Handles invalid server response error messages', () => {
             expect(
                 errorToUserFriendly(
@@ -300,6 +321,13 @@ describe('ErrorUtils', () => {
         it('handles null/undefined', () => {
             expect(parseLdkNodeError(null)).toEqual('');
             expect(parseLdkNodeError(undefined)).toEqual('');
+        });
+
+        it('parses long text that never closes the iOS form in linear time', () => {
+            const word = 'a'.repeat(100000);
+            expectFast(() => parseLdkNodeError(word), word);
+            const openings = 'a(message:"'.repeat(100000);
+            expectFast(() => parseLdkNodeError(openings), openings);
         });
     });
 
@@ -544,6 +572,35 @@ describe('ErrorUtils', () => {
             expect(parsed).toContain('11000');
             expect(parsed).toContain('Quote amount not as requested');
         });
+
+        it('takes the first closing after the first iOS opening', () => {
+            expect(
+                parseCashuDevKitError(
+                    'CashuDevKit.FfiError.Internal(errorMessage: "outer CashuDevKit.FfiError.Generic(message: "inner") tail")'
+                )
+            ).toEqual('outer CashuDevKit.FfiError.Generic(message: "inner');
+        });
+
+        it('parses a mint detail full of unclosed iOS openings in linear time', () => {
+            const detail = 'CashuDevKit.FfiError.a(message:"'.repeat(32768);
+            expectFast(
+                () =>
+                    parseCashuDevKitError(
+                        `Unknown error response: \`code: 0, detail: ${detail}\``
+                    ),
+                'A'
+            );
+        });
+
+        it('strips a long run of trailing wrappers in linear time', () => {
+            expectFast(
+                () =>
+                    parseCashuDevKitError(
+                        `code: 0, detail: oops${'`")'.repeat(100000)}`
+                    ),
+                'Oops'
+            );
+        });
     });
 
     describe('cashuErrorForDisplay', () => {
@@ -626,6 +683,20 @@ describe('ErrorUtils', () => {
                     `CDK Error: Unknown error response: ${body}`
                 )
             ).toEqual('Quote amount not as requested');
+        });
+
+        it('handles long runs of wrapper characters in linear time', () => {
+            expectFast(
+                () => cashuErrorForDisplay(`oops {"${'"'.repeat(100000)}x`),
+                'oops'
+            );
+            expectFast(
+                () =>
+                    cashuErrorForDisplay(
+                        `oops${':'.repeat(100000)}x {"${'y'.repeat(100)}`
+                    ).slice(0, 6),
+                'oops::'
+            );
         });
     });
 });
