@@ -51,8 +51,7 @@ const reverseDefaults = {
     endpoint: 'https://swaps.zeuslsp.com/api/v2',
     transactionHex: 'tx-hex',
     feeRate: 2,
-    minerFee: 100,
-    isTestnet: false
+    minerFee: 100
 };
 
 describe('SubmarineClaimTransaction.build', () => {
@@ -116,8 +115,7 @@ describe('ReverseClaimTransaction.build', () => {
             lockupAddress: 'lockup-address',
             destinationAddress: 'destination-address',
             feeRate: 2,
-            minerFee: 100,
-            isTestnet: false
+            minerFee: 100
         });
     });
 

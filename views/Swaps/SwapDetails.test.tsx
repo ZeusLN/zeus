@@ -35,7 +35,7 @@ jest.mock('../../utils/SleepUtils', () => ({
 jest.mock('../../lndmobile/LndMobileInjection', () => ({
     swaps: {
         createClaimTransaction: jest.fn(),
-        createReverseClaimTransaction: jest.fn()
+        buildReverseClaimTransaction: jest.fn()
     }
 }));
 jest.mock('../../models/ClaimTransaction', () => ({
@@ -77,7 +77,8 @@ import lndMobile from '../../lndmobile/LndMobileInjection';
 import { ReverseClaimTransaction } from '../../models/ClaimTransaction';
 import { SwapType } from '../../models/Swap';
 
-const nativeClaim = lndMobile.swaps.createReverseClaimTransaction as jest.Mock;
+// builds and signs the claim; the app broadcasts it through the store
+const nativeClaim = lndMobile.swaps.buildReverseClaimTransaction as jest.Mock;
 
 const originalWebSocket = global.WebSocket;
 let socket: any;
@@ -86,6 +87,7 @@ let unexpectedErrors: any[][];
 beforeEach(() => {
     jest.useFakeTimers();
     nativeClaim.mockReset();
+    nativeClaim.mockResolvedValue('claimhex');
     (ReverseClaimTransaction.build as jest.Mock).mockClear();
     socket = { close: jest.fn(), send: jest.fn() };
     global.WebSocket = jest.fn(() => socket) as any;
@@ -109,7 +111,10 @@ afterEach(() => {
 
 // Opens the details of a reverse swap waiting for its lockup. Mounting
 // subscribes to the host's updates over the mocked WebSocket.
-const renderView = async (swapData: any = {}) => {
+const renderView = async (
+    swapData: any = {},
+    nodeInfo: any = { isTestNet: false }
+) => {
     const store = {
         claimMinerFee: 100,
         getSwapFees: jest.fn(),
@@ -121,7 +126,13 @@ const renderView = async (swapData: any = {}) => {
                 destinationAddress || 'bc1qwallet'
         ),
         formatStatus: (status: string) => status,
-        statusColor: () => '#000'
+        statusColor: () => '#000',
+        saveClaimTransaction: jest.fn().mockResolvedValue(true),
+        saveClaimTxid: jest.fn().mockResolvedValue(true),
+        broadcastSwapTransaction: jest.fn().mockResolvedValue('claim-txid'),
+        getReverseLockupTransactionHex: jest
+            .fn()
+            .mockResolvedValue({ status: 'none' })
     };
     const view = await render(
         <SwapDetails
@@ -139,7 +150,7 @@ const renderView = async (swapData: any = {}) => {
                         endpoint: 'https://provider.test/v2'
                     }
                 },
-                NodeInfoStore: { nodeInfo: { isTestNet: false } },
+                NodeInfoStore: { nodeInfo },
                 SwapStore: store,
                 InvoicesStore: {}
             } as any)}
@@ -162,6 +173,8 @@ const sendConfirmedLockup = () =>
     });
 
 const sendStatus = (status: string) => sendUpdate({ status });
+
+const FOUND = { status: 'found', hex: 'lockuphex' };
 
 const advance = (ms: number) =>
     act(async () => {
@@ -387,6 +400,338 @@ describe('SwapDetails lockup verification retry wiring', () => {
 
         expect(store.verifyReverseLockup).toHaveBeenCalledTimes(1);
         expect(errorShown()).toBe('The operation timed out.');
+    });
+
+    describe('the signed claim', () => {
+        it('stores the claim before broadcasting it, then records its txid', async () => {
+            const { store } = await renderView();
+
+            await sendConfirmedLockup();
+
+            expect(store.saveClaimTransaction).toHaveBeenCalledWith(
+                'swap',
+                'claimhex'
+            );
+            expect(store.broadcastSwapTransaction).toHaveBeenCalledWith(
+                'claimhex',
+                'https://provider.test/v2'
+            );
+            expect(
+                store.saveClaimTransaction.mock.invocationCallOrder[0]
+            ).toBeLessThan(
+                store.broadcastSwapTransaction.mock.invocationCallOrder[0]
+            );
+            expect(store.saveClaimTxid).toHaveBeenCalledWith(
+                'swap',
+                'claim-txid'
+            );
+        });
+
+        it.each([
+            [{ isTestNet: false }, 'mainnet'],
+            [{ isTestNet: true }, 'testnet'],
+            [{ isSigNet: true }, 'testnet'],
+            [{ isRegTest: true }, 'regtest']
+        ])('builds the claim for %j as %s', async (nodeInfo, network) => {
+            await renderView({}, nodeInfo);
+
+            await sendConfirmedLockup();
+
+            expect(nativeClaim).toHaveBeenCalledWith(
+                expect.objectContaining({ network })
+            );
+        });
+
+        it('resends the same claim when a broadcast fails, without rebuilding or rechecking', async () => {
+            const { store } = await renderView();
+            store.broadcastSwapTransaction
+                .mockRejectedValueOnce(new Error('mempool down'))
+                .mockResolvedValueOnce('claim-txid');
+
+            await sendConfirmedLockup();
+
+            expect(store.verifyReverseLockup).toHaveBeenCalledTimes(1);
+            expect(nativeClaim).toHaveBeenCalledTimes(1);
+            expect(store.broadcastSwapTransaction).toHaveBeenCalledTimes(2);
+            expect(store.broadcastSwapTransaction).toHaveBeenLastCalledWith(
+                'claimhex',
+                'https://provider.test/v2'
+            );
+            expect(store.saveClaimTxid).toHaveBeenCalledWith(
+                'swap',
+                'claim-txid'
+            );
+        });
+
+        it('keeps the claim and reports it when every broadcast fails', async () => {
+            const { store } = await renderView();
+            store.broadcastSwapTransaction.mockRejectedValue(
+                new Error('mempool down')
+            );
+
+            await sendConfirmedLockup();
+
+            expect(nativeClaim).toHaveBeenCalledTimes(1);
+            expect(store.saveClaimTransaction).toHaveBeenCalledTimes(1);
+            expect(store.broadcastSwapTransaction).toHaveBeenCalledTimes(11);
+            expect(store.saveClaimTxid).not.toHaveBeenCalled();
+            expect(errorShown()).toBe('views.SwapDetails.claimBroadcastFailed');
+        });
+
+        it('resends a claim stored on an earlier visit without rechecking or rebuilding', async () => {
+            const { store } = await renderView({
+                claimTransactionHex: 'storedhex'
+            });
+
+            await sendConfirmedLockup();
+
+            expect(store.verifyReverseLockup).not.toHaveBeenCalled();
+            expect(nativeClaim).not.toHaveBeenCalled();
+            expect(store.broadcastSwapTransaction).toHaveBeenCalledWith(
+                'storedhex',
+                'https://provider.test/v2'
+            );
+        });
+
+        it('leaves a swap alone once its claim has been broadcast', async () => {
+            const { store } = await renderView({
+                claimTransactionHex: 'storedhex',
+                claimTxid: 'claim-txid'
+            });
+
+            await sendConfirmedLockup();
+            await sendStatus('invoice.settled');
+
+            expect(store.verifyReverseLockup).not.toHaveBeenCalled();
+            expect(store.broadcastSwapTransaction).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('invoice.settled before the claim was broadcast', () => {
+        it('resends a stored claim', async () => {
+            const { store } = await renderView({
+                claimTransactionHex: 'storedhex'
+            });
+
+            await sendStatus('invoice.settled');
+
+            expect(store.getReverseLockupTransactionHex).not.toHaveBeenCalled();
+            expect(store.broadcastSwapTransaction).toHaveBeenCalledWith(
+                'storedhex',
+                'https://provider.test/v2'
+            );
+            expect(store.saveClaimTxid).toHaveBeenCalled();
+        });
+
+        it('fetches the lockup and claims it through the usual checks', async () => {
+            const { store } = await renderView();
+            store.getReverseLockupTransactionHex.mockResolvedValue(FOUND);
+
+            await sendStatus('invoice.settled');
+            await advance(2000);
+
+            expect(store.getReverseLockupTransactionHex).toHaveBeenCalledWith(
+                'swap',
+                'https://provider.test/v2'
+            );
+            expect(store.verifyReverseLockup).toHaveBeenCalledWith(
+                expect.anything(),
+                'lockuphex',
+                expect.anything()
+            );
+            expect(nativeClaim).toHaveBeenCalledTimes(1);
+            expect(store.broadcastSwapTransaction).toHaveBeenCalledWith(
+                'claimhex',
+                'https://provider.test/v2'
+            );
+        });
+
+        it('treats a lockup already spent as done, not as an error', async () => {
+            const { store } = await renderView();
+            store.getReverseLockupTransactionHex.mockResolvedValue(FOUND);
+            store.verifyReverseLockup.mockResolvedValue({
+                status: 'invalid',
+                reason: 'lockup-spent'
+            });
+
+            await sendStatus('invoice.settled');
+            await advance(120000);
+
+            expect(nativeClaim).not.toHaveBeenCalled();
+            expect(errorShown()).toBeUndefined();
+            expect(store.verifyReverseLockup).toHaveBeenCalledTimes(1);
+        });
+
+        it('still reports any other failed check', async () => {
+            const { store } = await renderView();
+            store.getReverseLockupTransactionHex.mockResolvedValue(FOUND);
+            store.verifyReverseLockup.mockResolvedValue({
+                status: 'invalid',
+                reason: 'refund-deadline'
+            });
+
+            await sendStatus('invoice.settled');
+            await advance(2000);
+
+            expect(nativeClaim).not.toHaveBeenCalled();
+            expect(errorShown()).toBe(
+                'views.SwapDetails.lockupVerificationFailed'
+            );
+        });
+
+        it('does nothing more when the host has no lockup to give', async () => {
+            const { store } = await renderView();
+
+            await sendStatus('invoice.settled');
+            await advance(120000);
+
+            expect(store.getReverseLockupTransactionHex).toHaveBeenCalledTimes(
+                1
+            );
+            expect(store.verifyReverseLockup).not.toHaveBeenCalled();
+            expect(nativeClaim).not.toHaveBeenCalled();
+            expect(noticeShown()).toBeUndefined();
+        });
+
+        it('asks the host again when it cannot be reached, and says so', async () => {
+            const { store } = await renderView();
+            store.getReverseLockupTransactionHex
+                .mockResolvedValueOnce({ status: 'unavailable' })
+                .mockResolvedValueOnce({ status: 'unavailable' })
+                .mockResolvedValue(FOUND);
+
+            await sendStatus('invoice.settled');
+
+            expect(noticeShown()).toBe(
+                'views.SwapDetails.lockupVerificationUnavailable'
+            );
+            expect(store.verifyReverseLockup).not.toHaveBeenCalled();
+
+            await advance(60000);
+            expect(store.getReverseLockupTransactionHex).toHaveBeenCalledTimes(
+                2
+            );
+            expect(store.verifyReverseLockup).not.toHaveBeenCalled();
+
+            await advance(60000);
+            await advance(2000);
+            expect(store.getReverseLockupTransactionHex).toHaveBeenCalledTimes(
+                3
+            );
+            expect(store.verifyReverseLockup).toHaveBeenCalledWith(
+                expect.anything(),
+                'lockuphex',
+                expect.anything()
+            );
+            expect(nativeClaim).toHaveBeenCalledTimes(1);
+            expect(store.saveClaimTxid).toHaveBeenCalledWith(
+                'swap',
+                'claim-txid'
+            );
+            expect(noticeShown()).toBeUndefined();
+        });
+
+        it('stops asking the host once the screen is closed', async () => {
+            const { store, unmount } = await renderView();
+            store.getReverseLockupTransactionHex.mockResolvedValue({
+                status: 'unavailable'
+            });
+
+            await sendStatus('invoice.settled');
+            await unmount();
+            await jest.advanceTimersByTimeAsync(180000);
+
+            expect(store.getReverseLockupTransactionHex).toHaveBeenCalledTimes(
+                1
+            );
+        });
+
+        it('does not schedule another try when the screen closes during the request', async () => {
+            const { store, unmount } = await renderView();
+            let answer!: (value: any) => void;
+            store.getReverseLockupTransactionHex.mockReturnValueOnce(
+                new Promise((resolve) => {
+                    answer = resolve;
+                })
+            );
+
+            let settled!: Promise<void>;
+            await act(async () => {
+                settled = socket.onmessage({
+                    data: JSON.stringify({
+                        event: 'update',
+                        args: [{ status: 'invoice.settled' }]
+                    })
+                });
+            });
+            await unmount();
+            const timers = jest.getTimerCount();
+            answer({ status: 'unavailable' });
+            await settled;
+
+            expect(jest.getTimerCount()).toBe(timers);
+            await jest.advanceTimersByTimeAsync(180000);
+
+            expect(store.getReverseLockupTransactionHex).toHaveBeenCalledTimes(
+                1
+            );
+        });
+
+        it('leaves a claim still being built to finish', async () => {
+            // the host settles as soon as the cooperative request inside the
+            // native build gives it the preimage, before the build returns
+            let resolveBuild!: (hex: string) => void;
+            nativeClaim.mockReturnValueOnce(
+                new Promise((resolve) => {
+                    resolveBuild = resolve;
+                })
+            );
+            const { store } = await renderView();
+
+            // the update handler waits on the build, so it is not awaited
+            // until the build is released
+            let confirmed!: Promise<void>;
+            await act(async () => {
+                confirmed = socket.onmessage({
+                    data: JSON.stringify({
+                        event: 'update',
+                        args: [
+                            {
+                                status: 'transaction.confirmed',
+                                transaction: { hex: 'txhex' }
+                            }
+                        ]
+                    })
+                });
+            });
+            await advance(1000);
+            expect(nativeClaim).toHaveBeenCalledTimes(1);
+
+            await sendStatus('invoice.settled');
+            await act(async () => {
+                resolveBuild('claimhex');
+                await confirmed;
+            });
+
+            expect(store.getReverseLockupTransactionHex).not.toHaveBeenCalled();
+            expect(nativeClaim).toHaveBeenCalledTimes(1);
+            expect(store.broadcastSwapTransaction).toHaveBeenCalledTimes(1);
+            expect(store.saveClaimTxid).toHaveBeenCalledWith(
+                'swap',
+                'claim-txid'
+            );
+        });
+
+        it('does not claim again after a claim broadcast on this screen', async () => {
+            const { store } = await renderView();
+
+            await sendConfirmedLockup();
+            await sendStatus('invoice.settled');
+
+            expect(store.getReverseLockupTransactionHex).not.toHaveBeenCalled();
+            expect(nativeClaim).toHaveBeenCalledTimes(1);
+            expect(store.broadcastSwapTransaction).toHaveBeenCalledTimes(1);
+        });
     });
 
     describe('a lockup amount nothing in the wallet vouches for', () => {

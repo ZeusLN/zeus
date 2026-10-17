@@ -69,7 +69,7 @@ export interface ILndMobile {
         pubNonce: string
     ): Promise<string>;
 
-    createReverseClaimTransaction(
+    buildReverseClaimTransaction(
         endpoint: string,
         swapId: string,
         claimLeaf: string,
@@ -82,10 +82,10 @@ export interface ILndMobile {
         destinationAddress: string,
         feeRate: number,
         minerFee: number,
-        isTestnet?: boolean
+        network: string
     ): Promise<string>;
 
-    createRefundTransaction(
+    buildRefundTransaction(
         endpoint: string,
         swapId: string,
         claimLeaf: string,
@@ -94,11 +94,12 @@ export interface ILndMobile {
         privateKey: string,
         servicePubKey: string,
         feeRate: number,
+        minerFee: number,
         timeoutBlockHeight: number,
         destinationAddress: string,
         lockupAddress: string,
         cooperative: boolean,
-        isTestnet?: boolean
+        network: string
     ): Promise<string>;
 }
 

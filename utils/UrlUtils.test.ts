@@ -125,6 +125,42 @@ describe('UrlUtils', () => {
         });
     });
 
+    describe('mempoolServesNetwork', () => {
+        const regtest = { ...mainnet, isRegTest: true };
+        const signet = { ...mainnet, isSigNet: true };
+
+        beforeEach(() => {
+            settingsStore.settings.privacy = {};
+        });
+
+        it('is true for mainnet, testnet and mutinynet', () => {
+            expect(UrlUtils.mempoolServesNetwork(mainnet)).toBe(true);
+            expect(UrlUtils.mempoolServesNetwork(testnet)).toBe(true);
+            expect(
+                UrlUtils.mempoolServesNetwork({ ...mutinynet, isSigNet: true })
+            ).toBe(true);
+        });
+
+        it('is false for regtest and plain signet without a custom instance', () => {
+            expect(UrlUtils.mempoolServesNetwork(regtest)).toBe(false);
+            expect(UrlUtils.mempoolServesNetwork(signet)).toBe(false);
+            settingsStore.settings.privacy = {
+                mempoolInstance: 'Custom',
+                customMempoolInstance: ''
+            };
+            expect(UrlUtils.mempoolServesNetwork(regtest)).toBe(false);
+        });
+
+        it('trusts a custom instance on every network', () => {
+            settingsStore.settings.privacy = {
+                mempoolInstance: 'Custom',
+                customMempoolInstance: 'http://localhost:4002'
+            };
+            expect(UrlUtils.mempoolServesNetwork(regtest)).toBe(true);
+            expect(UrlUtils.mempoolServesNetwork(signet)).toBe(true);
+        });
+    });
+
     describe('getMempoolInstanceHost', () => {
         it('returns the hostname of the effective instance', () => {
             settingsStore.settings.privacy = {};
