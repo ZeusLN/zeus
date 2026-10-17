@@ -1,9 +1,15 @@
-import { RnTor } from 'react-native-nitro-tor';
+import { Tor, TorError } from 'react-native-nitro-tor';
+import type {
+    HttpMethod,
+    TorStatus,
+    TorStatusListener
+} from 'react-native-nitro-tor';
 import RNFS from 'react-native-fs';
 
 const SOCKS_PORT = 9056;
-const TARGET_PORT = 9057;
-const START_TIMEOUT_MS = 30000;
+// start() resolves only once Tor reaches 100% bootstrap, which can take
+// well over 30s on a cold start over a slow mobile link
+const BOOTSTRAP_TIMEOUT_MS = 60000;
 const REQUEST_TIMEOUT_MS = 60000;
 const TOR_DATA_PATH = `${RNFS.DocumentDirectoryPath}/tor_data`;
 
@@ -13,10 +19,32 @@ enum RequestMethod {
     DELETE = 'delete'
 }
 
-const headersToString = (headers?: any): string => {
-    if (!headers) return '';
-    if (typeof headers === 'string') return headers;
-    return JSON.stringify(headers);
+const HTTP_METHODS: { [key in RequestMethod]: HttpMethod } = {
+    [RequestMethod.GET]: 'GET',
+    [RequestMethod.POST]: 'POST',
+    [RequestMethod.DELETE]: 'DELETE'
+};
+
+// Error codes that mean the request never got an answer over Tor, as
+// opposed to the remote end answering with an error
+const TRANSPORT_ERROR_CODES = [
+    'HTTP_TIMEOUT',
+    'HTTP_TRANSPORT_ERROR',
+    'NOT_RUNNING',
+    'TOR_STOPPED'
+];
+
+const normalizeHeaders = (headers?: any): Record<string, string> => {
+    if (!headers) return {};
+    const parsed =
+        typeof headers === 'string' ? JSON.parse(headers || '{}') : headers;
+    const result: Record<string, string> = {};
+    Object.keys(parsed).forEach((key) => {
+        if (parsed[key] !== undefined && parsed[key] !== null) {
+            result[key] = String(parsed[key]);
+        }
+    });
+    return result;
 };
 
 // Whether a URL targets a Tor v3 hidden service over HTTPS. For such
@@ -40,24 +68,73 @@ const isOnionHttpsUrl = (url: string): boolean => {
     }
 };
 
+const isTorTransportError = (error: any): boolean =>
+    error instanceof TorError && TRANSPORT_ERROR_CODES.includes(error.code);
+
+// Bumped by every restartTor, so a request can tell whether Tor was
+// restarted while it was in flight
+let restartGeneration = 0;
+let restartPromise: Promise<void> | null = null;
+
+// Whether a failed request can be resent once Tor is back:
+// - NOT_RUNNING: the request never left, so any method is safe.
+// - TOR_STOPPED, or any transport error when Tor was restarted during the
+//   request (a request cut off mid SOCKS connect reports
+//   HTTP_TRANSPORT_ERROR): the request may already have reached the node,
+//   so only GETs. Resending a POST could, for example, pay an invoice twice.
+const isRetryableAfterStop = (
+    error: any,
+    method: RequestMethod,
+    restartedDuringRequest: boolean
+): boolean => {
+    if (!(error instanceof TorError)) return false;
+    if (error.code === 'NOT_RUNNING') return true;
+    if (method !== RequestMethod.GET) return false;
+    return (
+        error.code === 'TOR_STOPPED' ||
+        (restartedDuringRequest && TRANSPORT_ERROR_CODES.includes(error.code))
+    );
+};
+
+type RequestOutcomeListener = (ok: boolean, url: string) => void;
+let requestOutcomeListener: RequestOutcomeListener | null = null;
+
+// Lets TorStore count consecutive transport failures, which catches
+// stale circuits that the daemon still reports as running
+const setTorRequestOutcomeListener = (
+    listener: RequestOutcomeListener | null
+) => {
+    requestOutcomeListener = listener;
+};
+
+const reportOutcome = (ok: boolean, url: string) => {
+    try {
+        requestOutcomeListener?.(ok, url);
+    } catch (e) {
+        console.warn('Tor request outcome listener threw', e);
+    }
+};
+
+// Shares one start() between concurrent callers. Cleared once it
+// settles so a daemon that later dies or is stopped gets started again
+// on the next request instead of every request failing until relaunch.
 let startPromise: Promise<void> | null = null;
 
-const ensureTorStarted = (): Promise<void> => {
+const ensureTorStarted = async (): Promise<void> => {
+    if (startPromise) return startPromise;
+    const status = await Tor.daemon.getStatus();
+    if (status.state === 'running') return;
     if (!startPromise) {
-        startPromise = (async () => {
-            const result = await RnTor.startTorIfNotRunning({
-                data_dir: TOR_DATA_PATH,
-                socks_port: SOCKS_PORT,
-                target_port: TARGET_PORT,
-                timeout_ms: START_TIMEOUT_MS
+        startPromise = Tor.daemon
+            .start({
+                dataDirectory: TOR_DATA_PATH,
+                socksPort: SOCKS_PORT,
+                bootstrapTimeoutMs: BOOTSTRAP_TIMEOUT_MS
+            })
+            .then(() => undefined)
+            .finally(() => {
+                startPromise = null;
             });
-            if (!result.is_success) {
-                throw new Error(result.error_message || 'Failed to start Tor');
-            }
-        })().catch((e) => {
-            startPromise = null;
-            throw e;
-        });
     }
     return startPromise;
 };
@@ -73,8 +150,25 @@ const doTorRequest = async (
     // longer timeout or the request dies before the node can answer.
     timeoutMs: number = REQUEST_TIMEOUT_MS
 ) => {
-    await ensureTorStarted();
-    const headerStr = headersToString(headers);
+    const httpMethod = HTTP_METHODS[method];
+    if (!httpMethod) {
+        throw new Error(`Unsupported method: ${method}`);
+    }
+
+    const generation = restartGeneration;
+    try {
+        await ensureTorStarted();
+    } catch (e) {
+        // Restart Tor stopped the start this request was waiting on.
+        // Nothing has been sent yet, so wait for the restart and go on.
+        const stoppedByRestart =
+            e instanceof TorError &&
+            e.code === 'TOR_STOPPED' &&
+            generation !== restartGeneration;
+        if (!stoppedByRestart) throw e;
+        if (restartPromise) await restartPromise.catch(() => {});
+        await ensureTorStarted();
+    }
 
     // Defense in depth: only honor trustInvalidCerts for HTTPS .onion
     // URLs. If a caller passes true for a clearnet URL we drop it on
@@ -88,40 +182,38 @@ const doTorRequest = async (
         );
     }
 
-    let response;
-    switch (method) {
-        case RequestMethod.GET:
-            response = await RnTor.httpGet({
-                url,
-                headers: headerStr,
-                timeout_ms: timeoutMs,
-                trust_invalid_certs: effectiveTrustInvalidCerts
-            });
-            break;
-        case RequestMethod.POST:
-            response = await RnTor.httpPost({
-                url,
-                body: data || '',
-                headers: headerStr,
-                timeout_ms: timeoutMs,
-                trust_invalid_certs: effectiveTrustInvalidCerts
-            });
-            break;
-        case RequestMethod.DELETE:
-            response = await RnTor.httpDelete({
-                url,
-                headers: headerStr,
-                timeout_ms: timeoutMs,
-                trust_invalid_certs: effectiveTrustInvalidCerts
-            });
-            break;
-        default:
-            throw new Error(`Unsupported method: ${method}`);
-    }
+    const send = () =>
+        Tor.http.request({
+            url,
+            method: httpMethod,
+            headers: normalizeHeaders(headers),
+            body: method === RequestMethod.POST ? data || '' : undefined,
+            timeoutMs,
+            allowInvalidCertificates: effectiveTrustInvalidCerts
+        });
 
-    if (response.error) {
-        throw new Error(response.error);
+    let response;
+    try {
+        try {
+            response = await send();
+        } catch (e) {
+            const restartedDuringRequest = generation !== restartGeneration;
+            if (!isRetryableAfterStop(e, method, restartedDuringRequest)) {
+                throw e;
+            }
+            // The daemon went away under us (Restart Tor, or it died).
+            // Let a restart in progress finish, start Tor if needed and
+            // resend once instead of failing the caller, which for the
+            // wallet means its error screen.
+            if (restartPromise) await restartPromise.catch(() => {});
+            await ensureTorStarted();
+            response = await send();
+        }
+    } catch (e) {
+        if (isTorTransportError(e)) reportOutcome(false, url);
+        throw e;
     }
+    reportOutcome(true, url);
 
     let parsedBody: any;
     if (response.body) {
@@ -132,7 +224,7 @@ const doTorRequest = async (
         }
     }
 
-    if (response.status_code >= 300) {
+    if (response.statusCode >= 300) {
         const message =
             (parsedBody &&
                 typeof parsedBody === 'object' &&
@@ -140,7 +232,7 @@ const doTorRequest = async (
                     parsedBody.message ||
                     parsedBody.error)) ||
             (typeof parsedBody === 'string' && parsedBody) ||
-            `HTTP ${response.status_code}`;
+            `HTTP ${response.statusCode}`;
         throw new Error(message);
     }
 
@@ -148,9 +240,37 @@ const doTorRequest = async (
 };
 
 const restartTor = async () => {
-    await RnTor.shutdownService();
-    startPromise = null;
-    await ensureTorStarted();
+    restartGeneration += 1;
+    const restart = (async () => {
+        await Tor.daemon.stop();
+        // stop() fails a start in progress; let it settle so the start
+        // below is a new one rather than that failing one
+        if (startPromise) await startPromise.catch(() => {});
+        await ensureTorStarted();
+    })();
+    restartPromise = restart;
+    try {
+        await restart;
+    } finally {
+        if (restartPromise === restart) restartPromise = null;
+    }
 };
 
-export { doTorRequest, restartTor, isOnionHttpsUrl, RequestMethod };
+const requestNewTorIdentity = () => Tor.daemon.requestNewIdentity();
+
+const getTorStatus = (): Promise<TorStatus> => Tor.daemon.getStatus();
+
+const subscribeTorStatus = (listener: TorStatusListener): (() => void) =>
+    Tor.daemon.subscribe(listener);
+
+export {
+    doTorRequest,
+    restartTor,
+    requestNewTorIdentity,
+    getTorStatus,
+    subscribeTorStatus,
+    setTorRequestOutcomeListener,
+    isOnionHttpsUrl,
+    RequestMethod
+};
+export type { TorStatus };

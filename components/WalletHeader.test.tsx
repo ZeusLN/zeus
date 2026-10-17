@@ -31,6 +31,7 @@ jest.mock('../utils/ThemeUtils', () => ({
 }));
 jest.mock('../stores/ChannelsStore', () => ({ ChannelsView: {} }));
 jest.mock('../stores/SettingsStore', () => ({ PosEnabled: {} }));
+jest.mock('../stores/TorStore', () => ({ TOR_INDICATOR_COLORS: {} }));
 // Renders the side slots, where the clipboard badge lives
 jest.mock('./Header', () => {
     const { View } = require('react-native');
@@ -72,11 +73,13 @@ const INVOICE = 'lnbcrt1pexample';
 const renderHeader = async ({
     clipboard,
     connecting,
-    settingsLoaded = true
+    settingsLoaded = true,
+    TorStore = { torInUse: false }
 }: {
     clipboard: boolean;
     connecting?: boolean;
     settingsLoaded?: boolean;
+    TorStore?: any;
 }) => {
     const listeners: { [event: string]: () => void } = {};
     const navigation = {
@@ -104,7 +107,8 @@ const renderHeader = async ({
                 NodeInfoStore: { nodeInfo: {} },
                 ModalStore: {},
                 AlertStore: {},
-                ConnectivityStore: { isOffline: false }
+                ConnectivityStore: { isOffline: false },
+                TorStore
             } as any)}
         />
     );
@@ -201,5 +205,35 @@ describe('WalletHeader clipboard badge', () => {
         expect(Clipboard.getString).toHaveBeenCalledTimes(1);
         await act(async () => onChange('active'));
         expect(Clipboard.getString).toHaveBeenCalledTimes(2);
+    });
+});
+
+describe('WalletHeader Tor badge', () => {
+    it('shows the Tor status and opens Networking when pressed', async () => {
+        const { navigation } = await renderHeader({
+            clipboard: false,
+            TorStore: {
+                torInUse: true,
+                statusText: 'Connected',
+                indicator: 'connected'
+            }
+        });
+
+        const badge = screen.getByLabelText(
+            'views.Settings.Networking.tor: Connected'
+        );
+        await fireEvent.press(badge);
+
+        expect(navigation.navigate).toHaveBeenCalledWith('Networking');
+    });
+
+    it('shows no Tor badge when Tor is not in use', async () => {
+        await renderHeader({ clipboard: false });
+
+        expect(
+            screen.queryByLabelText('views.Settings.Networking.tor', {
+                exact: false
+            })
+        ).not.toBeOnTheScreen();
     });
 });
