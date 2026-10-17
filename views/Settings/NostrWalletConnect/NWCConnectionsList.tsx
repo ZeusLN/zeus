@@ -53,6 +53,10 @@ interface NWCConnectionsListState {
     connectionsLoading: boolean;
     error: string;
     filter: ConnectionFilter;
+    // Bumped after pending invoices are re-checked: FlatList cells render
+    // outside the observer's tracking, so activity changes made in place
+    // would otherwise not re-render the rows.
+    refreshTick: number;
 }
 
 @inject('SettingsStore', 'NostrWalletConnectStore')
@@ -67,9 +71,12 @@ export default class NWCConnectionsList extends React.Component<
             searchQuery: '',
             connectionsLoading: false,
             error: '',
-            filter: ConnectionFilter.All
+            filter: ConnectionFilter.All,
+            refreshTick: 0
         };
     }
+
+    private unmounted = false;
 
     componentDidMount() {
         const { navigation } = this.props;
@@ -77,10 +84,11 @@ export default class NWCConnectionsList extends React.Component<
         this.getConnections();
     }
     componentWillUnmount() {
+        this.unmounted = true;
         const { navigation } = this.props;
         navigation.removeListener('focus', this.handleFocus);
     }
-    getConnections = async () => {
+    getConnections = async (force: boolean = false) => {
         try {
             this.setState({
                 connectionsLoading: true,
@@ -94,6 +102,16 @@ export default class NWCConnectionsList extends React.Component<
             this.setState({
                 connectionsLoading: false
             });
+            if (!SettingsStore.connecting) {
+                await NostrWalletConnectStore.refreshPendingMakeInvoices({
+                    force
+                });
+                if (!this.unmounted) {
+                    this.setState((prev) => ({
+                        refreshTick: prev.refreshTick + 1
+                    }));
+                }
+            }
         } catch (error) {
             this.setState({
                 connectionsLoading: false,
@@ -197,6 +215,15 @@ export default class NWCConnectionsList extends React.Component<
         index: number;
     }) => {
         const hasPaymentPermissions = connection.hasPaymentPermissions();
+        // Custom connections that can create invoices but aren't the preset
+        // are neither "Read Only" nor "Invoice Only", so they get no tag.
+        const restrictedStatus = hasPaymentPermissions
+            ? undefined
+            : connection.isInvoiceOnly()
+            ? Status.InvoiceOnly
+            : connection.hasPermission('make_invoice')
+            ? undefined
+            : Status.ReadOnly;
         return (
             <View style={{ paddingTop: index === 0 ? 10 : 0 }}>
                 <TouchableOpacity
@@ -225,8 +252,8 @@ export default class NWCConnectionsList extends React.Component<
                                 {connection.name}
                             </Text>
                             <View style={{ flexDirection: 'row', gap: 4 }}>
-                                {!hasPaymentPermissions && (
-                                    <Tag status={Status.ReadOnly} />
+                                {restrictedStatus && (
+                                    <Tag status={restrictedStatus} />
                                 )}
                                 {connection.hasWarnings && (
                                     <Tag
@@ -382,22 +409,72 @@ export default class NWCConnectionsList extends React.Component<
                         </View>
                     )}
                     {!hasPaymentPermissions && (
-                        <Text
-                            style={[
-                                styles.budgetDetailText,
-                                { color: themeColor('secondaryText') }
-                            ]}
+                        <View
+                            style={{
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                                alignItems: 'center'
+                            }}
                         >
-                            {connection.lastUsed
-                                ? `${localeString(
-                                      'views.Settings.NostrWalletConnect.lastUsed'
-                                  )} ${DateTimeUtils.listFormattedDateShort(
-                                      connection.lastUsed.getTime() / 1000
-                                  )}`
-                                : localeString(
-                                      'views.Settings.NostrWalletConnect.neverUsed'
-                                  )}
-                        </Text>
+                            <Text
+                                style={[
+                                    styles.budgetDetailText,
+                                    { color: themeColor('secondaryText') }
+                                ]}
+                            >
+                                {connection.lastUsed
+                                    ? `${localeString(
+                                          'views.Settings.NostrWalletConnect.lastUsed'
+                                      )} ${DateTimeUtils.listFormattedDateShort(
+                                          connection.lastUsed.getTime() / 1000
+                                      )}`
+                                    : localeString(
+                                          'views.Settings.NostrWalletConnect.neverUsed'
+                                      )}
+                            </Text>
+                            {connection.lastReceivedActivitySats > 0 && (
+                                <View
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        gap: 4
+                                    }}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.budgetDetailText,
+                                            {
+                                                color: themeColor(
+                                                    'secondaryText'
+                                                )
+                                            }
+                                        ]}
+                                    >
+                                        {`${localeString(
+                                            'views.Settings.NostrWalletConnect.recentlyReceived'
+                                        )}:`}
+                                    </Text>
+                                    <Text
+                                        style={[
+                                            styles.budgetDetailText,
+                                            {
+                                                color: themeColor('success')
+                                            }
+                                        ]}
+                                    >
+                                        +
+                                    </Text>
+                                    <Amount
+                                        sats={
+                                            connection.lastReceivedActivitySats
+                                        }
+                                        credit
+                                        toggleable
+                                        fontSize={14}
+                                    />
+                                </View>
+                            )}
+                        </View>
                     )}
                 </TouchableOpacity>
             </View>
@@ -614,6 +691,7 @@ export default class NWCConnectionsList extends React.Component<
                             {this.getFilteredConnections().length > 0 ? (
                                 <FlatList
                                     data={this.getFilteredConnections()}
+                                    extraData={this.state.refreshTick}
                                     renderItem={this.renderConnection}
                                     keyExtractor={(item) => item.id}
                                     showsVerticalScrollIndicator={false}
@@ -634,7 +712,9 @@ export default class NWCConnectionsList extends React.Component<
                                     refreshControl={
                                         <RefreshControl
                                             refreshing={connectionsLoading}
-                                            onRefresh={this.getConnections}
+                                            onRefresh={() =>
+                                                this.getConnections(true)
+                                            }
                                             tintColor={themeColor('text')}
                                             colors={[themeColor('highlight')]}
                                         />

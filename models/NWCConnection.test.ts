@@ -353,3 +353,84 @@ describe('NWCConnection pay_invoice activity lookup', () => {
         ).toBe(false);
     });
 });
+
+describe('NWCConnection received amounts', () => {
+    const receive = (
+        id: string,
+        satAmount: number,
+        createdAt: string,
+        status = 'success'
+    ) => ({
+        id,
+        type: 'make_invoice',
+        payment_source: 'lightning',
+        status,
+        satAmount,
+        createdAt: new Date(createdAt)
+    });
+
+    it('returns 0 when nothing was received', () => {
+        const connection = baseConnection();
+        expect(connection.lastReceivedActivitySats).toBe(0);
+        expect(connection.totalReceivedActivitySats).toBe(0);
+    });
+
+    it('uses the most recently created successful make_invoice', () => {
+        const connection = baseConnection();
+        connection.activity.push(
+            receive('a', 100, '2026-01-01T00:00:00Z') as any,
+            receive('b', 2500, '2026-01-03T00:00:00Z') as any,
+            receive('c', 700, '2026-01-02T00:00:00Z') as any
+        );
+
+        expect(connection.lastReceivedActivitySats).toBe(2500);
+        expect(connection.totalReceivedActivitySats).toBe(3300);
+    });
+
+    it('ignores pending, expired and failed invoices and pay_invoice', () => {
+        const connection = baseConnection();
+        connection.activity.push(
+            receive('a', 100, '2026-01-01T00:00:00Z') as any,
+            receive('b', 9000, '2026-01-05T00:00:00Z', 'pending') as any,
+            receive('c', 9000, '2026-01-06T00:00:00Z', 'expired') as any,
+            receive('d', 9000, '2026-01-07T00:00:00Z', 'failed') as any,
+            {
+                id: 'p',
+                type: 'pay_invoice',
+                payment_source: 'lightning',
+                status: 'success',
+                satAmount: 9000,
+                createdAt: new Date('2026-01-08T00:00:00Z')
+            } as any
+        );
+
+        expect(connection.lastReceivedActivitySats).toBe(100);
+        expect(connection.totalReceivedActivitySats).toBe(100);
+    });
+
+    it('skips zero-sat successful invoices', () => {
+        const connection = baseConnection();
+        connection.activity.push(
+            receive('a', 100, '2026-01-01T00:00:00Z') as any,
+            receive('b', 0, '2026-01-09T00:00:00Z') as any
+        );
+
+        expect(connection.lastReceivedActivitySats).toBe(100);
+    });
+
+    it('tolerates persisted string dates', () => {
+        const connection = baseConnection();
+        connection.activity.push(
+            {
+                ...receive('a', 100, '2026-01-01T00:00:00Z'),
+                createdAt: '2026-01-01T00:00:00.000Z'
+            } as any,
+            {
+                ...receive('b', 400, '2026-01-02T00:00:00Z'),
+                createdAt: '2026-01-02T00:00:00.000Z'
+            } as any
+        );
+
+        expect(connection.lastReceivedActivitySats).toBe(400);
+    });
+});
