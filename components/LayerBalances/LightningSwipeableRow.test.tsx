@@ -4,13 +4,20 @@ jest.mock('mobx-react', () => ({
 }));
 jest.mock('js-lnurl', () => ({ getParams: jest.fn() }));
 const mockBlobUtilFetch = jest.fn();
+// networkFetch passes headers and body through even when they are undefined;
+// drop trailing undefined args so assertions can name only the method and URL
 jest.mock('react-native-blob-util', () => ({
-    fetch: (...args: any[]) => mockBlobUtilFetch(...args)
+    fetch: (...args: any[]) => {
+        while (args.length && args[args.length - 1] === undefined) args.pop();
+        return mockBlobUtilFetch(...args);
+    }
 }));
 const mockDoTorRequest = jest.fn();
+const mockDoTorRequestRaw = jest.fn();
 jest.mock('../../utils/TorUtils', () => ({
     doTorRequest: (...args: any[]) => mockDoTorRequest(...args),
-    RequestMethod: { GET: 'GET' }
+    doTorRequestRaw: (...args: any[]) => mockDoTorRequestRaw(...args),
+    RequestMethod: { GET: 'GET', POST: 'POST', DELETE: 'DELETE' }
 }));
 jest.mock('../../utils/BackendUtils', () => ({
     supportsCashuWallet: () => false
@@ -72,6 +79,11 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
         mockDoTorRequest.mockResolvedValue({
             callback: `http://${ONION}/callback`
         });
+        mockDoTorRequestRaw.mockReset();
+        mockDoTorRequestRaw.mockResolvedValue({
+            status: 200,
+            body: JSON.stringify({ callback: 'https://example.com/callback' })
+        });
         mockSettingsStore.enableTor = false;
         mockSettingsStore.settings = {};
     });
@@ -126,15 +138,24 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
         );
     });
 
-    it('fetches a clearnet domain with an .onion label over https', async () => {
+    it('fetches a clearnet domain over Tor when Tor is enabled', async () => {
         mockSettingsStore.enableTor = true;
 
-        await tapRow('satoshi@pay.onion.example.com');
+        const navigation = await tapRow('satoshi@pay.onion.example.com');
 
+        expect(mockDoTorRequestRaw).toHaveBeenCalledWith(
+            'https://pay.onion.example.com/.well-known/lnurlp/satoshi',
+            'GET',
+            undefined,
+            undefined
+        );
         expect(mockDoTorRequest).not.toHaveBeenCalled();
-        expect(mockBlobUtilFetch).toHaveBeenCalledWith(
-            'get',
-            'https://pay.onion.example.com/.well-known/lnurlp/satoshi'
+        expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'LnurlPay',
+            expect.objectContaining({
+                lnurlParams: { callback: 'https://example.com/callback' }
+            })
         );
     });
 
@@ -143,6 +164,41 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
     // nothing. Jest fails a test on an unhandled rejection, so this cannot be
     // pinned through the row until the error is handled (#5060).
     it.todo('tells the user when the Lightning address lookup fails');
+
+    it('passes the Tor setting to the LNURL params lookup', async () => {
+        const LnurlParamsUtils = require('../../utils/LnurlParamsUtils');
+        const spy = jest
+            .spyOn(LnurlParamsUtils, 'getLnurlParams')
+            .mockResolvedValue({ tag: 'payRequest' });
+        mockSettingsStore.enableTor = true;
+
+        try {
+            // a locked row with an LNURL resolves it when tapped
+            const navigation = { navigate: jest.fn() };
+            await render(
+                <LightningSwipeableRow
+                    {...({
+                        lightning: 'lnurl1abc',
+                        locked: true,
+                        navigation,
+                        SyncStore: { isSyncing: false }
+                    } as any)}
+                >
+                    <Text>Pay</Text>
+                </LightningSwipeableRow>
+            );
+            await fireEvent.press(screen.getByText('Pay'));
+            await new Promise(setImmediate);
+
+            expect(spy).toHaveBeenCalledWith('lnurl1abc', true);
+            expect(navigation.navigate).toHaveBeenCalledWith(
+                'LnurlPay',
+                expect.anything()
+            );
+        } finally {
+            spy.mockRestore();
+        }
+    });
 
     describe('handler validation', () => {
         // Until #5060 lands, call the handler on a mounted row directly
@@ -169,6 +225,17 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
             );
             return { navigation, result };
         };
+
+        it('does not fall back to a direct request when the Tor request fails', async () => {
+            mockSettingsStore.enableTor = true;
+            mockDoTorRequestRaw.mockRejectedValue(new Error('tor failure'));
+
+            const { navigation, result } = await lookUp('satoshi@domain.com');
+
+            await expect(result).rejects.toThrow('tor failure');
+            expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        });
 
         it('rejects a response without a callback', async () => {
             mockBlobUtilFetch.mockResolvedValue({

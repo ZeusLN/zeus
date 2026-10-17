@@ -1,14 +1,14 @@
 import React, { Component } from 'react';
 import { Alert, View, I18nManager, TouchableOpacity } from 'react-native';
 import { SharedValue } from 'react-native-reanimated';
-import { getParams as getlnurlParams, LNURLWithdrawParams } from 'js-lnurl';
+import { LNURLWithdrawParams } from 'js-lnurl';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
 
-import ReactNativeBlobUtil from 'react-native-blob-util';
-
+import { networkFetch } from '../../utils/NetworkUtils';
 import { doTorRequest, RequestMethod } from '../../utils/TorUtils';
 import BackendUtils from './../../utils/BackendUtils';
+import { getLnurlParams } from '../../utils/LnurlParamsUtils';
 import { localeString } from './../../utils/LocaleUtils';
 import { getLnurlpUrl } from './../../utils/LnurlPayUtils';
 import { themeColor } from './../../utils/ThemeUtils';
@@ -134,13 +134,14 @@ export default class LightningSwipeableRow extends Component<
         navigation?: any,
         settings?: any
     ): Promise<void> => {
-        const params = lnurlParams || (await getlnurlParams(lightning ?? ''));
+        const params =
+            lnurlParams ||
+            (await getLnurlParams(lightning ?? '', settingsStore.enableTor));
         if (
             params &&
             params.status === 'ERROR' &&
             params.domain?.endsWith('.onion')
         ) {
-            // TODO handle fetching of params with internal Tor
             throw new Error(`${params.domain} says: ${params.reason}`);
         }
         switch (params.tag) {
@@ -205,26 +206,30 @@ export default class LightningSwipeableRow extends Component<
                     throw new Error(error);
                 });
         } else {
-            await ReactNativeBlobUtil.fetch('get', url).then(
-                (response: any) => {
-                    const status = response.info().status;
-                    if (status === 200) {
-                        const data = response.json();
-                        if (!data.callback) {
-                            throw new Error(error);
-                        }
-                        navigation.navigate('LnurlPay', {
-                            lnurlParams: data,
-                            ecash:
-                                BackendUtils.supportsCashuWallet() &&
-                                settings?.ecash?.enableCashu,
-                            lightningAddress
-                        });
-                    } else {
+            // Clearnet domains also go over Tor when it is enabled, so the
+            // recipient's server does not learn the user's IP
+            await networkFetch({
+                method: 'get',
+                url,
+                enableTor: settingsStore.enableTor
+            }).then((response: any) => {
+                const status = response.info().status;
+                if (status === 200) {
+                    const data = response.json();
+                    if (!data.callback) {
                         throw new Error(error);
                     }
+                    navigation.navigate('LnurlPay', {
+                        lnurlParams: data,
+                        ecash:
+                            BackendUtils.supportsCashuWallet() &&
+                            settings?.ecash?.enableCashu,
+                        lightningAddress
+                    });
+                } else {
+                    throw new Error(error);
                 }
-            );
+            });
         }
     };
 

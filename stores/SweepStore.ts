@@ -6,10 +6,12 @@ import { getPublicKey } from '@noble/secp256k1';
 import { decode as wifDecode } from 'wif';
 
 import NodeInfoStore from './NodeInfoStore';
+import SettingsStore from './SettingsStore';
 
 import AddressUtils from '../utils/AddressUtils';
 import { AddressType } from '../utils/WIFUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { networkFetch } from '../utils/NetworkUtils';
 import UrlUtils from '../utils/UrlUtils';
 import ecc from '../zeus_modules/noble_ecc';
 
@@ -32,9 +34,11 @@ export default class SweepStore {
     @observable bytes: number;
     @observable valueToSend: number;
     nodeInfoStore: NodeInfoStore;
+    settingsStore: SettingsStore;
 
-    constructor(nodeInfoStore: NodeInfoStore) {
+    constructor(nodeInfoStore: NodeInfoStore, settingsStore: SettingsStore) {
         this.nodeInfoStore = nodeInfoStore;
+        this.settingsStore = settingsStore;
     }
 
     @action
@@ -44,12 +48,14 @@ export default class SweepStore {
     }
 
     async getUtxosFromAddress(address: string) {
-        const res = await fetch(
-            `${UrlUtils.getMempoolApiUrl(
+        const res = await networkFetch({
+            method: 'GET',
+            url: `${UrlUtils.getMempoolApiUrl(
                 this.nodeInfoStore.nodeInfo
-            )}/address/${address}/utxo`
-        );
-        if (!res.ok) {
+            )}/address/${address}/utxo`,
+            enableTor: this.settingsStore.enableTor
+        });
+        if (res.info().status !== 200) {
             throw new Error(localeString('views.Wif.errorFetchingUtxos'));
         }
 
@@ -139,13 +145,15 @@ export default class SweepStore {
                 for (const utxo of this.utxos) {
                     const { txid, vout } = utxo;
                     totalSats += utxo.value;
-                    const res = await fetch(
-                        `${UrlUtils.getMempoolApiUrl(
+                    const res = await networkFetch({
+                        method: 'GET',
+                        url: `${UrlUtils.getMempoolApiUrl(
                             this.nodeInfoStore.nodeInfo
-                        )}/tx/${txid}/hex`
-                    );
+                        )}/tx/${txid}/hex`,
+                        enableTor: this.settingsStore.enableTor
+                    });
 
-                    if (!res.ok)
+                    if (res.info().status !== 200)
                         throw new Error(
                             localeString('views.Wif.failedToFetchTxHex', {
                                 txid
@@ -164,12 +172,14 @@ export default class SweepStore {
                 for (const utxo of this.utxos) {
                     const { txid, vout } = utxo;
 
-                    const res = await fetch(
-                        `${UrlUtils.getMempoolApiUrl(
+                    const res = await networkFetch({
+                        method: 'GET',
+                        url: `${UrlUtils.getMempoolApiUrl(
                             this.nodeInfoStore.nodeInfo
-                        )}/tx/${txid}`
-                    );
-                    if (!res.ok)
+                        )}/tx/${txid}`,
+                        enableTor: this.settingsStore.enableTor
+                    });
+                    if (res.info().status !== 200)
                         throw new Error(
                             localeString('views.Wif.failedToFetchTxDetails', {
                                 txid
@@ -208,12 +218,14 @@ export default class SweepStore {
 
                     const value = utxo.value;
                     totalSats += value;
-                    const res = await fetch(
-                        `${UrlUtils.getMempoolApiUrl(
+                    const res = await networkFetch({
+                        method: 'GET',
+                        url: `${UrlUtils.getMempoolApiUrl(
                             this.nodeInfoStore.nodeInfo
-                        )}/tx/${txid}`
-                    );
-                    if (!res.ok)
+                        )}/tx/${txid}`,
+                        enableTor: this.settingsStore.enableTor
+                    });
+                    if (res.info().status !== 200)
                         throw new Error(
                             localeString('views.Wif.failedToFetchTxDetails', {
                                 txid
