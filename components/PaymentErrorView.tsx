@@ -5,31 +5,42 @@ import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
+import PaymentReturnedIcon from '../assets/images/SVG/PaymentReturnedIcon.svg';
 
 interface PaymentErrorViewProps {
     errorMessage?: string | null;
+    // the recipient rejected or canceled the payment (e.g. a canceled hold
+    // invoice); not necessarily an error from the payer's point of view
+    rejectedByRecipient?: boolean;
 }
 
 export default function PaymentErrorView({
-    errorMessage
+    errorMessage,
+    rejectedByRecipient
 }: PaymentErrorViewProps) {
     const windowSize = Dimensions.get('window');
+    const Icon = rejectedByRecipient ? PaymentReturnedIcon : ErrorIcon;
 
     return (
         <View style={{ alignItems: 'center' }}>
-            <ErrorIcon
+            <Icon
                 width={windowSize.height * 0.13}
                 height={windowSize.height * 0.13}
             />
             <Text
                 style={{
-                    color: themeColor('warning'),
+                    color: rejectedByRecipient
+                        ? themeColor('text')
+                        : themeColor('warning'),
                     fontFamily: 'PPNeueMontreal-Book',
                     fontSize: 32,
-                    marginTop: windowSize.height * 0.07
+                    marginTop: windowSize.height * 0.07,
+                    textAlign: 'center'
                 }}
             >
-                {localeString('general.error')}
+                {rejectedByRecipient
+                    ? localeString('views.SendingLightning.paymentNotCompleted')
+                    : localeString('general.error')}
             </Text>
             {errorMessage && (
                 <Text
