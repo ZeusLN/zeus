@@ -325,3 +325,56 @@ export const verifyLnurlAuthCallback = (
 
     return { ok: true };
 };
+
+/**
+ * Policy for an image URL named by a third party (a Nostr profile picture or
+ * banner, a mint icon) that the wallet loads without asking: the callback
+ * policy above, plus no .onion hosts, since neither RNFS nor the platform
+ * image loader goes through Tor, and no backslashes, since native URL parsers
+ * and url.parse disagree on which side of a "\@" the host is.
+ */
+export const isRemoteImageAllowed = (imageUrl: string): LnurlCheckResult => {
+    if (typeof imageUrl === 'string' && imageUrl.includes('\\')) {
+        return { ok: false, reason: 'image URL contains a backslash' };
+    }
+
+    const allowed = isLnurlCallbackAllowed(imageUrl);
+    if (!allowed.ok) return allowed;
+
+    const hostname = (url.parse(imageUrl).hostname || '').toLowerCase();
+    if (hostname.endsWith('.onion')) {
+        return { ok: false, reason: 'image URL targets an onion host' };
+    }
+
+    return { ok: true };
+};
+
+/**
+ * Whether an <Image> may load a third-party image source. Inline data:image
+ * URIs make no request. An image served from the same origin as
+ * trustedOrigin (e.g. a mint's icon on the mint itself) is allowed, unless
+ * that origin is an onion host.
+ */
+export const isImageSourceAllowed = (
+    imageUrl?: string | null,
+    trustedOrigin?: string | null
+): imageUrl is string => {
+    if (typeof imageUrl !== 'string' || imageUrl.length === 0) return false;
+    if (/^data:image\//i.test(imageUrl)) return true;
+    if (isRemoteImageAllowed(imageUrl).ok) return true;
+    if (typeof trustedOrigin !== 'string' || imageUrl.includes('\\')) {
+        return false;
+    }
+
+    const image = url.parse(imageUrl);
+    const trusted = url.parse(trustedOrigin);
+    const host = (image.host || '').toLowerCase();
+    return (
+        !!host &&
+        !image.auth &&
+        !(image.hostname || '').toLowerCase().endsWith('.onion') &&
+        (image.protocol === 'https:' || image.protocol === 'http:') &&
+        image.protocol === trusted.protocol &&
+        host === (trusted.host || '').toLowerCase()
+    );
+};

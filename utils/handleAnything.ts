@@ -235,7 +235,8 @@ const nostrProfileLookup = async (data: string) => {
         'ContactDetails',
         {
             nostrContact: await ContactUtils.transformContactData(
-                profile.content
+                profile.content,
+                NostrUtils.hexToNpub(pubkey)
             ),
             isNostrContact: true
         }

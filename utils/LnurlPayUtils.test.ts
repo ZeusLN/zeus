@@ -8,7 +8,9 @@ import {
     getLnurlpUrl,
     verifyLnurlPayInvoice,
     isLnurlCallbackAllowed,
-    verifyLnurlAuthCallback
+    verifyLnurlAuthCallback,
+    isRemoteImageAllowed,
+    isImageSourceAllowed
 } from './LnurlPayUtils';
 
 const METADATA = '[["text/plain","Payment to Alice"]]';
@@ -358,6 +360,120 @@ describe('LnurlPayUtils', () => {
         it('rejects missing callbacks', () => {
             expect(
                 verifyLnurlAuthCallback(undefined as any, 'service.example').ok
+            ).toBe(false);
+        });
+    });
+
+    describe('isRemoteImageAllowed', () => {
+        it('allows https images on public hosts', () => {
+            expect(isRemoteImageAllowed('https://cdn.example/a.png').ok).toBe(
+                true
+            );
+            expect(isRemoteImageAllowed('https://8.8.8.8/a.png').ok).toBe(true);
+        });
+
+        it('rejects anything but https', () => {
+            [
+                'http://cdn.example/a.png',
+                'ftp://cdn.example/a.png',
+                'file:///data/user/0/app.zeusln.zeus/files/a.png',
+                'rnfs://a.png'
+            ].forEach((imageUrl) =>
+                expect(isRemoteImageAllowed(imageUrl).ok).toBe(false)
+            );
+        });
+
+        it('rejects loopback, private and link-local targets', () => {
+            [
+                'https://localhost/a.png',
+                'https://127.0.0.1:8443/a.png',
+                'https://2130706433/a.png',
+                'https://192.168.1.1/a.png',
+                'https://10.0.0.1/a.png',
+                'https://169.254.169.254/latest/meta-data',
+                'https://[::1]/a.png',
+                'https://cdn.example@127.0.0.1/a.png'
+            ].forEach((imageUrl) =>
+                expect(isRemoteImageAllowed(imageUrl).ok).toBe(false)
+            );
+        });
+
+        it('rejects onion hosts', () => {
+            expect(isRemoteImageAllowed('http://abcdefg.onion/a.png').ok).toBe(
+                false
+            );
+            expect(isRemoteImageAllowed('https://abcdefg.onion/a.png').ok).toBe(
+                false
+            );
+        });
+
+        it('rejects backslashes', () => {
+            expect(
+                isRemoteImageAllowed('https://cdn.example\\@127.0.0.1/a.png').ok
+            ).toBe(false);
+        });
+
+        it('rejects missing and malformed URLs', () => {
+            expect(isRemoteImageAllowed('').ok).toBe(false);
+            expect(isRemoteImageAllowed('https://').ok).toBe(false);
+            expect(isRemoteImageAllowed(undefined as any).ok).toBe(false);
+            expect(isRemoteImageAllowed({} as any).ok).toBe(false);
+        });
+    });
+
+    describe('isImageSourceAllowed', () => {
+        it('allows https images on public hosts and inline data images', () => {
+            expect(isImageSourceAllowed('https://cdn.example/a.png')).toBe(
+                true
+            );
+            expect(isImageSourceAllowed('data:image/png;base64,iVBORw0K')).toBe(
+                true
+            );
+        });
+
+        it('rejects http, private and onion images without a trusted origin', () => {
+            [
+                'http://cdn.example/a.png',
+                'http://192.168.1.1/apply.cgi?action=reboot',
+                'https://127.0.0.1:8443/a.png',
+                'https://abcdefg.onion/a.png',
+                'data:text/html,<b>x</b>',
+                '',
+                null,
+                undefined
+            ].forEach((imageUrl) =>
+                expect(isImageSourceAllowed(imageUrl)).toBe(false)
+            );
+        });
+
+        it('allows an icon on the same origin as the mint', () => {
+            expect(
+                isImageSourceAllowed(
+                    'http://192.168.1.20:3338/icon.png',
+                    'http://192.168.1.20:3338'
+                )
+            ).toBe(true);
+        });
+
+        it('rejects an icon on another origin than the mint', () => {
+            [
+                'http://192.168.1.1/apply.cgi?action=reboot',
+                'https://192.168.1.20:3338/icon.png',
+                'http://192.168.1.20:8080/icon.png',
+                'http://mint.example@192.168.1.1/icon.png'
+            ].forEach((imageUrl) =>
+                expect(
+                    isImageSourceAllowed(imageUrl, 'http://192.168.1.20:3338')
+                ).toBe(false)
+            );
+        });
+
+        it('rejects an icon on an onion mint', () => {
+            expect(
+                isImageSourceAllowed(
+                    'http://abcdefg.onion/icon.png',
+                    'http://abcdefg.onion'
+                )
             ).toBe(false);
         });
     });
