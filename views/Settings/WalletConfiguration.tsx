@@ -250,7 +250,7 @@ export default class WalletConfiguration extends React.Component<
         ldkSeedWordCount: 12,
         ldkEsploraServer: '',
         ldkRgsServer: '',
-        ldkScorerUrl: '',
+        ldkScorerUrl: undefined,
         ldkVssServer: DEFAULT_VSS_SERVER,
         ldkVssServerSelected: DEFAULT_VSS_SERVER,
         ldkVssServerCustom: '',

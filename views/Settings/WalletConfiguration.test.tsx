@@ -18,7 +18,7 @@ jest.mock('../../stores/SettingsStore', () => ({
     BLOCK_EXPLORER_KEYS: [],
     DEFAULT_MEMPOOL_INSTANCE: 'https://mempool.space',
     MEMPOOL_INSTANCE_KEYS: [],
-    getLspConfigForNetwork: jest.fn()
+    getLspConfigForNetwork: jest.fn(() => ({}))
 }));
 jest.mock('../../utils/BackendUtils', () => ({}));
 jest.mock('../../utils/LocaleUtils');
@@ -38,7 +38,9 @@ jest.mock('../../utils/LdkNodeUtils', () => ({
     getDefaultEsploraServer: jest.fn(() => ''),
     getDefaultRgsServer: jest.fn(() => ''),
     DEFAULT_VSS_SERVER: '',
-    DEFAULT_SCORER_URL: ''
+    DEFAULT_SCORER_URL: 'https://scorer.default',
+    createLdkNodeWallet: jest.fn(() => Promise.resolve({})),
+    stopLdkNode: jest.fn(() => Promise.resolve())
 }));
 jest.mock('../../storage', () => ({}));
 jest.mock('../../components/Button', () => {
@@ -81,6 +83,7 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import WalletConfiguration from './WalletConfiguration';
 import { confirmAction } from '../../utils/ActionUtils';
+import { createLdkNodeWallet } from '../../utils/LdkNodeUtils';
 
 const LNDHUB_IMPORT = 'lndhub://alice:secret@https://lndhub.example.com';
 
@@ -335,6 +338,26 @@ describe('WalletConfiguration', () => {
 
             expect(confirmAction).toHaveBeenCalledTimes(1);
             expect(updateSettings).not.toHaveBeenCalled();
+        });
+    });
+
+    describe('new LDK Node wallet', () => {
+        it('builds the node with the default scorer URL', async () => {
+            const view: any = new WalletConfiguration({
+                navigation: {},
+                route: { params: { newEntry: true } },
+                SettingsStore: { settings: { privacy: {} } }
+            } as any);
+            view.setState = (update: any) => Object.assign(view.state, update);
+            view.saveLdkNodeWalletConfiguration = jest.fn();
+
+            await view.createLdkNodeNewWallet('mainnet');
+
+            expect(createLdkNodeWallet).toHaveBeenCalledWith(
+                expect.objectContaining({
+                    scorerUrl: 'https://scorer.default'
+                })
+            );
         });
     });
 });
