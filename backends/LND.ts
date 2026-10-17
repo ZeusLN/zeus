@@ -191,7 +191,14 @@ export default class LND {
             });
 
             ws.addEventListener('close', () => {
-                // connection closed
+                // connection closed; nothing catches what a listener throws,
+                // so don't parse a response that never came
+                if (resp === undefined) {
+                    reject(
+                        localeString('backends.LND.restReq.connectionError')
+                    );
+                    return;
+                }
                 resolve(JSON.parse(resp));
             });
         });
@@ -520,7 +527,14 @@ export default class LND {
             });
 
             ws.addEventListener('close', () => {
-                // connection closed
+                // connection closed; nothing catches what a listener throws,
+                // so don't parse a response that never came
+                if (resp === undefined) {
+                    reject(
+                        localeString('backends.LND.restReq.connectionError')
+                    );
+                    return;
+                }
                 resolve(JSON.parse(resp));
             });
         });
