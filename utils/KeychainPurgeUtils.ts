@@ -41,7 +41,9 @@ import {
 // Not exported by SettingsStore; same local definition as KeychainRecoveryUtils
 const LEGACY_STORAGE_KEY = 'zeus-settings';
 
-const AUTO_PURGE_KEY = 'keychain-autopurge-v1';
+// v2: v1 passes set the flag while refusing the retired secrets (see
+// migratedCounterpartServers and isXprvCache), so those installs run once more
+const AUTO_PURGE_KEY = 'keychain-autopurge-v2';
 
 const CASHU_KEY_SUFFIXES = [
     'cashu-mintUrls',
@@ -117,13 +119,31 @@ export interface PurgeResult {
 }
 
 /**
- * Maps an unprefixed legacy server to the zeus:-prefixed server the 2026
- * keychain migration would have copied it to. The lone rename in that
- * migration is the settings blob: the legacy v1 blob's successor is the v2
- * blob, not a prefixed copy of the v1 key.
+ * Maps an unprefixed legacy server to the zeus:-prefixed servers that stand
+ * for it; any one of them existing makes it deletable. Normally that is the
+ * copy the 2026 keychain migration made. The lone rename in that migration is
+ * the settings blob: the legacy v1 blob's successor is the v2 blob, not a
+ * prefixed copy of the v1 key. '<nodeDir>-cashu-seed' was copied, but
+ * CashuStore.initializeWallets deletes the copy as soon as the wallet has a
+ * '<nodeDir>-cashu-seed-phrase' (CDK runs off the mnemonic), so the phrase
+ * retires the unprefixed seed bytes the same way.
  */
-const migratedCounterpartServer = (server: string): string =>
-    `${KEY_PREFIX}${server === LEGACY_STORAGE_KEY ? STORAGE_KEY : server}`;
+const migratedCounterpartServers = (server: string): string[] => {
+    if (server === LEGACY_STORAGE_KEY) return [`${KEY_PREFIX}${STORAGE_KEY}`];
+    if (server.endsWith('-cashu-seed')) {
+        return [`${KEY_PREFIX}${server}`, `${KEY_PREFIX}${server}-phrase`];
+    }
+    return [`${KEY_PREFIX}${server}`];
+};
+
+/**
+ * '<pubkey>-extended-private-keys' cached master keys derived from
+ * the wallet seed. The 2026 migration never copied it, no build reads it any
+ * more, and NodeInfoStore deletes the zeus: entry on every connect, so it
+ * never has a counterpart and is never the only copy of anything.
+ */
+const isXprvCache = (server: string): boolean =>
+    server.endsWith('-extended-private-keys');
 
 const probeExists = async (server: string): Promise<boolean> => {
     try {
@@ -314,13 +334,19 @@ export const executePurge = async (scan: PurgeScan): Promise<PurgeResult> => {
     // zeus:-prefixed copy of it exists: the migration's key catalog was not
     // exhaustive across app versions, so an unmatched unprefixed entry may
     // be the only copy of something. An unreadable counterpart also skips
-    // (deletion needs positive evidence of the copy, not an error).
+    // (deletion needs positive evidence of the copy, not an error). The
+    // xprv cache is the exception: it is derived, never migrated, and the
+    // app only ever deletes it, so waiting for a counterpart would keep it
+    // in iCloud forever.
     const hasMigratedCounterpart = async (server: string): Promise<boolean> => {
+        if (isXprvCache(server)) return true;
         try {
-            return (
-                (await getRawItem(migratedCounterpartServer(server), false)) !==
-                null
-            );
+            for (const counterpart of migratedCounterpartServers(server)) {
+                if ((await getRawItem(counterpart, false)) !== null) {
+                    return true;
+                }
+            }
+            return false;
         } catch {
             return false;
         }
