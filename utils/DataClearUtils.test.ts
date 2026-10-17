@@ -23,6 +23,9 @@ jest.mock('react-native-blob-util', () => ({
         ls: jest.fn().mockResolvedValue([])
     }
 }));
+jest.mock('react-native-notifications', () => ({
+    Notifications: { removeAllDeliveredNotifications: jest.fn() }
+}));
 
 jest.mock('../storage', () => ({
     getItem: jest.fn().mockResolvedValue(null),
@@ -153,8 +156,10 @@ jest.mock('../utils/RatingUtils', () => ({
 }));
 
 import hashjs from 'hash.js';
-import { BackHandler, Platform } from 'react-native';
+// @ts-ignore: Networking is exported at runtime but missing from the legacy typings
+import { BackHandler, Networking, Platform } from 'react-native';
 import EncryptedStorage from 'react-native-encrypted-storage';
+import { Notifications } from 'react-native-notifications';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import fs from 'fs';
@@ -732,6 +737,62 @@ describe('clearAllData write latch (settings resurrection regression)', () => {
         expect(mockedClear.mock.invocationCallOrder[0]).toBeLessThan(
             mockedClearFlags.mock.invocationCallOrder[0]
         );
+    });
+});
+
+describe('clearAllData cookies and notifications', () => {
+    const mockedRemoveNotifications =
+        Notifications.removeAllDeliveredNotifications as jest.Mock;
+    let clearCookiesSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+        clearCookiesSpy = jest
+            .spyOn(Networking, 'clearCookies')
+            .mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        clearCookiesSpy.mockRestore();
+    });
+
+    it('clears the HTTP cookie store', async () => {
+        await clearAllData();
+
+        expect(clearCookiesSpy).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not wait for the cookie callback, which Android may never call', async () => {
+        // the mock never invokes the callback
+        await expect(clearAllData()).resolves.toBeUndefined();
+    });
+
+    it('removes delivered notifications', async () => {
+        await clearAllData();
+
+        expect(mockedRemoveNotifications).toHaveBeenCalledTimes(1);
+    });
+
+    it('finishes the wipe when clearing cookies throws', async () => {
+        clearCookiesSpy.mockImplementation(() => {
+            throw new Error('no Networking module');
+        });
+
+        await clearAllData();
+
+        expect(mockedRemoveNotifications).toHaveBeenCalledTimes(1);
+        expect(removedKeys()).toContain('lnc-rn');
+    });
+
+    it('finishes the wipe when removing notifications throws', async () => {
+        mockedRemoveNotifications.mockImplementationOnce(() => {
+            throw new Error('no notification service');
+        });
+
+        await clearAllData();
+
+        expect(removedKeys()).toContain('lnc-rn');
     });
 });
 

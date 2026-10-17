@@ -2,7 +2,9 @@ import * as Keychain from 'react-native-keychain';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import ReactNativeBlobUtil from 'react-native-blob-util';
-import { BackHandler, Platform } from 'react-native';
+import { Notifications } from 'react-native-notifications';
+// @ts-ignore: Networking is exported at runtime but missing from the legacy typings
+import { BackHandler, Networking, Platform } from 'react-native';
 import CashuDevKit from '../cashu-cdk';
 import Storage from '../storage';
 
@@ -675,6 +677,8 @@ async function clearNodeDataDirectories(settings: any): Promise<void> {
  * - Dynamic keys (notes, Cashu, LNC)
  * - CDK SQLite database (Cashu wallet state)
  * - LND/LDK on-disk node data directories (channel + wallet state)
+ * - HTTP cookies
+ * - Delivered system notifications
  *
  * After clearing, the app should be restarted.
  */
@@ -772,6 +776,24 @@ export async function clearAllData(): Promise<void> {
         console.log('[ClearData] EncryptedStorage cleared');
     } catch (e) {
         console.warn('[ClearData] Error clearing EncryptedStorage:', e);
+    }
+
+    // 6b. Clear the HTTP cookie store shared by every request the app makes,
+    // so hosts contacted before the wipe cannot recognize the install after
+    // it. Not awaited: Android without a WebView never calls back.
+    try {
+        Networking.clearCookies(() => {});
+    } catch (e) {
+        console.warn('[ClearData] Error clearing cookies:', e);
+    }
+
+    // 6c. Remove delivered notifications (NWC payments and invoices, ZEUS Pay
+    // receipts). The OS keeps them, with amounts and app names, after the
+    // app's own data is gone.
+    try {
+        Notifications.removeAllDeliveredNotifications();
+    } catch (e) {
+        console.warn('[ClearData] Error removing notifications:', e);
     }
 
     // 7. Clear any remaining keychain items with common prefixes
