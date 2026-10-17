@@ -151,9 +151,12 @@ describe('EcashSwipeableRow LNURL errors', () => {
         // the row is only tappable with a lightning value
         const navigation = await tapRowWith({
             lightning: asLnurl('http://example.onion/lnurl'),
+            // js-lnurl's error responses carry the request URL, which the
+            // row names the host from
             lnurlParams: {
                 status: 'ERROR',
                 domain: 'example.onion',
+                url: 'http://example.onion/lnurl',
                 reason: 'unreachable'
             }
         });
