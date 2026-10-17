@@ -199,6 +199,44 @@ describe('LSPStore custom-message request timeouts', () => {
         expect(store.getInfoData).toEqual({});
     });
 
+    it.each([
+        ['an empty id', { id: '' }],
+        ['no id', {}],
+        ['a null id', { id: null }]
+    ])(
+        'ignores a create_order response with %s before the order is created',
+        (_name, idField) => {
+            const store = makeStore();
+            store.lsps1GetInfoCustomMessage();
+            store.resetLSPS1Data();
+
+            const handled = store.handleCustomMessages({
+                peer: Buffer.from('bb', 'hex').toString('base64'),
+                data: Buffer.from(
+                    JSON.stringify({
+                        jsonrpc: '2.0',
+                        ...idField,
+                        result: { order_id: 'other-order' }
+                    })
+                ).toString('base64')
+            });
+
+            expect(handled).toBe(false);
+            expect(store.createOrderResponse).toEqual({});
+        }
+    );
+
+    it('ignores a message whose payload is null', () => {
+        const store = makeStore();
+
+        expect(
+            store.handleCustomMessages({
+                peer: Buffer.from('bb', 'hex').toString('base64'),
+                data: Buffer.from('null').toString('base64')
+            })
+        ).toBe(false);
+    });
+
     it('background probe send failure does not surface an error', async () => {
         jest.mocked(BackendUtils.sendCustomMessage).mockRejectedValue(
             'peer not connected'
