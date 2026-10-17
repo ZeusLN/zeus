@@ -798,14 +798,15 @@ async function retryStartLnd({
             log.w(`Retry attempt ${attempt}/${MAX_START_LND_RETRIES} failed`, [
                 retryError
             ]);
-            if (attempt === MAX_START_LND_RETRIES) {
-                log.e(
-                    `LND failed to start after ${MAX_START_LND_RETRIES} attempts`
-                );
-                throw createLndError(LndErrorCode.LND_START_FAILED);
-            }
         }
     }
+
+    // Every attempt failed. This is also reached when the last attempt still
+    // found LND running (it refuses to stop during a recovery rescan): that LND
+    // serves another wallet's directory, so resolving here would attach the
+    // selected wallet to the wrong node
+    log.e(`LND failed to start after ${MAX_START_LND_RETRIES} attempts`);
+    throw createLndError(LndErrorCode.LND_START_FAILED);
 }
 
 /**
