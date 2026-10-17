@@ -51,6 +51,17 @@ export const getLnurlpUrl = (address: string) => {
     };
 };
 
+// Hex sha256 of the LUD-06 metadata string, the value a BOLT11
+// description_hash must commit to.
+export const getLnurlMetadataHash = (
+    metadata: string | undefined
+): string | null =>
+    typeof metadata === 'string'
+        ? Base64Utils.bytesToHex(
+              Array.from(sha256(Base64Utils.utf8ToBytes(metadata)))
+          )
+        : null;
+
 export const verifyLnurlPayInvoice = (
     pr: string,
     metadata: string | undefined,
@@ -76,12 +87,7 @@ export const verifyLnurlPayInvoice = (
         };
     }
 
-    const expectedDescriptionHash =
-        typeof metadata === 'string'
-            ? Base64Utils.bytesToHex(
-                  Array.from(sha256(Base64Utils.utf8ToBytes(metadata)))
-              )
-            : null;
+    const expectedDescriptionHash = getLnurlMetadataHash(metadata);
     if (
         decoded.description_hash &&
         decoded.description_hash !== expectedDescriptionHash
