@@ -33,6 +33,7 @@ import { v4 as uuidv4 } from 'uuid';
 
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { errorToUserFriendly } from '../utils/ErrorUtils';
 import NostrConnectUtils, {
     DEFAULT_INVOICE_EXPIRY_SECONDS,
     Nip47ErrorCode
@@ -81,7 +82,6 @@ const SUBSCRIPTION_DELAY_MS = 1000;
 const SERVICE_START_DELAY_MS = 2000;
 const PAYMENT_TIMEOUT_SECONDS = 120;
 const PAYMENT_FEE_LIMIT_SATS = 1000;
-const PAYMENT_PROCESSING_DELAY_MS = 100;
 /**
  * Max time a queued pay_invoice may wait behind another payment before it
  * is rejected with RATE_LIMITED instead of executing late. Kept well under
@@ -119,6 +119,19 @@ interface ClientKeys {
 interface WalletServiceKeys {
     privateKey: string;
     publicKey: string;
+}
+
+// Outcome of a single pay_invoice payment, private to the request that sent it
+interface LightningPaymentState {
+    loading: boolean;
+    status: string | number | null;
+    isIncomplete: boolean | null;
+    error: boolean;
+    error_msg: string | null;
+    payment_error: string | null;
+    payment_hash: string | null;
+    payment_preimage: string | null;
+    payment_fee: string | null;
 }
 
 export interface CreateConnectionParams {
@@ -1901,8 +1914,8 @@ export default class NostrWalletConnectStore {
     }
 
     // Serializes payment handling across all connections. Payment flows
-    // read and mutate shared singleton stores (TransactionsStore,
-    // CashuStore payReq/meltQuote) across awaits, so two concurrent
+    // read and mutate shared state (connection budgets, CashuStore
+    // payReq/meltQuote) across awaits, so two concurrent
     // pay_invoice requests would clobber each other's state: one flow
     // can melt the other's quote, validate budget against the wrong
     // amount, or report the other payment's result/preimage.
@@ -2612,27 +2625,20 @@ export default class NostrWalletConnectStore {
             );
         }
 
-        this.transactionsStore.reset();
-        this.transactionsStore.sendPayment({
-            payment_request: request.invoice,
+        const paymentState = await this.sendLightningPayment(
+            request.invoice,
             // nodes reject an amount for an invoice that already has one
-            amount: zeroAmountInvoice ? amountSats.toString() : undefined,
-            fee_limit_sat: PAYMENT_FEE_LIMIT_SATS.toString(),
-            timeout_seconds: PAYMENT_TIMEOUT_SECONDS.toString(),
-            // service-initiated: don't set or clear the user-facing
-            // double-submission guard (paymentInFlight)
-            background: true
-        });
-        await this.waitForPaymentCompletion();
+            zeroAmountInvoice ? amountSats.toString() : undefined
+        );
 
         const payments: Payment[] = await this.paymentsStore.getPayments();
-        const paymentHash = this.transactionsStore.payment_hash;
+        const paymentHash = paymentState.payment_hash;
         const inTransitResult =
             NostrConnectUtils.resolveLightningPaymentInTransit({
                 invoice: request.invoice,
                 payments,
                 paymentHash,
-                paymentState: this.getTransactionsStorePaymentState()
+                paymentState
             });
 
         if (inTransitResult.inTransit) {
@@ -2646,7 +2652,7 @@ export default class NostrWalletConnectStore {
             });
 
             const fees_paid =
-                this.transactionsStore.payment_fee ||
+                paymentState.payment_fee ||
                 inTransitResult.payment?.getFee ||
                 0;
 
@@ -2660,8 +2666,8 @@ export default class NostrWalletConnectStore {
             };
         }
 
-        const preimage = this.transactionsStore.payment_preimage;
-        const fees_paid = this.transactionsStore.payment_fee;
+        const preimage = paymentState.payment_preimage;
+        const fees_paid = paymentState.payment_fee;
 
         const payment =
             inTransitResult.payment ||
@@ -2680,6 +2686,7 @@ export default class NostrWalletConnectStore {
 
         if (!settledEvidence) {
             const paymentError = this.checkPaymentErrors(
+                paymentState,
                 Nip47ErrorCode.FAILED_TO_PAY_INVOICE,
                 localeString('views.SendingLightning.paymentTimedOut'),
                 localeString(
@@ -3287,56 +3294,45 @@ export default class NostrWalletConnectStore {
         });
     }
 
-    private getTransactionsStorePaymentState() {
-        return {
-            status: this.transactionsStore.status,
-            isIncomplete: this.transactionsStore.isIncomplete,
-            error: this.transactionsStore.error,
-            payment_error: this.transactionsStore.payment_error,
-            loading: this.transactionsStore.loading
-        };
-    }
-
     private checkPaymentErrors(
+        paymentState: LightningPaymentState,
         errorCode: Nip47ErrorCode,
         timeoutMessage?: string,
         noPreimageMessage?: string
     ): void | { result: undefined; error: { code: string; message: string } } {
         if (
-            NostrConnectUtils.isTransactionsStorePaymentInTransit(
-                this.getTransactionsStorePaymentState()
-            )
+            NostrConnectUtils.isTransactionsStorePaymentInTransit(paymentState)
         ) {
             return undefined;
         }
 
-        if (this.transactionsStore.payment_error) {
+        if (paymentState.payment_error) {
             return NostrConnectUtils.createNip47Error(
-                this.transactionsStore.payment_error,
+                paymentState.payment_error,
                 errorCode
             );
         }
 
-        if (this.transactionsStore.error && this.transactionsStore.error_msg) {
+        if (paymentState.error && paymentState.error_msg) {
             return NostrConnectUtils.createNip47Error(
-                this.transactionsStore.error_msg,
+                paymentState.error_msg,
                 errorCode
             );
         }
-        if (this.transactionsStore.loading && timeoutMessage) {
+        if (paymentState.loading && timeoutMessage) {
             return NostrConnectUtils.createNip47Error(
                 timeoutMessage,
                 errorCode
             );
         }
-        const preimage = this.transactionsStore.payment_preimage;
-        const paymentCompleted = !this.transactionsStore.loading;
-        const hasPaymentHash = !!this.transactionsStore.payment_hash;
+        const preimage = paymentState.payment_preimage;
+        const paymentCompleted = !paymentState.loading;
+        const hasPaymentHash = !!paymentState.payment_hash;
         const hasSuccessStatus =
-            this.transactionsStore.status === 'complete' ||
-            this.transactionsStore.status === 'SUCCEEDED';
+            paymentState.status === 'complete' ||
+            paymentState.status === 'SUCCEEDED';
         const hasInFlightStatus = NostrConnectUtils.isInFlightPaymentStatus(
-            this.transactionsStore.status
+            paymentState.status
         );
 
         const canAssumeSuccess =
@@ -3350,46 +3346,63 @@ export default class NostrWalletConnectStore {
             );
         }
     }
+
     /**
-     * Resolves when `transactionsStore.loading` becomes false, or after the
-     * payment timeout. Uses a MobX reaction instead of polling every 200ms.
+     * Sends a pay_invoice payment and resolves with the outcome of that
+     * payment alone, or with `loading` still true if it has none after the
+     * payment timeout. The outcome is not read from TransactionsStore's
+     * observables: the user's own payments write to them as well.
      */
-    private async waitForPaymentCompletion(): Promise<void> {
+    private async sendLightningPayment(
+        payment_request: string,
+        amount?: string
+    ): Promise<LightningPaymentState> {
+        const pending: LightningPaymentState = {
+            loading: true,
+            status: null,
+            isIncomplete: null,
+            error: false,
+            error_msg: null,
+            payment_error: null,
+            payment_hash: null,
+            payment_preimage: null,
+            payment_fee: null
+        };
         const maxWaitTime = (PAYMENT_TIMEOUT_SECONDS + 5) * 1000;
 
-        await new Promise<void>((resolve) => {
-            let done = false;
-            const finish = () => {
-                if (done) return;
-                done = true;
-                resolve();
-            };
-
-            let disposer: (() => void) | undefined;
-            const timeoutId = setTimeout(() => {
-                disposer?.();
-                finish();
-            }, maxWaitTime);
-
-            disposer = reaction(
-                () => this.transactionsStore.loading,
-                (loading) => {
-                    if (!loading) {
-                        clearTimeout(timeoutId);
-                        disposer?.();
-                        finish();
-                    }
-                },
-                { fireImmediately: true }
-            );
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
+        const timedOut = new Promise<LightningPaymentState>((resolve) => {
+            timeoutId = setTimeout(() => resolve(pending), maxWaitTime);
         });
-
-        // If still loading after max wait, consider it timed out
-        if (this.transactionsStore.loading) {
-            await new Promise((resolve) =>
-                setTimeout(resolve, PAYMENT_PROCESSING_DELAY_MS)
+        const completed = this.transactionsStore
+            .sendPaymentSilently({
+                payment_request,
+                amount,
+                max_parts: '1',
+                fee_limit_sat: PAYMENT_FEE_LIMIT_SATS,
+                timeout_seconds: PAYMENT_TIMEOUT_SECONDS
+            })
+            .then(
+                (result: any): LightningPaymentState => ({
+                    ...pending,
+                    ...this.transactionsStore.getPaymentOutcome(result),
+                    loading: false
+                })
+            )
+            .catch(
+                (err: Error): LightningPaymentState => ({
+                    ...pending,
+                    loading: false,
+                    error: true,
+                    error_msg:
+                        errorToUserFriendly(err) ||
+                        localeString('error.sendingPayment')
+                })
             );
-        }
+
+        return Promise.race([completed, timedOut]).finally(() =>
+            clearTimeout(timeoutId)
+        );
     }
 
     /**
