@@ -29,6 +29,8 @@ class ConnectionFormatUtils {
                 lndconnect.split(':')[1] &&
                 lndconnect.split(':')[1].split('?')[0];
         }
+        // host:port/?macaroon=...
+        port = port && port.replace(/\/$/, '');
         const macaroonHex =
             result.macaroon && Base64Utils.base64UrlToHex(result.macaroon);
 
@@ -114,6 +116,8 @@ class ConnectionFormatUtils {
                 const portPart = connectionPart.split(':')[1];
                 port = portPart ? portPart.split('?')[0] : '';
             }
+            // host:port/?rune=...
+            port = port.replace(/\/$/, '');
         }
 
         const rune = result.rune;

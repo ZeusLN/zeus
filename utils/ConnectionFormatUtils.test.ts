@@ -66,6 +66,19 @@ describe('ConnectionFormatUtils', () => {
                 enableTor: true
             });
         });
+
+        it('drops a trailing slash after the port', () => {
+            expect(
+                ConnectionFormatUtils.processLndConnectUrl(
+                    'lndconnect://8.8.0.0:2056/?macaroon=0201b6'
+                ).port
+            ).toEqual('2056');
+            expect(
+                ConnectionFormatUtils.processLndConnectUrl(
+                    'lndconnect://[2604:2000::]:2056/?macaroon=0201b6'
+                ).port
+            ).toEqual('2056');
+        });
     });
 
     describe('processLncUrl', () => {
@@ -206,6 +219,19 @@ describe('ConnectionFormatUtils', () => {
                 enableTor: true,
                 implementation: 'cln-rest'
             });
+        });
+
+        it('drops a trailing slash after the port', () => {
+            expect(
+                ConnectionFormatUtils.processCLNRestConnectUrl(
+                    'clnrest+https://cln.local:3010/?rune=8hJ6ZKFvRune'
+                ).port
+            ).toEqual('3010');
+            expect(
+                ConnectionFormatUtils.processCLNRestConnectUrl(
+                    'clnrest+https://[2604:2000::]:3010/?rune=8hJ6ZKFvRune'
+                ).port
+            ).toEqual('3010');
         });
     });
 });

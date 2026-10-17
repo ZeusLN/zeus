@@ -247,6 +247,17 @@ describe('isValidPort', () => {
         expect(ValidationUtils.isValidPort('-1')).toBe(false);
         expect(ValidationUtils.isValidPort('a')).toBe(false);
     });
+
+    it('rejects anything other than digits', () => {
+        expect(ValidationUtils.isValidPort('')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080@evil.com')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080@evil.com/')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080/path')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080#')).toBe(false);
+        expect(ValidationUtils.isValidPort('8080 ')).toBe(false);
+        expect(ValidationUtils.isValidPort('80.80')).toBe(false);
+        expect(ValidationUtils.isValidPort('1e3')).toBe(false);
+    });
 });
 
 describe('hasValidRuneChars', () => {
