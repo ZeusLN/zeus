@@ -9,7 +9,8 @@ jest.mock('../utils/BackendUtils', () => ({
         getNewChangeAddress: jest.fn(),
         isLNDBased: jest.fn(() => false),
         supportsFlowLSP: jest.fn(() => false),
-        createInvoice: jest.fn()
+        createInvoice: jest.fn(),
+        lookupInvoice: jest.fn()
     }
 }));
 jest.mock('../utils/LocaleUtils');
@@ -58,6 +59,30 @@ describe('InvoicesStore.getPayReq', () => {
 
         expect(store.pay_req).toBeNull();
         expect(store.getPayReqError).toBe('decode failed');
+    });
+});
+
+describe('InvoicesStore.isInvoicePaid', () => {
+    it.each([
+        [{ settled: true }, true],
+        [{ status: 'paid' }, true],
+        [{ settled: false, state: 'OPEN' }, false],
+        [false, false]
+    ])('reads %j from the node as paid: %s', async (response, paid) => {
+        (BackendUtils.lookupInvoice as jest.Mock).mockResolvedValue(response);
+
+        expect(await newStore().isInvoicePaid('aa')).toBe(paid);
+        expect(BackendUtils.lookupInvoice).toHaveBeenCalledWith({
+            r_hash: 'aa'
+        });
+    });
+
+    it('treats an invoice the node cannot find as unpaid', async () => {
+        (BackendUtils.lookupInvoice as jest.Mock).mockRejectedValue(
+            new Error('not found')
+        );
+
+        expect(await newStore().isInvoicePaid('aa')).toBe(false);
     });
 });
 

@@ -564,6 +564,16 @@ export default class InvoicesStore {
             });
     };
 
+    public isInvoicePaid = async (hash: string): Promise<boolean> => {
+        try {
+            const response = await BackendUtils.lookupInvoice({ r_hash: hash });
+            return !!response && new Invoice(response).isPaid;
+        } catch {
+            // lookupInvoice throws when the hash is unknown on this backend
+            return false;
+        }
+    };
+
     @action
     public fetchIncomingChannel = async (hash: string) => {
         try {
