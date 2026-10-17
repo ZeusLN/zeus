@@ -576,6 +576,59 @@ describe('CLNRest payment request bodies', () => {
         await cln.sendKeysend({ pubkey: '02ab', amt: 2, fee_limit_sat: 5 });
         expect(sentBody().body.maxfeepercent).toBe(100);
     });
+
+    // TransactionsStore passes the fee limit as a number, so a limit of
+    // '0' arrives here as 0
+    it.each([
+        ['payLightningInvoice', 'v24.11', '/v1/xpay'],
+        ['payLightningInvoice', 'v24.08', '/v1/pay'],
+        ['sendKeysend', 'v26.06', '/v1/xkeysend'],
+        ['sendKeysend', 'v25.02', '/v1/keysend']
+    ] as const)(
+        '%s on %s sends a fee limit of 0 as maxfee 0',
+        async (method, version, route) => {
+            mockNodeInfoStore.nodeInfo = { version };
+
+            await cln[method]({
+                payment_request: 'lnbc1',
+                pubkey: '02ab',
+                amt: 100,
+                fee_limit_sat: 0
+            });
+
+            expect(sentBody().url).toBe(
+                `https://node.example.com:3010${route}`
+            );
+            expect(sentBody().body.maxfee).toBe(0);
+        }
+    );
+
+    it('sends a fee limit of 0 as 0 percent on keysend before v24.11', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.08' };
+
+        await cln.sendKeysend({ pubkey: '02ab', amt: 200, fee_limit_sat: 0 });
+
+        expect(sentBody().body.maxfeepercent).toBe(0);
+        expect(sentBody().body).not.toHaveProperty('maxfee');
+    });
+
+    it.each([
+        ['v24.11', '/v1/xpay'],
+        ['v24.08', '/v1/pay']
+    ])(
+        'leaves the fee cap to the node on %s when no limit is set',
+        async (version, route) => {
+            mockNodeInfoStore.nodeInfo = { version };
+
+            await cln.payLightningInvoice({ payment_request: 'lnbc1' });
+
+            expect(sentBody().url).toBe(
+                `https://node.example.com:3010${route}`
+            );
+            expect(sentBody().body).not.toHaveProperty('maxfee');
+            expect(sentBody().body).not.toHaveProperty('maxfeepercent');
+        }
+    );
 });
 
 describe('CLNRest capability flags', () => {
