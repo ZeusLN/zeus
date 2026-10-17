@@ -20,7 +20,7 @@ jest.mock('../utils/BackendUtils', () => ({
     supportsOnchainSendFeeRate: () => false,
     supportsOnchainBatching: () => false,
     supportsCoinControl: () => false,
-    supportsKeysend: () => false,
+    supportsKeysend: jest.fn(() => false),
     supportsAMP: () => false,
     supportsOffersDirectPay: jest.fn(() => false),
     decodeOffer: jest.fn(),
@@ -475,5 +475,43 @@ describe('Send mount', () => {
         );
 
         expect(getLightningBalance).toHaveBeenCalledWith(true);
+    });
+});
+
+describe('Send keysend fee limit', () => {
+    afterEach(() =>
+        (BackendUtils.supportsKeysend as jest.Mock).mockReturnValue(false)
+    );
+
+    it('sends the default fee percentage when percent mode is picked without retyping it', async () => {
+        (BackendUtils.supportsKeysend as jest.Mock).mockReturnValue(true);
+        const TransactionsStore = {
+            paymentInFlight: false,
+            sendPayment: jest.fn()
+        };
+        await renderView({
+            params: {
+                destination: '02' + 'cd'.repeat(32),
+                transactionType: 'Keysend',
+                isValid: true
+            },
+            TransactionsStore,
+            settings: { payments: { defaultFeePercentage: '0.5' } }
+        });
+
+        await enterAmount('1000', 1000);
+        // what FeeLimit reports when its percent field is tapped
+        const feeLimit = hosts('FeeLimit')[0];
+        await fireEvent(feeLimit, 'feeLimitSatChange', '5');
+        await fireEvent(feeLimit, 'feeOptionChange', 'percent');
+        await fireEvent.press(button('general.send'));
+
+        expect(TransactionsStore.sendPayment).toHaveBeenCalledWith(
+            expect.objectContaining({
+                amount: '1000',
+                fee_limit_sat: '5',
+                max_fee_percent: '0.5'
+            })
+        );
     });
 });
