@@ -956,19 +956,21 @@ export default class Receive extends React.Component<
         });
 
         // If switching to unified or on-chain and there's a lightning invoice
-        // but no on-chain address, generate one
+        // but no on-chain address, generate one and watch it for payment
+        // alongside the invoice
         if (
             (selectedIndex === 0 || selectedIndex === 2) &&
             payment_request &&
             !onChainAddress &&
             BackendUtils.supportsOnchainReceiving()
         ) {
-            await getNewAddress(
+            const address = await getNewAddress(
                 this.buildAddressRequest(
                     account,
                     account !== 'default' ? accountAddressType : addressType
                 )
             );
+            if (address) this.subscribeInvoice(undefined, address);
         }
     };
 
