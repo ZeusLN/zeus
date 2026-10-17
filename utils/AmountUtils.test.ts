@@ -1260,16 +1260,18 @@ describe('AmountUtils', () => {
             expect(getFeeLimitSatsFromPercent('0', '1000')).toBe('0');
         });
 
-        it('returns 0 when there is no amount', () => {
-            expect(getFeeLimitSatsFromPercent('5.0', undefined)).toBe('0');
-            expect(getFeeLimitSatsFromPercent('5.0', '')).toBe('0');
-            expect(getFeeLimitSatsFromPercent('5.0', 0)).toBe('0');
+        it('returns an empty limit when there is no amount', () => {
+            expect(getFeeLimitSatsFromPercent('5.0', undefined)).toBe('');
+            expect(getFeeLimitSatsFromPercent('5.0', '')).toBe('');
+            expect(getFeeLimitSatsFromPercent('5.0', 0)).toBe('');
         });
 
-        it('returns 0 when an input is not a number', () => {
-            expect(getFeeLimitSatsFromPercent('', '1000')).toBe('0');
-            expect(getFeeLimitSatsFromPercent('abc', '1000')).toBe('0');
-            expect(getFeeLimitSatsFromPercent('5.0', 'abc')).toBe('0');
+        it('returns an empty limit, not a 0 sat cap, for an unusable input', () => {
+            expect(getFeeLimitSatsFromPercent('', '1000')).toBe('');
+            expect(getFeeLimitSatsFromPercent('abc', '1000')).toBe('');
+            expect(getFeeLimitSatsFromPercent('5.0', 'abc')).toBe('');
+            expect(getFeeLimitSatsFromPercent('-5', '1000')).toBe('');
+            expect(getFeeLimitSatsFromPercent('Infinity', '1000')).toBe('');
         });
 
         it('does not use exponent notation for large amounts', () => {
