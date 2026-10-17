@@ -1520,12 +1520,18 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
         try {
             const pendingPaymentData = await loadPendingPaymentData();
             if (pendingPaymentData) {
-                const { InvoicesStore, navigation } = this.props;
+                const { InvoicesStore, SettingsStore, navigation } = this.props;
+
+                // like a deep link, wait for the login; the payment stays in
+                // storage for the refresh that follows it
+                if (SettingsStore.externalInputAuthRequired()) return;
 
                 if (pendingPaymentData.payment_request) {
                     await InvoicesStore.getPayReq(
                         pendingPaymentData.payment_request
                     );
+                    // the session can lock while the invoice is decoded
+                    if (SettingsStore.externalInputAuthRequired()) return;
                     navigation.navigate('PaymentRequest', {
                         fromGraphSync: true
                     });
