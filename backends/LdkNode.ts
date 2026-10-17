@@ -1412,17 +1412,19 @@ export default class LdkNode {
             });
         }
 
-        const { hash, preimage, feeMsat } = await this.awaitPaymentCompletion(
-            paymentId,
-            paymentTimeoutSecs
-        );
+        const { hash, preimage, feeMsat, pending } =
+            await this.awaitPaymentCompletion(paymentId, paymentTimeoutSecs, {
+                pendingOnTimeout: true
+            });
 
         return {
-            payment_hash: hash,
+            // LDK uses the payment hash as the id of a BOLT 11 payment
+            payment_hash: hash || paymentId,
             payment_preimage: preimage,
             fee_msat: feeMsat,
-            payment_route: {},
-            status: 'SUCCEEDED'
+            // SendingLightning reads any payment_route as success
+            ...(!pending && { payment_route: {} }),
+            status: pending ? 'IN_FLIGHT' : 'SUCCEEDED'
         };
     };
 
@@ -1990,12 +1992,14 @@ export default class LdkNode {
 
             if (payment?.status !== 'succeeded') {
                 // Keysend and BOLT 12 sends get a fresh payment id on every
-                // attempt, so LDK can't reject a retry as a duplicate.
-                // Reporting a timeout as a failure there lets the user send
-                // again while this payment can still complete: LDK keeps
-                // in-flight HTLCs after its retry timeout, and waits for a
-                // BOLT 12 invoice for one to two timer ticks regardless of
-                // it. Those callers report the payment as in flight instead.
+                // attempt, and a Lightning address, LNURL-pay service or
+                // checkout hands out a fresh BOLT 11 invoice per attempt, so
+                // LDK can't reject a retry as a duplicate. Reporting a
+                // timeout as a failure lets the user send again while this
+                // payment can still complete: LDK keeps in-flight HTLCs
+                // after its retry timeout, and waits for a BOLT 12 invoice
+                // for one to two timer ticks regardless of it. Callers
+                // report the payment as in flight instead.
                 if (pendingOnTimeout) {
                     return {
                         hash: payment?.kind.hash || '',
