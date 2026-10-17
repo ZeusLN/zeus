@@ -41,6 +41,8 @@ export default class PushNotificationManager extends React.Component<any, any> {
     ): void {
         const link = parseNwcActivityNotif(payload);
         if (!link) return;
+        // same gate as deep links and share intents
+        if (settingsStore.externalInputAuthRequired()) return;
         NavigationService.navigateWhenReady('NWCConnectionActivity', {
             connectionId: link.connectionId,
             ...(link.failedActivityId && {
