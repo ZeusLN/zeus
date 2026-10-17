@@ -45,6 +45,13 @@ jest.mock('../utils/MigrationUtils', () => ({
     runSettingsMigrations: jest
         .fn()
         .mockImplementation(async (settings: any) => settings),
+    // adopted the same way as runSettingsMigrations
+    migrateLockCredentialsToVerifiers: jest
+        .fn()
+        .mockImplementation(async (settings: any) => settings),
+    restampKeychainAccessibility: jest
+        .fn()
+        .mockImplementation(async (settings: any) => settings),
     legacySettingsMigrations: jest.fn().mockResolvedValue({}),
     storageMigrationV2: jest.fn().mockResolvedValue(undefined)
 }));
@@ -1141,6 +1148,94 @@ describe('SettingsStore.getSettings', () => {
         // Read-only fallback: the local partition must not be written
         expect(StorageMock._backing[STORAGE_KEY]).toBeUndefined();
     });
+
+    describe('lock verifier and keychain re-stamp migrations', () => {
+        const MigrationUtilsMock: any = jest.requireMock(
+            '../utils/MigrationUtils'
+        );
+        const verifier = { kdf: 'scrypt', salt: 'aa', hash: 'bb' };
+
+        afterEach(() => {
+            MigrationUtilsMock.migrateLockCredentialsToVerifiers.mockClear();
+            MigrationUtilsMock.restampKeychainAccessibility.mockClear();
+            MigrationUtilsMock.legacySettingsMigrations.mockClear();
+        });
+
+        it('run on the modern path after consolidation, and their results are adopted', async () => {
+            seedSettings({ pin: '1234' });
+            MigrationUtilsMock.migrateLockCredentialsToVerifiers.mockImplementationOnce(
+                async () => ({ pinVerifier: verifier })
+            );
+            const store = new SettingsStore();
+
+            await store.getSettings();
+
+            expect(
+                MigrationUtilsMock.migrateLockCredentialsToVerifiers
+            ).toHaveBeenCalledWith({ pin: '1234' }, false);
+            // the re-stamp sees the lock migration's result, not the snapshot
+            expect(
+                MigrationUtilsMock.restampKeychainAccessibility
+            ).toHaveBeenCalledWith({ pinVerifier: verifier }, false);
+            expect(store.settings).toEqual({ pinVerifier: verifier });
+            expect(store.settingsLoaded).toBe(true);
+        });
+
+        it('run on the synchronizable-partition fallback', async () => {
+            StorageMock.getRawItem.mockImplementation(
+                async (server: string, cloudSync: boolean) =>
+                    cloudSync && server === `zeus:${STORAGE_KEY}`
+                        ? JSON.stringify({ pin: '1234' })
+                        : null
+            );
+            const store = new SettingsStore();
+
+            await store.getSettings();
+
+            expect(
+                MigrationUtilsMock.migrateLockCredentialsToVerifiers
+            ).toHaveBeenCalledWith({ pin: '1234' }, false);
+            expect(
+                MigrationUtilsMock.restampKeychainAccessibility
+            ).toHaveBeenCalled();
+        });
+
+        it('run in-queue inside updateSettings', async () => {
+            seedSettings({ fiat: 'USD' });
+            const store = new SettingsStore();
+
+            await store.updateSettings({ locale: 'en' });
+
+            expect(
+                MigrationUtilsMock.migrateLockCredentialsToVerifiers
+            ).toHaveBeenCalledWith(expect.anything(), true);
+            expect(
+                MigrationUtilsMock.restampKeychainAccessibility
+            ).toHaveBeenCalledWith(expect.anything(), true);
+        });
+
+        it('are left to legacySettingsMigrations on the legacy path', async () => {
+            const EncryptedStorageMock: any = jest.requireMock(
+                'react-native-encrypted-storage'
+            );
+            EncryptedStorageMock.getItem.mockResolvedValueOnce(
+                JSON.stringify({ pin: '1234' })
+            );
+            const store = new SettingsStore();
+
+            await store.getSettings();
+
+            expect(
+                MigrationUtilsMock.legacySettingsMigrations
+            ).toHaveBeenCalled();
+            expect(
+                MigrationUtilsMock.migrateLockCredentialsToVerifiers
+            ).not.toHaveBeenCalled();
+            expect(
+                MigrationUtilsMock.restampKeychainAccessibility
+            ).not.toHaveBeenCalled();
+        });
+    });
 });
 
 // Clipboard readers gate on settingsLoaded, because until a load completes
@@ -1267,7 +1362,9 @@ describe('getLspConfigForNetwork', () => {
 describe('SettingsStore.externalInputAuthRequired', () => {
     const withPin = () => {
         const store = new SettingsStore();
-        store.settings = { pin: '1234' } as any;
+        store.settings = {
+            pinVerifier: { kdf: 'scrypt', salt: 'aa', hash: 'bb' }
+        } as any;
         return store;
     };
 

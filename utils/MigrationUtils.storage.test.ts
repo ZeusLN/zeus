@@ -40,6 +40,10 @@ jest.mock('react-native-keychain', () => {
     const applyFault = (op: KeychainOp, server: string, p: Partition) =>
         mockKeychain.fault ? mockKeychain.fault(op, server, p) : undefined;
     return {
+        ACCESSIBLE: {
+            AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY:
+                'AccessibleAfterFirstUnlockThisDeviceOnly'
+        },
         getInternetCredentials: jest.fn(async (server: string, opts?: any) => {
             const p = partitionOf(opts);
             const injected = applyFault('get', server, p);
@@ -291,6 +295,21 @@ describe('storageMigrationV2', () => {
             expect(server.startsWith('zeus:')).toBe(true);
         }
         expect(Keychain.resetInternetCredentials).not.toHaveBeenCalled();
+    });
+
+    it('writes every copy as this-device-only, so it stays out of backups', async () => {
+        seedLegacy();
+
+        await MigrationUtils.storageMigrationV2(SETTINGS);
+
+        const writes = (Keychain.setInternetCredentials as jest.Mock).mock
+            .calls;
+        expect(writes.length).toBeGreaterThan(0);
+        for (const [, , , opts] of writes) {
+            expect(opts).toMatchObject({
+                accessible: 'AccessibleAfterFirstUnlockThisDeviceOnly'
+            });
+        }
     });
 
     it('keeps the legacy value when a write throws', async () => {

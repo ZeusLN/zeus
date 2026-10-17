@@ -1,5 +1,11 @@
 import React from 'react';
-import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import {
+    act,
+    fireEvent,
+    render,
+    screen,
+    waitFor
+} from '@testing-library/react-native';
 
 // mobx-react's main entry needs react-dom; the stores arrive as props here
 jest.mock('mobx-react', () => ({
@@ -51,10 +57,23 @@ jest.mock('../utils/ThemeUtils', () => ({
     themeColor: jest.fn(() => '#000')
 }));
 
+// The native randombytes module cannot init under jest; back it with node
+// crypto so a real PIN verifier can be derived
+jest.mock('react-native-randombytes', () => ({
+    randomBytes: (length: number) => require('crypto').randomBytes(length)
+}));
+
 import { verifyBiometry } from '../utils/BiometricUtils';
+import * as LockVerifierUtils from '../utils/LockVerifierUtils';
+import { deriveVerifier, VerifierRecord } from '../utils/LockVerifierUtils';
 import Lockscreen from './Lockscreen';
 
 const PIN = '1234';
+let pinVerifier: VerifierRecord;
+
+beforeAll(async () => {
+    pinVerifier = await deriveVerifier(PIN);
+});
 
 const deferred = () => {
     let resolve!: () => void;
@@ -71,7 +90,7 @@ const renderLockscreen = async (
     { biometry = false }: { biometry?: boolean } = {}
 ) => {
     const SettingsStore = {
-        settings: { pin: PIN },
+        settings: { pinVerifier },
         posStatus: 'inactive',
         triggerSettingsRefresh: false,
         isBiometryConfigured: jest.fn(() => biometry),
@@ -100,6 +119,11 @@ const renderLockscreen = async (
 const submitPin = () =>
     fireEvent.press(screen.getByRole('button', { name: 'Submit PIN' }));
 
+// PIN verification is an async scrypt derivation, so a login reaches the
+// attempt reset some time after the PIN is submitted
+const untilCalled = (mock: jest.Mock) =>
+    waitFor(() => expect(mock).toHaveBeenCalled(), { timeout: 5000 });
+
 let errorSpy: jest.SpyInstance;
 
 beforeEach(() => {
@@ -119,6 +143,7 @@ describe('Lockscreen login', () => {
         const updateSettings = jest.fn(() => reset.promise);
         const { navigation } = await renderLockscreen(updateSettings);
         await submitPin();
+        await untilCalled(updateSettings);
 
         expect(updateSettings).toHaveBeenCalledWith({
             authenticationAttempts: 0
@@ -137,6 +162,7 @@ describe('Lockscreen login', () => {
             updateSettings
         );
         await submitPin();
+        await untilCalled(navigation.pop);
 
         expect(SettingsStore.setLoginStatus).toHaveBeenCalledWith(true);
         expect(navigation.pop).toHaveBeenCalledTimes(1);
@@ -150,9 +176,21 @@ describe('Lockscreen login', () => {
         const reset = deferred();
         const updateSettings = jest.fn(() => reset.promise);
         const { navigation } = await renderLockscreen(updateSettings);
+        const verify = jest.spyOn(LockVerifierUtils, 'verifySecret');
         await submitPin();
+        await untilCalled(updateSettings);
+        const verificationsPerAttempt = verify.mock.calls.length;
+
+        // the second submit must not start another verification; checking
+        // the count is what makes this deterministic, since a second scrypt
+        // run would otherwise finish after the assertions below
         await submitPin();
+        await act(async () => {});
+        expect(verify).toHaveBeenCalledTimes(verificationsPerAttempt);
+
         await act(async () => reset.resolve());
+        await untilCalled(navigation.pop);
+        verify.mockRestore();
 
         expect(updateSettings).toHaveBeenCalledTimes(1);
         expect(navigation.pop).toHaveBeenCalledTimes(1);
