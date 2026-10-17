@@ -15,9 +15,21 @@ export default class LnurlPayMetadata extends React.Component<LnurlPayMetadataPr
     render() {
         const { metadata, showArrow = true, hideImage = false } = this.props;
 
+        // The string comes from the LNURL service and is rendered again
+        // from storage in the payment details, so only keep what LUD-06
+        // defines: an array of [type, content] string pairs. Anything else
+        // is shown as no metadata rather than thrown from render().
         let keypairs: Array<Array<string>>;
         try {
-            keypairs = JSON.parse(metadata);
+            const parsed = JSON.parse(metadata);
+            keypairs = Array.isArray(parsed)
+                ? parsed.filter(
+                      (pair: any) =>
+                          Array.isArray(pair) &&
+                          typeof pair[0] === 'string' &&
+                          typeof pair[1] === 'string'
+                  )
+                : [];
         } catch (err) {
             keypairs = [];
         }
