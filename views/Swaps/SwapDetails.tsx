@@ -258,7 +258,8 @@ export default class SwapDetails extends React.Component<
         const { SwapStore } = this.props;
 
         if (!createdResponse || !createdResponse.id) {
-            console.error('Invalid response:', createdResponse);
+            // the swap holds the refund key or preimage; don't log it
+            console.error('Invalid response: swap has no ID');
             this.setState({ error: 'Invalid response received.' });
             return;
         }
@@ -448,7 +449,8 @@ export default class SwapDetails extends React.Component<
         const { SwapStore } = this.props;
 
         if (!createdResponse || !createdResponse.id) {
-            console.error('Invalid response:', createdResponse);
+            // the swap holds the refund key or preimage; don't log it
+            console.error('Invalid response: swap has no ID');
             this.setState({ error: 'Invalid response received.' });
             return;
         }
