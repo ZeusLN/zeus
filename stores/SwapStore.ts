@@ -68,6 +68,9 @@ interface SubmarineSwapInfo {
 }
 
 interface ReverseSwapInfo {
+    // identifies the quote; sent back on creation so the provider refuses
+    // a swap priced with fees other than the ones the user saw
+    hash?: string;
     fees?: {
         percentage?: number;
         minerFees?: {
@@ -80,6 +83,16 @@ interface ReverseSwapInfo {
         maximal?: number;
     };
 }
+
+// Error the provider returns when the pair hash sent on creation no
+// longer matches its current quote
+const INVALID_PAIR_HASH_ERROR = 'invalid pair hash';
+
+// Boltz computes the service fee as Math.ceil(percentage / 100 * amount)
+// in floating point, which can land just above a whole number and charge
+// one sat more than the exact fee (0.07% of 1,000,000 sats gives 701).
+// The lockup minimum allows for that one sat.
+const REVERSE_LOCKUP_ROUNDING_SLACK = 1;
 
 // The fields a rescued swap takes from the host's /swap/restore response,
 // at the top level and inside claimDetails/refundDetails
@@ -332,8 +345,14 @@ export default class SwapStore {
             .replace(/\b[a-z]/g, (char) => char.toUpperCase()); // Capitalize first letter of each word
     };
 
+    // Number of the latest getSwapFees call. An older call that finishes
+    // later must not replace the quote the Swaps screen shows.
+    private swapFeesRequest = 0;
+
     @action
     public getSwapFees = async () => {
+        const request = ++this.swapFeesRequest;
+        const superseded = () => request !== this.swapFeesRequest;
         this.loading = true;
         this.apiError = '';
         const host = this.getHost;
@@ -344,6 +363,7 @@ export default class SwapStore {
                 `${host}/swap/submarine`,
                 this.getHeaders
             );
+            if (superseded()) return;
             const status = response.info().status;
             if (status == 200) {
                 const data = response.json();
@@ -365,6 +385,7 @@ export default class SwapStore {
                 return;
             }
         } catch (e) {
+            if (superseded()) return;
             console.error('Error fetching submarine swap fees:', e);
             this.apiError = localeString('views.Swaps.fetchFeesFailed');
         }
@@ -375,6 +396,7 @@ export default class SwapStore {
                 `${host}/swap/reverse`,
                 this.getHeaders
             );
+            if (superseded()) return;
             const status = response.info().status;
             if (status == 200) {
                 const data = response.json();
@@ -396,6 +418,7 @@ export default class SwapStore {
                 return;
             }
         } catch (e) {
+            if (superseded()) return;
             console.error('Error fetching reverse swap fees:', e);
             this.apiError = localeString('views.Swaps.fetchFeesFailed');
         }
@@ -581,6 +604,12 @@ export default class SwapStore {
         const { implementation } = this.settingsStore;
         const { nodeInfo } = this.nodeInfoStore;
         const nodePubkey = nodeInfo.nodeId;
+        // Read the quote the Swaps screen showed before the first await:
+        // a getSwapFees call that finishes during creation replaces
+        // reverseInfo, and the checks below must use the quote the user saw
+        const fees = this.reverseInfo?.fees;
+        const pairHash = this.reverseInfo?.hash;
+        const claimMinerFee = this.claimMinerFee;
         try {
             initEccLib(ecc);
             console.log('Creating reverse swap using rescue key...');
@@ -595,7 +624,8 @@ export default class SwapStore {
                 from: 'BTC',
                 claimPublicKey: Buffer.from(keys.publicKey).toString('hex'),
                 preimageHash: crypto.sha256(preimage).toString('hex'),
-                ...(this.referralId && { referralId: this.referralId })
+                ...(this.referralId && { referralId: this.referralId }),
+                ...(typeof pairHash === 'string' && { pairHash })
             });
 
             console.log('Data before sending to API:', data);
@@ -611,6 +641,21 @@ export default class SwapStore {
 
             const responseData = JSON.parse(response.data);
             console.log('Created reverse swap:', responseData);
+
+            // The provider's fees changed since the quote: fetch the new
+            // quote so the Swaps screen shows it, and ask the user to retry
+            if (responseData?.error === INVALID_PAIR_HASH_ERROR) {
+                await this.getSwapFees();
+                runInAction(() => {
+                    if (!this.apiError) {
+                        this.apiError = localeString(
+                            'views.Swaps.swapFeesChanged'
+                        );
+                    }
+                    this.loading = false;
+                });
+                return;
+            }
 
             // Handle API errors
             if (responseData?.error) {
@@ -650,18 +695,24 @@ export default class SwapStore {
             // Verify the rest of the response before saving or paying: the
             // swap tree must pay our key against our preimage hash, the
             // lockup address must be that tree's taproot output, and the
-            // provider must lock up more than the amount the Swaps screen
-            // showed. Otherwise a host could point the claim at an output
+            // provider must lock up at least the amount the Swaps screen
+            // showed plus the claim fee, which the claim pays out of the
+            // lockup, less REVERSE_LOCKUP_ROUNDING_SLACK. Otherwise a host could point the claim at an output
             // it controls and still learn the preimage when we claim.
-            const fees = this.reverseInfo?.fees;
             const minOnchainAmount = calculateReceiveAmount(
                 new BigNumber(invoiceAmount),
                 fees?.percentage || 0,
-                new BigNumber(fees?.minerFees?.claim || 0)
+                new BigNumber(claimMinerFee)
                     .plus(fees?.minerFees?.lockup || 0)
                     .toNumber(),
                 true
-            ).toNumber();
+            )
+                // neither the slack nor a negative claim quote may lower
+                // the minimum below the amount shown
+                .plus(
+                    Math.max(claimMinerFee - REVERSE_LOCKUP_ROUNDING_SLACK, 0)
+                )
+                .toNumber();
             const responseCheck = verifyReverseSwapResponse({
                 swapTree: responseData.swapTree,
                 lockupAddress: responseData.lockupAddress,
@@ -710,7 +761,7 @@ export default class SwapStore {
             responseData.type = SwapType.Reverse;
             responseData.preimage = preimage;
             responseData.destinationAddress = destinationAddress;
-            responseData.claimMinerFee = this.claimMinerFee;
+            responseData.claimMinerFee = claimMinerFee;
 
             await this.saveReverseSwaps(
                 responseData,

@@ -246,6 +246,7 @@ export type ReverseSwapResponseCheck =
               | 'claim-leaf-mismatch'
               | 'refund-leaf-mismatch'
               | 'lockup-address-mismatch'
+              | 'onchain-amount-invalid'
               | 'onchain-amount-low';
       };
 
@@ -253,9 +254,11 @@ export type ReverseSwapResponseCheck =
  * Verifies the provider's reverse swap details against what ZEUS chose:
  * the claim leaf must pay our key against our preimage hash, the refund
  * leaf must pay the server key, and the lockup address must be the
- * taproot output of exactly that tree. When minOnchainAmount is given,
- * the provider must also lock up more than that (the amount the Swaps
- * screen showed the user they would receive).
+ * taproot output of exactly that tree. A given onchainAmount must be a
+ * whole, positive number of sats. When minOnchainAmount is given, the
+ * provider must also lock up at least that much (the amount the Swaps
+ * screen showed the user they would receive, plus the claim fee that is
+ * paid out of the lockup).
  *
  * Without this a provider can hand out a lockup address it controls, or
  * a tree we can't claim from, and still get the preimage when we claim.
@@ -351,9 +354,19 @@ export const verifyReverseSwapResponse = ({
         return { valid: false, reason: 'lockup-address-mismatch' };
     }
 
+    // The stored amount is the lockup floor at claim time, so it has to
+    // survive the JSON round trip: 1e999 parses to Infinity and is saved
+    // as null, and a numeric string or array would pass Number() here but
+    // compare differently later. Rescued swaps store no amount.
+    if (
+        onchainAmount != null &&
+        (!Number.isSafeInteger(onchainAmount) || onchainAmount <= 0)
+    ) {
+        return { valid: false, reason: 'onchain-amount-invalid' };
+    }
     if (
         minOnchainAmount != null &&
-        !(Number(onchainAmount) > minOnchainAmount)
+        !(onchainAmount != null && onchainAmount >= minOnchainAmount)
     ) {
         return { valid: false, reason: 'onchain-amount-low' };
     }

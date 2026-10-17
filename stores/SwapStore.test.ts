@@ -332,3 +332,71 @@ describe('SwapStore host-change rate refetch', () => {
         expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
     });
 });
+
+describe('SwapStore.getSwapFees', () => {
+    beforeEach(() => jest.clearAllMocks());
+    // drop queued responses a superseded call never asked for
+    afterEach(() => (ReactNativeBlobUtil.fetch as jest.Mock).mockReset());
+
+    const ratesResponse = (claim: number) => ({
+        info: () => ({ status: 200 }),
+        json: () => ({
+            BTC: {
+                BTC: {
+                    fees: { percentage: 0.5, minerFees: { claim, lockup: 400 } }
+                }
+            }
+        })
+    });
+
+    it('ignores an earlier call that finishes after a later one', async () => {
+        const store = buildStore();
+        const fetchMock = ReactNativeBlobUtil.fetch as jest.Mock;
+
+        // the first call's submarine request stays open
+        let releaseFirst: (value: any) => void = () => {};
+        fetchMock.mockImplementationOnce(
+            () => new Promise((resolve) => (releaseFirst = resolve))
+        );
+        const first = store.getSwapFees();
+
+        fetchMock
+            .mockResolvedValueOnce(ratesResponse(300))
+            .mockResolvedValueOnce(ratesResponse(300));
+        await store.getSwapFees();
+        expect(store.reverseInfo.fees?.minerFees?.claim).toBe(300);
+        expect(store.loading).toBe(false);
+
+        // the first call now completes with another quote
+        fetchMock.mockResolvedValueOnce(ratesResponse(-97800));
+        releaseFirst(ratesResponse(-97800));
+        await first;
+
+        expect(store.reverseInfo.fees?.minerFees?.claim).toBe(300);
+        expect(store.loading).toBe(false);
+        // it stopped before asking for the reverse rates again
+        expect(fetchMock).toHaveBeenCalledTimes(3);
+    });
+
+    it('ignores the error of an earlier call that fails after a later one', async () => {
+        const store = buildStore();
+        const fetchMock = ReactNativeBlobUtil.fetch as jest.Mock;
+
+        let failFirst: (reason: any) => void = () => {};
+        fetchMock.mockImplementationOnce(
+            () => new Promise((_, reject) => (failFirst = reject))
+        );
+        const first = store.getSwapFees();
+
+        fetchMock
+            .mockResolvedValueOnce(ratesResponse(300))
+            .mockResolvedValueOnce(ratesResponse(300));
+        await store.getSwapFees();
+
+        failFirst(new Error('timeout'));
+        await first;
+
+        expect(store.apiError).toBe('');
+        expect(store.reverseInfo.fees?.minerFees?.claim).toBe(300);
+    });
+});
