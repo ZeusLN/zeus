@@ -1379,6 +1379,35 @@ describe('handleAnything', () => {
         });
     });
 
+    describe('zeuscontact', () => {
+        it('opens the card without the images it names', async () => {
+            const card = `zeuscontact:${JSON.stringify({
+                contactId: '1',
+                name: 'Coffee shop',
+                description: '',
+                lnAddress: ['tips@coffee.example'],
+                photo: 'http://192.168.1.1/cgi-bin/reboot',
+                banner: 'https://beacon.example/seen.png'
+            })}`;
+            mockProcessBIP21Uri.mockReturnValue({ value: card });
+
+            const result = await handleAnything(card);
+
+            expect(result).toEqual([
+                'ContactDetails',
+                {
+                    nostrContact: {
+                        contactId: '1',
+                        name: 'Coffee shop',
+                        description: '',
+                        lnAddress: ['tips@coffee.example']
+                    },
+                    isNostrContact: true
+                }
+            ]);
+        });
+    });
+
     describe('npub', () => {
         const NPUB =
             'npub1sg6plzptd64u62a878hep2kev88swjh3tw00gjsfl8f237lmu63q0uf63m';
