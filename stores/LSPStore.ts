@@ -44,6 +44,15 @@ const CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS = 7000;
 
 const FREE_ORDER_POLL_INTERVAL_MS = 5000;
 
+// The fields of an lsps7.get_extendable_channels entry that the channel views
+// read while rendering. The answer is LSP-controlled, so only keep entries the
+// views can draw.
+const isBlockCount = (value: any) => value == null || Number.isFinite(value);
+const isExtendableChannel = (extendableChannel: any) =>
+    typeof extendableChannel?.short_channel_id === 'string' &&
+    isBlockCount(extendableChannel.expiration_block) &&
+    isBlockCount(extendableChannel.max_channel_extension_expiry_blocks);
+
 export default class LSPStore {
     @observable public info: any = {};
     @observable public zeroConfFee: number | undefined;
@@ -953,8 +962,12 @@ export default class LSPStore {
                 this.getExtendableChannelsError = true;
             } else {
                 this.getExtendableChannelsError = false;
-                this.getExtendableChannelsData =
-                    data?.result?.extendable_channels;
+                const extendableChannels = data?.result?.extendable_channels;
+                this.getExtendableChannelsData = Array.isArray(
+                    extendableChannels
+                )
+                    ? extendableChannels.filter(isExtendableChannel)
+                    : [];
             }
             this.getExtendableChannelsResponseResolver?.();
             return true;
