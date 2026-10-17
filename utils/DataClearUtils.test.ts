@@ -633,6 +633,48 @@ describe('legacy xprv cache purge (KEY-006 follow-up)', () => {
 
         expect(mockedDerive).not.toHaveBeenCalled();
     });
+
+    // The builds that wrote the cache named it after
+    // NodeInfoStore.nodeInfo.nodeId, which is undefined until LND is up
+    describe('cache written before node info had loaded', () => {
+        const NO_PUBKEY_XPRV_KEY = 'undefined-extended-private-keys';
+
+        it('is cleared on single-wallet deletion', async () => {
+            await clearNodeKeychainData({
+                implementation: 'embedded-lnd',
+                lndDir: 'lnd-abc',
+                seedPhrase
+            });
+
+            expect(removedKeys()).toContain(NO_PUBKEY_XPRV_KEY);
+        });
+
+        it('is cleared when the pubkey cannot be derived', async () => {
+            mockedDerive.mockRejectedValueOnce(
+                new Error('Decryption failed. Invalid passphrase?')
+            );
+
+            await clearNodeKeychainData({
+                implementation: 'embedded-lnd',
+                lndDir: 'lnd-abc',
+                seedPhrase
+            });
+
+            expect(removedKeys()).toContain(NO_PUBKEY_XPRV_KEY);
+        });
+
+        it('is left alone when a remote node is deleted', async () => {
+            await clearNodeKeychainData({ implementation: 'lnd' });
+
+            expect(removedKeys()).not.toContain(NO_PUBKEY_XPRV_KEY);
+        });
+
+        it('is cleared by a full wipe with no embedded wallet config left', async () => {
+            await clearAllData();
+
+            expect(removedKeys()).toContain(NO_PUBKEY_XPRV_KEY);
+        });
+    });
 });
 
 describe('clearAllData keychain backing store deletion (Android)', () => {
