@@ -109,7 +109,11 @@ afterEach(() => {
 
 // Opens the details of a reverse swap waiting for its lockup. Mounting
 // subscribes to the host's updates over the mocked WebSocket.
-const renderView = async (swapData: any = {}) => {
+const renderView = async (
+    swapData: any = {},
+    params: any = {},
+    props: any = {}
+) => {
     const store = {
         claimMinerFee: 100,
         getSwapFees: jest.fn(),
@@ -136,12 +140,14 @@ const renderView = async (swapData: any = {}) => {
                             destinationAddress: 'destination',
                             ...swapData
                         },
-                        endpoint: 'https://provider.test/v2'
+                        endpoint: 'https://provider.test/v2',
+                        ...params
                     }
                 },
                 NodeInfoStore: { nodeInfo: { isTestNet: false } },
                 SwapStore: store,
-                InvoicesStore: {}
+                InvoicesStore: {},
+                ...props
             } as any)}
         />
     );
@@ -213,17 +219,16 @@ describe('SwapDetails reverse claim', () => {
         }
     );
 
-    it('checks after a delayed fee lookup, immediately before the native claim', async () => {
-        let resolveFees!: () => void;
-        const fees = new Promise<void>((resolve) => {
-            resolveFees = resolve;
+    it('checks after a delayed address lookup, immediately before the native claim', async () => {
+        let resolveAddress!: (address: string) => void;
+        const address = new Promise<string>((resolve) => {
+            resolveAddress = resolve;
         });
-        const { store } = await renderView();
-        store.claimMinerFee = 0;
-        store.getSwapFees.mockReturnValue(fees);
+        const { store } = await renderView({ imported: true });
+        store.resolveClaimAddress.mockReturnValue(address);
 
-        // the update handler waits on the fee lookup, so it is not awaited
-        // until the lookup is released
+        // the update handler waits on the address lookup, so it is not
+        // awaited until the lookup is released
         let update!: Promise<void>;
         await act(async () => {
             update = socket.onmessage({
@@ -238,7 +243,7 @@ describe('SwapDetails reverse claim', () => {
                 })
             });
         });
-        expect(store.getSwapFees).toHaveBeenCalled();
+        expect(store.resolveClaimAddress).toHaveBeenCalled();
         expect(store.verifyReverseLockup).not.toHaveBeenCalled();
 
         store.verifyReverseLockup.mockResolvedValue({
@@ -246,7 +251,7 @@ describe('SwapDetails reverse claim', () => {
             reason: 'refund-deadline'
         });
         await act(async () => {
-            resolveFees();
+            resolveAddress('bc1qwallet');
             await update;
         });
 
@@ -285,6 +290,20 @@ describe('SwapDetails reverse claim', () => {
         expect(nativeClaim).toHaveBeenCalledTimes(1);
     });
 
+    it('builds the claim without the host endpoint', async () => {
+        await renderView();
+        nativeClaim.mockResolvedValue(undefined);
+
+        await sendConfirmedLockup();
+
+        // with the host's endpoint the native claim would post the
+        // preimage there before broadcasting
+        expect(
+            (ReverseClaimTransaction.build as jest.Mock).mock.calls[0][0]
+        ).not.toHaveProperty('endpoint');
+        expect(nativeClaim).toHaveBeenCalledTimes(1);
+    });
+
     it('claims a swap created on this device to the address picked for it', async () => {
         await renderView({ destinationAddress: 'bc1qpicked' });
         nativeClaim.mockResolvedValue(undefined);
@@ -292,6 +311,166 @@ describe('SwapDetails reverse claim', () => {
         await sendConfirmedLockup();
 
         expect(claimedTo()).toBe('bc1qpicked');
+    });
+});
+
+describe('SwapDetails reverse claim fee', () => {
+    const claimedFee = () =>
+        (ReverseClaimTransaction.build as jest.Mock).mock.calls[0][0].minerFee;
+
+    const claim = async (swapData: any, params: any = {}) => {
+        const view = await renderView(swapData, params);
+        nativeClaim.mockResolvedValue(undefined);
+        await sendConfirmedLockup();
+        return view;
+    };
+
+    it('raises a 1 sat claim fee to the rate on the largest claim', async () => {
+        // a swap stored before the fee was decided at creation
+        await claim({ claimMinerFee: 1 }, { fee: '25' });
+
+        expect(claimedFee()).toBe(25 * 152);
+        expect(nativeClaim).toHaveBeenCalledTimes(1);
+    });
+
+    it('pays the fee decided at creation', async () => {
+        await claim({ claimMinerFee: 4000, claimFeeRate: 25 }, { fee: '25' });
+
+        expect(claimedFee()).toBe(4000);
+    });
+
+    it('uses the rate stored with a swap reopened from the list', async () => {
+        // reopened from the list or Activity: no rate in the route
+        await claim({ claimMinerFee: 1, claimFeeRate: 25 });
+
+        expect(claimedFee()).toBe(25 * 152);
+    });
+
+    it('claims a swap with no stored fee at the rate, not the current quote', async () => {
+        const { store } = await renderView({}, { fee: '10' });
+        store.claimMinerFee = 99999;
+        nativeClaim.mockResolvedValue(undefined);
+
+        await sendConfirmedLockup();
+
+        expect(claimedFee()).toBe(10 * 152);
+        expect(store.getSwapFees).not.toHaveBeenCalled();
+    });
+
+    it('uses the current mempool rate for a swap with no stored rate', async () => {
+        const FeeStore = {
+            getOnchainFeesviaMempool: jest
+                .fn()
+                .mockResolvedValue({ fastestFee: 30 })
+        };
+        await renderView({ claimMinerFee: 1 }, {}, { FeeStore });
+        nativeClaim.mockResolvedValue(undefined);
+
+        await sendConfirmedLockup();
+
+        expect(claimedFee()).toBe(30 * 152);
+    });
+
+    it('does not look up a rate for a swap that has one stored', async () => {
+        const FeeStore = { getOnchainFeesviaMempool: jest.fn() };
+        await renderView(
+            { claimMinerFee: 3800, claimFeeRate: 25 },
+            {},
+            { FeeStore }
+        );
+        nativeClaim.mockResolvedValue(undefined);
+
+        await sendConfirmedLockup();
+
+        expect(claimedFee()).toBe(3800);
+        expect(FeeStore.getOnchainFeesviaMempool).not.toHaveBeenCalled();
+    });
+
+    it('falls back to 2 sat/vB when no rate is stored or available', async () => {
+        const FeeStore = {
+            getOnchainFeesviaMempool: jest
+                .fn()
+                .mockRejectedValue(new Error('offline'))
+        };
+        await renderView({ claimMinerFee: 1 }, {}, { FeeStore });
+        nativeClaim.mockResolvedValue(undefined);
+
+        await sendConfirmedLockup();
+
+        expect(claimedFee()).toBe(2 * 152);
+    });
+
+    it('does not claim with a stored fee above the maximum', async () => {
+        await claim({ claimMinerFee: 2000 * 152 + 1, claimFeeRate: 25 });
+
+        expect(nativeClaim).not.toHaveBeenCalled();
+        expect(errorShown()).toBe('views.SwapDetails.claimFailed');
+    });
+
+    it('shows and claims the fee at the current mempool rate, looked up once', async () => {
+        const FeeStore = {
+            getOnchainFeesviaMempool: jest
+                .fn()
+                .mockResolvedValue({ fastestFee: 30 })
+        };
+        const { store } = await renderView(
+            { claimMinerFee: 1, onchainAmount: 99100 },
+            {},
+            { FeeStore }
+        );
+
+        // the amount shown already uses the rate the claim will pay
+        expect(store.getReverseSwapReceiveAmount).toHaveBeenLastCalledWith(
+            99100,
+            30 * 152
+        );
+
+        nativeClaim.mockResolvedValue(undefined);
+        await sendConfirmedLockup();
+
+        expect(claimedFee()).toBe(30 * 152);
+        expect(FeeStore.getOnchainFeesviaMempool).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+        ['fails', jest.fn().mockRejectedValue(new Error('offline'))],
+        [
+            'returns no usable rate',
+            jest.fn().mockResolvedValue({ fastestFee: 0 })
+        ]
+    ])(
+        'shows and claims the 2 sat/vB floor when the rate lookup %s',
+        async (_, getOnchainFeesviaMempool) => {
+            const { store } = await renderView(
+                { claimMinerFee: 1, onchainAmount: 99100 },
+                {},
+                { FeeStore: { getOnchainFeesviaMempool } }
+            );
+
+            expect(store.getReverseSwapReceiveAmount).toHaveBeenLastCalledWith(
+                99100,
+                2 * 152
+            );
+
+            nativeClaim.mockResolvedValue(undefined);
+            await sendConfirmedLockup();
+
+            expect(claimedFee()).toBe(2 * 152);
+            expect(nativeClaim).toHaveBeenCalledTimes(1);
+        }
+    );
+
+    it('shows the amount the claim pays out', async () => {
+        const { store } = await renderView({
+            claimMinerFee: 1,
+            claimFeeRate: 25,
+            onchainAmount: 99100
+        });
+
+        expect(store.getReverseSwapReceiveAmount).toHaveBeenCalledWith(
+            99100,
+            25 * 152
+        );
     });
 });
 

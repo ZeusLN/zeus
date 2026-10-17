@@ -645,7 +645,6 @@ describe('rescued reverse swap, from storage to claim', () => {
 
         const claim = ReverseClaimTransaction.build({
             swap: new Swap({ ...getStored(SWAPS_KEY)[0] }),
-            endpoint: 'https://swaps.example.com',
             transactionHex: '00',
             feeRate: 2,
             minerFee: 200,

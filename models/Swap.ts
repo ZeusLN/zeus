@@ -51,7 +51,10 @@ export default class Swap extends BaseModel {
     acceptZeroConf?: boolean;
     address?: string;
     bip21?: string;
+    // a reverse swap's claim fee in sats, and the sat/vB rate it was
+    // decided at, both fixed when the swap is created
     claimMinerFee?: number;
+    claimFeeRate?: number;
     failureReason?: string;
     imported?: boolean;
     claimAddressFromWallet?: boolean;

@@ -28,6 +28,10 @@ import { Row } from '../../components/layout/Row';
 import Text from '../../components/Text';
 
 import BackendUtils from '../../utils/BackendUtils';
+import {
+    isPlausibleSatPerVbyte,
+    reverseClaimMinerFee
+} from '../../utils/FeeUtils';
 import handleAnything from '../../utils/handleAnything';
 import { localeString, pascalToHumanReadable } from '../../utils/LocaleUtils';
 import { sleep } from '../../utils/SleepUtils';
@@ -37,6 +41,7 @@ import { numberWithCommas } from '../../utils/UnitsUtils';
 import { swapWebSocketUrl } from '../../utils/SwapUtils';
 import UrlUtils from '../../utils/UrlUtils';
 
+import FeeStore from '../../stores/FeeStore';
 import InvoicesStore from '../../stores/InvoicesStore';
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SwapStore, { ReverseLockupCheck } from '../../stores/SwapStore';
@@ -65,6 +70,7 @@ interface SwapDetailsProps {
             fee: string;
         }
     >;
+    FeeStore?: FeeStore;
     InvoicesStore?: InvoicesStore;
     NodeInfoStore?: NodeInfoStore;
     SwapStore?: SwapStore;
@@ -79,12 +85,14 @@ interface SwapDetailsState {
     swapTreeToggle: boolean;
     swapData: Swap;
     lockupNotice: string | null;
+    // the current rate, for a reverse swap with none stored
+    currentClaimFeeRate?: number;
 }
 
 // how often to re-check an unconfirmed or unreachable lockup
 const LOCKUP_RECHECK_MS = 60 * 1000;
 
-@inject('InvoicesStore', 'NodeInfoStore', 'SwapStore')
+@inject('FeeStore', 'InvoicesStore', 'NodeInfoStore', 'SwapStore')
 @observer
 export default class SwapDetails extends React.Component<
     SwapDetailsProps,
@@ -154,16 +162,8 @@ export default class SwapDetails extends React.Component<
                 return;
             }
 
-            // legacy swaps predate claimMinerFee being stored at
-            // creation; fetch rates so the claim fee does not fall
-            // back to zero
-            if (
-                swapData.claimMinerFee == null &&
-                !this.props.SwapStore?.claimMinerFee
-            ) {
-                this.props.SwapStore?.getSwapFees();
-            }
-
+            // the claim awaits this same lookup
+            this.loadCurrentClaimFeeRate();
             this.getReverseSwapUpdates(swapData, swapData.isSubmarineSwap);
         }
     }
@@ -489,7 +489,6 @@ export default class SwapDetails extends React.Component<
                 const result = await this.createReverseClaimTransaction(
                     createdResponse,
                     keys,
-                    endpoint,
                     swapData.lockupAddress!,
                     swapData.claimDestinationAddress || '',
                     swapData.preimage,
@@ -819,13 +818,58 @@ export default class SwapDetails extends React.Component<
         return destinationAddress;
     };
 
+    // The fee the reverse claim pays. A swap created since the fee is
+    // decided at creation stores it with its rate, so this returns the
+    // stored fee. One stored before that, or a rescued swap, pays at least
+    // currentRate (else 2 sat/vB) on the largest claim.
+    claimMinerFee = (currentRate?: number): number | undefined => {
+        const { swapData } = this.state;
+        const { fee } = this.props.route.params;
+        return reverseClaimMinerFee(
+            swapData?.claimMinerFee,
+            swapData?.claimFeeRate ??
+                (fee ? Number(fee) : undefined) ??
+                currentRate ??
+                2
+        );
+    };
+
+    private currentClaimFeeRateLookup?: Promise<number | undefined>;
+
+    // The rate the Swaps screen would pre-fill now, for a swap that has
+    // none stored. Looked up once and kept in state, so the amount shown
+    // and the claim use the same rate. Undefined if none is needed or the
+    // lookup fails, and then both use the 2 sat/vB floor.
+    loadCurrentClaimFeeRate = (): Promise<number | undefined> => {
+        if (!this.currentClaimFeeRateLookup) {
+            this.currentClaimFeeRateLookup = this.fetchCurrentClaimFeeRate();
+        }
+        return this.currentClaimFeeRateLookup;
+    };
+
+    fetchCurrentClaimFeeRate = async (): Promise<number | undefined> => {
+        const { swapData } = this.state;
+        if (swapData?.claimFeeRate != null || this.props.route.params.fee) {
+            return undefined;
+        }
+        try {
+            const fees = await this.props.FeeStore?.getOnchainFeesviaMempool();
+            const rate = fees?.fastestFee;
+            if (!isPlausibleSatPerVbyte(rate)) return undefined;
+            this.setState({ currentClaimFeeRate: Number(rate) });
+            return Number(rate);
+        } catch (e) {
+            console.log('Error fetching fee rates for claim', e);
+            return undefined;
+        }
+    };
+
     /**
      * Create and send a claim transaction for a reverse swap
      */
     createReverseClaimTransaction = async (
         createdResponse: any,
         keys: any,
-        endpoint: string,
         lockupAddress: string,
         destinationAddress: string,
         preimage: any,
@@ -839,21 +883,15 @@ export default class SwapDetails extends React.Component<
         try {
             const { SwapStore } = this.props;
 
-            // legacy swaps predate claimMinerFee being stored at
-            // creation; the mount-time rates prefetch may not have
-            // resolved yet, so wait for it here rather than building
-            // the claim with a zero miner fee
-            let minerFee =
-                this.state.swapData?.claimMinerFee ??
-                SwapStore?.claimMinerFee ??
-                0;
-            if (!minerFee) {
-                try {
-                    await SwapStore?.getSwapFees();
-                    minerFee = SwapStore?.claimMinerFee ?? 0;
-                } catch (e) {
-                    console.log('Error fetching rates for claim fee', e);
-                }
+            const minerFee = this.claimMinerFee(
+                await this.loadCurrentClaimFeeRate()
+            );
+            if (minerFee === undefined) {
+                this.setState({
+                    error: localeString('views.SwapDetails.claimFailed'),
+                    loading: false
+                });
+                return false;
             }
 
             // a rescued swap arrives without one, and a claim cannot be
@@ -877,7 +915,6 @@ export default class SwapDetails extends React.Component<
                     lockupAddress,
                     destinationAddress: claimAddress
                 }),
-                endpoint,
                 transactionHex,
                 feeRate: Number(fee || 2),
                 minerFee,
@@ -1192,7 +1229,10 @@ export default class SwapDetails extends React.Component<
                                         sats={
                                             SwapStore?.getReverseSwapReceiveAmount(
                                                 swapData?.getAmount,
-                                                swapData?.claimMinerFee
+                                                this.claimMinerFee(
+                                                    this.state
+                                                        .currentClaimFeeRate
+                                                ) ?? swapData?.claimMinerFee
                                             ) || 0
                                         }
                                         sensitive
