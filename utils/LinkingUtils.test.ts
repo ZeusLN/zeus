@@ -122,3 +122,67 @@ describe('LinkingUtils.handleDeepLink', () => {
         expect(navigation.popTo).toHaveBeenCalledWith('PaymentRequest', {});
     });
 });
+
+// processSharedQRImageFast clears the intent when it reads it. A second
+// clear here would discard a share that arrived between the two.
+describe('LinkingUtils share intents', () => {
+    const { Linking, NativeModules, Platform } = require('react-native');
+    const { processSharedQRImageFast } = require('./ShareIntentProcessor');
+    const originalOS = Platform.OS;
+    const payload = {
+        base64Image: 'QRIMAGE',
+        requiresAuth: true,
+        requiresWalletSelection: false
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        LinkingUtils.resetShareIntentFlag();
+        NativeModules.MobileTools = {
+            getIntentNfcData: jest.fn().mockResolvedValue(null),
+            clearSharedIntent: jest.fn().mockResolvedValue(true)
+        };
+        processSharedQRImageFast.mockResolvedValue({
+            success: true,
+            route: 'ShareIntentProcessing',
+            params: payload
+        });
+    });
+
+    afterEach(() => {
+        Platform.OS = originalOS;
+    });
+
+    it('hands an Android share to the processing screen without clearing it again', async () => {
+        Platform.OS = 'android';
+        const navigation = makeNavigation(['Wallet']);
+
+        await LinkingUtils.handleAndroidIntents(navigation as any);
+
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'ShareIntentProcessing',
+            payload
+        );
+        expect(
+            NativeModules.MobileTools.clearSharedIntent
+        ).not.toHaveBeenCalled();
+    });
+
+    it('hands an iOS share URL to the processing screen without clearing it again', async () => {
+        Platform.OS = 'ios';
+        jest.spyOn(Linking, 'getInitialURL').mockResolvedValue(
+            'zeusln://share'
+        );
+        const navigation = makeNavigation(['Wallet']);
+
+        await LinkingUtils.handleInitialUrl(navigation as any);
+
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'ShareIntentProcessing',
+            payload
+        );
+        expect(
+            NativeModules.MobileTools.clearSharedIntent
+        ).not.toHaveBeenCalled();
+    });
+});

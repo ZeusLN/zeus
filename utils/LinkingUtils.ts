@@ -50,14 +50,9 @@ class LinkingUtils {
                 if (shareIntentResult && shareIntentResult.success) {
                     this.shareIntentProcessed = true;
 
-                    try {
-                        await NativeModules.MobileTools.clearSharedIntent();
-                    } catch (e) {
-                        console.warn('Failed to clear intent', e);
-                    }
-
-                    // the gates ride on the params from
-                    // processSharedQRImageFast
+                    // processSharedQRImageFast has already cleared the
+                    // intent; clearing again here could discard a newer
+                    // share that arrived since. The gates ride on its params
                     navigation.navigate(
                         'ShareIntentProcessing',
                         shareIntentResult.params
@@ -92,16 +87,8 @@ class LinkingUtils {
             if (shareIntentResult && shareIntentResult.success) {
                 this.shareIntentProcessed = true;
 
-                // Clear the Android share intent immediately to prevent reprocessing
-                try {
-                    await NativeModules.MobileTools.clearSharedIntent();
-                } catch (clearError) {
-                    console.warn(
-                        '[LinkingUtils] Failed to clear share intent:',
-                        clearError
-                    );
-                }
-
+                // processSharedQRImageFast has already cleared the intent;
+                // clearing again here could discard a newer share.
                 // Always show processing screen immediately for share intents
                 // Background sync and authentication will be handled by the
                 // processing screen, on the gates that ride along with the
