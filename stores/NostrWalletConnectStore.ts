@@ -2853,11 +2853,7 @@ export default class NostrWalletConnectStore {
             amount: amountSats.toString()
         });
 
-        if (
-            !cashuInvoice ||
-            cashuInvoice.isFailed ||
-            this.cashuStore.paymentError
-        ) {
+        if (!cashuInvoice || cashuInvoice.isFailed) {
             const paymentErrorMsg =
                 this.cashuStore.paymentErrorMsg ||
                 localeString(

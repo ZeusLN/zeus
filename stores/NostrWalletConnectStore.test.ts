@@ -2797,7 +2797,11 @@ describe('NostrWalletConnectStore cashu pay_invoice preimage', () => {
     // Drives handleCashuPayInvoice past its guards to the response shape.
     // The melt has already succeeded by that point, so only the fields the
     // response is built from need to be real.
-    const payWith = async (cashuInvoice: any, payments: any[] = []) => {
+    const payWith = async (
+        cashuInvoice: any,
+        payments: any[] = [],
+        cashuStoreOverrides: any = {}
+    ) => {
         const { store } = createStore({
             cashuStore: {
                 selectedMintUrl: 'https://mint.example',
@@ -2814,7 +2818,8 @@ describe('NostrWalletConnectStore cashu pay_invoice preimage', () => {
                     .fn()
                     .mockResolvedValue(cashuInvoice),
                 isProperlyConfigured: () => true,
-                payments
+                payments,
+                ...cashuStoreOverrides
             }
         });
         // isCashuConfigured is a computed, so satisfy its inputs rather
@@ -2866,6 +2871,23 @@ describe('NostrWalletConnectStore cashu pay_invoice preimage', () => {
             payment_source: 'cashu',
             isBudgetDebited: true
         });
+    });
+
+    it('ignores a payment error left on the store by another payment', async () => {
+        const { response, connection } = await payWith(
+            {
+                isFailed: false,
+                getPreimage: preimage,
+                getPaymentRequest: invoice,
+                getFee: 1
+            },
+            [],
+            { paymentError: true, paymentErrorMsg: 'Payment failed' }
+        );
+
+        expect(response.error).toBeUndefined();
+        expect(response.result.preimage).toBe(preimage);
+        expect(connection.totalSpendSats).toBe(101);
     });
 
     it('never returns the invoice as the preimage', async () => {

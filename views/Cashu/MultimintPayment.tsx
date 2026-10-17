@@ -231,7 +231,7 @@ export default class MultimintPayment extends React.Component<
                 onProgress: this.onProgressUpdate
             });
 
-            if (!payment || CashuStore!!.paymentError) {
+            if (!payment) {
                 this.setState({
                     step: MultinutPaymentStep.FAILED,
                     isProcessing: false,
@@ -247,12 +247,6 @@ export default class MultimintPayment extends React.Component<
                 isProcessing: false,
                 error: undefined
             });
-
-            this.paymentAmountSat =
-                CashuStore?.payReq?.getRequestAmount ||
-                Number(route.params?.paymentAmount || 0);
-            this.paymentHash =
-                CashuStore?.payReq?.payment_hash || this.paymentHash;
 
             const { donationAmount, enableDonations } = route.params || {};
             if (
