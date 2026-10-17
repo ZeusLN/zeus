@@ -1163,10 +1163,11 @@ class LdkNodeModule: RCTEventEmitter {
         let hasFeeMsat = maxTotalRoutingFeeMsat >= 0
         let hasPathCount = maxPathCount >= 0
         guard hasFeeMsat || hasPathCount else { return nil }
+        // Both are upper limits, so one too large for its type becomes the largest
         return RouteParametersConfig(
-            maxTotalRoutingFeeMsat: hasFeeMsat ? UInt64(maxTotalRoutingFeeMsat) : nil,
+            maxTotalRoutingFeeMsat: hasFeeMsat ? (toUInt64(maxTotalRoutingFeeMsat) ?? UInt64.max) : nil,
             maxTotalCltvExpiryDelta: 1008,
-            maxPathCount: hasPathCount ? UInt8(maxPathCount) : 10,
+            maxPathCount: hasPathCount ? (UInt8(exactly: maxPathCount.rounded(.towardZero)) ?? UInt8.max) : 10,
             maxChannelSaturationPowerOfHalf: 2
         )
     }
@@ -1174,6 +1175,19 @@ class LdkNodeModule: RCTEventEmitter {
     private func optionalTimeoutSecs(_ value: Double) -> UInt64? {
         guard value > 0 else { return nil }
         return UInt64(exactly: value)
+    }
+
+    // UInt64(_:) and UInt32(_:) trap on a Double that is NaN, negative or too
+    // large for the type instead of throwing, so the catch blocks below never
+    // see it and the app terminates. Some of these values come from outside
+    // the app (e.g. the amount and expiry of an NWC make_invoice request), so
+    // convert with the failable initialisers and reject the promise instead.
+    private func toUInt64(_ value: Double) -> UInt64? {
+        return UInt64(exactly: value.rounded(.towardZero))
+    }
+
+    private func toUInt32(_ value: Double) -> UInt32? {
+        return UInt32(exactly: value.rounded(.towardZero))
     }
 
     // MARK: - BOLT11 Payment Methods
@@ -1185,10 +1199,15 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let amount = toUInt64(amountMsat), let expiry = toUInt32(expirySecs) else {
+            reject("error", "Invalid amount or expiry", nil)
+            return
+        }
+
         do {
             let bolt11 = node.bolt11Payment()
             let descriptionObj = Bolt11InvoiceDescription.direct(description: invoiceDescription)
-            let invoice = try bolt11.receive(amountMsat: UInt64(amountMsat), description: descriptionObj, expirySecs: UInt32(expirySecs))
+            let invoice = try bolt11.receive(amountMsat: amount, description: descriptionObj, expirySecs: expiry)
             resolve(["invoice": invoice.description])
         } catch {
             reject("error", self.errorMessage(error), error)
@@ -1202,10 +1221,15 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let expiry = toUInt32(expirySecs) else {
+            reject("error", "Invalid expiry", nil)
+            return
+        }
+
         do {
             let bolt11 = node.bolt11Payment()
             let descriptionObj = Bolt11InvoiceDescription.direct(description: invoiceDescription)
-            let invoice = try bolt11.receiveVariableAmount(description: descriptionObj, expirySecs: UInt32(expirySecs))
+            let invoice = try bolt11.receiveVariableAmount(description: descriptionObj, expirySecs: expiry)
             resolve(["invoice": invoice.description])
         } catch {
             reject("error", self.errorMessage(error), error)
@@ -1241,6 +1265,11 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let amount = toUInt64(amountMsat) else {
+            reject("error", "Invalid amount", nil)
+            return
+        }
+
         let routeParams = buildRouteParameters(maxTotalRoutingFeeMsat: maxTotalRoutingFeeMsat, maxPathCount: maxPathCount)
         let timeoutSecs = optionalTimeoutSecs(paymentTimeoutSecs)
 
@@ -1248,7 +1277,7 @@ class LdkNodeModule: RCTEventEmitter {
             do {
                 let bolt11 = node.bolt11Payment()
                 let bolt11Invoice = try Bolt11Invoice.fromStr(invoiceStr: invoice)
-                let paymentId = try bolt11.sendUsingAmount(invoice: bolt11Invoice, amountMsat: UInt64(amountMsat), routeParameters: routeParams, paymentTimeoutSecs: timeoutSecs)
+                let paymentId = try bolt11.sendUsingAmount(invoice: bolt11Invoice, amountMsat: amount, routeParameters: routeParams, paymentTimeoutSecs: timeoutSecs)
                 resolve(["paymentId": paymentId])
             } catch {
                 reject("error", self.errorMessage(error), error)
@@ -1286,13 +1315,18 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let amount = toUInt64(amountMsat) else {
+            reject("error", "Invalid amount", nil)
+            return
+        }
+
         let routeParams = buildRouteParameters(maxTotalRoutingFeeMsat: maxTotalRoutingFeeMsat, maxPathCount: maxPathCount)
 
         DispatchQueue.global(qos: .userInitiated).async {
             do {
                 let bolt11 = node.bolt11Payment()
                 let bolt11Invoice = try Bolt11Invoice.fromStr(invoiceStr: invoice)
-                try bolt11.sendProbesUsingAmount(invoice: bolt11Invoice, amountMsat: UInt64(amountMsat), routeParameters: routeParams)
+                try bolt11.sendProbesUsingAmount(invoice: bolt11Invoice, amountMsat: amount, routeParameters: routeParams)
                 resolve(nil)
             } catch {
                 reject("error", self.errorMessage(error), error)
@@ -1309,12 +1343,17 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let amount = toUInt64(amountMsat) else {
+            reject("error", "Invalid amount", nil)
+            return
+        }
+
         let routeParams = buildRouteParameters(maxTotalRoutingFeeMsat: maxTotalRoutingFeeMsat, maxPathCount: maxPathCount)
         let timeoutSecs = optionalTimeoutSecs(paymentTimeoutSecs)
 
         DispatchQueue.global(qos: .userInitiated).async {
             do {
-                let paymentId = try node.spontaneousPayment().send(amountMsat: UInt64(amountMsat), nodeId: nodeId, routeParameters: routeParams, paymentTimeoutSecs: timeoutSecs)
+                let paymentId = try node.spontaneousPayment().send(amountMsat: amount, nodeId: nodeId, routeParameters: routeParams, paymentTimeoutSecs: timeoutSecs)
                 resolve(["paymentId": paymentId])
             } catch {
                 reject("error", self.errorMessage(error), error)
@@ -1331,9 +1370,22 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let amount = toUInt64(amountMsat) else {
+            reject("error", "Invalid amount", nil)
+            return
+        }
+        var expiry: UInt32? = nil
+        if expirySecs > 0 {
+            guard let secs = toUInt32(expirySecs) else {
+                reject("error", "Invalid expiry", nil)
+                return
+            }
+            expiry = secs
+        }
+
         do {
             let bolt12 = node.bolt12Payment()
-            let offer = try bolt12.receive(amountMsat: UInt64(amountMsat), description: description, expirySecs: expirySecs > 0 ? UInt32(expirySecs) : nil, quantity: nil)
+            let offer = try bolt12.receive(amountMsat: amount, description: description, expirySecs: expiry, quantity: nil)
             resolve(["offer": offer.description, "offerId": offer.id()])
         } catch {
             reject("error", self.errorMessage(error), error)
@@ -1347,9 +1399,18 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        var expiry: UInt32? = nil
+        if expirySecs > 0 {
+            guard let secs = toUInt32(expirySecs) else {
+                reject("error", "Invalid expiry", nil)
+                return
+            }
+            expiry = secs
+        }
+
         do {
             let bolt12 = node.bolt12Payment()
-            let offer = try bolt12.receiveVariableAmount(description: description, expirySecs: expirySecs > 0 ? UInt32(expirySecs) : nil)
+            let offer = try bolt12.receiveVariableAmount(description: description, expirySecs: expiry)
             resolve(["offer": offer.description, "offerId": offer.id()])
         } catch {
             reject("error", self.errorMessage(error), error)
@@ -1385,6 +1446,11 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let amount = toUInt64(amountMsat) else {
+            reject("error", "Invalid amount", nil)
+            return
+        }
+
         let routeParams = buildRouteParameters(maxTotalRoutingFeeMsat: maxTotalRoutingFeeMsat, maxPathCount: maxPathCount)
         let timeoutSecs = optionalTimeoutSecs(paymentTimeoutSecs)
 
@@ -1392,7 +1458,7 @@ class LdkNodeModule: RCTEventEmitter {
             do {
                 let bolt12 = node.bolt12Payment()
                 let offer = try Offer.fromStr(offerStr: offerStr)
-                let paymentId = try bolt12.sendUsingAmount(offer: offer, amountMsat: UInt64(amountMsat), quantity: nil, payerNote: payerNote, routeParameters: routeParams, paymentTimeoutSecs: timeoutSecs)
+                let paymentId = try bolt12.sendUsingAmount(offer: offer, amountMsat: amount, quantity: nil, payerNote: payerNote, routeParameters: routeParams, paymentTimeoutSecs: timeoutSecs)
                 resolve(["paymentId": paymentId])
             } catch {
                 reject("error", self.errorMessage(error), error)
@@ -1407,12 +1473,17 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let amount = toUInt64(amountMsat), let expiry = toUInt32(expirySecs) else {
+            reject("error", "Invalid amount or expiry", nil)
+            return
+        }
+
         let routeParams = buildRouteParameters(maxTotalRoutingFeeMsat: maxTotalRoutingFeeMsat, maxPathCount: maxPathCount)
         let timeoutSecs = optionalTimeoutSecs(paymentTimeoutSecs)
 
         do {
             let bolt12 = node.bolt12Payment()
-            let refund = try bolt12.initiateRefund(amountMsat: UInt64(amountMsat), expirySecs: UInt32(expirySecs), quantity: nil, payerNote: nil, routeParameters: routeParams, paymentTimeoutSecs: timeoutSecs)
+            let refund = try bolt12.initiateRefund(amountMsat: amount, expirySecs: expiry, quantity: nil, payerNote: nil, routeParameters: routeParams, paymentTimeoutSecs: timeoutSecs)
             resolve(["refund": refund.description])
         } catch {
             reject("error", self.errorMessage(error), error)
@@ -1591,13 +1662,20 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let lspBalance = toUInt64(lspBalanceSat),
+              let clientBalance = toUInt64(clientBalanceSat),
+              let expiryBlocks = toUInt32(channelExpiryBlocks) else {
+            reject("error", "Invalid balance or expiry", nil)
+            return
+        }
+
         DispatchQueue.global(qos: .userInitiated).async {
             do {
                 let lsps1 = node.lsps1Liquidity()
                 let orderStatus = try lsps1.requestChannel(
-                    lspBalanceSat: UInt64(lspBalanceSat),
-                    clientBalanceSat: UInt64(clientBalanceSat),
-                    channelExpiryBlocks: UInt32(channelExpiryBlocks),
+                    lspBalanceSat: lspBalance,
+                    clientBalanceSat: clientBalance,
+                    channelExpiryBlocks: expiryBlocks,
                     announceChannel: announceChannel
                 )
                 resolve(self.serializeLsps1OrderStatus(orderStatus))
@@ -1654,12 +1732,17 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let expiryBlocks = toUInt32(channelExtensionExpiryBlocks) else {
+            reject("error", "Invalid expiry", nil)
+            return
+        }
+
         DispatchQueue.global(qos: .userInitiated).async {
             do {
                 let lsps7 = node.lsps7Liquidity()
                 let response = try lsps7.createOrder(
                     shortChannelId: shortChannelId,
-                    channelExtensionExpiryBlocks: UInt32(channelExtensionExpiryBlocks),
+                    channelExtensionExpiryBlocks: expiryBlocks,
                     token: token,
                     refundOnchainAddress: refundOnchainAddress
                 )

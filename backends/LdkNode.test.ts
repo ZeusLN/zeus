@@ -1,4 +1,6 @@
 const mockListPayments = jest.fn();
+const mockReceiveBolt11 = jest.fn();
+const mockReceiveVariableAmountBolt11 = jest.fn();
 const mockSendBolt11 = jest.fn();
 const mockSendSpontaneousPayment = jest.fn();
 const mockBolt12SendUsingAmount = jest.fn();
@@ -20,7 +22,10 @@ jest.mock('../ldknode/LdkNodeInjection', () => ({
             listPayments: (...args: any[]) => mockListPayments(...args)
         },
         bolt11: {
-            sendBolt11: (...args: any[]) => mockSendBolt11(...args)
+            sendBolt11: (...args: any[]) => mockSendBolt11(...args),
+            receiveBolt11: (...args: any[]) => mockReceiveBolt11(...args),
+            receiveVariableAmountBolt11: (...args: any[]) =>
+                mockReceiveVariableAmountBolt11(...args)
         },
         spontaneous: {
             sendSpontaneousPayment: (...args: any[]) =>
@@ -414,5 +419,64 @@ describe('LdkNode.createWithdrawalRequest', () => {
         expect(mockBolt12InitiateRefund).toHaveBeenCalledWith(
             expect.objectContaining({ amountMsat: 100_000 })
         );
+    });
+});
+
+describe('LdkNode createInvoice', () => {
+    let ldk: LdkNode;
+
+    // The BOLT 11 example invoice; its content does not matter here
+    const INVOICE =
+        'lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpquwpc4curk03c9wlrswe78q4eyqc7d8d0xqzpu9qrsgqhtjpauu9ur7fw2thcl4y9vfvh4m9wlfyz2gem29g5ghe2aak2pm3ps8fdhtceqsaagty2vph7utlgj48u0ged6a337aewvraedendscp573dxr';
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        ldk = new LdkNode();
+        ldk.subscribeToEvents = () => () => {};
+        mockReceiveBolt11.mockResolvedValue(INVOICE);
+        mockReceiveVariableAmountBolt11.mockResolvedValue(INVOICE);
+    });
+
+    it('passes an amount and expiry that fit the native types', async () => {
+        await ldk.createInvoice({
+            value: '21000',
+            memo: 'order 17',
+            expiry_seconds: String(0xffffffff)
+        });
+
+        expect(mockReceiveBolt11).toHaveBeenCalledWith({
+            amountMsat: 21_000_000,
+            description: 'order 17',
+            expirySecs: 0xffffffff
+        });
+    });
+
+    // The native module converts these with UInt32(_:) / UInt64(_:), which
+    // terminate the iOS app on a value that does not fit instead of
+    // rejecting, and an NWC make_invoice request picks both
+    it.each([
+        [
+            'an expiry above UInt32.max',
+            { value: '21000', expiry_seconds: '4294967296' }
+        ],
+        ['a negative expiry', { value: '21000', expiry_seconds: '-1' }],
+        ['an infinite expiry', { value: '21000', expiry_seconds: 'Infinity' }],
+        [
+            'an amount above UInt64.max',
+            { value: '1e20', expiry_seconds: '3600' }
+        ],
+        ['a negative amount', { value: '-1', expiry_seconds: '3600' }],
+        ['a non-numeric amount', { value: 'abc', expiry_seconds: '3600' }],
+        [
+            'an expiry above UInt32.max on an any-amount invoice',
+            { value: '0', expiry_seconds: '4294967296' }
+        ]
+    ])('rejects %s before calling the native module', async (_name, data) => {
+        await expect(ldk.createInvoice(data)).rejects.toThrow(
+            'error.invalidInvoiceAmountOrExpiry'
+        );
+
+        expect(mockReceiveBolt11).not.toHaveBeenCalled();
+        expect(mockReceiveVariableAmountBolt11).not.toHaveBeenCalled();
     });
 });
