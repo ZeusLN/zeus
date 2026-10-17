@@ -3,10 +3,13 @@ jest.mock('mobx-react', () => ({
     observer: (component: any) => component
 }));
 jest.mock('@rneui/themed', () => ({ CheckBox: 'CheckBox' }));
-jest.mock('../components/SharedTransition', () => ({
-    SharedScreen: 'SharedScreen',
-    SharedText: 'SharedText'
-}));
+jest.mock('../components/SharedTransition', () => {
+    const { Text } = require('react-native');
+    return {
+        SharedScreen: 'SharedScreen',
+        SharedText: ({ children }: any) => <Text>{children}</Text>
+    };
+});
 jest.mock('../components/Button', () => {
     const { Pressable, Text } = require('react-native');
     return ({ title, onPress, disabled }: any) => (
@@ -55,7 +58,7 @@ jest.mock('nostr-tools', () => ({
         close = jest.fn();
     },
     nip05: { queryProfile: (...args: any[]) => mockQueryProfile(...args) },
-    nip19: {}
+    nip19: { npubEncode: (pubkey: string) => `npub-of-${pubkey}` }
 }));
 
 import * as React from 'react';
@@ -137,5 +140,86 @@ describe('NostrContacts NIP-05 lookup', () => {
             screen.container.queryAll((n) => n.type === 'LoadingIndicator')
         ).toHaveLength(0);
         expect(mockQuerySync).not.toHaveBeenCalled();
+    });
+});
+
+describe('NostrContacts follow list', () => {
+    const profile = (pubkey: string, content: any) => ({
+        pubkey,
+        created_at: 1,
+        content: JSON.stringify({
+            picture: 'https://cdn.example/avatar.png',
+            ...content
+        })
+    });
+
+    // Looks up a follow list holding the given kind 0 events
+    const lookUpFollows = async (profiles: any[]) => {
+        mockQueryProfile.mockReset();
+        mockQuerySync.mockReset();
+        mockQueryProfile.mockResolvedValue({ pubkey: PUBKEY });
+        mockQuerySync
+            .mockResolvedValueOnce([
+                {
+                    created_at: 1,
+                    tags: profiles.map((event) => ['p', event.pubkey])
+                }
+            ])
+            .mockResolvedValueOnce(profiles);
+
+        await lookUp('satoshi@domain.com');
+        await new Promise(setImmediate);
+    };
+
+    const avatars = () =>
+        screen.container.queryAll((n) => n.type === 'ContactAvatar');
+
+    it('lists accounts that share a display name as separate rows', async () => {
+        await lookUpFollows([
+            profile('aa', { name: 'Alice', lud16: 'alice@wallet.example' }),
+            profile('bb', { name: 'Bob', lud16: 'bob@wallet.example' }),
+            profile('cc', { name: 'alice', lud16: 'alice@mallory.example' })
+        ]);
+
+        expect(screen.getByText('alice@wallet.example')).toBeOnTheScreen();
+        expect(screen.getByText('alice@mallory.example')).toBeOnTheScreen();
+        expect(screen.getByText('bob@wallet.example')).toBeOnTheScreen();
+        expect(avatars().map((a) => a.props.contactId)).toEqual([
+            'npub-of-aa',
+            'npub-of-cc',
+            'npub-of-bb'
+        ]);
+    });
+
+    it('takes the npub from the event author, not from the profile', async () => {
+        await lookUpFollows([
+            profile('aa', { name: 'Alice' }),
+            profile('cc', { name: 'Mallory', npub: 'npub-of-aa' })
+        ]);
+
+        expect(avatars().map((a) => a.props.contactId)).toEqual([
+            'npub-of-aa',
+            'npub-of-cc'
+        ]);
+    });
+
+    it('does not load avatars from cleartext or private addresses', async () => {
+        await lookUpFollows([
+            profile('aa', { name: 'Alice' }),
+            profile('bb', {
+                name: 'Bob',
+                picture: 'http://192.168.1.1/apply.cgi?action=reboot'
+            }),
+            profile('cc', {
+                name: 'Carol',
+                picture: 'https://127.0.0.1:8443/shutdown'
+            })
+        ]);
+
+        expect(avatars().map((a) => a.props.imageUrl)).toEqual([
+            'https://cdn.example/avatar.png',
+            undefined,
+            undefined
+        ]);
     });
 });
