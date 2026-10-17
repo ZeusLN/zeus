@@ -726,3 +726,64 @@ describe('LSPStore embedded LND listeners', () => {
         expect(store.customMessagesSubscriber).toBeTruthy();
     });
 });
+
+describe('LSPStore get_extendable_channels response', () => {
+    const extendableChannel = {
+        short_channel_id: '900000x1x0',
+        max_channel_extension_expiry_blocks: 52560,
+        expiration_block: 901000
+    };
+
+    const answer = (extendable_channels: any) => {
+        const store = makeStore();
+        store.getExtendableChannels();
+        store.handleCustomMessages({
+            peer: Buffer.from('aa', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: store.getExtendableChannelsId,
+                    result: { extendable_channels }
+                })
+            ).toString('base64')
+        });
+        return store.getExtendableChannelsData;
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.mocked(BackendUtils.sendCustomMessage).mockResolvedValue({});
+    });
+
+    it('stores the list of extendable channels', () => {
+        const lspDiscretion = { ...extendableChannel, expiration_block: 0 };
+        expect(answer([extendableChannel, lspDiscretion])).toEqual([
+            extendableChannel,
+            lspDiscretion
+        ]);
+    });
+
+    it.each([[{}], [5], ['x'], [true], [null], [undefined]])(
+        'stores an empty list when the LSP answers with %p',
+        (extendable_channels) => {
+            expect(answer(extendable_channels)).toEqual([]);
+        }
+    );
+
+    it('drops the entries the channel views cannot draw', () => {
+        expect(
+            answer([
+                null,
+                5,
+                {},
+                { ...extendableChannel, short_channel_id: 5 },
+                { ...extendableChannel, expiration_block: { toString: 1 } },
+                {
+                    ...extendableChannel,
+                    max_channel_extension_expiry_blocks: [901000]
+                },
+                extendableChannel
+            ])
+        ).toEqual([extendableChannel]);
+    });
+});
