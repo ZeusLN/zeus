@@ -2097,7 +2097,11 @@ export default class LdkNode {
     private formatPayment(payment: PaymentDetails): any {
         // For Lightning payments, hash and preimage are in the kind object
         const hash = payment.kind.hash || payment.id;
-        const preimage = payment.kind.preimage || '';
+        // LDK lists a keysend with the preimage the sender chose, also while
+        // it is pending and after it failed. Payment.isIncomplete reads a
+        // preimage as settled, so only pass it on for a succeeded payment.
+        const preimage =
+            payment.status === 'succeeded' ? payment.kind.preimage || '' : '';
         const bolt11 = payment.kind.bolt11Invoice || '';
         const feeMsat = payment.feePaidMsat || 0;
 
