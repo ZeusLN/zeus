@@ -83,4 +83,11 @@ const getPhoto = (photo: string | undefined): string => {
     return photo || '';
 };
 
-export { getPhoto, getPresetNames, getPresetImage };
+// The two forms the app itself saves. getPhoto returns anything else as is,
+// so a value from outside the app could point an <Image> at a remote URL.
+const LOCAL_PHOTO_PATTERN = /^(preset|rnfs):\/\/[\w.-]+$/;
+
+const isLocalPhoto = (photo: unknown): boolean =>
+    typeof photo === 'string' && LOCAL_PHOTO_PATTERN.test(photo);
+
+export { getPhoto, getPresetNames, getPresetImage, isLocalPhoto };

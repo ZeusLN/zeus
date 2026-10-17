@@ -212,6 +212,40 @@ describe('NodeConfigUtils', () => {
                 ]
             });
         });
+
+        it.each(['preset://lnd', 'rnfs://photo_1700000000000.png', ''])(
+            'keeps the local wallet picture "%s"',
+            async (photo) => {
+                const store = createMockSettingsStore([]);
+
+                await saveNodeConfigs(
+                    [{ implementation: 'lnd', photo } as any],
+                    store as SettingsStore
+                );
+
+                expect(appliedUpdate().nodes[0].photo).toBe(photo);
+            }
+        );
+
+        it.each([
+            'https://tracker.example/zeus.png?recipient=42',
+            'http://192.168.1.1/logo.png',
+            'file:///data/local/tmp/x.png',
+            'https://tracker.example/rnfs://x.png',
+            'rnfs://../../x.png',
+            { uri: 'https://tracker.example/zeus.png' }
+        ])('drops the wallet picture %j', async (photo) => {
+            const store = createMockSettingsStore([]);
+
+            await saveNodeConfigs(
+                [{ implementation: 'lnd', nickname: 'a', photo } as any],
+                store as SettingsStore
+            );
+
+            expect(appliedUpdate().nodes).toStrictEqual([
+                { implementation: 'lnd', nickname: 'a', photo: undefined }
+            ]);
+        });
     });
 
     describe('exportNodeConfigs', () => {
