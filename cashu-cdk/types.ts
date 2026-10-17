@@ -109,6 +109,12 @@ export interface CDKMelted {
     fee_paid: number;
 }
 
+// Result of meltPartial, which creates its own MPP melt quote natively.
+// quote_id is that quote's id. Builds before it was added omit it.
+export interface CDKPartialMelted extends CDKMelted {
+    quote_id?: string;
+}
+
 // ============================================================================
 // Spending Conditions (P2PK)
 // ============================================================================

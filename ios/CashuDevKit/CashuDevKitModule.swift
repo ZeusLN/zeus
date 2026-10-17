@@ -1196,7 +1196,12 @@ class CashuDevKitModule: RCTEventEmitter {
                 )
                 let melted = try await prepared.confirm()
 
-                resolve(encodeToJson(encodeMelted(melted)))
+                // Return the quote id so the caller can record which MPP
+                // quote this part was paid with.
+                var result = encodeMelted(melted)
+                result["quote_id"] = quote.id
+
+                resolve(encodeToJson(result))
             } catch let error as FfiError {
                 let (code, message) = mapFfiError(error)
                 reject(code, message, error)
