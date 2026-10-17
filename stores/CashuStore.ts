@@ -5657,15 +5657,26 @@ export default class CashuStore {
 
         try {
             const results = { claimed: 0, alreadySpent: 0, failed: 0 };
-            const remaining: CashuToken[] = [];
+            // Tokens that leave the queue: claimed, or already spent
+            const settled = new Set<string>();
             const spent: CashuToken[] = [];
 
             const tokensToProcess = [...this.offlinePendingTokens];
 
+            // Same configured-mint gate as checkPendingItems: claiming runs
+            // ensureMintAdded, which would add a mint the user never added
+            // (or has since removed) and hold ecash there
+            const knownMints = new Set(
+                this.mintUrls.map((url) => this.normalizeMintUrl(url))
+            );
+
             for (let i = 0; i < tokensToProcess.length; i++) {
                 const token = tokensToProcess[i];
-                if (!token.encodedToken) {
-                    remaining.push(token);
+                if (
+                    !token.encodedToken ||
+                    (token.mint &&
+                        !knownMints.has(this.normalizeMintUrl(token.mint)))
+                ) {
                     continue;
                 }
                 try {
@@ -5685,6 +5696,7 @@ export default class CashuStore {
                     );
 
                     // CDK records the transaction internally
+                    settled.add(token.encodedToken);
                     results.claimed++;
                 } catch (e: any) {
                     console.warn(
@@ -5694,7 +5706,6 @@ export default class CashuStore {
 
                     if (e.type === 'Network') {
                         // Abort sweep on network error to avoid failing all tokens
-                        remaining.push(...tokensToProcess.slice(i));
                         break;
                     }
 
@@ -5710,18 +5721,22 @@ export default class CashuStore {
                                 pendingClaim: false
                             })
                         );
+                        settled.add(token.encodedToken);
                         results.alreadySpent++;
                     } else {
                         // Keep in pending for retry
-                        remaining.push(token);
                         results.failed++;
                     }
                 }
             }
 
             runInAction(() => {
-                this.offlinePendingTokens = remaining;
-                this.offlinePendingBalance = remaining.reduce(
+                // Filter the live queue rather than replacing it: tokens may
+                // have been queued or removed while we awaited the mint
+                this.offlinePendingTokens = this.offlinePendingTokens.filter(
+                    (t) => !t.encodedToken || !settled.has(t.encodedToken)
+                );
+                this.offlinePendingBalance = this.offlinePendingTokens.reduce(
                     (sum, t) => sum + t.getAmount,
                     0
                 );
@@ -5786,6 +5801,16 @@ export default class CashuStore {
         // When offline, queue token for later claiming
         if (this.isOffline) {
             this.loading = false;
+            // The queue is swept with a plain receive, which would keep the
+            // token as ecash at a mint the user may never have added
+            if (toSelfCustody) {
+                return {
+                    success: false,
+                    errorMessage: localeString(
+                        'cashu.offlinePending.selfCustodyUnavailable'
+                    )
+                };
+            }
             return await this.claimTokenOffline(encodedToken, decoded);
         }
 
