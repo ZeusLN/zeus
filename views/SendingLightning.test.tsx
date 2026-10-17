@@ -88,9 +88,10 @@ const renderView = async (
     transactionsState: Record<string, any>,
     LnurlPayStore: Record<string, any> = {},
     wrapStore: (store: Record<string, any>) => Record<string, any> = (store) =>
-        store
+        store,
+    params?: Record<string, any>
 ) => {
-    const TransactionsStore = wrapStore({
+    const TransactionsStore: any = wrapStore({
         loading: false,
         error: false,
         error_msg: null,
@@ -108,19 +109,30 @@ const renderView = async (
         popTo: jest.fn(),
         addListener: jest.fn(() => jest.fn())
     };
-    await render(
+    const element = () => (
         <SendingLightning
             {...({
                 navigation,
-                route: { key: 'SendingLightning', name: 'SendingLightning' },
+                route: {
+                    key: 'SendingLightning',
+                    name: 'SendingLightning',
+                    params
+                },
                 TransactionsStore,
                 ContactStore: { contacts: [] },
                 LnurlPayStore,
-                NodeInfoStore: { nodeInfo: {} }
+                NodeInfoStore: { nodeInfo: { isMainNet: !!params } },
+                PaymentsStore: { getPayments: jest.fn() },
+                BalanceStore: { getCombinedBalance: jest.fn() }
             } as any)}
         />
     );
-    return navigation;
+    const { rerender } = await render(element());
+    return {
+        navigation,
+        TransactionsStore,
+        rerender: () => rerender(element())
+    };
 };
 
 const hosts = (type: string) =>
@@ -130,7 +142,7 @@ describe('SendingLightning retry', () => {
     it('does not offer Try Again while the payment is in transit', async () => {
         // what TransactionsStore holds after LdkNode reports a keysend or
         // BOLT 12 payment still pending at its timeout
-        const navigation = await renderView({ status: 'IN_FLIGHT' });
+        const { navigation } = await renderView({ status: 'IN_FLIGHT' });
 
         expect(
             screen.queryByRole('button', { name: TRY_AGAIN })
@@ -176,7 +188,7 @@ describe('SendingLightning retry', () => {
     });
 
     it('offers Try Again, going back to the previous screen, after a failure', async () => {
-        const navigation = await renderView({
+        const { navigation } = await renderView({
             error: true,
             error_msg: 'RouteNotFound'
         });
@@ -189,7 +201,7 @@ describe('SendingLightning retry', () => {
     it('disables Try Again while the node is still being checked for the payment', async () => {
         // a dispatch error is shown, but tracking still holds the send
         // guard, which would silently ignore the retry
-        const navigation = await renderView({
+        const { navigation } = await renderView({
             error: true,
             error_msg: 'connection closed',
             paymentInFlight: true
@@ -250,7 +262,7 @@ describe('SendingLightning hardware back', () => {
     afterEach(() => jest.restoreAllMocks());
 
     it('returns to the wallet while the payment is in transit', async () => {
-        const navigation = await renderView({ status: 'IN_FLIGHT' });
+        const { navigation } = await renderView({ status: 'IN_FLIGHT' });
 
         expect(onBack()).toBe(true);
 
@@ -261,7 +273,7 @@ describe('SendingLightning hardware back', () => {
     it('stays on the screen while the payment is still being sent', async () => {
         // otherwise back falls through to Send, which pops to the payment
         // screen and lets the user pay again before this payment resolves
-        const navigation = await renderView({ loading: true });
+        const { navigation } = await renderView({ loading: true });
 
         expect(onBack()).toBe(true);
 
@@ -270,7 +282,7 @@ describe('SendingLightning hardware back', () => {
     });
 
     it('leaves a failed payment to the default back behavior', async () => {
-        const navigation = await renderView({
+        const { navigation } = await renderView({
             error: true,
             error_msg: 'RouteNotFound'
         });
@@ -305,7 +317,7 @@ describe('SendingLightning payment still pending', () => {
     const sending = { loading: true, paymentInFlight: true };
 
     it('offers a way back to the wallet once the payment has been pending a while', async () => {
-        const navigation = await renderView(sending);
+        const { navigation } = await renderView(sending);
 
         expect(screen.queryByText(STILL_PENDING)).not.toBeOnTheScreen();
         expect(
@@ -360,7 +372,7 @@ describe('SendingLightning payment still pending', () => {
     });
 
     it('returns to the wallet on hardware back once the exit is offered', async () => {
-        const navigation = await renderView(sending);
+        const { navigation } = await renderView(sending);
 
         expect(onBack()).toBe(true);
         expect(navigation.popTo).not.toHaveBeenCalled();
@@ -413,7 +425,7 @@ describe('SendingLightning payment still pending', () => {
 
         it('counts the delay from when the payment is sent, not from when the screen opens', async () => {
             // held back by the graph sync prompt, answered after 15 s
-            const navigation = await renderObserved({
+            const { navigation } = await renderObserved({
                 loading: true,
                 paymentInFlight: false
             });
@@ -447,7 +459,7 @@ describe('SendingLightning payment still pending', () => {
         });
 
         it('withdraws the exit when the send guard is taken again after it was offered', async () => {
-            const navigation = await renderObserved(sending);
+            const { navigation } = await renderObserved(sending);
             await advance(10000);
             expectExitOffered(true);
 
@@ -1093,5 +1105,99 @@ describe('SendingLightning donation payment sequence', () => {
         await update({ loading: false, status: 'SUCCEEDED' });
 
         expect(loadDonationLnurl).not.toHaveBeenCalled();
+    });
+});
+
+describe('SendingLightning donation fee limit and result', () => {
+    // a settled payment followed by a 50 sat donation
+    const paid = {
+        payment_preimage: 'ab'.repeat(32),
+        payment_hash: 'cd'.repeat(32),
+        status: 'SUCCEEDED'
+    };
+    // the screen is for the latest payment, so it may donate
+    const params = {
+        enableDonations: true,
+        donationAmount: '50',
+        donationFeeLimitSat: '5',
+        paymentSequence: 1
+    };
+
+    beforeEach(() =>
+        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc-donation')
+    );
+
+    const donate = async (result: any, donationParams: any = params) => {
+        // later attempts never settle, so a retry can't change the outcome
+        const sendPaymentSilently = jest
+            .fn()
+            .mockResolvedValueOnce(result)
+            .mockReturnValue(new Promise(() => {}));
+        const { TransactionsStore, rerender } = await renderView(
+            { loading: true, lastPaymentSequence: 1, sendPaymentSilently },
+            {},
+            undefined,
+            donationParams
+        );
+        // the payment settles
+        Object.assign(TransactionsStore, { ...paid, loading: false });
+        await rerender();
+        await act(async () => {
+            await new Promise((resolve) => setImmediate(resolve));
+        });
+        return { sendPaymentSilently };
+    };
+
+    const hostProps = (type: string) =>
+        screen.container.queryAll((n) => n.type === type)[0]?.props;
+
+    it('pays the donation with the fee limit of the payment', async () => {
+        const { sendPaymentSilently } = await donate({ status: 'SUCCEEDED' });
+
+        expect(sendPaymentSilently).toHaveBeenCalledWith({
+            payment_request: 'lnbc-donation',
+            fee_limit_sat: 5
+        });
+    });
+
+    it.each([
+        [100, '5000'],
+        [0, '0'],
+        [100, undefined],
+        [100, 'abc']
+    ])(
+        'donates with a %p sat fee limit when the payment allows %p',
+        async (expected, donationFeeLimitSat) => {
+            const { sendPaymentSilently } = await donate(
+                { status: 'SUCCEEDED' },
+                { ...params, donationFeeLimitSat }
+            );
+
+            expect(sendPaymentSilently).toHaveBeenCalledWith({
+                payment_request: 'lnbc-donation',
+                fee_limit_sat: expected
+            });
+        }
+    );
+
+    it('does not mark a donation paid when embedded LND reports it failed', async () => {
+        // lnrpc.Payment as decoded on embedded LND: numeric status, no
+        // payment_error
+        const { sendPaymentSilently } = await donate({
+            status: 3,
+            failure_reason: 2
+        });
+
+        expect(sendPaymentSilently).toHaveBeenCalled();
+        expect(hostProps('DonationGiftIcon').donationHandled).toBe(false);
+    });
+
+    it('marks a settled donation paid', async () => {
+        await donate({
+            status: 2,
+            value_sat: '50'
+        });
+
+        expect(hostProps('DonationGiftIcon').donationHandled).toBe(true);
     });
 });
