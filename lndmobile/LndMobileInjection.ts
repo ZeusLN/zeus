@@ -308,7 +308,8 @@ export interface ILndMobileInjections {
             outputIndex: number,
             force?: boolean,
             sat_per_vbyte?: number,
-            delivery_address?: string
+            delivery_address?: string,
+            requestId?: string
         ) => Promise<string>;
         listChannels: () => Promise<lnrpc.ListChannelsResponse>;
         openChannel: (
@@ -322,7 +323,8 @@ export interface ILndMobileInjections {
             simpleTaprootChannel?: boolean,
             fund_max?: boolean,
             utxos?: Array<string>,
-            funding_shim?: any
+            funding_shim?: any,
+            requestId?: string
         ) => Promise<string>;
         openChannelSync: (
             pubkey: string,
