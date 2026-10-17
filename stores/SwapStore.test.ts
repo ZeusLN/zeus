@@ -79,6 +79,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import Storage from '../storage';
 import SwapStore from './SwapStore';
 import { SwapState, SwapType } from '../models/Swap';
+import { REVERSE_SWAPS_KEY, SWAPS_KEY } from '../utils/SwapUtils';
 
 const SWAP_ID = 'swap-abc';
 const LOCKUP = {
@@ -398,5 +399,180 @@ describe('SwapStore.getSwapFees', () => {
 
         expect(store.apiError).toBe('');
         expect(store.reverseInfo.fees?.minerFees?.claim).toBe(300);
+    });
+});
+
+describe('SwapStore swap status from the host', () => {
+    const STORED_SWAP = {
+        id: SWAP_ID,
+        type: SwapType.Submarine,
+        status: SwapState.InvoiceSet,
+        createdAt: 1700000000
+    };
+    const stored: { [key: string]: string } = {};
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        for (const key of Object.keys(stored)) delete stored[key];
+        stored[SWAPS_KEY] = JSON.stringify([STORED_SWAP]);
+        (Storage.getItem as jest.Mock).mockImplementation(
+            async (key: string) => stored[key] ?? null
+        );
+        (Storage.setItem as jest.Mock).mockImplementation(
+            async (key: string, value: string) => {
+                stored[key] = value;
+                return true;
+            }
+        );
+    });
+
+    const storedSwaps = () => JSON.parse(stored[SWAPS_KEY]);
+
+    const pollAnswer = (body: any) =>
+        (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValue({
+            json: () => body
+        });
+
+    // The first cannot be converted to the object key the Activity filter
+    // uses a status as, the second makes BaseModel take it for a Long.
+    const NOT_A_STATUS: any[] = [
+        { toString: 1 },
+        { high: 0, low: 0, toString: 0 },
+        ['invoice.settled'],
+        200,
+        true
+    ];
+
+    it('stores a polled status that is a string, known or not', async () => {
+        pollAnswer({ status: 'no.such.status' });
+        const store = buildStore();
+        await store.fetchAndUpdateSwaps();
+
+        expect(storedSwaps()[0].status).toBe('no.such.status');
+        expect(store.swaps.map((s: any) => s.status)).toEqual([
+            'no.such.status'
+        ]);
+    });
+
+    it.each(NOT_A_STATUS)(
+        'ignores a polled status that is not a string: %j',
+        async (status) => {
+            pollAnswer({ status });
+            const store = buildStore();
+            await store.fetchAndUpdateSwaps();
+
+            expect(storedSwaps()).toEqual([STORED_SWAP]);
+            expect(store.swaps.map((s: any) => s.status)).toEqual([
+                STORED_SWAP.status
+            ]);
+        }
+    );
+
+    it.each(NOT_A_STATUS)(
+        'drops a stored status that is not a string: %j',
+        async (status) => {
+            stored[SWAPS_KEY] = JSON.stringify([{ ...STORED_SWAP, status }]);
+            (ReactNativeBlobUtil.fetch as jest.Mock).mockRejectedValue(
+                new Error('offline')
+            );
+            const store = buildStore();
+            await store.fetchAndUpdateSwaps();
+
+            expect(storedSwaps()).toHaveLength(1);
+            expect(storedSwaps()[0]).not.toHaveProperty('status');
+            expect(store.swaps.map((s: any) => s.id)).toEqual([SWAP_ID]);
+        }
+    );
+
+    it.each(NOT_A_STATUS)(
+        'ignores a status update that is not a string: %j',
+        async (status) => {
+            await buildStore().updateSwapStatus(SWAP_ID, status, true);
+
+            expect(storedSwaps()).toEqual([STORED_SWAP]);
+        }
+    );
+
+    it.each(NOT_A_STATUS)(
+        'does not store a failure reason that is not a string: %j',
+        async (failureReason) => {
+            await buildStore().updateSwapStatus(
+                SWAP_ID,
+                SwapState.InvoiceFailedToPay,
+                true,
+                failureReason
+            );
+
+            expect(storedSwaps()).toEqual([
+                { ...STORED_SWAP, status: SwapState.InvoiceFailedToPay }
+            ]);
+        }
+    );
+});
+
+describe('SwapStore.fetchAndUpdateSwaps', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.useFakeTimers();
+        jest.spyOn(console, 'warn').mockImplementation(() => undefined);
+    });
+    afterEach(() => {
+        jest.useRealTimers();
+        jest.restoreAllMocks();
+    });
+
+    const SILENT_HOST = 'https://silent.example/v2';
+    const HOST = 'https://host.example/v2';
+
+    const storeSwaps = (submarineSwaps: any[], reverseSwaps: any[]) =>
+        (Storage.getItem as jest.Mock).mockImplementation(async (key: string) =>
+            JSON.stringify(
+                key === REVERSE_SWAPS_KEY ? reverseSwaps : submarineSwaps
+            )
+        );
+
+    // the silent host accepts the request and never answers; the other
+    // one answers at once
+    const cancel = jest.fn();
+    const mockHosts = () =>
+        (ReactNativeBlobUtil.fetch as jest.Mock).mockImplementation(
+            (_method: string, url: string) =>
+                url.startsWith(SILENT_HOST)
+                    ? Object.assign(new Promise(() => undefined), { cancel })
+                    : Promise.resolve({
+                          json: () => ({ status: SwapState.InvoicePaid })
+                      })
+        );
+
+    it('does not wait for hosts that hold the status poll', async () => {
+        storeSwaps(
+            [
+                { id: 'held-1', endpoint: SILENT_HOST },
+                { id: 'held-2', endpoint: SILENT_HOST },
+                { id: 'answered', endpoint: HOST }
+            ].map((swap) => ({
+                ...swap,
+                type: SwapType.Submarine,
+                status: SwapState.InvoiceSet
+            })),
+            []
+        );
+        mockHosts();
+
+        const store = buildStore();
+        const done = store.fetchAndUpdateSwaps();
+        // one timeout in total, not one per swap
+        await jest.advanceTimersByTimeAsync(10000);
+        await done;
+
+        expect(store.swapsLoading).toBe(false);
+        expect(cancel).toHaveBeenCalledTimes(2);
+        expect(
+            Object.fromEntries(store.swaps.map((s: any) => [s.id, s.status]))
+        ).toEqual({
+            'held-1': SwapState.InvoiceSet,
+            'held-2': SwapState.InvoiceSet,
+            answered: SwapState.InvoicePaid
+        });
     });
 });
