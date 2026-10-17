@@ -28,7 +28,8 @@ jest.mock('./SwipeableRowAction', () => 'SwipeableRowAction');
 jest.mock('./SwipeableRowContainer', () => 'SwipeableRowContainer');
 
 import * as React from 'react';
-import { Text } from 'react-native';
+import { Alert, Text } from 'react-native';
+import { getParams as getlnurlParams } from 'js-lnurl';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { settingsStore } from '../../stores/Stores';
 import LightningSwipeableRow from './LightningSwipeableRow';
@@ -209,5 +210,42 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
             );
             expect(navigation.navigate).not.toHaveBeenCalled();
         });
+    });
+});
+
+describe('LightningSwipeableRow LNURL errors', () => {
+    it('names the host the LNURL error came from', async () => {
+        const alertSpy = jest
+            .spyOn(Alert, 'alert')
+            .mockImplementation(() => {});
+        (getlnurlParams as jest.Mock).mockResolvedValue({
+            status: 'ERROR',
+            reason: 'Claim your refund',
+            // js-lnurl's getDomain reads shop.example out of this URL
+            domain: 'shop.example',
+            url: 'https://other.example\\@shop.example/lnurl'
+        });
+        await render(
+            <LightningSwipeableRow
+                {...({
+                    lightning: 'lnurl1example',
+                    locked: true,
+                    navigation: { navigate: jest.fn() },
+                    SyncStore: { isSyncing: false }
+                } as any)}
+            >
+                <Text>Pay</Text>
+            </LightningSwipeableRow>
+        );
+        await fireEvent.press(screen.getByText('Pay'));
+        await new Promise(setImmediate);
+
+        expect(alertSpy).toHaveBeenCalledWith(
+            'general.error',
+            'other.example says: Claim your refund',
+            expect.any(Array),
+            { cancelable: false }
+        );
+        alertSpy.mockRestore();
     });
 });

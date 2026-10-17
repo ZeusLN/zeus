@@ -32,7 +32,8 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { getRawAmountFromSats, getSatAmount } from '../../utils/AmountUtils';
 import {
     verifyLnurlPayInvoice,
-    isLnurlCallbackAllowed
+    isLnurlCallbackAllowed,
+    getLnurlHost
 } from '../../utils/LnurlPayUtils';
 import { ScrollView } from 'react-native-gesture-handler';
 
@@ -255,7 +256,7 @@ export default class LnurlPay extends React.Component<
             amount: finalAmount,
             satAmount: finalSatAmount,
             fiatError,
-            domain: lnurl.domain,
+            domain: getLnurlHost(lnurl.callback),
             lightningAddress: lightningAddress || '',
             matchedContact,
             comment: ''
