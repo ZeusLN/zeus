@@ -44,6 +44,7 @@ import IOSAudioKeepAliveUtils from '../utils/IOSAudioKeepAliveUtils';
 import { satsToMillisats, millisatsToSats } from '../utils/AmountUtils';
 import { retry } from '../utils/SleepUtils';
 import { isReservedSigningMessage } from '../utils/LnurlAuthUtils';
+import { sha256StringToHex } from '../utils/HashingUtils';
 import NWCConnection, {
     BudgetRenewalType,
     ConnectionActivity,
@@ -1221,9 +1222,14 @@ export default class NostrWalletConnectStore {
         const nodeId = this.nodeInfoStore.nodeInfo?.nodeId;
         if (nodeId) return nodeId;
 
-        const { implementation, lndhubUrl, username } = this.settingsStore;
-        if (implementation === 'lndhub' && lndhubUrl && username) {
-            return `lndhub:${lndhubUrl}:${username}`;
+        // The login alone does not name an LndHub account: on LNbits every
+        // wallet logs in as "admin" (or "invoice") and the password, the
+        // wallet's API key, selects the wallet.
+        const { implementation, lndhubUrl, username, password } =
+            this.settingsStore;
+        if (implementation === 'lndhub' && lndhubUrl && username && password) {
+            const account = sha256StringToHex(`${username}:${password}`);
+            return `lndhub:${lndhubUrl}:${account}`;
         }
         return '';
     }
@@ -1247,6 +1253,48 @@ export default class NostrWalletConnectStore {
         );
     }
 
+    /**
+     * Identity LndHub connections were stored under before the account was
+     * hashed in: server and login only. Every wallet of an LNbits server
+     * shares it, so a connection stored under it can only be claimed for the
+     * open wallet while no other saved wallet has the same server and login.
+     */
+    private getLegacyLndHubWalletPubkey(): string {
+        const { implementation, lndhubUrl, username, settings } =
+            this.settingsStore;
+        if (implementation !== 'lndhub' || !lndhubUrl || !username) {
+            return '';
+        }
+        const sameLogin = (settings?.nodes || []).filter(
+            (node) =>
+                (node.implementation || 'lnd') === 'lndhub' &&
+                node.lndhubUrl === lndhubUrl &&
+                node.username === username
+        );
+        return sameLogin.length === 1 ? `lndhub:${lndhubUrl}:${username}` : '';
+    }
+
+    /** Rebinds legacy LndHub connections to the open wallet's identity. */
+    private migrateLegacyLndHubConnections(
+        connections: NWCConnectionData[]
+    ): boolean {
+        const currentNodePubkey = this.getCurrentWalletPubkey();
+        const legacyNodePubkey = this.getLegacyLndHubWalletPubkey();
+        if (!currentNodePubkey || !legacyNodePubkey) return false;
+
+        let migrated = false;
+        for (const c of connections) {
+            if (
+                c.implementation === 'lndhub' &&
+                c.nodePubkey === legacyNodePubkey
+            ) {
+                c.nodePubkey = currentNodePubkey;
+                migrated = true;
+            }
+        }
+        return migrated;
+    }
+
     @action
     public loadConnections = async () => {
         try {
@@ -1260,6 +1308,8 @@ export default class NostrWalletConnectStore {
                     this.settingsStore
                 );
                 let stamped = false;
+                const migrated =
+                    this.migrateLegacyLndHubConnections(connections);
                 runInAction(() => {
                     const filtered = this.hasWalletContext()
                         ? connections.filter((c: NWCConnectionData) =>
@@ -1283,7 +1333,11 @@ export default class NostrWalletConnectStore {
                         }
                     );
                 });
-                if (stamped) this.scheduleSave();
+                if (migrated) {
+                    await this.saveConnections();
+                } else if (stamped) {
+                    this.scheduleSave();
+                }
                 await this.checkAndResetAllBudgets();
             } else {
                 runInAction(() => {
