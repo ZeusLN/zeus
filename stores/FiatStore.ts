@@ -765,7 +765,15 @@ export default class FiatStore {
             );
             const status = response.info().status;
             if (status == 200) {
-                return response.json();
+                // fiatRates is read with .find/.filter during render, so only
+                // keep an array of rows with a code and a numeric rate
+                const data = response.json();
+                if (!Array.isArray(data)) return undefined;
+                return data.filter(
+                    (entry: any) =>
+                        typeof entry?.code === 'string' &&
+                        Number.isFinite(entry?.rate)
+                );
             }
         } catch (error) {
             console.error('Error fetching fiat rates from zeus', error);
