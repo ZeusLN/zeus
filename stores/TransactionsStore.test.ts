@@ -13,7 +13,10 @@ jest.mock('../utils/BackendUtils', () => ({
         payOffer: jest.fn(),
         payLightningInvoice: jest.fn(),
         sendKeysend: jest.fn(),
+        sendCoins: jest.fn(),
+        fundPsbt: jest.fn(),
         supportsOffersDirectPay: jest.fn(() => true),
+        supportsOnchainSendMax: jest.fn(() => true),
         isLNDBased: jest.fn(() => false)
     }
 }));
@@ -32,6 +35,9 @@ import BackendUtils from '../utils/BackendUtils';
 const payOffer = BackendUtils.payOffer as jest.Mock;
 const payLightningInvoice = BackendUtils.payLightningInvoice as jest.Mock;
 const sendKeysend = BackendUtils.sendKeysend as jest.Mock;
+const sendCoins = BackendUtils.sendCoins as jest.Mock;
+const fundPsbt = BackendUtils.fundPsbt as jest.Mock;
+const isLNDBased = BackendUtils.isLNDBased as jest.Mock;
 const supportsOffersDirectPay =
     BackendUtils.supportsOffersDirectPay as jest.Mock;
 
@@ -222,5 +228,65 @@ describe('TransactionsStore.sendPayment with an offer', () => {
         payLightningInvoice.mockReturnValue(deferred().promise);
         store.sendPayment({ payment_request: 'lnbcrt1...' });
         expect(payLightningInvoice).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('TransactionsStore.sendCoins with selected UTXOs on LND', () => {
+    const utxo = `${'cd'.repeat(32)}:0`;
+    const request = {
+        addr: 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq',
+        amount: '100000',
+        sat_per_vbyte: '5',
+        spend_unconfirmed: true,
+        account: 'default',
+        utxos: [utxo]
+    };
+
+    beforeEach(() => {
+        sendCoins.mockReset();
+        sendCoins.mockReturnValue(deferred().promise);
+        fundPsbt.mockReset();
+        fundPsbt.mockReturnValue(deferred().promise);
+        isLNDBased.mockReturnValue(true);
+    });
+
+    afterEach(() => {
+        isLNDBased.mockReturnValue(false);
+    });
+
+    it('passes the UTXOs to sendCoins as outpoints for a single output', () => {
+        newStore('lnd').sendCoins({ ...request, additional_outputs: [] });
+
+        expect(fundPsbt).not.toHaveBeenCalled();
+        expect(sendCoins).toHaveBeenCalledTimes(1);
+        expect(sendCoins).toHaveBeenCalledWith(
+            expect.objectContaining({
+                addr: request.addr,
+                amount: '100000',
+                outpoints: [{ txid_str: 'cd'.repeat(32), output_index: 0 }]
+            })
+        );
+    });
+
+    it('funds a PSBT paying every output when there are additional outputs', () => {
+        const address = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
+        newStore('lnd').sendCoins({
+            ...request,
+            additional_outputs: [
+                { address, amount: '250000', satAmount: '250000' }
+            ]
+        });
+
+        expect(sendCoins).not.toHaveBeenCalled();
+        expect(fundPsbt).toHaveBeenCalledTimes(1);
+        expect(fundPsbt).toHaveBeenCalledWith(
+            expect.objectContaining({
+                raw: {
+                    outputs: { [request.addr]: 100000, [address]: 250000 },
+                    inputs: [{ txid_str: 'cd'.repeat(32), output_index: 0 }]
+                },
+                account: 'default'
+            })
+        );
     });
 });
