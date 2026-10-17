@@ -342,4 +342,23 @@ describe('LightningSwipeableRow lnurl resolve', () => {
         expectAlert('utils.handleAnything.invalidLnurlParams');
         expect(navigation.navigate).not.toHaveBeenCalled();
     });
+
+    it('names the host the LNURL error came from', async () => {
+        mockFetchLnurlParams.mockResolvedValue({
+            status: 'ERROR',
+            reason: 'Claim your refund',
+            // js-lnurl's getDomain reads shop.example out of this URL
+            domain: 'shop.example',
+            url: 'https://other.example\\@shop.example/lnurl'
+        });
+
+        await tapRow(undefined, asLnurl('https://example.com/lnurl'));
+
+        expect(alertSpy).toHaveBeenCalledWith(
+            'general.error',
+            'other.example says: Claim your refund',
+            expect.any(Array),
+            { cancelable: false }
+        );
+    });
 });

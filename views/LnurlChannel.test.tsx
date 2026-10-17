@@ -49,7 +49,7 @@ const lnurlParams = {
     uri: '03864ef025fde8fb587d989186ce6a4a186895ee44a926bfc370e2c366597a3f8f@3.33.236.230:9735'
 };
 
-const renderView = (params: typeof lnurlParams = lnurlParams) =>
+const renderView = (params: any = lnurlParams) =>
     render(
         <LnurlChannel
             navigation={{} as any}
@@ -118,6 +118,22 @@ describe('LnurlChannel', () => {
         expect(toggle).toHaveProp('thumbTintColor', 'theme:disabled');
         expect(toggle).toHaveProp('tintColor', 'theme:disabled');
         expect(toggle).toHaveProp('onTintColor', 'theme:highlight');
+    });
+
+    it('names the host the callback is sent to', async () => {
+        await renderView({
+            ...lnurlParams,
+            // what js-lnurl's getDomain makes of this callback
+            domain: 'lnurl.example.com',
+            callback: 'https://other.example\\@lnurl.example.com/channel'
+        });
+
+        expect(screen.getByText('other.example')).toBeOnTheScreen();
+        expect(screen.queryByText('lnurl.example.com')).toBeNull();
+
+        await fireEvent.press(connectButton());
+        const [url] = (fetchLnurlUrl as jest.Mock).mock.calls[0];
+        expect(new URL(url).hostname).toBe('other.example');
     });
 
     it('requests a private channel by default', async () => {

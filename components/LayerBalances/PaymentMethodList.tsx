@@ -13,6 +13,7 @@ import Amount from '../Amount';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { decodeNoffer, NofferPriceType } from '../../utils/ClinkUtils';
+import { getLnurlHost } from '../../utils/LnurlPayUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -333,7 +334,8 @@ export default class PaymentMethodList extends Component<
 
         const isWithdraw = lnurlParams?.tag === 'withdrawRequest';
         const subtitle = isWithdraw
-            ? lnurlParams?.defaultDescription || lnurlParams?.domain
+            ? lnurlParams?.defaultDescription ||
+              getLnurlHost(lnurlParams?.callback)
             : lightning ?? lnurlParams?.tag;
 
         if (lightning || lnurlParams) {
