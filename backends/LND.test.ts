@@ -15,6 +15,7 @@ jest.mock('../utils/TorUtils', () => ({
 
 import LND from './LND';
 import { settingsStore } from '../stores/Stores';
+import { localeString } from '../utils/LocaleUtils';
 
 describe('LND.getURL', () => {
     const lnd = new LND();
@@ -468,5 +469,91 @@ describe('LND.subscribeCustomMessages', () => {
         const ws = new LND().subscribeCustomMessages(jest.fn(), jest.fn());
         expect(sockets).toHaveLength(1);
         expect(ws).toBe(sockets[0]);
+    });
+});
+
+describe('LND WebSocket calls whose socket closes', () => {
+    const connectionError = localeString(
+        'backends.LND.restReq.connectionError'
+    );
+    const psbtFund = { result: { psbt_fund: { psbt: 'cHNidP8=' } } };
+
+    const calls: [string, (lnd: LND) => Promise<any>][] = [
+        ['wsReq', (lnd) => lnd.wsReq('/v1/route', 'POST', {}) as Promise<any>],
+        [
+            'openChannelStream',
+            (lnd) =>
+                lnd.openChannelStream({
+                    node_pubkey_string: '02ab'
+                } as any) as Promise<any>
+        ]
+    ];
+
+    const realWebSocket = global.WebSocket;
+    let listeners: { [event: string]: (e?: any) => void };
+    let lnd: LND;
+
+    beforeEach(() => {
+        listeners = {};
+        (global as any).WebSocket = jest.fn(() => ({
+            send: jest.fn(),
+            addEventListener: (event: string, listener: (e?: any) => void) => {
+                listeners[event] = listener;
+            }
+        }));
+        lnd = new LND();
+        jest.spyOn(lnd, 'getURL').mockReturnValue('wss://node.example.com');
+    });
+
+    afterEach(() => {
+        global.WebSocket = realWebSocket;
+    });
+
+    it.each(calls)(
+        '%s rejects, rather than throws, when there was no response',
+        async (_name, call) => {
+            const outcome = call(lnd).catch((error: any) => error);
+            expect(() => listeners.close()).not.toThrow();
+            expect(await outcome).toBe(connectionError);
+        }
+    );
+
+    it.each(calls)(
+        "%s keeps the node's error when the socket closes after it",
+        async (_name, call) => {
+            const outcome = call(lnd).catch((error: any) => error);
+            listeners.message({
+                data: JSON.stringify({ error: { message: 'peer offline' } })
+            });
+            expect(() => listeners.close()).not.toThrow();
+            expect(await outcome).toEqual({ message: 'peer offline' });
+        }
+    );
+
+    it.each(calls)(
+        '%s resolves with the last response before the close',
+        async (_name, call) => {
+            const outcome = call(lnd);
+            listeners.message({ data: JSON.stringify({ result: 1 }) });
+            listeners.message({ data: JSON.stringify({ result: 2 }) });
+            listeners.close();
+            await expect(outcome).resolves.toEqual({ result: 2 });
+        }
+    );
+
+    it('openChannelStream does not throw when the peer cancels after psbt_fund', async () => {
+        // the funding PSBT is out for signing: psbt_fund has settled the
+        // promise and the stream carries nothing else until LND ends it
+        const outcome = lnd.openChannelStream({
+            node_pubkey_string: '02ab'
+        } as any);
+        listeners.message({ data: JSON.stringify(psbtFund) });
+        listeners.message({
+            data: JSON.stringify({
+                error: { message: 'remote canceled funding' }
+            })
+        });
+        expect(() => listeners.close()).not.toThrow();
+        await expect(outcome).resolves.toEqual(psbtFund);
     });
 });
