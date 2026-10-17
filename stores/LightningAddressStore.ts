@@ -1,16 +1,21 @@
 import { Platform } from 'react-native';
-import { action, observable, runInAction } from 'mobx';
+import { action, observable, reaction, runInAction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Notifications } from 'react-native-notifications';
 
 import { io } from 'socket.io-client';
 
 import CashuStore from './CashuStore';
+import ChannelsStore from './ChannelsStore';
+import LSPStore from './LSPStore';
 import NodeInfoStore from './NodeInfoStore';
 import SettingsStore from './SettingsStore';
 
+import { LSPService } from '../models/LSP';
+
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { networkFetch } from '../utils/NetworkUtils';
 
 import Storage from '../storage';
 
@@ -78,6 +83,10 @@ export default class LightningAddressStore {
     @observable public currentDeviceToken: string;
     @observable public serviceDeviceToken: string;
     private pendingPushUpdate: boolean = false;
+    private pendingLspPush: boolean = false;
+    // `${pubkey}:${token}` last registered through /push this session
+    private lspPushRegisteredKey?: string;
+    private lspPushInFlight?: Promise<void>;
     // Auth
     auth?: Auth;
     authDate?: Date;
@@ -85,15 +94,30 @@ export default class LightningAddressStore {
     cashuStore: CashuStore;
     nodeInfoStore: NodeInfoStore;
     settingsStore: SettingsStore;
+    channelsStore: ChannelsStore;
+    lspStore: LSPStore;
 
     constructor(
         cashuStore: CashuStore,
         nodeInfoStore: NodeInfoStore,
-        settingsStore: SettingsStore
+        settingsStore: SettingsStore,
+        channelsStore: ChannelsStore,
+        lspStore: LSPStore
     ) {
         this.cashuStore = cashuStore;
         this.nodeInfoStore = nodeInfoStore;
         this.settingsStore = settingsStore;
+        this.channelsStore = channelsStore;
+        this.lspStore = lspStore;
+
+        reaction(
+            () => this.channelsStore.channels,
+            () => {
+                this.maybeRegisterLspPush().catch((e) =>
+                    console.log('Failed to register LSP push', e)
+                );
+            }
+        );
     }
 
     private getAuthData = async () => {
@@ -102,14 +126,15 @@ export default class LightningAddressStore {
         if (this.auth && this.authDate && this.authDate > tenMinutesAgo) {
             return this.auth;
         } else {
-            const authResponse = await ReactNativeBlobUtil.fetch(
-                'POST',
-                `${LNURL_HOST}/api/lnurl/auth`,
-                { 'Content-Type': 'application/json' },
-                JSON.stringify({
+            const authResponse = await networkFetch({
+                method: 'POST',
+                url: `${LNURL_HOST}/api/lnurl/auth`,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
-                })
-            );
+                }),
+                enableTor: this.settingsStore.enableTor
+            });
 
             const authData = authResponse.json();
             if (authResponse.info().status !== 200) throw authData.error;
@@ -613,6 +638,97 @@ export default class LightningAddressStore {
                 console.log('Failed to update push credentials', e)
             );
         }
+        if (this.pendingLspPush) {
+            this.pendingLspPush = false;
+            this.maybeRegisterLspPush().catch((e) =>
+                console.log('Failed to register LSP push', e)
+            );
+        }
+    };
+
+    // The Olympus LSP sends channel-expiry reminders to the device token
+    // stored with ZEUS Pay. Nodes with an Olympus channel but no ZEUS Pay
+    // address register the token through /push instead of /update, once the
+    // user opts in from the Flow LSP settings. ZEUS Pay is mainnet-only, and
+    // the switch is only reachable where supportsFlowLSP() is true.
+    public maybeRegisterLspPush = async () => {
+        const { settings } = this.settingsStore;
+        const { nodeInfo } = this.nodeInfoStore;
+
+        if (
+            settings.lspPushNotifications !== true ||
+            this.lightningAddress ||
+            !nodeInfo?.isMainNet ||
+            !nodeInfo?.identity_pubkey ||
+            !BackendUtils.supportsFlowLSP() ||
+            !BackendUtils.supportsMessageSigning() ||
+            !this.lspStore.isOlympus(LSPService.LSPS7)
+        ) {
+            return;
+        }
+
+        const lspPubkey = this.lspStore.getLSPSPubkey();
+        const hasLspChannel = this.channelsStore.channels.some(
+            (channel: { remotePubkey: string }) =>
+                channel.remotePubkey === lspPubkey
+        );
+        if (!hasLspChannel) return;
+
+        if (!this.currentDeviceToken) {
+            this.pendingLspPush = true;
+            return;
+        }
+
+        const key = `${nodeInfo.identity_pubkey}:${this.currentDeviceToken}`;
+        if (this.lspPushRegisteredKey === key) return;
+
+        // channels refresh often; don't start a second request while one
+        // is outstanding
+        if (!this.lspPushInFlight) {
+            this.lspPushInFlight = this.registerLspPush(true).finally(() => {
+                this.lspPushInFlight = undefined;
+            });
+        }
+        await this.lspPushInFlight;
+    };
+
+    // enabled: false removes a token-only row. ZEUS Pay leaves an address
+    // row alone; its notification setting controls it.
+    public registerLspPush = async (enabled: boolean) => {
+        const device_token = this.currentDeviceToken;
+        if (enabled && !device_token) {
+            this.pendingLspPush = true;
+            return;
+        }
+
+        const pubkey = this.nodeInfoStore.nodeInfo.identity_pubkey;
+        const { verification, signature } = await this.getAuthData();
+
+        const response = await networkFetch({
+            method: 'POST',
+            url: `${LNURL_HOST}/api/lnurl/push`,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                pubkey,
+                message: verification,
+                signature,
+                enabled,
+                ...(enabled && {
+                    device_token,
+                    device_platform: Platform.OS
+                })
+            }),
+            enableTor: this.settingsStore.enableTor
+        });
+
+        const data = response.json();
+        if (response.info().status !== 200 || !data.success) {
+            throw data.error;
+        }
+
+        this.lspPushRegisteredKey = enabled
+            ? `${pubkey}:${device_token}`
+            : undefined;
     };
 
     public updatePushCredentials = async () => {
@@ -702,6 +818,7 @@ export default class LightningAddressStore {
         // reject calls with 'invalid signature'
         this.auth = undefined;
         this.authDate = undefined;
+        this.lspPushRegisteredKey = undefined;
         if (this.socket) this.socket.disconnect();
         this.socket = undefined;
         this.lightningAddress = '';
