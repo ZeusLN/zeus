@@ -1674,7 +1674,8 @@ export default class WalletConfiguration extends React.Component<
                                             onPress={() => {
                                                 createAccount(
                                                     lndhubUrl,
-                                                    certVerification
+                                                    certVerification,
+                                                    enableTor
                                                 ).then((data: any) => {
                                                     if (
                                                         data.login &&
