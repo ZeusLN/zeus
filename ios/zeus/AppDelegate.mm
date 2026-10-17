@@ -1,15 +1,6 @@
 #import "AppDelegate.h"
 
-#import <React/RCTBundleURLProvider.h>
-#import <React/RCTLinkingManager.h>
 #import "RNNotifications.h"
-
-#if __has_include(<ReactAppDependencyProvider/RCTAppDependencyProvider.h>)
-#define USE_OSS_CODEGEN 1
-#import <ReactAppDependencyProvider/RCTAppDependencyProvider.h>
-#else
-#define USE_OSS_CODEGEN 0
-#endif
 
 /**
  Deletes all Keychain items accessible by this app if this is the first time the user launches the app
@@ -40,13 +31,7 @@ static void ClearKeychainIfNecessary() {
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
-  self.moduleName = @"zeus";
-  self.initialProps = @{};
-
-#if USE_OSS_CODEGEN
-  self.dependencyProvider = [RCTAppDependencyProvider new];
-#endif
-
+  // React Native is started by SceneDelegate once the window scene connects.
   [RNNotifications startMonitorNotifications];
   ClearKeychainIfNecessary();
 
@@ -60,23 +45,7 @@ static void ClearKeychainIfNecessary() {
     }
   }
 
-  return [super application:application didFinishLaunchingWithOptions:launchOptions];
-}
-
-- (NSURL *)bundleURL
-{
-#if DEBUG
-  return [[RCTBundleURLProvider sharedSettings] jsBundleURLForBundleRoot:@"index"];
-#else
-  return [[NSBundle mainBundle] URLForResource:@"main" withExtension:@"jsbundle"];
-#endif
-}
-
-- (BOOL)application:(UIApplication *)application
-   openURL:(NSURL *)url
-   options:(NSDictionary<UIApplicationOpenURLOptionsKey,id> *)options
-{
-  return [RCTLinkingManager application:application openURL:url options:options];
+  return YES;
 }
 
 - (void)application:(UIApplication *)application didRegisterForRemoteNotificationsWithDeviceToken:(NSData *)deviceToken {
@@ -85,14 +54,6 @@ static void ClearKeychainIfNecessary() {
 
 - (void)application:(UIApplication *)application didFailToRegisterForRemoteNotificationsWithError:(NSError *)error {
   [RNNotifications didFailToRegisterForRemoteNotificationsWithError:error];
-}
-
-- (void)applicationDidEnterBackground:(UIApplication *)application {
-  NSLog(@"App entered background");
-}
-
-- (void)applicationWillEnterForeground:(UIApplication *)application {
-  NSLog(@"App will enter foreground");
 }
 
 - (void)applicationWillTerminate:(UIApplication *)application {
