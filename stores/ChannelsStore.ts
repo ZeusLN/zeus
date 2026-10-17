@@ -120,7 +120,7 @@ export default class ChannelsStore {
     @observable public aliasMap = observable.map({});
     // external account funding
     @observable public funded_psbt: string = '';
-    @observable public pending_chan_ids: Array<string>;
+    @observable public pending_chan_ids: Array<string> = [];
     // pending HTLCs
     @observable public pendingHTLCs: Array<PendingHTLC> = [];
     @observable public haveAnnouncedChannels = false;
@@ -198,6 +198,13 @@ export default class ChannelsStore {
         this.channelSuccess = false;
         this.channelRequest = null;
         this.funded_psbt = '';
+    };
+
+    // Kept out of resetOpenChannel: the PSBT and TxHex screens read it to
+    // hand a signed funding transaction back to LND, so it has to survive
+    // form resets until the funding flow ends.
+    @action
+    public resetPendingChannels = () => {
         this.pending_chan_ids = [];
     };
 
@@ -208,6 +215,7 @@ export default class ChannelsStore {
     @action
     public reset = () => {
         this.resetOpenChannel();
+        this.resetPendingChannels();
         this.hasChannelData = false;
         this.haveAnnouncedChannels = false;
         this.nodes = {};
@@ -1057,6 +1065,7 @@ export default class ChannelsStore {
                                 this.channelRequest = null;
                                 this.peerSuccess = false;
                                 this.channelSuccess = false;
+                                this.resetPendingChannels();
                             });
                         } else {
                             const formattedPsbt = new FundedPsbt(
@@ -1091,6 +1100,7 @@ export default class ChannelsStore {
                                             this.errorMsgChannel = null;
                                             this.channelRequest = null;
                                             this.channelSuccess = true;
+                                            this.resetPendingChannels();
                                         }
                                     });
                                 })
@@ -1119,6 +1129,7 @@ export default class ChannelsStore {
                             this.channelRequest = null;
                             this.peerSuccess = false;
                             this.channelSuccess = false;
+                            this.resetPendingChannels();
                         });
                     });
             })
@@ -1133,6 +1144,7 @@ export default class ChannelsStore {
                     this.channelRequest = null;
                     this.peerSuccess = false;
                     this.channelSuccess = false;
+                    this.resetPendingChannels();
                 });
             });
     };
@@ -1148,6 +1160,7 @@ export default class ChannelsStore {
         this.peerSuccess = false;
         this.channelSuccess = false;
         this.connectingToPeer = false;
+        this.resetPendingChannels();
     };
 
     @action
@@ -1169,6 +1182,7 @@ export default class ChannelsStore {
         this.peerSuccess = false;
         this.channelSuccess = false;
         this.openingChannel = true;
+        this.resetPendingChannels();
 
         if (request?.account !== 'default' || multipleChans) {
             const outputs: any = {};
