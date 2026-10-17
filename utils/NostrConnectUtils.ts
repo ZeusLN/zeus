@@ -1257,7 +1257,14 @@ export default class NostrConnectUtils {
                 paymentState.payment_error
             ) || paymentState.loading;
 
-        if (timedOutOrStillLoading || paymentState.isIncomplete) {
+        // A send request that was rejected (connection dropped, response
+        // closed by a proxy) says nothing about an HTLC that is already out
+        // either, so the node's list decides there too.
+        if (
+            timedOutOrStillLoading ||
+            paymentState.isIncomplete ||
+            paymentState.error
+        ) {
             const listed = NostrConnectUtils.findPaymentForInvoice(
                 invoice,
                 payments,
