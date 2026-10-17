@@ -55,6 +55,7 @@ export default class Swap extends BaseModel {
     failureReason?: string;
     imported?: boolean;
     claimAddressFromWallet?: boolean;
+    onchainAmountVerified?: boolean;
     keyIndex?: number;
     preimageHash?: string;
     serverPublicKey?: string;
