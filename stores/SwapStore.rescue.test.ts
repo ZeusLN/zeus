@@ -226,6 +226,26 @@ describe('SwapStore.getRescuableSwaps', () => {
         });
     });
 
+    it('takes no status that is not a string from the host', async () => {
+        restoreResponse([
+            {
+                id: 'rescued-reverse',
+                type: 'reverse',
+                status: { toString: 1 },
+                claimDetails: { keyIndex: 0, serverPublicKey: 'ab' }
+            }
+        ]);
+
+        await newStore().getRescuableSwaps({
+            seedArray: RESCUE_MNEMONIC.split(' '),
+            host: 'https://swaps.example.com'
+        });
+
+        const [rescued] = getStored(SWAPS_KEY);
+        expect(rescued.id).toBe('rescued-reverse');
+        expect(rescued).not.toHaveProperty('status');
+    });
+
     it('keeps a reverse swap whose preimage hash matches, in any case', async () => {
         restoreResponse([
             {
