@@ -78,6 +78,10 @@ export default class CashuToken extends BaseModel {
         return this.received ? this.received_at || 0 : this.created_at || 0;
     }
 
+    @computed public get getDate(): Date {
+        return DateTimeUtils.listDate(this.getTimestamp);
+    }
+
     @computed public get getLockPubkey(): string | undefined {
         if (!this.proofs || this.proofs.length === 0) return undefined;
         return CashuUtils.getP2PKPubkeySecret(this.proofs[0].secret);
