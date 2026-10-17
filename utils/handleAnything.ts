@@ -1,5 +1,4 @@
 import { Alert, Platform } from 'react-native';
-import { getParams as getlnurlParams } from 'js-lnurl';
 import { findlnurl, decodelnurl } from 'js-lnurl/lib/helpers';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
@@ -11,6 +10,11 @@ import Bolt11Utils from './Bolt11Utils';
 import CashuUtils from './CashuUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
 import ContactUtils from './ContactUtils';
+import { isLightningAddressEndpointAllowed } from './LnurlPayUtils';
+import {
+    getLnurlParams as getlnurlParams,
+    isUnsafeLnurlError
+} from './LnurlResolveUtils';
 import { localeString } from './LocaleUtils';
 import NodeUriUtils from './NodeUriUtils';
 import NostrUtils from './NostrUtils';
@@ -630,6 +634,20 @@ const handleAnything = async (
         const normalizedDomain = domain.toLowerCase();
         const isOnion = normalizedDomain.endsWith('.onion');
 
+        // Skip lowercasing for cryptoqr.net addresses as they contain URL-encoded
+        // data where hex digit casing matters for server-side lookup
+        const isCryptoQR = normalizedDomain.endsWith('cryptoqr.net');
+        const normalizedUsername = isCryptoQR
+            ? username
+            : username.toLowerCase();
+        const scheme = isOnion ? 'http' : 'https';
+        const url = `${scheme}://${normalizedDomain}/.well-known/lnurlp/${normalizedUsername}`;
+        // Refuse before the BOLT 12 lookup below, which would otherwise send
+        // the address, IP literal included, to the DoH resolver first
+        if (!isLightningAddressEndpointAllowed(url).ok) {
+            throw new Error(localeString('utils.lnurl.unsafeLightningAddress'));
+        }
+
         let bolt12: string | undefined;
         let b12Value: string | undefined,
             b12SatAmount: string | undefined,
@@ -716,14 +734,6 @@ const handleAnything = async (
         }
 
         // try BOLT 11 address
-        // Skip lowercasing for cryptoqr.net addresses as they contain URL-encoded
-        // data where hex digit casing matters for server-side lookup
-        const isCryptoQR = normalizedDomain.endsWith('cryptoqr.net');
-        const normalizedUsername = isCryptoQR
-            ? username
-            : username.toLowerCase();
-        const scheme = isOnion ? 'http' : 'https';
-        const url = `${scheme}://${normalizedDomain}/.well-known/lnurlp/${normalizedUsername}`;
         const error = localeString(
             'utils.handleAnything.lightningAddressError'
         );
@@ -1038,7 +1048,9 @@ const handleAnything = async (
                         );
                 }
             })
-            .catch(() => {
+            .catch((e) => {
+                // a host policy refusal keeps its own message
+                if (isUnsafeLnurlError(e)) throw e;
                 throw new Error(
                     localeString('utils.handleAnything.invalidLnurlParams')
                 );
