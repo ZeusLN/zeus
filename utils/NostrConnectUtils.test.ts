@@ -473,6 +473,27 @@ describe('NostrConnectUtils', () => {
         });
     });
 
+    describe('getSettledPreimage', () => {
+        it('returns the preimage of a settled payment', () => {
+            const settled = paymentFixtures.settled();
+            expect(NostrConnectUtils.getSettledPreimage(settled)).toBe(
+                settled.getPreimage
+            );
+            expect(settled.getPreimage).not.toBe('');
+        });
+
+        it("returns '' for a failed payment with LND's all-zero preimage", () => {
+            const failed = paymentFixtures.failed();
+            expect(failed.getPreimage).toBe(ZERO_PREIMAGE);
+            expect(NostrConnectUtils.getSettledPreimage(failed)).toBe('');
+        });
+
+        it("returns '' when there is no payment", () => {
+            expect(NostrConnectUtils.getSettledPreimage(undefined)).toBe('');
+            expect(NostrConnectUtils.getSettledPreimage(null)).toBe('');
+        });
+    });
+
     describe('lightning payment in-transit detection', () => {
         describe('isInFlightPaymentStatus', () => {
             it.each([
@@ -952,6 +973,24 @@ describe('NostrConnectUtils', () => {
                     );
 
                 expect(tx.preimage).toBe(STORED_PREIMAGE);
+            });
+
+            it("does not report LND's all-zero preimage for an unsettled pay_invoice activity", () => {
+                const activity: ConnectionActivity = {
+                    id: INVOICE_A,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'pending',
+                    payment: paymentFixtures.inFlightStatus()
+                };
+
+                const tx =
+                    NostrConnectUtils.convertConnectionActivityToNip47Transaction(
+                        activity
+                    );
+
+                expect(tx.state).toBe('pending');
+                expect(tx.preimage).toBe('');
             });
         });
     });
