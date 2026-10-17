@@ -23,6 +23,7 @@ const withScheme = (host: string): string =>
 const getMempoolApiUrl = (nodeInfo: {
     isMutinynet: boolean;
     isTestNet: boolean;
+    isSigNet?: boolean;
 }): string => {
     const privacy = settingsStore?.settings?.privacy;
     // No stored selection resolves to DEFAULT_MEMPOOL_INSTANCE. This
@@ -43,8 +44,10 @@ const getMempoolApiUrl = (nodeInfo: {
         );
         return `${host}/api`;
     }
+    // LDK Node sets isSigNet on Mutinynet too, so Mutinynet must be checked first
     if (nodeInfo.isMutinynet) return 'https://mutinynet.com/api';
-    // electrs.zeusln.com is mainnet-only; testnet3 lives at mempool.space/testnet
+    // electrs.zeusln.com is mainnet-only; signet and testnet3 use mempool.space
+    if (nodeInfo.isSigNet) return 'https://mempool.space/signet/api';
     if (nodeInfo.isTestNet) return 'https://mempool.space/testnet/api';
     return `https://${
         instance === 'mempool.space'
@@ -59,6 +62,7 @@ const getMempoolApiUrl = (nodeInfo: {
 const getMempoolInstanceHost = (nodeInfo: {
     isMutinynet: boolean;
     isTestNet: boolean;
+    isSigNet?: boolean;
 }): string => {
     try {
         return new URL(getMempoolApiUrl(nodeInfo)).host;
@@ -75,17 +79,20 @@ const goToBlockExplorer = (
     const { settings } = settingsStore;
     const { privacy } = settings;
     const custom = privacy && privacy.defaultBlockExplorer === 'Custom';
-    const { isMutinynet } = nodeInfoStore.nodeInfo;
+    const { isMutinynet, isSigNet } = nodeInfoStore.nodeInfo;
     const host =
         custom && privacy.customBlockExplorer
             ? privacy.customBlockExplorer
             : isMutinynet
             ? 'mutinynet.com'
             : (privacy && privacy.defaultBlockExplorer) || 'mempool.space';
-    const network =
-        !isMutinynet && (nodeInfoStore.nodeInfo.isTestNet || testnet)
-            ? 'testnet/'
-            : '';
+    const network = isMutinynet
+        ? ''
+        : isSigNet
+        ? 'signet/'
+        : nodeInfoStore.nodeInfo.isTestNet || testnet
+        ? 'testnet/'
+        : '';
 
     // Read the convention hint off the raw host, before it is stripped below.
     // Currently '...#mempool.space' is the only meaningful hint: it tells us
