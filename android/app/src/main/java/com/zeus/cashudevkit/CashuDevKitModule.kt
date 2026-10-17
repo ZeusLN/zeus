@@ -1284,34 +1284,10 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     extra = null
                 )
 
-                // Step 2: Gather this mint's unspent proofs —
-                // the mint knows the MPP partial amount from the quote
-                val database = db
-                if (database == null) {
-                    withContext(Dispatchers.Main) {
-                        promise.reject("NO_WALLET", "Wallet not initialized")
-                    }
-                    return@launch
-                }
-                val url = MintUrl(normalizeMintUrl(mintUrl))
-                val proofInfos = database.getProofs(
-                    mintUrl = url,
-                    unit = CurrencyUnit.Sat,
-                    state = listOf(ProofState.UNSPENT),
-                    spendingConditions = null
-                )
-                val mintProofs = proofInfos.map { it.proof }
-
-                if (mintProofs.isEmpty()) {
-                    withContext(Dispatchers.Main) {
-                        promise.reject("NO_PROOFS", "No proofs found for mint $mintUrl")
-                    }
-                    return@launch
-                }
-
-                // Step 3: Two-phase melt with the selected proofs
-                val melted = wallet.prepareMeltProofs(quote.id, mintProofs)
-                    .useHandle { it.confirm() }
+                // Step 2: Two-phase melt. As in melt(), CDK selects proofs for
+                // the quoted partial amount plus fee reserve; every proof
+                // handed in stays pending while the payment is in flight
+                val melted = wallet.prepareMelt(quote.id).useHandle { it.confirm() }
 
                 withContext(Dispatchers.Main) {
                     promise.resolve(encodeMelted(melted).toString())

@@ -1168,32 +1168,10 @@ class CashuDevKitModule: RCTEventEmitter {
                     extra: nil
                 )
 
-                // Step 2: Gather this mint's unspent proofs —
-                // the mint knows the MPP partial amount from the quote
-                let dbHandle: WalletSqliteDatabase? = walletQueue.sync { self.db }
-                guard let db = dbHandle else {
-                    reject("NO_WALLET", "Wallet not initialized", nil)
-                    return
-                }
-                let url = MintUrl(url: normalizeMintUrl(mintUrl))
-                let proofInfos = try await db.getProofs(
-                    mintUrl: url,
-                    unit: .sat,
-                    state: [.unspent],
-                    spendingConditions: nil
-                )
-                let mintProofs = proofInfos.map { $0.proof }
-
-                guard !mintProofs.isEmpty else {
-                    reject("NO_PROOFS", "No proofs found for mint \(mintUrl)", nil)
-                    return
-                }
-
-                // Step 3: Two-phase melt with the selected proofs
-                let prepared = try await wallet.prepareMeltProofs(
-                    quoteId: quote.id,
-                    proofs: mintProofs
-                )
+                // Step 2: Two-phase melt. As in melt(), CDK selects proofs for
+                // the quoted partial amount plus fee reserve; every proof
+                // handed in stays pending while the payment is in flight
+                let prepared = try await wallet.prepareMelt(quoteId: quote.id)
                 let melted = try await prepared.confirm()
 
                 resolve(encodeToJson(encodeMelted(melted)))
