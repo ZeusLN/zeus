@@ -65,6 +65,7 @@ import { Alert } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import LnurlPay from './LnurlPay';
 import { unitsStore } from '../../stores/Stores';
+import { verifyLnurlPayInvoice } from '../../utils/LnurlPayUtils';
 
 const FIXED_SATS = 12618;
 const CONFIRM = 'views.LnurlPay.LnurlPay.confirm';
@@ -368,5 +369,93 @@ describe('LnurlPay with invalid lnurlParams', () => {
         buttons[0].onPress();
 
         expect(navigation.goBack).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('LnurlPay ecash payment', () => {
+    // BOLT 11 spec vectors with different payment hashes
+    const SERVICE_INVOICE =
+        'lnbc2500u1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpquwpc4curk03c9wlrswe78q4eyqc7d8d0xqzpu9qrsgqhtjpauu9ur7fw2thcl4y9vfvh4m9wlfyz2gem29g5ghe2aak2pm3ps8fdhtceqsaagty2vph7utlgj48u0ged6a337aewvraedendscp573dxr';
+    const OTHER_INVOICE =
+        'lnbcrt1230n1pj429x7pp57t97q4awqj3f529snr0pa6senk83sq5pp760qf5a4jzvd7xgwcksdqqcqzzsxqrrsssp57eqtv7vxr46arupna3w4ct0lkf2mqmz9wt044cwkks0rwlnhfr5s9qyyssqragwpwav7nfwv2xyuuamxxj4pnnpzv2hlw7j473repd3sq7st698ta9kmzmygt0w7tmncl56a6mnma0w7e5dlpqd0wy6x3v35rssldspjhh8p0';
+    const SERVICE_PAYMENT_HASH =
+        '0001020304050607080900010203040506070809000102030405060708090102';
+
+    beforeEach(() => {
+        jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        (verifyLnurlPayInvoice as jest.Mock).mockReturnValue({ ok: true });
+        mockBlobFetch.mockReset();
+        mockBlobFetch.mockResolvedValue({
+            json: () => ({ pr: SERVICE_INVOICE })
+        });
+    });
+
+    afterEach(() => {
+        jest.restoreAllMocks();
+        mockBlobFetch.mockReset();
+        mockBlobFetch.mockImplementation(() => new Promise(() => {}));
+    });
+
+    // Confirms an ecash payment while another caller of the shared
+    // CashuStore loads OTHER_INVOICE during the mint quote round trip
+    const confirmWhileStoreIsReplaced = async () => {
+        const CashuStore: any = {};
+        CashuStore.getPayReq = jest.fn(async () => {
+            CashuStore.paymentRequest = OTHER_INVOICE;
+            CashuStore.payReq = { payment_hash: 'other-payment-hash' };
+            CashuStore.getPayReqError = 'error of the other invoice';
+        });
+        const navigation = {
+            addListener: jest.fn(),
+            removeListener: jest.fn(),
+            navigate: jest.fn(),
+            goBack: jest.fn()
+        };
+        const LnurlPayStore = { keep: jest.fn() };
+        await render(
+            <LnurlPay
+                {...({
+                    navigation,
+                    route: {
+                        params: {
+                            lnurlParams: lnurlParams(250000, 250000),
+                            ecash: true
+                        }
+                    },
+                    UnitsStore: { resetUnits: jest.fn() },
+                    ContactStore: { contacts: [] },
+                    CashuStore,
+                    InvoicesStore: { getPayReq: jest.fn(async () => {}) },
+                    LnurlPayStore
+                } as any)}
+            />
+        );
+        await fireEvent.press(screen.getByRole('button', { name: CONFIRM }));
+        await act(async () => {
+            await new Promise(setImmediate);
+        });
+        return { navigation, LnurlPayStore };
+    };
+
+    it('passes the invoice it checked to ChoosePaymentMethod', async () => {
+        const { navigation } = await confirmWhileStoreIsReplaced();
+
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'ChoosePaymentMethod',
+            { lightning: SERVICE_INVOICE, locked: true }
+        );
+    });
+
+    it('records the payment under the checked invoice payment hash', async () => {
+        const { LnurlPayStore } = await confirmWhileStoreIsReplaced();
+
+        expect(LnurlPayStore.keep).toHaveBeenCalledTimes(1);
+        expect(LnurlPayStore.keep.mock.calls[0][0]).toBe(SERVICE_PAYMENT_HASH);
+    });
+
+    it('ignores the error of an invoice another caller loaded', async () => {
+        await confirmWhileStoreIsReplaced();
+
+        expect(Alert.alert).not.toHaveBeenCalled();
     });
 });

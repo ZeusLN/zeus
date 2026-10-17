@@ -30,6 +30,7 @@ import LnurlPayMetadata from './Metadata';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getRawAmountFromSats, getSatAmount } from '../../utils/AmountUtils';
+import Bolt11Utils from '../../utils/Bolt11Utils';
 import {
     verifyLnurlPayInvoice,
     isLnurlCallbackAllowed
@@ -396,7 +397,13 @@ export default class LnurlPay extends React.Component<
                     CashuStore.getPayReq(pr).then(() => {
                         this.setState({ loading: false });
 
-                        const payReqError = CashuStore.getPayReqError;
+                        // CashuStore is shared with the NWC service and a
+                        // superseded getPayReq resolves silently, so the store
+                        // may hold another invoice by now. Use pr from here on.
+                        const payReqError =
+                            CashuStore.paymentRequest === pr
+                                ? CashuStore.getPayReqError
+                                : undefined;
                         const isInsufficientFunds =
                             typeof payReqError === 'string' &&
                             payReqError
@@ -424,14 +431,10 @@ export default class LnurlPay extends React.Component<
                             return;
                         }
 
-                        const payment_hash: string =
-                            (CashuStore.payReq &&
-                                CashuStore.payReq.payment_hash) ||
-                            '';
+                        const decoded = Bolt11Utils.decode(pr);
+                        const payment_hash: string = decoded.payment_hash || '';
                         const description_hash: string =
-                            (CashuStore.payReq &&
-                                CashuStore.payReq.description_hash) ||
-                            '';
+                            decoded.description_hash || '';
 
                         LnurlPayStore.keep(
                             payment_hash,
@@ -444,7 +447,7 @@ export default class LnurlPay extends React.Component<
                         );
 
                         navigation.navigate('ChoosePaymentMethod', {
-                            lightning: CashuStore.paymentRequest,
+                            lightning: pr,
                             locked: true
                         });
                     });
