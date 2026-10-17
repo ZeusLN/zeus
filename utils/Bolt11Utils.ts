@@ -51,6 +51,10 @@ class Bolt11Utils {
     // so an LRU cache keyed by the raw input collapses those into a single
     // recovery per unique invoice.
     private readonly CACHE_LIMIT = 256;
+    // Longest payment request that fits in a single QR code (version 40,
+    // alphanumeric); LDK rejects anything longer. The tag loop and prefix
+    // regex below are quadratic in the input length, so cap it.
+    private readonly MAX_LENGTH = 7089;
     private cache: Map<string, DecodedBolt11> = new Map();
 
     constructor() {
@@ -81,7 +85,7 @@ class Bolt11Utils {
         }
 
         const sections: Bolt11Section[] = [];
-        const decoded = bech32.decode(paymentRequest, Number.MAX_SAFE_INTEGER);
+        const decoded = bech32.decode(paymentRequest, this.MAX_LENGTH);
         paymentRequest = paymentRequest.toLowerCase();
         const prefix = decoded.prefix;
         let words = decoded.words;
