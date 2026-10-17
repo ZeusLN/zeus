@@ -10,7 +10,7 @@ import ReactNativeBlobUtil from 'react-native-blob-util';
 import { doTorRequest, RequestMethod } from '../../utils/TorUtils';
 import BackendUtils from './../../utils/BackendUtils';
 import { localeString } from './../../utils/LocaleUtils';
-import { getLnurlpUrl } from './../../utils/LnurlPayUtils';
+import { getLnurlHost, getLnurlpUrl } from './../../utils/LnurlPayUtils';
 import { themeColor } from './../../utils/ThemeUtils';
 
 import {
@@ -135,13 +135,14 @@ export default class LightningSwipeableRow extends Component<
         settings?: any
     ): Promise<void> => {
         const params = lnurlParams || (await getlnurlParams(lightning ?? ''));
+        const lnurlHost = getLnurlHost(params?.url ?? params?.callback);
         if (
             params &&
             params.status === 'ERROR' &&
-            params.domain?.endsWith('.onion')
+            lnurlHost.endsWith('.onion')
         ) {
             // TODO handle fetching of params with internal Tor
-            throw new Error(`${params.domain} says: ${params.reason}`);
+            throw new Error(`${lnurlHost} says: ${params.reason}`);
         }
         switch (params.tag) {
             case 'payRequest':
@@ -162,7 +163,7 @@ export default class LightningSwipeableRow extends Component<
                 Alert.alert(
                     localeString('general.error'),
                     params.status === 'ERROR'
-                        ? `${params.domain} says: ${params.reason}`
+                        ? `${lnurlHost} says: ${params.reason}`
                         : `${localeString(
                               'utils.handleAnything.unsupportedLnurlType'
                           )}: ${params.tag}`,
