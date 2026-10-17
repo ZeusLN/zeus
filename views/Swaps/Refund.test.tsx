@@ -9,6 +9,8 @@ jest.mock('../../utils/BackendUtils', () => ({
     getMyNodeInfo: jest.fn(),
     supportsOnchainSends: () => false
 }));
+// AddressUtils reads the connected node's network from here
+jest.mock('../../stores/Stores', () => ({ nodeInfoStore: { nodeInfo: {} } }));
 jest.mock('../../models/NodeInfo', () => ({
     __esModule: true,
     default: class {
@@ -75,11 +77,14 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import RefundSwap from './Refund';
 import lndMobile from '../../lndmobile/LndMobileInjection';
 import BackendUtils from '../../utils/BackendUtils';
+import { nodeInfoStore } from '../../stores/Stores';
 
 const nativeBuild = lndMobile.swaps.buildRefundTransaction as jest.Mock;
 const getMyNodeInfo = BackendUtils.getMyNodeInfo as jest.Mock;
 
 const TIMEOUT = 900000;
+const DESTINATION = 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4';
+const NEXT_DESTINATION = 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq';
 const NOT_COSIGNED = 'could not create refund transaction: all outputs invalid';
 // broadcastSwapTransaction's error when neither the mempool instance nor
 // the host takes a transaction whose locktime is above the tip
@@ -127,7 +132,7 @@ const refund = async ({
             } as any)}
         />
     );
-    await fireEvent.changeText(hostOfType('AddressInput'), 'bc1qdestination');
+    await fireEvent.changeText(hostOfType('AddressInput'), DESTINATION);
     await fireEvent(hostOfType('OnchainFeeInput'), 'changeFee', '3');
     if (uncooperative) {
         await fireEvent(hostOfType('Switch'), 'valueChange', true);
@@ -180,7 +185,10 @@ describe('RefundSwap refund button', () => {
         // the destination is cleared, so the button waits for a new one
         expect(hostOfType('AddressInput').props.value).toBe('');
         // a new destination enables it again, so loading was reset
-        await fireEvent.changeText(hostOfType('AddressInput'), 'bc1qnext');
+        await fireEvent.changeText(
+            hostOfType('AddressInput'),
+            NEXT_DESTINATION
+        );
         refundEnabled();
     });
 
@@ -195,7 +203,7 @@ describe('RefundSwap refund button', () => {
             transactionHex: 'lockuphex',
             feeRate: 3,
             timeoutBlockHeight: TIMEOUT,
-            destinationAddress: 'bc1qdestination',
+            destinationAddress: DESTINATION,
             lockupAddress: 'bc1plockup',
             network: 'mainnet'
         });
@@ -420,5 +428,57 @@ describe('RefundSwap raw details', () => {
         expect(rows).toContainEqual(
             expect.objectContaining({ keyValue: 'swapId', value: SWAP.id })
         );
+    });
+});
+
+describe('RefundSwap destination', () => {
+    const TESTNET = 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx';
+
+    afterEach(() => {
+        (nodeInfoStore as any).nodeInfo = {};
+    });
+
+    const enter = async (destination: string) => {
+        await render(
+            <RefundSwap
+                {...({
+                    navigation: { navigate: jest.fn(), setParams: jest.fn() },
+                    route: { params: { swapData: { ...SWAP } } },
+                    SwapStore: {},
+                    NodeInfoStore: { nodeInfo: nodeInfoStore.nodeInfo },
+                    InvoicesStore: {}
+                } as any)}
+            />
+        );
+        await fireEvent.changeText(hostOfType('AddressInput'), destination);
+        return screen.getByRole('button', {
+            name: 'views.Swaps.initiateRefund'
+        });
+    };
+
+    it('accepts an address of the node network', async () => {
+        expect(await enter(DESTINATION)).toBeEnabled();
+    });
+
+    it('accepts a testnet address on a testnet node', async () => {
+        (nodeInfoStore as any).nodeInfo = { isTestNet: true };
+        expect(await enter(TESTNET)).toBeEnabled();
+    });
+
+    it.each([
+        ['a testnet address', TESTNET],
+        ['a regtest address', 'bcrt1qqgdrlt97x4847rf85utak8gre5q7k83uwh3ajj'],
+        ['a testnet base58 address', 'mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn'],
+        [
+            'a public key',
+            '0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798'
+        ]
+    ])('refuses %s on a mainnet node', async (_, destination) => {
+        expect(await enter(destination)).toBeDisabled();
+    });
+
+    it('refuses a mainnet address on a testnet node', async () => {
+        (nodeInfoStore as any).nodeInfo = { isTestNet: true };
+        expect(await enter(DESTINATION)).toBeDisabled();
     });
 });
