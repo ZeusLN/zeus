@@ -16,6 +16,7 @@ jest.mock('../components/SuccessErrorMessage', () => ({
     ErrorMessage: 'ErrorMessage'
 }));
 jest.mock('../stores/FiatStore', () => ({}));
+jest.mock('../stores/Stores', () => ({}));
 jest.mock('../stores/TransactionsStore', () => ({}));
 jest.mock('../stores/SettingsStore', () => ({
     __esModule: true,
@@ -190,6 +191,40 @@ describe('Bolt12OfferReview confirmation', () => {
         await control.confirm();
 
         expect(TransactionsStore.sendPayment).not.toHaveBeenCalled();
+    });
+
+    it.each(['1,000', '0,5', '-1', '.'])(
+        'cannot dispatch with the unusable fee limit %s',
+        async (feeLimitSat) => {
+            const { TransactionsStore, navigation } = await renderView({
+                feeLimitSat
+            });
+
+            expect(
+                screen.container
+                    .queryAll((n) => n.type === 'ErrorMessage')
+                    .map((n) => n.props.message)
+            ).toContain('views.PaymentRequest.invalidFeeLimit');
+
+            const control = payControl();
+            expect(control.disabled).toBe(true);
+            await control.confirm();
+
+            expect(TransactionsStore.sendPayment).not.toHaveBeenCalled();
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        }
+    );
+
+    it('dispatches with a fee limit of 0', async () => {
+        const { TransactionsStore } = await renderView({ feeLimitSat: '0' });
+
+        const control = payControl();
+        expect(control.disabled).toBe(false);
+        await control.confirm();
+
+        expect(TransactionsStore.sendPayment).toHaveBeenCalledWith(
+            expect.objectContaining({ fee_limit_sat: '0' })
+        );
     });
 
     it.each([
