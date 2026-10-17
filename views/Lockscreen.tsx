@@ -27,7 +27,9 @@ import SettingsStore from '../stores/SettingsStore';
 import { verifyBiometry } from '../utils/BiometricUtils';
 import {
     blockNavigationDuringWipe,
-    clearAllData
+    clearAllData,
+    isWipePending,
+    markWipePending
 } from '../utils/DataClearUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { restartApp } from '../utils/RestartUtils';
@@ -63,6 +65,7 @@ interface LockscreenState {
     duressPin: string;
     hidden: boolean;
     error: boolean;
+    attemptNotSaved: boolean;
     modifySecurityScreen: string;
     deletePin: boolean;
     deleteDuressPin: boolean;
@@ -88,6 +91,9 @@ export default class Lockscreen extends React.Component<
     // whatever screen is on top. An instance field, not state, so the
     // guard holds before the next render.
     private unlocking = false;
+    // Set while an entry's attempt is being saved, so that each entry is
+    // saved before the next one is taken
+    private savingAttempt = false;
 
     constructor(props: any) {
         super(props);
@@ -100,6 +106,7 @@ export default class Lockscreen extends React.Component<
             duressPin: '',
             hidden: true,
             error: false,
+            attemptNotSaved: false,
             modifySecurityScreen: '',
             deletePin: false,
             deleteDuressPin: false,
@@ -189,6 +196,17 @@ export default class Lockscreen extends React.Component<
             pendingNavigation,
             shareIntentData
         } = route.params ?? {};
+
+        // Finish a wipe started by an earlier launch that was cut short,
+        // before anything else, POS and biometrics included. A saved
+        // attempt count at the limit does not wipe here: the last attempt
+        // may have been a correct entry whose reset was not saved, so it
+        // only means the next wrong entry wipes.
+        if (await isWipePending()) {
+            this.setState({ wiping: true });
+            await this.authenticationFailure();
+            return;
+        }
 
         if (
             SettingsStore.isPosEnabled() &&
@@ -331,16 +349,47 @@ export default class Lockscreen extends React.Component<
             deletePassword,
             deleteDuressPassword
         } = this.state;
-        const { updateSettings, getSettings, setPosStatus } = SettingsStore;
+        const { updateSettings, setPosStatus } = SettingsStore;
 
         // a wipe is already running; a second submit must not start another
         // wipe or mutate settings mid-wipe. Likewise while a verified login
         // is still completing, a second submit would navigate twice.
-        if (this.state.wiping || this.unlocking) return;
+        if (this.state.wiping || this.unlocking || this.savingAttempt) return;
 
         this.setState({
-            error: false
+            error: false,
+            attemptNotSaved: false
         });
+
+        // Save the attempt before checking the entry. An entry that is
+        // checked but not counted (a failed write, or the app closed before
+        // the write) would not count toward the wipe, so if the write fails
+        // the entry is not checked. The increment runs inside the settings
+        // update queue, so it always builds on the last saved count.
+        let authenticationAttempts: number;
+        this.savingAttempt = true;
+        try {
+            const updatedSettings = await updateSettings(
+                (currentSettings: any) => ({
+                    authenticationAttempts:
+                        (currentSettings?.authenticationAttempts || 0) + 1
+                })
+            );
+            if (typeof updatedSettings?.authenticationAttempts !== 'number') {
+                throw new Error('authentication attempt was not saved');
+            }
+            authenticationAttempts = updatedSettings.authenticationAttempts;
+        } catch (error) {
+            console.error('Failed to save authentication attempt', error);
+            this.setState({
+                error: true,
+                attemptNotSaved: true,
+                pinAttempt: ''
+            });
+            return;
+        } finally {
+            this.savingAttempt = false;
+        }
 
         if (
             (passphraseAttempt && passphraseAttempt === passphrase) ||
@@ -427,32 +476,27 @@ export default class Lockscreen extends React.Component<
             // the configs being wiped) before the restart lands. Keeping
             // loggedIn false holds every auth gate shut for the duration,
             // and the wipe guard pins the user to the wiping screen.
+            // Save the pending wipe before the screen changes (see below).
+            await markWipePending();
             this.setState({ wiping: true });
             await this.deleteNodes();
         } else {
-            // need to fetch updated settings to get incremented value of
-            // authenticationAttempts, in case there are multiple failed attempts in a row
-            const updatedSettings = await getSettings();
-            let authenticationAttempts = 1;
-            if (updatedSettings?.authenticationAttempts) {
-                authenticationAttempts =
-                    updatedSettings.authenticationAttempts + 1;
-            }
             this.setState({
                 authenticationAttempts
             });
             if (authenticationAttempts >= maxAuthenticationAttempts) {
-                // see the duress branch: loggedIn must stay false so the
-                // wallet UI stays gated while the wipe runs
+                // Save the pending wipe before the screen changes, so that
+                // closing the app once the wrong entry shows cannot stop
+                // the wipe. See the duress branch: loggedIn must stay false
+                // so the wallet UI stays gated while the wipe runs.
+                await markWipePending();
                 this.setState({ wiping: true });
                 // wipe node configs, passwords, and pins
                 await this.authenticationFailure();
             } else {
-                await updateSettings({ authenticationAttempts }).then(() => {
-                    this.setState({
-                        error: true,
-                        pinAttempt: ''
-                    });
+                this.setState({
+                    error: true,
+                    pinAttempt: ''
                 });
             }
         }
@@ -538,10 +582,9 @@ export default class Lockscreen extends React.Component<
             // mechanism and there is no meaningful recovery mid-wipe
             console.warn('[Lockscreen] wipe failed part-way', e);
         } finally {
-            // the restart must run even after a partial wipe: the settings
-            // blob is cleared early, so a restart still lands on a fresh
-            // install state rather than stranding the user on a dead
-            // lockscreen
+            // the restart must run even after a partial wipe: the wipe is
+            // still recorded as pending, so the next launch finishes it
+            // rather than stranding the user on a dead lockscreen
             restartApp();
         }
     };
@@ -582,8 +625,13 @@ export default class Lockscreen extends React.Component<
     };
 
     generateErrorMessage = (): string => {
-        const { passphrase, authenticationAttempts } = this.state;
+        const { passphrase, authenticationAttempts, attemptNotSaved } =
+            this.state;
         let incorrect = '';
+
+        if (attemptNotSaved) {
+            return localeString('views.Lockscreen.attemptNotSaved');
+        }
 
         if (passphrase) {
             incorrect = localeString('views.Lockscreen.incorrectPassword');

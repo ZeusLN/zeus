@@ -95,6 +95,7 @@ function setup(selectedNode: number) {
         handleInitialUrl: jest.fn(),
         processPendingDeepLink: jest.fn()
     };
+    const isWipePending = jest.fn(async () => false);
     const Wallet = sourceMethods(
         'views/Wallet/Wallet.tsx',
         'Wallet',
@@ -127,7 +128,8 @@ function setup(selectedNode: number) {
             themeColor: () => '#000',
             isLightTheme: () => false,
             autoPurgeLegacyKeychain: jest.fn(),
-            repairMissingChannelEdges
+            repairMissingChannelEdges,
+            isWipePending
         }
     );
     const view = new Wallet();
@@ -186,7 +188,8 @@ function setup(selectedNode: number) {
         ldk,
         lnd,
         repairMissingChannelEdges,
-        LinkingUtils
+        LinkingUtils,
+        isWipePending
     };
 }
 
@@ -211,6 +214,16 @@ it('control: a refresh with no switch connects and clears connecting', async () 
     expect(view.props.NodeInfoStore.getNodeInfo).toHaveBeenCalledTimes(1);
     expect(view.props.ChannelsStore.getChannels).toHaveBeenCalledTimes(1);
     expect(settings.connecting).toBe(false);
+});
+
+it('hands a wipe that did not finish to the Lockscreen before loading settings', async () => {
+    const { settings, view, refresh, isWipePending } = setup(1);
+    isWipePending.mockResolvedValue(true);
+    view.props.navigation = { navigate: jest.fn() };
+    await refresh();
+    expect(view.props.navigation.navigate).toHaveBeenCalledWith('Lockscreen');
+    expect(settings.getSettings).not.toHaveBeenCalled();
+    expect(view.props.NodeInfoStore.getNodeInfo).not.toHaveBeenCalled();
 });
 
 it('switching away from a loading LDK Node leaves its alerts and connect to the next wallet', async () => {

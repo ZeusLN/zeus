@@ -42,6 +42,14 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
     })
 }));
 jest.mock('react-native-encrypted-storage', () => ({
+    getItem: jest.fn(async (key: string) => {
+        if (mockEncryptedStorage.failGet) throw new Error('get failed');
+        return mockEncryptedStorage.items.get(key) ?? null;
+    }),
+    setItem: jest.fn(async (key: string, value: string) => {
+        if (mockEncryptedStorage.failSet) throw new Error('set failed');
+        mockEncryptedStorage.items.set(key, value);
+    }),
     removeItem: jest.fn(async (key: string) => {
         if (mockEncryptedStorage.failRemove) throw new Error('remove failed');
         mockEncryptedStorage.items.delete(key);
@@ -185,6 +193,8 @@ import {
     clearCDKDatabaseForNode,
     clearNodeKeychainData,
     deleteNodeDataDirectoryWithRetry,
+    isWipePending,
+    markWipePending,
     CASHU_KEY_SUFFIXES
 } from './DataClearUtils';
 import { deleteLndWallet } from './LndMobileUtils';
@@ -203,6 +213,8 @@ const mockKeychain = {
 };
 const mockEncryptedStorage = {
     items: new Map<string, string>(),
+    failGet: false,
+    failSet: false,
     failRemove: false,
     failClear: false
 };
@@ -245,6 +257,13 @@ const failOn =
         s === server && cloud === (partition === 'cloud');
 const warnedAbout = (text: string) =>
     warnSpy.mock.calls.some((call) => String(call[0]).includes(text));
+const deferred = <T>() => {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((res) => {
+        resolve = res;
+    });
+    return { promise, resolve };
+};
 
 const NODES = [
     {
@@ -281,6 +300,8 @@ beforeEach(() => {
     mockKeychain.failReset = never;
     mockKeychain.failGet = never;
     mockEncryptedStorage.items.clear();
+    mockEncryptedStorage.failGet = false;
+    mockEncryptedStorage.failSet = false;
     mockEncryptedStorage.failRemove = false;
     mockEncryptedStorage.failClear = false;
     mockAsyncStorage.items.clear();
@@ -480,7 +501,7 @@ describe('clearAllData: a failing step does not stop later steps', () => {
 
         await expect(clearAllData()).resolves.toBeUndefined();
 
-        expect(warnedAbout('Error clearing EncryptedStorage')).toBe(true);
+        expect(warnedAbout('Error clearing legacy settings')).toBe(true);
         expect(remainingEntries()).toEqual([]);
         expect(mockFs.files.has(ANDROID_DATASTORE)).toBe(false);
     });
@@ -706,5 +727,148 @@ describe('deleteNodeDataDirectoryWithRetry rejections', () => {
             })
         ).resolves.toBe(false);
         expect(mockedDeleteLdkNodeWallet).toHaveBeenCalledTimes(3);
+    });
+});
+
+// A stored config whose values cannot be turned into key names (accepted by
+// the wallet config import) made clearNodeKeychainData throw, which ended
+// the wipe before the settings blob and everything after it
+describe('clearAllData with a malformed node config', () => {
+    it.each([
+        ['an lndDir', { implementation: 'lnd', lndDir: { toString: null } }],
+        [
+            'an ldkNodeDir',
+            { implementation: 'lnd', ldkNodeDir: { toString: null } }
+        ],
+        [
+            'a pairingPhrase',
+            {
+                implementation: 'lightning-node-connect',
+                pairingPhrase: { length: { toString: null } }
+            }
+        ]
+    ])(
+        'still clears everything when %s is not a string',
+        async (_field, malformed) => {
+            setPlatformOS('android');
+            seedInstall();
+            seedEverywhere(
+                'zeus-settings-v2',
+                JSON.stringify({ nodes: [malformed, ...NODES] })
+            );
+            mockFs.files.add(ANDROID_DATASTORE);
+
+            await expect(clearAllData()).resolves.toBeUndefined();
+
+            expect(warnedAbout('Error clearing node keys')).toBe(true);
+            expect(remainingEntries()).toEqual([]);
+            expect(mockedDeleteLndWallet).toHaveBeenCalledWith('lnd-uuid');
+            expect(mockedDeleteLdkNodeWallet).toHaveBeenCalledWith('ldk-uuid');
+            expect([...mockEncryptedStorage.items.keys()]).toEqual([]);
+            expect(mockFs.files.has(ANDROID_DATASTORE)).toBe(false);
+        }
+    );
+});
+
+// The write latch lives in JS memory, so a process that ended mid-wipe left
+// the settings blob (cleared late) for the next launch to load as if no wipe
+// had started. The wipe is recorded in EncryptedStorage until it finishes.
+describe('clearAllData pending-wipe record', () => {
+    it('is saved before anything is cleared and kept while the wipe is cut short', async () => {
+        seedInstall();
+        const lndStop = deferred<boolean>();
+        mockedDeleteLndWallet.mockReturnValueOnce(lndStop.promise);
+        const recordAtFirstReset: Array<string | undefined> = [];
+        mockKeychain.failReset = () => {
+            if (recordAtFirstReset.length === 0) {
+                recordAtFirstReset.push(
+                    mockEncryptedStorage.items.get('wipe-pending')
+                );
+            }
+            return false;
+        };
+
+        const wipe = clearAllData();
+        await new Promise((resolve) => setImmediate(resolve));
+
+        // the process would end here, with LND still stopping
+        expect(mockedDeleteLndWallet).toHaveBeenCalledWith('lnd-uuid');
+        expect(recordAtFirstReset).toEqual(['true']);
+        expect(remainingEntries()).toContain('local:zeus:zeus-settings-v2');
+        expect(mockEncryptedStorage.items.get('wipe-pending')).toBe('true');
+        // not reported as unfinished to this JS context, which is running it
+        expect(await isWipePending()).toBe(false);
+
+        lndStop.resolve(true);
+        await wipe;
+    });
+
+    it('is kept through EncryptedStorage.clear and the keychain file deletion, then removed', async () => {
+        setPlatformOS('android');
+        seedInstall();
+        mockFs.files.add(ANDROID_DATASTORE);
+        let recordAtStep8: string | undefined;
+        mockFs.failUnlink = (path) => {
+            if (path === ANDROID_DATASTORE) {
+                recordAtStep8 = mockEncryptedStorage.items.get('wipe-pending');
+            }
+            return false;
+        };
+
+        await clearAllData();
+
+        expect(recordAtStep8).toBe('true');
+        expect(mockFs.files.has(ANDROID_DATASTORE)).toBe(false);
+        expect(mockEncryptedStorage.items.has('wipe-pending')).toBe(false);
+        expect(await isWipePending()).toBe(false);
+    });
+
+    it('removes the legacy settings blob before the keychain settings blob', async () => {
+        seedInstall();
+        let legacyAtBlobReset: boolean | undefined;
+        mockKeychain.failReset = (server) => {
+            if (
+                legacyAtBlobReset === undefined &&
+                server === 'zeus:zeus-settings-v2'
+            ) {
+                legacyAtBlobReset =
+                    mockEncryptedStorage.items.has('zeus-settings');
+            }
+            return false;
+        };
+
+        await clearAllData();
+
+        expect(legacyAtBlobReset).toBe(false);
+    });
+
+    it('still wipes when the record cannot be saved', async () => {
+        seedInstall();
+        mockEncryptedStorage.failSet = true;
+
+        await expect(clearAllData()).resolves.toBeUndefined();
+
+        expect(warnedAbout('Error recording the pending wipe')).toBe(true);
+        expect(remainingEntries()).toEqual([]);
+    });
+
+    it('isWipePending reports a record left by an earlier launch', async () => {
+        expect(await isWipePending()).toBe(false);
+
+        mockEncryptedStorage.items.set('wipe-pending', 'true');
+        expect(await isWipePending()).toBe(true);
+
+        mockEncryptedStorage.failGet = true;
+        expect(await isWipePending()).toBe(false);
+    });
+
+    it('markWipePending saves the record and does not throw when it cannot', async () => {
+        await markWipePending();
+        expect(await isWipePending()).toBe(true);
+
+        mockEncryptedStorage.items.clear();
+        mockEncryptedStorage.failSet = true;
+        await expect(markWipePending()).resolves.toBeUndefined();
+        expect(warnedAbout('Error recording the pending wipe')).toBe(true);
     });
 });
