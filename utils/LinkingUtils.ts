@@ -153,6 +153,12 @@ class LinkingUtils {
                         routes.some((r) => r.name === 'PaymentRequest')
                     ) {
                         navigation.popTo(route, props);
+                    } else if (route === focusedRoute) {
+                        // navigate() would keep the focused screen and only
+                        // swap its route params, which screens that copy the
+                        // request into state on mount do not pick up. Mount
+                        // a fresh screen for the new request instead.
+                        navigation.replace(route, props);
                     } else {
                         navigation.navigate(route, props);
                     }
