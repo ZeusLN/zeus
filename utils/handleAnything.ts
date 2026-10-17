@@ -9,6 +9,7 @@ import AddressUtils from './AddressUtils';
 import BackendUtils from './BackendUtils';
 import Bolt11Utils from './Bolt11Utils';
 import CashuUtils from './CashuUtils';
+import { isCREQ, decodeCREQ } from './CREQUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
 import ContactUtils from './ContactUtils';
 import { localeString } from './LocaleUtils';
@@ -367,7 +368,7 @@ const handleAnything = async (
 ): Promise<any> => {
     data = data.trim();
     const network = getNetworkString();
-    let { value, satAmount, lightning, offer, clinkNoffer }: any =
+    let { value, satAmount, lightning, offer, clinkNoffer, creq }: any =
         AddressUtils.processBIP21Uri(data);
     const hasAt: boolean = value.includes('@');
     const hasMultiple: boolean =
@@ -376,7 +377,8 @@ const handleAnything = async (
         (value && clinkNoffer) ||
         (lightning && offer) ||
         (lightning && clinkNoffer) ||
-        (offer && clinkNoffer);
+        (offer && clinkNoffer) ||
+        (creq && (value || lightning || offer || clinkNoffer));
 
     // ecash mode
     const ecash =
@@ -406,6 +408,14 @@ const handleAnything = async (
 
     if (!hasAt && hasMultiple) {
         if (isClipboardValue) return true;
+        let creqParams;
+        let creqString;
+        if (creq && isCREQ(creq)) {
+            try {
+                creqParams = decodeCREQ(creq);
+                creqString = creq;
+            } catch {}
+        }
         // ChoosePaymentMethod offers on-chain for any value it receives, so
         // leave out an address that is not valid on this node's network
         return [
@@ -418,7 +428,20 @@ const handleAnything = async (
                 satAmount,
                 lightning,
                 offer,
-                clinkNoffer
+                clinkNoffer,
+                creqParams,
+                creqString
+            }
+        ];
+    } else if (creq && isCREQ(creq)) {
+        // CREQ from BIP-21 as only payment method
+        if (isClipboardValue) return true;
+        const creqParams = decodeCREQ(creq);
+        return [
+            'CREQPayment',
+            {
+                creqParams,
+                creqString: creq
             }
         ];
     } else if (clinkNoffer) {
@@ -1151,6 +1174,16 @@ const handleAnything = async (
             'ImportAccount',
             {
                 extended_public_key: value
+            }
+        ];
+    } else if (isCREQ(value)) {
+        if (isClipboardValue) return true;
+        const creqParams = decodeCREQ(value);
+        return [
+            'CREQPayment',
+            {
+                creqParams,
+                creqString: value
             }
         ];
     } else if (await CashuUtils.isValidCashuTokenAsync(value)) {

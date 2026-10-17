@@ -1,5 +1,6 @@
 import * as React from 'react';
 import {
+    Alert,
     AppState,
     FlatList,
     Image,
@@ -50,10 +51,11 @@ import UTXOPicker from '../components/UTXOPicker';
 import AddressUtils from '../utils/AddressUtils';
 import BackendUtils from '../utils/BackendUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
-import { scanNfcTag } from '../utils/NFCUtils';
+import { scanNfcTag, payViaNfcTap } from '../utils/NFCUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { getRawAmountFromSats } from '../utils/AmountUtils';
+import { cashuStore } from '../stores/Stores';
 import { clearPendingPaymentData } from '../utils/GraphSyncUtils';
 
 import NFC from '../assets/images/SVG/NFC-alt.svg';
@@ -320,6 +322,34 @@ export default class Send extends React.Component<SendProps, SendState> {
     };
 
     scanNfc = async () => {
+        // Try CREQ tap-to-pay first if ecash is enabled
+        if (BackendUtils.supportsCashuWallet() && cashuStore.cdkInitialized) {
+            const result = await payViaNfcTap(
+                this.props.ModalStore,
+                cashuStore
+            );
+            if (result.success) {
+                Alert.alert(
+                    localeString('general.success'),
+                    `${result.creqParams.amount} ${
+                        result.creqParams.unit || 'sat'
+                    }`
+                );
+                return;
+            }
+            // Only stop for definitive failures; otherwise fall through
+            // to regular tag scanning (e.g. technology mismatch, plain NDEF tag)
+            const stopErrors = [
+                localeString('utils.NFCUtils.nfcNotEnabled'),
+                localeString('views.Cashu.CREQPayment.noCompatibleMint')
+            ];
+            if (stopErrors.includes(result.error)) {
+                this.setState({ error_msg: result.error });
+                return;
+            }
+        }
+
+        // Fall back to regular NFC tag reading
         const str = await scanNfcTag(this.props.ModalStore);
         if (str) this.validateAddress(str);
     };

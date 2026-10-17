@@ -246,3 +246,25 @@ describe('ChoosePaymentMethod sending capacity', () => {
         expect(InvoicesStore.getPayReq).not.toHaveBeenCalled();
     });
 });
+
+describe('ChoosePaymentMethod CREQ', () => {
+    beforeEach(() => {
+        balances = { lightningBalance: 0, totalBlockchainBalance: 0 };
+        channels = undefined;
+    });
+
+    it('passes the decoded CREQ and its string through to the list', async () => {
+        const creqParams = { amount: 100, unit: 'sat' };
+        await renderView({ creqParams, creqString: 'creqAoWFhZA' });
+
+        expect(list().creqParams).toEqual(creqParams);
+        expect(list().creqString).toBe('creqAoWFhZA');
+    });
+
+    it('leaves the CREQ props unset when the route has no CREQ', async () => {
+        await renderView();
+
+        expect(list().creqParams).toBeUndefined();
+        expect(list().creqString).toBeUndefined();
+    });
+});
