@@ -713,9 +713,13 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 // creates a wallet per supported unit, so only fold this
                 // wallet's unit; other units must not count toward the total
                 val balances = repo.getBalances()
+                // A mint's balance is whatever it signed for, so the sum can
+                // pass ULong.MAX_VALUE. `+=` wraps there, so clamp instead.
                 var total: ULong = 0UL
                 balances.forEach { (key, amount) ->
-                    if (key.unit == walletUnit) total += amount.value
+                    if (key.unit != walletUnit) return@forEach
+                    val sum = total + amount.value
+                    total = if (sum < total) ULong.MAX_VALUE else sum
                 }
 
                 withContext(Dispatchers.Main) {
