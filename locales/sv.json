@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "Det maximala antalet partiella betalningar som kan användas för att slutföra hela mängden.",
     "views.PaymentRequest.timeout": "Timeout (sekunder)",
     "views.PaymentRequest.feeLimit": "Avgiftsgräns",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "Betala denna invoice",
     "views.PaymentRequest.firstHop": "Första hoppet",
     "views.PaymentRequest.lastHop": "Sista hoppet",
