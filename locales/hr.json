@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "Maksimalan broj djelomičnih uplata koje se mogu koristiti za dovršenje punog iznosa.",
     "views.PaymentRequest.timeout": "Istek vremena (sekunde)",
     "views.PaymentRequest.feeLimit": "Ograničenje naknade",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "Plati ovu fakturu",
     "views.PaymentRequest.firstHop": "Prvi Hop",
     "views.PaymentRequest.lastHop": "Zadnji hop",
