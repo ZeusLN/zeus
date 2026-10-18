@@ -928,6 +928,7 @@
     "views.Send.payBolt12.specifyAmount": "수량을 지정해야 합니다.",
     "views.Send.payBolt12.invalidOffer": "Invalid BOLT 12 offer",
     "views.Send.payBolt12.offersNotSupported": "백엔드에서 BOLT 12를 지원하지 않습니다.",
+    "views.Send.payBolt12.paymentPending": "A payment to this offer is still in transit. Check the Activity view and wait for it to complete or fail before paying again.",
     "views.Bolt12OfferReview.title": "Review Offer",
     "views.Bolt12OfferReview.issuer": "Issuer",
     "views.Bolt12OfferReview.issuerId": "Issuer ID",
