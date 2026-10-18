@@ -70,7 +70,11 @@ import {
 import { PAYMENT_COUNT_KEY, RATING_DISMISSED_KEY } from '../utils/RatingUtils';
 import { deriveEmbeddedNodeId } from './AezeedUtils';
 import { deleteLndWallet } from './LndMobileUtils';
-import { deleteLdkNodeWallet, stopLdkNode } from './LdkNodeUtils';
+import {
+    deleteLdkNodeWallet,
+    getLdkNodeBaseDirectory,
+    stopLdkNode
+} from './LdkNodeUtils';
 import { sleep } from './SleepUtils';
 import hashjs from 'hash.js';
 
@@ -685,6 +689,105 @@ async function clearNodeDataDirectories(settings: any): Promise<void> {
     }
 }
 
+// Wallet directories are named with uuidv4() (WalletCreationUtils,
+// WalletConfiguration, SeedRecovery); older embedded LND wallets used 'lnd'
+const NODE_DIR_NAME_REGEX =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Paths only LND creates inside its data directory
+const LND_DIR_MARKERS = [
+    'lnd.conf',
+    'tls.cert',
+    'tls.key',
+    'data/chain',
+    'data/graph',
+    'logs/bitcoin'
+];
+
+async function hasLndMarker(dir: string): Promise<boolean> {
+    for (const marker of LND_DIR_MARKERS) {
+        if (await ReactNativeBlobUtil.fs.exists(`${dir}/${marker}`)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/**
+ * Deletes LND and LDK Node data directories found on disk whose config is
+ * no longer in settings.nodes, which clearNodeDataDirectories cannot reach.
+ * Directories are left behind when a single-wallet deletion removes the
+ * config but the directory removal fails and the user skips the retry, when
+ * the app is killed between those two steps, and by Android builds before
+ * v13.2.0, whose native delete removed nothing. Only directories named the
+ * way ZEUS names wallet directories and holding LND files are deleted, plus
+ * the entries of the ldk-node base directory. Directories of configured
+ * nodes were already handled by clearNodeDataDirectories and are skipped so
+ * a directory that failed there is not retried a second time.
+ */
+async function clearOrphanedNodeDataDirectories(settings: any): Promise<void> {
+    const nodes: any[] = Array.isArray(settings?.nodes) ? settings.nodes : [];
+    const configuredLndDirs = new Set(
+        nodes
+            .filter((node) => node?.implementation === 'embedded-lnd')
+            .map((node) => node.lndDir || 'lnd')
+    );
+    const configuredLdkDirs = new Set(
+        nodes
+            .filter((node) => node?.implementation === 'ldk-node')
+            .map((node) => node.ldkNodeDir)
+    );
+
+    // LND directories sit next to the CDK databases: Application Support on
+    // iOS, the files dir on Android
+    try {
+        const baseDir = cdkDatabaseDir();
+        const lndDirs: string[] = [];
+        // Legacy Android wallets ran LND in the files dir root, which
+        // deleteLndDirectory addresses as 'lnd'
+        if (Platform.OS === 'android' && (await hasLndMarker(baseDir))) {
+            lndDirs.push('lnd');
+        }
+        const entries: string[] = await ReactNativeBlobUtil.fs.ls(baseDir);
+        for (const entry of entries) {
+            const isNodeDirName =
+                NODE_DIR_NAME_REGEX.test(entry) ||
+                (Platform.OS === 'ios' && entry === 'lnd');
+            if (!isNodeDirName) continue;
+            if (await hasLndMarker(`${baseDir}/${entry}`)) {
+                lndDirs.push(entry);
+            }
+        }
+        for (const lndDir of lndDirs) {
+            if (configuredLndDirs.has(lndDir)) continue;
+            await deleteNodeDataDirectoryWithRetry({
+                implementation: 'embedded-lnd',
+                lndDir
+            });
+        }
+    } catch (e) {
+        console.warn('[ClearData] Error sweeping LND directories:', e);
+    }
+
+    // Every LDK Node wallet has a subdirectory of the ldk-node base directory
+    try {
+        const ldkBaseDir = getLdkNodeBaseDirectory();
+        if (await ReactNativeBlobUtil.fs.exists(ldkBaseDir)) {
+            const entries: string[] = await ReactNativeBlobUtil.fs.ls(
+                ldkBaseDir
+            );
+            for (const ldkNodeDir of entries) {
+                if (configuredLdkDirs.has(ldkNodeDir)) continue;
+                await deleteNodeDataDirectoryWithRetry({
+                    implementation: 'ldk-node',
+                    ldkNodeDir
+                });
+            }
+        }
+    } catch (e) {
+        console.warn('[ClearData] Error sweeping LDK Node directories:', e);
+    }
+}
+
 /**
  * Clears all app data including:
  * - Storage (new zeus: namespace)
@@ -747,6 +850,7 @@ export async function clearAllData(): Promise<void> {
     // hold channel + wallet state and are not covered by the keychain/Cashu
     // clears above, so they must be unlinked explicitly.
     await clearNodeDataDirectories(settings);
+    await clearOrphanedNodeDataDirectories(settings);
 
     // 2d. Delete any plaintext rescue-key exports. Legacy files live outside
     // the app sandbox (public Downloads on Android, Files-visible Documents
