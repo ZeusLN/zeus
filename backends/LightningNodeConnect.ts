@@ -35,7 +35,6 @@ import BigNumber from 'bignumber.js';
 
 export default class LightningNodeConnect {
     private client: any;
-    listener: any;
     customMessagesListener: EmitterSubscription | null = null;
 
     // Lifecycle code may close an old client, but RPCs must only use the
@@ -530,7 +529,7 @@ export default class LightningNodeConnect {
         const { LncModule } = NativeModules;
         const eventEmitter = new NativeEventEmitter(LncModule);
         return new Promise((resolve, reject) => {
-            this.listener = eventEmitter.addListener(
+            const listener = eventEmitter.addListener(
                 streamingCall,
                 (event: any) => {
                     if (!isEventForRequest(event, requestId)) return;
@@ -540,7 +539,7 @@ export default class LightningNodeConnect {
                             result = JSON.parse(event.result);
 
                             resolve({ result });
-                            this.listener.remove();
+                            listener.remove();
                         } catch (e) {
                             try {
                                 result = JSON.parse(event);
@@ -549,7 +548,7 @@ export default class LightningNodeConnect {
                             }
 
                             reject(result);
-                            this.listener.remove();
+                            listener.remove();
                         }
                     }
                 }
