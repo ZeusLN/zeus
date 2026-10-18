@@ -1877,6 +1877,7 @@
     "error.paymentFailed": "결제 실패",
     "error.paymentTimedOut": "결제 시간 한도 초과",
     "error.channelNotFound": "펀딩 txid가 {{fundingTxid}}인 채널을 찾을 수 없음",
+    "error.invalidInvoiceAmountOrExpiry": "Invalid invoice amount or expiry",
     "error.serviceConnection": "서비스 연결 중 오류가 발생했습니다. 나중에 다시 시도해주세요.",
     "error.getExtendableChannels": "연장 가능한 채널 조회 실패",
     "error.createOrder": "주문 생성 실패",
