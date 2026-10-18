@@ -1877,6 +1877,7 @@
     "error.paymentFailed": "Payment failed",
     "error.paymentTimedOut": "Payment timed out",
     "error.channelNotFound": "Channel with funding txid {{fundingTxid}} not found",
+    "error.invalidInvoiceAmountOrExpiry": "Invalid invoice amount or expiry",
     "error.serviceConnection": "連線到服務時發生錯誤，請之後再重試看看。",
     "error.getExtendableChannels": "Failed to get extendable channels",
     "error.createOrder": "Failed to create order",
