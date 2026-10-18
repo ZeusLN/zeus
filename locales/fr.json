@@ -928,6 +928,7 @@
     "views.Send.payBolt12.specifyAmount": "Le montant doit être précisé",
     "views.Send.payBolt12.invalidOffer": "Invalid BOLT 12 offer",
     "views.Send.payBolt12.offersNotSupported": "Le backend ne prend pas en charge BOLT 12",
+    "views.Send.payBolt12.paymentPending": "A payment to this offer is still in transit. Check the Activity view and wait for it to complete or fail before paying again.",
     "views.Bolt12OfferReview.title": "Review Offer",
     "views.Bolt12OfferReview.issuer": "Issuer",
     "views.Bolt12OfferReview.issuerId": "Issuer ID",
