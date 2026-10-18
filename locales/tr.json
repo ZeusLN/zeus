@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "Ödemenin tamamlanması için izin\nverilen maksimum parça ödeme",
     "views.PaymentRequest.timeout": "Zamanaşımı (saniye)",
     "views.PaymentRequest.feeLimit": "Ücret limiti",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "Bu faturayı öde",
     "views.PaymentRequest.firstHop": "İlk zıplama",
     "views.PaymentRequest.lastHop": "Son zıplama",
