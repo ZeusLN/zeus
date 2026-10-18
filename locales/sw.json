@@ -1877,6 +1877,7 @@
     "error.paymentFailed": "Payment failed",
     "error.paymentTimedOut": "Malipo yalipita muda",
     "error.channelNotFound": "Channel with funding txid {{fundingTxid}} not found",
+    "error.invalidInvoiceAmountOrExpiry": "Invalid invoice amount or expiry",
     "error.serviceConnection": "Error connecting to service. Please try again later.",
     "error.getExtendableChannels": "Failed to get extendable channels",
     "error.createOrder": "Failed to create order",
