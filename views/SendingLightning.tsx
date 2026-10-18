@@ -367,7 +367,12 @@ export default class SendingLightning extends React.Component<
         const paymentAmount = currentPayment?.getAmount;
         const feeAmount = payment_fee || currentPayment?.getFee;
 
-        const lightningAddress = LnurlPayStore.lightningAddress;
+        // the address was looked up for one LNURL-pay invoice; don't show
+        // it as the recipient of a different payment
+        const lightningAddress =
+            payment_hash && payment_hash === LnurlPayStore.paymentHash
+                ? LnurlPayStore.lightningAddress
+                : undefined;
         const matchedContact = ContactUtils.findContactByLightningAddress(
             lightningAddress,
             ContactStore?.contacts

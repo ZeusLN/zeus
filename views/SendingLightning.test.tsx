@@ -65,7 +65,10 @@ import SendingLightning from './SendingLightning';
 const TRY_AGAIN = 'views.SendingLightning.tryAgain';
 const GO_TO_WALLET = 'views.SendingLightning.goToWallet';
 
-const renderView = async (transactionsState: Record<string, any>) => {
+const renderView = async (
+    transactionsState: Record<string, any>,
+    LnurlPayStore: Record<string, any> = {}
+) => {
     const TransactionsStore = {
         loading: false,
         error: false,
@@ -91,7 +94,7 @@ const renderView = async (transactionsState: Record<string, any>) => {
                 route: { key: 'SendingLightning', name: 'SendingLightning' },
                 TransactionsStore,
                 ContactStore: { contacts: [] },
-                LnurlPayStore: {},
+                LnurlPayStore,
                 NodeInfoStore: { nodeInfo: {} }
             } as any)}
         />
@@ -164,5 +167,33 @@ describe('SendingLightning hardware back', () => {
         expect(onBack()).toBe(false);
 
         expect(navigation.popTo).not.toHaveBeenCalled();
+    });
+});
+
+describe('SendingLightning recipient', () => {
+    // a Lightning address looked up earlier for another invoice
+    const lnurlPay = {
+        paymentHash: '5e'.repeat(32),
+        lightningAddress: 'alice@friends.example'
+    };
+    const sent = (payment_hash: string) => ({
+        status: 'SUCCEEDED',
+        payment_hash,
+        payment_preimage: 'ab'.repeat(32)
+    });
+    const recipient = () =>
+        screen.container.queryAll((n) => n.type === 'PaymentDetailsSheet')[0]
+            .props.lightningAddress;
+
+    it('shows the Lightning address for the invoice it was looked up for', async () => {
+        await renderView(sent(lnurlPay.paymentHash), lnurlPay);
+
+        expect(recipient()).toBe('alice@friends.example');
+    });
+
+    it('does not show the Lightning address for a different payment', async () => {
+        await renderView(sent('cd'.repeat(32)), lnurlPay);
+
+        expect(recipient()).toBeUndefined();
     });
 });
