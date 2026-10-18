@@ -1852,6 +1852,26 @@ export default class LdkNode {
             data.fee_limit_sat
         );
 
+        // Every send to an offer gets a fresh payment id, so LDK would pay
+        // the offer again while an earlier payment to it is still pending
+        const { offerId } = await LdkNodeInjection.bolt12.bolt12DecodeOffer({
+            offer: data.offer
+        });
+        const payments = await LdkNodeInjection.payments.listPayments();
+        if (
+            payments.some(
+                (p) =>
+                    p.direction === 'outbound' &&
+                    p.status === 'pending' &&
+                    p.kind?.type === 'bolt12Offer' &&
+                    p.kind.offerId === offerId
+            )
+        ) {
+            throw new Error(
+                localeString('views.Send.payBolt12.paymentPending')
+            );
+        }
+
         const paymentId = await LdkNodeInjection.bolt12.bolt12SendUsingAmount({
             offer: data.offer,
             amountMsat: Number(data.amt) * 1000,

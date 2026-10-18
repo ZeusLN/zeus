@@ -5,6 +5,7 @@ const mockSendBolt11 = jest.fn();
 const mockSendSpontaneousPayment = jest.fn();
 const mockBolt12SendUsingAmount = jest.fn();
 const mockBolt12InitiateRefund = jest.fn();
+const mockBolt12DecodeOffer = jest.fn();
 const mockListChannels = jest.fn();
 const mockCloseChannel = jest.fn();
 const mockForceCloseChannel = jest.fn();
@@ -35,7 +36,9 @@ jest.mock('../ldknode/LdkNodeInjection', () => ({
             bolt12SendUsingAmount: (...args: any[]) =>
                 mockBolt12SendUsingAmount(...args),
             bolt12InitiateRefund: (...args: any[]) =>
-                mockBolt12InitiateRefund(...args)
+                mockBolt12InitiateRefund(...args),
+            bolt12DecodeOffer: (...args: any[]) =>
+                mockBolt12DecodeOffer(...args)
         }
     }
 }));
@@ -69,6 +72,7 @@ describe('LdkNode payment results', () => {
         mockSendBolt11.mockResolvedValue(PAYMENT_ID);
         mockSendSpontaneousPayment.mockResolvedValue(PAYMENT_ID);
         mockBolt12SendUsingAmount.mockResolvedValue(PAYMENT_ID);
+        mockBolt12DecodeOffer.mockResolvedValue({ offerId: 'offer-id' });
     });
 
     const payBolt11 = () =>
@@ -131,6 +135,7 @@ describe('LdkNode payment timeouts', () => {
         mockSendBolt11.mockResolvedValue(PAYMENT_ID);
         mockSendSpontaneousPayment.mockResolvedValue(PAYMENT_ID);
         mockBolt12SendUsingAmount.mockResolvedValue(PAYMENT_ID);
+        mockBolt12DecodeOffer.mockResolvedValue({ offerId: 'offer-id' });
     });
 
     afterEach(() => {
@@ -221,6 +226,71 @@ describe('LdkNode payment timeouts', () => {
         );
 
         expect(error.message).toEqual('error.paymentTimedOut');
+    });
+});
+
+describe('LdkNode.payOffer with an earlier payment to the offer', () => {
+    let ldk: LdkNode;
+
+    const offerPayment = (overrides: Record<string, any> = {}) => ({
+        id: 'earlier-payment-id',
+        direction: 'outbound',
+        status: 'pending',
+        amountMsat: 5_000_000,
+        latestUpdateTimestamp: 0,
+        ...overrides,
+        kind: {
+            type: 'bolt12Offer',
+            offerId: 'offer-id',
+            ...overrides.kind
+        }
+    });
+
+    const payOffer = () => ldk.payOffer({ offer: 'lno1...', amt: '5000' });
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        ldk = new LdkNode();
+        ldk.subscribeToEvents = () => () => {};
+        mockBolt12DecodeOffer.mockResolvedValue({ offerId: 'offer-id' });
+        mockBolt12SendUsingAmount.mockResolvedValue(PAYMENT_ID);
+    });
+
+    it('refuses to pay while an outbound payment to the same offer is pending', async () => {
+        mockListPayments.mockResolvedValue([offerPayment()]);
+
+        await expect(payOffer()).rejects.toThrow(
+            'views.Send.payBolt12.paymentPending'
+        );
+
+        expect(mockBolt12DecodeOffer).toHaveBeenCalledWith({
+            offer: 'lno1...'
+        });
+        expect(mockBolt12SendUsingAmount).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        ['succeeded', offerPayment({ status: 'succeeded' })],
+        ['failed', offerPayment({ status: 'failed' })],
+        [
+            'pending to another offer',
+            offerPayment({ kind: { offerId: 'other-offer-id' } })
+        ],
+        ['pending and inbound', offerPayment({ direction: 'inbound' })],
+        [
+            'a pending refund',
+            offerPayment({ kind: { type: 'bolt12Refund', offerId: undefined } })
+        ]
+    ])('pays when the earlier payment is %s', async (_name, earlier) => {
+        mockListPayments.mockResolvedValue([
+            earlier,
+            { ...succeededPayment(0), id: PAYMENT_ID }
+        ]);
+
+        const result = await payOffer();
+
+        expect(mockBolt12SendUsingAmount).toHaveBeenCalledTimes(1);
+        expect(result.status).toEqual('SUCCEEDED');
     });
 });
 
