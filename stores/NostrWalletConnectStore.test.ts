@@ -57,6 +57,7 @@ jest.mock('../storage', () => ({
 }));
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { autorun } from 'mobx';
 import {
     NWCWalletService,
     NWCWalletServiceKeyPair,
@@ -761,6 +762,34 @@ describe('NostrWalletConnectStore request gate', () => {
         });
         expect(isSubscribed(connection)).toBe(false);
         expect(connection.lastUsed).toBeUndefined();
+        expect(balanceStore.getLightningBalance).not.toHaveBeenCalled();
+    });
+
+    it('answers RESTRICTED once the connection has expired while a screen observes it', async () => {
+        const {
+            store,
+            balanceStore,
+            connections: [connection]
+        } = await startService([{ expiresAt: new Date(Date.now() + 60_000) }]);
+        const client = clientFor(connection);
+        // NWCConnectionsList reads isExpired in render while mounted
+        const dispose = autorun(() =>
+            store.connections.map((c) => c.isExpired)
+        );
+        jest.setSystemTime(Date.now() + 120_000);
+
+        const response = await client.getBalance();
+        dispose();
+
+        expect(response).toEqual({
+            result: undefined,
+            error: {
+                code: 'RESTRICTED',
+                message:
+                    'views.Settings.NostrWalletConnect.error.connectionExpired'
+            }
+        });
+        expect(isSubscribed(connection)).toBe(false);
         expect(balanceStore.getLightningBalance).not.toHaveBeenCalled();
     });
 
@@ -2900,5 +2929,107 @@ describe('NostrWalletConnectStore cashu pay_invoice preimage', () => {
         );
 
         expect(response.result.preimage).toBe(preimage);
+    });
+});
+
+describe('NostrWalletConnectStore wallet deletion', () => {
+    const OTHER_WALLET = {
+        id: 'conn-other',
+        name: 'Other Wallet App',
+        pubkey: hex64('c'),
+        nodePubkey: 'other-node-pubkey'
+    };
+
+    it('deleteCurrentWalletConnections stops serving and deletes only the current wallet connections', async () => {
+        const otherWallet = connectionData(OTHER_WALLET);
+        const {
+            store,
+            connections: [first, second]
+        } = await startService([{}, {}]);
+        storedItems.set(
+            NWC_CONNECTIONS_KEY,
+            JSON.stringify([...persistedConnections(), otherWallet])
+        );
+        storedItems.set(
+            NWC_CLIENT_KEYS,
+            JSON.stringify({
+                ...storedClientKeys(),
+                [otherWallet.pubkey]: hex64('9')
+            })
+        );
+        const client = clientFor(first);
+
+        await store.deleteCurrentWalletConnections();
+
+        expect(store.isInitialized).toBe(false);
+        expect(store.connections).toEqual([]);
+        expect(isSubscribed(first)).toBe(false);
+        expect(isSubscribed(second)).toBe(false);
+        expect(persistedConnections().map((c) => c.id)).toEqual([
+            OTHER_WALLET.id
+        ]);
+        expect(storedClientKeys()).toEqual({
+            [otherWallet.pubkey]: hex64('9')
+        });
+        expect(storedItems.has(NWC_SERVICE_KEYS)).toBe(true);
+        expect(await client.getInfo()).toEqual(UNAUTHORIZED);
+    });
+
+    it('deleteCurrentWalletConnections deletes stored connections the service has not loaded', async () => {
+        const current = connectionData();
+        const otherWallet = connectionData(OTHER_WALLET);
+        storedItems.set(
+            NWC_CONNECTIONS_KEY,
+            JSON.stringify([current, otherWallet])
+        );
+        storedItems.set(
+            NWC_CLIENT_KEYS,
+            JSON.stringify({
+                [current.pubkey]: hex64('3'),
+                [otherWallet.pubkey]: hex64('9')
+            })
+        );
+        // Wallet deleted before initializeService loaded its connections
+        const { store } = createStore();
+        expect(store.connections).toEqual([]);
+
+        await store.deleteCurrentWalletConnections();
+
+        expect(persistedConnections().map((c) => c.id)).toEqual([
+            OTHER_WALLET.id
+        ]);
+        expect(storedClientKeys()).toEqual({
+            [otherWallet.pubkey]: hex64('9')
+        });
+    });
+
+    it('deleteCurrentWalletConnections leaves a re-added node with no connections', async () => {
+        const { store } = await startService();
+
+        await store.deleteCurrentWalletConnections();
+        await store.initializeService();
+        await jest.advanceTimersByTimeAsync(SERVICE_START_MS);
+
+        expect(store.connections).toEqual([]);
+        expect(store.isInitialized).toBe(false);
+    });
+
+    it('deleteAllConnectionData removes every stored connection and key', async () => {
+        const { store, connections } = await startService();
+        storedItems.set(
+            NWC_CONNECTIONS_KEY,
+            JSON.stringify([
+                ...persistedConnections(),
+                connectionData(OTHER_WALLET)
+            ])
+        );
+
+        await store.deleteAllConnectionData();
+
+        expect(store.connections).toEqual([]);
+        expect(isSubscribed(connections[0])).toBe(false);
+        expect(storedItems.has(NWC_CONNECTIONS_KEY)).toBe(false);
+        expect(storedItems.has(NWC_CLIENT_KEYS)).toBe(false);
+        expect(storedItems.has(NWC_SERVICE_KEYS)).toBe(false);
     });
 });

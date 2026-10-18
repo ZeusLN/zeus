@@ -17,6 +17,8 @@ jest.mock('../utils/NostrConnectUtils', () => ({
     }
 }));
 
+import { autorun } from 'mobx';
+
 import NWCConnection from './NWCConnection';
 
 const baseConnection = () =>
@@ -351,5 +353,39 @@ describe('NWCConnection pay_invoice activity lookup', () => {
                 isBudgetDebited: true
             })
         ).toBe(false);
+    });
+});
+
+describe('NWCConnection expiry', () => {
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('refuses payments after expiry while isExpired is observed', () => {
+        jest.useFakeTimers().setSystemTime(new Date('2026-01-01T00:00:00Z'));
+        const connection = baseConnection();
+        connection.expiresAt = new Date('2026-01-01T01:00:00Z');
+        // a mounted observer screen keeps the computed cached
+        const dispose = autorun(() => connection.isExpired);
+        expect(connection.validateBudgetBeforePayment(1).success).toBe(true);
+
+        jest.setSystemTime(new Date('2026-01-01T02:00:00Z'));
+
+        expect(connection.isExpiredNow()).toBe(true);
+        expect(connection.validateBudgetBeforePayment(1)).toEqual({
+            success: false,
+            errorMessage:
+                'views.Settings.NostrWalletConnect.error.connectionExpired'
+        });
+        dispose();
+    });
+
+    it('isExpiredNow is false without an expiry and before it', () => {
+        jest.useFakeTimers().setSystemTime(new Date('2026-01-01T00:00:00Z'));
+        const connection = baseConnection();
+        expect(connection.isExpiredNow()).toBe(false);
+
+        connection.expiresAt = new Date('2026-01-01T01:00:00Z');
+        expect(connection.isExpiredNow()).toBe(false);
     });
 });
