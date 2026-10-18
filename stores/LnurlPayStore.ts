@@ -2,6 +2,7 @@ import { action, runInAction } from 'mobx';
 import { LNURLPaySuccessAction } from 'js-lnurl';
 
 import Storage from '../storage';
+import { getLnurlMetadataHash } from '../utils/LnurlPayUtils';
 
 import SettingsStore from './SettingsStore';
 import NodeInfoStore from './NodeInfoStore';
@@ -50,6 +51,8 @@ export default class LnurlPayStore {
         let lnurlpaytx: any = await Storage.getItem('lnurlpay:' + paymentHash);
         if (lnurlpaytx) {
             lnurlpaytx = JSON.parse(lnurlpaytx);
+        }
+        if (lnurlpaytx?.metadata_hash) {
             const metadata: any = await Storage.getItem(
                 'lnurlpay:' + lnurlpaytx.metadata_hash
             );
@@ -72,6 +75,10 @@ export default class LnurlPayStore {
     ) => {
         this.reset();
         const now = new Date().getTime();
+        // invoices without a description hash are keyed by the hash of
+        // their own metadata, so they do not share one entry
+        const metadataHash =
+            descriptionHash || getLnurlMetadataHash(metadata) || '';
 
         const transactionData: LnurlPayTransaction = {
             paymentHash,
@@ -79,7 +86,7 @@ export default class LnurlPayStore {
             lnurl,
             successAction,
             time: now,
-            metadata_hash: descriptionHash
+            metadata_hash: metadataHash
         };
 
         const metadataEntry: LnurlPayMetadataEntry = {
@@ -88,7 +95,9 @@ export default class LnurlPayStore {
         };
 
         await Storage.setItem('lnurlpay:' + paymentHash, transactionData);
-        await Storage.setItem('lnurlpay:' + descriptionHash, metadataEntry);
+        if (metadataHash) {
+            await Storage.setItem('lnurlpay:' + metadataHash, metadataEntry);
+        }
 
         runInAction(() => {
             this.paymentHash = paymentHash;
