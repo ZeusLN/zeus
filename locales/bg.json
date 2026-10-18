@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "The maximum number of partial payments that may be used to complete the full amount.",
     "views.PaymentRequest.timeout": "Timeout (секунди)",
     "views.PaymentRequest.feeLimit": "Лимит на таксите",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "Плати тази фактура",
     "views.PaymentRequest.firstHop": "Първи скок",
     "views.PaymentRequest.lastHop": "Последен скок",
