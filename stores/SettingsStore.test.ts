@@ -794,6 +794,26 @@ describe('SettingsStore LndHub session token', () => {
             expect(isCurrent()).toBe(false);
         }
     );
+
+    // Two embedded wallets differ only in their data directory, which
+    // updateNodeProperties does not compare, so deleteNodeConfig ends the
+    // deleted wallet's connection itself
+    it('keeps the connection guard when an embedded wallet takes the same index, until invalidateConnection', async () => {
+        const deleted = { implementation: 'embedded-lnd', lndDir: 'lnd-a' };
+        const next = { implementation: 'embedded-lnd', lndDir: 'lnd-b' };
+        seedSettings({ selectedNode: 0, nodes: [deleted, next] });
+        const store = new SettingsStore();
+        await store.getSettings();
+        const isCurrent = store.getConnectionGuard();
+
+        await store.updateSettings({ selectedNode: 0, nodes: [next] });
+        expect(isCurrent()).toBe(true);
+
+        const connecting = store.connecting;
+        store.invalidateConnection();
+        expect(isCurrent()).toBe(false);
+        expect(store.connecting).toBe(connecting);
+    });
 });
 
 describe('SettingsStore.updateSettingsGroupDebounced', () => {

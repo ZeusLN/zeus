@@ -2766,6 +2766,13 @@ export default class SettingsStore {
         return this.connecting;
     };
 
+    // Fails the connection guard of every connect, login and refresh
+    // started so far, without starting a new connection
+    @action
+    public invalidateConnection = () => {
+        this.connectionSeq++;
+    };
+
     @action
     public toggleLurker = () => {
         if (this.lurkerTimeout) {
