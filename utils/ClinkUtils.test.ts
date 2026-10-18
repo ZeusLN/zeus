@@ -1,5 +1,6 @@
 import { bech32 } from '@scure/base';
 import { hexToBytes } from '@noble/hashes/utils';
+import { Relay } from 'nostr-tools';
 
 import ClinkUtils, {
     decodeNoffer,
@@ -8,9 +9,19 @@ import ClinkUtils, {
     isValidClinkResponseEvent,
     isNofferSuccess,
     verifyBolt11MatchesOffer,
+    isOnionHostname,
+    isOnionRelay,
+    requestInvoiceFromNoffer,
     CLINK_KIND,
     CLINK_VERSION
 } from './ClinkUtils';
+
+// requestInvoiceFromNoffer must refuse onion relays before a socket is
+// opened; stub the relay so a missed refusal shows up as a dial, not a hang
+jest.mock('nostr-tools', () => ({
+    ...jest.requireActual('nostr-tools'),
+    Relay: jest.fn()
+}));
 
 const utf8Encoder = new global.TextEncoder();
 
@@ -479,6 +490,96 @@ describe('ClinkUtils', () => {
             expect(verifyBolt11MatchesOffer('not-a-bolt11', offer)).toMatch(
                 /decode/
             );
+        });
+    });
+
+    describe('isOnionRelay', () => {
+        it('recognizes the onion host the WebSocket would be opened to', () => {
+            [
+                'wss://abcdefg.onion',
+                'ws://ABCDEFG.ONION:8080/x',
+                'abcdefg.onion',
+                // spellings the URL parser folds to the same host
+                'wss://abcdefg.onion.',
+                'wss://abcdefg.onion%2e/',
+                'wss://abcdefg.onion?x=1',
+                'wss://abcdefg.onion#a',
+                'wss://abcdefg.onion:/',
+                'wss://abcdefg.onion\\x',
+                'wss://abcdefg.%6fnion/',
+                'wss://abcdefg.on\tion/',
+                'wss://abcdefg.onion\u3002',
+                'wss://abcdefg.\uff4f\uff4e\uff49\uff4f\uff4e'
+            ].forEach((r) => expect(isOnionRelay(r)).toBe(true));
+        });
+
+        it('is not fooled by .onion outside the host', () => {
+            [
+                'wss://relay.example.com',
+                'wss://relay.example.com/abcdefg.onion',
+                'wss://relay.example.com?x=abcdefg.onion',
+                'wss://relay.example.com#abcdefg.onion',
+                'wss://abcdefg.onion@relay.example.com',
+                'wss://abcdefg.onion.example.com',
+                'wss://'
+            ].forEach((r) => expect(isOnionRelay(r)).toBe(false));
+        });
+    });
+
+    // Jest's URL (Node) already applies IDNA, but the app's
+    // react-native-url-polyfill does not, so these are the hostnames the
+    // app gets for relays spelled with these characters
+    describe('isOnionHostname', () => {
+        it('recognizes an onion host hidden by characters IDNA removes or folds', () => {
+            [
+                'abcdefg.onion',
+                'abcdefg.onion.',
+                'abcdefg.on\u00adion',
+                'abcdefg.on\u200bion',
+                'abcdefg.oni\u200don',
+                'abcdefg.onion\ufe0f',
+                'abcdefg.\uff4f\uff4e\uff49\uff4f\uff4e',
+                'abcdefg\u3002onion',
+                'abcdefg\uff0eonion',
+                'abcdefg\uff61onion'
+            ].forEach((h) => expect(isOnionHostname(h)).toBe(true));
+        });
+
+        it('leaves other hosts alone', () => {
+            [
+                'relay.example.com',
+                'onion.example.com',
+                'abcdefg.onion.example.com',
+                'r\u00e9lay.example.com',
+                ''
+            ].forEach((h) => expect(isOnionHostname(h)).toBe(false));
+        });
+    });
+
+    describe('requestInvoiceFromNoffer', () => {
+        it('refuses onion relays, however spelled, without dialling them', async () => {
+            for (const onionRelay of [
+                'wss://abcdefg.onion',
+                'wss://abcdefg.onion.',
+                'wss://abcdefg.onion?x=1',
+                'wss://abcdefg.onion#a',
+                'wss://abcdefg.onion:/',
+                'wss://abcdefg.onion\\x',
+                'wss://abcdefg.%6fnion/'
+            ]) {
+                await expect(
+                    requestInvoiceFromNoffer({
+                        pubkey,
+                        relay: onionRelay,
+                        offer: offerId,
+                        priceType: NofferPriceType.Spontaneous
+                    })
+                ).rejects.toMatchObject({
+                    code: 'ONION_NOT_SUPPORTED',
+                    detail: onionRelay
+                });
+            }
+            expect(Relay).not.toHaveBeenCalled();
         });
     });
 
