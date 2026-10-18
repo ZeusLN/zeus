@@ -175,7 +175,7 @@ jest.mock('../utils/RatingUtils', () => ({
 }));
 
 import hashjs from 'hash.js';
-import { Platform } from 'react-native';
+import { NativeModules, Platform } from 'react-native';
 
 import Storage from '../storage';
 import MigrationUtils from './MigrationUtils';
@@ -706,5 +706,99 @@ describe('deleteNodeDataDirectoryWithRetry rejections', () => {
             })
         ).resolves.toBe(false);
         expect(mockedDeleteLdkNodeWallet).toHaveBeenCalledTimes(3);
+    });
+});
+
+describe('clearAllData: POS order records and the iOS keychain sweep', () => {
+    // KeychainAudit lists the servers in one partition of the fake keychain
+    const enableKeychainAudit = (failLocal = false) => {
+        const getInternetPasswordServers = jest.fn(
+            async (synchronizable: boolean) => {
+                if (failLocal && !synchronizable) {
+                    throw new Error('SecItemCopyMatching failed: -34018');
+                }
+                return [
+                    ...(synchronizable
+                        ? mockKeychain.cloud
+                        : mockKeychain.local
+                    ).keys()
+                ];
+            }
+        );
+        NativeModules.KeychainAudit = { getInternetPasswordServers };
+        return getInternetPasswordServers;
+    };
+
+    afterEach(() => {
+        delete NativeModules.KeychainAudit;
+    });
+
+    it('clears pos-<id> and pos-invoice-<id> for standalone and hidden orders on iOS', async () => {
+        seedInstall();
+        seedEverywhere(
+            'pos-standalone',
+            JSON.stringify([{ id: 'order-1' }, { id: 'order-2' }])
+        );
+        seedEverywhere('pos-hidden', JSON.stringify(['square-hidden']));
+        seedEverywhere('pos-order-1', '{"tx":"lnbc1order","preimage":"ab"}');
+        seedEverywhere('pos-invoice-order-2', '{"payment_request":"lnbc1"}');
+        seedEverywhere('pos-square-hidden', '{"tx":"txid"}');
+
+        await clearAllData();
+
+        expect(remainingEntries()).toEqual([]);
+    });
+
+    it('still clears hidden orders when the standalone order list is malformed', async () => {
+        seedEverywhere('pos-standalone', 'not json');
+        seedEverywhere('pos-hidden', JSON.stringify(['order-3']));
+        seedEverywhere('pos-order-3', '{"tx":"txid"}');
+
+        await clearAllData();
+
+        expect(remainingEntries()).toEqual([]);
+        expect(warnedAbout('Error reading POS orders pos-standalone')).toBe(
+            true
+        );
+    });
+
+    it('deletes entries no index names (Square order records, lnurlpay:<hash>) in both iOS partitions', async () => {
+        seedInstall();
+        enableKeychainAudit();
+        mockKeychain.local.set('zeus:pos-square-order', '{"tx":"lnbc1"}');
+        mockKeychain.cloud.set('zeus:pos-square-order', '{"tx":"lnbc1"}');
+        mockKeychain.local.set('zeus:lnurlpay:abcd', '{"metadata":"x"}');
+
+        await clearAllData();
+
+        expect(remainingEntries()).toEqual([]);
+    });
+
+    it('keeps sweeping when listing one partition or deleting one entry fails', async () => {
+        enableKeychainAudit(true);
+        mockKeychain.cloud.set('zeus:pos-a', 'a');
+        mockKeychain.cloud.set('zeus:pos-b', 'b');
+        mockKeychain.failReset = failOn('zeus:pos-a', 'cloud');
+
+        await expect(clearAllData()).resolves.toBeUndefined();
+
+        expect(remainingEntries()).toEqual(['cloud:zeus:pos-a']);
+        expect(warnedAbout('Error listing keychain entries')).toBe(true);
+        expect(warnedAbout('Error clearing keychain entry zeus:pos-a')).toBe(
+            true
+        );
+    });
+
+    it('does not enumerate the keychain or clear POS records by name on Android', async () => {
+        setPlatformOS('android');
+        const listServers = enableKeychainAudit();
+        seedEverywhere('pos-standalone', JSON.stringify([{ id: 'order-1' }]));
+        seedEverywhere('pos-order-1', '{"tx":"lnbc1"}');
+
+        await clearAllData();
+
+        expect(listServers).not.toHaveBeenCalled();
+        // Left to the backing store deletion in step 8
+        expect(mockKeychain.local.has('zeus:pos-order-1')).toBe(true);
     });
 });
