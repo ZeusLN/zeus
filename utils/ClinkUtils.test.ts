@@ -399,6 +399,9 @@ describe('ClinkUtils', () => {
             'lnbc10u1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq8w3jhxaqxqrrsscqpfy9rcdxqs6sg3stye42sr3wr046005zrpeccrk2yvjexau2fw6vfh3fplnwyvswc8474g8t9rprevl42a50mf6sxqx796hmztzfyq2tqqaggcpw';
         const invoiceAmountless =
             'lnbc1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq8w3jhxaqxqrrsscqpf8mshkzdw6gscgeqgwf8q54x27hyf6hrqtmqur5eud2umrsavmzmsk6skc3adk6y6wj3tngd6f0qzh4py0fg0n63kfjdr3ekgy62p9ecprf5yqg';
+        // 5,000,000 sats + 1 msat
+        const invoiceSubSat =
+            'lnbc50000000010p1pvjluezpp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdq8w3jhxaqxqrrsscqpfly47e3udvtpjqlvcvvtdjg0s9cumq9gl69889htvs43xfnhn0dckme3u745s06lrnj447gyc023ty5agzrha4zf649vrp0awx7ddgygq3kfh6r';
 
         const baseNoffer = {
             pubkey,
@@ -479,6 +482,27 @@ describe('ClinkUtils', () => {
             expect(verifyBolt11MatchesOffer(invoiceAmountless, offer)).toMatch(
                 /amountless/
             );
+        });
+
+        it('does not treat a sub-sat amount as amountless for spontaneous offers', () => {
+            const offer = {
+                ...baseNoffer,
+                priceType: NofferPriceType.Spontaneous
+            };
+            const reason = verifyBolt11MatchesOffer(invoiceSubSat, offer, 1000);
+            expect(reason).toMatch(/expected 1000 sats/);
+            expect(reason).toMatch(/5000000\.001/);
+        });
+
+        it('does not treat a sub-sat amount as amountless for fixed-price offers', () => {
+            const offer = {
+                ...baseNoffer,
+                priceType: NofferPriceType.Fixed,
+                price: 5000000
+            };
+            const reason = verifyBolt11MatchesOffer(invoiceSubSat, offer);
+            expect(reason).toMatch(/expected 5000000 sats/);
+            expect(reason).toMatch(/5000000\.001/);
         });
 
         it('returns a friendly error on undecodable input', () => {

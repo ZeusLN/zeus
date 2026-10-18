@@ -1,5 +1,6 @@
 import { bech32 } from '@scure/base';
 import { bytesToHex } from '@noble/hashes/utils';
+import BigNumber from 'bignumber.js';
 import Bolt11Utils from './Bolt11Utils';
 import {
     generateSecretKey,
@@ -232,15 +233,20 @@ export const verifyBolt11MatchesOffer = (
     noffer: NofferData,
     requestedAmountSats?: number
 ): string | null => {
-    let invoiceSats: number | null;
+    let invoiceSats: BigNumber | null;
     try {
         const decoded = Bolt11Utils.decode(invoice);
+        // `satoshis` is also null when the amount isn't a whole number of
+        // sats; `millisatoshis` is set for every encoded amount, so only a
+        // null there means the invoice is amountless.
         invoiceSats =
-            typeof decoded?.satoshis === 'number' ? decoded.satoshis : null;
+            decoded.millisatoshis != null
+                ? new BigNumber(decoded.millisatoshis).div(1000)
+                : null;
     } catch {
         return 'could not decode service invoice';
     }
-    if (invoiceSats === null || invoiceSats === undefined) {
+    if (invoiceSats === null) {
         // Invoice has no encoded amount — service expects the wallet to
         // choose one. Acceptable only for spontaneous offers; otherwise
         // it's a protocol violation.
@@ -248,7 +254,7 @@ export const verifyBolt11MatchesOffer = (
         return 'service returned an amountless invoice';
     }
     if (noffer.priceType === NofferPriceType.Fixed && noffer.price) {
-        if (invoiceSats !== noffer.price) {
+        if (!invoiceSats.isEqualTo(noffer.price)) {
             return `expected ${noffer.price} sats, invoice is for ${invoiceSats} sats`;
         }
         return null;
@@ -257,7 +263,7 @@ export const verifyBolt11MatchesOffer = (
     // requested. (For variable offers with a currency the user requested
     // sats post-conversion, so a direct comparison is still appropriate.)
     if (requestedAmountSats !== undefined && requestedAmountSats > 0) {
-        if (invoiceSats !== requestedAmountSats) {
+        if (!invoiceSats.isEqualTo(requestedAmountSats)) {
             return `expected ${requestedAmountSats} sats, invoice is for ${invoiceSats} sats`;
         }
     }
