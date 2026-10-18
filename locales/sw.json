@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "Idadi kubwa ya malipo ya sehemu ambayo inaweza kutumika kukamilisha kiasi kamili.",
     "views.PaymentRequest.timeout": "Muda wa Kukoma (sekunde)",
     "views.PaymentRequest.feeLimit": "Kikomo cha Ada",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "Lipa ankara hii",
     "views.PaymentRequest.firstHop": "Hatua ya Kwanza",
     "views.PaymentRequest.lastHop": "Hatua ya Mwisho",
