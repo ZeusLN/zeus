@@ -222,60 +222,93 @@ describe('LND request core', () => {
     });
 
     describe('error fallback on status >= 300', () => {
-        it('throws the raw body string even when it holds error.message', async () => {
-            // The errorInfo extraction throws inside its own try, so the
-            // catch always replaces it with the raw body when data is a
-            // string. errorToUserFriendly parses the JSON downstream.
-            const body = '{"error":{"message":"nested message"}}';
-            mockFetch.mockResolvedValue(response(500, body));
+        // rejection message for a request answered with this status and body
+        const errorFor = async (
+            status: number,
+            body: any,
+            json?: () => any
+        ) => {
+            mockFetch.mockResolvedValue(response(status, body, json));
+            const error = await lnd.getRequest('/v1/x').catch((e: Error) => e);
+            expect(error).toBeInstanceOf(Error);
+            return error.message;
+        };
 
-            await expect(lnd.getRequest('/v1/x')).rejects.toThrow(body);
+        it('throws the nested error.message', async () => {
+            expect(
+                await errorFor(500, '{"error":{"message":"nested message"}}')
+            ).toBe('nested message');
         });
 
-        it('throws the raw body string for a top-level message', async () => {
-            const body = '{"code":2,"message":"invoice is already paid"}';
-            mockFetch.mockResolvedValue(response(400, body));
+        it('throws the top-level message of a gRPC gateway error', async () => {
+            expect(
+                await errorFor(
+                    400,
+                    '{"code":2,"message":"invoice is already paid","details":[]}'
+                )
+            ).toBe('invoice is already paid');
+        });
 
-            await expect(lnd.getRequest('/v1/x')).rejects.toThrow(body);
+        it('prefers the nested error.message over the top-level message', async () => {
+            expect(
+                await errorFor(
+                    500,
+                    '{"error":{"message":"nested"},"message":"top"}'
+                )
+            ).toBe('nested');
+        });
+
+        it('throws a string error field', async () => {
+            expect(await errorFor(500, '{"error":"string error"}')).toBe(
+                'string error'
+            );
+        });
+
+        it('throws the message when error is a boolean flag (LndHub)', async () => {
+            expect(
+                await errorFor(
+                    401,
+                    '{"error":true,"code":1,"message":"bad auth"}'
+                )
+            ).toBe('bad auth');
+        });
+
+        it('throws the raw body when the JSON has no usable message', async () => {
+            expect(await errorFor(500, '{"error":true,"code":8}')).toBe(
+                '{"error":true,"code":8}'
+            );
         });
 
         it('throws the raw body when it is not JSON', async () => {
-            mockFetch.mockResolvedValue(response(502, 'Bad Gateway'));
-
-            await expect(lnd.getRequest('/v1/x')).rejects.toThrow(
-                'Bad Gateway'
-            );
+            expect(await errorFor(502, 'Bad Gateway')).toBe('Bad Gateway');
         });
 
         it('treats status 300 as an error', async () => {
             // valid JSON, so a success branch would resolve instead
-            mockFetch.mockResolvedValue(response(300, '{"code":3}'));
-
-            await expect(lnd.getRequest('/v1/x')).rejects.toThrow('{"code":3}');
+            expect(await errorFor(300, '{"code":3}')).toBe('{"code":3}');
         });
 
-        it('throws the connection error when the body is not a string', async () => {
-            mockFetch.mockResolvedValue(
-                response(500, undefined, () => ({
+        it('throws the parsed message when the body is not a string', async () => {
+            // e.g. a base64-encoded response, which json() decodes
+            expect(
+                await errorFor(500, undefined, () => ({
                     error: { message: 'nested message' }
                 }))
-            );
+            ).toBe('nested message');
+        });
 
-            await expect(lnd.getRequest('/v1/x')).rejects.toThrow(
+        it('throws the connection error when the body is not a string and has no message', async () => {
+            expect(await errorFor(500, undefined, () => ({}))).toBe(
                 CONNECTION_ERROR
             );
         });
 
         it('throws the connection error for an empty body', async () => {
-            mockFetch.mockResolvedValue(
-                response(500, '', () => {
+            expect(
+                await errorFor(500, '', () => {
                     throw new SyntaxError('Unexpected end of JSON input');
                 })
-            );
-
-            await expect(lnd.getRequest('/v1/x')).rejects.toThrow(
-                CONNECTION_ERROR
-            );
+            ).toBe(CONNECTION_ERROR);
         });
 
         it('passes a transport rejection through unchanged', async () => {
@@ -635,9 +668,11 @@ describe('LND.payLightningInvoice timeout race', () => {
         const body = '{"code":2,"message":"invoice is already paid"}';
         mockFetch.mockResolvedValue(response(409, body));
 
-        await expect(
-            lnd.payLightningInvoice({ timeout_seconds: 10 })
-        ).rejects.toThrow(body);
+        const error = await lnd
+            .payLightningInvoice({ timeout_seconds: 10 })
+            .catch((e: Error) => e);
+        expect(error).toBeInstanceOf(Error);
+        expect(error.message).toBe('invoice is already paid');
     });
 
     it('ignores a node answer that arrives after the forced timeout', async () => {

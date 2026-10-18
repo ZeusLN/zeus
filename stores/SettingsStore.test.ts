@@ -28,7 +28,8 @@ jest.mock('../utils/BackendUtils', () => ({
         clearCachedCalls: jest.fn(),
         initLNC: jest.fn(),
         connect: jest.fn(),
-        isConnected: jest.fn()
+        isConnected: jest.fn(),
+        login: jest.fn()
     }
 }));
 jest.mock('../utils/BiometricUtils', () => ({
@@ -356,6 +357,54 @@ describe('SettingsStore.connect (LNC)', () => {
         expect(store.error).toBe(false);
         expect(store.errorMsg).toBe('');
         expect(BackendUtilsMock.connect).toHaveBeenCalledTimes(1);
+    });
+});
+
+// LndHub answers a failed login with a non-2xx and a body like
+// {"error":true,"code":1,"message":"bad auth"}. LND.restReq used to reject
+// with that raw body and now rejects with its message, so the check has to
+// match both.
+describe('SettingsStore.login (LndHub)', () => {
+    const BackendUtilsMock: any = jest.requireMock(
+        '../utils/BackendUtils'
+    ).default;
+
+    const loginWith = async (rejection: any) => {
+        BackendUtilsMock.login.mockReset().mockRejectedValue(rejection);
+        const store = new SettingsStore();
+        await store.login({ login: 'user', password: 'pass' } as any);
+        return store;
+    };
+
+    it('reports bad credentials when the node message is "bad auth"', async () => {
+        const store = await loginWith(new Error('bad auth'));
+        expect(store.error).toBe(true);
+        expect(store.errorMsg).toBe('stores.SettingsStore.lndhubLoginError');
+    });
+
+    it('reports bad credentials for the raw JSON body', async () => {
+        const store = await loginWith(
+            new Error('{"error":true,"code":1,"message":"bad auth"}')
+        );
+        expect(store.errorMsg).toBe('stores.SettingsStore.lndhubLoginError');
+    });
+
+    it('reports a connection problem for any other error', async () => {
+        const store = await loginWith(new Error('Connection error'));
+        expect(store.error).toBe(true);
+        expect(store.errorMsg).toBe('stores.SettingsStore.lndhubConnectError');
+    });
+
+    it('stores the tokens on success', async () => {
+        BackendUtilsMock.login.mockReset().mockResolvedValue({
+            access_token: 'at',
+            refresh_token: 'rt'
+        });
+        const store = new SettingsStore();
+        await store.login({ login: 'user', password: 'pass' } as any);
+        expect(store.error).toBe(false);
+        expect(store.accessToken).toBe('at');
+        expect(store.refreshToken).toBe('rt');
     });
 });
 
