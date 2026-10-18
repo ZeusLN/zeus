@@ -6,7 +6,7 @@ import { Notifications } from 'react-native-notifications';
 // @ts-ignore: Networking is exported at runtime but missing from the legacy typings
 import { BackHandler, Networking, Platform } from 'react-native';
 import CashuDevKit from '../cashu-cdk';
-import Storage from '../storage';
+import Storage, { getInternetPasswordServers, removeRawItem } from '../storage';
 
 import {
     STORAGE_KEY,
@@ -120,7 +120,8 @@ const STORAGE_KEYS = [
     RATING_DISMISSED_KEY,
     // LnurlPayStore writes 'lnurlpay:<paymentHash>' entries with no index to
     // enumerate them; at least clear the bare key written when a hash is
-    // undefined. Hash-keyed entries are a documented residual.
+    // undefined. Hash-keyed entries are left to the wholesale keychain
+    // clears in step 8.
     'lnurlpay:',
     // Legacy xprv cache written before node info had loaded (see
     // clearNodeKeychainData). Listed here too: its wallet's config may be gone.
@@ -237,7 +238,8 @@ async function clearKey(key: string) {
  * (older versions). This is the only way to remove orphaned entries that
  * config-driven clearing can never reach: keys from wallets deleted by older
  * builds and unenumerable hash-keyed dynamic entries. Android-only; on iOS
- * the keychain is system-managed with no file to delete.
+ * the keychain is system-managed with no file to delete (see
+ * clearKeychainEntries).
  *
  * MUST run as the final step of a full wipe: react-native-keychain caches
  * the full preference map in memory, and any keychain write after this
@@ -267,6 +269,69 @@ async function clearKeychainBackingStore(): Promise<void> {
                 e
             );
         }
+    }
+}
+
+/**
+ * iOS counterpart of clearKeychainBackingStore: there is no backing file to
+ * delete, so list every internet-password item the app still owns, in the
+ * device-local and the iCloud partition, and delete each one. This reaches
+ * entries no index names, such as the 'pos-<orderId>' records of Square
+ * orders and hash-keyed 'lnurlpay:' entries. A failed listing or deletion is
+ * logged and the sweep continues.
+ */
+async function clearKeychainEntries(): Promise<void> {
+    if (Platform.OS !== 'ios') return;
+    for (const cloudSync of [false, true]) {
+        let servers: string[] = [];
+        try {
+            servers = await getInternetPasswordServers(cloudSync);
+        } catch (e) {
+            console.warn('[ClearData] Error listing keychain entries:', e);
+        }
+        for (const server of servers) {
+            try {
+                await removeRawItem(server, cloudSync);
+            } catch (e) {
+                console.warn(
+                    `[ClearData] Error clearing keychain entry ${server}:`,
+                    e
+                );
+            }
+        }
+    }
+}
+
+/**
+ * Clears the per-order records PosStore writes: 'pos-<orderId>' (paid
+ * invoice or txid, amounts, rate, preimage) and 'pos-invoice-<orderId>'
+ * (unpaid invoice). The order ids come from the standalone and hidden order
+ * lists, so this must run before step 3 clears those lists. Skipped on
+ * Android, where step 8 deletes the keychain backing store wholesale.
+ */
+async function clearPosOrderRecords(): Promise<void> {
+    if (Platform.OS === 'android') return;
+    const orderIds = new Set<string>();
+    const readList = async (key: string, toId: (entry: any) => any) => {
+        try {
+            const json = await Storage.getItem(key);
+            const entries = json ? JSON.parse(json) : null;
+            if (Array.isArray(entries)) {
+                for (const entry of entries) {
+                    const id = toId(entry);
+                    if (typeof id === 'string' && id) orderIds.add(id);
+                }
+            }
+        } catch (e) {
+            console.warn(`[ClearData] Error reading POS orders ${key}:`, e);
+        }
+    };
+    await readList(POS_STANDALONE_KEY, (order) => order?.id);
+    await readList(POS_HIDDEN_KEY, (orderId) => orderId);
+
+    for (const orderId of orderIds) {
+        await clearKey(`pos-${orderId}`);
+        await clearKey(`pos-invoice-${orderId}`);
     }
 }
 
@@ -691,7 +756,7 @@ async function clearNodeDataDirectories(settings: any): Promise<void> {
  * - Old keychain entries (local and cloud)
  * - AsyncStorage
  * - EncryptedStorage
- * - Dynamic keys (notes, Cashu, LNC)
+ * - Dynamic keys (notes, POS orders, Cashu, LNC)
  * - CDK SQLite database (Cashu wallet state)
  * - LND/LDK on-disk node data directories (channel + wallet state)
  * - HTTP cookies
@@ -754,6 +819,10 @@ export async function clearAllData(): Promise<void> {
     // nothing else in this flow touches either.
     await purgeLegacyRescueKeyFiles();
     await unlinkRescueKeyStagingFile();
+
+    // 2e. Clear the per-order POS records while the order lists that name
+    // them still exist (step 3 clears the lists)
+    await clearPosOrderRecords();
 
     // 3. Clear all known storage keys
     console.log('[ClearData] Clearing known storage keys...');
@@ -824,9 +893,11 @@ export async function clearAllData(): Promise<void> {
         await clearKey(key);
     }
 
-    // 8. Android: delete the keychain backing stores wholesale, killing the
-    // orphaned entries no config-driven clear can reach. Keep this the LAST
+    // 8. Delete whatever is left in the keychain wholesale, killing the
+    // orphaned entries no config-driven clear can reach: by enumeration on
+    // iOS, by deleting the backing stores on Android. Keep this the LAST
     // clearing action (see clearKeychainBackingStore).
+    await clearKeychainEntries();
     await clearKeychainBackingStore();
 
     console.log('[ClearData] All data cleared successfully');

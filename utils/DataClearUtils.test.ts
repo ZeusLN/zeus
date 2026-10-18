@@ -31,7 +31,9 @@ jest.mock('../storage', () => ({
     getItem: jest.fn().mockResolvedValue(null),
     removeItem: jest.fn().mockResolvedValue(true),
     setItem: jest.fn().mockResolvedValue(true),
-    blockWrites: jest.fn()
+    blockWrites: jest.fn(),
+    getInternetPasswordServers: jest.fn().mockResolvedValue([]),
+    removeRawItem: jest.fn().mockResolvedValue(undefined)
 }));
 
 // Native CDK bridge. Both wipe paths must drop the SQLite handles before
