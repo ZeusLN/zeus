@@ -1212,6 +1212,59 @@ describe('handleAnything', () => {
             );
         });
 
+        it('encodes URL syntax in the username', async () => {
+            // %2e%2e is an encoded '..': unencoded, the request would be
+            // for /uploads/mallory.json, outside /.well-known/lnurlp/
+            const address = '%2e%2e/%2e%2e/uploads/mallory.json@example.com';
+            mockProcessBIP21Uri.mockReturnValue({ value: address });
+            mockIsValidLightningAddress = true;
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({ status: 200 }),
+                json: () => ({ callback: 'https://example.com/callback' })
+            });
+
+            await handleAnything(address);
+
+            expect(mockBlobUtilFetch).toHaveBeenCalledWith(
+                'get',
+                'https://example.com/.well-known/lnurlp/%252e%252e%2F%252e%252e%2Fuploads%2Fmallory.json'
+            );
+        });
+
+        it('encodes path syntax in a cryptoqr.net username', async () => {
+            const address = '%2e%2e/%2E%2E/out?x=1#@cryptoqr.net';
+            mockProcessBIP21Uri.mockReturnValue({ value: address });
+            mockIsValidLightningAddress = true;
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({ status: 200 }),
+                json: () => ({ callback: 'https://cryptoqr.net/callback' })
+            });
+
+            await handleAnything(address);
+
+            expect(mockBlobUtilFetch).toHaveBeenCalledWith(
+                'get',
+                'https://cryptoqr.net/.well-known/lnurlp/%252e%252e%2F%252E%252E%2Fout%3Fx=1%23'
+            );
+        });
+
+        it('treats a domain ending in cryptoqr.net like other domains', async () => {
+            const address = 'A%2Fb@evilcryptoqr.net';
+            mockProcessBIP21Uri.mockReturnValue({ value: address });
+            mockIsValidLightningAddress = true;
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({ status: 200 }),
+                json: () => ({ callback: 'https://evilcryptoqr.net/callback' })
+            });
+
+            await handleAnything(address);
+
+            expect(mockBlobUtilFetch).toHaveBeenCalledWith(
+                'get',
+                'https://evilcryptoqr.net/.well-known/lnurlp/a%252fb'
+            );
+        });
+
         it('lowercases domain per LUD-16 spec', async () => {
             const address = 'satoshi@EXAMPLE.COM';
             mockProcessBIP21Uri.mockReturnValue({ value: address });
