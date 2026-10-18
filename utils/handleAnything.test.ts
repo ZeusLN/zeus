@@ -64,7 +64,11 @@ const mockNip19Decode = jest.fn();
 const mockQuerySync = jest.fn();
 
 const ZEUS_ECASH_GIFT_URL = 'https://zeusln.com/e/';
+// The connected node is on regtest unless a test says otherwise
+let mockNodeNetwork = 'regtest';
 jest.mock('./AddressUtils', () => ({
+    bitcoinNetworkForNode: () =>
+        require('bitcoinjs-lib').networks[mockNodeNetwork],
     processBIP21Uri: (...args: string[]) => mockProcessBIP21Uri(...args),
     isValidBitcoinAddress: () => mockIsValidBitcoinAddress,
     isValidBitcoinAddressForNode: () => mockIsValidBitcoinAddress,
@@ -209,6 +213,7 @@ describe('handleAnything', () => {
         mockIsValidTxHex = false;
         mockIsValidXpub = false;
         mockIsValidWithdrawalRequest = false;
+        mockNodeNetwork = 'regtest';
     });
 
     describe('input sanitization', () => {
@@ -2987,6 +2992,55 @@ describe('handleAnything', () => {
             const result = await handleAnything(url, undefined, true);
 
             expect(result).toBe(true);
+        });
+    });
+
+    describe('WIF private keys', () => {
+        const MAINNET_WIF =
+            'KwDiBf89QgGbjEhKnhXJuH7LrciVrZi3qYjgd9M7rFU73sVHnoWn';
+        const TESTNET_WIF =
+            'cMahea7zqjxrtgAbB7LSGbcQUr1uX1ojuat9jZodMN87JcbXMTcA';
+
+        it('routes a key for the node network to WIFSweeper', async () => {
+            mockProcessBIP21Uri.mockReturnValue({ value: TESTNET_WIF });
+
+            const result = await handleAnything(TESTNET_WIF);
+
+            expect(result).toEqual(['WIFSweeper', { wif: TESTNET_WIF }]);
+        });
+
+        it('says when a key is for another network', async () => {
+            mockProcessBIP21Uri.mockReturnValue({ value: MAINNET_WIF });
+
+            await expect(handleAnything(MAINNET_WIF)).rejects.toThrow(
+                'This private key is for a different Bitcoin network than the connected wallet.'
+            );
+        });
+
+        it('returns false for a key for another network on the clipboard', async () => {
+            mockProcessBIP21Uri.mockReturnValue({ value: MAINNET_WIF });
+
+            const result = await handleAnything(MAINNET_WIF, undefined, true);
+
+            expect(result).toBe(false);
+        });
+
+        it('keeps the generic error for a malformed WIF-like string', async () => {
+            // Right prefix and length, but the checksum does not match
+            const malformed = `${TESTNET_WIF.slice(0, -1)}B`;
+            mockProcessBIP21Uri.mockReturnValue({ value: malformed });
+
+            await expect(handleAnything(malformed)).rejects.toThrow(
+                'Value provided was not a valid Bitcoin address or Lightning Invoice'
+            );
+        });
+
+        it('keeps the generic error for unrecognized input', async () => {
+            mockProcessBIP21Uri.mockReturnValue({ value: 'not a key' });
+
+            await expect(handleAnything('not a key')).rejects.toThrow(
+                'Value provided was not a valid Bitcoin address or Lightning Invoice'
+            );
         });
     });
 
