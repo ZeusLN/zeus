@@ -1,5 +1,6 @@
 import NodeInfoStore from './NodeInfoStore';
 import BackendUtils from '../utils/BackendUtils';
+import Storage from '../storage';
 
 jest.mock('./ChannelsStore', () => ({
     __esModule: true,
@@ -119,6 +120,23 @@ describe('NodeInfoStore.getNodeInfo', () => {
         expect(currentResult.settled).toBe(true);
         expect((currentResult as any).error).toBeDefined();
         expect(store.errorMsg).toBe('error.connectionRefused');
+    });
+
+    it('purges the legacy xprv cache on connect, with and without a pubkey', async () => {
+        getMyNodeInfoMock.mockResolvedValue({
+            identity_pubkey: 'pk1',
+            version: '0.18.0-beta'
+        });
+
+        await new NodeInfoStore({} as any, {} as any).getNodeInfo();
+
+        expect(Storage.removeItem).toHaveBeenCalledWith(
+            'pk1-extended-private-keys'
+        );
+        // Older builds exporting before node info had loaded wrote this one
+        expect(Storage.removeItem).toHaveBeenCalledWith(
+            'undefined-extended-private-keys'
+        );
     });
 });
 
