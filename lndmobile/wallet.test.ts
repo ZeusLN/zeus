@@ -9,6 +9,8 @@ describe('wallet', () => {
     const sentOptions = () =>
         (sendCommand as jest.Mock).mock.lastCall[0].options;
 
+    beforeEach(() => (sendCommand as jest.Mock).mockClear());
+
     // the BumpFee view passes the fee rate and budget as typed
     it.each([
         ['2', '50000', '2', '50000'],
@@ -37,4 +39,55 @@ describe('wallet', () => {
             expect(sentOptions().budget.toString()).toBe(expectedBudget);
         }
     );
+
+    // Number() makes these NaN or below 1, which Long.fromNumber sent as
+    // 0, so LND chose its own value instead of the one typed
+    describe.each(['0.5', 'abc', '1,5', '-2', 'Infinity'])(
+        'given %p',
+        (value) => {
+            it('refuses it as a fee rate', async () => {
+                await expect(
+                    bumpFee({
+                        outpoint: {} as any,
+                        sat_per_vbyte: value as any
+                    })
+                ).rejects.toThrow('Fee rate must be at least 1 sat/vB');
+                await expect(
+                    bumpForceCloseFee({
+                        chan_point: {} as any,
+                        starting_feerate: value as any
+                    })
+                ).rejects.toThrow('Fee rate must be at least 1 sat/vB');
+                expect(sendCommand).not.toHaveBeenCalled();
+            });
+
+            it('refuses it as a budget', async () => {
+                await expect(
+                    bumpFee({
+                        outpoint: {} as any,
+                        sat_per_vbyte: '2' as any,
+                        budget: value as any
+                    })
+                ).rejects.toThrow('Budget must be at least 1 sat');
+                await expect(
+                    bumpForceCloseFee({
+                        chan_point: {} as any,
+                        starting_feerate: '2' as any,
+                        budget: value as any
+                    })
+                ).rejects.toThrow('Budget must be at least 1 sat');
+                expect(sendCommand).not.toHaveBeenCalled();
+            });
+        }
+    );
+
+    it('leaves the fee rate and budget to LND when not given', async () => {
+        await bumpFee({ outpoint: {} as any, target_conf: 6 });
+        expect(sentOptions().sat_per_vbyte).toBeUndefined();
+        expect(sentOptions().budget).toBeUndefined();
+
+        await bumpForceCloseFee({ chan_point: {} as any, immediate: true });
+        expect(sentOptions().starting_feerate).toBeUndefined();
+        expect(sentOptions().budget).toBeUndefined();
+    });
 });

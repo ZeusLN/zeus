@@ -115,6 +115,16 @@ export const sendCoins = async (
         throw new Error('Amount must be a whole number of satoshis');
     }
 
+    // A fee rate that is not a number or is below 1 would be sent as 0,
+    // which makes LND pick its own fee instead of the one the user saw
+    const satPerVbyte = feeRate ? Number(feeRate) : undefined;
+    if (
+        satPerVbyte !== undefined &&
+        !(Number.isFinite(satPerVbyte) && satPerVbyte >= 1)
+    ) {
+        throw new Error('Fee rate must be at least 1 sat/vB');
+    }
+
     const response = await sendCommand<
         lnrpc.ISendCoinsRequest,
         lnrpc.SendCoinsRequest,
@@ -126,9 +136,10 @@ export const sendCoins = async (
         options: {
             addr: address,
             amount: send_all ? undefined : Long.fromNumber(amount),
-            sat_per_vbyte: feeRate
-                ? Long.fromNumber(Number(feeRate))
-                : undefined,
+            sat_per_vbyte:
+                satPerVbyte !== undefined
+                    ? Long.fromNumber(satPerVbyte)
+                    : undefined,
             spend_unconfirmed,
             send_all,
             outpoints,
