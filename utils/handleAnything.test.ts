@@ -1430,6 +1430,45 @@ describe('handleAnything', () => {
         });
     });
 
+    describe('PSBT', () => {
+        // A PSBT carries output scripts and previous transactions chosen by
+        // other parties, so its base64 text can contain any substring
+        const scan = (psbt: string) => {
+            mockIsPsbt = true;
+            mockProcessBIP21Uri.mockReturnValue({ value: psbt });
+            return handleAnything(psbt);
+        };
+
+        it('is not taken for an LNURL when its bytes read as one', async () => {
+            const lnurl = 'lnurl1dp68gurn8ghj7etk9e5kcqswryy';
+            const psbt = `cHNidP8BAHEC${lnurl}//AAAA`;
+            mockFindLnurl.mockReturnValue(lnurl);
+
+            expect(await scan(psbt)).toEqual(['PSBT', { psbt }]);
+            expect(mockGetLnurlParamsFn).not.toHaveBeenCalled();
+        });
+
+        it.each(['clnrest+', 'lndconnect', '/lnurlp'])(
+            'is not taken for a %s link when its bytes read as one',
+            async (text) => {
+                const psbt = `cHNidP8BAHEC${text}AAAA`;
+
+                expect(await scan(psbt)).toEqual(['PSBT', { psbt }]);
+                expect(mockProcessCLNRestConnectUrl).not.toHaveBeenCalled();
+                expect(mockProcessLndConnectUrl).not.toHaveBeenCalled();
+                expect(mockGetLnurlParamsFn).not.toHaveBeenCalled();
+            }
+        );
+
+        it('leaves a Lightning address that starts with psbt alone', async () => {
+            mockIsValidLightningAddress = true;
+            mockBlobUtilFetch.mockRejectedValue(new Error('offline'));
+
+            await expect(scan('psbt@zeuspay.com')).rejects.toThrow();
+            expect(mockBlobUtilFetch).toHaveBeenCalled();
+        });
+    });
+
     describe('BIP 353 BOLT 12 address resolution', () => {
         // The worked example from BIP 353 (matt@mattcorallo.com): a decoy
         // TXT record that must be ignored, plus the real record split
