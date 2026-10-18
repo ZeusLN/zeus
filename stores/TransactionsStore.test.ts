@@ -289,4 +289,23 @@ describe('TransactionsStore.sendCoins with selected UTXOs on LND', () => {
             })
         );
     });
+
+    it('pays an address entered more than once the sum of its amounts', () => {
+        newStore('lnd').sendCoins({
+            ...request,
+            additional_outputs: [
+                { address: request.addr, amount: '20000', satAmount: '20000' },
+                { address: request.addr, amount: '3000', satAmount: '3000' }
+            ]
+        });
+
+        expect(fundPsbt).toHaveBeenCalledWith(
+            expect.objectContaining({
+                raw: {
+                    outputs: { [request.addr]: 123000 },
+                    inputs: [{ txid_str: 'cd'.repeat(32), output_index: 0 }]
+                }
+            })
+        );
+    });
 });

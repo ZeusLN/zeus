@@ -426,14 +426,21 @@ export default class TransactionsStore {
             });
         }
 
+        // fundPsbt takes one amount per address, so an address entered more
+        // than once is paid the sum of its amounts, as VerifyOnChain totals
+        // them. Assigning would pay only the last of them.
+        const addOutput = (address: string, sats: any) => {
+            outputs[address] = (outputs[address] || 0) + Number(sats);
+        };
+
         if (addr) {
-            outputs[addr] = Number(amount);
+            addOutput(addr, amount);
         }
 
         if (additional_outputs) {
-            additional_outputs.map((output) => {
-                outputs[output.address] = Number(output.satAmount);
-            });
+            additional_outputs.forEach((output) =>
+                addOutput(output.address, output.satAmount)
+            );
         }
 
         const fundPsbtRequest = {
