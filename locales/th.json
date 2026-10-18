@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "จำนวนที่มากที่สุดของการใช้จ่ายบางส่วนที่สามารถใช้ในการทำให้ได้ยอดเงินเต็มจำนวน",
     "views.PaymentRequest.timeout": "ขาดการเชื่อมต่อ (วินาที)",
     "views.PaymentRequest.feeLimit": "จำกัดค่าธรรมเนียม",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "จ่ายใบแจ้งหนี้นี้",
     "views.PaymentRequest.firstHop": "ช่องทางเข้า Hop",
     "views.PaymentRequest.lastHop": "ช่องทางออก Hop",
