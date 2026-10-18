@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "전체 수량을 결제하는 데 사용할 수 있는 최대 부분 결제 횟수입니다.",
     "views.PaymentRequest.timeout": "제한 시간 (초)",
     "views.PaymentRequest.feeLimit": "수수료 한도",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "이 인보이스에 지불합니다",
     "views.PaymentRequest.firstHop": "첫 번째 홉",
     "views.PaymentRequest.lastHop": "마지막 홉",
