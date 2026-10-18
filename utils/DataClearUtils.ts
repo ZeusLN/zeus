@@ -463,6 +463,7 @@ export const CASHU_KEY_SUFFIXES = [
     'original-seed-version',
     'v1-restore-done',
     'dismissedUpgradeThreshold',
+    'dismissedConsolidationThresholds',
     'randomizeMintSelection',
     'nostrMintBackupTimestamp'
 ];
