@@ -326,6 +326,11 @@ export const verifyLnurlAuthCallback = (
     return { ok: true };
 };
 
+// url.parse keeps a trailing root dot ("x.onion."), which still resolves
+// to the same host, so strip it before matching the onion suffix.
+const isOnionHostname = (hostname?: string | null): boolean =>
+    (hostname || '').toLowerCase().replace(/\.+$/, '').endsWith('.onion');
+
 /**
  * Policy for an image URL named by a third party (a Nostr profile picture or
  * banner, a mint icon) that the wallet loads without asking: the callback
@@ -341,8 +346,7 @@ export const isRemoteImageAllowed = (imageUrl: string): LnurlCheckResult => {
     const allowed = isLnurlCallbackAllowed(imageUrl);
     if (!allowed.ok) return allowed;
 
-    const hostname = (url.parse(imageUrl).hostname || '').toLowerCase();
-    if (hostname.endsWith('.onion')) {
+    if (isOnionHostname(url.parse(imageUrl).hostname)) {
         return { ok: false, reason: 'image URL targets an onion host' };
     }
 
@@ -366,13 +370,20 @@ export const isImageSourceAllowed = (
         return false;
     }
 
-    const image = url.parse(imageUrl);
-    const trusted = url.parse(trustedOrigin);
+    let image: url.UrlWithStringQuery;
+    let trusted: url.UrlWithStringQuery;
+    try {
+        image = url.parse(imageUrl);
+        trusted = url.parse(trustedOrigin);
+    } catch {
+        // e.g. "URI malformed" from a bad percent escape in the userinfo
+        return false;
+    }
     const host = (image.host || '').toLowerCase();
     return (
         !!host &&
         !image.auth &&
-        !(image.hostname || '').toLowerCase().endsWith('.onion') &&
+        !isOnionHostname(image.hostname) &&
         (image.protocol === 'https:' || image.protocol === 'http:') &&
         image.protocol === trusted.protocol &&
         host === (trusted.host || '').toLowerCase()

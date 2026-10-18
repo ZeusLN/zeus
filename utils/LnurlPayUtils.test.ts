@@ -407,6 +407,17 @@ describe('LnurlPayUtils', () => {
             );
         });
 
+        it('rejects root-qualified onion hosts', () => {
+            expect(
+                isRemoteImageAllowed(`https://${'a'.repeat(56)}.onion./a.png`)
+                    .ok
+            ).toBe(false);
+            expect(
+                isRemoteImageAllowed(`https://${'a'.repeat(56)}.onion../a.png`)
+                    .ok
+            ).toBe(false);
+        });
+
         it('rejects backslashes', () => {
             expect(
                 isRemoteImageAllowed('https://cdn.example\\@127.0.0.1/a.png').ok
@@ -473,6 +484,34 @@ describe('LnurlPayUtils', () => {
                 isImageSourceAllowed(
                     'http://abcdefg.onion/icon.png',
                     'http://abcdefg.onion'
+                )
+            ).toBe(false);
+        });
+
+        it('rejects root-qualified onion images', () => {
+            const onion = `${'a'.repeat(56)}.onion.`;
+            expect(isImageSourceAllowed(`https://${onion}/image.png`)).toBe(
+                false
+            );
+            expect(
+                isImageSourceAllowed(
+                    `http://${onion}/icon.png`,
+                    `http://${onion}`
+                )
+            ).toBe(false);
+        });
+
+        it('returns false for an icon url.parse cannot decode', () => {
+            expect(() =>
+                isImageSourceAllowed(
+                    'https://%zz@mint.example/icon.png',
+                    'https://mint.example'
+                )
+            ).not.toThrow();
+            expect(
+                isImageSourceAllowed(
+                    'https://%zz@mint.example/icon.png',
+                    'https://mint.example'
                 )
             ).toBe(false);
         });
