@@ -713,8 +713,10 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 // creates a wallet per supported unit, so only fold this
                 // wallet's unit; other units must not count toward the total
                 val balances = repo.getBalances()
-                // A mint's balance is whatever it signed for, so the sum can
-                // pass ULong.MAX_VALUE. `+=` wraps there, so clamp instead.
+                // CDK 0.18.1 already rejects balances whose total passes
+                // the i64 range, so this sum cannot overflow today. If a
+                // later CDK stops doing that, `+=` would wrap to a wrong
+                // total, so clamp instead.
                 var total: ULong = 0UL
                 balances.forEach { (key, amount) ->
                     if (key.unit != walletUnit) return@forEach
