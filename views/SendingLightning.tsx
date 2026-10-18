@@ -305,6 +305,9 @@ export default class SendingLightning extends React.Component<
 
     private handleBackPress(): boolean {
         const { TransactionsStore, navigation } = this.props;
+        // Stay here until the payment has a result: going back to the
+        // payment screen while it is pending allows a second payment
+        if (TransactionsStore.loading) return true;
         if (
             !TransactionsStore.error &&
             (this.successfullySent(TransactionsStore) ||

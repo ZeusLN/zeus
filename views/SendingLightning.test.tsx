@@ -158,6 +158,17 @@ describe('SendingLightning hardware back', () => {
         expect(navigation.goBack).not.toHaveBeenCalled();
     });
 
+    it('stays on the screen while the payment is still being sent', async () => {
+        // otherwise back falls through to Send, which pops to the payment
+        // screen and lets the user pay again before this payment resolves
+        const navigation = await renderView({ loading: true });
+
+        expect(onBack()).toBe(true);
+
+        expect(navigation.popTo).not.toHaveBeenCalled();
+        expect(navigation.goBack).not.toHaveBeenCalled();
+    });
+
     it('leaves a failed payment to the default back behavior', async () => {
         const navigation = await renderView({
             error: true,
