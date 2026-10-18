@@ -24,7 +24,7 @@ const btcBech = /^(bc1|BC1|[13])[a-zA-HJ-NP-Z0-9]{25,87}$/;
  lnbcrt - regtest
 */
 const lnInvoice =
-    /^(lnbc|lntb|lntbs|lnbcrt|LNBC|LNTB|LNTBS|LNBCRT)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
+    /^(lnbc|lntb|lntbs|lnbcrt|LNBC|LNTB|LNTBS|LNBCRT)[0-9][a-zA-Z0-9]+$/;
 const lnPubKey = /^[a-f0-9]{66}$/;
 
 /* BIP-21 */
@@ -32,7 +32,7 @@ const bip21Uri =
     /^(bitcoin|BITCOIN):([13a-zA-Z0-9]{25,42})?(\?((amount|AMOUNT)=([0-9]+(\.[0-9]+)?)|(label|LABEL|message|MESSAGE|lightning|LIGHTNING|lno|LNO|noffer|NOFFER)=([^&]*))((&((amount|AMOUNT)=([0-9]+(\.[0-9]+)?)|(label|LABEL|message|MESSAGE|lightning|LIGHTNING|lno|LNO|noffer|NOFFER)=([^&]*)))*))?/;
 
 /* BOLT 12 */
-const lnOffer = /^(lno|LNO)([0-9]{1,}[a-zA-Z0-9]+){1}$/;
+const lnOffer = /^(lno|LNO)[0-9][a-zA-Z0-9]+$/;
 
 /* CLINK noffer — Nostr Offer (https://github.com/shocknet/clink) */
 const noffer = /^(?:noffer1[02-9ac-hj-np-z]{6,}|NOFFER1[02-9AC-HJ-NP-Z]{6,})$/;
@@ -45,15 +45,18 @@ const btcBechPubkeyScriptHashTestnet =
 
 /* lndhub */
 const lndHubAddress =
-    /^(lndhub:\/\/)[\w-]+(:)\w+(@https?:\/\/[\w\-_.]+(:\d{1,5})?([\w/-]+)?)?$/;
+    /^(lndhub:\/\/)[\w-]+(:)\w+(@https?:\/\/[\w\-_.]+(:\d{1,5})?(\/[\w/-]*)?)?$/;
 
 /* lnurl */
 // Domains are case-insensitive and uppercase QR payloads are common
 // (alphanumeric mode). handleAnything lowercases the domain before fetching,
 // per LUD-16. A-Z is listed explicitly because the /i flag in unicode mode
 // would also match U+212A (Kelvin sign), which lowercases to 'k'.
+// No quoted local part and no bracketed address literal: both can contain
+// '@', and callers split the address on '@'. Every accepted string has
+// exactly one '@'.
 const lightningAddress =
-    /^(?:[\p{L}\p{N}\p{S}\p{M}!#$%&'*+/=?^_`{|}~-]+(?:\.[\p{L}\p{N}\p{S}\p{M}!#$%&'*+/=?^_`{|}~-]+)*|"(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21\x23-\x5b\x5d-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])*")@(?:(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?|\[(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?|[a-zA-Z0-9-]*[a-zA-Z0-9]:(?:[\x01-\x08\x0b\x0c\x0e-\x1f\x21-\x5a\x53-\x7f]|\\[\x01-\x09\x0b\x0c\x0e-\x7f])+)\])$/u;
+    /^[\p{L}\p{N}\p{S}\p{M}!#$%&'*+/=?^_`{|}~-]+(?:\.[\p{L}\p{N}\p{S}\p{M}!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.)+[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/u;
 
 const blueWalletAddress = /^bluewallet:setlndhuburl\?url=(\S+)/;
 
