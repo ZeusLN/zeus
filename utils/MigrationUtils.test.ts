@@ -1711,6 +1711,110 @@ describe('MigrationUtils', () => {
         });
     });
 
+    describe('retireWalletSeedRescueKey', () => {
+        const EncryptedStorage = require('react-native-encrypted-storage');
+        const AsyncStorage = require('@react-native-async-storage/async-storage');
+        const Storage = require('../storage');
+        const FLAG = 'swaps-rescue-key-wallet-seed-v1';
+        const ldkMnemonic =
+            'legal winner thank year wave sausage worth useful legal winner thank yellow';
+        const independentKey =
+            'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+        const settings = {
+            nodes: [
+                { implementation: 'lnd', host: 'example.com' },
+                { implementation: 'ldk-node', ldkNodeDir: 'a', ldkMnemonic }
+            ]
+        };
+        let order: string[];
+
+        const storeRescueKey = (value: string | false) =>
+            Storage.getItem.mockImplementation((key: string) =>
+                Promise.resolve(key === 'swaps-rescue-key' ? value : false)
+            );
+
+        beforeEach(() => {
+            order = [];
+            EncryptedStorage.getItem.mockReset().mockResolvedValue(null);
+            EncryptedStorage.setItem
+                .mockReset()
+                .mockImplementation(async (key: string) => {
+                    order.push(`flag:${key}`);
+                });
+            AsyncStorage.setItem
+                .mockReset()
+                .mockImplementation(async (key: string) => {
+                    order.push(`notice:${key}`);
+                });
+            Storage.getItem.mockReset();
+            Storage.removeItem
+                .mockReset()
+                .mockImplementation(async (key: string) => {
+                    order.push(`remove:${key}`);
+                });
+        });
+
+        afterAll(() => {
+            Storage.getItem.mockReset();
+            Storage.removeItem.mockReset();
+        });
+
+        it("removes a rescue key that is an LDK Node wallet's mnemonic", async () => {
+            storeRescueKey(ldkMnemonic);
+
+            await MigrationUtils.retireWalletSeedRescueKey(settings);
+
+            // notice first and rescue key last, so an interrupted run is
+            // retried on the next load with the notice in place
+            expect(order).toEqual([
+                'notice:swaps-rescue-key-replaced',
+                'remove:swaps-last-used-key',
+                'remove:swaps-rescue-key',
+                `flag:${FLAG}`
+            ]);
+        });
+
+        it('keeps an independent rescue key', async () => {
+            storeRescueKey(independentKey);
+
+            await MigrationUtils.retireWalletSeedRescueKey(settings);
+
+            expect(Storage.removeItem).not.toHaveBeenCalled();
+            expect(AsyncStorage.setItem).not.toHaveBeenCalled();
+            expect(order).toEqual([`flag:${FLAG}`]);
+        });
+
+        it('sets the flag when there is no rescue key', async () => {
+            storeRescueKey(false);
+
+            await MigrationUtils.retireWalletSeedRescueKey(settings);
+
+            expect(Storage.removeItem).not.toHaveBeenCalled();
+            expect(order).toEqual([`flag:${FLAG}`]);
+        });
+
+        it('keeps the rescue key when no wallets are configured', async () => {
+            storeRescueKey(ldkMnemonic);
+
+            await MigrationUtils.retireWalletSeedRescueKey({});
+
+            expect(Storage.removeItem).not.toHaveBeenCalled();
+        });
+
+        it('does nothing once the flag is set', async () => {
+            EncryptedStorage.getItem.mockImplementation((key: string) =>
+                Promise.resolve(key === FLAG ? 'true' : null)
+            );
+            storeRescueKey(ldkMnemonic);
+
+            await MigrationUtils.retireWalletSeedRescueKey(settings);
+
+            expect(Storage.getItem).not.toHaveBeenCalled();
+            expect(Storage.removeItem).not.toHaveBeenCalled();
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+        });
+    });
+
     describe('migrateCashuSeedVersion', () => {
         beforeEach(() => {
             // Clear mock history before each test

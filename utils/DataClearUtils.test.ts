@@ -9,7 +9,8 @@ jest.mock('react-native-keychain', () => ({
     resetInternetCredentials: jest.fn().mockResolvedValue(true)
 }));
 jest.mock('@react-native-async-storage/async-storage', () => ({
-    clear: jest.fn().mockResolvedValue(undefined)
+    clear: jest.fn().mockResolvedValue(undefined),
+    setItem: jest.fn().mockResolvedValue(undefined)
 }));
 jest.mock('react-native-encrypted-storage', () => ({
     removeItem: jest.fn().mockResolvedValue(undefined),
@@ -142,6 +143,10 @@ jest.mock('../utils/SwapUtils', () => ({
     REVERSE_SWAPS_KEY: 'reverse-swaps',
     SWAPS_RESCUE_KEY: 'swaps-rescue-key',
     SWAPS_LAST_USED_KEY: 'swaps-last-used-key',
+    RESCUE_KEY_REPLACED_KEY: 'swaps-rescue-key-replaced',
+    // the real comparison is covered in SwapUtils.test.ts
+    isWalletSeed: (mnemonic: any, nodes: any[]) =>
+        !!mnemonic && nodes.some((node) => node.ldkMnemonic === mnemonic),
     purgeLegacyRescueKeyFiles: jest.fn().mockResolvedValue(undefined),
     unlinkRescueKeyStagingFile: jest.fn().mockResolvedValue(undefined)
 }));
@@ -705,6 +710,51 @@ describe('clearNodeKeychainData (single-wallet deletion helper)', () => {
     it('is a no-op for a null node', async () => {
         await expect(clearNodeKeychainData(null)).resolves.toBeUndefined();
         expect(mockedStorageRemoveItem).not.toHaveBeenCalled();
+    });
+
+    describe('swap rescue key', () => {
+        const ldkMnemonic =
+            'legal winner thank year wave sausage worth useful legal winner thank yellow';
+        const asyncStorage = require('@react-native-async-storage/async-storage');
+
+        it("clears the rescue key and its index when it is the deleted wallet's mnemonic", async () => {
+            mockedStorageGetItem.mockImplementation((key: string) =>
+                Promise.resolve(key === 'swaps-rescue-key' ? ldkMnemonic : null)
+            );
+
+            await clearNodeKeychainData({
+                implementation: 'ldk-node',
+                ldkNodeDir: 'ldk-1',
+                ldkMnemonic
+            });
+
+            expect(removedKeys()).toContain('swaps-rescue-key');
+            expect(removedKeys()).toContain('swaps-last-used-key');
+            expect(asyncStorage.setItem).toHaveBeenCalledWith(
+                'swaps-rescue-key-replaced',
+                'true'
+            );
+        });
+
+        it('keeps an independent rescue key', async () => {
+            mockedStorageGetItem.mockImplementation((key: string) =>
+                Promise.resolve(
+                    key === 'swaps-rescue-key'
+                        ? 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
+                        : null
+                )
+            );
+
+            await clearNodeKeychainData({
+                implementation: 'ldk-node',
+                ldkNodeDir: 'ldk-1',
+                ldkMnemonic
+            });
+
+            expect(removedKeys()).not.toContain('swaps-rescue-key');
+            expect(removedKeys()).not.toContain('swaps-last-used-key');
+            expect(asyncStorage.setItem).not.toHaveBeenCalled();
+        });
     });
 });
 

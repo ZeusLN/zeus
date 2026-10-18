@@ -158,6 +158,8 @@ jest.mock('../utils/SwapUtils', () => ({
     REVERSE_SWAPS_KEY: 'reverse-swaps',
     SWAPS_RESCUE_KEY: 'swaps-rescue-key',
     SWAPS_LAST_USED_KEY: 'swaps-last-used-key',
+    RESCUE_KEY_REPLACED_KEY: 'swaps-rescue-key-replaced',
+    isWalletSeed: () => false,
     purgeLegacyRescueKeyFiles: jest.fn().mockResolvedValue(undefined),
     unlinkRescueKeyStagingFile: jest.fn().mockResolvedValue(undefined)
 }));

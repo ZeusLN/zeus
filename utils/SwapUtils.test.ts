@@ -29,6 +29,7 @@ import {
     swapNetworkFee,
     fetchBlockHeight,
     isValidRescueKey,
+    isWalletSeed,
     refundFailureAction,
     nativeSwapEndpoint,
     swapWebSocketUrl,
@@ -236,6 +237,52 @@ describe('SwapUtils', () => {
         it('should return limit as-is when in reverse mode', () => {
             const result = calculateLimit(940, 1, 50, true);
             expect(result).toBe(940);
+        });
+    });
+
+    describe('isWalletSeed', () => {
+        const ldkMnemonic =
+            'legal winner thank year wave sausage worth useful legal winner thank yellow';
+        const nodes = [
+            { implementation: 'lnd' },
+            { implementation: 'ldk-node', ldkMnemonic }
+        ];
+
+        it("matches an LDK Node wallet's mnemonic", () => {
+            expect(isWalletSeed(ldkMnemonic, nodes)).toBe(true);
+        });
+
+        it('ignores case and extra whitespace', () => {
+            expect(
+                isWalletSeed(`  ${ldkMnemonic.toUpperCase()}  `, nodes)
+            ).toBe(true);
+            expect(isWalletSeed(ldkMnemonic.replace(/ /g, '   '), nodes)).toBe(
+                true
+            );
+        });
+
+        it('does not match an independent rescue key', () => {
+            expect(
+                isWalletSeed(
+                    'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+                    nodes
+                )
+            ).toBe(false);
+        });
+
+        it('is false without a mnemonic or wallets', () => {
+            expect(isWalletSeed(false, nodes)).toBe(false);
+            expect(isWalletSeed('', nodes)).toBe(false);
+            expect(isWalletSeed(ldkMnemonic, undefined)).toBe(false);
+            expect(isWalletSeed(ldkMnemonic, [])).toBe(false);
+        });
+
+        it('ignores wallets with an empty mnemonic', () => {
+            expect(
+                isWalletSeed(' ', [
+                    { implementation: 'ldk-node', ldkMnemonic: '' } as any
+                ])
+            ).toBe(false);
         });
     });
 
