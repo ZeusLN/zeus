@@ -1877,6 +1877,7 @@
     "error.paymentFailed": "Échec du paiement",
     "error.paymentTimedOut": "Paiement expiré",
     "error.channelNotFound": "Canal avec l'identifiant de transaction de financement {{fundingTxid}} introuvable",
+    "error.invalidInvoiceAmountOrExpiry": "Invalid invoice amount or expiry",
     "error.serviceConnection": "Erreur de connexion au service. Veuillez réessayer ultérieurement.",
     "error.getExtendableChannels": "Impossible d'obtenir des canaux extensibles",
     "error.createOrder": "Impossible de créer la commande",
