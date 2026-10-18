@@ -761,9 +761,15 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let feeRate = toUInt64(feeRateSatsPerVbyte.doubleValue),
+              let sleepSecs = toUInt64(sleepSeconds.doubleValue) else {
+            reject("error", "Invalid fee rate or sleep seconds", nil)
+            return
+        }
+
         DispatchQueue.global(qos: .userInitiated).async {
             do {
-                let txHex = try node.sweepRemoteClosedOutputs(sweepAddress: sweepAddress, feeRateSatsPerVbyte: feeRateSatsPerVbyte.uint64Value, sleepSeconds: sleepSeconds.uint64Value)
+                let txHex = try node.sweepRemoteClosedOutputs(sweepAddress: sweepAddress, feeRateSatsPerVbyte: feeRate, sleepSeconds: sleepSecs)
                 resolve(["txHex": txHex])
             } catch {
                 reject("error", self.errorMessage(error), error)
@@ -882,16 +888,24 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
-        do {
-            // Treat 0 as nil (no push to counterparty)
-            let pushMsat: UInt64? = pushToCounterpartyMsat.uint64Value > 0 ? pushToCounterpartyMsat.uint64Value : nil
+        guard let amount = toUInt64(channelAmountSats.doubleValue) else {
+            reject("error", "Invalid channel amount", nil)
+            return
+        }
 
+        // Treat 0 as nil (no push to counterparty)
+        guard let pushMsat = optionalPositiveUInt64(pushToCounterpartyMsat) else {
+            reject("error", "Invalid push amount", nil)
+            return
+        }
+
+        do {
             let userChannelId: UserChannelId
             if announceChannel {
                 userChannelId = try node.openAnnouncedChannel(
                     nodeId: nodeId,
                     address: address,
-                    channelAmountSats: channelAmountSats.uint64Value,
+                    channelAmountSats: amount,
                     pushToCounterpartyMsat: pushMsat,
                     channelConfig: nil
                 )
@@ -899,7 +913,7 @@ class LdkNodeModule: RCTEventEmitter {
                 userChannelId = try node.openChannel(
                     nodeId: nodeId,
                     address: address,
-                    channelAmountSats: channelAmountSats.uint64Value,
+                    channelAmountSats: amount,
                     pushToCounterpartyMsat: pushMsat,
                     channelConfig: nil
                 )
@@ -917,24 +931,23 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
-        do {
-            let pushMsat: UInt64? = pushToCounterpartyMsat.uint64Value > 0 ? pushToCounterpartyMsat.uint64Value : nil
+        guard let pushMsat = optionalPositiveUInt64(pushToCounterpartyMsat) else {
+            reject("error", "Invalid push amount", nil)
+            return
+        }
 
-            var outpoints: [OutPoint]? = nil
-            if let utxosArray = utxos {
-                var parsed: [OutPoint] = []
-                for item in utxosArray {
-                    if let dict = item as? [String: Any],
-                       let txid = dict["txid"] as? String,
-                       let vout = dict["vout"] as? NSNumber {
-                        parsed.append(OutPoint(txid: txid, vout: vout.uint32Value))
-                    }
-                }
-                if !parsed.isEmpty {
-                    outpoints = parsed
-                }
+        var outpoints: [OutPoint]? = nil
+        if let utxosArray = utxos {
+            guard let parsed = parseOutPoints(utxosArray) else {
+                reject("error", "Invalid vout", nil)
+                return
             }
+            if !parsed.isEmpty {
+                outpoints = parsed
+            }
+        }
 
+        do {
             let userChannelId: UserChannelId
             if announceChannel {
                 userChannelId = try node.openAnnouncedChannelFundMax(
@@ -966,24 +979,28 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let amount = toUInt64(channelAmountSats.doubleValue) else {
+            reject("error", "Invalid channel amount", nil)
+            return
+        }
+
+        guard let pushMsat = optionalPositiveUInt64(pushToCounterpartyMsat) else {
+            reject("error", "Invalid push amount", nil)
+            return
+        }
+
+        guard let outpoints = parseOutPoints(utxos) else {
+            reject("error", "Invalid vout", nil)
+            return
+        }
+
         do {
-            let pushMsat: UInt64? = pushToCounterpartyMsat.uint64Value > 0 ? pushToCounterpartyMsat.uint64Value : nil
-
-            var outpoints: [OutPoint] = []
-            for item in utxos {
-                if let dict = item as? [String: Any],
-                   let txid = dict["txid"] as? String,
-                   let vout = dict["vout"] as? NSNumber {
-                    outpoints.append(OutPoint(txid: txid, vout: vout.uint32Value))
-                }
-            }
-
             let userChannelId: UserChannelId
             if announceChannel {
                 userChannelId = try node.openAnnouncedChannelWithUtxos(
                     nodeId: nodeId,
                     address: address,
-                    channelAmountSats: channelAmountSats.uint64Value,
+                    channelAmountSats: amount,
                     pushToCounterpartyMsat: pushMsat,
                     channelConfig: nil,
                     utxos: outpoints
@@ -992,7 +1009,7 @@ class LdkNodeModule: RCTEventEmitter {
                 userChannelId = try node.openChannelWithUtxos(
                     nodeId: nodeId,
                     address: address,
-                    channelAmountSats: channelAmountSats.uint64Value,
+                    channelAmountSats: amount,
                     pushToCounterpartyMsat: pushMsat,
                     channelConfig: nil,
                     utxos: outpoints
@@ -1059,9 +1076,14 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let amount = toUInt64(amountSats.doubleValue) else {
+            reject("error", "Invalid amount", nil)
+            return
+        }
+
         do {
             let onchain = node.onchainPayment()
-            let txid = try onchain.sendToAddress(address: address, amountSats: amountSats.uint64Value, feeRate: nil)
+            let txid = try onchain.sendToAddress(address: address, amountSats: amount, feeRate: nil)
             resolve(["txid": txid])
         } catch {
             reject("error", self.errorMessage(error), error)
@@ -1116,17 +1138,19 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let amount = toUInt64(amountSats.doubleValue) else {
+            reject("error", "Invalid amount", nil)
+            return
+        }
+
+        guard let outpoints = parseOutPoints(utxos) else {
+            reject("error", "Invalid vout", nil)
+            return
+        }
+
         do {
             let onchain = node.onchainPayment()
-            var outpoints: [OutPoint] = []
-            for item in utxos {
-                if let dict = item as? [String: Any],
-                   let txid = dict["txid"] as? String,
-                   let vout = dict["vout"] as? NSNumber {
-                    outpoints.append(OutPoint(txid: txid, vout: vout.uint32Value))
-                }
-            }
-            let txid = try onchain.sendToAddressWithUtxos(address: address, amountSats: amountSats.uint64Value, utxos: outpoints, feeRate: nil)
+            let txid = try onchain.sendToAddressWithUtxos(address: address, amountSats: amount, utxos: outpoints, feeRate: nil)
             resolve(["txid": txid])
         } catch {
             reject("error", self.errorMessage(error), error)
@@ -1140,16 +1164,13 @@ class LdkNodeModule: RCTEventEmitter {
             return
         }
 
+        guard let outpoints = parseOutPoints(utxos) else {
+            reject("error", "Invalid vout", nil)
+            return
+        }
+
         do {
             let onchain = node.onchainPayment()
-            var outpoints: [OutPoint] = []
-            for item in utxos {
-                if let dict = item as? [String: Any],
-                   let txid = dict["txid"] as? String,
-                   let vout = dict["vout"] as? NSNumber {
-                    outpoints.append(OutPoint(txid: txid, vout: vout.uint32Value))
-                }
-            }
             let txid = try onchain.sendAllToAddressWithUtxos(address: address, retainReserves: retainReserve, utxos: outpoints, feeRate: nil)
             resolve(["txid": txid])
         } catch {
@@ -1188,6 +1209,28 @@ class LdkNodeModule: RCTEventEmitter {
 
     private func toUInt32(_ value: Double) -> UInt32? {
         return UInt32(exactly: value.rounded(.towardZero))
+    }
+
+    // Optional amount that is only set when positive, e.g. the push amount of
+    // a channel open. The outer optional is nil when the value does not fit.
+    private func optionalPositiveUInt64(_ value: NSNumber) -> UInt64?? {
+        guard value.doubleValue > 0 else { return .some(nil) }
+        guard let converted = toUInt64(value.doubleValue) else { return .none }
+        return .some(converted > 0 ? converted : nil)
+    }
+
+    // Returns nil when a vout is negative or too large for UInt32
+    private func parseOutPoints(_ utxos: NSArray) -> [OutPoint]? {
+        var outpoints: [OutPoint] = []
+        for item in utxos {
+            if let dict = item as? [String: Any],
+               let txid = dict["txid"] as? String,
+               let vout = dict["vout"] as? NSNumber {
+                guard let voutValue = toUInt32(vout.doubleValue) else { return nil }
+                outpoints.append(OutPoint(txid: txid, vout: voutValue))
+            }
+        }
+        return outpoints
     }
 
     // MARK: - BOLT11 Payment Methods
