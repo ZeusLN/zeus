@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "Số lượng thanh toán từng phần tối đa có thể được sử dụng để hoàn thành toàn bộ số tiền. ",
     "views.PaymentRequest.timeout": "Thời gian hết hạn (giây)",
     "views.PaymentRequest.feeLimit": "Giới hạn phí",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "Thanh toán hoá đơn này",
     "views.PaymentRequest.firstHop": "Hop đầu tiên ",
     "views.PaymentRequest.lastHop": "Hop cuối cùng",
