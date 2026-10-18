@@ -42,6 +42,7 @@ interface WIFSweepState {
     feeRate: string;
     feeLoadingError: boolean;
     isWifValid: boolean;
+    wifError: string;
 }
 
 @inject('SweepStore', 'InvoicesStore')
@@ -59,7 +60,8 @@ export default class WIFSweeper extends React.Component<
         onChainAddressloading: false,
         feeRate: '2',
         feeLoadingError: false,
-        isWifValid: true
+        isWifValid: true,
+        wifError: ''
     };
 
     componentDidMount() {
@@ -102,7 +104,8 @@ export default class WIFSweeper extends React.Component<
             loading,
             onChainAddressloading,
             feeRate,
-            feeLoadingError
+            feeLoadingError,
+            wifError
         } = this.state;
         const { sweepError, sweepErrorMsg } = SweepStore;
 
@@ -163,12 +166,18 @@ export default class WIFSweeper extends React.Component<
                                 )}
                                 value={privateKey}
                                 onChangeText={(text: string) => {
-                                    const isWifValid =
-                                        text.length === 0 ||
-                                        wifUtils.validateWIF(text).isValid;
+                                    const validation = text
+                                        ? wifUtils.validateWIF(text)
+                                        : { isValid: true };
                                     this.setState({
                                         privateKey: text,
-                                        isWifValid
+                                        isWifValid: validation.isValid,
+                                        wifError: validation.isValid
+                                            ? ''
+                                            : validation.error ||
+                                              localeString(
+                                                  'views.Wif.invalidWif'
+                                              )
                                     });
                                 }}
                                 secureTextEntry={hidden}
@@ -191,6 +200,17 @@ export default class WIFSweeper extends React.Component<
                                 }
                             />
                         </View>
+                        {!!wifError && (
+                            <Text
+                                style={{
+                                    ...styles.text,
+                                    color: themeColor('delete'),
+                                    marginTop: 5
+                                }}
+                            >
+                                {wifError}
+                            </Text>
+                        )}
                     </View>
 
                     <View>
@@ -319,7 +339,8 @@ export default class WIFSweeper extends React.Component<
                                 disabled={
                                     !privateKey ||
                                     !this.state.isWifValid ||
-                                    !!SweepStore.destination
+                                    !!SweepStore.destination ||
+                                    onChainAddressloading
                                 }
                             />
                         </View>
