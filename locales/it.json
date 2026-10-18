@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "Il numero massimo di pagamenti parziali che possono essere utilizzati per completare l'intero importo.",
     "views.PaymentRequest.timeout": "Timeout (secondi)",
     "views.PaymentRequest.feeLimit": "Limite di commissione",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "Paga questa fattura",
     "views.PaymentRequest.firstHop": "Primo hop",
     "views.PaymentRequest.lastHop": "Ultimo hop",
