@@ -328,5 +328,33 @@ describe('NostrUtils', () => {
                 NostrUtils.queryNip05Profile('satoshi@domain.com')
             ).rejects.toThrow('network');
         });
+
+        it('does not look up .onion identifiers', async () => {
+            const onion =
+                '2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion';
+
+            for (const identifier of [
+                `satoshi@${onion}`,
+                `satoshi@${onion.toUpperCase()}`,
+                `satoshi@${onion}.`,
+                onion
+            ]) {
+                await expect(
+                    NostrUtils.queryNip05Profile(identifier)
+                ).resolves.toBe(null);
+            }
+
+            expect(mockQueryProfile).not.toHaveBeenCalled();
+        });
+
+        it('still looks up a domain that only contains onion', async () => {
+            mockQueryProfile.mockResolvedValue({ pubkey: validHex });
+
+            await NostrUtils.queryNip05Profile('satoshi@onion.example');
+
+            expect(mockQueryProfile).toHaveBeenCalledWith(
+                'satoshi@onion.example'
+            );
+        });
     });
 });
