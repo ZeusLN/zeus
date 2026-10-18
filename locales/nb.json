@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "Maksimalt antall delbetalinger som kan brukes til å fullføre hele beløpet.",
     "views.PaymentRequest.timeout": "Tidsavbrudd (sekunder)",
     "views.PaymentRequest.feeLimit": "Avgiftsgrense",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "Betal denne fakturaen",
     "views.PaymentRequest.firstHop": "Første hopp",
     "views.PaymentRequest.lastHop": "Siste hopp",

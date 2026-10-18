@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "Die maximale Anzahl von Teilzahlungen, die zur Vervollständigung des Gesamtbetrags verwendet werden können.",
     "views.PaymentRequest.timeout": "Zeitlimit (Sekunden)",
     "views.PaymentRequest.feeLimit": "Gebührenlimit",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "Diese Rechnung bezahlen",
     "views.PaymentRequest.firstHop": "Erster Hop",
     "views.PaymentRequest.lastHop": "Letzter Hop",

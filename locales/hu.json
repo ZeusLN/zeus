@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "A teljes összeg teljesítéséhez felhasználható részleges kifizetések maximális száma. ",
     "views.PaymentRequest.timeout": "Időtúllépés (másodperc)",
     "views.PaymentRequest.feeLimit": "Díj limit",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "Ezen számla fizetése",
     "views.PaymentRequest.firstHop": "Első Ugrás",
     "views.PaymentRequest.lastHop": "Utolsó Ugrás",

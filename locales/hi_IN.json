@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "पूरी राशि को पूरा करने के लिए उपयोग किए जा सकने वाले आंशिक भुगतानों की अधिकतम संख्या।",
     "views.PaymentRequest.timeout": "टाइमआउट (सेकंड)",
     "views.PaymentRequest.feeLimit": "शुल्क सीमा",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "इस इनवॉइस का भुगतान करें",
     "views.PaymentRequest.firstHop": "पहला हॉप",
     "views.PaymentRequest.lastHop": "अंतिम हॉप",

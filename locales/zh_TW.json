@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "為了湊足完整金額所使用片段支付的最大數量。",
     "views.PaymentRequest.timeout": "付款逾時(單位：秒)",
     "views.PaymentRequest.feeLimit": "手續費上限",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "結帳",
     "views.PaymentRequest.firstHop": "第一站",
     "views.PaymentRequest.lastHop": "終點前站",

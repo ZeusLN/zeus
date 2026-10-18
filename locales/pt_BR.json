@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "O número máximo de pagamentos parciais que serão usados para completar o montante total",
     "views.PaymentRequest.timeout": "Tempo máximo (segundos)",
     "views.PaymentRequest.feeLimit": "Limite da taxa",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "Pagar esta cobrança",
     "views.PaymentRequest.firstHop": "Primeiro salto",
     "views.PaymentRequest.lastHop": "Último salto",

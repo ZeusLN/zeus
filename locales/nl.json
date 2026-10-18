@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "Het maximale aantal deelbetalingen dat kan worden gebruikt om het volledige bedrag te voltooien.",
     "views.PaymentRequest.timeout": "Timeout (seconden)",
     "views.PaymentRequest.feeLimit": "Fee limiet",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "Betaal deze factuur",
     "views.PaymentRequest.firstHop": "First Hop",
     "views.PaymentRequest.lastHop": "Last Hop",

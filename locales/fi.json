@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "Osittaisten maksujen enimmäismäärä, joka voidaan käyttää koko summan maksamiseen.",
     "views.PaymentRequest.timeout": "Aikakatkaisu (sekuntia)",
     "views.PaymentRequest.feeLimit": "Siirtomaksun enimmäismäärä",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "Maksa tämä lasku",
     "views.PaymentRequest.firstHop": "Ensimmäinen hyppy",
     "views.PaymentRequest.lastHop": "Viimeinen hyppy",

@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "Ο μέγιστος αριθμός τμηματικών πληρωμών που μπορούν να χρησιμοποιηθούν για τη συμπλήρωση του πλήρους ποσού.",
     "views.PaymentRequest.timeout": "Timeout (δευτερόλεπτα)",
     "views.PaymentRequest.feeLimit": "Όριο τέλους",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "Πληρωμή του τιμολογίου",
     "views.PaymentRequest.firstHop": "Πρώτο Hop",
     "views.PaymentRequest.lastHop": "Τελευταίο Hop",

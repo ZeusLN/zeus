@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "Maksymalna ilość częściowych płatności, które mogą być użyte do relizacji kwoty całkowitej.",
     "views.PaymentRequest.timeout": "Limit czasu (sekundy)",
     "views.PaymentRequest.feeLimit": "Limit opłat",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "Zapłać tą fakturę",
     "views.PaymentRequest.firstHop": "Pierwszy skok",
     "views.PaymentRequest.lastHop": "Ostatnio skok",

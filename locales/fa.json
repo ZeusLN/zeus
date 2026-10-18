@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "تعداد حداکثر پرداخت های بخشی که یک مبلغ کلی را کامل کند.",
     "views.PaymentRequest.timeout": "وقفه (ثانیه)",
     "views.PaymentRequest.feeLimit": "حد کارمزد",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "پرداخت این رسید",
     "views.PaymentRequest.firstHop": "پرش اول",
     "views.PaymentRequest.lastHop": "پرش آخر",

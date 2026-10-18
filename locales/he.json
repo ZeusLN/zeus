@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "מספר מקסימלי של תשלומים חלקיים שיכולים לשמש למילוי הכמות הנדרשת",
     "views.PaymentRequest.timeout": "תוקף (שניות)",
     "views.PaymentRequest.feeLimit": "הגבלת עמלה",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "תשלום חשבונית זו",
     "views.PaymentRequest.firstHop": "קפיצה ראשונה",
     "views.PaymentRequest.lastHop": "קפיצה אחרונה",

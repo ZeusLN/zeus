@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "Jumlah maksimum pembayaran parsial yang digunakan untuk menutup total pembayaran.",
     "views.PaymentRequest.timeout": "Batas waktu (detik)",
     "views.PaymentRequest.feeLimit": "Batas biaya",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "Bayar faktur ini",
     "views.PaymentRequest.firstHop": "Node pertama",
     "views.PaymentRequest.lastHop": "Node terakhir",
