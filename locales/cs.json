@@ -928,6 +928,7 @@
     "views.Send.payBolt12.specifyAmount": "Musí být specifikována částka",
     "views.Send.payBolt12.invalidOffer": "Neplatná nabídka BOLT 12",
     "views.Send.payBolt12.offersNotSupported": "Backend nepodporuje BOLT 12",
+    "views.Send.payBolt12.paymentPending": "A payment to this offer is still in transit. Check the Activity view and wait for it to complete or fail before paying again.",
     "views.Bolt12OfferReview.title": "Zkontrolovat nabídku",
     "views.Bolt12OfferReview.issuer": "Vydavatel",
     "views.Bolt12OfferReview.issuerId": "ID vydavatele",
