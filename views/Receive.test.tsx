@@ -213,4 +213,24 @@ describe('Receive.updateIndex', () => {
         expect(BackendUtils.watchOnchainReceived).not.toHaveBeenCalled();
         expect(view.unsubscribeOnchainWatch).toBeNull();
     });
+
+    it('does not watch the address when the invoice is paid before it resolves', async () => {
+        let resolveAddress: (address: string) => void = () => {};
+        const view = makeTabView({
+            watchedInvoicePaid: false,
+            getNewAddress: jest.fn(
+                () =>
+                    new Promise<string>((resolve) => {
+                        resolveAddress = resolve;
+                    })
+            )
+        });
+
+        const pending = view.updateIndex(2);
+        view.props.InvoicesStore!.watchedInvoicePaid = true;
+        resolveAddress(NEW_ADDRESS);
+        await pending;
+
+        expect(BackendUtils.watchOnchainReceived).not.toHaveBeenCalled();
+    });
 });

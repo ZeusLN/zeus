@@ -976,7 +976,11 @@ export default class Receive extends React.Component<
                     account !== 'default' ? accountAddressType : addressType
                 )
             );
-            if (address) this.subscribeInvoice(undefined, address);
+            // an invoice paid while the request was in flight is done: don't
+            // start an on-chain watcher behind the paid screen
+            if (address && !InvoicesStore.watchedInvoicePaid) {
+                this.subscribeInvoice(undefined, address);
+            }
         }
     };
 
