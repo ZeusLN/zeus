@@ -7,6 +7,7 @@ import com.facebook.react.modules.core.DeviceEventManagerModule
 import com.reactnativecommunity.asyncstorage.AsyncLocalStorageUtil
 import com.reactnativecommunity.asyncstorage.ReactDatabaseSupplier
 import kotlinx.coroutines.*
+import kotlin.math.truncate
 
 import org.lightningdevkit.ldknode.*
 
@@ -921,7 +922,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
-                val txHex = node.sweepRemoteClosedOutputs(sweepAddress, feeRateSatsPerVbyte.toLong().toULong(), sleepSeconds.toLong().toULong())
+                val txHex = node.sweepRemoteClosedOutputs(sweepAddress, toULongExact(feeRateSatsPerVbyte, "fee rate"), toULongExact(sleepSeconds, "sleep seconds"))
                 val result = Arguments.createMap().apply {
                     putString("txHex", txHex)
                 }
@@ -1059,11 +1060,11 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
-                val pushMsat = pushToCounterpartyMsat?.let { if (it > 0) it.toLong().toULong() else null }
+                val pushMsat = optionalPositiveULong(pushToCounterpartyMsat, "push amount")
                 val userChannelId = if (announceChannel) {
-                    node.openAnnouncedChannel(nodeId, address, channelAmountSats.toLong().toULong(), pushMsat, null)
+                    node.openAnnouncedChannel(nodeId, address, toULongExact(channelAmountSats, "channel amount"), pushMsat, null)
                 } else {
-                    node.openChannel(nodeId, address, channelAmountSats.toLong().toULong(), pushMsat, null)
+                    node.openChannel(nodeId, address, toULongExact(channelAmountSats, "channel amount"), pushMsat, null)
                 }
                 val result = Arguments.createMap().apply {
                     putString("userChannelId", userChannelId)
@@ -1136,7 +1137,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 val onchain = node.onchainPayment()
-                val txid = onchain.sendToAddress(address, amountSats.toLong().toULong(), null)
+                val txid = onchain.sendToAddress(address, toULongExact(amountSats, "amount"), null)
                 val result = Arguments.createMap().apply {
                     putString("txid", txid)
                 }
@@ -1210,7 +1211,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             val dict = utxosArray.getMap(i)
             if (dict != null) {
                 val txid = dict.getString("txid") ?: continue
-                val vout = dict.getInt("vout").toUInt()
+                val vout = dict.getInt("vout").let { if (it >= 0) it.toUInt() else throw IllegalArgumentException("Invalid vout") }
                 outpoints.add(OutPoint(txid = txid, vout = vout))
             }
         }
@@ -1224,7 +1225,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 val onchain = node.onchainPayment()
                 val outpoints = parseOutPoints(utxos)
-                val txid = onchain.sendToAddressWithUtxos(address, amountSats.toLong().toULong(), outpoints, null)
+                val txid = onchain.sendToAddressWithUtxos(address, toULongExact(amountSats, "amount"), outpoints, null)
                 val result = Arguments.createMap().apply {
                     putString("txid", txid)
                 }
@@ -1266,7 +1267,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
-                val pushMsat = pushToCounterpartyMsat?.let { if (it > 0) it.toLong().toULong() else null }
+                val pushMsat = optionalPositiveULong(pushToCounterpartyMsat, "push amount")
                 val outpoints = utxos?.let { parseOutPoints(it) }
                 val userChannelId = if (announceChannel) {
                     node.openAnnouncedChannelFundMax(nodeId, address, pushMsat, null, outpoints)
@@ -1292,12 +1293,12 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
-                val pushMsat = pushToCounterpartyMsat?.let { if (it > 0) it.toLong().toULong() else null }
+                val pushMsat = optionalPositiveULong(pushToCounterpartyMsat, "push amount")
                 val outpoints = parseOutPoints(utxos)
                 val userChannelId = if (announceChannel) {
-                    node.openAnnouncedChannelWithUtxos(nodeId, address, channelAmountSats.toLong().toULong(), pushMsat, null, outpoints)
+                    node.openAnnouncedChannelWithUtxos(nodeId, address, toULongExact(channelAmountSats, "channel amount"), pushMsat, null, outpoints)
                 } else {
-                    node.openChannelWithUtxos(nodeId, address, channelAmountSats.toLong().toULong(), pushMsat, null, outpoints)
+                    node.openChannelWithUtxos(nodeId, address, toULongExact(channelAmountSats, "channel amount"), pushMsat, null, outpoints)
                 }
                 val result = Arguments.createMap().apply {
                     putString("userChannelId", userChannelId)
@@ -1321,7 +1322,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             val node = this.node ?: throw Exception("Node not initialized")
             val bolt11 = node.bolt11Payment()
             val invoiceDescription = Bolt11InvoiceDescription.Direct(description)
-            val invoice = bolt11.receive(amountMsat.toLong().toULong(), invoiceDescription, expirySecs.toInt().toUInt())
+            val invoice = bolt11.receive(toULongExact(amountMsat, "amount"), invoiceDescription, toUIntExact(expirySecs, "expiry"))
             val result = Arguments.createMap().apply { putString("invoice", invoice.toString()) }
             promise.resolve(result)
         } catch (e: Exception) {
@@ -1335,7 +1336,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
             val node = this.node ?: throw Exception("Node not initialized")
             val bolt11 = node.bolt11Payment()
             val invoiceDescription = Bolt11InvoiceDescription.Direct(description)
-            val invoice = bolt11.receiveVariableAmount(invoiceDescription, expirySecs.toInt().toUInt())
+            val invoice = bolt11.receiveVariableAmount(invoiceDescription, toUIntExact(expirySecs, "expiry"))
             val result = Arguments.createMap().apply { putString("invoice", invoice.toString()) }
             promise.resolve(result)
         } catch (e: Exception) {
@@ -1343,16 +1344,59 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         }
     }
 
+    // Number Conversion Helpers
+
+    // Double.toLong().toULong() and Double.toInt().toUInt() wrap a negative
+    // value to a huge one and turn NaN into 0. Some of these values come from
+    // outside the app (e.g. the amount and expiry of an NWC make_invoice
+    // request), so round toward zero and return null when the value is NaN,
+    // infinite, negative or too large for the type, like toUInt64 and
+    // toUInt32 in LdkNodeModule.swift.
+    private fun toULongOrNull(value: Double): ULong? {
+        if (!value.isFinite()) return null
+        val truncated = truncate(value)
+        val twoPow63 = 9223372036854775808.0
+        if (truncated < 0 || truncated >= 2 * twoPow63) return null
+        return if (truncated < twoPow63) {
+            truncated.toLong().toULong()
+        } else {
+            (truncated - twoPow63).toLong().toULong() + Long.MIN_VALUE.toULong()
+        }
+    }
+
+    private fun toUIntOrNull(value: Double): UInt? {
+        if (!value.isFinite()) return null
+        val truncated = truncate(value)
+        if (truncated < 0 || truncated > UInt.MAX_VALUE.toDouble()) return null
+        return truncated.toLong().toUInt()
+    }
+
+    // These throw so the method's catch block rejects the promise with "Invalid <name>"
+    private fun toULongExact(value: Double, name: String): ULong =
+        toULongOrNull(value) ?: throw IllegalArgumentException("Invalid $name")
+
+    private fun toUIntExact(value: Double, name: String): UInt =
+        toUIntOrNull(value) ?: throw IllegalArgumentException("Invalid $name")
+
+    // No timeout when the value is not positive or does not fit
+    private fun optionalTimeoutSecs(value: Double): ULong? =
+        if (value > 0) toULongOrNull(value) else null
+
+    // Optional amount that is only set when positive, e.g. the push amount of a channel open
+    private fun optionalPositiveULong(value: Double?, name: String): ULong? =
+        value?.let { if (it > 0) toULongExact(it, name) else null }
+
     // Route Parameters Helper
 
     private fun buildRouteParameters(maxTotalRoutingFeeMsat: Double, maxPathCount: Double): RouteParametersConfig? {
         val hasFeeMsat = maxTotalRoutingFeeMsat >= 0
         val hasPathCount = maxPathCount >= 0
         if (!hasFeeMsat && !hasPathCount) return null
+        // Both are upper limits, so one too large for its type becomes the largest
         return RouteParametersConfig(
-            maxTotalRoutingFeeMsat = if (hasFeeMsat) maxTotalRoutingFeeMsat.toLong().toULong() else null,
+            maxTotalRoutingFeeMsat = if (hasFeeMsat) (toULongOrNull(maxTotalRoutingFeeMsat) ?: ULong.MAX_VALUE) else null,
             maxTotalCltvExpiryDelta = 1008u,
-            maxPathCount = if (hasPathCount) maxPathCount.toInt().toUByte() else 10u,
+            maxPathCount = if (hasPathCount) minOf(truncate(maxPathCount), UByte.MAX_VALUE.toDouble()).toInt().toUByte() else 10u,
             maxChannelSaturationPowerOfHalf = 2u
         )
     }
@@ -1360,7 +1404,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     @ReactMethod
     fun sendBolt11(invoice: String, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, paymentTimeoutSecs: Double, promise: Promise) {
         val routeParams = buildRouteParameters(maxTotalRoutingFeeMsat, maxPathCount)
-        val timeoutSecs: ULong? = if (paymentTimeoutSecs > 0) paymentTimeoutSecs.toLong().toULong() else null
+        val timeoutSecs = optionalTimeoutSecs(paymentTimeoutSecs)
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
@@ -1384,13 +1428,13 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     @ReactMethod
     fun sendBolt11UsingAmount(invoice: String, amountMsat: Double, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, paymentTimeoutSecs: Double, promise: Promise) {
         val routeParams = buildRouteParameters(maxTotalRoutingFeeMsat, maxPathCount)
-        val timeoutSecs: ULong? = if (paymentTimeoutSecs > 0) paymentTimeoutSecs.toLong().toULong() else null
+        val timeoutSecs = optionalTimeoutSecs(paymentTimeoutSecs)
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 val bolt11 = node.bolt11Payment()
                 val invoiceObj = Bolt11Invoice.fromStr(invoice)
-                val paymentId = bolt11.sendUsingAmount(invoiceObj, amountMsat.toLong().toULong(), routeParams, timeoutSecs)
+                val paymentId = bolt11.sendUsingAmount(invoiceObj, toULongExact(amountMsat, "amount"), routeParams, timeoutSecs)
                 val result = Arguments.createMap().apply {
                     putString("paymentId", paymentId)
                 }
@@ -1435,7 +1479,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 val bolt11 = node.bolt11Payment()
                 val invoiceObj = Bolt11Invoice.fromStr(invoice)
-                bolt11.sendProbesUsingAmount(invoiceObj, amountMsat.toLong().toULong(), routeParams)
+                bolt11.sendProbesUsingAmount(invoiceObj, toULongExact(amountMsat, "amount"), routeParams)
                 withContext(Dispatchers.Main) {
                     promise.resolve(null)
                 }
@@ -1452,11 +1496,11 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     @ReactMethod
     fun sendSpontaneousPayment(nodeId: String, amountMsat: Double, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, paymentTimeoutSecs: Double, promise: Promise) {
         val routeParams = buildRouteParameters(maxTotalRoutingFeeMsat, maxPathCount)
-        val timeoutSecs: ULong? = if (paymentTimeoutSecs > 0) paymentTimeoutSecs.toLong().toULong() else null
+        val timeoutSecs = optionalTimeoutSecs(paymentTimeoutSecs)
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
-                val paymentId = node.spontaneousPayment().send(amountMsat.toLong().toULong(), nodeId, routeParams, timeoutSecs)
+                val paymentId = node.spontaneousPayment().send(toULongExact(amountMsat, "amount"), nodeId, routeParams, timeoutSecs)
                 val result = Arguments.createMap().apply {
                     putString("paymentId", paymentId)
                 }
@@ -1478,8 +1522,8 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         try {
             val node = this.node ?: throw Exception("Node not initialized")
             val bolt12 = node.bolt12Payment()
-            val expiry = if (expirySecs > 0) expirySecs.toInt().toUInt() else null
-            val offer = bolt12.receive(amountMsat.toLong().toULong(), description, expiry, null)
+            val expiry = if (expirySecs > 0) toUIntExact(expirySecs, "expiry") else null
+            val offer = bolt12.receive(toULongExact(amountMsat, "amount"), description, expiry, null)
             val result = Arguments.createMap().apply {
                 putString("offer", offer.toString())
                 putString("offerId", offer.id())
@@ -1495,7 +1539,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
         try {
             val node = this.node ?: throw Exception("Node not initialized")
             val bolt12 = node.bolt12Payment()
-            val expiry = if (expirySecs > 0) expirySecs.toInt().toUInt() else null
+            val expiry = if (expirySecs > 0) toUIntExact(expirySecs, "expiry") else null
             val offer = bolt12.receiveVariableAmount(description, expiry)
             val result = Arguments.createMap().apply {
                 putString("offer", offer.toString())
@@ -1510,7 +1554,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     @ReactMethod
     fun bolt12Send(offerStr: String, payerNote: String?, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, paymentTimeoutSecs: Double, promise: Promise) {
         val routeParams = buildRouteParameters(maxTotalRoutingFeeMsat, maxPathCount)
-        val timeoutSecs: ULong? = if (paymentTimeoutSecs > 0) paymentTimeoutSecs.toLong().toULong() else null
+        val timeoutSecs = optionalTimeoutSecs(paymentTimeoutSecs)
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
@@ -1534,13 +1578,13 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     @ReactMethod
     fun bolt12SendUsingAmount(offerStr: String, amountMsat: Double, payerNote: String?, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, paymentTimeoutSecs: Double, promise: Promise) {
         val routeParams = buildRouteParameters(maxTotalRoutingFeeMsat, maxPathCount)
-        val timeoutSecs: ULong? = if (paymentTimeoutSecs > 0) paymentTimeoutSecs.toLong().toULong() else null
+        val timeoutSecs = optionalTimeoutSecs(paymentTimeoutSecs)
         moduleScope.launch {
             try {
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 val bolt12 = node.bolt12Payment()
                 val offer = Offer.fromStr(offerStr)
-                val paymentId = bolt12.sendUsingAmount(offer, amountMsat.toLong().toULong(), null, payerNote, routeParams, timeoutSecs)
+                val paymentId = bolt12.sendUsingAmount(offer, toULongExact(amountMsat, "amount"), null, payerNote, routeParams, timeoutSecs)
                 val result = Arguments.createMap().apply {
                     putString("paymentId", paymentId)
                 }
@@ -1558,11 +1602,11 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
     @ReactMethod
     fun bolt12InitiateRefund(amountMsat: Double, expirySecs: Double, maxTotalRoutingFeeMsat: Double, maxPathCount: Double, paymentTimeoutSecs: Double, promise: Promise) {
         val routeParams = buildRouteParameters(maxTotalRoutingFeeMsat, maxPathCount)
-        val timeoutSecs: ULong? = if (paymentTimeoutSecs > 0) paymentTimeoutSecs.toLong().toULong() else null
+        val timeoutSecs = optionalTimeoutSecs(paymentTimeoutSecs)
         try {
             val node = this.node ?: throw Exception("Node not initialized")
             val bolt12 = node.bolt12Payment()
-            val refund = bolt12.initiateRefund(amountMsat.toLong().toULong(), expirySecs.toInt().toUInt(), null, null, routeParams, timeoutSecs)
+            val refund = bolt12.initiateRefund(toULongExact(amountMsat, "amount"), toUIntExact(expirySecs, "expiry"), null, null, routeParams, timeoutSecs)
             val result = Arguments.createMap().apply { putString("refund", refund.toString()) }
             promise.resolve(result)
         } catch (e: Exception) {
@@ -1961,9 +2005,9 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 val node = this@LdkNodeModule.node ?: throw Exception("Node not initialized")
                 val lsps1 = node.lsps1Liquidity()
                 val response = lsps1.requestChannel(
-                    lspBalanceSat.toLong().toULong(),
-                    clientBalanceSat.toLong().toULong(),
-                    channelExpiryBlocks.toInt().toUInt(),
+                    toULongExact(lspBalanceSat, "balance"),
+                    toULongExact(clientBalanceSat, "balance"),
+                    toUIntExact(channelExpiryBlocks, "expiry"),
                     announceChannel
                 )
                 withContext(Dispatchers.Main) {
@@ -2105,7 +2149,7 @@ class LdkNodeModule(reactContext: ReactApplicationContext) : ReactContextBaseJav
                 val lsps7 = node.lsps7Liquidity()
                 val response = lsps7.createOrder(
                     shortChannelId,
-                    channelExtensionExpiryBlocks.toInt().toUInt(),
+                    toUIntExact(channelExtensionExpiryBlocks, "expiry"),
                     token,
                     refundOnchainAddress
                 )
