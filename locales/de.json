@@ -1877,6 +1877,7 @@
     "error.paymentFailed": "Zahlung fehlgeschlagen",
     "error.paymentTimedOut": "Zeitüberschreitung bei der Zahlung",
     "error.channelNotFound": "Kanal mit der Finanzierungs-TXID {{fundingTxid}} nicht gefunden",
+    "error.invalidInvoiceAmountOrExpiry": "Invalid invoice amount or expiry",
     "error.serviceConnection": "Verbindung zum Dienst fehlgeschlagen. Bitte versuche es später noch einmal.",
     "error.getExtendableChannels": "Verlängerbare Kanäle konnten nicht abgerufen werden",
     "error.createOrder": "Bestellung konnte nicht erstellt werden",

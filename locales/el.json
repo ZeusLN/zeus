@@ -1877,6 +1877,7 @@
     "error.paymentFailed": "Η πληρωμή απέτυχε",
     "error.paymentTimedOut": "Η πληρωμή έχει λήξει",
     "error.channelNotFound": "Δεν βρέθηκε το κανάλι με το txid χρηματοδότησης {{fundingTxid}}",
+    "error.invalidInvoiceAmountOrExpiry": "Invalid invoice amount or expiry",
     "error.serviceConnection": "Σφάλμα κατά τη σύνδεση με την υπηρεσία. Παρακαλώ δοκιμάστε ξανά αργότερα.",
     "error.getExtendableChannels": "Δεν κατέστη δυνατή η λήψη επεκτάσιμων καναλιών",
     "error.createOrder": "Αποτυχία δημιουργίας παραγγελίας",

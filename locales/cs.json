@@ -1877,6 +1877,7 @@
     "error.paymentFailed": "Platba selhala",
     "error.paymentTimedOut": "Platba vypršela",
     "error.channelNotFound": "Kanál s fundovacím txid {{fundingTxid}} nebyl nalezen",
+    "error.invalidInvoiceAmountOrExpiry": "Invalid invoice amount or expiry",
     "error.serviceConnection": "Chyba během připojování ke službě. Zkuste to prosím později.",
     "error.getExtendableChannels": "Nezdařilo se získat rozšiřitelné kanály",
     "error.createOrder": "Nezdařilo se vytvořit objednávku",

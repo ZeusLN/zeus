@@ -1877,6 +1877,7 @@
     "error.paymentFailed": "Pagamento falhou",
     "error.paymentTimedOut": "Pagamento expirado",
     "error.channelNotFound": "Canal com txid de financiamento {{fundingTxid}} não encontrado",
+    "error.invalidInvoiceAmountOrExpiry": "Invalid invoice amount or expiry",
     "error.serviceConnection": "Erro ao conectar ao serviço. Tente novamente mais tarde.",
     "error.getExtendableChannels": "Não foi possível obter canais extensíveis.",
     "error.createOrder": "Falha ao criar o pedido",

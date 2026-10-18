@@ -1877,6 +1877,7 @@
     "error.paymentFailed": "支付失败",
     "error.paymentTimedOut": "支付超时",
     "error.channelNotFound": "未找到充值交易 ID 为 {{fundingTxid}} 的通道",
+    "error.invalidInvoiceAmountOrExpiry": "Invalid invoice amount or expiry",
     "error.serviceConnection": "连接服务时出错。请稍后重试。",
     "error.getExtendableChannels": "无法获取可扩展的通道",
     "error.createOrder": "无法创建订单",
