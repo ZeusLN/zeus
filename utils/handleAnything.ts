@@ -12,6 +12,7 @@ import CashuUtils from './CashuUtils';
 import ConnectionFormatUtils from './ConnectionFormatUtils';
 import ContactUtils from './ContactUtils';
 import { localeString } from './LocaleUtils';
+import { getLnurlpUrl } from './LnurlPayUtils';
 import NodeUriUtils from './NodeUriUtils';
 import NostrUtils from './NostrUtils';
 import { doTorRequest, RequestMethod } from './TorUtils';
@@ -716,17 +717,7 @@ const handleAnything = async (
         }
 
         // try BOLT 11 address
-        // Skip lowercasing for cryptoqr.net addresses as they contain URL-encoded
-        // data where hex digit casing matters for server-side lookup. The
-        // username is encoded so it stays inside /.well-known/lnurlp/.
-        const isCryptoQR = normalizedDomain.endsWith('cryptoqr.net');
-        const normalizedUsername = isCryptoQR
-            ? username.replace(/[/\\?#]|%2e/gi, (c: string) =>
-                  encodeURIComponent(c)
-              )
-            : encodeURIComponent(username.toLowerCase());
-        const scheme = isOnion ? 'http' : 'https';
-        const url = `${scheme}://${normalizedDomain}/.well-known/lnurlp/${normalizedUsername}`;
+        const { url } = getLnurlpUrl(value);
         const error = localeString(
             'utils.handleAnything.lightningAddressError'
         );

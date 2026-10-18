@@ -1248,6 +1248,23 @@ describe('handleAnything', () => {
             );
         });
 
+        it('treats a domain ending in cryptoqr.net like other domains', async () => {
+            const address = 'A%2Fb@evilcryptoqr.net';
+            mockProcessBIP21Uri.mockReturnValue({ value: address });
+            mockIsValidLightningAddress = true;
+            mockBlobUtilFetch.mockResolvedValue({
+                info: () => ({ status: 200 }),
+                json: () => ({ callback: 'https://evilcryptoqr.net/callback' })
+            });
+
+            await handleAnything(address);
+
+            expect(mockBlobUtilFetch).toHaveBeenCalledWith(
+                'get',
+                'https://evilcryptoqr.net/.well-known/lnurlp/a%252fb'
+            );
+        });
+
         it('lowercases domain per LUD-16 spec', async () => {
             const address = 'satoshi@EXAMPLE.COM';
             mockProcessBIP21Uri.mockReturnValue({ value: address });
