@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "Maximální počet dílčích plateb, které lze použít k dokončení celé částky.",
     "views.PaymentRequest.timeout": "Časový limit (sekundy)",
     "views.PaymentRequest.feeLimit": "Limit poplatků",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "Zaplatit tuto fakturu",
     "views.PaymentRequest.firstHop": "První hop",
     "views.PaymentRequest.lastHop": "Poslední hop",
