@@ -94,6 +94,9 @@ jest.mock('./LdkNodeUtils', () => ({
     deleteLdkNodeWallet: jest.fn().mockResolvedValue(undefined),
     stopLdkNode: jest.fn().mockResolvedValue(undefined)
 }));
+jest.mock('./ChannelMigrationUtils', () => ({
+    purgeChannelDbStagingFiles: jest.fn().mockResolvedValue(undefined)
+}));
 jest.mock('./SleepUtils', () => ({
     sleep: jest.fn().mockResolvedValue(undefined)
 }));
