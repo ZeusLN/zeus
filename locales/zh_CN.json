@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "可用于完成整个支付金额的最大部分支付数量。",
     "views.PaymentRequest.timeout": "超时（秒）",
     "views.PaymentRequest.feeLimit": "手续费限制",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "支付此发票",
     "views.PaymentRequest.firstHop": "第一个节点",
     "views.PaymentRequest.lastHop": "最后一个节点",
