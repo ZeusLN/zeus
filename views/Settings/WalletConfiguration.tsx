@@ -860,6 +860,12 @@ export default class WalletConfiguration extends React.Component<
         const deletedNode = index != null ? nodes?.[index] : undefined;
 
         try {
+            // The next wallet takes this one's index without a reconnect.
+            // Two embedded LND, LDK Node or NWC wallets have the same
+            // implementation and no host, so updateNodeProperties sees no
+            // change of target: end the deleted wallet's connection here
+            if (active) SettingsStore.invalidateConnection();
+
             // If deleting active embedded LND wallet, stop it first
             if (
                 active &&

@@ -2007,6 +2007,12 @@ export default class SettingsStore {
         // macaroonHex || accessToken), so a token left over from another
         // wallet would go to the next server. This runs after every settings
         // write, so only clear it when the connection target changes.
+        //
+        // A connect still in flight for the old target is stale from here
+        // on: deleting the active wallet slides the next one into the same
+        // index with no reconnect in between, so without a new generation a
+        // login answered after the deletion would pass getConnectionGuard
+        // and store the deleted account's token for the next wallet's server.
         if (
             !node ||
             (node.implementation || 'lnd') !== this.implementation ||
@@ -2016,6 +2022,7 @@ export default class SettingsStore {
             node.username !== this.username ||
             node.password !== this.password
         ) {
+            this.connectionSeq++;
             this.accessToken = '';
             this.refreshToken = '';
         }
@@ -2757,6 +2764,13 @@ export default class SettingsStore {
         }
         this.connecting = status;
         return this.connecting;
+    };
+
+    // Fails the connection guard of every connect, login and refresh
+    // started so far, without starting a new connection
+    @action
+    public invalidateConnection = () => {
+        this.connectionSeq++;
     };
 
     @action

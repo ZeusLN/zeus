@@ -428,6 +428,82 @@ describe('WalletConfiguration', () => {
         });
     });
 
+    describe('deleting a wallet', () => {
+        const NWC_A = {
+            implementation: 'nostr-wallet-connect',
+            nostrWalletConnectUrl: 'nostr+walletconnect://a'
+        };
+        const NWC_B = {
+            implementation: 'nostr-wallet-connect',
+            nostrWalletConnectUrl: 'nostr+walletconnect://b'
+        };
+
+        // Deletes the first of two NWC wallets through the Delete button
+        const deleteFirstWallet = async (active: boolean) => {
+            const nodes = [NWC_A, NWC_B];
+            const SettingsStore = {
+                settings: {
+                    privacy: { clipboard: false },
+                    nodes,
+                    selectedNode: active ? 0 : 1
+                },
+                updateSettings: jest.fn((update: any) =>
+                    Promise.resolve(update({ nodes }))
+                ),
+                setConnectingStatus: jest.fn(),
+                invalidateConnection: jest.fn()
+            };
+            await render(
+                <WalletConfiguration
+                    {...({
+                        navigation: {
+                            goBack: jest.fn(),
+                            navigate: jest.fn(),
+                            popTo: jest.fn(),
+                            reset: jest.fn()
+                        },
+                        route: {
+                            params: {
+                                node: NWC_A,
+                                index: 0,
+                                saved: true,
+                                active
+                            }
+                        },
+                        SettingsStore
+                    } as any)}
+                />
+            );
+
+            await pressButton(
+                'views.Settings.WalletConfiguration.deleteWallet'
+            );
+            const [, , proceed] = (confirmAction as jest.Mock).mock.calls[0];
+            await act(async () => proceed.onPress());
+            return SettingsStore;
+        };
+
+        beforeEach(() => {
+            (confirmAction as jest.Mock).mockClear();
+        });
+
+        // The next wallet takes the deleted one's index without a
+        // reconnect, and two NWC wallets look the same to the guard
+        it('ends the connection of the active wallet it deletes', async () => {
+            const SettingsStore = await deleteFirstWallet(true);
+
+            expect(SettingsStore.invalidateConnection).toHaveBeenCalledTimes(1);
+            expect(SettingsStore.updateSettings).toHaveBeenCalled();
+        });
+
+        it('keeps the connection when the wallet it deletes is not active', async () => {
+            const SettingsStore = await deleteFirstWallet(false);
+
+            expect(SettingsStore.invalidateConnection).not.toHaveBeenCalled();
+            expect(SettingsStore.updateSettings).toHaveBeenCalled();
+        });
+    });
+
     describe('implementation dropdown', () => {
         it('clears the previous server address and credentials', async () => {
             // existingAccount shows the username and password fields

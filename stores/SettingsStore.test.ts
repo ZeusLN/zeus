@@ -749,6 +749,71 @@ describe('SettingsStore LndHub session token', () => {
 
         expect(store.accessToken).toBe('');
     });
+
+    // Deleting the active wallet slides the next one into its index with
+    // no reconnect in between, so the index cannot tell the two apart
+    it('drops a login answered after the active wallet was deleted', async () => {
+        seedSettings({ selectedNode: 0, nodes: [hubA, hubB] });
+        const store = new SettingsStore();
+        await store.getSettings();
+        let answer: (data: any) => void = () => {};
+        jest.requireMock('../utils/BackendUtils').default.login = jest.fn(
+            () => new Promise((resolve) => (answer = resolve))
+        );
+
+        const login = store.login({ login: 'alice', password: 'a' } as any);
+        await store.updateSettings({ selectedNode: 0, nodes: [hubB] });
+        answer({ access_token: 'token-a', refresh_token: 'refresh-a' });
+        await login;
+
+        expect(store.lndhubUrl).toBe('https://hub-b.example.com');
+        expect(store.accessToken).toBe('');
+        expect(store.refreshToken).toBe('');
+    });
+
+    it.each([
+        ['lnd', 'host'],
+        ['lnd', 'port'],
+        ['lndhub', 'lndhubUrl'],
+        ['lndhub', 'username'],
+        ['lndhub', 'password']
+    ])(
+        'invalidates the connection guard when an %s wallet with another %s takes the same index',
+        async (implementation, field) => {
+            const deleted = { implementation, [field]: 'a' };
+            const next = { implementation, [field]: 'b' };
+            seedSettings({ selectedNode: 0, nodes: [deleted, next] });
+            const store = new SettingsStore();
+            await store.getSettings();
+            const isCurrent = store.getConnectionGuard();
+
+            await store.updateSettings({ fiat: 'EUR' });
+            expect(isCurrent()).toBe(true);
+
+            await store.updateSettings({ selectedNode: 0, nodes: [next] });
+            expect(isCurrent()).toBe(false);
+        }
+    );
+
+    // Two embedded wallets differ only in their data directory, which
+    // updateNodeProperties does not compare, so deleteNodeConfig ends the
+    // deleted wallet's connection itself
+    it('keeps the connection guard when an embedded wallet takes the same index, until invalidateConnection', async () => {
+        const deleted = { implementation: 'embedded-lnd', lndDir: 'lnd-a' };
+        const next = { implementation: 'embedded-lnd', lndDir: 'lnd-b' };
+        seedSettings({ selectedNode: 0, nodes: [deleted, next] });
+        const store = new SettingsStore();
+        await store.getSettings();
+        const isCurrent = store.getConnectionGuard();
+
+        await store.updateSettings({ selectedNode: 0, nodes: [next] });
+        expect(isCurrent()).toBe(true);
+
+        const connecting = store.connecting;
+        store.invalidateConnection();
+        expect(isCurrent()).toBe(false);
+        expect(store.connecting).toBe(connecting);
+    });
 });
 
 describe('SettingsStore.updateSettingsGroupDebounced', () => {
