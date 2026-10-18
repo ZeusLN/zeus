@@ -1877,6 +1877,7 @@
     "error.paymentFailed": "Plata a eșuat",
     "error.paymentTimedOut": "Plata expirata",
     "error.channelNotFound": "Canalul cu codul de finanțare {{fundingTxid}} nu a fost găsit.",
+    "error.invalidInvoiceAmountOrExpiry": "Invalid invoice amount or expiry",
     "error.serviceConnection": "Eroare la conectarea la serviciu. Vă rugăm să încercați din nou mai târziu.",
     "error.getExtendableChannels": "Nu s-au putut obține canalele extensibile",
     "error.createOrder": "Nu s-a putut crea comanda",
