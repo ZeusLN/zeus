@@ -56,6 +56,7 @@ jest.mock('./LndMobileUtils', () => ({
 }));
 jest.mock('./LdkNodeUtils', () => ({
     deleteLdkNodeWallet: jest.fn().mockResolvedValue(undefined),
+    getLdkNodeBaseDirectory: jest.fn().mockReturnValue('/docs/ldk-node'),
     stopLdkNode: jest.fn().mockResolvedValue(undefined)
 }));
 
@@ -395,6 +396,194 @@ describe('clearAllData node data directory retry', () => {
 
         expect(mockedDeleteLndWallet).toHaveBeenCalledTimes(3);
         expect(mockedDeleteLdkNodeWallet).toHaveBeenCalledWith('ldk-2');
+    });
+});
+
+// Node directories can outlive their config: a single-wallet deletion
+// removes the config before the directory, and the user can skip a failed
+// directory removal. The wipe must find these on disk.
+describe('clearAllData orphaned node data directories', () => {
+    const mockedLs = ReactNativeBlobUtil.fs.ls as jest.Mock;
+    const mockedExists = ReactNativeBlobUtil.fs.exists as jest.Mock;
+
+    const ORPHAN_LND = '3f2504e0-4f89-41d3-9a0c-0305e82c3301';
+    const ORPHAN_LND_2 = '9b2d5a1c-7e3f-4c6a-8d1b-2f4e6a8c0d12';
+    const CONFIGURED_LND = '1c4f9e2a-6b8d-4a3e-9f7c-5d2b8e1a4c63';
+    const IOS_BASE = '/lib/Application Support';
+    const ANDROID_BASE = '/docs/../files';
+
+    // Simulated disk: the listing of each directory and every existing path
+    const setDisk = (listings: Record<string, string[]>, paths: string[]) => {
+        mockedLs.mockImplementation((dir: string) =>
+            Promise.resolve(listings[dir] ?? [])
+        );
+        mockedExists.mockImplementation((p: string) =>
+            Promise.resolve(paths.includes(p) || p in listings)
+        );
+    };
+    const deletedLndDirs = () =>
+        mockedDeleteLndWallet.mock.calls.map((call) => call[0]);
+    const deletedLdkDirs = () =>
+        mockedDeleteLdkNodeWallet.mock.calls.map((call) => call[0]);
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+        mockedDeleteLndWallet.mockResolvedValue(true);
+        mockedDeleteLdkNodeWallet.mockResolvedValue(undefined);
+        setDisk({}, []);
+    });
+
+    afterAll(() => {
+        mockedLs.mockResolvedValue([]);
+        mockedExists.mockResolvedValue(false);
+    });
+
+    it('deletes an LND directory of a wallet no longer in settings (iOS)', async () => {
+        mockedStorageGetItem.mockImplementation(
+            settingsWithNodes([
+                { implementation: 'embedded-lnd', lndDir: CONFIGURED_LND }
+            ]).getItem
+        );
+        setDisk({ [IOS_BASE]: [CONFIGURED_LND, ORPHAN_LND] }, [
+            `${IOS_BASE}/${CONFIGURED_LND}/lnd.conf`,
+            `${IOS_BASE}/${ORPHAN_LND}/lnd.conf`,
+            `${IOS_BASE}/${ORPHAN_LND}/data/chain`
+        ]);
+
+        await clearAllData();
+
+        // configured directory once (settings pass), orphan once (sweep)
+        expect(deletedLndDirs()).toEqual([CONFIGURED_LND, ORPHAN_LND]);
+    });
+
+    it('deletes orphaned LND directories when the settings blob is unreadable', async () => {
+        mockedStorageGetItem.mockResolvedValue(null);
+        setDisk({ [IOS_BASE]: [ORPHAN_LND, ORPHAN_LND_2, 'lnd'] }, [
+            `${IOS_BASE}/${ORPHAN_LND}/data/chain`,
+            `${IOS_BASE}/${ORPHAN_LND_2}/logs/bitcoin`,
+            `${IOS_BASE}/lnd/tls.cert`
+        ]);
+
+        await clearAllData();
+
+        expect(deletedLndDirs().sort()).toEqual(
+            [ORPHAN_LND, ORPHAN_LND_2, 'lnd'].sort()
+        );
+    });
+
+    it('deletes a legacy Android LND wallet in the files dir root', async () => {
+        setPlatformOS('android');
+        setDisk({ [ANDROID_BASE]: ['data', 'logs', 'lnd.conf'] }, [
+            `${ANDROID_BASE}/lnd.conf`,
+            `${ANDROID_BASE}/data/chain`
+        ]);
+
+        await clearAllData();
+
+        expect(deletedLndDirs()).toEqual(['lnd']);
+    });
+
+    it('does not delete the files dir root again when the legacy wallet is configured', async () => {
+        setPlatformOS('android');
+        mockedStorageGetItem.mockImplementation(
+            settingsWithNodes([{ implementation: 'embedded-lnd' }]).getItem
+        );
+        setDisk({ [ANDROID_BASE]: ['data', 'lnd.conf'] }, [
+            `${ANDROID_BASE}/lnd.conf`
+        ]);
+
+        await clearAllData();
+
+        expect(deletedLndDirs()).toEqual(['lnd']);
+    });
+
+    it('leaves directories that are not ZEUS LND wallet directories alone', async () => {
+        setDisk(
+            {
+                [IOS_BASE]: [
+                    'cashu_wallet_0123456789abcdef.db',
+                    'ldk-node',
+                    'lnd-backup',
+                    'some-library',
+                    ORPHAN_LND
+                ]
+            },
+            [
+                // LND-like contents under names ZEUS never gives a wallet
+                `${IOS_BASE}/lnd-backup/lnd.conf`,
+                `${IOS_BASE}/some-library/logs/bitcoin`,
+                // a wallet-shaped name without LND files
+                `${IOS_BASE}/${ORPHAN_LND}/notes.txt`
+            ]
+        );
+
+        await clearAllData();
+
+        expect(mockedDeleteLndWallet).not.toHaveBeenCalled();
+    });
+
+    it('does not treat a stray data or logs dir in the Android files root as a wallet', async () => {
+        setPlatformOS('android');
+        setDisk({ [ANDROID_BASE]: ['data', 'logs'] }, [
+            `${ANDROID_BASE}/data`,
+            `${ANDROID_BASE}/logs`
+        ]);
+
+        await clearAllData();
+
+        expect(mockedDeleteLndWallet).not.toHaveBeenCalled();
+    });
+
+    it('does not retry a configured LND directory that already failed', async () => {
+        mockedStorageGetItem.mockImplementation(
+            settingsWithNodes([
+                { implementation: 'embedded-lnd', lndDir: CONFIGURED_LND }
+            ]).getItem
+        );
+        setDisk({ [IOS_BASE]: [CONFIGURED_LND] }, [
+            `${IOS_BASE}/${CONFIGURED_LND}/lnd.conf`
+        ]);
+        mockedDeleteLndWallet.mockResolvedValue(false);
+
+        await clearAllData();
+
+        expect(mockedDeleteLndWallet).toHaveBeenCalledTimes(3);
+    });
+
+    it('stops LDK Node and deletes LDK Node directories no longer in settings', async () => {
+        mockedStorageGetItem.mockImplementation(
+            settingsWithNodes([
+                { implementation: 'ldk-node', ldkNodeDir: 'ldk-configured' }
+            ]).getItem
+        );
+        setDisk({ '/docs/ldk-node': ['ldk-configured', 'ldk-orphan'] }, []);
+
+        await clearAllData();
+
+        expect(deletedLdkDirs()).toEqual(['ldk-configured', 'ldk-orphan']);
+        const orphanCall = deletedLdkDirs().indexOf('ldk-orphan');
+        expect(
+            mockedStopLdkNode.mock.invocationCallOrder[orphanCall]
+        ).toBeLessThan(
+            mockedDeleteLdkNodeWallet.mock.invocationCallOrder[orphanCall]
+        );
+    });
+
+    it('does not stop LDK Node when no LDK Node directory exists', async () => {
+        setDisk({ [IOS_BASE]: [] }, []);
+
+        await clearAllData();
+
+        expect(mockedStopLdkNode).not.toHaveBeenCalled();
+        expect(mockedDeleteLdkNodeWallet).not.toHaveBeenCalled();
+    });
+
+    it('still finishes the wipe when listing a directory fails', async () => {
+        mockedLs.mockRejectedValue(new Error('EACCES'));
+        mockedExists.mockResolvedValue(true);
+
+        await expect(clearAllData()).resolves.toBeUndefined();
     });
 });
 
