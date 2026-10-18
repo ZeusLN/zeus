@@ -480,3 +480,46 @@ describe('LdkNode createInvoice', () => {
         expect(mockReceiveVariableAmountBolt11).not.toHaveBeenCalled();
     });
 });
+
+describe('LdkNode.getPayments', () => {
+    // LDK lists a keysend with the preimage the sender chose, whatever its
+    // status; the app reads a preimage as proof of settlement
+    const keysend = (status: string) => ({
+        id: PAYMENT_ID,
+        direction: 'outbound',
+        status,
+        amountMsat: 3_000_000,
+        latestUpdateTimestamp: 0,
+        kind: { type: 'spontaneous', hash: 'hash', preimage: '01'.repeat(32) }
+    });
+
+    const listed = async (status: string) => {
+        mockListPayments.mockResolvedValue([keysend(status)]);
+        const { payments } = await new LdkNode().getPayments();
+        return new Payment(payments[0]);
+    };
+
+    it('keeps the preimage of a keysend that arrived', async () => {
+        const payment = await listed('succeeded');
+
+        expect(payment.getPreimage).toEqual('01'.repeat(32));
+        expect(payment.isIncomplete).toBe(false);
+        expect(payment.isFailed).toBe(false);
+    });
+
+    it('lists a failed keysend as failed, without a preimage', async () => {
+        const payment = await listed('failed');
+
+        expect(payment.getPreimage).toEqual('');
+        expect(payment.isIncomplete).toBe(true);
+        expect(payment.isFailed).toBe(true);
+    });
+
+    it('lists a pending keysend as incomplete', async () => {
+        const payment = await listed('pending');
+
+        expect(payment.getPreimage).toEqual('');
+        expect(payment.isIncomplete).toBe(true);
+        expect(payment.isFailed).toBe(false);
+    });
+});
