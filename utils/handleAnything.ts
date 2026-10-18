@@ -1197,22 +1197,21 @@ const handleAnything = async (
         if (isClipboardValue) return false;
         throw new Error(localeString('utils.handleAnything.notValid'));
     } else {
-        try {
-            const { isValid, error } = wifUtils.validateWIF(value);
-            if (isValid) {
-                return [
-                    'WIFSweeper',
-                    {
-                        wif: value
-                    }
-                ];
-            } else {
-                throw new Error(error || localeString('views.Wif.invalidWif'));
-            }
-        } catch (err) {
-            if (isClipboardValue) return false;
-            throw new Error(localeString('utils.handleAnything.notValid'));
+        const { isValid, error } = wifUtils.validateWIF(value);
+        if (isValid) {
+            return [
+                'WIFSweeper',
+                {
+                    wif: value
+                }
+            ];
         }
+        if (isClipboardValue) return false;
+        // A decodable key for another network: say so instead of "not valid"
+        if (error === localeString('views.Wif.wrongNetwork')) {
+            throw new Error(error);
+        }
+        throw new Error(localeString('utils.handleAnything.notValid'));
     }
 };
 
