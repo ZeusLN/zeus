@@ -119,6 +119,76 @@ describe('BackgroundLockUtils', () => {
         expect(store.setLoginStatus).toHaveBeenCalledWith(false);
     });
 
+    it('re-arms the lock when the wall clock was set back while the dialog was up', async () => {
+        jest.useFakeTimers();
+        const store = createStore();
+        (AppState as any).currentState = 'background';
+
+        const flow = suppressBackgroundLockDuring(store, async () => {
+            shouldSkipBackgroundLock();
+            jest.advanceTimersByTime(5 * 1000);
+            jest.setSystemTime(Date.now() - 24 * 60 * 60 * 1000);
+        });
+        await flushMicrotasks();
+        (AppState as any).emit('active');
+        await flow;
+
+        expect(store.setLoginStatus).toHaveBeenCalledWith(false);
+    });
+
+    it('re-arms the lock when only the monotonic clock passed the ceiling', async () => {
+        jest.useFakeTimers();
+        const store = createStore();
+        (AppState as any).currentState = 'background';
+
+        const flow = suppressBackgroundLockDuring(store, async () => {
+            shouldSkipBackgroundLock();
+            jest.advanceTimersByTime(BACKGROUND_LOCK_SUPPRESSION_MAX_MS + 1);
+            // Wall clock shows exactly the ceiling: neither over the limit
+            // nor behind the monotonic clock by more than 1 s.
+            jest.setSystemTime(Date.now() - 1);
+        });
+        await flushMicrotasks();
+        (AppState as any).emit('active');
+        await flow;
+
+        expect(store.setLoginStatus).toHaveBeenCalledWith(false);
+    });
+
+    it('does not re-arm when the wall clock trails the monotonic clock by exactly 1000 ms', async () => {
+        jest.useFakeTimers();
+        const store = createStore();
+        (AppState as any).currentState = 'background';
+
+        const flow = suppressBackgroundLockDuring(store, async () => {
+            shouldSkipBackgroundLock();
+            jest.advanceTimersByTime(5 * 1000);
+            jest.setSystemTime(Date.now() - 1000);
+        });
+        await flushMicrotasks();
+        (AppState as any).emit('active');
+        await flow;
+
+        expect(store.setLoginStatus).not.toHaveBeenCalled();
+    });
+
+    it('re-arms the lock when the wall clock trails the monotonic clock by just over 1000 ms', async () => {
+        jest.useFakeTimers();
+        const store = createStore();
+        (AppState as any).currentState = 'background';
+
+        const flow = suppressBackgroundLockDuring(store, async () => {
+            shouldSkipBackgroundLock();
+            jest.advanceTimersByTime(5 * 1000);
+            jest.setSystemTime(Date.now() - 1001);
+        });
+        await flushMicrotasks();
+        (AppState as any).emit('active');
+        await flow;
+
+        expect(store.setLoginStatus).toHaveBeenCalledWith(false);
+    });
+
     it('does not re-arm when no background event was suppressed (in-process iOS dialogs)', async () => {
         const store = createStore();
         jest.spyOn(Date, 'now')
