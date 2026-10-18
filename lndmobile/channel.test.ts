@@ -675,7 +675,8 @@ describe('subscribeChannelEvents', () => {
         expect(LndMobile.sendStreamCommand).toHaveBeenCalledWith(
             'SubscribeChannelEvents',
             '',
-            false
+            false,
+            ''
         );
     });
 });
@@ -804,7 +805,8 @@ describe('channelAcceptor', () => {
         expect(result).toBe('acceptor');
         expect(LndMobile.sendBidiStreamCommand).toHaveBeenCalledWith(
             'ChannelAcceptor',
-            false
+            false,
+            ''
         );
     });
 });
