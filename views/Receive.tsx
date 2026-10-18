@@ -242,6 +242,9 @@ export default class Receive extends React.Component<
 
     unsubscribeInvoiceWatch: (() => void) | null = null;
     unsubscribeOnchainWatch: (() => void) | null = null;
+    // set on unmount so address and invoice requests that resolve later
+    // don't start watchers that nothing will stop
+    private unmounted = false;
     hopPickerRef: HopPicker | null;
 
     private getDefaultIndex = (): number => {
@@ -558,6 +561,7 @@ export default class Receive extends React.Component<
     }
 
     componentWillUnmount() {
+        this.unmounted = true;
         this.cleanup();
     }
 
@@ -852,6 +856,8 @@ export default class Receive extends React.Component<
     };
 
     subscribeInvoice = (rHash?: string, onChainAddress?: string) => {
+        if (this.unmounted) return;
+
         const { SettingsStore, NodeInfoStore } = this.props;
         // the on-chain watcher compares against sats; state.value is in the
         // display unit (sats, BTC, or fiat)

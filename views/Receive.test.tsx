@@ -191,4 +191,26 @@ describe('Receive.updateIndex', () => {
         expect(view.props.InvoicesStore.getNewAddress).not.toHaveBeenCalled();
         expect(BackendUtils.watchOnchainReceived).not.toHaveBeenCalled();
     });
+
+    it('does not watch the address when the screen unmounts before it resolves', async () => {
+        let resolveAddress: (address: string) => void = () => {};
+        const view = makeTabView({
+            getNewAddress: jest.fn(
+                () =>
+                    new Promise<string>((resolve) => {
+                        resolveAddress = resolve;
+                    })
+            ),
+            reset: jest.fn()
+        });
+        Object.assign(view.props, { LSPStore: { reset: jest.fn() } });
+
+        const pending = view.updateIndex(2);
+        view.componentWillUnmount();
+        resolveAddress(NEW_ADDRESS);
+        await pending;
+
+        expect(BackendUtils.watchOnchainReceived).not.toHaveBeenCalled();
+        expect(view.unsubscribeOnchainWatch).toBeNull();
+    });
 });
