@@ -42,7 +42,9 @@ jest.mock('../../utils/LdkNodeUtils', () => ({
     createLdkNodeWallet: jest.fn(() => Promise.resolve({})),
     stopLdkNode: jest.fn(() => Promise.resolve())
 }));
-jest.mock('../../storage', () => ({}));
+jest.mock('../../storage', () => ({
+    getItem: jest.fn(() => Promise.resolve(null))
+}));
 jest.mock('../../components/Button', () => {
     const { Pressable, Text } = require('react-native');
     return ({ title, onPress, disabled }: any) => (
@@ -84,6 +86,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import WalletConfiguration from './WalletConfiguration';
 import { confirmAction } from '../../utils/ActionUtils';
 import { createLdkNodeWallet } from '../../utils/LdkNodeUtils';
+import Storage from '../../storage';
 
 const LNDHUB_IMPORT = 'lndhub://alice:secret@https://lndhub.example.com';
 
@@ -158,10 +161,16 @@ describe('WalletConfiguration', () => {
                 { ...LND_NODE, host: 'http://192.168.1.50' },
                 { clipboard: true }
             );
-            expect(screen.getByText(LNDHUB_IMPORT)).toBeOnTheScreen();
+            expect(
+                screen.getByText('lndhub://********@https://lndhub.example.com')
+            ).toBeOnTheScreen();
 
             await pressButton('views.Settings.AddEditNode.import');
-            expect(screen.queryByText(LNDHUB_IMPORT)).not.toBeOnTheScreen();
+            expect(
+                screen.queryByText(
+                    'lndhub://********@https://lndhub.example.com'
+                )
+            ).not.toBeOnTheScreen();
             expect(interfaceDropdown().props.selectedValue).toBe('lndhub');
             expect(screen.getByPlaceholderText('https://')).toHaveDisplayValue(
                 'https://lndhub.example.com'
@@ -190,6 +199,94 @@ describe('WalletConfiguration', () => {
                     name: 'views.Settings.AddEditNode.import'
                 })
             ).not.toBeOnTheScreen();
+        });
+    });
+
+    describe('clipboard import banner', () => {
+        it('does not show the lndhub login and password', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(LNDHUB_IMPORT);
+            await renderView(LND_NODE, { clipboard: true });
+
+            expect(
+                screen.getByText('lndhub://********@https://lndhub.example.com')
+            ).toBeOnTheScreen();
+            expect(screen.queryByText(/secret/)).not.toBeOnTheScreen();
+        });
+
+        it('does not show the clnrest rune', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(
+                'clnrest://cln.local:3010?rune=8hJ6ZKFvRune'
+            );
+            await renderView(LND_NODE, { clipboard: true });
+
+            expect(
+                screen.getByText('clnrest://cln.local:3010?rune=********')
+            ).toBeOnTheScreen();
+            expect(screen.queryByText(/8hJ6ZKFvRune/)).not.toBeOnTheScreen();
+        });
+
+        it('imports the unredacted lndhub password', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(LNDHUB_IMPORT);
+            await renderView(LND_NODE, { clipboard: true });
+
+            await pressButton('views.Settings.AddEditNode.import');
+
+            const [username, password] = screen.getAllByPlaceholderText('...');
+            expect(username).toHaveDisplayValue('alice');
+            expect(password).toHaveDisplayValue('secret');
+        });
+    });
+
+    describe('LNC keys', () => {
+        const PAIRING_PHRASE =
+            'cherry truth mask employ box silver mass bunker fiscal vote';
+        const LOCAL_KEY = 'd1'.repeat(32);
+        const REMOTE_KEY = '02' + 'd2'.repeat(32);
+
+        beforeEach(() => {
+            (Storage.getItem as jest.Mock).mockResolvedValue(
+                JSON.stringify({ localKey: LOCAL_KEY, remoteKey: REMOTE_KEY })
+            );
+        });
+
+        afterEach(() => {
+            (Storage.getItem as jest.Mock).mockResolvedValue(null);
+        });
+
+        it('masks the local and remote keys like the pairing phrase', async () => {
+            await renderView({
+                implementation: 'lightning-node-connect',
+                pairingPhrase: PAIRING_PHRASE
+            });
+
+            expect(
+                screen.getByDisplayValue(PAIRING_PHRASE).props.secureTextEntry
+            ).toBe(true);
+            expect(
+                screen.getByDisplayValue(LOCAL_KEY).props.secureTextEntry
+            ).toBe(true);
+            expect(
+                screen.getByDisplayValue(REMOTE_KEY).props.secureTextEntry
+            ).toBe(true);
+        });
+
+        it('shows the keys after the show/hide toggle is pressed', async () => {
+            await renderView({
+                implementation: 'lightning-node-connect',
+                pairingPhrase: PAIRING_PHRASE
+            });
+
+            const [toggle] = screen.container.queryAll(
+                (n) => n.type === 'ShowHideToggle'
+            );
+            await act(async () => toggle.props.onPress());
+
+            expect(
+                screen.getByDisplayValue(LOCAL_KEY).props.secureTextEntry
+            ).toBe(false);
+            expect(
+                screen.getByDisplayValue(REMOTE_KEY).props.secureTextEntry
+            ).toBe(false);
         });
     });
 
