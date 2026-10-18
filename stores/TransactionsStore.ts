@@ -426,14 +426,21 @@ export default class TransactionsStore {
             });
         }
 
+        // fundPsbt takes one amount per address, so an address entered more
+        // than once is paid the sum of its amounts, as VerifyOnChain totals
+        // them. Assigning would pay only the last of them.
+        const addOutput = (address: string, sats: any) => {
+            outputs[address] = (outputs[address] || 0) + Number(sats);
+        };
+
         if (addr) {
-            outputs[addr] = Number(amount);
+            addOutput(addr, amount);
         }
 
         if (additional_outputs) {
-            additional_outputs.map((output) => {
-                outputs[output.address] = Number(output.satAmount);
-            });
+            additional_outputs.forEach((output) =>
+                addOutput(output.address, output.satAmount)
+            );
         }
 
         const fundPsbtRequest = {
@@ -495,7 +502,10 @@ export default class TransactionsStore {
             transactionRequest.utxos &&
             transactionRequest.utxos.length > 0 &&
             transactionRequest.account === 'default' &&
-            BackendUtils.supportsOnchainSendMax()
+            BackendUtils.supportsOnchainSendMax() &&
+            // SendCoins pays a single address; batched sends have to go
+            // through fundPsbt below or the additional outputs are dropped
+            !transactionRequest.additional_outputs?.length
         ) {
             const outpoints: OutPoint[] = [];
             transactionRequest.utxos.forEach((input) => {
