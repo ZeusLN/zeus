@@ -9,6 +9,7 @@ import ClinkUtils, {
     isValidClinkResponseEvent,
     isNofferSuccess,
     verifyBolt11MatchesOffer,
+    isOnionHostname,
     isOnionRelay,
     requestInvoiceFromNoffer,
     CLINK_KIND,
@@ -522,6 +523,36 @@ describe('ClinkUtils', () => {
                 'wss://abcdefg.onion.example.com',
                 'wss://'
             ].forEach((r) => expect(isOnionRelay(r)).toBe(false));
+        });
+    });
+
+    // Jest's URL (Node) already applies IDNA, but the app's
+    // react-native-url-polyfill does not, so these are the hostnames the
+    // app gets for relays spelled with these characters
+    describe('isOnionHostname', () => {
+        it('recognizes an onion host hidden by characters IDNA removes or folds', () => {
+            [
+                'abcdefg.onion',
+                'abcdefg.onion.',
+                'abcdefg.on\u00adion',
+                'abcdefg.on\u200bion',
+                'abcdefg.oni\u200don',
+                'abcdefg.onion\ufe0f',
+                'abcdefg.\uff4f\uff4e\uff49\uff4f\uff4e',
+                'abcdefg\u3002onion',
+                'abcdefg\uff0eonion',
+                'abcdefg\uff61onion'
+            ].forEach((h) => expect(isOnionHostname(h)).toBe(true));
+        });
+
+        it('leaves other hosts alone', () => {
+            [
+                'relay.example.com',
+                'onion.example.com',
+                'abcdefg.onion.example.com',
+                'r\u00e9lay.example.com',
+                ''
+            ].forEach((h) => expect(isOnionHostname(h)).toBe(false));
         });
     });
 

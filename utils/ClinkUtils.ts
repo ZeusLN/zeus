@@ -481,6 +481,23 @@ const sendAndAwaitResponse = (opts: {
     });
 };
 
+// Whether a hostname, as react-native-url-polyfill returns it, names a Tor
+// onion service once the native socket stack maps it to ASCII. The polyfill
+// does no IDNA mapping, so the hostname can still hold fullwidth letters,
+// other full stops, and characters IDNA removes (soft hyphen, zero-width
+// space, variation selectors). NFKC folds the first two; every non-ASCII
+// character left after that is dropped, which can only make a hostname
+// count as onion, never hide one.
+export const isOnionHostname = (hostname: string): boolean => {
+    const host = hostname
+        .normalize('NFKC')
+        // IDNA also separates labels at the ideographic full stop
+        .replace(/\u3002/g, '.')
+        .replace(/[^\x00-\x7f]/g, '');
+    // a trailing dot is the fully qualified form of the same name
+    return /\.onion\.*$/i.test(host);
+};
+
 // Whether the host the relay layer would dial is a Tor onion service.
 // Judged on the URL Relay opens its socket to (nostr-tools runs the string
 // through the WHATWG URL parser first), not on the text of the offer: a
@@ -494,11 +511,7 @@ export const isOnionRelay = (relay: string): boolean => {
         // Relay's constructor throws on the same input: nothing is dialled
         return false;
     }
-    // react-native-url-polyfill does no IDNA mapping but the native socket
-    // stack may: fold fullwidth letters and ideographic full stops to ASCII
-    const host = hostname.normalize('NFKC').replace(/\u3002/g, '.');
-    // a trailing dot is the fully qualified form of the same name
-    return /\.onion\.*$/i.test(host);
+    return isOnionHostname(hostname);
 };
 
 // Resolves to a CLINK response: either a success containing a bolt11
