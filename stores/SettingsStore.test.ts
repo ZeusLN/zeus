@@ -58,7 +58,7 @@ jest.mock('./Stores', () => ({
     settingsStore: { settings: {} }
 }));
 jest.mock('../utils/LdkNodeUtils', () => ({
-    DEFAULT_SCORER_URL: '',
+    DEFAULT_SCORER_URL: 'https://scorer.default',
     DEFAULT_VSS_SERVER: '',
     getDefaultEsploraServer: jest.fn().mockReturnValue(''),
     getDefaultRgsServer: jest.fn().mockReturnValue('')
@@ -619,6 +619,41 @@ describe('SettingsStore.updateSelectedNode', () => {
             await store.updateSelectedNode({ dismissCustodialWarning: true })
         ).toBe(false);
         expect(persistedSettings().nodes).toEqual([]);
+    });
+});
+
+describe('SettingsStore.ldkScorerUrl', () => {
+    const loadWithNode = async (node: any) => {
+        seedSettings({ selectedNode: 0, nodes: [node] });
+        const store = new SettingsStore();
+        await store.getSettings();
+        return store;
+    };
+
+    it('uses the default when the node has no scorer URL', async () => {
+        const store = await loadWithNode({ implementation: 'ldk-node' });
+        expect(store.ldkScorerUrl).toBe('https://scorer.default');
+    });
+
+    it('keeps a custom scorer URL', async () => {
+        const store = await loadWithNode({
+            implementation: 'ldk-node',
+            ldkScorerUrl: 'https://s'
+        });
+        expect(store.ldkScorerUrl).toBe('https://s');
+    });
+
+    it('keeps a blank scorer URL on load and after saving', async () => {
+        const store = await loadWithNode({
+            implementation: 'ldk-node',
+            ldkScorerUrl: ''
+        });
+        expect(store.ldkScorerUrl).toBe('');
+
+        await store.updateSelectedNode({ ldkScorerUrl: 'https://s' });
+        expect(store.ldkScorerUrl).toBe('https://s');
+        await store.updateSelectedNode({ ldkScorerUrl: '' });
+        expect(store.ldkScorerUrl).toBe('');
     });
 });
 

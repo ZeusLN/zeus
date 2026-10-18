@@ -2062,7 +2062,7 @@ export default class SettingsStore {
                     (node.ldkNetwork?.toLowerCase() as SupportedNetwork) ||
                         'mainnet'
                 );
-            this.ldkScorerUrl = node.ldkScorerUrl || DEFAULT_SCORER_URL;
+            this.ldkScorerUrl = node.ldkScorerUrl ?? DEFAULT_SCORER_URL;
             this.ldkVssServer = node.ldkVssServer || DEFAULT_VSS_SERVER;
             // NWC
             this.nostrWalletConnectUrl = node.nostrWalletConnectUrl;

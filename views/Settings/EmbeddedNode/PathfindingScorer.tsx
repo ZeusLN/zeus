@@ -35,7 +35,8 @@ export default class PathfindingScorer extends React.Component<
     state = (() => {
         const { settings } = this.props.SettingsStore;
         const selectedNode = settings.selectedNode || 0;
-        const saved = settings.nodes?.[selectedNode]?.ldkScorerUrl || '';
+        const saved =
+            settings.nodes?.[selectedNode]?.ldkScorerUrl ?? DEFAULT_SCORER_URL;
         return {
             scorerUrl: saved,
             savedScorerUrl: saved
