@@ -49,6 +49,7 @@ describe('ConnectivityStore', () => {
         store.stop();
         global.fetch = originalFetch;
         jest.useRealTimers();
+        jest.restoreAllMocks();
     });
 
     it('clears the offline state when monitoring stops', () => {
@@ -162,6 +163,54 @@ describe('ConnectivityStore', () => {
 
         expect(store.isOffline).toBe(false);
         expect(onReconnect).toHaveBeenCalledTimes(1);
+    });
+
+    it('runs the remaining reconnect callbacks when one throws', () => {
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        const failing = jest.fn(() => {
+            throw new Error('callback failed');
+        });
+        const next = jest.fn();
+        store.onReconnect(failing);
+        store.onReconnect(next);
+        store.start();
+        emit({ isConnected: false });
+
+        emit({ isConnected: true, isInternetReachable: true });
+
+        expect(failing).toHaveBeenCalledTimes(1);
+        expect(next).toHaveBeenCalledTimes(1);
+        expect(store.isOffline).toBe(false);
+    });
+
+    it('runs the remaining reconnect callbacks when one throws after a probe', async () => {
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        const { settle } = mockPendingProbes();
+        const failing = jest.fn(() => {
+            throw new Error('callback failed');
+        });
+        const next = jest.fn();
+        store.onReconnect(failing);
+        store.onReconnect(next);
+        store.start();
+        emit({ isConnected: false });
+        emit(UNREACHABLE);
+
+        settle(true);
+        await flushPromises();
+
+        expect(next).toHaveBeenCalledTimes(1);
+        expect(store.isOffline).toBe(false);
+    });
+
+    it('does not fire onReconnect when already online', () => {
+        const onReconnect = jest.fn();
+        store.onReconnect(onReconnect);
+        store.start();
+
+        emit({ isConnected: true, isInternetReachable: true });
+
+        expect(onReconnect).not.toHaveBeenCalled();
     });
 
     it('does not start monitoring when the offline check is disabled', () => {
