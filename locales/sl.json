@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "Največje število delnih plačil, na katere je mogoče razdeliti celoten znesek.",
     "views.PaymentRequest.timeout": "Timeout (sekunde)",
     "views.PaymentRequest.feeLimit": "Omejitev omrežnine",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "Plačaj",
     "views.PaymentRequest.firstHop": "Prva povezava (First Hop)",
     "views.PaymentRequest.lastHop": "Zadnja povezava (Last Hop)",
