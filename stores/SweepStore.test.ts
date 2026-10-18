@@ -261,10 +261,10 @@ describe('SweepStore end-to-end sweep', () => {
         expect(store.sweepErrorMsg).toBe('views.Wif.outputIndexNotFound');
     });
 
-    it('refuses to sign a p2pkh input whose funding transaction does not match its txid', async () => {
-        // The amount fix trusts the downloaded transaction because signing
-        // checks it against the listed txid, so an explorer that inflates
-        // the value must make signing fail
+    it('refuses a p2pkh funding transaction that does not match its txid', async () => {
+        // The p2pkh amount is read from the downloaded funding transaction,
+        // so an explorer that serves another transaction paying more must
+        // not get that amount into the balance
         const payment = cases[0].payment;
         const tx = fundingTx(payment.output!);
         const forged = new bitcoin.Transaction();
@@ -278,15 +278,13 @@ describe('SweepStore end-to-end sweep', () => {
                 : lookup(url)
         );
         const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+
         await store.prepareSweepInputs(WIF);
 
-        store.destination = DESTINATION;
-        await store.finalizeSweepTransaction('2');
-
         expect(store.sweepError).toBe(true);
-        expect(store.sweepErrorMsg).toMatch(/doesn't match the hash/);
-        expect(store.txHex).toBeNull();
-        expect(store.txId).toBeNull();
+        expect(store.sweepErrorMsg).toBe('views.Wif.fundingTxMismatch');
+        expect(store.onChainBalance).toBeFalsy();
+        expect(store.psbt).toBeUndefined();
     });
 
     it('keeps the inputs of overlapping calls out of each other', async () => {

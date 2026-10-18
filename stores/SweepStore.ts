@@ -156,12 +156,20 @@ export default class SweepStore {
                         );
 
                     const rawTxHex = await res.text();
+                    const fundingTx = bitcoin.Transaction.fromHex(rawTxHex);
 
                     // A legacy signature does not commit to the input value,
-                    // so take it from the funding transaction, which signing
-                    // checks against txid, not from the explorer's listing
-                    const output =
-                        bitcoin.Transaction.fromHex(rawTxHex).outs[vout];
+                    // so take it from the funding transaction, not from the
+                    // explorer's listing, once that transaction is known to
+                    // be the one the UTXO belongs to
+                    if (fundingTx.getId() !== txid)
+                        throw new Error(
+                            localeString('views.Wif.fundingTxMismatch', {
+                                txid
+                            })
+                        );
+
+                    const output = fundingTx.outs[vout];
 
                     if (!output)
                         throw new Error(
