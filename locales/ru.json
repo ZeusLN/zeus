@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "Максимальное количество частичных платежей, которые могут быть использованы для завершения суммы.",
     "views.PaymentRequest.timeout": "Тайм-аут (секунды)",
     "views.PaymentRequest.feeLimit": "Предел комиссии",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "Оплатить этот инвойс",
     "views.PaymentRequest.firstHop": "Первый хоп",
     "views.PaymentRequest.lastHop": "Последний хоп",
