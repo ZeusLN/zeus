@@ -1,4 +1,5 @@
 import * as React from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
     KeyboardAvoidingView,
     Platform,
@@ -47,6 +48,7 @@ import {
     calculateSendAmount,
     calculateLimit,
     quoteSwapAmounts,
+    RESCUE_KEY_REPLACED_KEY,
     SWAPS_RESCUE_KEY
 } from '../../utils/SwapUtils';
 
@@ -106,6 +108,7 @@ interface SwapState {
     isModalVisible: boolean;
     isIntroModalVisible: boolean;
     showRescueKeyBtn: boolean;
+    rescueKeyReplaced: boolean;
     enableLSP: boolean;
     flowLspNotConfigured: boolean;
     // the amount field the user set last, kept when the network fee changes
@@ -152,6 +155,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         isModalVisible: false,
         isIntroModalVisible: false,
         showRescueKeyBtn: false,
+        rescueKeyReplaced: false,
         enableLSP: true,
         flowLspNotConfigured: true,
         lastEditedAmount: 'input' as 'input' | 'output',
@@ -365,6 +369,23 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         );
     };
 
+    // Set when a stored rescue key was a wallet's seed phrase and has been
+    // removed (MigrationUtils.retireWalletSeedRescueKey, wallet deletion).
+    // Shown until a new rescue key is stored.
+    isRescueKeyReplaced = async (): Promise<boolean> => {
+        try {
+            return (
+                (await AsyncStorage.getItem(RESCUE_KEY_REPLACED_KEY)) === 'true'
+            );
+        } catch (e) {
+            return false;
+        }
+    };
+
+    clearRescueKeyReplaced = () => {
+        AsyncStorage.removeItem(RESCUE_KEY_REPLACED_KEY).catch(() => {});
+    };
+
     async componentDidMount() {
         const { SettingsStore, NodeInfoStore, SwapStore } = this.props;
 
@@ -394,6 +415,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 const mnemonic = await Storage.getItem(SWAPS_RESCUE_KEY);
 
                 if (mnemonic) {
+                    this.clearRescueKeyReplaced();
                     this.setState({
                         showRescueKeyBtn: true,
                         seedPhrase: mnemonic.split(' '),
@@ -404,7 +426,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                     this.setState({
                         isIntroModalVisible: true,
                         isModalVisible: false,
-                        showRescueKeyBtn: false
+                        showRescueKeyBtn: false,
+                        rescueKeyReplaced: await this.isRescueKeyReplaced()
                     });
                 }
             } else {
@@ -440,6 +463,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 const mnemonic = await Storage.getItem(SWAPS_RESCUE_KEY);
 
                 if (mnemonic) {
+                    this.clearRescueKeyReplaced();
                     this.setState({
                         isModalVisible: false,
                         isIntroModalVisible: false,
@@ -450,7 +474,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                     this.setState({
                         isIntroModalVisible: true,
                         isModalVisible: false,
-                        showRescueKeyBtn: false
+                        showRescueKeyBtn: false,
+                        rescueKeyReplaced: await this.isRescueKeyReplaced()
                     });
                 }
             }
@@ -848,6 +873,21 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                     'views.Swaps.rescueKey.modal.text3'
                                 )}`}
                             </Text>
+                            {this.state.rescueKeyReplaced && (
+                                <Text
+                                    style={{
+                                        fontFamily: 'PPNeueMontreal-Book',
+                                        color: themeColor('warning'),
+                                        marginBottom: 12,
+                                        fontSize: 16,
+                                        textAlign: 'left'
+                                    }}
+                                >
+                                    {localeString(
+                                        'views.Swaps.rescueKey.replaced'
+                                    )}
+                                </Text>
+                            )}
                         </>
 
                         <Button

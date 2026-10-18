@@ -2194,6 +2194,8 @@ export default class SettingsStore {
                 }
             }
 
+            await MigrationsUtils.retireWalletSeedRescueKey(this.settings);
+
             this.updateNodeProperties(this.settings);
             this.settingsLoaded = true;
         } catch (error) {
