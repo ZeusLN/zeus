@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "Numărul maxim de plăți parțiale care poate fi folosit pentru a plăti valorea completă.",
     "views.PaymentRequest.timeout": "Expirare (secunde)",
     "views.PaymentRequest.feeLimit": "Limită comision",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "Plătește această factură",
     "views.PaymentRequest.firstHop": "Primul Hop",
     "views.PaymentRequest.lastHop": "Ultimul Hop",
