@@ -69,6 +69,7 @@ import {
 } from '../stores/NostrWalletConnectStore';
 import { PAYMENT_COUNT_KEY, RATING_DISMISSED_KEY } from '../utils/RatingUtils';
 import { deriveEmbeddedNodeId } from './AezeedUtils';
+import { purgeChannelDbStagingFiles } from './ChannelMigrationUtils';
 import { deleteLndWallet } from './LndMobileUtils';
 import {
     deleteLdkNodeWallet,
@@ -905,6 +906,7 @@ async function clearOrphanedNodeDataDirectories(settings: any): Promise<void> {
  * - Dynamic keys (notes, POS orders, Cashu, LNC)
  * - CDK SQLite database (Cashu wallet state)
  * - LND/LDK on-disk node data directories (channel + wallet state)
+ * - Channel database copies staged in app cache
  * - HTTP cookies
  * - Delivered system notifications
  *
@@ -982,6 +984,11 @@ export async function clearAllData(): Promise<void> {
     // 2e. Clear the per-order POS records while the order lists that name
     // them still exist (step 3 clears the lists)
     await clearPosOrderRecords();
+
+    // 2f. Delete channel database copies that the channel import, export and
+    // Olympus flows staged in app cache, outside the node directories
+    // deleted in 2c.
+    await purgeChannelDbStagingFiles();
 
     // 3. Clear all known storage keys. The legacy settings blob goes first:
     // getSettings() loads it whenever the keychain blob is missing, and it
