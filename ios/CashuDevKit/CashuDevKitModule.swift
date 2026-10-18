@@ -703,9 +703,14 @@ class CashuDevKitModule: RCTEventEmitter {
                 // wallet's unit; other units must not count toward the total
                 let unit = walletQueue.sync { walletUnit }
                 let balances = try await repo.getBalances()
+                // CDK 0.18.1 already rejects balances whose total passes
+                // the i64 range, so this sum cannot overflow today. If a
+                // later CDK stops doing that, `+=` would trap here and end
+                // the process at startup, so clamp instead.
                 var total: UInt64 = 0
                 for (key, amount) in balances where key.unit == unit {
-                    total += amount.value
+                    let (sum, overflow) = total.addingReportingOverflow(amount.value)
+                    total = overflow ? UInt64.max : sum
                 }
                 resolve(NSNumber(value: total))
             } catch let error as FfiError {
