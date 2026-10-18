@@ -9,6 +9,7 @@ jest.mock('@rneui/themed', () => ({
 jest.mock('react-native-nfc-manager', () => ({ isSupported: jest.fn() }));
 jest.mock('../utils/handleAnything', () => jest.fn());
 jest.mock('../utils/BackendUtils', () => ({
+    supportsOnchainReceiving: () => true,
     watchInvoicePaid: jest.fn(() => jest.fn()),
     watchOnchainReceived: jest.fn(() => jest.fn())
 }));
@@ -122,6 +123,114 @@ describe('Receive.subscribeInvoice', () => {
             { rHash: 'rhash' },
             expect.any(Function)
         );
+        expect(BackendUtils.watchOnchainReceived).not.toHaveBeenCalled();
+    });
+});
+
+describe('Receive.updateIndex', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    const NEW_ADDRESS = 'bc1qnewaddress';
+
+    // a Lightning-only invoice is on screen and no on-chain address has
+    // been generated for it yet
+    const makeTabView = (InvoicesStore: any) => {
+        const view = new Receive({
+            navigation: { navigate: jest.fn() },
+            route: { params: {} },
+            InvoicesStore: {
+                payment_request: 'lnbc100u1example',
+                onChainAddress: '',
+                getNewAddress: jest.fn(async () => NEW_ADDRESS),
+                ...InvoicesStore
+            },
+            SettingsStore: { settings: {} },
+            NodeInfoStore: { nodeInfo: { block_height: 900000 } }
+        } as unknown as React.ComponentProps<typeof Receive>);
+        // the view is never mounted, so apply state updates directly
+        jest.spyOn(view, 'setState').mockImplementation((update: any) => {
+            view.state = { ...view.state, ...update };
+        });
+        return view;
+    };
+
+    it.each([
+        ['unified', 0],
+        ['on-chain', 2]
+    ])(
+        'watches the address generated when switching to the %s tab',
+        async (_tab, selectedIndex) => {
+            const view = makeTabView({});
+            view.subscribeInvoice('rhash');
+
+            await view.updateIndex(selectedIndex);
+
+            expect(BackendUtils.watchOnchainReceived).toHaveBeenCalledWith(
+                expect.objectContaining({ address: NEW_ADDRESS }),
+                expect.any(Function)
+            );
+            // the invoice stays watched
+            expect(BackendUtils.watchInvoicePaid).toHaveBeenCalledTimes(1);
+            expect(view.unsubscribeInvoiceWatch).toBeDefined();
+        }
+    );
+
+    it('does not watch anything when the node returns no address', async () => {
+        const view = makeTabView({ getNewAddress: jest.fn(async () => {}) });
+
+        await view.updateIndex(2);
+
+        expect(BackendUtils.watchOnchainReceived).not.toHaveBeenCalled();
+    });
+
+    it('does not generate an address when switching to the Lightning tab', async () => {
+        const view = makeTabView({});
+
+        await view.updateIndex(1);
+
+        expect(view.props.InvoicesStore.getNewAddress).not.toHaveBeenCalled();
+        expect(BackendUtils.watchOnchainReceived).not.toHaveBeenCalled();
+    });
+
+    it('does not watch the address when the screen unmounts before it resolves', async () => {
+        let resolveAddress: (address: string) => void = () => {};
+        const view = makeTabView({
+            getNewAddress: jest.fn(
+                () =>
+                    new Promise<string>((resolve) => {
+                        resolveAddress = resolve;
+                    })
+            ),
+            reset: jest.fn()
+        });
+        Object.assign(view.props, { LSPStore: { reset: jest.fn() } });
+
+        const pending = view.updateIndex(2);
+        view.componentWillUnmount();
+        resolveAddress(NEW_ADDRESS);
+        await pending;
+
+        expect(BackendUtils.watchOnchainReceived).not.toHaveBeenCalled();
+        expect(view.unsubscribeOnchainWatch).toBeNull();
+    });
+
+    it('does not watch the address when the invoice is paid before it resolves', async () => {
+        let resolveAddress: (address: string) => void = () => {};
+        const view = makeTabView({
+            watchedInvoicePaid: false,
+            getNewAddress: jest.fn(
+                () =>
+                    new Promise<string>((resolve) => {
+                        resolveAddress = resolve;
+                    })
+            )
+        });
+
+        const pending = view.updateIndex(2);
+        view.props.InvoicesStore!.watchedInvoicePaid = true;
+        resolveAddress(NEW_ADDRESS);
+        await pending;
+
         expect(BackendUtils.watchOnchainReceived).not.toHaveBeenCalled();
     });
 });
