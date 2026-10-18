@@ -331,17 +331,23 @@ export default class SweepStore {
                     localeString('views.Wif.insufficientFundsAfterFees')
                 );
 
-            this.psbt.addOutput({
+            // Sign a copy so the prepared PSBT can be reused if the user goes
+            // back and changes the destination or fee rate
+            const signedPsbt = bitcoin.Psbt.fromBuffer(this.psbt.toBuffer(), {
+                network: this.network
+            });
+
+            signedPsbt.addOutput({
                 address: this.destination,
                 value: this.valueToSend
             });
 
-            for (let i = 0; i < this.psbt.inputCount; i++) {
-                this.psbt.signInput(i, signer);
+            for (let i = 0; i < signedPsbt.inputCount; i++) {
+                signedPsbt.signInput(i, signer);
             }
 
-            this.psbt.finalizeAllInputs();
-            const tx = this.psbt.extractTransaction();
+            signedPsbt.finalizeAllInputs();
+            const tx = signedPsbt.extractTransaction();
 
             this.txHex = tx.toHex();
             this.bytes = this.txHex.length / 2;

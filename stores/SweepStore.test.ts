@@ -232,7 +232,6 @@ describe('SweepStore end-to-end sweep', () => {
         expect(store.sweepError).toBe(false);
         const tx = bitcoin.Transaction.fromHex(store.txHex!);
         expect(tx.outs[0].value).toBe(UTXO_VALUE - store.fee);
-        expect(store.psbt.getFee()).toBe(store.fee);
     });
 
     it('reports a p2pkh UTXO missing from its funding transaction', async () => {
@@ -349,6 +348,34 @@ describe('SweepStore end-to-end sweep', () => {
         expect(store.sweepError).toBe(true);
         expect(store.txHex).toBeNull();
         expect(store.txId).toBeNull();
+    });
+
+    it('signs again after the destination and fee rate change', async () => {
+        const payment = cases[2].payment;
+        mockMempool(payment.address!, fundingTx(payment.output!));
+        const store = new SweepStore({ nodeInfo: { isRegTest: true } } as any);
+        await store.prepareSweepInputs(WIF);
+        store.destination = DESTINATION;
+        await store.finalizeSweepTransaction('2');
+        expect(store.sweepError).toBe(false);
+        const firstTxId = store.txId;
+
+        const otherDestination = bitcoin.payments.p2wpkh({
+            hash: Buffer.alloc(20, 2),
+            network
+        }).address!;
+        store.destination = otherDestination;
+        await store.finalizeSweepTransaction('5');
+
+        expect(store.sweepError).toBe(false);
+        const tx = bitcoin.Transaction.fromHex(store.txHex!);
+        expect(store.txId).not.toBe(firstTxId);
+        expect(tx.outs).toHaveLength(1);
+        expect(
+            bitcoin.address.fromOutputScript(tx.outs[0].script, network)
+        ).toBe(otherDestination);
+        expect(store.fee).toBe(Math.ceil(store.vBytes * 5));
+        expect(tx.outs[0].value).toBe(UTXO_VALUE - store.fee);
     });
 
     it('fails when the destination is for another network', async () => {
