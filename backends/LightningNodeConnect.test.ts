@@ -534,6 +534,111 @@ describe('LightningNodeConnect', () => {
         });
     });
 
+    describe('openChannelStream', () => {
+        const EVENT = 'lnrpc.Lightning.OpenChannel';
+        let listeners: Array<{
+            name: string;
+            handler: (event: any) => void;
+            removed: boolean;
+        }>;
+
+        const requestIdOf = (n = -1) => lnc.subscribe.mock.calls.at(n)[2];
+        const emit = (result: string, request_id: string) =>
+            listeners
+                .filter((l) => l.name === EVENT && !l.removed)
+                .forEach((l) => l.handler({ result, request_id }));
+        const psbtFund = (funding_address: string) =>
+            JSON.stringify({
+                psbt_fund: { funding_address, funding_amount: '100000' }
+            });
+
+        const track = (open: Promise<any>) => {
+            const state: { settled: boolean; result?: any; error?: any } = {
+                settled: false
+            };
+            open.then(
+                (result) => {
+                    state.settled = true;
+                    state.result = result;
+                },
+                (error) => {
+                    state.settled = true;
+                    state.error = error;
+                }
+            );
+            return state;
+        };
+        const flush = () => jest.advanceTimersByTimeAsync(0);
+        const openRequest = (node_pubkey_string: string) =>
+            ({
+                node_pubkey_string,
+                local_funding_amount: '100000',
+                funding_shim: { psbt_shim: { base_psbt: '' } }
+            } as any);
+
+        let backend: LightningNodeConnect;
+        let lnc: any;
+
+        beforeEach(async () => {
+            listeners = [];
+            NativeModules.LncModule = {
+                addListener: jest.fn(),
+                removeListeners: jest.fn()
+            };
+            jest.spyOn(
+                NativeEventEmitter.prototype,
+                'addListener'
+            ).mockImplementation((name: string, handler: any) => {
+                const listener = { name, handler, removed: false };
+                listeners.push(listener);
+                return {
+                    remove: () => {
+                        listener.removed = true;
+                    }
+                } as any;
+            });
+            backend = new LightningNodeConnect();
+            lnc = await openWallet(backend, 'phrase-a');
+            jest.useFakeTimers();
+        });
+
+        afterEach(() => {
+            jest.useRealTimers();
+            jest.restoreAllMocks();
+        });
+
+        // A batch open of 3+ channels runs the later opens concurrently.
+        // Each open must remove only its own listener, or the other open
+        // never sees its psbt_fund.
+        it('settles concurrent opens with their own psbt_fund', async () => {
+            const first = track(
+                backend.openChannelStream(openRequest('02' + 'aa'.repeat(32)))
+            );
+            const firstId = requestIdOf();
+            const second = track(
+                backend.openChannelStream(openRequest('02' + 'bb'.repeat(32)))
+            );
+            const secondId = requestIdOf();
+            expect(secondId).not.toEqual(firstId);
+
+            emit(psbtFund('first-address'), firstId);
+            await flush();
+            expect(first.result?.result.psbt_fund.funding_address).toBe(
+                'first-address'
+            );
+            expect(second.settled).toBe(false);
+
+            emit(psbtFund('second-address'), secondId);
+            await flush();
+            expect(second.result?.result.psbt_fund.funding_address).toBe(
+                'second-address'
+            );
+            expect(listeners.some((l) => l.name === EVENT && !l.removed)).toBe(
+                false
+            );
+        });
+    });
+
     describe('payLightningInvoice', () => {
         const EVENT = 'routerrpc.Router.SendPaymentV2';
         const HASH_A = 'aa'.repeat(32);
