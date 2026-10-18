@@ -179,7 +179,7 @@ describe('SweepStore end-to-end sweep', () => {
 
             await store.prepareSweepInputs(WIF);
             expect(store.sweepError).toBe(false);
-            expect(store.addressType).toBe(type);
+            expect(store.sweptAddressTypes).toEqual([type]);
             expect(store.utxos).toHaveLength(1);
             expect(store.psbt.inputCount).toBe(1);
 
@@ -210,9 +210,9 @@ describe('SweepStore end-to-end sweep', () => {
 
         await store.prepareSweepInputs(WIF);
 
-        expect(store.addressType).toBe('p2tr');
         expect(store.sweepError).toBe(true);
         expect(store.sweepErrorMsg).toBe('views.Wif.addressTypeNotSupported');
+        expect(store.unsweptTaprootSats).toBe(UTXO_VALUE);
     });
 
     it('fails when fees exceed the swept amount', async () => {
