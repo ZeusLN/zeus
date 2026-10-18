@@ -43,6 +43,26 @@ describe('onchain', () => {
             expect(sentOptions().sat_per_vbyte.toString()).toBe(expected);
         });
 
+        // Number() makes these NaN or below 1, which Long.fromNumber sent
+        // as 0, so LND chose its own fee rate
+        it.each(['0.5', 'abc', '1,5', '-2', 'Infinity'])(
+            'refuses a fee rate of %p',
+            async (feeRate) => {
+                await expect(
+                    sendCoins('bc1qtest', '100000', feeRate)
+                ).rejects.toThrow('Fee rate must be at least 1 sat/vB');
+                expect(sendCommand).not.toHaveBeenCalled();
+            }
+        );
+
+        it.each([undefined, ''])(
+            'leaves the fee rate to LND when it is %p',
+            async (feeRate) => {
+                await sendCoins('bc1qtest', '100000', feeRate);
+                expect(sentOptions().sat_per_vbyte).toBeUndefined();
+            }
+        );
+
         it('needs no amount to send everything', async () => {
             await sendCoins('bc1qtest', '', 2, true, true);
             expect(sentOptions().amount).toBeUndefined();

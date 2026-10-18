@@ -7,6 +7,23 @@ import Base64Utils from '../utils/Base64Utils';
 
 // WalletKit
 
+// The BumpFee view passes strings, which Long.fromValue misparses when
+// they contain a decimal point, so convert them to numbers first. A value
+// that is not a number or is below 1 would be sent as 0, which makes LND
+// choose its own value instead of the one the user typed, so refuse it.
+const toLongAtLeastOne = (
+    value: Long | string | number | undefined,
+    error: string
+): Long | undefined => {
+    if (!value) return undefined;
+    const number = Number(value);
+    if (!(Number.isFinite(number) && number >= 1)) throw new Error(error);
+    return Long.fromNumber(number);
+};
+
+const FEE_RATE_ERROR = 'Fee rate must be at least 1 sat/vB';
+const BUDGET_ERROR = 'Budget must be at least 1 sat';
+
 /**
  * @throws
  */
@@ -23,16 +40,12 @@ export const bumpFee = async ({
     sat_per_vbyte?: Long;
     budget?: Long;
 }): Promise<walletrpc.BumpFeeResponse> => {
-    // The BumpFee view passes strings, which Long.fromValue misparses when
-    // they contain a decimal point, so convert them to numbers first
     const options: walletrpc.IBumpFeeRequest = {
         outpoint,
         target_conf,
         immediate,
-        sat_per_vbyte: sat_per_vbyte
-            ? Long.fromNumber(Number(sat_per_vbyte))
-            : undefined,
-        budget: budget ? Long.fromNumber(Number(budget)) : undefined
+        sat_per_vbyte: toLongAtLeastOne(sat_per_vbyte, FEE_RATE_ERROR),
+        budget: toLongAtLeastOne(budget, BUDGET_ERROR)
     };
     const response = await sendCommand<
         walletrpc.IBumpFeeRequest,
@@ -64,10 +77,8 @@ export const bumpForceCloseFee = async ({
     const options: walletrpc.IBumpForceCloseFeeRequest = {
         chan_point,
         immediate,
-        starting_feerate: starting_feerate
-            ? Long.fromNumber(Number(starting_feerate))
-            : undefined,
-        budget: budget ? Long.fromNumber(Number(budget)) : undefined
+        starting_feerate: toLongAtLeastOne(starting_feerate, FEE_RATE_ERROR),
+        budget: toLongAtLeastOne(budget, BUDGET_ERROR)
     };
     const response = await sendCommand<
         walletrpc.IBumpForceCloseFeeRequest,
