@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "全額の支払いを完了するために使用することができる部分的な支払いの最大数。",
     "views.PaymentRequest.timeout": "Timeout (seconds)",
     "views.PaymentRequest.feeLimit": "Fee limit",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "Pay this invoice",
     "views.PaymentRequest.firstHop": "First Hop",
     "views.PaymentRequest.lastHop": "Last Hop",
