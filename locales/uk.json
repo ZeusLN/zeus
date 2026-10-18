@@ -837,6 +837,7 @@
     "views.PaymentRequest.maxPartsDescription": "Максимальна кількість часткових платежів, які можна використати для завершення повної суми.",
     "views.PaymentRequest.timeout": "Кінець часу (в секундах)",
     "views.PaymentRequest.feeLimit": "Ліміт комісії",
+    "views.PaymentRequest.invalidFeeLimit": "Enter the fee limit as a number of sats, without commas or spaces.",
     "views.PaymentRequest.payInvoice": "Оплатити цей рахунок",
     "views.PaymentRequest.firstHop": "First Hop",
     "views.PaymentRequest.lastHop": "Last Hop",
