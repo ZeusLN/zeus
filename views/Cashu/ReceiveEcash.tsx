@@ -142,6 +142,9 @@ export default class ReceiveEcash extends React.Component<
     }
 
     lnInterval: any;
+    // CashuStore is shared with the next ReceiveEcash view, so work that
+    // completes after this view is gone must not reach it
+    isUnmounted = false;
     hopPickerRef: HopPicker | null;
 
     async componentDidMount() {
@@ -238,6 +241,7 @@ export default class ReceiveEcash extends React.Component<
 
     componentWillUnmount() {
         const { CashuStore } = this.props;
+        this.isUnmounted = true;
         CashuStore.clearInvoice();
         CashuStore.creatingInvoiceError = false;
         CashuStore.error_msg = undefined;
@@ -270,18 +274,23 @@ export default class ReceiveEcash extends React.Component<
 
     scanNfc = async () => {
         const str = await scanNfcTag(this.props.ModalStore);
-        if (!str) return;
+        if (!str || this.isUnmounted) return;
         this.setState({ nfcError: false });
         this.validateAddress(str);
     };
 
     validateAddress = (text: string) => {
-        const { navigation, CashuStore, route } = this.props;
+        const { navigation, CashuStore } = this.props;
         const { createInvoice } = CashuStore;
-        const satAmount = getSatAmount(route.params?.amount);
+        // route.params.amount is in the display unit that was active when it
+        // was passed, and the amount under the QR code toggles that unit:
+        // use the sats it was converted to back then
+        const { satAmount } = this.state;
 
         handleAnything(text, satAmount.toString())
             .then((response) => {
+                // the tag's LNURL server decides when this runs
+                if (this.isUnmounted) return;
                 try {
                     const [route, props] = response;
                     const { lnurlParams } = props;
@@ -306,6 +315,7 @@ export default class ReceiveEcash extends React.Component<
                                 this.subscribeInvoice();
                             })
                             .catch(() => {
+                                if (this.isUnmounted) return;
                                 navigation.navigate(route, {
                                     satAmount,
                                     ...props
@@ -316,7 +326,9 @@ export default class ReceiveEcash extends React.Component<
                     }
                 } catch (e) {}
             })
-            .catch(() => this.setState({ nfcError: true }));
+            .catch(() => {
+                if (!this.isUnmounted) this.setState({ nfcError: true });
+            });
     };
 
     subscribeInvoice = async () => {
@@ -325,6 +337,8 @@ export default class ReceiveEcash extends React.Component<
             this.state;
         const { setWatchedInvoicePaid, checkInvoicePaid } = CashuStore;
 
+        // nothing would stop this interval anymore
+        if (this.isUnmounted) return;
         if (!CashuStore.quoteId) return;
 
         // persist invoice to check,
@@ -334,6 +348,8 @@ export default class ReceiveEcash extends React.Component<
             CashuStore.lastInvoiceMintUrl || CashuStore.selectedMintUrl
         );
 
+        // only ever poll the latest invoice of this view
+        this.clearIntervals();
         this.lnInterval = setInterval(() => {
             checkInvoicePaid(quoteId, selectedMintUrl).then(
                 (response?: {
@@ -343,7 +359,11 @@ export default class ReceiveEcash extends React.Component<
                     updatedInvoice?: CashuInvoice;
                 }) => {
                     if (response?.isPaid) {
-                        setWatchedInvoicePaid(response.amtSat);
+                        // a check that was in flight when the interval
+                        // was cleared must not mark the next view's
+                        // invoice as paid
+                        if (!this.isUnmounted)
+                            setWatchedInvoicePaid(response.amtSat);
                         if (orderId)
                             PosStore.recordPayment({
                                 orderId,
