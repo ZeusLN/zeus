@@ -778,6 +778,25 @@ describe('LSPStore.getZeroConfFee superseded requests', () => {
         expect(store.feeId).toBeUndefined();
     });
 
+    it('still records a quote that arrives after clearFee', async () => {
+        // an invoice without the LSP was created in the meantime
+        const store = makeStore();
+        store.zeroConfFee = 500;
+        store.flow_error_msg = 'old error';
+        const request = store.getZeroConfFee(100000000);
+        store.clearFee();
+        expect(store.zeroConfFee).toBeUndefined();
+        expect(store.flow_error_msg).toBe('');
+        answers[0].resolve(quote(1000000, 'first'));
+
+        await expect(request).resolves.toEqual({
+            feeSats: 1000,
+            feeId: 'first'
+        });
+        expect(store.zeroConfFee).toBe(1000);
+        expect(store.feeId).toBe('first');
+    });
+
     it('ignores errors from requests that have been replaced', async () => {
         const store = makeStore();
         const rejected = store.getZeroConfFee(100000000);

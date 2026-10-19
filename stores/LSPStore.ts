@@ -168,9 +168,19 @@ export default class LSPStore {
         }
     };
 
+    // Also drops the answer to any fee request still in flight.
     @action
     public resetFee = () => {
         this.feeRequestId++;
+        this.clearFee();
+    };
+
+    // Clears the shown quote and error but lets a fee request in flight
+    // finish, for invoices that don't use the LSP: one created in the
+    // background (NWC, Cashu) must not stop an LSP invoice that is waiting
+    // for its quote.
+    @action
+    public clearFee = () => {
         this.zeroConfFee = undefined;
         this.feeId = undefined;
         this.flow_error = false;
