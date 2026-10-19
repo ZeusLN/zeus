@@ -766,6 +766,36 @@ describe('CashuStore single-mint melt state', () => {
         expect(store.pendingMelts).toHaveLength(1);
     });
 
+    // The mint paid after CDK stopped waiting; checking the quote finalizes
+    // the melt, so this is a payment, not one in flight
+    it('reports a melt that threw as paid when its quote says the mint paid', async () => {
+        const store = payingStore();
+        (CashuDevKit.melt as jest.Mock).mockRejectedValue(
+            new Error('Subscription closed')
+        );
+        (CashuDevKit.checkMeltQuote as jest.Mock).mockResolvedValue({
+            id: 'quote-1',
+            state: 'Paid',
+            payment_preimage: 'c'.repeat(64)
+        });
+
+        await store.payLnInvoiceFromEcash({
+            amount: '1000',
+            paymentRequest: 'lnbc10n1ptestinvoice'
+        });
+
+        expect(store.paymentError).toBe(false);
+        expect(store.paymentSuccess).toBe(true);
+        expect(store.paymentPreimage).toBe('c'.repeat(64));
+        // the quote does not carry the fee
+        expect(store.paymentFee).toBeUndefined();
+        expect(store.payments).toHaveLength(1);
+        expect(store.payments[0].isInTransit).toBe(false);
+        expect(store.payments[0].getAmount).toBe(1000);
+        expect(store.payments[0].getFee).toBe('');
+        expect(store.pendingMelts).toEqual([]);
+    });
+
     // CDK released the quote: the saga compensated and the proofs are back
     it('stops tracking a melt that threw once CDK has released the quote', async () => {
         const store = payingStore();

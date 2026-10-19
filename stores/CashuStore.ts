@@ -4896,7 +4896,11 @@ export default class CashuStore {
                 createdAt: Date.now()
             };
 
-            let meltResult;
+            // fee_paid is left out when only the melt quote says the
+            // invoice was paid: the quote does not carry the fee
+            let meltResult: Omit<CDKMelted, 'fee_paid'> & {
+                fee_paid?: number;
+            };
             try {
                 meltResult = await this.trackAndMelt(pendingMelt);
             } catch (meltError) {
@@ -4904,14 +4908,14 @@ export default class CashuStore {
                 // when it stops waiting (connection lost, mint unreachable)
                 // it throws while its saga still holds the quote and the
                 // proofs. Ask CDK which it is before calling it a failure.
+                let quote: CDKMeltQuote | undefined;
                 let outcome;
                 try {
-                    outcome = meltQuoteOutcome(
-                        await CashuDevKit.checkMeltQuote(
-                            mintUrl,
-                            meltQuote.quote
-                        )
+                    quote = await CashuDevKit.checkMeltQuote(
+                        mintUrl,
+                        meltQuote.quote
                     );
+                    outcome = meltQuoteOutcome(quote);
                 } catch (checkError) {
                     console.error(
                         'CDK payLnInvoiceFromEcash: Failed to check melt quote after error:',
@@ -4919,17 +4923,28 @@ export default class CashuStore {
                     );
                 }
 
-                if (outcome === 'unpaid') {
-                    await this.untrackPendingMelt(meltQuote.quote);
-                } else if (outcome) {
-                    // In flight, or paid since: record it as in flight and
-                    // let reconcilePendingMelts settle it
-                    await this.recordInFlightPayment(pendingMelt, payReq);
-                    throw new Error(
-                        localeString('stores.CashuStore.paymentInFlight')
-                    );
+                if (quote && outcome === 'paid') {
+                    // The mint paid while CDK was no longer waiting, and
+                    // checking the quote finalized the melt: report the
+                    // payment rather than an in-flight one
+                    meltResult = {
+                        state: quote.state,
+                        amount: meltQuote.amount,
+                        preimage: quote.payment_preimage
+                    };
+                } else {
+                    if (outcome === 'unpaid') {
+                        await this.untrackPendingMelt(meltQuote.quote);
+                    } else if (outcome) {
+                        // In flight: record it as such and let
+                        // reconcilePendingMelts settle it
+                        await this.recordInFlightPayment(pendingMelt, payReq);
+                        throw new Error(
+                            localeString('stores.CashuStore.paymentInFlight')
+                        );
+                    }
+                    throw meltError;
                 }
-                throw meltError;
             }
 
             // Only a Paid melt means the mint settled the invoice. Anything
@@ -4966,7 +4981,8 @@ export default class CashuStore {
                     change: meltResult.change
                 },
                 amount: meltResult.amount,
-                fee: realFee,
+                fee: realFee ?? 0,
+                ...(realFee === undefined ? { fee_unknown: true } : {}),
                 payment_preimage: paymentPreimage,
                 mintUrl
             });
