@@ -202,6 +202,8 @@ const EXPECTED_FLAGS: { [flag: string]: boolean } = {
     supportsCircularRebalancing: false,
     supportsForceClose: false,
     supportsPendingChannels: false,
+    supportsRouteHintUserChannelIds: false,
+    supportsRouteHints: false,
     supportsClosedChannels: false,
     supportsMPP: false,
     supportsAMP: false,
