@@ -482,4 +482,88 @@ describe('LightningNodeConnect', () => {
             });
         });
     });
+
+    describe('payLightningInvoice', () => {
+        const EVENT = 'routerrpc.Router.SendPaymentV2';
+        let backend: LightningNodeConnect;
+
+        beforeEach(async () => {
+            NativeModules.LncModule = {
+                addListener: jest.fn(),
+                removeListeners: jest.fn()
+            };
+            jest.spyOn(
+                NativeEventEmitter.prototype,
+                'addListener'
+            ).mockImplementation(() => ({ remove: jest.fn() } as any));
+            backend = new LightningNodeConnect();
+            const lnc = await openWallet(backend, 'phrase-a');
+            lnc.lnd.router = { sendPaymentV2: jest.fn(() => EVENT) };
+            jest.useFakeTimers();
+        });
+
+        afterEach(() => {
+            jest.useRealTimers();
+            jest.restoreAllMocks();
+        });
+
+        it('resolves an outcome-unknown result when the stream goes quiet', async () => {
+            let result: any;
+            backend
+                .payLightningInvoice({
+                    payment_hash: 'ab'.repeat(32),
+                    timeout_seconds: 60
+                })
+                .then((r: any) => (result = r));
+
+            await jest.advanceTimersByTimeAsync(119_999);
+            expect(result).toBeUndefined();
+
+            await jest.advanceTimersByTimeAsync(1);
+            // without payment_timed_out the store reports a failure and
+            // releases the send guard while the payment may still settle
+            expect(result.payment_timed_out).toBe(true);
+            // the stream is never cancelled, so the request can still reach
+            // the node: no deadline after which a missing record is proof
+            expect(result).not.toHaveProperty('dispatch_deadline_ms');
+        });
+    });
+
+    describe('getPayments', () => {
+        it('passes creation_date_start through to ListPayments', async () => {
+            const backend = new LightningNodeConnect();
+            const lnc = await openWallet(backend, 'phrase-a');
+            lnc.lnd.lightning.listPayments = jest.fn(async () => ({
+                payments: []
+            }));
+
+            await backend.lookupPayment({
+                payment_hash: 'ab'.repeat(32),
+                creation_date_start: 1700000000
+            });
+
+            expect(lnc.lnd.lightning.listPayments).toHaveBeenCalledWith({
+                include_incomplete: true,
+                max_payments: 50,
+                reversed: false,
+                creation_date_start: 1700000000
+            });
+        });
+
+        it('omits creation_date_start without a bound', async () => {
+            const backend = new LightningNodeConnect();
+            const lnc = await openWallet(backend, 'phrase-a');
+            lnc.lnd.lightning.listPayments = jest.fn(async () => ({
+                payments: []
+            }));
+
+            await backend.lookupPayment({ payment_hash: 'ab'.repeat(32) });
+
+            expect(lnc.lnd.lightning.listPayments).toHaveBeenCalledWith({
+                include_incomplete: true,
+                max_payments: 50,
+                reversed: true
+            });
+        });
+    });
 });

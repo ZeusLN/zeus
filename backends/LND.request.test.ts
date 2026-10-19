@@ -644,6 +644,29 @@ describe('LND.payLightningInvoice timeout race', () => {
         ).rejects.toThrow(body);
     });
 
+    // The transport deadline (timeout_seconds + 5) is set past the forced
+    // timeout so it never fires first; the safety net covers it doing so
+    it("returns the timed-out shape when the transport rejects with 'Request timeout' first", async () => {
+        const start = Date.now();
+        jest.spyOn(lnd, 'postRequest').mockRejectedValue(
+            new Error('Request timeout')
+        );
+
+        await expect(
+            lnd.payLightningInvoice({ timeout_seconds: 10 })
+        ).resolves.toEqual(timedOut(start, 10));
+    });
+
+    it('rethrows any other transport rejection', async () => {
+        jest.spyOn(lnd, 'postRequest').mockRejectedValue(
+            new Error('connection lost')
+        );
+
+        await expect(
+            lnd.payLightningInvoice({ timeout_seconds: 10 })
+        ).rejects.toThrow('connection lost');
+    });
+
     it('ignores a node answer that arrives after the forced timeout', async () => {
         let resolveFetch: (v: any) => void = () => {};
         mockFetch.mockReturnValue(

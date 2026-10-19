@@ -16,11 +16,13 @@ jest.mock('../utils/TorUtils', () => ({
 const mockCloseChannel = jest.fn();
 const mockSendPaymentV2Sync = jest.fn();
 const mockSendKeysendPaymentV2 = jest.fn();
+const mockListPayments = jest.fn();
 jest.mock('../lndmobile/LndMobileInjection', () => ({
     __esModule: true,
     default: {
         index: {
             listPeers: jest.fn(),
+            listPayments: (...args: any[]) => mockListPayments(...args),
             sendPaymentV2Sync: (...args: any[]) =>
                 mockSendPaymentV2Sync(...args),
             sendKeysendPaymentV2: (...args: any[]) =>
@@ -319,5 +321,44 @@ describe('EmbeddedLND payment rejections', () => {
 
         expect(error.message).toBe('insufficient local balance');
         expect(isNodeResponse(error)).toBe(true);
+    });
+});
+
+describe('EmbeddedLND.lookupPayment', () => {
+    const HASH = 'ab'.repeat(32);
+
+    beforeEach(() => {
+        mockListPayments.mockReset();
+    });
+
+    it('scans ascending from creation_date_start', async () => {
+        const target = { payment_hash: HASH, status: 'IN_FLIGHT' };
+        mockListPayments.mockResolvedValue({ payments: [target] });
+
+        await expect(
+            new EmbeddedLND().lookupPayment({
+                payment_hash: HASH,
+                creation_date_start: 1700000000
+            })
+        ).resolves.toBe(target);
+        // the bound keeps newer payments from other clients from evicting
+        // the tracked one from the page
+        expect(mockListPayments).toHaveBeenCalledWith({
+            maxPayments: 50,
+            reversed: false,
+            creationDateStart: 1700000000
+        });
+    });
+
+    it('scans the newest page without a bound', async () => {
+        mockListPayments.mockResolvedValue({ payments: [] });
+
+        await expect(
+            new EmbeddedLND().lookupPayment({ payment_hash: HASH })
+        ).resolves.toBeNull();
+        expect(mockListPayments).toHaveBeenCalledTimes(1);
+        expect(mockListPayments.mock.calls[0][0].creationDateStart).toBe(
+            undefined
+        );
     });
 });
