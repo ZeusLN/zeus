@@ -2903,6 +2903,22 @@ describe('NostrWalletConnectStore cashu pay_invoice preimage', () => {
         });
     });
 
+    // A melt confirmed only from its quote carries no fee, and the mint may
+    // have spent up to the fee reserve
+    it('debits the fee reserve when the melt fee is unknown', async () => {
+        const { response, connection } = await payWith({
+            isFailed: false,
+            getPreimage: preimage,
+            getPaymentRequest: invoice,
+            getFee: '',
+            fee_unknown: true,
+            meltResponse: { quote: { quote: 'quote-1', fee_reserve: 3 } }
+        });
+
+        expect(connection.totalSpendSats).toBe(103);
+        expect(response.result.fees_paid).toBe(3000);
+    });
+
     it('tells CashuStore which invoice it may pay', async () => {
         const { cashuStore } = await payWith({
             isFailed: false,

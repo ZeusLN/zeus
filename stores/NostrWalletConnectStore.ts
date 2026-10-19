@@ -2929,8 +2929,13 @@ export default class NostrWalletConnectStore {
         // The melt succeeded (failure returned above), so debit the budget
         // unconditionally: gating on the payments-list lookup would let the
         // spend escape the budget when the list misses the fresh melt.
-        const feeSats =
-            Number(cashuInvoice.getFee) || Number(payment?.getFee) || 0;
+        //
+        // A melt that CashuStore could only confirm from its quote has no
+        // known fee. The mint may have spent up to the fee reserve, so debit
+        // and report that rather than a free payment.
+        const feeSats = cashuInvoice.fee_unknown
+            ? Number(cashuInvoice.meltResponse?.quote?.fee_reserve) || 0
+            : Number(cashuInvoice.getFee) || Number(payment?.getFee) || 0;
         await this.finalizePayment({
             rawInvoice: request.invoice,
             decoded:
