@@ -8,6 +8,12 @@ jest.mock('../stores/Stores', () => ({
     }
 }));
 
+import {
+    CommonActions,
+    StackActions,
+    StackRouter
+} from '@react-navigation/routers';
+
 import { settingsStore } from '../stores/Stores';
 import {
     POS_ROUTES,
@@ -139,50 +145,42 @@ describe('NavigationUtils', () => {
     });
 
     describe('posRouteGuard', () => {
-        // Stand-in for the stack router: navigate pushes (or updates the
-        // params of the focused route of the same name), pop removes the
-        // focused route
-        let keyCount = 0;
-        const original: any = {
-            getStateForAction: jest.fn((state: any, action: any) => {
-                if (action.type === 'NAVIGATE') {
-                    const { name, params } = action.payload;
-                    const top = state.routes[state.index];
-                    if (top.name === name) {
-                        const routes = [...state.routes];
-                        routes[state.index] = { ...top, params };
-                        return { ...state, routes };
-                    }
-                    const routes = [
-                        ...state.routes,
-                        { key: `${name}-${++keyCount}`, name, params }
-                    ];
-                    return { ...state, routes, index: routes.length - 1 };
-                }
-                if (action.type === 'POP') {
-                    if (state.routes.length < 2) return null;
-                    const routes = state.routes.slice(0, -1);
-                    return { ...state, routes, index: routes.length - 1 };
-                }
-                return null;
-            })
+        // The real stack router, so a change in how it handles navigate,
+        // replace, reset or popTo shows up here
+        const routeNames = [
+            ...POS_ROUTES,
+            'Menu',
+            'Invoice',
+            'Transaction',
+            'Wallets',
+            'WalletConfiguration',
+            'LightningAddress',
+            'Mints',
+            'Swaps',
+            'LnurlPay'
+        ];
+        const options: any = {
+            routeNames,
+            routeParamList: {},
+            routeGetIdList: {}
         };
-        const router = posRouteGuard(original);
-        const options: any = {};
+        const stack = StackRouter({});
+        const router: any = { ...stack, ...posRouteGuard(stack as any) };
 
-        const stackOf = (...names: string[]): any => ({
-            key: 'stack',
-            index: names.length - 1,
-            routeNames: [],
-            routes: names.map((name) => ({ key: `${name}-0`, name })),
-            stale: false,
-            type: 'stack',
-            preloadedRoutes: []
-        });
-        const navigate = (name: string, params?: any): any => ({
-            type: 'NAVIGATE',
-            payload: { name, params }
-        });
+        const stackOf = (...routes: Array<string | [string, any]>): any => {
+            const initial = stack.getInitialState(options);
+            return {
+                ...initial,
+                routes: routes.map((r, i) => {
+                    const [name, params] = typeof r === 'string' ? [r] : r;
+                    return { key: `${name}-${i}`, name, params };
+                }),
+                index: routes.length - 1
+            };
+        };
+        const navigate = (name: string, params?: any) =>
+            CommonActions.navigate(name, params);
+        const names = (state: any) => state.routes.map((r: any) => r.name);
         const top = (state: any) => state.routes[state.index];
 
         beforeEach(() => {
@@ -204,13 +202,13 @@ describe('NavigationUtils', () => {
             (name, params) => {
                 const state = stackOf('Wallet', 'Activity');
 
-                const next: any = router.getStateForAction!(
+                const next = router.getStateForAction(
                     state,
                     navigate(name, params),
                     options
                 );
 
-                expect(next.routes.map((r: any) => r.name)).toEqual([
+                expect(names(next)).toEqual([
                     'Wallet',
                     'Activity',
                     'Lockscreen'
@@ -221,12 +219,37 @@ describe('NavigationUtils', () => {
             }
         );
 
+        it.each([
+            ['replace', StackActions.replace('Invoice', { a: 1 })],
+            ['push', StackActions.push('Invoice', { a: 1 })],
+            ['popTo', StackActions.popTo('Invoice', { a: 1 })],
+            [
+                'reset',
+                CommonActions.reset({
+                    index: 1,
+                    routes: [
+                        { name: 'Wallet' },
+                        { name: 'Invoice', params: { a: 1 } }
+                    ]
+                })
+            ]
+        ])('opens the Lockscreen for %s to a wallet screen', (_, action) => {
+            const state = stackOf('Wallet', 'Activity');
+
+            const next = router.getStateForAction(state, action, options);
+
+            expect(names(next)).toEqual(['Wallet', 'Activity', 'Lockscreen']);
+            expect(top(next).params).toEqual({
+                pendingNavigation: { screen: 'Invoice', params: { a: 1 } }
+            });
+        });
+
         it.each(POS_ROUTES.filter((name) => name !== 'Wallet'))(
             'lets a POS session open %s',
             (name) => {
                 const state = stackOf('Wallet');
 
-                const next: any = router.getStateForAction!(
+                const next = router.getStateForAction(
                     state,
                     navigate(name, { amount: '10' }),
                     options
@@ -240,38 +263,51 @@ describe('NavigationUtils', () => {
         it('lets a POS session go back to the POS view', () => {
             const state = stackOf('Wallet', 'Receive');
 
-            const next: any = router.getStateForAction!(
+            const next = router.getStateForAction(
                 state,
-                { type: 'POP' } as any,
+                StackActions.pop(),
                 options
             );
 
-            expect(next.routes.map((r: any) => r.name)).toEqual(['Wallet']);
+            expect(names(next)).toEqual(['Wallet']);
         });
 
         it('only updates the pending screen when the Lockscreen is already in front', () => {
-            const state = stackOf('Wallet', 'Lockscreen');
+            const state = stackOf('Wallet', [
+                'Lockscreen',
+                { pendingNavigation: { screen: 'Invoice' } }
+            ]);
 
-            const next: any = router.getStateForAction!(
+            const next = router.getStateForAction(
                 state,
                 navigate('Menu'),
                 options
             );
 
-            expect(next.routes.map((r: any) => r.name)).toEqual([
-                'Wallet',
-                'Lockscreen'
-            ]);
+            expect(names(next)).toEqual(['Wallet', 'Lockscreen']);
             expect(top(next).params).toEqual({
                 pendingNavigation: { screen: 'Menu', params: undefined }
             });
+        });
+
+        it('opens the pending screen once the Lockscreen has left POS mode', () => {
+            mockSettingsStore.posStatus = 'inactive';
+            const state = stackOf('Wallet', 'Lockscreen');
+
+            const next = router.getStateForAction(
+                state,
+                StackActions.popTo('Invoice', { a: 1 }),
+                options
+            );
+
+            expect(names(next)).toEqual(['Wallet', 'Invoice']);
         });
 
         it('leaves navigation alone when POS is not active', () => {
             mockSettingsStore.posStatus = 'inactive';
             const state = stackOf('Wallet', 'Activity');
 
-            const next: any = router.getStateForAction!(
+            const next = router.getStateForAction(
                 state,
                 navigate('Invoice'),
                 options
@@ -284,7 +320,7 @@ describe('NavigationUtils', () => {
             mockSettingsStore.loginMethodConfigured.mockReturnValue(false);
             const state = stackOf('Wallet', 'Activity');
 
-            const next: any = router.getStateForAction!(
+            const next = router.getStateForAction(
                 state,
                 navigate('Invoice'),
                 options
@@ -297,11 +333,7 @@ describe('NavigationUtils', () => {
             const state = stackOf('Wallet');
 
             expect(
-                router.getStateForAction!(
-                    state,
-                    { type: 'POP' } as any,
-                    options
-                )
+                router.getStateForAction(state, StackActions.pop(), options)
             ).toBeNull();
         });
     });
