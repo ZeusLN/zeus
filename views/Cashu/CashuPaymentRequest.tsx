@@ -167,13 +167,18 @@ export default class CashuPaymentRequest extends React.Component<
         // complete against the swapped-in invoice. The render path notices
         // the mismatch and replaces the pay controls with a warning; the pin
         // is only advanced when the user explicitly accepts the new request.
+        // If no invoice was loaded at mount, pin the first one that
+        // arrives: the swipe is reset here, so it can only be paid after it
+        // has been on screen.
         this.swipeResetDisposer = reaction(
             () => CashuStore.paymentRequest,
-            () => {
+            (current) => {
                 if (!this.isComponentMounted) return;
-                this.setState({
-                    swipeButtonKey: this.state.swipeButtonKey + 1
-                });
+                this.setState((prevState) => ({
+                    swipeButtonKey: prevState.swipeButtonKey + 1,
+                    reviewedPaymentRequest:
+                        prevState.reviewedPaymentRequest || current || ''
+                }));
             }
         );
 
@@ -210,7 +215,7 @@ export default class CashuPaymentRequest extends React.Component<
         }
     }
 
-    sendPayment = ({ amount }: SendPaymentReq) => {
+    sendPayment = ({ payment_request, amount }: SendPaymentReq) => {
         const { SettingsStore, navigation } = this.props;
         const { settings } = SettingsStore;
 
@@ -224,13 +229,15 @@ export default class CashuPaymentRequest extends React.Component<
                 donationAmount > 0 && {
                     donationAmount: donationAmount.toString()
                 }),
-            paymentAmount: amount ? amount : undefined
+            paymentAmount: amount ? amount : undefined,
+            paymentRequest: payment_request
         });
     };
 
     triggerPayment = () => {
         const { CashuStore, SettingsStore, navigation } = this.props;
-        const { multiMintEnabled, donationAmount } = this.state;
+        const { multiMintEnabled, donationAmount, reviewedPaymentRequest } =
+            this.state;
 
         // Fail closed: if the invoice in the store no longer matches the one
         // the user reviewed, it was swapped out from under the review screen.
@@ -240,9 +247,12 @@ export default class CashuPaymentRequest extends React.Component<
         // screen when this confirmation began. Reset the swipe knob so the
         // gesture doesn't stick; the render path shows the
         // payment-request-changed warning in place of the pay controls.
+        // With nothing pinned there is nothing the user reviewed, so refuse
+        // as well. The payment screens are handed the reviewed invoice, so
+        // that they refuse one swapped in between here and their mount.
         if (
-            this.state.reviewedPaymentRequest !== '' &&
-            CashuStore.paymentRequest !== this.state.reviewedPaymentRequest
+            !reviewedPaymentRequest ||
+            CashuStore.paymentRequest !== reviewedPaymentRequest
         ) {
             this.setState({
                 swipeButtonKey: this.state.swipeButtonKey + 1
@@ -277,6 +287,7 @@ export default class CashuPaymentRequest extends React.Component<
         if (isMultiMint) {
             navigation.navigate('MultimintPayment', {
                 paymentAmount,
+                paymentRequest: reviewedPaymentRequest,
                 enableDonations,
                 ...(enableDonations &&
                     donationAmount > 0 && {
@@ -288,6 +299,7 @@ export default class CashuPaymentRequest extends React.Component<
 
         // Call sendPayment with the freshest values
         this.sendPayment({
+            payment_request: reviewedPaymentRequest,
             amount: paymentAmount
         });
     };

@@ -54,6 +54,7 @@ interface CashuSendingLightningProps {
             donationAmount?: string;
             enableDonations: boolean;
             paymentAmount?: string;
+            paymentRequest?: string;
         }
     >;
 }
@@ -101,7 +102,7 @@ export default class CashuSendingLightning extends React.Component<
 
     componentDidMount() {
         const { CashuStore, navigation, route } = this.props;
-        const { paymentAmount } = route.params || {};
+        const { paymentAmount, paymentRequest } = route.params || {};
 
         // Reset payment state and start the payment once the JS thread is
         // free, so the melt does not jank the navigation transition. The
@@ -112,7 +113,8 @@ export default class CashuSendingLightning extends React.Component<
         this.cancelPaymentKickoff = runWhenIdle(
             () =>
                 CashuStore.payLnInvoiceFromEcash({
-                    amount: paymentAmount
+                    amount: paymentAmount,
+                    paymentRequest
                 }),
             500
         );
@@ -185,6 +187,7 @@ export default class CashuSendingLightning extends React.Component<
 
             const donationPayment = await CashuStore.payLnInvoiceFromEcash({
                 amount: donationAmount.toString(),
+                paymentRequest,
                 isDonationPayment
             });
 

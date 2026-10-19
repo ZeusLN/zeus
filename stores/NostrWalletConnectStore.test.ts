@@ -2826,13 +2826,18 @@ describe('NostrWalletConnectStore cashu pay_invoice preimage', () => {
     // Drives handleCashuPayInvoice past its guards to the response shape.
     // The melt has already succeeded by that point, so only the fields the
     // response is built from need to be real.
-    const payWith = async (cashuInvoice: any, payments: any[] = []) => {
+    const payWith = async (
+        cashuInvoice: any,
+        payments: any[] = [],
+        cashuOverrides: any = {}
+    ) => {
         const { store } = createStore({
             cashuStore: {
                 selectedMintUrl: 'https://mint.example',
                 totalBalanceSats: 100_000,
                 paymentError: false,
                 paymentErrorMsg: '',
+                paymentRequest: invoice,
                 payReq: new Invoice({
                     payment_request: invoice,
                     num_satoshis: '100'
@@ -2843,7 +2848,8 @@ describe('NostrWalletConnectStore cashu pay_invoice preimage', () => {
                     .fn()
                     .mockResolvedValue(cashuInvoice),
                 isProperlyConfigured: () => true,
-                payments
+                payments,
+                ...cashuOverrides
             }
         });
         // isCashuConfigured is a computed, so satisfy its inputs rather
@@ -2854,7 +2860,7 @@ describe('NostrWalletConnectStore cashu pay_invoice preimage', () => {
             connection,
             { invoice }
         );
-        return { response, connection };
+        return { response, connection, cashuStore: (store as any).cashuStore };
     };
 
     beforeEach(() => {
@@ -2895,6 +2901,39 @@ describe('NostrWalletConnectStore cashu pay_invoice preimage', () => {
             payment_source: 'cashu',
             isBudgetDebited: true
         });
+    });
+
+    it('tells CashuStore which invoice it may pay', async () => {
+        const { cashuStore } = await payWith({
+            isFailed: false,
+            getPreimage: preimage,
+            getPaymentRequest: invoice,
+            getFee: 1
+        });
+
+        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledWith(
+            expect.objectContaining({ paymentRequest: invoice })
+        );
+    });
+
+    it('pays nothing when another invoice was loaded into CashuStore meanwhile', async () => {
+        // getPayReq was superseded: it returns without an error and the
+        // store describes the invoice opened on a send screen
+        const { response, connection, cashuStore } = await payWith(
+            {
+                isFailed: false,
+                getPreimage: preimage,
+                getPaymentRequest: invoice,
+                getFee: 1
+            },
+            [],
+            { paymentRequest: 'lnbc1otherinvoice' }
+        );
+
+        expect(response.result).toBeUndefined();
+        expect(response.error).toBeDefined();
+        expect(cashuStore.payLnInvoiceFromEcash).not.toHaveBeenCalled();
+        expect(connection.totalSpendSats).toBe(0);
     });
 
     it('never returns the invoice as the preimage', async () => {
