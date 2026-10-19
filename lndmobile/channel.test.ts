@@ -291,10 +291,11 @@ describe('openChannel', () => {
         );
 
         expect(result).toBe('stream-started');
-        const [method, , streamOnlyOnce] =
+        const [method, , streamOnlyOnce, requestId] =
             LndMobile.sendStreamCommand.mock.calls[0];
         expect(method).toBe('OpenChannel');
         expect(streamOnlyOnce).toBe(false);
+        expect(requestId).toBe('');
 
         const req = sentRequest(
             LndMobile.sendStreamCommand,
@@ -351,6 +352,29 @@ describe('openChannel', () => {
         expect(shim.base_psbt).toHaveLength(0);
         expect(shim.no_publish).toBe(true);
     });
+
+    it('hands the request id to the native stream call', async () => {
+        LndMobile.sendStreamCommand.mockResolvedValueOnce('');
+
+        await openChannel(
+            PUBKEY,
+            100000,
+            false,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            false,
+            false,
+            undefined,
+            undefined,
+            'open-request-id'
+        );
+
+        expect(LndMobile.sendStreamCommand.mock.calls[0][3]).toBe(
+            'open-request-id'
+        );
+    });
 });
 
 describe('closeChannel', () => {
@@ -366,10 +390,11 @@ describe('closeChannel', () => {
         );
 
         expect(result).toBe('closing');
-        const [method, , streamOnlyOnce] =
+        const [method, , streamOnlyOnce, requestId] =
             LndMobile.sendStreamCommand.mock.calls[0];
         expect(method).toBe('CloseChannel');
         expect(streamOnlyOnce).toBe(false);
+        expect(requestId).toBe('');
 
         const req = sentRequest(
             LndMobile.sendStreamCommand,
@@ -396,6 +421,23 @@ describe('closeChannel', () => {
         expect(req.sat_per_vbyte.isZero()).toBe(true);
         expect(req.delivery_address).toBe('');
         expect(req.channel_point?.output_index).toBe(0);
+    });
+
+    it('hands the request id to the native stream call', async () => {
+        LndMobile.sendStreamCommand.mockResolvedValueOnce('');
+
+        await closeChannel(
+            TXID,
+            0,
+            false,
+            undefined,
+            undefined,
+            'close-request-id'
+        );
+
+        expect(LndMobile.sendStreamCommand.mock.calls[0][3]).toBe(
+            'close-request-id'
+        );
     });
 });
 
