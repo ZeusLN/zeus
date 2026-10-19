@@ -46,15 +46,23 @@ export const markNodeResponded = (
 export const isNodeResponse = (error: unknown): boolean =>
     (error as any)?.nodeResponded === true;
 
+// gRPC status codes other than OK (1 Canceled to 16 Unauthenticated)
+const isGrpcErrorCode = (code: unknown): boolean =>
+    Number.isInteger(code) && (code as number) >= 1 && (code as number) <= 16;
+
 // The gRPC status code in an LND REST error body: grpc-gateway puts it at
-// `code` for unary calls and at `error.code` in a stream's error chunk
+// `code` for unary calls and at `error.code` in a stream's error chunk,
+// always as an integer. A proxy's JSON error can carry its own `code` (an
+// HTTP status like 502, or a string like "UPSTREAM_TIMEOUT"), which isn't
+// one, so anything outside the gRPC error range reads as no code.
 export const grpcErrorCode = (body: unknown): unknown => {
     if (!body || typeof body !== 'object') return undefined;
     const { code, error } = body as any;
-    if (error && typeof error === 'object' && error.code !== undefined) {
-        return error.code;
-    }
-    return code;
+    const found =
+        error && typeof error === 'object' && error.code !== undefined
+            ? error.code
+            : code;
+    return isGrpcErrorCode(found) ? found : undefined;
 };
 
 // Tags an LND REST error status as the node's answer only when the body

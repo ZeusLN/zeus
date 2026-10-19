@@ -223,6 +223,26 @@ describe('grpcErrorCode', () => {
         expect(grpcErrorCode({ error: 'bad request' })).toBeUndefined();
         expect(grpcErrorCode(undefined)).toBeUndefined();
     });
+
+    it.each([
+        ['an HTTP status at code', { code: 502, message: 'Bad Gateway' }],
+        [
+            'an HTTP status at error.code',
+            { error: { code: 503, message: 'Service Unavailable' } }
+        ],
+        ['a string code', { code: 'UPSTREAM_TIMEOUT' }],
+        ['a numeric string code', { code: '6' }],
+        ['code 0 (OK)', { code: 0 }],
+        ['code 17', { code: 17 }],
+        ['a fractional code', { code: 2.5 }]
+    ])('reads no code from a body with %s', (_label, body) => {
+        expect(grpcErrorCode(body)).toBeUndefined();
+    });
+
+    it('reads codes 1 and 16 at the ends of the range', () => {
+        expect(grpcErrorCode({ code: 1 })).toBe(1);
+        expect(grpcErrorCode({ error: { code: 16 } })).toBe(16);
+    });
 });
 
 describe('isPaymentRefusedAsDuplicate', () => {

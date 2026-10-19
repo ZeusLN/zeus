@@ -664,6 +664,21 @@ describe('LND.restReq errors', () => {
             'a 503 from envoy',
             503,
             'upstream connect error or disconnect/reset before headers'
+        ],
+        [
+            'a 502 JSON body with an HTTP status code',
+            502,
+            '{"code":502,"message":"Bad Gateway"}'
+        ],
+        [
+            'a 503 JSON error chunk with an HTTP status code',
+            503,
+            '{"error":{"code":503,"message":"Service Unavailable"}}'
+        ],
+        [
+            'a 504 JSON body with a string code',
+            504,
+            '{"code":"UPSTREAM_TIMEOUT","message":"upstream timed out"}'
         ]
     ])(
         'does not tag %s from a proxy as a response from the node',
