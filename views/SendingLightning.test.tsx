@@ -156,6 +156,33 @@ describe('SendingLightning retry', () => {
     });
 });
 
+describe('SendingLightning tracking stopped', () => {
+    const TRACKING_STOPPED = 'views.SendingLightning.trackingStopped';
+
+    it('says tracking stopped when the outcome could not be verified', async () => {
+        // what TransactionsStore holds after the tracker gives up on a
+        // payment it last saw in transit
+        await renderView({
+            status: 'IN_FLIGHT',
+            paymentOutcomeUnverified: true
+        });
+
+        expect(screen.getByText(TRACKING_STOPPED)).toBeOnTheScreen();
+        expect(
+            screen.queryByRole('button', { name: TRY_AGAIN })
+        ).not.toBeOnTheScreen();
+    });
+
+    it('does not say so while the payment is still tracked', async () => {
+        await renderView({
+            status: 'IN_FLIGHT',
+            paymentOutcomeUnverified: false
+        });
+
+        expect(screen.queryByText(TRACKING_STOPPED)).not.toBeOnTheScreen();
+    });
+});
+
 describe('SendingLightning hardware back', () => {
     let onBack: () => boolean;
 

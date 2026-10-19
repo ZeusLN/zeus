@@ -1257,6 +1257,46 @@ describe('TransactionsStore releasePaymentInFlight', () => {
         expect(store.loading).toBe(false);
     });
 
+    it.each([
+        [
+            'succeeded',
+            (background: ReturnType<typeof deferred>) =>
+                background.resolve({
+                    status: 'SUCCEEDED',
+                    payment_hash: HASH2,
+                    payment_preimage: 'beefdead'
+                })
+        ],
+        [
+            'was rejected',
+            (background: ReturnType<typeof deferred>) =>
+                background.reject(new Error('no route'))
+        ]
+    ])(
+        'clears loading at release after an earlier background payment %s',
+        async (_label, settle) => {
+            const store = newStore('lnd');
+            const background = deferred();
+            (BackendUtils.payLightningInvoice as jest.Mock).mockReturnValueOnce(
+                background.promise
+            );
+            store.sendPayment({
+                payment_request: 'lnbc1other',
+                background: true
+            });
+            await flush();
+            settle(background);
+            await flush();
+
+            await startHungPayment(store);
+            expect(store.loading).toBe(true);
+
+            // the finished background payment no longer holds loading
+            expect(store.releasePaymentInFlight()).toBe(true);
+            expect(store.loading).toBe(false);
+        }
+    );
+
     it("keeps one tracker for the next payment when the released payment's tracker exits", async () => {
         (BackendUtils.payLightningInvoice as jest.Mock).mockResolvedValueOnce({
             status: 'IN_FLIGHT',
