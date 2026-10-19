@@ -13,10 +13,14 @@ const mockCloseChannel = jest.fn();
 const mockForceCloseChannel = jest.fn();
 const mockLsps1RequestChannel = jest.fn();
 const mockReceiveViaJitChannel = jest.fn();
+const mockListBalances = jest.fn();
 
 jest.mock('../ldknode/LdkNodeInjection', () => ({
     __esModule: true,
     default: {
+        node: {
+            listBalances: (...args: any[]) => mockListBalances(...args)
+        },
         channel: {
             listChannels: (...args: any[]) => mockListChannels(...args),
             closeChannel: (...args: any[]) => mockCloseChannel(...args),
@@ -557,6 +561,47 @@ describe('LdkNode.formatChannel', () => {
         // LDK leaves forceCloseSpendDelay unset on an outbound channel
         // until the counterparty accepts it
         expect(formatChannel().csv_delay).toBe(0);
+    });
+});
+
+describe('LdkNode.getChannels', () => {
+    const SAT = 1000;
+    const ready = (inboundSats: number) => ({
+        channelId: `chan-${inboundSats}`,
+        counterpartyNodeId: 'lsp',
+        channelValueSats: inboundSats * 2,
+        outboundCapacityMsat: 0,
+        inboundCapacityMsat: inboundSats * SAT,
+        isChannelReady: true,
+        isUsable: true,
+        isAnnounced: false,
+        isOutbound: false
+    });
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockListChannels.mockResolvedValue([ready(25_000), ready(22_650)]);
+        mockListBalances.mockResolvedValue({ lightningBalances: [] });
+    });
+
+    it('reports the inbound createInvoice buys an LSPS2 channel against', async () => {
+        const ldk = new LdkNode();
+        ldk.isLsps2Active = () => true;
+
+        const { channels, receivable_inbound_sat } = await ldk.getChannels();
+
+        expect(channels).toHaveLength(2);
+        // 47,650 of inbound, less the 2,000 sat margin kept per channel
+        expect(receivable_inbound_sat).toBe(43_650);
+    });
+
+    it('leaves it out when receives use Flow 2.0', async () => {
+        const ldk = new LdkNode();
+        ldk.isLsps2Active = () => false;
+
+        const data = await ldk.getChannels();
+
+        expect(data).not.toHaveProperty('receivable_inbound_sat');
     });
 });
 
@@ -1495,5 +1540,45 @@ describe('LdkNode.createInvoice', () => {
         await expect(create('50000')).rejects.toThrow(
             'stores.InvoicesStore.lsps2.requestFailed'
         );
+    });
+});
+
+describe('LdkNode received JIT payments', () => {
+    const received = (kind: any) => ({
+        id: 'jit',
+        direction: 'inbound',
+        status: 'succeeded',
+        amountMsat: 40_000_000,
+        latestUpdateTimestamp: 0,
+        kind: { hash: 'hash', ...kind }
+    });
+    const lookup = (kind: any) => {
+        mockListPayments.mockResolvedValue([received(kind)]);
+        return new LdkNode().lookupInvoice({ r_hash: 'hash' });
+    };
+
+    beforeEach(() => jest.clearAllMocks());
+
+    it('reports the fee the LSP withheld next to the net amount', async () => {
+        const invoice = await lookup({
+            type: 'bolt11Jit',
+            counterpartySkimmedFeeMsat: 10_000_000
+        });
+
+        expect(invoice.lsp_fee_msat).toEqual('10000000');
+        expect(invoice.amt_paid_sat).toEqual('40000');
+    });
+
+    it('reports no fee for a plain payment, from either platform', async () => {
+        // Android leaves the key out, iOS sends null
+        expect((await lookup({ type: 'bolt11' })).lsp_fee_msat).toBeUndefined();
+        expect(
+            (
+                await lookup({
+                    type: 'bolt11Jit',
+                    counterpartySkimmedFeeMsat: null
+                })
+            ).lsp_fee_msat
+        ).toBeUndefined();
     });
 });

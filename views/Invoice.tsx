@@ -226,6 +226,7 @@ export default class InvoiceView extends React.Component<
             value,
             getNoteKey,
             getAmount,
+            getLspFee,
             bolt12,
             payment_preimage
         } = invoice;
@@ -304,6 +305,20 @@ export default class InvoiceView extends React.Component<
                                 )}
                                 value={
                                     <Amount sats={value} sensitive toggleable />
+                                }
+                                sensitive
+                            />
+                        )}
+
+                        {isPaid && getLspFee > 0 && (
+                            <KeyValue
+                                keyValue={localeString('views.Invoice.lspFee')}
+                                value={
+                                    <Amount
+                                        sats={getLspFee}
+                                        sensitive
+                                        toggleable
+                                    />
                                 }
                                 sensitive
                             />
