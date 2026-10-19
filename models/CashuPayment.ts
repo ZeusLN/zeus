@@ -32,6 +32,9 @@ export default class CashuPayment extends Payment {
     public meltResponse: MeltResponse;
     public mintUrl: string;
     public proofs: Proof[];
+    // Set when the payment is known to be paid but not what the mint spent
+    // on fees, e.g. one reconcile settled from its melt quote
+    public fee_unknown?: boolean;
 
     constructor(data?: any) {
         super(data);
@@ -55,9 +58,10 @@ export default class CashuPayment extends Payment {
     }
 
     @computed public get getFee(): string {
-        // The mint has not settled the melt, so there is no fee yet. A 0
-        // here would read as a free payment.
-        if (this.isInTransit) return '';
+        // The mint has not settled the melt, so there is no fee yet, or it
+        // has and did not say what it spent. A 0 here would read as a free
+        // payment.
+        if (this.isInTransit || this.fee_unknown) return '';
 
         const feeMsat = Number(this.fee_msat);
         if (!Number.isNaN(feeMsat) && feeMsat !== 0) {

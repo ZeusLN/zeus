@@ -17,6 +17,18 @@ describe('CashuPayment.getFee', () => {
         expect(payment.getFee).toBe('');
         expect(payment.getFeePercentage).toBe('');
     });
+
+    // Settled from its melt quote, which does not carry the fee
+    it('returns no fee for a paid payment whose fee is unknown', () => {
+        const payment = new CashuPayment({
+            fee: 0,
+            fee_unknown: true,
+            status: 'SUCCEEDED'
+        });
+
+        expect(payment.getFee).toBe('');
+        expect(payment.getFeePercentage).toBe('');
+    });
 });
 
 describe('CashuPayment.getTimestamp', () => {

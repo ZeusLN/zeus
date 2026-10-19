@@ -3270,10 +3270,11 @@ export default class CashuStore {
      *
      * Only a `payment` melt produces a history entry: sweeps and self-custody
      * claims pay an invoice from the user's own node, so a late settlement
-     * arrives as an incoming payment and is recorded there. The fee stays as
-     * the in-flight entry recorded it, since what the mint actually spent is
-     * only in the melt result the caller never received; the balance itself
-     * comes from CDK.
+     * arrives as an incoming payment and is recorded there. The fee is only
+     * known if the pay path stored the payment from its melt result; what the
+     * mint spent is not in the quote, so an entry settled from the quote is
+     * marked fee unknown rather than shown as free. The balance itself comes
+     * from CDK.
      */
     private recordSettledMelt = async (
         melt: PendingMelt,
@@ -3286,6 +3287,8 @@ export default class CashuStore {
             (payment) => payment.meltResponse?.quote?.quote === melt.quote
         );
         const existing = index > -1 ? payments[index] : undefined;
+        const feeKnown =
+            !!existing && !existing.isInTransit && !existing.fee_unknown;
 
         const settled = new CashuPayment({
             ...(existing ? { ...existing } : {}),
@@ -3306,7 +3309,8 @@ export default class CashuStore {
                 preimage
             },
             amount: existing?.amount ?? melt.amount,
-            fee: existing?.fee ?? 0,
+            fee: feeKnown ? existing.fee : 0,
+            fee_unknown: !feeKnown,
             ...(existing
                 ? {}
                 : { creation_date: Math.floor(melt.createdAt / 1000) }),

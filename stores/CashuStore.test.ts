@@ -1025,6 +1025,10 @@ describe('CashuStore reconcilePendingMelts', () => {
         expect(store.payments).toHaveLength(1);
         expect(store.payments[0].isInTransit).toBe(false);
         expect(store.payments[0].payment_preimage).toBe('b'.repeat(64));
+        // the quote does not say what the mint spent, so no fee is shown
+        // rather than a free payment
+        expect(store.payments[0].fee_unknown).toBe(true);
+        expect(store.payments[0].getFee).toBe('');
         expect(store.pendingMelts).toEqual([]);
         expect(store.syncCDKBalances).toHaveBeenCalled();
     });
@@ -1059,6 +1063,7 @@ describe('CashuStore reconcilePendingMelts', () => {
 
         expect(store.payments).toHaveLength(1);
         expect(store.payments[0].getFee).toBe('2');
+        expect(store.payments[0].fee_unknown).toBe(false);
         expect(store.payments[0].payment_preimage).toBe('b'.repeat(64));
         expect(store.pendingMelts).toEqual([]);
     });
@@ -1080,6 +1085,7 @@ describe('CashuStore reconcilePendingMelts', () => {
         expect(store.payments[0].payment_preimage).toBe('b'.repeat(64));
         // dated when the melt started, not 1970
         expect(store.payments[0].getTimestamp).toBe(1_700_000_000);
+        expect(store.payments[0].getFee).toBe('');
         expect(store.pendingMelts).toEqual([]);
     });
 
