@@ -2704,13 +2704,12 @@ export default class NostrWalletConnectStore {
                 paymentError.error.code === Nip47ErrorCode.FAILED_TO_PAY_INVOICE
             ) {
                 // a fee cap cut by the budget can be the reason no route was
-                // found, so say so. Timeouts and invoice-state errors are
-                // matched on their exact text and keep it.
+                // found, so say so on route failures only. Other errors, such
+                // as insufficient balance, keep their text.
                 const message = String(paymentError.error.message);
                 const errorMessage =
                     feeLimitSats < PAYMENT_FEE_LIMIT_SATS &&
-                    !NostrConnectUtils.isPaymentTimedOutMessage(message) &&
-                    !NostrConnectUtils.isIgnorableError(message)
+                    NostrConnectUtils.isRouteFailureMessage(message)
                         ? `${message.replace(/\.$/, '')}. ${localeString(
                               'stores.NostrWalletConnectStore.error.feeLimitReducedByBudget',
                               { feeLimit: feeLimitSats.toString() }

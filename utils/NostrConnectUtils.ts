@@ -1018,6 +1018,42 @@ export default class NostrConnectUtils {
     }
 
     /**
+     * True when a payment failed for lack of a route, the failure a lower
+     * fee cap can cause. Locale keys and their translations cover the
+     * mapped LND and LDK Node reasons; English substrings cover raw
+     * Core Lightning errors. LND's timeout reason mentions "routes to try"
+     * and is excluded.
+     */
+    static isRouteFailureMessage(message?: string | null): boolean {
+        if (!message) return false;
+        const text = message.replace(/\.$/, '');
+        const isKey = (key: string) =>
+            text === key || text === localeString(key).replace(/\.$/, '');
+        if (
+            isKey('error.failureReasonTimeout') ||
+            NostrConnectUtils.isPaymentTimedOutMessage(message)
+        ) {
+            return false;
+        }
+        if (
+            isKey('error.failureReasonNoRoute') ||
+            isKey('error.ldk.routeNotFound') ||
+            isKey('error.ldk.retriesExhausted')
+        ) {
+            return true;
+        }
+        const normalized = message.toLowerCase();
+        return [
+            'no route',
+            'route not found',
+            'find a route',
+            'ran out of routes',
+            'find a path',
+            'usable set of paths'
+        ].some((phrase) => normalized.includes(phrase));
+    }
+
+    /**
      * Max hold when the node never lists the payment (LndHub, paginated
      * history). Must outlast an outgoing HTLC: LND and Core Lightning allow
      * a route time lock of up to 2016 blocks (about two weeks) by default.

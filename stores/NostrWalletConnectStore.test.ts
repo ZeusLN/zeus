@@ -2706,6 +2706,27 @@ describe('NostrWalletConnectStore handleLightningPayInvoice fee cap', () => {
         expect(connection.activity[0].error).toBe('No route found.');
     });
 
+    it('leaves a non-route error unchanged when the fee cap was reduced', async () => {
+        const { store, transactionsStore } = buildHandlerStore();
+        transactionsStore.payment_error =
+            'error.failureReasonInsufficientBalance';
+        const connection = addConnection(store, { maxAmountSats: 5400 });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice: 'lnbc1fee-cap-a' }
+        );
+
+        expect(sentFeeLimits(transactionsStore)).toEqual(['400']);
+        expect(response.error).toEqual({
+            code: Nip47ErrorCode.FAILED_TO_PAY_INVOICE,
+            message: 'error.failureReasonInsufficientBalance'
+        });
+        expect(connection.activity[0].error).toBe(
+            'error.failureReasonInsufficientBalance'
+        );
+    });
+
     it('leaves an invoice-state error unchanged when the fee cap was reduced', async () => {
         const { store, transactionsStore } = buildHandlerStore();
         transactionsStore.payment_error = 'invoice expired';
