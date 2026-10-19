@@ -18,6 +18,11 @@ import {
 import { localeString } from '../utils/LocaleUtils';
 import { invoiceNotFoundError } from '../utils/PaymentLookupUtils';
 import { markRequestTimeout } from '../utils/RequestTimeoutUtils';
+import {
+    getJitQuoteMsat,
+    getLsps2ErrorMessage,
+    getReceivableMsat
+} from '../utils/Lsps2Utils';
 import type {
     Network,
     NodeStatus,
@@ -1326,7 +1331,27 @@ export default class LdkNode {
             throw new Error(localeString('error.invalidInvoiceAmountOrExpiry'));
         }
 
-        if (amountMsat > 0) {
+        // Callers set lsps2_jit when an LSPS2 JIT channel may be bought.
+        // 1 sat or less leaves nothing for the LSP's fee
+        const jit =
+            !!data.lsps2_jit &&
+            amountMsat > 1000 &&
+            getReceivableMsat(await LdkNodeInjection.channel.listChannels()) <
+                amountMsat;
+
+        if (jit) {
+            try {
+                invoice = await LdkNodeInjection.bolt11.receiveViaJitChannel({
+                    amountMsat,
+                    description: data.memo || '',
+                    expirySecs,
+                    // the LSP's fee has to leave something to receive
+                    maxLspFeeLimitMsat: amountMsat - 1
+                });
+            } catch (e: any) {
+                throw new Error(getLsps2ErrorMessage(e?.message || String(e)));
+            }
+        } else if (amountMsat > 0) {
             invoice = await LdkNodeInjection.bolt11.receiveBolt11({
                 amountMsat,
                 description: data.memo || '',
@@ -1352,10 +1377,18 @@ export default class LdkNode {
             console.error('[LDK] Error decoding invoice for payment hash:', e);
         }
 
+        const lspFeeMsat = jit
+            ? getJitQuoteMsat(
+                  await LdkNodeInjection.payments.listPayments(),
+                  paymentHash
+              )
+            : undefined;
+
         return {
             payment_request: invoice,
             r_hash: paymentHash,
-            add_index: ''
+            add_index: '',
+            ...(jit && { lsps2_jit: true, lsp_fee_msat: lspFeeMsat })
         };
     };
 
