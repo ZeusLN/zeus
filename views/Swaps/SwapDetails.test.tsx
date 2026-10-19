@@ -3,7 +3,7 @@ jest.mock('mobx-react', () => ({
     observer: (component: any) => component
 }));
 jest.mock('@rneui/themed', () => ({ LinearProgress: 'LinearProgress' }));
-jest.mock('react-native-blob-util', () => ({}));
+jest.mock('react-native-blob-util', () => ({ fetch: jest.fn() }));
 jest.mock('../../stores/Stores', () => ({
     nodeInfoStore: { nodeInfo: {} },
     unitsStore: { resetUnits: jest.fn() }
@@ -72,9 +72,15 @@ jest.mock('../../assets/images/SVG/QR.svg', () => 'QR');
 import * as React from 'react';
 import { Alert } from 'react-native';
 import { act, render, screen } from '@testing-library/react-native';
+import ReactNativeBlobUtil from 'react-native-blob-util';
+import { crypto } from 'bitcoinjs-lib';
 import SwapDetails from './SwapDetails';
 import lndMobile from '../../lndmobile/LndMobileInjection';
-import { ReverseClaimTransaction } from '../../models/ClaimTransaction';
+import Bolt11Utils from '../../utils/Bolt11Utils';
+import {
+    ReverseClaimTransaction,
+    SubmarineClaimTransaction
+} from '../../models/ClaimTransaction';
 import { SwapType } from '../../models/Swap';
 
 const nativeClaim = lndMobile.swaps.createReverseClaimTransaction as jest.Mock;
@@ -87,6 +93,7 @@ beforeEach(() => {
     jest.useFakeTimers();
     nativeClaim.mockReset();
     (ReverseClaimTransaction.build as jest.Mock).mockClear();
+    (SubmarineClaimTransaction.build as jest.Mock).mockClear();
     socket = { close: jest.fn(), send: jest.fn() };
     global.WebSocket = jest.fn(() => socket) as any;
     jest.spyOn(console, 'log').mockImplementation(() => {});
@@ -292,6 +299,37 @@ describe('SwapDetails reverse claim', () => {
         await sendConfirmedLockup();
 
         expect(claimedTo()).toBe('bc1qpicked');
+    });
+});
+
+describe('SwapDetails submarine claim', () => {
+    it('builds the cooperative claim for the host without its /v2 suffix', async () => {
+        const preimage = '11'.repeat(32);
+        (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValue({
+            json: () => ({
+                preimage,
+                transactionHash: 'hash',
+                pubNonce: 'nonce'
+            })
+        });
+        jest.spyOn(Bolt11Utils, 'decode').mockReturnValue({
+            payment_hash: crypto
+                .sha256(Buffer.from(preimage, 'hex'))
+                .toString('hex')
+        } as any);
+        await renderView({ type: SwapType.Submarine });
+
+        await sendStatus('transaction.claim.pending');
+
+        // the host's own claim details still come from the full API path
+        expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledWith(
+            'GET',
+            'https://provider.test/v2/swap/submarine/swap/claim',
+            expect.anything()
+        );
+        expect(SubmarineClaimTransaction.build).toHaveBeenCalledWith(
+            expect.objectContaining({ endpoint: 'https://provider.test' })
+        );
     });
 });
 

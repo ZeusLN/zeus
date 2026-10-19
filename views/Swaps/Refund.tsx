@@ -29,6 +29,7 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
 import {
     fetchBlockHeight,
+    nativeSwapEndpoint,
     refundFailureAction,
     RefundFailureAction
 } from '../../utils/SwapUtils';
@@ -91,7 +92,7 @@ export default class RefundSwap extends React.Component<
         cooperative: boolean
     ): Promise<string> =>
         createRefundTransaction({
-            endpoint: swapData.endpoint.replace('/v2', ''),
+            endpoint: nativeSwapEndpoint(swapData.endpoint),
             swapId: swapData.id,
             claimLeaf: swapData?.swapTreeDetails.claimLeaf.output,
             refundLeaf: swapData?.swapTreeDetails.refundLeaf.output,
@@ -237,7 +238,7 @@ export default class RefundSwap extends React.Component<
         } = this.state;
 
         const rawDetails = {
-            endpoint: swapData.endpoint.replace('/v2', ''),
+            endpoint: nativeSwapEndpoint(swapData.endpoint),
             swapId: swapData.id,
             claimLeaf: swapData?.swapTreeDetails.claimLeaf.output,
             refundLeaf: swapData?.swapTreeDetails.refundLeaf.output,
