@@ -946,6 +946,20 @@ const handleAnything = async (
                     throw new Error(`${lnurlHost} says: ${params.reason}`);
                 }
 
+                // The withdraw and channel screens name the service by the
+                // callback host. A callback url.parse finds no host in, such
+                // as "https:///a.example/cb", would leave that name blank
+                // while the request may still be sent to a.example.
+                if (
+                    (params.tag === 'withdrawRequest' ||
+                        params.tag === 'channelRequest') &&
+                    !getLnurlHost(params.callback)
+                ) {
+                    throw new Error(
+                        localeString('utils.handleAnything.invalidLnurlParams')
+                    );
+                }
+
                 switch (params.tag) {
                     case 'withdrawRequest':
                         if (ecash) {

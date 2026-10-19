@@ -5,7 +5,10 @@ jest.mock('./Stores', () => ({
 jest.mock('./SettingsStore', () => ({
     DEFAULT_NOSTR_RELAYS: ['wss://relay.one', 'wss://relay.two']
 }));
-jest.mock('react-native-blob-util', () => ({}));
+const mockBlobUtilFetch = jest.fn();
+jest.mock('react-native-blob-util', () => ({
+    fetch: (...args: any[]) => mockBlobUtilFetch(...args)
+}));
 jest.mock('@nostr-dev-kit/ndk', () => ({
     __esModule: true,
     default: jest.fn()
@@ -35,7 +38,7 @@ jest.mock('../storage', () => ({
     KEY_PREFIX: 'zeus:'
 }));
 
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { validateMnemonic } from '@scure/bip39';
 import NDK from '@nostr-dev-kit/ndk';
 import CashuStore from './CashuStore';
@@ -1678,5 +1681,57 @@ describe('CashuStore deleteCashuData', () => {
             'lnd-cashu-pending-melts'
         );
         expect(store.pendingMelts).toEqual([]);
+    });
+});
+
+describe('CashuStore.createInvoice LNURL-withdraw callback', () => {
+    // decodes with timestamp 1700074718 and expiry 3600 (see Bolt11Utils.test.ts)
+    const paymentRequest =
+        'lnbcrt1230n1pj429x7pp57t97q4awqj3f529snr0pa6senk83sq5pp760qf5a4jzvd7xgwcksdqqcqzzsxqrrsssp57eqtv7vxr46arupna3w4ct0lkf2mqmz9wt044cwkks0rwlnhfr5s9qyyssqragwpwav7nfwv2xyuuamxxj4pnnpzv2hlw7j473repd3sq7st698ta9kmzmygt0w7tmncl56a6mnma0w7e5dlpqd0wy6x3v35rssldspjhh8p0';
+
+    it('names the host the callback is sent to in a service error', async () => {
+        mockBlobUtilFetch.mockResolvedValue({
+            json: () => ({ status: 'ERROR', reason: 'Limit exceeded' })
+        });
+        const alertSpy = jest
+            .spyOn(Alert, 'alert')
+            .mockImplementation(() => {});
+        const store: any = newStore();
+        store.isProperlyConfigured = () => true;
+        store.selectedMintUrl = 'https://mint.example';
+        store.getNodeDir = () => 'node';
+        store.invoices = [];
+        store.createMintQuoteCDK = jest.fn().mockResolvedValue({
+            id: 'quote',
+            request: paymentRequest,
+            state: 'UNPAID',
+            expiry: 1700078318
+        });
+
+        await store.createInvoice({
+            memo: '',
+            value: '123',
+            lnurl: {
+                tag: 'withdrawRequest',
+                k1: 'k1',
+                // js-lnurl's getDomain reads faucet.example out of this
+                callback: 'https://other.example\\@faucet.example/withdraw',
+                domain: 'faucet.example'
+            }
+        });
+        // the callback request is not awaited by createInvoice
+        await new Promise(setImmediate);
+
+        expect(mockBlobUtilFetch).toHaveBeenCalledWith(
+            'get',
+            expect.stringMatching(/^https:\/\/other\.example\//)
+        );
+        expect(alertSpy).toHaveBeenCalledWith(
+            '[error] other.example says:',
+            'Limit exceeded',
+            expect.any(Array),
+            { cancelable: false }
+        );
+        alertSpy.mockRestore();
     });
 });

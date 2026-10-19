@@ -155,6 +155,16 @@ export default class LightningSwipeableRow extends Component<
                 });
                 break;
             case 'withdrawRequest':
+                // Receive names the service by the callback host, so a
+                // callback without one (e.g. "https:///a.example/cb") is
+                // refused, as in handleAnything
+                if (!getLnurlHost(params.callback)) {
+                    Alert.alert(
+                        localeString('general.error'),
+                        localeString('utils.handleAnything.invalidLnurlParams')
+                    );
+                    break;
+                }
                 navigation.navigate('Receive', {
                     lnurlParams: params
                 });

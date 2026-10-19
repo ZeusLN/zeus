@@ -15,6 +15,7 @@ jest.mock('../utils/BackendUtils', () => ({
 }));
 jest.mock('../utils/LocaleUtils');
 
+import { Alert } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import InvoicesStore from './InvoicesStore';
@@ -1030,5 +1031,58 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
             expect(requestedValue()).toBe('50000');
             expect(submittedInvoice()).toBe('lnbc-wrapped');
         });
+    });
+});
+
+describe('InvoicesStore.createInvoice LNURL-withdraw callback', () => {
+    it('names the host the callback is sent to in a service error', async () => {
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            payment_request: paymentRequest
+        });
+        const blobFetch = ReactNativeBlobUtil.fetch as jest.Mock;
+        blobFetch.mockReset();
+        blobFetch.mockResolvedValue({
+            json: () => ({ status: 'ERROR', reason: 'Limit exceeded' })
+        });
+        const alertSpy = jest
+            .spyOn(Alert, 'alert')
+            .mockImplementation(() => {});
+        const store = new InvoicesStore(
+            { settings: {} } as any,
+            {
+                flow_error: false,
+                resetFee: jest.fn(),
+                clearFee: jest.fn()
+            } as any,
+            {} as any,
+            {} as any
+        );
+
+        await store.createInvoice({
+            memo: '',
+            value: '1000',
+            expirySeconds: '3600',
+            lnurl: {
+                tag: 'withdrawRequest',
+                k1: 'k1',
+                // js-lnurl's getDomain reads faucet.example out of this
+                callback: 'https://other.example\\@faucet.example/withdraw',
+                domain: 'faucet.example'
+            } as any
+        });
+        // the callback request is not awaited by createInvoice
+        await new Promise(setImmediate);
+
+        expect(blobFetch).toHaveBeenCalledWith(
+            'get',
+            expect.stringMatching(/^https:\/\/other\.example\//)
+        );
+        expect(alertSpy).toHaveBeenCalledWith(
+            '[error] other.example says:',
+            'Limit exceeded',
+            expect.any(Array),
+            { cancelable: false }
+        );
+        alertSpy.mockRestore();
     });
 });

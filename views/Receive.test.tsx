@@ -468,3 +468,74 @@ describe('Receive.validateAddress (Pay via NFC)', () => {
         expect(navigation.navigate).not.toHaveBeenCalled();
     });
 });
+
+// Collects every string in an element tree without mounting it
+const strings = (node: any, out: string[] = []): string[] => {
+    if (typeof node === 'string') out.push(node);
+    else if (Array.isArray(node)) node.forEach((n) => strings(n, out));
+    else if (node?.props)
+        Object.values(node.props).forEach((v) => strings(v, out));
+    return out;
+};
+
+describe('Receive LNURL-withdraw', () => {
+    // render() asks the backend what it supports
+    beforeAll(() =>
+        [
+            'isLNDBased',
+            'supportsAMP',
+            'supportsAddressTypeSelection',
+            'supportsBolt11BlindedRoutes',
+            'supportsCustomPreimages',
+            'supportsFlowLSP',
+            'supportsLightningAddress',
+            'supportsNestedSegWit',
+            'supportsOnchainReceiving',
+            'supportsSettingInvoiceExpiration',
+            'supportsTaproot'
+        ].forEach(
+            (name) => ((BackendUtils as any)[name] = jest.fn(() => false))
+        )
+    );
+
+    const renderText = (invoicesStore: any) => {
+        const view = new Receive({
+            navigation: { navigate: jest.fn() },
+            route: {
+                params: {
+                    lnurlParams: {
+                        tag: 'withdrawRequest',
+                        k1: 'k1',
+                        // js-lnurl's getDomain reads faucet.example out of
+                        // this, but the request goes to other.example
+                        callback:
+                            'https://other.example\\@faucet.example/withdraw',
+                        domain: 'faucet.example'
+                    }
+                }
+            },
+            InvoicesStore: invoicesStore,
+            SettingsStore: { settings: {} },
+            UnitsStore: {},
+            LightningAddressStore: {},
+            LSPStore: {},
+            NodeInfoStore: { nodeInfo: { block_height: 900000 } }
+        } as unknown as React.ComponentProps<typeof Receive>);
+        view.state = { ...view.state, initialLoad: false };
+        return strings(view.render()).join('\n');
+    };
+
+    it('names the host the withdraw callback is sent to', () => {
+        const text = renderText({});
+
+        expect(text).toContain('views.Receive.andSubmitTo other.example');
+        expect(text).not.toContain('faucet.example');
+    });
+
+    it('names the host the invoice was sent to', () => {
+        const text = renderText({ payment_request: 'lnbcrt1' });
+
+        expect(text).toContain('views.Receive.andSentTo other.example');
+        expect(text).not.toContain('faucet.example');
+    });
+});
