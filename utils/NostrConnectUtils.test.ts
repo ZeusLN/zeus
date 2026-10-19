@@ -513,6 +513,58 @@ describe('NostrConnectUtils', () => {
             });
         });
 
+        describe('isRouteFailureMessage', () => {
+            it.each([
+                ['LND no route key', 'error.failureReasonNoRoute', true],
+                ['LDK route not found key', 'error.ldk.routeNotFound', true],
+                [
+                    'LDK retries exhausted key',
+                    'error.ldk.retriesExhausted',
+                    true
+                ],
+                ['no route text', 'No route found.', true],
+                [
+                    'CLN pay',
+                    'Ran out of routes to try after 3 attempts: see `paystatus`',
+                    true
+                ],
+                [
+                    'CLN xpay',
+                    'Failed after 1 attempts. We could not find a usable set of paths',
+                    true
+                ],
+                ['LND timeout key', 'error.failureReasonTimeout', false],
+                [
+                    'LND timeout text',
+                    'There are more routes to try, but the payment timeout was exceeded.',
+                    false
+                ],
+                [
+                    'insufficient balance key',
+                    'error.failureReasonInsufficientBalance',
+                    false
+                ],
+                [
+                    'insufficient balance text',
+                    'Insufficient local balance',
+                    false
+                ],
+                ['non-recoverable key', 'error.failureReasonError', false],
+                [
+                    'recipient rejected key',
+                    'error.ldk.recipientRejected',
+                    false
+                ],
+                ['invoice expired', 'invoice expired', false],
+                ['null', null, false],
+                ['empty string', '', false]
+            ])('%s', (_label, message, expected) => {
+                expect(NostrConnectUtils.isRouteFailureMessage(message)).toBe(
+                    expected
+                );
+            });
+        });
+
         describe('isSettledPayment', () => {
             it('returns true when preimage is present and payment is not failed', () => {
                 expect(
@@ -1335,13 +1387,33 @@ describe('NostrConnectUtils', () => {
             ).toBe(true);
         });
 
-        it('abandons after invoice expiry plus grace', () => {
+        it('keeps a hold whose invoice expired long ago', () => {
             const activity = baseActivity();
-            activity.expiresAt = new Date(
-                now -
-                    NostrConnectUtils.UNRESOLVED_PAY_INVOICE_INVOICE_GRACE_MS -
-                    1000
-            );
+            activity.createdAt = new Date(now - 13 * 24 * 60 * 60 * 1000);
+            activity.expiresAt = new Date(now - 13 * 24 * 60 * 60 * 1000);
+            expect(
+                NostrConnectUtils.isPayInvoiceHoldAbandoned(activity, now)
+            ).toBe(false);
+        });
+
+        it('keeps a hold for the longest HTLC time lock', () => {
+            const activity = baseActivity();
+            // 2016 blocks at 10 minutes each
+            activity.createdAt = new Date(now - 2016 * 10 * 60 * 1000);
+            expect(
+                NostrConnectUtils.isPayInvoiceHoldAbandoned(activity, now)
+            ).toBe(false);
+        });
+
+        it('keeps a hold for 21 days', () => {
+            const day = 24 * 60 * 60 * 1000;
+            const activity = baseActivity();
+            activity.createdAt = new Date(now - 21 * day + 60_000);
+            expect(
+                NostrConnectUtils.isPayInvoiceHoldAbandoned(activity, now)
+            ).toBe(false);
+
+            activity.createdAt = new Date(now - 21 * day);
             expect(
                 NostrConnectUtils.isPayInvoiceHoldAbandoned(activity, now)
             ).toBe(true);

@@ -41,6 +41,8 @@ export interface ConnectionActivity {
     isExpired?: boolean;
     expiryLabel?: string;
     fees_paid?: number;
+    // routing fee cap sent with a pay_invoice; held with satAmount while pending
+    feeLimitSats?: number;
     isBudgetDebited?: boolean;
 }
 
@@ -224,11 +226,12 @@ export default class NWCConnection extends BaseModel {
 
     /**
      * Sum of in-flight (pending) pay_invoice amounts on this connection's
-     * activity log. Counted against the budget so concurrent or
-     * slow-settling (hodl) payments cannot exceed the limit while their
-     * debits are deferred to reconcile. Reconcile flips an activity to
-     * success and calls trackSpending in one atomic action, so an amount
-     * is never counted in both this and totalSpendSats.
+     * activity log, each with the routing fee cap it was sent with. Counted
+     * against the budget so concurrent or slow-settling (hodl) payments
+     * cannot exceed the limit while their debits are deferred to reconcile.
+     * Reconcile flips an activity to success and calls trackSpending in one
+     * atomic action, so an amount is never counted in both this and
+     * totalSpendSats.
      */
     @computed public get pendingSpendSats(): number {
         if (!this.activity?.length) return 0;
@@ -236,7 +239,11 @@ export default class NWCConnection extends BaseModel {
             if (a.type !== 'pay_invoice' || a.status !== 'pending') {
                 return sum;
             }
-            return sum + Math.max(0, Math.floor(Number(a.satAmount) || 0));
+            return (
+                sum +
+                Math.max(0, Math.floor(Number(a.satAmount) || 0)) +
+                Math.max(0, Math.floor(Number(a.feeLimitSats) || 0))
+            );
         }, 0);
     }
 
@@ -441,6 +448,21 @@ export default class NWCConnection extends BaseModel {
         return this.effectiveSpendSats + amountSats <= this.maxAmountSats!;
     }
 
+    /**
+     * Routing fee cap for a payment of amountSats: what the budget has left
+     * after the amount, at most maxFeeLimitSats. Unchanged without a budget.
+     */
+    public feeLimitSatsForPayment(
+        amountSats: number,
+        maxFeeLimitSats: number
+    ): number {
+        if (!this.hasBudgetLimit) return maxFeeLimitSats;
+        return Math.max(
+            0,
+            Math.min(maxFeeLimitSats, this.remainingBudget - amountSats)
+        );
+    }
+
     @action
     public resetBudget(): void {
         this.totalSpendSats = 0;
@@ -536,14 +558,16 @@ export default class NWCConnection extends BaseModel {
     /**
      * Validates spendable budget against the invoice amount only.
      *
-     * Routing fees are unknown until the payment settles and are intentionally
-     * excluded here. Worst-case overshoot is bounded by PAYMENT_FEE_LIMIT_SATS
-     * (the fee cap passed to the backend). Debit happens on finalize/reconcile
-     * for the settled amount; subsequent pays see the reduced remaining budget.
+     * Routing fees are unknown until the payment settles, so they are not
+     * required here. Instead, on backends that enforce a fee limit, the fee
+     * cap passed to the backend comes from feeLimitSatsForPayment, which
+     * limits it to the budget left after the amount, and a pending payment
+     * holds that cap until it resolves. Debit happens on finalize/reconcile
+     * for the settled amount plus fee.
      *
-     * Reserving amount + fee_limit up front would reject legitimate payments
-     * when remaining budget is in (amount, amount + fee_limit], which is a
-     * worse failure mode for tight budgets.
+     * Requiring amount + fee_limit up front would reject payments when the
+     * remaining budget is in [amount, amount + fee_limit); those are still
+     * attempted, with the smaller fee cap.
      */
     @action
     public validateBudgetBeforePayment(amountSats: number): {

@@ -257,6 +257,72 @@ describe('NWCConnection budget accounting with pending payments', () => {
             connection.warnings.some((w) => w.type === 'budget_limit_reached')
         ).toBe(false);
     });
+
+    it('holds the fee cap of a pending pay_invoice with its amount', () => {
+        const connection = baseConnection();
+        connection.activity.push(
+            {
+                id: 'lnbc-held',
+                type: 'pay_invoice',
+                payment_source: 'lightning',
+                status: 'pending',
+                satAmount: 1,
+                feeLimitSats: 1000
+            },
+            {
+                id: 'lnbc-settled',
+                type: 'pay_invoice',
+                payment_source: 'lightning',
+                status: 'success',
+                satAmount: 1,
+                feeLimitSats: 1000
+            }
+        );
+
+        expect(connection.pendingSpendSats).toBe(1001);
+        expect(connection.remainingBudget).toBe(98999);
+    });
+});
+
+describe('NWCConnection feeLimitSatsForPayment', () => {
+    it('returns the full cap when the budget has room for it', () => {
+        const connection = baseConnection();
+        expect(connection.feeLimitSatsForPayment(1000, 1000)).toBe(1000);
+    });
+
+    it('limits the cap to the budget left after the amount', () => {
+        const connection = baseConnection();
+        connection.trackSpending(98500);
+        expect(connection.feeLimitSatsForPayment(1000, 1000)).toBe(500);
+        expect(connection.feeLimitSatsForPayment(1500, 1000)).toBe(0);
+    });
+
+    it('counts pending holds, fee caps included, as used', () => {
+        const connection = baseConnection();
+        connection.maxAmountSats = 2000;
+        connection.activity.push({
+            id: 'lnbc-held',
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            status: 'pending',
+            satAmount: 1,
+            feeLimitSats: 1000
+        });
+
+        expect(connection.feeLimitSatsForPayment(1, 1000)).toBe(998);
+    });
+
+    it('never returns a negative cap', () => {
+        const connection = baseConnection();
+        connection.trackSpending(100000);
+        expect(connection.feeLimitSatsForPayment(10, 1000)).toBe(0);
+    });
+
+    it('returns the full cap when the connection has no budget', () => {
+        const connection = baseConnection();
+        connection.maxAmountSats = undefined;
+        expect(connection.feeLimitSatsForPayment(5000000, 1000)).toBe(1000);
+    });
 });
 
 describe('NWCConnection pay_invoice activity lookup', () => {

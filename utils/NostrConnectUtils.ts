@@ -1017,23 +1017,51 @@ export default class NostrConnectUtils {
         );
     }
 
-    /** Max hold when the node never lists the payment (LndHub, paginated history). */
-    static readonly UNRESOLVED_PAY_INVOICE_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-
-    /** Grace after bolt11 expiry before abandoning an unresolved hold. */
-    static readonly UNRESOLVED_PAY_INVOICE_INVOICE_GRACE_MS =
-        24 * 60 * 60 * 1000;
-
-    static resolveBolt11ExpiryTimeMs(invoice: string): number | undefined {
-        try {
-            const decoded = Bolt11Utils.decode(invoice);
-            const expiry = decoded.timeExpireDate;
-            if (expiry == null || expiry <= 0) return undefined;
-            return expiry * 1000;
-        } catch {
-            return undefined;
+    /**
+     * True when a payment failed for lack of a route, the failure a lower
+     * fee cap can cause. Locale keys and their translations cover the
+     * mapped LND and LDK Node reasons; English substrings cover raw
+     * Core Lightning errors. LND's timeout reason mentions "routes to try"
+     * and is excluded.
+     */
+    static isRouteFailureMessage(message?: string | null): boolean {
+        if (!message) return false;
+        const text = message.replace(/\.$/, '');
+        const isKey = (key: string) =>
+            text === key || text === localeString(key).replace(/\.$/, '');
+        if (
+            isKey('error.failureReasonTimeout') ||
+            NostrConnectUtils.isPaymentTimedOutMessage(message)
+        ) {
+            return false;
         }
+        if (
+            isKey('error.failureReasonNoRoute') ||
+            isKey('error.ldk.routeNotFound') ||
+            isKey('error.ldk.retriesExhausted')
+        ) {
+            return true;
+        }
+        const normalized = message.toLowerCase();
+        return [
+            'no route',
+            'route not found',
+            'find a route',
+            'ran out of routes',
+            'find a path',
+            'usable set of paths'
+        ].some((phrase) => normalized.includes(phrase));
     }
+
+    /**
+     * Max hold when the node never lists the payment (LndHub, paginated
+     * history). Must outlast an outgoing HTLC: LND and Core Lightning allow
+     * a route time lock of up to 2016 blocks (about two weeks) by default.
+     * The invoice expiry is not used, since it does not limit how long an
+     * HTLC that was already sent stays unresolved.
+     */
+    static readonly UNRESOLVED_PAY_INVOICE_MAX_AGE_MS =
+        21 * 24 * 60 * 60 * 1000;
 
     /** True when an unresolved pay_invoice hold should be released. */
     static isPayInvoiceHoldAbandoned(
@@ -1051,26 +1079,10 @@ export default class NostrConnectUtils {
         const createdAt = activity.createdAt?.getTime();
         if (!createdAt) return false;
 
-        if (
+        return (
             nowMs >=
             createdAt + NostrConnectUtils.UNRESOLVED_PAY_INVOICE_MAX_AGE_MS
-        ) {
-            return true;
-        }
-
-        const expiryMs =
-            activity.expiresAt?.getTime() ??
-            NostrConnectUtils.resolveBolt11ExpiryTimeMs(activity.id);
-        if (
-            expiryMs &&
-            nowMs >=
-                expiryMs +
-                    NostrConnectUtils.UNRESOLVED_PAY_INVOICE_INVOICE_GRACE_MS
-        ) {
-            return true;
-        }
-
-        return false;
+        );
     }
 
     static isSettledPayment(payment: Payment): boolean {
