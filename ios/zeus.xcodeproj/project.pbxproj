@@ -165,7 +165,6 @@
 		B426671EE5DA4CA18D9F7009 /* Text.svg in Resources */ = {isa = PBXBuildFile; fileRef = A4C4406966A64A0191896B8D /* Text.svg */; };
 		B6D272C1AF5D4002A252AC7A /* zeus_icon.jpg in Resources */ = {isa = PBXBuildFile; fileRef = 8DEB9D669C694320B603F9DE /* zeus_icon.jpg */; };
 		B7B3D0A8E3C8499892224242 /* Block.svg in Resources */ = {isa = PBXBuildFile; fileRef = B10811B91C8044358B7EBE82 /* Block.svg */; };
-		B8067346D38044A7B3100972 /* Verified Account.svg in Resources */ = {isa = PBXBuildFile; fileRef = 8F531F57A66C4D86B3D226D7 /* Verified Account.svg */; };
 		BAA4C955BBD64657B95BB6FD /* Lock.svg in Resources */ = {isa = PBXBuildFile; fileRef = D941967BF1894368A72180AF /* Lock.svg */; };
 		BAFB41DDD4CE49F596B34D92 /* Swap.svg in Resources */ = {isa = PBXBuildFile; fileRef = 9B066550A2EA4AC794CA089B /* Swap.svg */; };
 		BC43A928A3C3466390D20200 /* Pie.svg in Resources */ = {isa = PBXBuildFile; fileRef = 662F3CE13986425FAECE00A8 /* Pie.svg */; };
@@ -608,7 +607,6 @@
 		8CA64666372746E689C302BE /* Lato-Bold.ttf */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Lato-Bold.ttf"; path = "../assets/fonts/Lato-Bold.ttf"; sourceTree = "<group>"; };
 		8DA42A65AA9D406CBB84A659 /* lightning_black.png */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = lightning_black.png; path = ../assets/images/lightning_black.png; sourceTree = "<group>"; };
 		8DEB9D669C694320B603F9DE /* zeus_icon.jpg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = zeus_icon.jpg; path = ../assets/images/zeus_icon.jpg; sourceTree = "<group>"; };
-		8F531F57A66C4D86B3D226D7 /* Verified Account.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = "Verified Account.svg"; path = "../assets/images/SVG/Verified Account.svg"; sourceTree = "<group>"; };
 		90FC9B311888404098848E43 /* QR.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = QR.svg; path = ../assets/images/SVG/QR.svg; sourceTree = "<group>"; };
 		9176A321EE9D4653BBE6E680 /* Cloud.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Cloud.svg; path = ../assets/images/SVG/Cloud.svg; sourceTree = "<group>"; };
 		938F4C062D704F34A05B933B /* Clock.svg */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 9; includeInIndex = 0; lastKnownFileType = unknown; name = Clock.svg; path = ../assets/images/SVG/Clock.svg; sourceTree = "<group>"; };
@@ -1187,7 +1185,6 @@
 				6934A0BCDAD94002BA8F840A /* Save.svg */,
 				B813A99762CC4756A18E0C20 /* Skull.svg */,
 				259C6F30DC5D40FF9E5DF839 /* Sweep.svg */,
-				8F531F57A66C4D86B3D226D7 /* Verified Account.svg */,
 				8CA64666372746E689C302BE /* Lato-Bold.ttf */,
 				8968C5A47BF6473DAAADAAB6 /* Lato-Regular.ttf */,
 				7BF4E2803ED74582856B0DDC /* alby.jpg */,
@@ -1766,7 +1763,6 @@
 				F9767258AD2F4256A0668218 /* Save.svg in Resources */,
 				F15BCD255F194C84973AB51D /* Skull.svg in Resources */,
 				593DA4FEB1FE4C1CA721DDB1 /* Sweep.svg in Resources */,
-				B8067346D38044A7B3100972 /* Verified Account.svg in Resources */,
 				8DDBA9D94AE480ECACB93254 /* PrivacyInfo.xcprivacy in Resources */,
 				6B0D155152B94454988B1EC8 /* Lato-Bold.ttf in Resources */,
 				13B56D1900B8453796EF0EDA /* Lato-Regular.ttf in Resources */,
