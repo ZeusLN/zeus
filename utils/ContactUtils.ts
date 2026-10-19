@@ -94,4 +94,25 @@ const findContactByLightningAddress = (
     return found ? new Contact(found) : null;
 };
 
-export default { transformContactData, findContactByLightningAddress };
+// The members a zeuscontact: card carries (views/MultiQR.tsx). Cards
+// made before v0.11.0 also held the sender's remote photo and banner URLs
+// and fields like isFavourite, so a received card is rebuilt from this list.
+const toCardContact = (contact: any) => ({
+    contactId: contact.contactId ?? '',
+    name: contact.name ?? '',
+    description: contact.description ?? '',
+    lnAddress: contact.lnAddress ?? [],
+    bolt12Address: contact.bolt12Address ?? [],
+    bolt12Offer: contact.bolt12Offer ?? [],
+    onchainAddress: contact.onchainAddress ?? [],
+    nip05: contact.nip05 ?? [],
+    nostrNpub: contact.nostrNpub ?? [],
+    pubkey: contact.pubkey ?? [],
+    cashuPubkey: contact.cashuPubkey ?? []
+});
+
+export default {
+    transformContactData,
+    findContactByLightningAddress,
+    toCardContact
+};

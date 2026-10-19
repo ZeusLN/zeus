@@ -1380,31 +1380,100 @@ describe('handleAnything', () => {
     });
 
     describe('zeuscontact', () => {
-        it('opens the card without the images it names', async () => {
-            const card = `zeuscontact:${JSON.stringify({
+        const openCard = async (fields: any) => {
+            const card = `zeuscontact:${JSON.stringify(fields)}`;
+            mockProcessBIP21Uri.mockReturnValue({ value: card });
+            return await handleAnything(card);
+        };
+
+        const CARD_DEFAULTS = {
+            description: '',
+            lnAddress: [],
+            bolt12Address: [],
+            bolt12Offer: [],
+            onchainAddress: [],
+            nip05: [],
+            nostrNpub: [],
+            pubkey: [],
+            cashuPubkey: []
+        };
+
+        it('opens the card without the remote images it names', async () => {
+            const result = await openCard({
                 contactId: '1',
                 name: 'Coffee shop',
                 description: '',
                 lnAddress: ['tips@coffee.example'],
                 photo: 'http://192.168.1.1/cgi-bin/reboot',
                 banner: 'https://beacon.example/seen.png'
-            })}`;
-            mockProcessBIP21Uri.mockReturnValue({ value: card });
-
-            const result = await handleAnything(card);
+            });
 
             expect(result).toEqual([
                 'ContactDetails',
                 {
                     nostrContact: {
+                        ...CARD_DEFAULTS,
                         contactId: '1',
                         name: 'Coffee shop',
-                        description: '',
                         lnAddress: ['tips@coffee.example']
                     },
                     isNostrContact: true
                 }
             ]);
+        });
+
+        it('drops local rnfs:// image paths', async () => {
+            const result = await openCard({
+                contactId: '1',
+                name: 'Coffee shop',
+                photo: 'rnfs://../../Library/Preferences/x.plist',
+                banner: 'rnfs://banner.png'
+            });
+
+            expect(result[1].nostrContact).not.toHaveProperty('photo');
+            expect(result[1].nostrContact).not.toHaveProperty('banner');
+        });
+
+        it('drops fields a card does not carry', async () => {
+            const result = await openCard({
+                contactId: '1',
+                name: 'Coffee shop',
+                id: 'legacy-id',
+                isFavourite: true,
+                isSelected: true
+            });
+
+            expect(result[1].nostrContact).toEqual({
+                ...CARD_DEFAULTS,
+                contactId: '1',
+                name: 'Coffee shop'
+            });
+        });
+
+        it('keeps every member a card carries', async () => {
+            const fields = {
+                contactId: '1',
+                name: 'Coffee shop',
+                description: 'Espresso',
+                lnAddress: ['tips@coffee.example'],
+                bolt12Address: ['tips@bolt12.example'],
+                bolt12Offer: ['lno1offer'],
+                onchainAddress: ['bc1qaddress'],
+                nip05: ['coffee@nostr.example'],
+                nostrNpub: ['npub1coffee'],
+                pubkey: ['02pubkey'],
+                cashuPubkey: ['02cashu']
+            };
+
+            const result = await openCard(fields);
+
+            expect(result[1].nostrContact).toEqual(fields);
+        });
+
+        it('falls through when the card has no contactId', async () => {
+            const result = await openCard({ name: 'Coffee shop' });
+
+            expect(result).toBeUndefined();
         });
     });
 

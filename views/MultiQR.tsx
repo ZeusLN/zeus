@@ -13,6 +13,7 @@ import Carousel, {
 
 import Header from '../components/Header';
 import Text from '../components/Text';
+import ContactUtils from '../utils/ContactUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import CollapsedQR from '../components/CollapsedQR';
 
@@ -55,19 +56,7 @@ const MultiQR: React.FC<MultiQRProps> = (props: MultiQRProps) => {
         }
 
         if (parsedContact) {
-            const essentialContact = {
-                contactId: parsedContact.contactId ?? '',
-                name: parsedContact.name ?? '',
-                description: parsedContact.description ?? '',
-                lnAddress: parsedContact.lnAddress ?? [],
-                bolt12Address: parsedContact.bolt12Address ?? [],
-                bolt12Offer: parsedContact.bolt12Offer ?? [],
-                onchainAddress: parsedContact.onchainAddress ?? [],
-                nip05: parsedContact.nip05 ?? [],
-                nostrNpub: parsedContact.nostrNpub ?? [],
-                pubkey: parsedContact.pubkey ?? [],
-                cashuPubkey: parsedContact.cashuPubkey ?? []
-            };
+            const essentialContact = ContactUtils.toCardContact(parsedContact);
 
             setContactLabel(parsedContact.name ?? '');
             setAddressData([

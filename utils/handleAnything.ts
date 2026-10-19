@@ -1061,14 +1061,13 @@ const handleAnything = async (
         }
     } else if (data.startsWith('zeuscontact:')) {
         const zeusContactData = data.replace('zeuscontact:', '');
-        const contact = JSON.parse(zeusContactData);
+        const card = JSON.parse(zeusContactData);
 
-        if (contact?.contactId) {
-            // ZEUS never exports photo/banner in a card (views/MultiQR.tsx).
-            // In a received card they are remote URLs that ContactDetails
-            // would load as soon as it opens, and again after saving.
-            delete contact.photo;
-            delete contact.banner;
+        if (card?.contactId) {
+            // Cards made before v0.11.0 could carry remote photo/banner
+            // URLs, which ContactDetails would load as soon as it opens
+            // and again on every display after saving.
+            const contact = ContactUtils.toCardContact(card);
 
             return [
                 'ContactDetails',
