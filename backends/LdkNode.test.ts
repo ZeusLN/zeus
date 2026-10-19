@@ -12,6 +12,7 @@ const mockListChannels = jest.fn();
 const mockCloseChannel = jest.fn();
 const mockForceCloseChannel = jest.fn();
 const mockLsps1RequestChannel = jest.fn();
+const mockReceiveViaJitChannel = jest.fn();
 
 jest.mock('../ldknode/LdkNodeInjection', () => ({
     __esModule: true,
@@ -31,7 +32,9 @@ jest.mock('../ldknode/LdkNodeInjection', () => ({
                 mockSendBolt11UsingAmount(...args),
             receiveBolt11: (...args: any[]) => mockReceiveBolt11(...args),
             receiveVariableAmountBolt11: (...args: any[]) =>
-                mockReceiveVariableAmountBolt11(...args)
+                mockReceiveVariableAmountBolt11(...args),
+            receiveViaJitChannel: (...args: any[]) =>
+                mockReceiveViaJitChannel(...args)
         },
         spontaneous: {
             sendSpontaneousPayment: (...args: any[]) =>
@@ -1313,6 +1316,184 @@ describe('LdkNode.requestLsps1Liquidity', () => {
         await ldk.requestLsps1Liquidity({ amount_sat: 1000000 });
         expect(mockLsps1RequestChannel).toHaveBeenCalledWith(
             expect.objectContaining({ channelExpiryBlocks: 52560 })
+        );
+    });
+});
+
+describe('LdkNode.createInvoice', () => {
+    const SAT = 1000;
+    const channel = (inboundSats: number, extra: any = {}) => ({
+        isChannelReady: true,
+        inboundCapacityMsat: inboundSats * SAT,
+        ...extra
+    });
+    const jitPayment = (openingFeeMsat: number) => ({
+        id: 'jit',
+        direction: 'inbound',
+        status: 'pending',
+        kind: {
+            type: 'bolt11Jit',
+            hash: 'hash',
+            lspFeeLimits: { maxTotalOpeningFeeMsat: openingFeeMsat }
+        }
+    });
+    const create = (value: string, lsps2_jit = true) =>
+        new LdkNode().createInvoice({
+            value,
+            memo: 'memo',
+            expiry_seconds: '3600',
+            lsps2_jit
+        });
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.spyOn(Bolt11Utils, 'decode').mockReturnValue({
+            payment_hash: 'hash'
+        } as any);
+        mockReceiveBolt11.mockResolvedValue('lnbc-plain');
+        mockReceiveVariableAmountBolt11.mockResolvedValue('lnbc-variable');
+        mockReceiveViaJitChannel.mockResolvedValue('lnbc-jit');
+        mockListPayments.mockResolvedValue([jitPayment(10_000 * SAT)]);
+    });
+
+    it('creates a plain invoice when existing inbound can take it', async () => {
+        mockListChannels.mockResolvedValue([channel(60_000)]);
+
+        const result = await create('50000');
+
+        expect(mockReceiveViaJitChannel).not.toHaveBeenCalled();
+        expect(result).toEqual({
+            payment_request: 'lnbc-plain',
+            r_hash: 'hash',
+            add_index: ''
+        });
+    });
+
+    it('buys a JIT channel when inbound is short and returns its fee', async () => {
+        mockListChannels.mockResolvedValue([]);
+
+        const result = await create('50000');
+
+        expect(mockReceiveViaJitChannel).toHaveBeenCalledWith({
+            amountMsat: 50_000 * SAT,
+            description: 'memo',
+            expirySecs: 3600,
+            maxLspFeeLimitMsat: 50_000 * SAT - 1
+        });
+        expect(result).toEqual({
+            payment_request: 'lnbc-jit',
+            r_hash: 'hash',
+            add_index: '',
+            lsps2_jit: true,
+            lsp_fee_msat: 10_000 * SAT
+        });
+    });
+
+    it('adds up inbound across channels', async () => {
+        mockListChannels.mockResolvedValue([channel(30_000), channel(30_000)]);
+
+        await create('50000');
+
+        expect(mockReceiveViaJitChannel).not.toHaveBeenCalled();
+    });
+
+    it('keeps a margin back on each channel', async () => {
+        mockListChannels.mockResolvedValue([channel(50_000)]);
+
+        await create('50000');
+
+        expect(mockReceiveViaJitChannel).toHaveBeenCalled();
+    });
+
+    it("respects a channel's per-payment cap", async () => {
+        mockListChannels.mockResolvedValue([
+            channel(500_000, { inboundHtlcMaximumMsat: 40_000 * SAT })
+        ]);
+
+        await create('50000');
+
+        expect(mockReceiveViaJitChannel).toHaveBeenCalled();
+    });
+
+    it('ignores channels that are not ready', async () => {
+        mockListChannels.mockResolvedValue([
+            channel(500_000, { isChannelReady: false })
+        ]);
+
+        await create('50000');
+
+        expect(mockReceiveViaJitChannel).toHaveBeenCalled();
+    });
+
+    it('never buys a channel unless the caller allows it', async () => {
+        mockListChannels.mockResolvedValue([]);
+
+        await create('50000', false);
+
+        expect(mockListChannels).not.toHaveBeenCalled();
+        expect(mockReceiveViaJitChannel).not.toHaveBeenCalled();
+        expect(mockReceiveBolt11).toHaveBeenCalled();
+    });
+
+    it('keeps no-amount invoices plain', async () => {
+        mockListChannels.mockResolvedValue([]);
+
+        await create('0');
+
+        expect(mockReceiveViaJitChannel).not.toHaveBeenCalled();
+        expect(mockReceiveVariableAmountBolt11).toHaveBeenCalled();
+    });
+
+    it('keeps 1 sat plain, and buys a channel from 2 sats', async () => {
+        mockListChannels.mockResolvedValue([]);
+
+        await create('1');
+
+        expect(mockReceiveViaJitChannel).not.toHaveBeenCalled();
+        expect(mockReceiveBolt11).toHaveBeenCalledWith(
+            expect.objectContaining({ amountMsat: SAT })
+        );
+
+        await create('2');
+
+        expect(mockReceiveViaJitChannel).toHaveBeenCalledWith(
+            expect.objectContaining({
+                amountMsat: 2 * SAT,
+                maxLspFeeLimitMsat: 2 * SAT - 1
+            })
+        );
+    });
+
+    it.each([
+        [
+            'the node has no record of the payment',
+            () => mockListPayments.mockResolvedValue([])
+        ],
+        [
+            'the invoice cannot be decoded',
+            () =>
+                jest.spyOn(Bolt11Utils, 'decode').mockImplementation(() => {
+                    throw new Error('bad invoice');
+                })
+        ]
+    ])('marks a JIT invoice with an unknown fee when %s', async (_, setUp) => {
+        mockListChannels.mockResolvedValue([]);
+        setUp();
+
+        const result = await create('50000');
+
+        expect(result.lsps2_jit).toBe(true);
+        expect(result.lsp_fee_msat).toBeUndefined();
+    });
+
+    it('explains LSP failures in plain language', async () => {
+        mockListChannels.mockResolvedValue([]);
+        mockReceiveViaJitChannel.mockRejectedValue(
+            new Error('Failed to request inbound liquidity.')
+        );
+
+        await expect(create('50000')).rejects.toThrow(
+            'stores.InvoicesStore.lsps2.requestFailed'
         );
     });
 });
