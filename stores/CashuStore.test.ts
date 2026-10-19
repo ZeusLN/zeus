@@ -766,6 +766,34 @@ describe('CashuStore single-mint melt state', () => {
         expect(store.pendingMelts).toHaveLength(1);
     });
 
+    // #5137 snapshots the invoice before the first await; the in-flight
+    // record must use that snapshot, not whatever is loaded by the time
+    // melt() throws
+    it('records an in-flight payment for the invoice it was melting when another one is loaded meanwhile', async () => {
+        const store = payingStore();
+        store.payReq = { payment_hash: 'hash of the paid invoice' };
+        (CashuDevKit.melt as jest.Mock).mockImplementation(async () => {
+            store.paymentRequest = 'lnbc1other';
+            store.payReq = { payment_hash: 'hash of lnbc1other' };
+            throw new Error('Subscription closed');
+        });
+        (CashuDevKit.checkMeltQuote as jest.Mock).mockResolvedValue({
+            id: 'quote-1',
+            state: 'Unpaid',
+            used_by_operation: 'op-1'
+        });
+
+        await store.payLnInvoiceFromEcash({
+            amount: '1000',
+            paymentRequest: 'lnbc10n1ptestinvoice'
+        });
+
+        expect(store.payments).toHaveLength(1);
+        expect(store.payments[0].bolt11).toBe('lnbc10n1ptestinvoice');
+        expect(store.payments[0].payment_hash).toBe('hash of the paid invoice');
+        expect(store.pendingMelts[0].request).toBe('lnbc10n1ptestinvoice');
+    });
+
     // The mint paid after CDK stopped waiting; checking the quote finalizes
     // the melt, so this is a payment, not one in flight
     it('reports a melt that threw as paid when its quote says the mint paid', async () => {
