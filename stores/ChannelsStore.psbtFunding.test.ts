@@ -36,9 +36,48 @@ import ChannelsStore from './ChannelsStore';
 import TransactionsStore from './TransactionsStore';
 import BackendUtils from '../utils/BackendUtils';
 
+const bitcoin = require('bitcoinjs-lib');
+
 const PUBKEY =
     '03cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd';
-const PSBT = 'cHNidP8BAA==';
+const P2WPKH = Buffer.from(`0014${'11'.repeat(20)}`, 'hex');
+const FUNDING_INPUTS = [
+    { txid: 'aa'.repeat(32), vout: 1 },
+    { txid: 'bb'.repeat(32), vout: 0 }
+];
+const OTHER_INPUTS = [{ txid: 'cc'.repeat(32), vout: 0 }];
+
+const psbtSpending = (
+    inputs: Array<{ txid: string; vout: number }>,
+    signed = false
+) => {
+    const psbt = new bitcoin.Psbt();
+    inputs.forEach(({ txid, vout }, index) => {
+        psbt.addInput({
+            hash: txid,
+            index: vout,
+            witnessUtxo: { script: P2WPKH, value: 100000 }
+        });
+        if (signed) {
+            psbt.updateInput(index, {
+                finalScriptWitness: Buffer.from('00', 'hex')
+            });
+        }
+    });
+    psbt.addOutput({ script: P2WPKH, value: 150000 });
+    return psbt.toBase64();
+};
+
+const txSpending = (inputs: Array<{ txid: string; vout: number }>) => {
+    const tx = new bitcoin.Transaction();
+    inputs.forEach(({ txid, vout }) =>
+        tx.addInput(Buffer.from(txid, 'hex').reverse(), vout)
+    );
+    tx.addOutput(P2WPKH, 150000);
+    return tx.toHex();
+};
+
+const PSBT = psbtSpending(FUNDING_INPUTS);
 
 const flushPromises = () => new Promise(setImmediate);
 
@@ -224,5 +263,81 @@ describe('ChannelsStore PSBT funding flow', () => {
         channelsStore.reset();
 
         expect(channelsStore.pending_chan_ids).toEqual([]);
+        expect(channelsStore.pendingChanIdsFor({ psbt: PSBT })).toEqual([]);
+    });
+
+    it('matches the signed funding transaction to the channel', () => {
+        // the form reset that no longer drops the channel
+        channelsStore.resetOpenChannel();
+
+        expect(channelsStore.pendingChanIdsFor({ psbt: PSBT })).toEqual([
+            'chan-1'
+        ]);
+        expect(
+            channelsStore.pendingChanIdsFor({
+                psbt: psbtSpending(FUNDING_INPUTS, true)
+            })
+        ).toEqual(['chan-1']);
+        // inputs in another order
+        expect(
+            channelsStore.pendingChanIdsFor({
+                txHex: txSpending([...FUNDING_INPUTS].reverse())
+            })
+        ).toEqual(['chan-1']);
+    });
+
+    // A send from an external account, a scanned PSBT or a sweep reaches the
+    // same screens while an abandoned funding flow still has its ID set
+    it('matches no channel to a transaction that spends other outpoints', () => {
+        channelsStore.resetOpenChannel();
+
+        expect(
+            channelsStore.pendingChanIdsFor({
+                psbt: psbtSpending(OTHER_INPUTS)
+            })
+        ).toEqual([]);
+        expect(
+            channelsStore.pendingChanIdsFor({
+                txHex: txSpending(OTHER_INPUTS)
+            })
+        ).toEqual([]);
+        // a subset of the funding inputs is a different transaction
+        expect(
+            channelsStore.pendingChanIdsFor({
+                txHex: txSpending(FUNDING_INPUTS.slice(0, 1))
+            })
+        ).toEqual([]);
+        expect(channelsStore.pendingChanIdsFor({ psbt: 'not a psbt' })).toEqual(
+            []
+        );
+        expect(channelsStore.pendingChanIdsFor({ txHex: 'zz' })).toEqual([]);
+        expect(channelsStore.pending_chan_ids).toEqual(['chan-1']);
+    });
+
+    it('matches no channel once LND has finalized it', async () => {
+        jest.mocked(BackendUtils.fundingStateStep).mockResolvedValue({});
+
+        await transactionsStore.finalizePsbtAndBroadcastChannel(
+            PSBT,
+            channelsStore.pendingChanIdsFor({ psbt: PSBT })
+        );
+
+        expect(channelsStore.pendingChanIdsFor({ psbt: PSBT })).toEqual([]);
+    });
+
+    it('matches the new funding PSBT when another channel is opened', async () => {
+        const otherPsbt = psbtSpending(OTHER_INPUTS);
+        jest.mocked(BackendUtils.fundPsbt).mockResolvedValue({
+            funded_psbt: otherPsbt
+        });
+        lndWaitsForSigner('chan-2');
+
+        await channelsStore.connectPeer(openRequest('signer'));
+        await flushPromises();
+
+        expect(channelsStore.pendingChanIdsFor({ psbt: PSBT })).toEqual([]);
+        expect(channelsStore.pendingChanIdsFor({ psbt: otherPsbt })).toEqual([
+            'chan-2'
+        ]);
     });
 });
