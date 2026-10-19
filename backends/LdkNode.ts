@@ -18,6 +18,7 @@ import {
 import { localeString } from '../utils/LocaleUtils';
 import { invoiceNotFoundError } from '../utils/PaymentLookupUtils';
 import { markRequestTimeout } from '../utils/RequestTimeoutUtils';
+import { getActiveLsps2NodeId } from '../utils/LdkNodeUtils';
 import {
     getJitQuoteMsat,
     getLsps2ErrorMessage,
@@ -442,7 +443,14 @@ export default class LdkNode {
         return {
             channels: readyChannels.map((channel) =>
                 this.formatChannel(channel, balances)
-            )
+            ),
+            // what createInvoice compares the amount with before buying an
+            // LSPS2 channel, so Receive can tell when one will be bought
+            ...(this.isLsps2Active() && {
+                receivable_inbound_sat: Math.floor(
+                    getReceivableMsat(channels) / 1000
+                )
+            })
         };
     };
 
@@ -2319,6 +2327,9 @@ export default class LdkNode {
                 ? new BigNumber(payment.amountMsat).dividedBy(1000).toString()
                 : '0',
             amt_paid_msat: payment.amountMsat?.toString() || '0',
+            // What the LSP kept when it opened a JIT channel for this
+            // payment; the amounts above are what reached us
+            lsp_fee_msat: payment.kind.counterpartySkimmedFeeMsat?.toString(),
             state: isSettled
                 ? 'SETTLED'
                 : payment.status === 'pending'
@@ -2401,6 +2412,8 @@ export default class LdkNode {
     supportsCircularRebalancing = () => false;
     supportsForceClose = () => true;
     supportsLSPS2 = () => true;
+    // A dedicated LSPS2 LSP is registered in the running node
+    isLsps2Active = () => !!getActiveLsps2NodeId();
     supportsPendingChannels = () => true;
     supportsClosedChannels = () => true;
     supportsMPP = () => true;

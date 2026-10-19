@@ -28,6 +28,7 @@ jest.mock('../utils/BackendUtils', () => ({
     subscribeCustomMessages: jest.fn(),
     initChanAcceptor: jest.fn(),
     supportsFlowLSP: jest.fn(() => true),
+    isLsps2Active: jest.fn(() => false),
     supportsLSPScustomMessage: () => true,
     supportsLSPS1rest: jest.fn(() => false),
     supportsLSPS1native: jest.fn(() => false),
@@ -1457,6 +1458,17 @@ describe('LSPStore.initFlowLSP', () => {
 
         expect(store.flow_error).toBe(true);
         expect(store.showLspSettings).toBe(true);
+        expect(store.initChannelAcceptor).toHaveBeenCalled();
+    });
+
+    it('skips Flow when the node gets JIT channels over LSPS2', () => {
+        jest.mocked(BackendUtils.isLsps2Active).mockReturnValueOnce(true);
+        const store = makeFlowStore('ldk-node');
+        const getLSPInfo = jest.spyOn(store, 'getLSPInfo');
+
+        store.initFlowLSP();
+
+        expect(getLSPInfo).not.toHaveBeenCalled();
         expect(store.initChannelAcceptor).toHaveBeenCalled();
     });
 

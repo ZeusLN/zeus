@@ -109,6 +109,29 @@ describe('ChannelsStore.getChannels', () => {
         expect(store.totalOutboundOffline).toBe(11243);
     });
 
+    it('checks receive amounts against the inbound the backend buys channels against', async () => {
+        jest.mocked(BackendUtils.getChannels).mockResolvedValue({
+            channels: [channel(0, 47650, true)],
+            receivable_inbound_sat: 43650
+        } as any);
+
+        await store.getChannels();
+
+        expect(store.totalInbound).toBe(47650);
+        expect(store.inboundForReceive).toBe(43650);
+    });
+
+    it('falls back to the total inbound when the backend reports none', async () => {
+        jest.mocked(BackendUtils.getChannels).mockResolvedValue({
+            channels: [channel(0, 47650, true)]
+        } as any);
+
+        await store.getChannels();
+
+        expect(store.receivableInbound).toBeNull();
+        expect(store.inboundForReceive).toBe(47650);
+    });
+
     it('keeps the previous totals visible while a refresh is in flight', async () => {
         jest.mocked(BackendUtils.getChannels).mockResolvedValue({
             channels: [channel(11243, 5000, true)]

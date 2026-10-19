@@ -464,7 +464,7 @@ export default class Receive extends React.Component<
             if (
                 this.state.lspIsActive &&
                 new BigNumber(getSatAmount(lnurl.maxWithdrawable / 1000)).gt(
-                    this.props.ChannelsStore.totalInbound
+                    this.props.ChannelsStore.inboundForReceive
                 )
             ) {
                 needInbound = true;
@@ -483,7 +483,7 @@ export default class Receive extends React.Component<
                 this.state.lspIsActive &&
                 getSatAmount(amount) !== 0 &&
                 new BigNumber(getSatAmount(amount)).gt(
-                    this.props.ChannelsStore.totalInbound
+                    this.props.ChannelsStore.inboundForReceive
                 )
             ) {
                 needInbound = true;
@@ -571,7 +571,7 @@ export default class Receive extends React.Component<
                     this.state.lspIsActive &&
                     getSatAmount(amount) !== 0 &&
                     new BigNumber(getSatAmount(amount)).gt(
-                        this.props.ChannelsStore.totalInbound
+                        this.props.ChannelsStore.inboundForReceive
                     )
                 ) {
                     needInbound = true;
@@ -592,7 +592,7 @@ export default class Receive extends React.Component<
                     this.state.lspIsActive &&
                     new BigNumber(
                         getSatAmount(lnurl.maxWithdrawable / 1000)
-                    ).gt(this.props.ChannelsStore.totalInbound)
+                    ).gt(this.props.ChannelsStore.inboundForReceive)
                 ) {
                     needInbound = true;
                 }
@@ -1178,12 +1178,23 @@ export default class Receive extends React.Component<
         } = this.state;
 
         const { showLspSettings } = LSPStore;
+        // the Flow explainer's minimum and wrapped-invoice walkthrough don't
+        // apply to LSPS2, whose LSP sets its own limits
+        const lsps2Explainer = needInbound && BackendUtils.isLsps2Active();
         // the fee the shown invoice was priced with, not LSPStore.zeroConfFee,
         // which a later fee request can replace while this invoice is shown
         const zeroConfFee = InvoicesStore.payment_request_lsp_fee ?? undefined;
-        const requiresChannelSetup =
+        // an LSPS2 fee always buys a channel, and the Flow explanations it
+        // would link to describe wrapped invoices. "Create a wrapped
+        // invoice" stays on Flow
+        const lsps2Fee =
             !!zeroConfFee &&
-            new BigNumber(zeroConfFee).gte(LSP_MIN_CHANNEL_OPEN_FEE_SATS);
+            !this.props.route.params?.forceLsp &&
+            BackendUtils.isLsps2Active();
+        const requiresChannelSetup =
+            lsps2Fee ||
+            (!!zeroConfFee &&
+                new BigNumber(zeroConfFee).gte(LSP_MIN_CHANNEL_OPEN_FEE_SATS));
 
         const {
             createUnifiedInvoice,
@@ -1829,13 +1840,10 @@ export default class Receive extends React.Component<
                                     (selectedIndex == 0 ||
                                         selectedIndex == 1) && (
                                         <TouchableOpacity
+                                            disabled={lsps2Fee}
                                             onPress={() =>
                                                 navigation.navigate(
-                                                    new BigNumber(
-                                                        zeroConfFee
-                                                    ).gte(
-                                                        LSP_MIN_CHANNEL_OPEN_FEE_SATS
-                                                    )
+                                                    requiresChannelSetup
                                                         ? 'LspExplanationFees'
                                                         : 'LspExplanationRouting'
                                                 )
@@ -1871,11 +1879,7 @@ export default class Receive extends React.Component<
                                                     }}
                                                 >
                                                     {localeString(
-                                                        new BigNumber(
-                                                            zeroConfFee
-                                                        ).gte(
-                                                            LSP_MIN_CHANNEL_OPEN_FEE_SATS
-                                                        )
+                                                        requiresChannelSetup
                                                             ? selectedIndex ===
                                                               0
                                                                 ? 'views.Receive.lspExplainerUnified'
@@ -1906,22 +1910,24 @@ export default class Receive extends React.Component<
                                                         )}
                                                     </Text>
                                                 )}
-                                                <Text
-                                                    style={{
-                                                        fontFamily:
-                                                            'Roboto-Medium',
-                                                        color: themeColor(
-                                                            'secondaryText'
-                                                        ),
-                                                        fontSize: 15,
-                                                        top: 5,
-                                                        textAlign: 'right'
-                                                    }}
-                                                >
-                                                    {localeString(
-                                                        'general.tapToLearnMore'
-                                                    )}
-                                                </Text>
+                                                {!lsps2Fee && (
+                                                    <Text
+                                                        style={{
+                                                            fontFamily:
+                                                                'Roboto-Medium',
+                                                            color: themeColor(
+                                                                'secondaryText'
+                                                            ),
+                                                            fontSize: 15,
+                                                            top: 5,
+                                                            textAlign: 'right'
+                                                        }}
+                                                    >
+                                                        {localeString(
+                                                            'general.tapToLearnMore'
+                                                        )}
+                                                    </Text>
+                                                )}
                                             </View>
                                         </TouchableOpacity>
                                     )}
@@ -2426,7 +2432,7 @@ export default class Receive extends React.Component<
                                                         ).gt(
                                                             this.props
                                                                 .ChannelsStore
-                                                                .totalInbound
+                                                                .inboundForReceive
                                                         )
                                                     ) {
                                                         needInbound = true;
@@ -2441,6 +2447,7 @@ export default class Receive extends React.Component<
 
                                             {needInbound && (
                                                 <TouchableOpacity
+                                                    disabled={lsps2Explainer}
                                                     onPress={() =>
                                                         navigation.navigate(
                                                             'LspExplanationFees'
@@ -2474,10 +2481,15 @@ export default class Receive extends React.Component<
                                                                 fontSize: 15
                                                             }}
                                                         >
-                                                            {this.props
-                                                                .ChannelsStore
-                                                                .channels
-                                                                .length === 0
+                                                            {lsps2Explainer
+                                                                ? localeString(
+                                                                      'views.Wallet.KeypadPane.lsps2Explainer'
+                                                                  )
+                                                                : this.props
+                                                                      .ChannelsStore
+                                                                      .channels
+                                                                      .length ===
+                                                                  0
                                                                 ? localeString(
                                                                       'views.Wallet.KeypadPane.lspExplainerFirstChannel'
                                                                   )
@@ -2485,23 +2497,25 @@ export default class Receive extends React.Component<
                                                                       'views.Wallet.KeypadPane.lspExplainer'
                                                                   )}
                                                         </Text>
-                                                        <Text
-                                                            style={{
-                                                                fontFamily:
-                                                                    'Roboto-Medium',
-                                                                color: themeColor(
-                                                                    'secondaryText'
-                                                                ),
-                                                                fontSize: 15,
-                                                                top: 5,
-                                                                textAlign:
-                                                                    'right'
-                                                            }}
-                                                        >
-                                                            {localeString(
-                                                                'general.tapToLearnMore'
-                                                            )}
-                                                        </Text>
+                                                        {!lsps2Explainer && (
+                                                            <Text
+                                                                style={{
+                                                                    fontFamily:
+                                                                        'Roboto-Medium',
+                                                                    color: themeColor(
+                                                                        'secondaryText'
+                                                                    ),
+                                                                    fontSize: 15,
+                                                                    top: 5,
+                                                                    textAlign:
+                                                                        'right'
+                                                                }}
+                                                            >
+                                                                {localeString(
+                                                                    'general.tapToLearnMore'
+                                                                )}
+                                                            </Text>
+                                                        )}
                                                     </View>
                                                 </TouchableOpacity>
                                             )}

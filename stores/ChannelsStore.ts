@@ -1,5 +1,5 @@
 const bitcoin = require('bitcoinjs-lib');
-import { action, observable, reaction, runInAction } from 'mobx';
+import { action, computed, observable, reaction, runInAction } from 'mobx';
 import BigNumber from 'bignumber.js';
 // leave as is, do not do tree-shaking
 import { chain } from 'lodash';
@@ -258,6 +258,9 @@ export default class ChannelsStore {
     // whether there is any capacity.
     @observable public hasChannelData = false;
     @observable public totalInbound = 0;
+    // set by backends that decide themselves when a new channel is bought
+    // (LDK Node with LSPS2), from the same figure they decide with
+    @observable public receivableInbound: number | null = null;
     @observable public totalOffline = 0;
     @observable public chanInfo: ChannelInfoIndex = {};
     @observable public channelsType = ChannelsType.Open;
@@ -431,6 +434,7 @@ export default class ChannelsStore {
         this.totalOutbound = 0;
         this.totalOutboundOffline = 0;
         this.totalInbound = 0;
+        this.receivableInbound = null;
         this.totalOffline = 0;
         this.channelsType = ChannelsType.Open;
         this.pendingHTLCs = [];
@@ -708,6 +712,12 @@ export default class ChannelsStore {
         return channels;
     };
 
+    // the inbound an invoice amount is checked against to tell whether
+    // receiving it needs a new channel
+    @computed public get inboundForReceive(): number {
+        return this.receivableInbound ?? this.totalInbound;
+    }
+
     @action
     private getChannelsError = () => {
         this.hasChannelData = false;
@@ -716,6 +726,7 @@ export default class ChannelsStore {
         this.totalOutbound = 0;
         this.totalOutboundOffline = 0;
         this.totalInbound = 0;
+        this.receivableInbound = null;
         this.totalOffline = 0;
         this.error = true;
         this.loading = false;
@@ -771,6 +782,8 @@ export default class ChannelsStore {
                 runInAction(() => {
                     this.largestChannelSats = largestChannelSats.toNumber();
                     this.totalInbound = totalInbound.toNumber();
+                    this.receivableInbound =
+                        data.receivable_inbound_sat ?? null;
                     this.totalOutbound = totalOutbound.toNumber();
                     this.totalOutboundOffline = totalOutboundOffline.toNumber();
                     this.totalOffline = totalOffline.toNumber();

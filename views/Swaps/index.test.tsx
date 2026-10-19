@@ -11,9 +11,11 @@ jest.mock('../../utils/AddressUtils', () => ({
     isValidBitcoinAddressForNode: (value: string) => value.startsWith('bc1'),
     isValidLightningPaymentRequest: (value: string) => value.startsWith('lnbc')
 }));
+const mockIsLsps2Active = jest.fn(() => false);
 jest.mock('../../utils/BackendUtils', () => ({
     supportsFlowLSP: () => true,
-    supportsOnchainSends: () => true
+    supportsOnchainSends: () => true,
+    isLsps2Active: () => mockIsLsps2Active()
 }));
 jest.mock('../../utils/FontUtils', () => ({ font: () => 'font' }));
 jest.mock('../../utils/LocaleUtils', () => ({
@@ -23,6 +25,9 @@ jest.mock('../../utils/NavigationUtils', () => ({
     reAuthNavigation: jest.fn()
 }));
 jest.mock('../../utils/ThemeUtils', () => ({ themeColor: () => '#000' }));
+jest.mock('../../utils/UnitsUtils', () => ({
+    numberWithCommas: (x: number) => `${x}`
+}));
 // the real SwapUtils touches the filesystem and save dialog for the rescue
 // key export; neither is exercised here
 jest.mock('react-native-fs', () => ({}));
@@ -74,12 +79,20 @@ const SUBMARINE_AMOUNTS = {
     serviceFeeSats: 100
 };
 
+// what the last generate() wrote to the screen's state
+let swapSetState: jest.Mock;
+
 // Brings the screen up in `state` and presses the button titled `title`;
-// returns what InvoicesStore was asked for.
-const generate = async (state: any, title: string) => {
+// returns what InvoicesStore was asked for, if anything.
+const generate = async (
+    state: any,
+    title: string,
+    inboundForReceive = 1_000_000
+) => {
     const createUnifiedInvoice = jest.fn(async (_: any) => ({
         paymentRequest: 'lnbc1'
     }));
+    swapSetState = jest.fn();
     const view = new Swap({
         navigation: { navigate: jest.fn() },
         route: { params: {} },
@@ -95,9 +108,10 @@ const generate = async (state: any, title: string) => {
         // the global setting stays on throughout
         SettingsStore: { settings: { enableLSP: true } },
         InvoicesStore: { createUnifiedInvoice, onChainAddress: ADDRESS },
-        LSPStore: {}
+        LSPStore: {},
+        ChannelsStore: { inboundForReceive }
     } as any);
-    jest.spyOn(view, 'setState').mockImplementation(() => {});
+    jest.spyOn(view, 'setState').mockImplementation(swapSetState);
     view.state = { ...view.state, ...SUBMARINE_AMOUNTS, ...state };
 
     const find = (node: any): any =>
@@ -107,11 +121,13 @@ const generate = async (state: any, title: string) => {
                   .map(find)
                   .find(Boolean);
     await find(view.render()).props.onPress();
-    return createUnifiedInvoice.mock.calls[0][0];
+    return createUnifiedInvoice.mock.calls[0]?.[0];
 };
 
 describe('Swaps: Generate invoice LSP decision', () => {
     const lsp = (lspIsActive: boolean) => ({ useLsp: lspIsActive });
+
+    afterEach(() => mockIsLsps2Active.mockReturnValue(false));
 
     it('uses the Flow LSP when the LSP switch is shown and on', async () => {
         expect(
@@ -138,6 +154,64 @@ describe('Swaps: Generate invoice LSP decision', () => {
                 'views.Swaps.generateInvoice'
             )
         ).toMatchObject(lsp(false));
+    });
+
+    it('skips the LSP when the node gets JIT channels over LSPS2', async () => {
+        // no LSPS2 fee can be shown before the swap
+        mockIsLsps2Active.mockReturnValue(true);
+        expect(
+            await generate(
+                { enableLSP: true, flowLspNotConfigured: false },
+                'views.Swaps.generateInvoice'
+            )
+        ).toMatchObject(lsp(false));
+    });
+
+    describe('when the node gets JIT channels over LSPS2', () => {
+        const flowOn = { enableLSP: true, flowLspNotConfigured: false };
+
+        beforeEach(() => mockIsLsps2Active.mockReturnValue(true));
+
+        // 100,000 sats to receive
+        it('refuses a swap the wallet cannot receive, and says how much it can', async () => {
+            const request = await generate(
+                flowOn,
+                'views.Swaps.generateInvoice',
+                43650
+            );
+
+            expect(request).toBeUndefined();
+            expect(swapSetState).toHaveBeenCalledWith({
+                error: 'views.Swaps.notEnoughInbound',
+                fetchingInvoice: false
+            });
+        });
+
+        it('creates the invoice when the wallet can receive it', async () => {
+            expect(
+                await generate(flowOn, 'views.Swaps.generateInvoice', 100000)
+            ).toMatchObject(lsp(false));
+        });
+
+        it('leaves the check out with the LSP switch off', async () => {
+            expect(
+                await generate(
+                    { enableLSP: false, flowLspNotConfigured: false },
+                    'views.Swaps.generateInvoice',
+                    0
+                )
+            ).toMatchObject(lsp(false));
+        });
+    });
+
+    it('does not check inbound for Flow, which opens the channel', async () => {
+        expect(
+            await generate(
+                { enableLSP: true, flowLspNotConfigured: false },
+                'views.Swaps.generateInvoice',
+                0
+            )
+        ).toMatchObject(lsp(true));
     });
 
     it('skips the LSP when only the on-chain address is used', async () => {

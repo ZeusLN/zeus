@@ -204,11 +204,14 @@ export default class KeypadPane extends React.PureComponent<
             !this.state.flowLspNotConfigured &&
             newAmount !== '0' &&
             new BigNumber(getSatAmount(newAmount)).gt(
-                this.props.ChannelsStore!.totalInbound
+                this.props.ChannelsStore!.inboundForReceive
             )
         ) {
             needInbound = true;
-            if (new BigNumber(getSatAmount(newAmount)).lt(50000)) {
+            if (
+                !BackendUtils.isLsps2Active() &&
+                new BigNumber(getSatAmount(newAmount)).lt(50000)
+            ) {
                 belowMinAmount = true;
             }
         }
@@ -261,11 +264,14 @@ export default class KeypadPane extends React.PureComponent<
             !this.state.flowLspNotConfigured &&
             newAmount !== '0' &&
             new BigNumber(getSatAmount(newAmount)).gt(
-                this.props.ChannelsStore!.totalInbound
+                this.props.ChannelsStore!.inboundForReceive
             )
         ) {
             needInbound = true;
-            if (new BigNumber(getSatAmount(newAmount)).lt(50000)) {
+            if (
+                !BackendUtils.isLsps2Active() &&
+                new BigNumber(getSatAmount(newAmount)).lt(50000)
+            ) {
                 belowMinAmount = true;
             }
         }
@@ -335,6 +341,9 @@ export default class KeypadPane extends React.PureComponent<
         const { isSyncing } = SyncStore!;
 
         const noMints = CashuStore?.mintUrls.length === 0;
+        // the Flow explainer's minimum and wrapped-invoice walkthrough don't
+        // apply to LSPS2, whose LSP sets its own limits
+        const lsps2Explainer = needInbound && BackendUtils.isLsps2Active();
 
         return (
             <>
@@ -343,6 +352,7 @@ export default class KeypadPane extends React.PureComponent<
 
                     {!ecashMode && needInbound && (
                         <TouchableOpacity
+                            disabled={lsps2Explainer}
                             onPress={() =>
                                 navigation.navigate('LspExplanationFees')
                             }
@@ -366,8 +376,12 @@ export default class KeypadPane extends React.PureComponent<
                                         fontSize: 15
                                     }}
                                 >
-                                    {this.props.ChannelsStore?.channels
-                                        .length === 0
+                                    {lsps2Explainer
+                                        ? localeString(
+                                              'views.Wallet.KeypadPane.lsps2Explainer'
+                                          )
+                                        : this.props.ChannelsStore?.channels
+                                              .length === 0
                                         ? localeString(
                                               'views.Wallet.KeypadPane.lspExplainerFirstChannel'
                                           )
@@ -375,17 +389,19 @@ export default class KeypadPane extends React.PureComponent<
                                               'views.Wallet.KeypadPane.lspExplainer'
                                           )}
                                 </Text>
-                                <Text
-                                    style={{
-                                        fontFamily: 'Roboto-Medium',
-                                        color: themeColor('secondaryText'),
-                                        fontSize: 15,
-                                        top: 5,
-                                        textAlign: 'right'
-                                    }}
-                                >
-                                    {localeString('general.tapToLearnMore')}
-                                </Text>
+                                {!lsps2Explainer && (
+                                    <Text
+                                        style={{
+                                            fontFamily: 'Roboto-Medium',
+                                            color: themeColor('secondaryText'),
+                                            fontSize: 15,
+                                            top: 5,
+                                            textAlign: 'right'
+                                        }}
+                                    >
+                                        {localeString('general.tapToLearnMore')}
+                                    </Text>
+                                )}
                             </View>
                         </TouchableOpacity>
                     )}
