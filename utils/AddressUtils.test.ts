@@ -252,6 +252,37 @@ describe('AddressUtils', () => {
                 clinkNoffer:
                     'noffer1qqsx7zhgr59uem4khsejw3w43hzpqfd23xz6kdpst40zsfh89yqkawcprpmhxue69uhhqctjwss8w6t5dqsr2dnz'
             });
+
+            // CREQ payment requests
+            expect(
+                AddressUtils.processBIP21Uri('bitcoin:?creq=creqAoWFhZA')
+            ).toEqual({
+                value: '',
+                creq: 'creqAoWFhZA'
+            });
+
+            // CREQ with lightning (unified)
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'bitcoin:?lightning=lnbc1234&creq=creqAoWFhZA'
+                )
+            ).toEqual({
+                value: '',
+                lightning: 'lnbc1234',
+                creq: 'creqAoWFhZA'
+            });
+
+            // CREQ with address and lightning (full unified)
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'bitcoin:bc1qtest?amount=0.001&lightning=lnbc1234&creq=creqAoWFhZA'
+                )
+            ).toEqual({
+                value: 'bc1qtest',
+                satAmount: '100000',
+                lightning: 'lnbc1234',
+                creq: 'creqAoWFhZA'
+            });
         });
     });
 

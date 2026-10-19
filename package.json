@@ -11,13 +11,14 @@
       "<rootDir>/utils/BigNumberConfig.ts"
     ],
     "moduleNameMapper": {
-      "^@react-native/assets-registry/registry$": "react-native/src/asset-registry"
+      "^@react-native/assets-registry/registry$": "react-native/src/asset-registry",
+      "^cborg$": "<rootDir>/node_modules/cborg/cborg.js"
     },
     "watchPathIgnorePatterns": [
       "<rootDir>/node_modules"
     ],
     "transformIgnorePatterns": [
-      "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes|react-native-nfc-manager|dateformat|nostr-tools|@noble|@scure|uuid|uint8array-tools)/)"
+      "node_modules/(?!(react-native|@react-native|react-native-blob-util|react-native-randombytes|react-native-nfc-manager|dateformat|nostr-tools|@noble|@scure|uuid|uint8array-tools|cborg)/)"
     ],
     "testPathIgnorePatterns": [
       "zeus_modules"
@@ -95,6 +96,7 @@
     "bitcoinjs-lib": "6.1.5",
     "bs58check": "4.0.0",
     "buffer": "5.7.1",
+    "cborg": "5.1.1",
     "create-hash": "1.2.0",
     "crypto-js": "4.2.0",
     "dateformat": "5.0.4",

@@ -129,6 +129,11 @@ jest.mock('./CashuUtils', () => {
     };
 });
 
+jest.mock('./CREQUtils', () => ({
+    isCREQ: (v: string) => v.startsWith('creqA'),
+    decodeCREQ: (v: string) => ({ amount: 100, unit: 'sat', _raw: v })
+}));
+
 const mockProcessLndConnectUrl = jest.fn();
 const mockProcessCLNRestConnectUrl = jest.fn();
 const mockProcessLncUrl = jest.fn();
@@ -3191,6 +3196,60 @@ describe('handleAnything', () => {
             mockProcessBIP21Uri.mockReturnValue({ value: request });
 
             await expect(handleAnything(request)).rejects.toThrow();
+        });
+    });
+
+    describe('CREQ payment requests', () => {
+        it('should route standalone CREQ to CREQPayment', async () => {
+            const creq = 'creqAoWFhZA';
+            mockProcessBIP21Uri.mockReturnValue({ value: creq });
+
+            const result = await handleAnything(creq);
+            expect(result).toEqual([
+                'CREQPayment',
+                {
+                    creqParams: expect.objectContaining({ amount: 100 }),
+                    creqString: creq
+                }
+            ]);
+        });
+
+        it('should route BIP-21 with creq-only to CREQPayment', async () => {
+            const creq = 'creqAoWFhZA';
+            mockProcessBIP21Uri.mockReturnValue({
+                value: '',
+                creq
+            });
+
+            const result = await handleAnything('bitcoin:?creq=' + creq);
+            expect(result).toEqual([
+                'CREQPayment',
+                {
+                    creqParams: expect.objectContaining({ amount: 100 }),
+                    creqString: creq
+                }
+            ]);
+        });
+
+        it('should route BIP-21 with creq + lightning to ChoosePaymentMethod', async () => {
+            const creq = 'creqAoWFhZA';
+            mockProcessBIP21Uri.mockReturnValue({
+                value: '',
+                lightning: 'lnbc1234',
+                creq
+            });
+
+            const result = await handleAnything(
+                'bitcoin:?lightning=lnbc1234&creq=' + creq
+            );
+            expect(result).toEqual([
+                'ChoosePaymentMethod',
+                expect.objectContaining({
+                    lightning: 'lnbc1234',
+                    creqParams: expect.objectContaining({ amount: 100 }),
+                    creqString: creq
+                })
+            ]);
         });
     });
 });

@@ -93,7 +93,7 @@ export const CUSTODIAL_LNDHUBS = [
 ];
 
 const bitcoinQrParser = (input: string, prefix: string) => {
-    let satAmount, lightning, offer, clinkNoffer;
+    let satAmount, lightning, offer, clinkNoffer, creq;
     const btcAddressAndParams = input.split(prefix)[1];
     const [btcAddress, params] = btcAddressAndParams.split('?');
 
@@ -133,12 +133,16 @@ const bitcoinQrParser = (input: string, prefix: string) => {
         clinkNoffer = result.noffer || result.NOFFER;
     }
 
-    return [value, satAmount, lightning, offer, clinkNoffer];
+    if (result.creq || result.CREQ) {
+        creq = result.creq || result.CREQ;
+    }
+
+    return [value, satAmount, lightning, offer, clinkNoffer, creq];
 };
 
 class AddressUtils {
     processBIP21Uri = (input: string) => {
-        let value, satAmount, lightning, offer, clinkNoffer;
+        let value, satAmount, lightning, offer, clinkNoffer, creq;
 
         // handle addresses prefixed with 'bitcoin:' and
         // payment requests prefixed with 'lightning:'
@@ -150,7 +154,8 @@ class AddressUtils {
                 parsedSatAmount,
                 parsedLightning,
                 parsedOffer,
-                parsedClinkNoffer
+                parsedClinkNoffer,
+                parsedCreq
             ] = bitcoinQrParser(
                 input,
                 input.includes('BITCOIN:') ? 'BITCOIN:' : 'bitcoin:'
@@ -172,6 +177,10 @@ class AddressUtils {
             if (parsedClinkNoffer) {
                 clinkNoffer = parsedClinkNoffer;
             }
+
+            if (parsedCreq) {
+                creq = parsedCreq;
+            }
         } else if (input.includes('lightning:')) {
             value = input.split('lightning:')[1];
         } else if (input.includes('LIGHTNING:')) {
@@ -182,7 +191,7 @@ class AddressUtils {
             value = input;
         }
 
-        return { value, satAmount, lightning, offer, clinkNoffer };
+        return { value, satAmount, lightning, offer, clinkNoffer, creq };
     };
 
     // Returns the BOLT 12 offer from a bare lno1... or a Bitcoin URI
