@@ -146,6 +146,34 @@ describe('doTorRequest errors', () => {
         expect(isPaymentRefusedAsDuplicate(error)).toBe(true);
     });
 
+    it.each([
+        ['a 502 HTML page', 502, '<html>Bad Gateway</html>'],
+        ['a 504 with an empty body', 504, ''],
+        [
+            'a 503 from envoy',
+            503,
+            'upstream connect error or disconnect/reset before headers'
+        ],
+        ['a JSON body without a gRPC code', 503, '{"message":"no upstream"}']
+    ])(
+        'does not tag %s from a proxy as a response from the node',
+        async (_label, status_code, body) => {
+            (RnTor.httpPost as jest.Mock).mockResolvedValue({
+                status_code,
+                body
+            });
+
+            const error = await doTorRequest(
+                'https://node.onion:8080/v2/router/send',
+                RequestMethod.POST,
+                '{}'
+            ).catch((e: any) => e);
+
+            expect(error).toBeInstanceOf(Error);
+            expect(isNodeResponse(error)).toBe(false);
+        }
+    );
+
     it('does not tag a transport failure', async () => {
         (RnTor.httpPost as jest.Mock).mockResolvedValue({
             error: 'circuit closed'

@@ -14,7 +14,7 @@ import { toLnrpcAddressType } from './../utils/LndUtils';
 import {
     findPaymentByHash,
     grpcErrorCode,
-    markNodeResponded
+    markRestErrorResponse
 } from './../utils/PaymentLookupUtils';
 import { Hash as sha256Hash } from 'fast-sha256';
 import BigNumber from 'bignumber.js';
@@ -109,13 +109,11 @@ export default class LND {
                         }
                         return response.json();
                     } else {
-                        // an error status means the request was processed,
-                        // not left in transit
                         let grpcCode: unknown;
                         try {
                             const errorInfo = response.json();
                             grpcCode = grpcErrorCode(errorInfo);
-                            throw markNodeResponded(
+                            throw markRestErrorResponse(
                                 new Error(
                                     (errorInfo.error &&
                                         errorInfo.error.message) ||
@@ -129,12 +127,12 @@ export default class LND {
                                 response.data &&
                                 typeof response.data === 'string'
                             ) {
-                                throw markNodeResponded(
+                                throw markRestErrorResponse(
                                     new Error(response.data),
                                     grpcCode
                                 );
                             } else {
-                                throw markNodeResponded(
+                                throw markRestErrorResponse(
                                     new Error(
                                         localeString(
                                             'backends.LND.restReq.connectionError'

@@ -657,6 +657,52 @@ describe('LND.restReq errors', () => {
         expect(isPaymentRefusedAsDuplicate(error)).toBe(true);
     });
 
+    it.each([
+        ['a 502 HTML page', 502, '<html>Bad Gateway</html>'],
+        ['a 504 with an empty body', 504, ''],
+        [
+            'a 503 from envoy',
+            503,
+            'upstream connect error or disconnect/reset before headers'
+        ]
+    ])(
+        'does not tag %s from a proxy as a response from the node',
+        async (_label, status, body) => {
+            fetchResolving({
+                info: () => ({ status }),
+                json: () => JSON.parse(body),
+                data: body
+            });
+
+            const error = await new LND()
+                .restReq({}, 'https://node:8080/v2/router/send', 'POST', {
+                    id: `proxy-${status}`
+                })
+                .catch((e: any) => e);
+
+            expect(error).toBeInstanceOf(Error);
+            expect(isNodeResponse(error)).toBe(false);
+            expect(isPaymentRefusedAsDuplicate(error)).toBe(false);
+        }
+    );
+
+    it('does not tag a JSON error body without a gRPC code', async () => {
+        const body = JSON.stringify({ message: 'no healthy upstream' });
+        fetchResolving({
+            info: () => ({ status: 503 }),
+            json: () => JSON.parse(body),
+            data: body
+        });
+
+        const error = await new LND()
+            .restReq({}, 'https://node:8080/v2/router/send', 'POST', {
+                id: 'json-no-code'
+            })
+            .catch((e: any) => e);
+
+        expect(isNodeResponse(error)).toBe(false);
+    });
+
     it('does not tag a transport failure', async () => {
         (ReactNativeBlobUtil.config as jest.Mock).mockReturnValue({
             fetch: jest.fn().mockRejectedValue(new Error('connection lost'))

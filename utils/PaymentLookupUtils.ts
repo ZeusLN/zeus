@@ -20,8 +20,8 @@ export const paymentLookupInconclusiveError = () => {
 export const isPaymentLookupInconclusive = (error: unknown): boolean =>
     (error as Error)?.name === INCONCLUSIVE_ERROR_NAME;
 
-// A send request rejected by the node itself (an HTTP error status, or an
-// in-process call on embedded LND) was processed, not left in transit. LND
+// A send request rejected by the node itself (a gRPC error from LND's REST
+// gateway, or an in-process call on embedded LND) was processed, not left in transit. LND
 // records a payment before dispatching any HTLC, so after such a rejection
 // one lookup finding no record shows the payment was never sent; a
 // transport failure (timeout, dropped connection) needs repeated answers
@@ -56,6 +56,19 @@ export const grpcErrorCode = (body: unknown): unknown => {
     }
     return code;
 };
+
+// Tags an LND REST error status as the node's answer only when the body
+// carries a gRPC status code. LND's REST gateway puts one in every error it
+// returns. A reverse proxy in front of LND (nginx, envoy, Cloudflare)
+// answers 502/503/504 with its own body and no code, while the request may
+// still be on its way to LND, so that error stays a transport failure.
+export const markRestErrorResponse = (
+    error: Error,
+    grpcCode: unknown
+): unknown =>
+    grpcCode === undefined || grpcCode === null
+        ? error
+        : markNodeResponded(error, grpcCode);
 
 // LND refuses a send with AlreadyExists when it already has a payment for
 // the hash (already paid, still in flight, or being created), before any

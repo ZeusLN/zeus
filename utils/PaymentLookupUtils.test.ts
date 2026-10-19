@@ -6,6 +6,7 @@ import {
     isPaymentLookupInconclusive,
     isPaymentRefusedAsDuplicate,
     markNodeResponded,
+    markRestErrorResponse,
     paymentCreationTimeMs
 } from './PaymentLookupUtils';
 
@@ -178,6 +179,29 @@ describe('markNodeResponded', () => {
         expect(isNodeResponse(new Error('Request timeout'))).toBe(false);
         expect(isNodeResponse('connection closed')).toBe(false);
         expect(isNodeResponse(undefined)).toBe(false);
+    });
+});
+
+describe('markRestErrorResponse', () => {
+    it('tags an error carrying a gRPC code', () => {
+        const error = markRestErrorResponse(new Error('invoice expired'), 2);
+        expect(isNodeResponse(error)).toBe(true);
+        expect((error as any).grpcCode).toBe(2);
+    });
+
+    it('tags gRPC code 0 too', () => {
+        expect(isNodeResponse(markRestErrorResponse(new Error('x'), 0))).toBe(
+            true
+        );
+    });
+
+    it('leaves an error without a gRPC code untagged', () => {
+        const error = new Error('<html>Bad Gateway</html>');
+        expect(markRestErrorResponse(error, undefined)).toBe(error);
+        expect(isNodeResponse(error)).toBe(false);
+        expect(
+            isNodeResponse(markRestErrorResponse(new Error('x'), null))
+        ).toBe(false);
     });
 });
 
