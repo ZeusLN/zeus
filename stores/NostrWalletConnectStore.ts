@@ -2612,11 +2612,16 @@ export default class NostrWalletConnectStore {
             );
         }
 
-        // the fee cap is limited to the budget left after the amount
-        const feeLimitSats = connection.feeLimitSatsForPayment(
-            amountSats,
-            PAYMENT_FEE_LIMIT_SATS
-        );
+        // the fee cap is limited to the budget left after the amount.
+        // Backends that ignore fee_limit_sat (LndHub) keep the full cap and
+        // hold none: a cap they never apply would only tie up the budget.
+        const enforcesFeeLimit = !!BackendUtils.supportsCustomFeeLimit();
+        const feeLimitSats = enforcesFeeLimit
+            ? connection.feeLimitSatsForPayment(
+                  amountSats,
+                  PAYMENT_FEE_LIMIT_SATS
+              )
+            : PAYMENT_FEE_LIMIT_SATS;
 
         this.transactionsStore.reset();
         this.transactionsStore.sendPayment({
@@ -2646,7 +2651,7 @@ export default class NostrWalletConnectStore {
                 rawInvoice: request.invoice,
                 connection,
                 amountSats,
-                feeLimitSats,
+                feeLimitSats: enforcesFeeLimit ? feeLimitSats : undefined,
                 payment_source: 'lightning',
                 payment: inTransitResult.payment,
                 paymentHash: paymentHash || inTransitResult.payment?.paymentHash

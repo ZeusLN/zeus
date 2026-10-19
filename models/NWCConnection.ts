@@ -551,10 +551,11 @@ export default class NWCConnection extends BaseModel {
      * Validates spendable budget against the invoice amount only.
      *
      * Routing fees are unknown until the payment settles, so they are not
-     * required here. Instead the fee cap passed to the backend comes from
-     * feeLimitSatsForPayment, which limits it to the budget left after the
-     * amount, and a pending payment holds that cap until it resolves. Debit
-     * happens on finalize/reconcile for the settled amount plus fee.
+     * required here. Instead, on backends that enforce a fee limit, the fee
+     * cap passed to the backend comes from feeLimitSatsForPayment, which
+     * limits it to the budget left after the amount, and a pending payment
+     * holds that cap until it resolves. Debit happens on finalize/reconcile
+     * for the settled amount plus fee.
      *
      * Requiring amount + fee_limit up front would reject payments when the
      * remaining budget is in [amount, amount + fee_limit); those are still

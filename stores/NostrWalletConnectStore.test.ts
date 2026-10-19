@@ -8,6 +8,7 @@ jest.mock('../utils/BackendUtils', () => ({
         supportsNodeInfo: jest.fn(),
         supportsCashuWallet: jest.fn(),
         supportsMessageSigning: jest.fn(),
+        supportsCustomFeeLimit: jest.fn(),
         decodePaymentRequest: jest.fn()
     }
 }));
@@ -319,6 +320,7 @@ function installCollaboratorDefaults() {
     (BackendUtils.supportsNodeInfo as jest.Mock).mockReturnValue(false);
     (BackendUtils.supportsCashuWallet as jest.Mock).mockReturnValue(false);
     (BackendUtils.supportsMessageSigning as jest.Mock).mockReturnValue(true);
+    (BackendUtils.supportsCustomFeeLimit as jest.Mock).mockReturnValue(true);
     (NWCWalletService as unknown as jest.Mock).mockImplementation(
         ({ relayUrls }: { relayUrls: string[] }) => relayFor(relayUrls[0])
     );
@@ -2664,6 +2666,44 @@ describe('NostrWalletConnectStore handleLightningPayInvoice fee cap', () => {
 
         expect(sentFeeLimits(transactionsStore)).toEqual(['1000']);
         expect(response.error?.message).toBe('No route found.');
+    });
+
+    it('sends the full fee cap and holds none when the backend ignores fee limits', async () => {
+        (BackendUtils.supportsCustomFeeLimit as jest.Mock).mockReturnValue(
+            false
+        );
+        jest.spyOn(
+            NostrConnectUtils,
+            'resolveLightningPaymentInTransit'
+        ).mockReturnValue({ inTransit: true } as any);
+        const { store, transactionsStore } = buildHandlerStore();
+        const connection = addConnection(store, { maxAmountSats: 5400 });
+
+        await (store as any).handleLightningPayInvoice(connection, {
+            invoice: 'lnbc1fee-cap-a'
+        });
+
+        expect(sentFeeLimits(transactionsStore)).toEqual(['1000']);
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.activity[0].feeLimitSats).toBeUndefined();
+        expect(connection.pendingSpendSats).toBe(5000);
+    });
+
+    it('leaves the error unchanged when the backend ignores fee limits', async () => {
+        (BackendUtils.supportsCustomFeeLimit as jest.Mock).mockReturnValue(
+            false
+        );
+        const { store, transactionsStore } = buildHandlerStore();
+        transactionsStore.payment_error = 'No route found.';
+        const connection = addConnection(store, { maxAmountSats: 5400 });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice: 'lnbc1fee-cap-a' }
+        );
+
+        expect(response.error?.message).toBe('No route found.');
+        expect(connection.activity[0].error).toBe('No route found.');
     });
 
     it('leaves an invoice-state error unchanged when the fee cap was reduced', async () => {
