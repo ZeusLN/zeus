@@ -55,18 +55,21 @@ const renderView = async ({
     satAmount = '2500',
     feeLimitSat = '25',
     timeoutSeconds = '45',
-    paymentInFlight = false
+    paymentInFlight = false,
+    paymentInFlightConfirmed = false
 }: {
     decodedOffer?: DecodedOffer;
     satAmount?: string;
     feeLimitSat?: string;
     timeoutSeconds?: string;
     paymentInFlight?: boolean;
+    paymentInFlightConfirmed?: boolean;
 } = {}) => {
     // sendPayment takes the in-flight guard like the real store does, so a
     // second tap sees paymentInFlight
     const TransactionsStore: any = {
         paymentInFlight,
+        paymentInFlightConfirmed,
         sendPayment: jest.fn(() => {
             TransactionsStore.paymentInFlight = true;
         })
@@ -305,5 +308,43 @@ describe('Bolt12OfferReview confirmation', () => {
         // the tap does nothing and the expired message does not appear (#5063)
         expect(payControl().disabled).toBe(false);
         expect(expiredMessageShown()).toBe(false);
+    });
+});
+
+describe('Bolt12OfferReview payment in flight notice', () => {
+    it('explains the disabled pay control while an earlier payment is checked', async () => {
+        await renderView({ paymentInFlight: true });
+
+        expect(
+            screen.getByText('components.PaymentInFlightNotice.checking')
+        ).toBeOnTheScreen();
+    });
+
+    it('offers Pay anyway once the node reports the earlier payment in flight', async () => {
+        await renderView({
+            paymentInFlight: true,
+            paymentInFlightConfirmed: true
+        });
+
+        expect(
+            screen.getByText('components.PaymentInFlightNotice.pending')
+        ).toBeOnTheScreen();
+        expect(
+            screen.container
+                .queryAll((n) => n.type === 'Button')
+                .some(
+                    (n) =>
+                        n.props.title ===
+                        'components.PaymentInFlightNotice.payAnyway'
+                )
+        ).toBe(true);
+    });
+
+    it('shows no notice when no payment is in flight', async () => {
+        await renderView();
+
+        expect(
+            screen.queryByText('components.PaymentInFlightNotice.checking')
+        ).not.toBeOnTheScreen();
     });
 });

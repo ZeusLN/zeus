@@ -12,7 +12,12 @@ jest.mock('react-native-fs', () => ({
     DocumentDirectoryPath: '/tmp'
 }));
 
-import { isOnionHttpsUrl } from './TorUtils';
+import { RnTor } from 'react-native-nitro-tor';
+import { doTorRequest, isOnionHttpsUrl, RequestMethod } from './TorUtils';
+import {
+    isNodeResponse,
+    isPaymentRefusedAsDuplicate
+} from './PaymentLookupUtils';
 
 describe('TorUtils', () => {
     describe('isOnionHttpsUrl', () => {
@@ -96,5 +101,106 @@ describe('TorUtils', () => {
             expect(isOnionHttpsUrl('xyz.onion')).toBe(false); // no scheme
             expect(isOnionHttpsUrl('://xyz.onion')).toBe(false);
         });
+    });
+});
+
+describe('doTorRequest errors', () => {
+    beforeEach(() => {
+        (RnTor.startTorIfNotRunning as jest.Mock).mockResolvedValue({
+            is_success: true
+        });
+    });
+
+    it('tags an error status as a response from the node', async () => {
+        (RnTor.httpPost as jest.Mock).mockResolvedValue({
+            status_code: 500,
+            body: JSON.stringify({ code: 2, message: 'invoice expired' })
+        });
+
+        const error = await doTorRequest(
+            'https://node.onion:8080/v2/router/send',
+            RequestMethod.POST,
+            '{}'
+        ).catch((e: any) => e);
+
+        expect(error.message).toBe('invoice expired');
+        expect(isNodeResponse(error)).toBe(true);
+        expect(isPaymentRefusedAsDuplicate(error)).toBe(false);
+    });
+
+    it("tags a stream's AlreadyExists error chunk as a duplicate refusal", async () => {
+        (RnTor.httpPost as jest.Mock).mockResolvedValue({
+            status_code: 409,
+            body: JSON.stringify({
+                error: { code: 6, message: 'invoice is already paid' }
+            })
+        });
+
+        const error = await doTorRequest(
+            'https://node.onion:8080/v2/router/send',
+            RequestMethod.POST,
+            '{}'
+        ).catch((e: any) => e);
+
+        expect(error.message).toBe('invoice is already paid');
+        expect(isPaymentRefusedAsDuplicate(error)).toBe(true);
+    });
+
+    it.each([
+        ['a 502 HTML page', 502, '<html>Bad Gateway</html>'],
+        ['a 504 with an empty body', 504, ''],
+        [
+            'a 503 from envoy',
+            503,
+            'upstream connect error or disconnect/reset before headers'
+        ],
+        ['a JSON body without a gRPC code', 503, '{"message":"no upstream"}'],
+        [
+            'a 502 JSON body with an HTTP status code',
+            502,
+            '{"code":502,"message":"Bad Gateway"}'
+        ],
+        [
+            'a 503 JSON error chunk with an HTTP status code',
+            503,
+            '{"error":{"code":503,"message":"Service Unavailable"}}'
+        ],
+        [
+            'a 504 JSON body with a string code',
+            504,
+            '{"code":"UPSTREAM_TIMEOUT","message":"upstream timed out"}'
+        ]
+    ])(
+        'does not tag %s from a proxy as a response from the node',
+        async (_label, status_code, body) => {
+            (RnTor.httpPost as jest.Mock).mockResolvedValue({
+                status_code,
+                body
+            });
+
+            const error = await doTorRequest(
+                'https://node.onion:8080/v2/router/send',
+                RequestMethod.POST,
+                '{}'
+            ).catch((e: any) => e);
+
+            expect(error).toBeInstanceOf(Error);
+            expect(isNodeResponse(error)).toBe(false);
+        }
+    );
+
+    it('does not tag a transport failure', async () => {
+        (RnTor.httpPost as jest.Mock).mockResolvedValue({
+            error: 'circuit closed'
+        });
+
+        const error = await doTorRequest(
+            'https://node.onion:8080/v2/router/send',
+            RequestMethod.POST,
+            '{}'
+        ).catch((e: any) => e);
+
+        expect(error.message).toBe('circuit closed');
+        expect(isNodeResponse(error)).toBe(false);
     });
 });

@@ -13,9 +13,14 @@ jest.mock('../utils/TorUtils', () => ({
     RequestMethod: {}
 }));
 
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import LND from './LND';
 import { settingsStore } from '../stores/Stores';
 import { localeString } from '../utils/LocaleUtils';
+import {
+    isNodeResponse,
+    isPaymentRefusedAsDuplicate
+} from '../utils/PaymentLookupUtils';
 
 describe('LND.getURL', () => {
     const lnd = new LND();
@@ -555,5 +560,175 @@ describe('LND WebSocket calls whose socket closes', () => {
         });
         expect(() => listeners.close()).not.toThrow();
         await expect(outcome).resolves.toEqual(psbtFund);
+    });
+});
+
+describe('LND.lookupPayment', () => {
+    const HASH = 'ab'.repeat(32);
+
+    const lndWithPages = (...pages: any[]) => {
+        const lnd = new LND();
+        const getRequest = jest.fn();
+        pages.forEach((p) => getRequest.mockResolvedValueOnce(p));
+        (lnd as any).getRequest = getRequest;
+        return { lnd, getRequest };
+    };
+
+    it('scans ascending from creation_date_start, then the newest page', async () => {
+        const { lnd, getRequest } = lndWithPages(
+            { payments: [] },
+            { payments: [] }
+        );
+
+        await expect(
+            lnd.lookupPayment({
+                payment_hash: HASH,
+                creation_date_start: 1700000000
+            })
+        ).resolves.toBeNull();
+        expect(getRequest.mock.calls.map(([route]) => route)).toEqual([
+            '/v1/payments?include_incomplete=true&max_payments=50&reversed=false&creation_date_start=1700000000',
+            '/v1/payments?include_incomplete=true&max_payments=50&reversed=true'
+        ]);
+    });
+
+    it('matches the payment hash case-insensitively', async () => {
+        const target = {
+            payment_hash: HASH.toUpperCase(),
+            status: 'SUCCEEDED'
+        };
+        const { lnd, getRequest } = lndWithPages({ payments: [target] });
+
+        await expect(
+            lnd.lookupPayment({
+                payment_hash: HASH,
+                creation_date_start: 1700000000
+            })
+        ).resolves.toBe(target);
+        expect(getRequest).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('LND.restReq errors', () => {
+    const fetchResolving = (response: any) =>
+        (ReactNativeBlobUtil.config as jest.Mock).mockReturnValue({
+            fetch: jest.fn().mockResolvedValue(response)
+        });
+
+    it('tags an error status as a response from the node', async () => {
+        const body = JSON.stringify({
+            code: 2,
+            message: 'invoice expired'
+        });
+        fetchResolving({
+            info: () => ({ status: 500 }),
+            json: () => JSON.parse(body),
+            data: body
+        });
+
+        const error = await new LND()
+            .restReq({}, 'https://node:8080/v2/router/send', 'POST', {})
+            .catch((e: any) => e);
+
+        expect(error.message).toContain('invoice expired');
+        expect(isNodeResponse(error)).toBe(true);
+        expect(isPaymentRefusedAsDuplicate(error)).toBe(false);
+    });
+
+    it("tags a stream's AlreadyExists error chunk as a duplicate refusal", async () => {
+        // grpc-gateway writes a stream error before any message with the
+        // HTTP status for the gRPC code (409) and the code in error.code
+        const body = JSON.stringify({
+            error: { code: 6, message: 'invoice is already paid' }
+        });
+        fetchResolving({
+            info: () => ({ status: 409 }),
+            json: () => JSON.parse(body),
+            data: body
+        });
+
+        const error = await new LND()
+            .restReq({}, 'https://node:8080/v2/router/send', 'POST', {
+                id: 'already-paid'
+            })
+            .catch((e: any) => e);
+
+        expect(error.message).toContain('invoice is already paid');
+        expect(isPaymentRefusedAsDuplicate(error)).toBe(true);
+    });
+
+    it.each([
+        ['a 502 HTML page', 502, '<html>Bad Gateway</html>'],
+        ['a 504 with an empty body', 504, ''],
+        [
+            'a 503 from envoy',
+            503,
+            'upstream connect error or disconnect/reset before headers'
+        ],
+        [
+            'a 502 JSON body with an HTTP status code',
+            502,
+            '{"code":502,"message":"Bad Gateway"}'
+        ],
+        [
+            'a 503 JSON error chunk with an HTTP status code',
+            503,
+            '{"error":{"code":503,"message":"Service Unavailable"}}'
+        ],
+        [
+            'a 504 JSON body with a string code',
+            504,
+            '{"code":"UPSTREAM_TIMEOUT","message":"upstream timed out"}'
+        ]
+    ])(
+        'does not tag %s from a proxy as a response from the node',
+        async (_label, status, body) => {
+            fetchResolving({
+                info: () => ({ status }),
+                json: () => JSON.parse(body),
+                data: body
+            });
+
+            const error = await new LND()
+                .restReq({}, 'https://node:8080/v2/router/send', 'POST', {
+                    id: `proxy-${status}`
+                })
+                .catch((e: any) => e);
+
+            expect(error).toBeInstanceOf(Error);
+            expect(isNodeResponse(error)).toBe(false);
+            expect(isPaymentRefusedAsDuplicate(error)).toBe(false);
+        }
+    );
+
+    it('does not tag a JSON error body without a gRPC code', async () => {
+        const body = JSON.stringify({ message: 'no healthy upstream' });
+        fetchResolving({
+            info: () => ({ status: 503 }),
+            json: () => JSON.parse(body),
+            data: body
+        });
+
+        const error = await new LND()
+            .restReq({}, 'https://node:8080/v2/router/send', 'POST', {
+                id: 'json-no-code'
+            })
+            .catch((e: any) => e);
+
+        expect(isNodeResponse(error)).toBe(false);
+    });
+
+    it('does not tag a transport failure', async () => {
+        (ReactNativeBlobUtil.config as jest.Mock).mockReturnValue({
+            fetch: jest.fn().mockRejectedValue(new Error('connection lost'))
+        });
+
+        const error = await new LND()
+            .restReq({}, 'https://node:8080/v2/router/send', 'POST', {
+                id: 'transport'
+            })
+            .catch((e: any) => e);
+
+        expect(isNodeResponse(error)).toBe(false);
     });
 });

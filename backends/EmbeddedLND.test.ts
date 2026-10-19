@@ -14,10 +14,20 @@ jest.mock('../utils/TorUtils', () => ({
 }));
 
 const mockCloseChannel = jest.fn();
+const mockSendPaymentV2Sync = jest.fn();
+const mockSendKeysendPaymentV2 = jest.fn();
+const mockListPayments = jest.fn();
 jest.mock('../lndmobile/LndMobileInjection', () => ({
     __esModule: true,
     default: {
-        index: { listPeers: jest.fn() },
+        index: {
+            listPeers: jest.fn(),
+            listPayments: (...args: any[]) => mockListPayments(...args),
+            sendPaymentV2Sync: (...args: any[]) =>
+                mockSendPaymentV2Sync(...args),
+            sendKeysendPaymentV2: (...args: any[]) =>
+                mockSendKeysendPaymentV2(...args)
+        },
         channel: {
             closeChannel: (...args: any[]) => mockCloseChannel(...args),
             // test events carry the decoded update as JSON
@@ -66,6 +76,10 @@ import lndMobile from '../lndmobile/LndMobileInjection';
 import { lnrpc } from '../proto/lightning';
 import EmbeddedLND from './EmbeddedLND';
 import Peer from '../models/Peer';
+import {
+    isNodeResponse,
+    isPaymentRefusedAsDuplicate
+} from '../utils/PaymentLookupUtils';
 
 const PUBKEY =
     '02aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -265,5 +279,86 @@ describe('EmbeddedLND.closeChannel', () => {
         expect(close.settled).toBe(true);
         expect(close.error).toBeUndefined();
         expect(listening()).toBe(false);
+    });
+});
+
+describe('EmbeddedLND payment rejections', () => {
+    // lndmobile rejects with the stream's error, which may be a string
+    it('tags a rejected invoice payment as a response from the node', async () => {
+        mockSendPaymentV2Sync.mockRejectedValue('invoice expired');
+
+        const error = await new EmbeddedLND()
+            .payLightningInvoice({ payment_request: 'lnbc1fake' })
+            .catch((e: any) => e);
+
+        expect(error.message).toBe('invoice expired');
+        expect(isNodeResponse(error)).toBe(true);
+        expect(isPaymentRefusedAsDuplicate(error)).toBe(false);
+    });
+
+    it('tags an AlreadyExists rejection as a duplicate refusal', async () => {
+        // checkLndStreamErrorResponse carries the natively parsed code name
+        const refusal = new Error('invoice is already paid');
+        (refusal as any).grpcCode = 'AlreadyExists';
+        mockSendPaymentV2Sync.mockRejectedValue(refusal);
+
+        const error = await new EmbeddedLND()
+            .payLightningInvoice({ payment_request: 'lnbc1fake' })
+            .catch((e: any) => e);
+
+        expect(error.message).toBe('invoice is already paid');
+        expect(isPaymentRefusedAsDuplicate(error)).toBe(true);
+    });
+
+    it('tags a rejected keysend as a response from the node', async () => {
+        mockSendKeysendPaymentV2.mockRejectedValue(
+            new Error('insufficient local balance')
+        );
+
+        const error = await new EmbeddedLND()
+            .sendKeysend({ pubkey: PUBKEY, amt: 1000 })
+            .catch((e: any) => e);
+
+        expect(error.message).toBe('insufficient local balance');
+        expect(isNodeResponse(error)).toBe(true);
+    });
+});
+
+describe('EmbeddedLND.lookupPayment', () => {
+    const HASH = 'ab'.repeat(32);
+
+    beforeEach(() => {
+        mockListPayments.mockReset();
+    });
+
+    it('scans ascending from creation_date_start', async () => {
+        const target = { payment_hash: HASH, status: 'IN_FLIGHT' };
+        mockListPayments.mockResolvedValue({ payments: [target] });
+
+        await expect(
+            new EmbeddedLND().lookupPayment({
+                payment_hash: HASH,
+                creation_date_start: 1700000000
+            })
+        ).resolves.toBe(target);
+        // the bound keeps newer payments from other clients from evicting
+        // the tracked one from the page
+        expect(mockListPayments).toHaveBeenCalledWith({
+            maxPayments: 50,
+            reversed: false,
+            creationDateStart: 1700000000
+        });
+    });
+
+    it('scans the newest page without a bound', async () => {
+        mockListPayments.mockResolvedValue({ payments: [] });
+
+        await expect(
+            new EmbeddedLND().lookupPayment({ payment_hash: HASH })
+        ).resolves.toBeNull();
+        expect(mockListPayments).toHaveBeenCalledTimes(1);
+        expect(mockListPayments.mock.calls[0][0].creationDateStart).toBe(
+            undefined
+        );
     });
 });

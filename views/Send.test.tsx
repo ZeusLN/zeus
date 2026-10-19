@@ -20,7 +20,7 @@ jest.mock('../utils/BackendUtils', () => ({
     supportsOnchainSendFeeRate: () => false,
     supportsOnchainBatching: () => false,
     supportsCoinControl: () => false,
-    supportsKeysend: () => false,
+    supportsKeysend: jest.fn(() => false),
     supportsAMP: () => false,
     supportsOffersDirectPay: jest.fn(() => false),
     decodeOffer: jest.fn(),
@@ -475,5 +475,55 @@ describe('Send mount', () => {
         );
 
         expect(getLightningBalance).toHaveBeenCalledWith(true);
+    });
+});
+
+describe('Send payment in flight notice', () => {
+    const CHECKING = 'components.PaymentInFlightNotice.checking';
+    const supportsKeysend = BackendUtils.supportsKeysend as jest.Mock;
+
+    afterEach(() => supportsKeysend.mockReturnValue(false));
+
+    it('explains the disabled keysend control while an earlier payment is checked', async () => {
+        supportsKeysend.mockReturnValue(true);
+        await renderView({
+            params: {
+                destination: '02' + 'ab'.repeat(32),
+                transactionType: 'Keysend',
+                isValid: true
+            },
+            TransactionsStore: { paymentInFlight: true }
+        });
+
+        expect(screen.getByText(CHECKING)).toBeOnTheScreen();
+    });
+
+    it('explains the disabled BOLT 12 Proceed while an earlier payment is checked', async () => {
+        await renderView({
+            params: {
+                destination:
+                    'lno1qgsyxjtl6luzd9t3pr62xr7eemp6awnejusgf6gw45q75vcfqqqqqqq',
+                transactionType: 'BOLT 12',
+                isValid: true
+            },
+            TransactionsStore: { paymentInFlight: true }
+        });
+
+        expect(screen.getByText(CHECKING)).toBeOnTheScreen();
+        expect(isProceedDisabled()).toBe(true);
+    });
+
+    it('shows no notice when no payment is in flight', async () => {
+        await renderView({
+            params: {
+                destination:
+                    'lno1qgsyxjtl6luzd9t3pr62xr7eemp6awnejusgf6gw45q75vcfqqqqqqq',
+                transactionType: 'BOLT 12',
+                isValid: true
+            },
+            TransactionsStore: { paymentInFlight: false }
+        });
+
+        expect(screen.queryByText(CHECKING)).not.toBeOnTheScreen();
     });
 });

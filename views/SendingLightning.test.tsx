@@ -12,8 +12,8 @@ jest.mock('../utils/DonationUtils', () => ({ loadDonationLnurl: jest.fn() }));
 jest.mock('./LnurlPay/Success', () => 'LnurlPaySuccess');
 jest.mock('../components/Button', () => {
     const { Pressable, Text } = require('react-native');
-    return ({ title, onPress }: any) => (
-        <Pressable role="button" onPress={onPress}>
+    return ({ title, onPress, disabled }: any) => (
+        <Pressable role="button" onPress={onPress} disabled={disabled}>
             <Text>{title}</Text>
         </Pressable>
     );
@@ -132,6 +132,54 @@ describe('SendingLightning retry', () => {
         await fireEvent.press(screen.getByRole('button', { name: TRY_AGAIN }));
 
         expect(navigation.goBack).toHaveBeenCalledTimes(1);
+    });
+
+    it('disables Try Again while the node is still being checked for the payment', async () => {
+        // a dispatch error is shown, but tracking still holds the send
+        // guard, which would silently ignore the retry
+        const navigation = await renderView({
+            error: true,
+            error_msg: 'connection closed',
+            paymentInFlight: true
+        });
+
+        expect(
+            screen.queryByRole('button', { name: TRY_AGAIN })
+        ).not.toBeOnTheScreen();
+        const checking = screen.getByRole('button', {
+            name: 'views.SendingLightning.checkingPayment'
+        });
+        expect(checking).toBeDisabled();
+
+        await fireEvent.press(checking);
+        expect(navigation.goBack).not.toHaveBeenCalled();
+    });
+});
+
+describe('SendingLightning tracking stopped', () => {
+    const TRACKING_STOPPED = 'views.SendingLightning.trackingStopped';
+
+    it('says tracking stopped when the outcome could not be verified', async () => {
+        // what TransactionsStore holds after the tracker gives up on a
+        // payment it last saw in transit
+        await renderView({
+            status: 'IN_FLIGHT',
+            paymentOutcomeUnverified: true
+        });
+
+        expect(screen.getByText(TRACKING_STOPPED)).toBeOnTheScreen();
+        expect(
+            screen.queryByRole('button', { name: TRY_AGAIN })
+        ).not.toBeOnTheScreen();
+    });
+
+    it('does not say so while the payment is still tracked', async () => {
+        await renderView({
+            status: 'IN_FLIGHT',
+            paymentOutcomeUnverified: false
+        });
+
+        expect(screen.queryByText(TRACKING_STOPPED)).not.toBeOnTheScreen();
     });
 });
 

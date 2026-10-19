@@ -354,7 +354,9 @@ export default class SendingLightning extends React.Component<
             payment_fee,
             payment_error,
             noteKey,
-            paymentDuration
+            paymentDuration,
+            paymentOutcomeUnverified,
+            paymentInFlight
         } = TransactionsStore;
 
         const {
@@ -580,17 +582,38 @@ export default class SendingLightning extends React.Component<
                                         )}
                                     </Text>
                                 )}
+                                {paymentOutcomeUnverified && (
+                                    <Text
+                                        style={{
+                                            textAlign: 'center',
+                                            color: themeColor('text'),
+                                            fontFamily: 'PPNeueMontreal-Book',
+                                            padding: 20,
+                                            fontSize: 14
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.SendingLightning.trackingStopped'
+                                        )}
+                                    </Text>
+                                )}
                                 {(!!payment_error || !!error) && (
                                     <>
+                                        {/* the send guard is still held while
+                                        the node is checked for this payment,
+                                        so a retry would be silently ignored */}
                                         <Button
                                             title={localeString(
-                                                'views.SendingLightning.tryAgain'
+                                                paymentInFlight
+                                                    ? 'views.SendingLightning.checkingPayment'
+                                                    : 'views.SendingLightning.tryAgain'
                                             )}
                                             icon={{
                                                 name: 'rotate-ccw',
                                                 type: 'feather',
                                                 size: 25
                                             }}
+                                            disabled={paymentInFlight}
                                             onPress={() => navigation.goBack()}
                                             buttonStyle={{
                                                 backgroundColor: 'white',

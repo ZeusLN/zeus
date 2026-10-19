@@ -197,7 +197,11 @@ export function checkLndStreamErrorResponse(
             return createLndError(LndErrorCode.RPC_CONNECTION_CLOSED);
         }
 
-        return new Error(errorDesc);
+        const error = new Error(errorDesc);
+        // the gRPC status code name (e.g. AlreadyExists) parsed natively
+        // from lnd's error, for callers that classify rejections
+        (error as any).grpcCode = event.error_code;
+        return error;
     }
     return null;
 }

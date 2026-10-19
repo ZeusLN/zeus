@@ -20,7 +20,11 @@ jest.mock('../utils/LinkingUtils', () => ({}));
 jest.mock('../utils/GraphSyncUtils', () => ({
     clearPendingPaymentData: jest.fn()
 }));
-jest.mock('../components/AmountInput', () => 'AmountInput');
+jest.mock('../components/AmountInput', () => {
+    const { View } = require('react-native');
+    // exposes onAmountChange so tests can enter an amount
+    return (props: any) => <View testID="AmountInput" {...props} />;
+});
 jest.mock('../components/Amount', () => 'Amount');
 jest.mock('../components/Button', () => {
     const { Pressable, Text } = require('react-native');
@@ -65,6 +69,7 @@ import PaymentRequest from './PaymentRequest';
 
 const PAY = 'views.PaymentRequest.payInvoice';
 const GETTING_READY = 'views.PaymentRequest.lndGettingReady';
+const ENTER_AMOUNT = 'views.PaymentRequest.enterAmount';
 
 // a decoded 1,000 sat invoice that never expires during a test
 const payReq = {
@@ -80,8 +85,14 @@ const renderView = async ({
     implementation = 'embedded-lnd',
     lightningBalance = 50000,
     isLightningReadyToSend = jest.fn().mockResolvedValue(true),
-    getSettings = jest.fn(async () => ({ payments: {} }))
+    getSettings = jest.fn(async () => ({ payments: {} })),
+    payReqOverrides = {},
+    TransactionsStore = { paymentInFlight: false },
+    ref
 }: {
+    payReqOverrides?: object;
+    TransactionsStore?: object;
+    ref?: React.Ref<any>;
     implementation?: string;
     lightningBalance?: number;
     isLightningReadyToSend?: jest.Mock;
@@ -93,6 +104,7 @@ const renderView = async ({
     };
     const result = await render(
         <PaymentRequest
+            ref={ref}
             {...({
                 navigation: { addListener: jest.fn(() => jest.fn()) },
                 route: { params: {} },
@@ -103,11 +115,11 @@ const renderView = async ({
                     getSettings
                 },
                 InvoicesStore: {
-                    pay_req: payReq,
+                    pay_req: { ...payReq, ...payReqOverrides },
                     paymentRequest: 'lnbc10u1example'
                 },
                 NodeInfoStore: { nodeInfo: {}, isLightningReadyToSend },
-                TransactionsStore: { paymentInFlight: false },
+                TransactionsStore,
                 LnurlPayStore: {},
                 UnitsStore: {},
                 ChannelsStore: {}
@@ -199,5 +211,81 @@ describe('PaymentRequest embedded LND readiness', () => {
         await new Promise((resolve) => setImmediate(resolve));
 
         expect(isReady).toHaveBeenCalledTimes(callsAtUnmount);
+    });
+});
+
+describe('PaymentRequest no-amount invoice', () => {
+    it('disables Pay until an amount is entered', async () => {
+        await renderView({
+            implementation: 'lnd',
+            payReqOverrides: { getRequestAmount: 0 }
+        });
+
+        expect(payButton()).toBeDisabled();
+        expect(screen.getByText(ENTER_AMOUNT)).toBeOnTheScreen();
+
+        const amountInput = screen.getByTestId('AmountInput');
+        await act(async () => amountInput.props.onAmountChange('0', 0));
+        expect(payButton()).toBeDisabled();
+
+        await act(async () => amountInput.props.onAmountChange('500', 500));
+        expect(payButton()).toBeEnabled();
+        expect(screen.queryByText(ENTER_AMOUNT)).not.toBeOnTheScreen();
+    });
+
+    it('does not show the hint on an invoice with an amount', async () => {
+        await renderView({ implementation: 'lnd' });
+
+        expect(payButton()).toBeEnabled();
+        expect(screen.queryByText(ENTER_AMOUNT)).not.toBeOnTheScreen();
+    });
+
+    it('refuses to pay from triggerPayment until an amount is entered', async () => {
+        const ref = React.createRef<any>();
+        await renderView({
+            implementation: 'lnd',
+            payReqOverrides: { getRequestAmount: 0 },
+            ref
+        });
+        // the Pay button is disabled here, so call the handler the button
+        // and swipe would reach
+        const view = ref.current;
+        view.sendPayment = jest.fn();
+
+        await act(async () => view.triggerPayment());
+        expect(view.sendPayment).not.toHaveBeenCalled();
+
+        const amountInput = screen.getByTestId('AmountInput');
+        await act(async () => amountInput.props.onAmountChange('500', 500));
+        await act(async () => view.triggerPayment());
+        expect(view.sendPayment).toHaveBeenCalledTimes(1);
+        expect(view.sendPayment).toHaveBeenCalledWith(
+            expect.objectContaining({ amount: '500' })
+        );
+    });
+});
+
+describe('PaymentRequest payment in flight', () => {
+    it('explains the disabled Pay button while an earlier payment is checked', async () => {
+        await renderView({
+            implementation: 'lnd',
+            TransactionsStore: {
+                paymentInFlight: true,
+                paymentInFlightConfirmed: false
+            }
+        });
+
+        expect(payButton()).toBeDisabled();
+        expect(
+            screen.getByText('components.PaymentInFlightNotice.checking')
+        ).toBeOnTheScreen();
+    });
+
+    it('shows no notice when no payment is in flight', async () => {
+        await renderView({ implementation: 'lnd' });
+
+        expect(
+            screen.queryByText('components.PaymentInFlightNotice.checking')
+        ).not.toBeOnTheScreen();
     });
 });
