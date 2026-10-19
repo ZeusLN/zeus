@@ -290,6 +290,29 @@ describe('NavigationUtils', () => {
             });
         });
 
+        it("keeps the Lockscreen's share intent when another screen is redirected to it", () => {
+            const shareIntentData = { qrData: 'lnbc1' };
+            const state = stackOf('Wallet', [
+                'Lockscreen',
+                { shareIntentData }
+            ]);
+
+            const next = router.getStateForAction(
+                state,
+                navigate('LnurlPay', { lnurlParams: { tag: 'payRequest' } }),
+                options
+            );
+
+            expect(names(next)).toEqual(['Wallet', 'Lockscreen']);
+            expect(top(next).params).toEqual({
+                shareIntentData,
+                pendingNavigation: {
+                    screen: 'LnurlPay',
+                    params: { lnurlParams: { tag: 'payRequest' } }
+                }
+            });
+        });
+
         it('opens the pending screen once the Lockscreen has left POS mode', () => {
             mockSettingsStore.posStatus = 'inactive';
             const state = stackOf('Wallet', 'Lockscreen');

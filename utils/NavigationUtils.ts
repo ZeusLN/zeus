@@ -59,6 +59,9 @@ const posRouteGuard = <Action extends NavigationAction>(
             return next;
         }
 
+        // merge: if the Lockscreen is already in front, keep its other
+        // params (a POS share intent's shareIntentData) and only replace
+        // the pending screen
         return original.getStateForAction(
             state,
             {
@@ -70,7 +73,8 @@ const posRouteGuard = <Action extends NavigationAction>(
                             screen: top.name,
                             params: top.params
                         }
-                    }
+                    },
+                    merge: true
                 }
             } as Action,
             options
