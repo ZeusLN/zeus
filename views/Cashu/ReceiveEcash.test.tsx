@@ -597,3 +597,52 @@ describe('ReceiveEcash Lightning address tab', () => {
         expect(navigate).toHaveBeenCalledWith('CreateCashuLightningAddress');
     });
 });
+
+// Collects every string in an element tree without mounting it
+const strings = (node: any, out: string[] = []): string[] => {
+    if (typeof node === 'string') out.push(node);
+    else if (Array.isArray(node)) node.forEach((n) => strings(n, out));
+    else if (node?.props)
+        Object.values(node.props).forEach((v) => strings(v, out));
+    return out;
+};
+
+const renderText = (cashuStore: any) => {
+    const view = new ReceiveEcash({
+        navigation: { navigate: jest.fn() },
+        route: {
+            params: {
+                lnurlParams: {
+                    tag: 'withdrawRequest',
+                    k1: 'k1',
+                    // js-lnurl's getDomain reads faucet.example out of this,
+                    // but the request goes to other.example
+                    callback: 'https://other.example\\@faucet.example/withdraw',
+                    domain: 'faucet.example'
+                }
+            }
+        },
+        CashuStore: cashuStore,
+        SettingsStore: { settings: {} },
+        LightningAddressStore: {},
+        NodeInfoStore: {}
+    } as unknown as React.ComponentProps<typeof ReceiveEcash>);
+    view.state = { ...view.state, loading: false };
+    return strings(view.render()).join('\n');
+};
+
+describe('ReceiveEcash LNURL-withdraw', () => {
+    it('names the host the withdraw callback is sent to', () => {
+        const text = renderText({});
+
+        expect(text).toContain('views.Receive.andSubmitTo other.example');
+        expect(text).not.toContain('faucet.example');
+    });
+
+    it('names the host the invoice was sent to', () => {
+        const text = renderText({ invoice: 'lnbcrt1' });
+
+        expect(text).toContain('views.Receive.andSentTo other.example');
+        expect(text).not.toContain('faucet.example');
+    });
+});
