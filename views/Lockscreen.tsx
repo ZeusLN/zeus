@@ -94,6 +94,10 @@ export default class Lockscreen extends React.Component<
     // Set while an entry's attempt is being saved, so that each entry is
     // saved before the next one is taken
     private savingAttempt = false;
+    // Set once a wipe is decided, while its pending record is saved and
+    // before `wiping` is set, so a second submit cannot start another wipe.
+    // Never cleared: the wipe ends in a restart.
+    private startingWipe = false;
 
     constructor(props: any) {
         super(props);
@@ -354,7 +358,39 @@ export default class Lockscreen extends React.Component<
         // a wipe is already running; a second submit must not start another
         // wipe or mutate settings mid-wipe. Likewise while a verified login
         // is still completing, a second submit would navigate twice.
-        if (this.state.wiping || this.unlocking || this.savingAttempt) return;
+        if (
+            this.state.wiping ||
+            this.startingWipe ||
+            this.unlocking ||
+            this.savingAttempt
+        ) {
+            return;
+        }
+
+        const isCorrect = !!(
+            (passphraseAttempt && passphraseAttempt === passphrase) ||
+            (pinAttempt && pinAttempt === pin)
+        );
+
+        // The duress wipe does not depend on the attempt count, so it runs
+        // before the attempt is saved: a failed write (storage full) must
+        // not stop it. Duress creds only trigger the wipe on a genuine login
+        // attempt; in security management flows they count as an incorrect
+        // entry below.
+        if (
+            !isCorrect &&
+            !this.isSecurityManagementFlow &&
+            ((duressPassphrase && passphraseAttempt === duressPassphrase) ||
+                (duressPin && pinAttempt === duressPin))
+        ) {
+            // never mark the session logged in here: the wipe takes long
+            // enough that an unlocked app would expose the wallet UI (and
+            // the configs being wiped) before the restart lands. Keeping
+            // loggedIn false holds every auth gate shut for the duration,
+            // and the wipe guard pins the user to the wiping screen.
+            await this.startWipe(this.deleteNodes);
+            return;
+        }
 
         this.setState({
             error: false,
@@ -391,10 +427,7 @@ export default class Lockscreen extends React.Component<
             this.savingAttempt = false;
         }
 
-        if (
-            (passphraseAttempt && passphraseAttempt === passphrase) ||
-            (pinAttempt && pinAttempt === pin)
-        ) {
+        if (isCorrect) {
             this.unlocking = true;
             try {
                 SettingsStore.setLoginStatus(true);
@@ -464,35 +497,15 @@ export default class Lockscreen extends React.Component<
             } finally {
                 this.unlocking = false;
             }
-        } else if (
-            // duress creds only trigger the wipe on a genuine login attempt -
-            // in security management flows they count as an incorrect entry
-            !this.isSecurityManagementFlow &&
-            ((duressPassphrase && passphraseAttempt === duressPassphrase) ||
-                (duressPin && pinAttempt === duressPin))
-        ) {
-            // never mark the session logged in here: the wipe takes long
-            // enough that an unlocked app would expose the wallet UI (and
-            // the configs being wiped) before the restart lands. Keeping
-            // loggedIn false holds every auth gate shut for the duration,
-            // and the wipe guard pins the user to the wiping screen.
-            // Save the pending wipe before the screen changes (see below).
-            await markWipePending();
-            this.setState({ wiping: true });
-            await this.deleteNodes();
         } else {
             this.setState({
                 authenticationAttempts
             });
             if (authenticationAttempts >= maxAuthenticationAttempts) {
-                // Save the pending wipe before the screen changes, so that
-                // closing the app once the wrong entry shows cannot stop
-                // the wipe. See the duress branch: loggedIn must stay false
-                // so the wallet UI stays gated while the wipe runs.
-                await markWipePending();
-                this.setState({ wiping: true });
+                // See the duress branch: loggedIn must stay false so the
+                // wallet UI stays gated while the wipe runs.
                 // wipe node configs, passwords, and pins
-                await this.authenticationFailure();
+                await this.startWipe(this.authenticationFailure);
             } else {
                 this.setState({
                     error: true,
@@ -500,6 +513,16 @@ export default class Lockscreen extends React.Component<
                 });
             }
         }
+    };
+
+    // Saves the pending wipe before the screen changes, so that closing the
+    // app once the result shows cannot stop the wipe. markWipePending()
+    // does not reject.
+    startWipe = async (wipe: () => Promise<void>) => {
+        this.startingWipe = true;
+        await markWipePending();
+        this.setState({ wiping: true });
+        await wipe();
     };
 
     onSubmitPin = (value: string) => {

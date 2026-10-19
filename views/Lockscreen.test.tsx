@@ -313,6 +313,68 @@ describe('Lockscreen failed attempts', () => {
         );
     });
 
+    it('runs the duress wipe while attempts cannot be saved', async () => {
+        const saved: any = { pin: PIN, duressPin: '0000' };
+        const updateSettings = makeUpdateSettings(saved, async () => {
+            throw new Error('no space left on device');
+        });
+        const { SettingsStore } = await renderLockscreen(updateSettings, {
+            settings: saved
+        });
+
+        await submitWrongPin();
+
+        expect(updateSettings).not.toHaveBeenCalled();
+        expect(markWipePending).toHaveBeenCalledTimes(1);
+        expect(clearAllData).toHaveBeenCalledTimes(1);
+        expect(restartApp).toHaveBeenCalledTimes(1);
+        expect(SettingsStore.setLoginStatus).not.toHaveBeenCalled();
+    });
+
+    it('treats the duress PIN as a wrong entry in a security flow while attempts cannot be saved', async () => {
+        const saved: any = { pin: PIN, duressPin: '0000' };
+        const updateSettings = makeUpdateSettings(saved, async () => {
+            throw new Error('no space left on device');
+        });
+        await renderLockscreen(updateSettings, {
+            settings: saved,
+            params: { deletePin: true }
+        });
+
+        await submitWrongPin();
+
+        expect(updateSettings).toHaveBeenCalledTimes(1);
+        expect(markWipePending).not.toHaveBeenCalled();
+        expect(clearAllData).not.toHaveBeenCalled();
+        expect(errorSpy).toHaveBeenCalledWith(
+            'Failed to save authentication attempt',
+            expect.any(Error)
+        );
+    });
+
+    it.each([
+        ['the fifth wrong entry', { pin: PIN, authenticationAttempts: 4 }],
+        ['the duress PIN', { pin: PIN, duressPin: '0000' }]
+    ])(
+        'starts one wipe when an entry arrives while the pending wipe for %s is saved',
+        async (_case, settings) => {
+            const saved: any = { ...settings };
+            const record = deferred();
+            (markWipePending as jest.Mock).mockReturnValue(record.promise);
+            const updateSettings = makeUpdateSettings(saved);
+            await renderLockscreen(updateSettings, { settings: saved });
+
+            await submitWrongPin();
+            const writes = updateSettings.mock.calls.length;
+            await submitWrongPin();
+            await act(async () => record.resolve());
+
+            expect(updateSettings).toHaveBeenCalledTimes(writes);
+            expect(markWipePending).toHaveBeenCalledTimes(1);
+            expect(clearAllData).toHaveBeenCalledTimes(1);
+        }
+    );
+
     it('drops an entry made while the previous attempt is being saved', async () => {
         const saved: any = { pin: PIN };
         const write = deferred();
