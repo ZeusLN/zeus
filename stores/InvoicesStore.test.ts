@@ -16,6 +16,7 @@ jest.mock('../utils/BackendUtils', () => ({
         isLNDBased: jest.fn(() => false),
         supportsFlowLSP: jest.fn(() => false),
         supportsOnchainReceiving: jest.fn(() => false),
+        isLsps2Active: jest.fn(() => false),
         createInvoice: jest.fn(),
         lookupInvoice: jest.fn()
     }
@@ -2235,5 +2236,152 @@ describe('InvoicesStore lnurl-withdraw callback', () => {
         await withdrawTo('https://service.example/cb');
 
         expect(blobFetch).toHaveBeenCalledTimes(1);
+    });
+});
+
+describe('InvoicesStore.createInvoice with an LSPS2 LSP', () => {
+    const lspStoreMock = () => ({
+        resetFee: jest.fn(),
+        clearFee: jest.fn(),
+        info: { pubkey: 'lsp', connection_methods: [] },
+        getZeroConfFee: jest.fn(() => Promise.resolve({ feeSats: 1000 })),
+        getZeroConfInvoice: jest.fn(() => Promise.resolve('wrapped')),
+        zeroConfFee: undefined as number | undefined,
+        flow_error: false
+    });
+    const lnurl = {
+        callback: 'https://service.example/withdraw',
+        k1: 'k1',
+        domain: 'service.example',
+        maxWithdrawable: 1_000_000_000
+    };
+
+    const create = async (params: any, backendResult: any = {}) => {
+        const lspStore = lspStoreMock();
+        const store = new InvoicesStore(
+            { settings: { enableLSP: true } } as any,
+            lspStore as any,
+            {} as any,
+            {
+                flowLspNotConfigured: () => ({ flowLspNotConfigured: false })
+            } as any
+        );
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            payment_request: 'lnbc-ldk',
+            r_hash: 'hash',
+            ...backendResult
+        });
+        const result = await store.createInvoice({
+            memo: '',
+            value: '50000',
+            expirySeconds: '3600',
+            ...params
+        });
+        return { lspStore, result };
+    };
+    const request = () =>
+        (BackendUtils.createInvoice as jest.Mock).mock.calls[0][0];
+    const jitFee = { lsps2_jit: true, lsp_fee_msat: 10_000_999 };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (BackendUtils.supportsFlowLSP as jest.Mock).mockReturnValue(true);
+        (BackendUtils.isLsps2Active as jest.Mock).mockReturnValue(true);
+        (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValue({
+            json: () => ({ status: 'OK' })
+        });
+    });
+
+    afterEach(() => {
+        (BackendUtils.supportsFlowLSP as jest.Mock).mockReturnValue(false);
+        (BackendUtils.isLsps2Active as jest.Mock).mockReturnValue(false);
+    });
+
+    it('lets the node buy a JIT channel instead of using Flow', async () => {
+        const { lspStore, result } = await create({ useLsp: true });
+
+        expect(request().lsps2_jit).toBe(true);
+        expect(request().value).toEqual('50000');
+        expect(lspStore.getZeroConfFee).not.toHaveBeenCalled();
+        expect(lspStore.getZeroConfInvoice).not.toHaveBeenCalled();
+        expect(result?.paymentRequest).toEqual('lnbc-ldk');
+    });
+
+    it("prices the invoice with the LSP's fee, rounded down to sats", async () => {
+        const { result } = await create({ useLsp: true }, jitFee);
+
+        expect(result?.lspFeeSats).toEqual(10_000);
+    });
+
+    it('prices a plain invoice with no fee', async () => {
+        const { result } = await create({ useLsp: true });
+
+        expect(result?.lspFeeSats).toBeNull();
+    });
+
+    it.each([
+        ['the LSP switch is off', { useLsp: false }],
+        ['the caller opts out', { useLsp: true, noLsp: true }],
+        ['there is no amount', { useLsp: true, value: '0' }]
+    ])('does not allow a JIT channel when %s', async (_, params) => {
+        const { lspStore } = await create(params);
+
+        expect(request().lsps2_jit).toBeUndefined();
+        expect(lspStore.getZeroConfFee).not.toHaveBeenCalled();
+    });
+
+    it("keeps Flow for Flow's own wrapped invoice button", async () => {
+        const { lspStore } = await create({ forceLsp: true });
+
+        expect(request().lsps2_jit).toBeUndefined();
+        expect(lspStore.getZeroConfFee).toHaveBeenCalled();
+    });
+
+    it('uses Flow when the node has no LSPS2 LSP', async () => {
+        (BackendUtils.isLsps2Active as jest.Mock).mockReturnValue(false);
+
+        const { lspStore } = await create({ useLsp: true });
+
+        expect(request().lsps2_jit).toBeUndefined();
+        expect(lspStore.getZeroConfFee).toHaveBeenCalled();
+        expect(lspStore.getZeroConfInvoice).toHaveBeenCalled();
+    });
+
+    it('withdraws with a JIT invoice only after the fee is accepted', async () => {
+        const confirmLspFee = jest.fn(() => Promise.resolve(true));
+
+        const { result } = await create(
+            { useLsp: true, lnurl, confirmLspFee },
+            jitFee
+        );
+
+        expect(confirmLspFee).toHaveBeenCalledWith(10_000, '50000');
+        expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledTimes(1);
+        expect(result?.paymentRequest).toEqual('lnbc-ldk');
+    });
+
+    it('does not withdraw when the fee is declined or cannot be asked', async () => {
+        const declined = await create(
+            {
+                useLsp: true,
+                lnurl,
+                confirmLspFee: () => Promise.resolve(false)
+            },
+            jitFee
+        );
+        const unasked = await create({ useLsp: true, lnurl }, jitFee);
+
+        expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+        expect(declined.result).toBeUndefined();
+        expect(unasked.result).toBeUndefined();
+    });
+
+    it('withdraws with a plain invoice without asking', async () => {
+        const confirmLspFee = jest.fn();
+
+        await create({ useLsp: true, lnurl, confirmLspFee });
+
+        expect(confirmLspFee).not.toHaveBeenCalled();
+        expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledTimes(1);
     });
 });
