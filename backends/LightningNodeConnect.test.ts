@@ -53,7 +53,8 @@ jest.mock('../zeus_modules/@lightninglabs/lnc-rn', () => {
             lightning: {
                 getInfo: jest.fn(() => Promise.reject(new Error('gbn exited'))),
                 // lnc-rn's subscribe returns the RPC method as event name
-                closeChannel: jest.fn(() => 'lnrpc.Lightning.CloseChannel')
+                closeChannel: jest.fn(() => 'lnrpc.Lightning.CloseChannel'),
+                getTransactions: jest.fn()
             }
         };
         constructor(config: any) {
@@ -564,6 +565,94 @@ describe('LightningNodeConnect', () => {
                 max_payments: 50,
                 reversed: true
             });
+        });
+    });
+
+    describe('getTransactions', () => {
+        // lnc-rn answers with camelCase fields, sorted by confirmations
+        const tx = (txHash: string, numConfirmations: number) => ({
+            txHash,
+            numConfirmations
+        });
+        const NEWEST = [tx('tx2', 1), tx('tx1', 2)];
+        const PENDING = [tx('pending0', 0)];
+
+        let lnc: any;
+        let backend: LightningNodeConnect;
+
+        beforeEach(async () => {
+            backend = new LightningNodeConnect();
+            lnc = await openWallet(backend, 'phrase-a');
+            lnc.lnd.lightning.getTransactions.mockImplementation(
+                async (request: any) => ({
+                    transactions: request.endHeight === 1 ? NEWEST : PENDING
+                })
+            );
+        });
+
+        it('requests the newest mined page, then the unconfirmed ones when it is full', async () => {
+            const { transactions } = await backend.getTransactions({
+                max_transactions: 2
+            });
+
+            expect(
+                lnc.lnd.lightning.getTransactions.mock.calls.map(
+                    ([request]: any[]) => request
+                )
+            ).toEqual([
+                { startHeight: -1, endHeight: 1, maxTransactions: 2 },
+                { startHeight: -1, endHeight: -1, maxTransactions: 0 }
+            ]);
+            // oldest first: TransactionsStore reverses it again
+            expect(transactions.map((t: any) => t.tx_hash)).toEqual([
+                'tx2',
+                'pending0'
+            ]);
+        });
+
+        it('makes one request with the default limit when the page is short', async () => {
+            const { transactions } = await backend.getTransactions();
+
+            expect(lnc.lnd.lightning.getTransactions).toHaveBeenCalledTimes(1);
+            expect(lnc.lnd.lightning.getTransactions).toHaveBeenCalledWith({
+                startHeight: -1,
+                endHeight: 1,
+                maxTransactions: 500
+            });
+            expect(transactions.map((t: any) => t.tx_hash)).toEqual([
+                'tx1',
+                'tx2'
+            ]);
+        });
+
+        it('passes an explicit range through as one request', async () => {
+            await backend.getTransactions({ start_height: 100 });
+            await backend.getTransactions({
+                start_height: 100,
+                end_height: 200,
+                max_transactions: 0
+            });
+
+            expect(
+                lnc.lnd.lightning.getTransactions.mock.calls.map(
+                    ([request]: any[]) => request
+                )
+            ).toEqual([
+                {
+                    startHeight: 100,
+                    endHeight: undefined,
+                    maxTransactions: 500
+                },
+                { startHeight: 100, endHeight: 200, maxTransactions: 0 }
+            ]);
+        });
+
+        it('returns an empty list when lnd omits transactions', async () => {
+            lnc.lnd.lightning.getTransactions.mockResolvedValue({});
+
+            const { transactions } = await backend.getTransactions();
+
+            expect(transactions).toEqual([]);
         });
     });
 });

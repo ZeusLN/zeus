@@ -180,4 +180,20 @@ describe('getNewestTransactions', () => {
         ]);
         expect(txs[0].num_confirmations).toBe(0);
     });
+
+    it('sorts by confirmations itself instead of relying on the order lnd sends', async () => {
+        const confirmed = mined(4);
+        // a full page in block order, oldest first
+        const fetchPage = async (request: TransactionPageRequest) =>
+            request.end_height === 1 ? [...confirmed] : [pending[0]];
+
+        const txs = await getNewestTransactions({ fetchPage, limit: 4 });
+
+        expect(txs.map((tx) => tx.tx_hash)).toEqual([
+            'pending0',
+            'tx3',
+            'tx2',
+            'tx1'
+        ]);
+    });
 });
