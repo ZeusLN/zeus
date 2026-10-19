@@ -91,6 +91,8 @@ export default class Invoice extends BaseModel {
     public settled_at?: number;
     public invoice?: string;
     public amount_received_msat?: string | number;
+    // LDK Node: fee an LSP withheld from this payment for a JIT channel
+    public lsp_fee_msat?: string;
     public formattedOriginalTimeUntilExpiry: string;
     public formattedTimeUntilExpiry: string;
 
@@ -257,6 +259,11 @@ export default class Invoice extends BaseModel {
                   Number(this.amt) ||
                   this.getRequestAmount ||
                   0;
+    }
+
+    // return amount in satoshis. Not getFee: that is read as a fee paid
+    @computed public get getLspFee(): number {
+        return this.lsp_fee_msat ? Number(this.lsp_fee_msat) / 1000 : 0;
     }
 
     // return amount in satoshis

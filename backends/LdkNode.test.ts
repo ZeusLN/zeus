@@ -805,3 +805,43 @@ describe('LdkNode.createInvoice', () => {
         );
     });
 });
+
+describe('LdkNode received JIT payments', () => {
+    const received = (kind: any) => ({
+        id: 'jit',
+        direction: 'inbound',
+        status: 'succeeded',
+        amountMsat: 40_000_000,
+        latestUpdateTimestamp: 0,
+        kind: { hash: 'hash', ...kind }
+    });
+    const lookup = (kind: any) => {
+        mockListPayments.mockResolvedValue([received(kind)]);
+        return new LdkNode().lookupInvoice({ r_hash: 'hash' });
+    };
+
+    beforeEach(() => jest.clearAllMocks());
+
+    it('reports the fee the LSP withheld next to the net amount', async () => {
+        const invoice = await lookup({
+            type: 'bolt11Jit',
+            counterpartySkimmedFeeMsat: 10_000_000
+        });
+
+        expect(invoice.lsp_fee_msat).toEqual('10000000');
+        expect(invoice.amt_paid_sat).toEqual('40000');
+    });
+
+    it('reports no fee for a plain payment, from either platform', async () => {
+        // Android leaves the key out, iOS sends null
+        expect((await lookup({ type: 'bolt11' })).lsp_fee_msat).toBeUndefined();
+        expect(
+            (
+                await lookup({
+                    type: 'bolt11Jit',
+                    counterpartySkimmedFeeMsat: null
+                })
+            ).lsp_fee_msat
+        ).toBeUndefined();
+    });
+});

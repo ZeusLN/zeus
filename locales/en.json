@@ -669,6 +669,7 @@
     "views.Invoice.rHash": "R Hash",
     "views.Invoice.rPreimage": "R Preimage",
     "views.Invoice.invoiceAmount": "Invoice amount",
+    "views.Invoice.lspFee": "LSP fee",
     "views.Invoice.descriptionHash": "Description Hash",
     "views.Invoice.paymentHash": "Payment Hash",
     "views.Invoice.paymentRequest": "Payment Request",

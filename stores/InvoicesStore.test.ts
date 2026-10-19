@@ -9,6 +9,7 @@ jest.mock('../utils/BackendUtils', () => ({
         getNewChangeAddress: jest.fn(),
         isLNDBased: jest.fn(() => false),
         supportsFlowLSP: jest.fn(() => false),
+        isLsps2Active: jest.fn(() => false),
         createInvoice: jest.fn()
     }
 }));
@@ -366,5 +367,104 @@ describe('InvoicesStore.createInvoice LSP decision', () => {
         expect(
             (await create(false, { forceLsp: true })).getZeroConfFee
         ).toHaveBeenCalled();
+    });
+});
+
+describe('InvoicesStore.createInvoice with an LSPS2 LSP', () => {
+    const lspStoreMock = () => ({
+        resetFee: jest.fn(),
+        info: { pubkey: 'lsp', connection_methods: [] },
+        getZeroConfFee: jest.fn(() => Promise.resolve()),
+        getZeroConfInvoice: jest.fn(() => Promise.resolve('wrapped')),
+        zeroConfFee: undefined as number | undefined,
+        flow_error: false
+    });
+
+    const create = async (params: any, backendResult: any = {}) => {
+        const lspStore = lspStoreMock();
+        const store = new InvoicesStore(
+            { settings: { enableLSP: true } } as any,
+            lspStore as any,
+            {} as any,
+            {} as any
+        );
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            payment_request: 'lnbc-ldk',
+            r_hash: 'hash',
+            ...backendResult
+        });
+        const result = await store.createInvoice({
+            memo: '',
+            value: '50000',
+            expirySeconds: '3600',
+            ...params
+        });
+        return { lspStore, result };
+    };
+    const request = () =>
+        (BackendUtils.createInvoice as jest.Mock).mock.calls[0][0];
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (BackendUtils.supportsFlowLSP as jest.Mock).mockReturnValue(true);
+        (BackendUtils.isLsps2Active as jest.Mock).mockReturnValue(true);
+    });
+
+    afterEach(() => {
+        (BackendUtils.supportsFlowLSP as jest.Mock).mockReturnValue(false);
+        (BackendUtils.isLsps2Active as jest.Mock).mockReturnValue(false);
+    });
+
+    it('lets the node buy a JIT channel instead of using Flow', async () => {
+        const { lspStore, result } = await create({ useLsp: true });
+
+        expect(request().lsps2_jit).toBe(true);
+        expect(request().value).toEqual('50000');
+        expect(lspStore.getZeroConfFee).not.toHaveBeenCalled();
+        expect(lspStore.getZeroConfInvoice).not.toHaveBeenCalled();
+        expect(result?.paymentRequest).toEqual('lnbc-ldk');
+    });
+
+    it("shows the LSP's fee, rounded down to sats", async () => {
+        const { lspStore } = await create(
+            { useLsp: true },
+            { lsps2_jit: true, lsp_fee_msat: 10_000_999 }
+        );
+
+        expect(lspStore.zeroConfFee).toEqual(10_000);
+    });
+
+    it('shows no fee for a plain invoice', async () => {
+        const { lspStore } = await create({ useLsp: true });
+
+        expect(lspStore.zeroConfFee).toBeUndefined();
+    });
+
+    it.each([
+        ['the LSP switch is off', { useLsp: false }],
+        ['the caller opts out', { useLsp: true, noLsp: true }],
+        ['there is no amount', { useLsp: true, value: '0' }]
+    ])('does not allow a JIT channel when %s', async (_, params) => {
+        const { lspStore } = await create(params);
+
+        expect(request().lsps2_jit).toBeUndefined();
+        expect(lspStore.getZeroConfFee).not.toHaveBeenCalled();
+    });
+
+    it("keeps Flow for Flow's own wrapped invoice button", async () => {
+        const { lspStore } = await create({ forceLsp: true });
+
+        expect(request().lsps2_jit).toBeUndefined();
+        expect(lspStore.getZeroConfFee).toHaveBeenCalled();
+    });
+
+    it('uses Flow when the node has no LSPS2 LSP', async () => {
+        (BackendUtils.isLsps2Active as jest.Mock).mockReturnValue(false);
+
+        const { lspStore } = await create({ useLsp: true });
+
+        expect(request().lsps2_jit).toBeUndefined();
+        expect(lspStore.getZeroConfFee).toHaveBeenCalled();
+        expect(lspStore.getZeroConfInvoice).toHaveBeenCalled();
     });
 });
