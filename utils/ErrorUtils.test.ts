@@ -328,6 +328,40 @@ describe('ErrorUtils', () => {
             expectFast(() => parseLdkNodeError(word), word);
             const openings = 'a(message:"'.repeat(100000);
             expectFast(() => parseLdkNodeError(openings), openings);
+            const lines = ('a(message:"'.repeat(10000) + '\n').repeat(10);
+            expectFast(() => parseLdkNodeError(lines), lines.trim());
+        });
+
+        it('finds an iOS form on a later line when the first does not close', () => {
+            expect(
+                parseLdkNodeError('Foo(message: "line1\nBar(message: "x")')
+            ).toEqual('x');
+            // the opening's whitespace may span the newline
+            expect(
+                parseLdkNodeError('A(message: "foo B(message:\n"bar")')
+            ).toEqual('bar');
+        });
+
+        it('extracts the same iOS message as the single regex did', () => {
+            const singleRegex = (str: string) => {
+                const match = str.match(/\w+\(message:\s*"(.+?)"\)/);
+                return match ? match[1].trim() : str.trim();
+            };
+            const inputs = [
+                'A(message: "one")',
+                'A(message: "one") B(message: "two")',
+                'A(message: "no close\nB(message: "two")',
+                'A(message: "x B(message: "y")',
+                'A(message: "x\nB(message: "y\nC(message: "z")',
+                'A(message: "x B(message:\n\n"y")',
+                'A(message: "")")',
+                'A(message: "a\n")',
+                'A(message:\n"multi\nline")',
+                'A(message: "x"\n)'
+            ];
+            for (const input of inputs) {
+                expect(parseLdkNodeError(input)).toEqual(singleRegex(input));
+            }
         });
     });
 
