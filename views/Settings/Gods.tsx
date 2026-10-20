@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Dimensions, FlatList, Platform, Text } from 'react-native';
+import { FlatList, Platform, Text } from 'react-native';
 import { Avatar, ListItem } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -9,6 +9,7 @@ import Header from '../../components/Header';
 import LoadingIndicator from '../../components/LoadingIndicator';
 import Screen from '../../components/Screen';
 
+import { getWindowDimensions } from '../../utils/LayoutUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
@@ -67,8 +68,7 @@ export default class Gods extends React.Component<GodsProps, {}> {
                                 >
                                     <Avatar
                                         size={
-                                            Dimensions.get('window').width / 4 -
-                                            13
+                                            getWindowDimensions().width / 4 - 13
                                         }
                                         rounded
                                         source={{

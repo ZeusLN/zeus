@@ -1,15 +1,10 @@
 import * as React from 'react';
-import {
-    BackHandler,
-    Dimensions,
-    NativeEventSubscription,
-    Text,
-    View
-} from 'react-native';
+import { BackHandler, NativeEventSubscription, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
+import { getContentWidth, getWindowDimensions } from '../../utils/LayoutUtils';
 import { loadDonationLnurl } from '../../utils/DonationUtils';
 
 import LnurlPaySuccess from '../LnurlPay/Success';
@@ -285,7 +280,8 @@ export default class CashuSendingLightning extends React.Component<
         );
 
         const success = this.successfullySent(CashuStore);
-        const windowSize = Dimensions.get('window');
+        const windowSize = getWindowDimensions();
+        const contentWidth = getContentWidth(windowSize.width);
 
         // Show loading animation until we have a result (success or error)
         const showLoading = !paymentSuccess && !paymentError;
@@ -327,8 +323,8 @@ export default class CashuSendingLightning extends React.Component<
                         >
                             {!paymentError && (
                                 <Wordmark
-                                    height={windowSize.width * 0.25}
-                                    width={windowSize.width}
+                                    height={contentWidth * 0.25}
+                                    width={contentWidth}
                                     fill={themeColor('highlight')}
                                 />
                             )}

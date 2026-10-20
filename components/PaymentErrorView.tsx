@@ -1,7 +1,8 @@
 import * as React from 'react';
-import { Dimensions, Text, View } from 'react-native';
+import { Text, View, useWindowDimensions } from 'react-native';
 
 import { localeString } from '../utils/LocaleUtils';
+import { getContentWidth } from '../utils/LayoutUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
@@ -13,7 +14,8 @@ interface PaymentErrorViewProps {
 export default function PaymentErrorView({
     errorMessage
 }: PaymentErrorViewProps) {
-    const windowSize = Dimensions.get('window');
+    const windowSize = useWindowDimensions();
+    const contentWidth = getContentWidth(windowSize.width);
 
     return (
         <View style={{ alignItems: 'center' }}>
@@ -36,7 +38,7 @@ export default function PaymentErrorView({
                     style={{
                         color: themeColor('text'),
                         fontFamily: 'PPNeueMontreal-Book',
-                        fontSize: windowSize.width * windowSize.scale * 0.014,
+                        fontSize: contentWidth * windowSize.scale * 0.014,
                         textAlign: 'center',
                         marginTop: windowSize.height * 0.025,
                         padding: 5

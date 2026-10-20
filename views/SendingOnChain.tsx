@@ -1,7 +1,6 @@
 import * as React from 'react';
 import {
     BackHandler,
-    Dimensions,
     NativeEventSubscription,
     StyleSheet,
     Text,
@@ -18,6 +17,7 @@ import Screen from '../components/Screen';
 import SuccessAnimation from '../components/SuccessAnimation';
 import { Row } from '../components/layout/Row';
 
+import { getContentWidth, getWindowDimensions } from '../utils/LayoutUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import UrlUtils from '../utils/UrlUtils';
@@ -100,7 +100,8 @@ export default class SendingOnChain extends React.Component<
         } = TransactionsStore;
         const { testnet } = NodeInfoStore;
         const { storedNotes } = this.state;
-        const windowSize = Dimensions.get('window');
+        const windowSize = getWindowDimensions();
+        const contentWidth = getContentWidth(windowSize.width);
 
         const stack = getRouteStack();
         const isSwap = stack.filter((route) => route.name === 'SwapDetails')[0];
@@ -129,7 +130,7 @@ export default class SendingOnChain extends React.Component<
                                 // paddingBottom for centering
                                 paddingBottom: windowSize.height / 10,
                                 fontSize:
-                                    windowSize.width * windowSize.scale * 0.014
+                                    contentWidth * windowSize.scale * 0.014
                             }}
                         >
                             {crafting
@@ -151,8 +152,8 @@ export default class SendingOnChain extends React.Component<
                             {publishSuccess && (
                                 <>
                                     <Wordmark
-                                        height={windowSize.width * 0.25}
-                                        width={windowSize.width}
+                                        height={contentWidth * 0.25}
+                                        width={contentWidth}
                                         fill={themeColor('highlight')}
                                     />
                                     <View style={{ alignItems: 'center' }}>
@@ -164,7 +165,7 @@ export default class SendingOnChain extends React.Component<
                                                 paddingTop:
                                                     windowSize.height * 0.03,
                                                 fontSize:
-                                                    windowSize.width *
+                                                    contentWidth *
                                                     windowSize.scale *
                                                     0.017,
                                                 alignSelf: 'center'
@@ -201,7 +202,7 @@ export default class SendingOnChain extends React.Component<
                                                 fontFamily:
                                                     'PPNeueMontreal-Book',
                                                 fontSize:
-                                                    windowSize.width *
+                                                    contentWidth *
                                                     windowSize.scale *
                                                     0.014,
                                                 textAlign: 'center',

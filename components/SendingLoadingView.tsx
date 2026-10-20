@@ -1,13 +1,15 @@
 import * as React from 'react';
-import { Dimensions, Text, View } from 'react-native';
+import { Text, View, useWindowDimensions } from 'react-native';
 
 import LightningLoadingPattern from './LightningLoadingPattern';
 
 import { localeString } from '../utils/LocaleUtils';
+import { getContentWidth } from '../utils/LayoutUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 export default function SendingLoadingView() {
-    const windowSize = Dimensions.get('window');
+    const windowSize = useWindowDimensions();
+    const contentWidth = getContentWidth(windowSize.width);
 
     return (
         <View
@@ -25,7 +27,7 @@ export default function SendingLoadingView() {
                     fontFamily: 'PPNeueMontreal-Book',
                     // paddingBottom for centering
                     paddingBottom: windowSize.height / 10,
-                    fontSize: windowSize.width * windowSize.scale * 0.014
+                    fontSize: contentWidth * windowSize.scale * 0.014
                 }}
             >
                 {localeString('views.SendingLightning.sending')}

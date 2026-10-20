@@ -1,6 +1,5 @@
 import * as React from 'react';
 import {
-    Dimensions,
     FlatList,
     ListRenderItemInfo,
     StyleSheet,
@@ -18,6 +17,7 @@ import Button from '../components/Button';
 import LoadingIndicator from './LoadingIndicator';
 import ModalBox from './ModalBox';
 
+import { getWindowDimensions } from '../utils/LayoutUtils';
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -46,7 +46,6 @@ interface UTXOPickerState {
 }
 
 const DEFAULT_TITLE = localeString('components.UTXOPicker.defaultTitle');
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const FOOTER_PADDING_BOTTOM = 12;
 
 @inject('UTXOsStore')
@@ -319,7 +318,7 @@ export default class UTXOPicker extends React.Component<
                     style={{
                         ...styles.sheet,
                         backgroundColor: themeColor('modalBackground'),
-                        height: SCREEN_HEIGHT * 0.9
+                        height: getWindowDimensions().height * 0.9
                     }}
                     swipeToClose={true}
                     backdropPressToClose={true}

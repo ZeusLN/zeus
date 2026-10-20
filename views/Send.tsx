@@ -754,7 +754,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             DEFAULT_SLIDE_TO_PAY_THRESHOLD;
 
         return (
-            <Screen>
+            <Screen limitWidth>
                 <Header
                     leftComponent="Back"
                     onBack={this.backPressed.bind(this)}

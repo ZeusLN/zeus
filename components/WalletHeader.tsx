@@ -11,7 +11,6 @@ const insets = initialWindowMetrics?.insets ?? {
 import {
     Animated,
     AppState,
-    Dimensions,
     Easing,
     Image,
     NativeEventSubscription,
@@ -40,6 +39,7 @@ import Header from './Header';
 import LoadingIndicator from '../components/LoadingIndicator';
 import NodeIdenticon from '../components/NodeIdenticon';
 
+import { getWindowDimensions } from '../utils/LayoutUtils';
 import handleAnything, { isClipboardValue } from '../utils/handleAnything';
 import BackendUtils from '../utils/BackendUtils';
 import { getPhoto } from '../utils/PhotoUtils';
@@ -479,7 +479,7 @@ export default class WalletHeader extends React.Component<
             infoValue = localeString('views.Wallet.MainPane.signet');
         }
 
-        const { fontScale } = Dimensions.get('window');
+        const { fontScale } = getWindowDimensions();
 
         const NetworkBadge = () => {
             return infoValue ? (

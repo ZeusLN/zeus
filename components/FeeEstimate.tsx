@@ -1,11 +1,5 @@
 import * as React from 'react';
-import {
-    Dimensions,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
-} from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { inject, observer } from 'mobx-react';
 import { LNURLWithdrawParams } from 'js-lnurl';
@@ -22,6 +16,7 @@ import InvoicesStore from '../stores/InvoicesStore';
 import CashuStore from '../stores/CashuStore';
 import { feeStore, settingsStore } from '../stores/Stores';
 
+import { getWindowDimensions } from '../utils/LayoutUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import BackendUtils from '../utils/BackendUtils';
@@ -237,7 +232,7 @@ export default class FeeEstimate extends React.PureComponent<
         if (!satAmount || !visible) return null;
 
         const displayedFeeRate = this.getDisplayedFeeRate(feeRateProp);
-        const windowHeight = Dimensions.get('window').height;
+        const windowHeight = getWindowDimensions().height;
         const modalMaxHeight = showOnchainFeeInput
             ? Math.min(Math.max(windowHeight * 0.45, 280), 300)
             : Math.min(Math.max(windowHeight * 0.25, 200), 260);

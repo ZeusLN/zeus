@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { Dimensions, Text, View } from 'react-native';
+import { Text, View, useWindowDimensions } from 'react-native';
 
 import PaidIndicator from './PaidIndicator';
 import SuccessAnimation from './SuccessAnimation';
@@ -7,6 +7,7 @@ import Amount from './Amount';
 import { Row } from './layout/Row';
 
 import { localeString } from '../utils/LocaleUtils';
+import { getContentWidth } from '../utils/LayoutUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
 interface PaymentSuccessViewProps {
@@ -20,8 +21,9 @@ export default function PaymentSuccessView({
     feeAmount,
     paymentDuration
 }: PaymentSuccessViewProps) {
-    const windowSize = Dimensions.get('window');
-    const amountFontSize = windowSize.width * windowSize.scale * 0.013;
+    const windowSize = useWindowDimensions();
+    const contentWidth = getContentWidth(windowSize.width);
+    const amountFontSize = contentWidth * windowSize.scale * 0.013;
 
     return (
         <>
@@ -33,7 +35,7 @@ export default function PaymentSuccessView({
                         color: themeColor('text'),
                         paddingTop: windowSize.height * 0.03,
                         fontFamily: 'PPNeueMontreal-Book',
-                        fontSize: windowSize.width * windowSize.scale * 0.017
+                        fontSize: contentWidth * windowSize.scale * 0.017
                     }}
                 >
                     {localeString('views.SendingLightning.success')}

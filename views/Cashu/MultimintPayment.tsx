@@ -1,7 +1,6 @@
 import * as React from 'react';
 import {
     ActivityIndicator,
-    Dimensions,
     FlatList,
     StyleSheet,
     Text,
@@ -25,6 +24,7 @@ import { sendingStyles } from '../../components/sendingStyles';
 
 import CashuStore from '../../stores/CashuStore';
 
+import { getContentWidth, getWindowDimensions } from '../../utils/LayoutUtils';
 import {
     MintPaymentStatus,
     MintProgressInfo,
@@ -505,7 +505,8 @@ export default class MultimintPayment extends React.Component<
             donationHandled,
             paymentStarted
         } = this.state;
-        const windowSize = Dimensions.get('window');
+        const windowSize = getWindowDimensions();
+        const contentWidth = getContentWidth(windowSize.width);
 
         const paymentAmount = this.paymentAmountSat;
 
@@ -562,8 +563,8 @@ export default class MultimintPayment extends React.Component<
                             }}
                         >
                             <Wordmark
-                                height={windowSize.width * 0.25}
-                                width={windowSize.width}
+                                height={contentWidth * 0.25}
+                                width={contentWidth}
                                 fill={themeColor('highlight')}
                             />
                             <PaymentSuccessView

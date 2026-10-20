@@ -5,13 +5,13 @@ import {
     View,
     Image,
     StyleSheet,
-    FlatList,
-    Dimensions
+    FlatList
 } from 'react-native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import RNFS from 'react-native-fs';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { observer } from 'mobx-react';
 
 import AddIcon from '../../assets/images/SVG/Add.svg';
 
@@ -20,6 +20,7 @@ import {
     getPresetImage,
     getPresetNames
 } from '../../utils/PhotoUtils';
+import { getContentWidth, getWindowDimensions } from '../../utils/LayoutUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Screen from '../../components/Screen';
@@ -38,6 +39,7 @@ interface SetWalletPictureState {
     photo: string;
 }
 
+@observer
 export default class SetWalletPicture extends React.Component<
     SetWalletPictureProps,
     SetWalletPictureState
@@ -111,6 +113,9 @@ export default class SetWalletPicture extends React.Component<
     render() {
         const { navigation } = this.props;
         const { photo } = this.state;
+        const presetSize =
+            getContentWidth(getWindowDimensions().width) / 3 - 20;
+        const presetSizeStyle = { width: presetSize, height: presetSize };
 
         const AddPhotos = () => (
             <AddIcon
@@ -173,17 +178,20 @@ export default class SetWalletPicture extends React.Component<
                             <View
                                 style={{
                                     ...styles.presetContainer,
+                                    ...presetSizeStyle,
+                                    borderRadius: presetSize / 2,
                                     backgroundColor: themeColor('secondaryText')
                                 }}
                             >
                                 <Image
                                     source={getPresetImage(item)}
-                                    style={styles.presetImage}
+                                    style={presetSizeStyle}
                                     resizeMode="contain"
                                 />
                             </View>
                         </TouchableOpacity>
                     )}
+                    extraData={presetSize}
                     numColumns={3}
                     keyExtractor={(item) => item}
                     contentContainerStyle={{
@@ -204,8 +212,6 @@ export default class SetWalletPicture extends React.Component<
     }
 }
 
-const presetSize = Dimensions.get('window').width / 3 - 20;
-
 const styles = StyleSheet.create({
     photoContainer: {
         width: 136,
@@ -222,16 +228,9 @@ const styles = StyleSheet.create({
         borderRadius: 68
     },
     presetContainer: {
-        width: presetSize,
-        height: presetSize,
-        borderRadius: presetSize / 2,
         margin: 8,
         overflow: 'hidden',
         justifyContent: 'center',
         alignItems: 'center'
-    },
-    presetImage: {
-        width: presetSize,
-        height: presetSize
     }
 });

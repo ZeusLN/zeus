@@ -1,17 +1,12 @@
 import * as React from 'react';
-import {
-    BackHandler,
-    Dimensions,
-    NativeEventSubscription,
-    Text,
-    View
-} from 'react-native';
+import { BackHandler, NativeEventSubscription, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { inject, observer } from 'mobx-react';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { Route } from '@react-navigation/native';
 import { getRouteStack } from '../NavigationService';
 
+import { getContentWidth, getWindowDimensions } from '../utils/LayoutUtils';
 import { loadDonationLnurl } from '../utils/DonationUtils';
 
 import LnurlPaySuccess from './LnurlPay/Success';
@@ -385,7 +380,8 @@ export default class SendingLightning extends React.Component<
 
         const success = this.successfullySent(TransactionsStore);
         const inTransit = this.inTransit(TransactionsStore);
-        const windowSize = Dimensions.get('window');
+        const windowSize = getWindowDimensions();
+        const contentWidth = getContentWidth(windowSize.width);
 
         const stack = getRouteStack();
         const isSwap = stack.filter((route) => route.name === 'SwapDetails')[0];
@@ -425,8 +421,8 @@ export default class SendingLightning extends React.Component<
                         >
                             {(!!success || !!inTransit) && !error && (
                                 <Wordmark
-                                    height={windowSize.width * 0.25}
-                                    width={windowSize.width}
+                                    height={contentWidth * 0.25}
+                                    width={contentWidth}
                                     fill={themeColor('highlight')}
                                 />
                             )}
@@ -456,7 +452,7 @@ export default class SendingLightning extends React.Component<
                                             color: themeColor('text'),
                                             fontFamily: 'PPNeueMontreal-Book',
                                             fontSize:
-                                                windowSize.width *
+                                                contentWidth *
                                                 windowSize.scale *
                                                 0.014,
                                             marginTop: windowSize.height * 0.03,

@@ -1,6 +1,5 @@
 import * as React from 'react';
 import {
-    Dimensions,
     ScrollView,
     StyleSheet,
     TouchableOpacity,
@@ -16,6 +15,7 @@ import NfcManager from 'react-native-nfc-manager';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+import { getContentWidth, getWindowDimensions } from '../utils/LayoutUtils';
 import handleAnything from '../utils/handleAnything';
 
 import Wordmark from '../assets/images/SVG/wordmark-black.svg';
@@ -1301,7 +1301,8 @@ export default class Receive extends React.Component<
         const belowDustLimit: boolean =
             Number(satAmount) !== 0 && Number(satAmount) < 546;
 
-        const windowSize = Dimensions.get('window');
+        const windowSize = getWindowDimensions();
+        const contentWidth = getContentWidth(windowSize.width);
 
         const tenMButton = () => (
             <Text
@@ -1442,7 +1443,7 @@ export default class Receive extends React.Component<
             ) && nfcSupported;
 
         return (
-            <Screen>
+            <Screen limitWidth>
                 <Header
                     leftComponent="Back"
                     onBack={this.onBack}
@@ -1504,8 +1505,8 @@ export default class Receive extends React.Component<
                         >
                             <PaidIndicator />
                             <Wordmark
-                                height={windowSize.width * 0.25}
-                                width={windowSize.width}
+                                height={contentWidth * 0.25}
+                                width={contentWidth}
                                 fill={themeColor('highlight')}
                             />
                             <SuccessAnimation />
@@ -1515,7 +1516,7 @@ export default class Receive extends React.Component<
                                         style={{
                                             ...styles.text,
                                             fontSize:
-                                                windowSize.width *
+                                                contentWidth *
                                                 windowSize.scale *
                                                 0.017,
                                             alignSelf: 'center',
