@@ -4,7 +4,8 @@ import {
     formatInlineNoun,
     pascalToHumanReadable,
     bridgeJavaStrings,
-    languagesWithNounCapitalization
+    languagesWithNounCapitalization,
+    allLocaleStrings
 } from './LocaleUtils';
 
 const mockSettings: { locale?: string } = { locale: 'en' };
@@ -32,6 +33,7 @@ jest.mock('../locales/en.json', () => ({
     'test.greeting': 'Hello {{name}}',
     'test.repeated': '{{name}} and {{name}}',
     'test.emptyInDe': 'English value',
+    'test.shared': 'Shared',
     'androidNotification.nodeRunningBackground': 'nodeRunningBackground',
     'androidNotification.shutdown': 'shutdown',
     'androidNotification.nwcRunningBackground': 'nwcRunningBackground',
@@ -49,7 +51,10 @@ jest.mock('../locales/sk.json', () => ({ 'test.marker': 'sk' }));
 jest.mock('../locales/tr.json', () => ({ 'test.marker': 'tr' }));
 jest.mock('../locales/hu.json', () => ({ 'test.marker': 'hu' }));
 jest.mock('../locales/zh_CN.json', () => ({ 'test.marker': 'zh_CN' }));
-jest.mock('../locales/fr.json', () => ({ 'test.marker': 'fr' }));
+jest.mock('../locales/fr.json', () => ({
+    'test.marker': 'fr',
+    'test.shared': 'Shared'
+}));
 jest.mock('../locales/nl.json', () => ({ 'test.marker': 'nl' }));
 jest.mock('../locales/nb.json', () => ({ 'test.marker': 'nb' }));
 jest.mock('../locales/sv.json', () => ({ 'test.marker': 'sv' }));
@@ -209,5 +214,27 @@ describe('bridgeJavaStrings', () => {
             'androidNotification.nwcRunningBackground': 'nwcRunningBackground',
             'androidNotification.nwcShutdown': 'nwcShutdown'
         });
+    });
+});
+
+describe('allLocaleStrings', () => {
+    it('returns the translation of a key in every locale', () => {
+        const markers = allLocaleStrings('test.marker');
+        expect(markers).toHaveLength(33);
+        expect(markers).toEqual(
+            expect.arrayContaining(['en', 'de', 'fr', 'ko', 'id'])
+        );
+    });
+
+    it('lists each translation once', () => {
+        expect(allLocaleStrings('test.shared')).toEqual(['Shared']);
+    });
+
+    it('skips locales where the key is empty', () => {
+        expect(allLocaleStrings('test.emptyInDe')).toEqual(['English value']);
+    });
+
+    it('returns an empty list for an unknown key', () => {
+        expect(allLocaleStrings('not.a.key')).toEqual([]);
     });
 });
