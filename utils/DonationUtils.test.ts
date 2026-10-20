@@ -1,9 +1,18 @@
 jest.mock('react-native-blob-util', () => ({
     fetch: jest.fn()
 }));
+jest.mock('../stores/Stores', () => ({
+    settingsStore: { enableTor: false }
+}));
+jest.mock('./TorUtils', () => ({
+    doTorRequestRaw: jest.fn(),
+    RequestMethod: { GET: 'GET' }
+}));
 
 // DonationUtils.test.ts
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import { settingsStore } from '../stores/Stores';
+import { doTorRequestRaw } from './TorUtils';
 import {
     calculateDonationAmount,
     calculateTotalWithDonation,
@@ -13,6 +22,7 @@ import {
 } from './DonationUtils';
 
 const mockFetch = ReactNativeBlobUtil.fetch as jest.Mock;
+const mockTorRequest = doTorRequestRaw as jest.Mock;
 const mockConsoleError = jest
     .spyOn(console, 'error')
     .mockImplementation(() => {});
@@ -145,13 +155,57 @@ describe('DonationUtils', () => {
             expect(mockFetch).toHaveBeenNthCalledWith(
                 1,
                 'GET',
-                'https://pay.zeusln.app/.well-known/lnurlp/tips'
+                'https://pay.zeusln.app/.well-known/lnurlp/tips',
+                undefined,
+                undefined
             );
             expect(mockFetch).toHaveBeenNthCalledWith(
                 2,
                 'GET',
-                `${CALLBACK_URL}?amount=21000`
+                `${CALLBACK_URL}?amount=21000`,
+                undefined,
+                undefined
             );
+        });
+
+        it('should fetch over Tor when Tor is enabled', async () => {
+            settingsStore.enableTor = true;
+            mockTorRequest
+                .mockResolvedValueOnce({
+                    status: 200,
+                    body: JSON.stringify({
+                        callback: CALLBACK_URL,
+                        metadata: DONATION_METADATA
+                    })
+                })
+                .mockResolvedValueOnce({
+                    status: 200,
+                    body: JSON.stringify({ pr: DONATION_INVOICE_21_SATS })
+                });
+
+            try {
+                await expect(loadDonationLnurl('21')).resolves.toBe(
+                    DONATION_INVOICE_21_SATS
+                );
+            } finally {
+                settingsStore.enableTor = false;
+            }
+
+            expect(mockTorRequest).toHaveBeenNthCalledWith(
+                1,
+                'https://pay.zeusln.app/.well-known/lnurlp/tips',
+                'GET',
+                undefined,
+                undefined
+            );
+            expect(mockTorRequest).toHaveBeenNthCalledWith(
+                2,
+                `${CALLBACK_URL}?amount=21000`,
+                'GET',
+                undefined,
+                undefined
+            );
+            expect(mockFetch).not.toHaveBeenCalled();
         });
 
         it('should convert donation amount to millisats', async () => {
@@ -166,7 +220,9 @@ describe('DonationUtils', () => {
             expect(mockFetch).toHaveBeenNthCalledWith(
                 2,
                 'GET',
-                `${CALLBACK_URL}?amount=500000`
+                `${CALLBACK_URL}?amount=500000`,
+                undefined,
+                undefined
             );
         });
 
@@ -205,7 +261,9 @@ describe('DonationUtils', () => {
             expect(mockFetch).toHaveBeenNthCalledWith(
                 2,
                 'GET',
-                `${CALLBACK_URL}?amount=21500`
+                `${CALLBACK_URL}?amount=21500`,
+                undefined,
+                undefined
             );
         });
 
