@@ -1788,12 +1788,13 @@ export default class SwapStore {
         errors: string[]
     ): Promise<boolean> => {
         try {
-            const response = await ReactNativeBlobUtil.fetch(
-                'POST',
+            const response = await networkFetch({
+                method: 'POST',
                 url,
                 headers,
-                body
-            );
+                body,
+                enableTor: this.settingsStore.enableTor
+            });
             const httpStatus = response.info().status;
             const text = String((await response.text()) || '');
             if (
@@ -1815,10 +1816,11 @@ export default class SwapStore {
         txid: string
     ): Promise<boolean> => {
         try {
-            const response = await ReactNativeBlobUtil.fetch(
-                'GET',
-                `${apiUrl}/tx/${txid}`
-            );
+            const response = await networkFetch({
+                method: 'GET',
+                url: `${apiUrl}/tx/${txid}`,
+                enableTor: this.settingsStore.enableTor
+            });
             if (response.info().status !== 200) return false;
             return JSON.parse(String(await response.text()))?.txid === txid;
         } catch (e) {
@@ -1840,10 +1842,11 @@ export default class SwapStore {
         endpoint: string
     ): Promise<ReverseLockupFetch> => {
         try {
-            const response = await ReactNativeBlobUtil.fetch(
-                'GET',
-                `${endpoint}/swap/reverse/${id}/transaction`
-            );
+            const response = await networkFetch({
+                method: 'GET',
+                url: `${endpoint}/swap/reverse/${id}/transaction`,
+                enableTor: this.settingsStore.enableTor
+            });
             const httpStatus = response.info().status;
             if (
                 httpStatus >= 400 &&
