@@ -53,10 +53,15 @@ import ModalStore from './ModalStore';
 import Base64Utils from '../utils/Base64Utils';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
 import CashuUtils, {
+    isMeltPaid,
+    isMeltSettledUnpaid,
+    meltQuoteOutcome,
     MintPaymentStatus,
     MintProgressInfo,
     MultimintProgressCallback,
-    MultinutPaymentStep
+    MultinutPaymentStep,
+    normalizeMeltState,
+    PendingMelt
 } from '../utils/CashuUtils';
 import { cashuErrorForDisplay, errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -201,6 +206,12 @@ export default class CashuStore {
     @observable public payments?: Array<CashuPayment>;
     @observable public receivedTokens?: Array<CashuToken>;
     @observable public sentTokens?: Array<CashuToken>;
+    // Melts the mint has taken ecash for but has not settled, re-checked by
+    // reconcilePendingMelts
+    @observable public pendingMelts: Array<PendingMelt> = [];
+    // Quotes whose melt call has not returned yet. CDK is still waiting on
+    // the mint for these, so reconcilePendingMelts leaves them to the caller.
+    private meltsInProgress = new Set<string>();
     // CDK transactions loaded from history (CashuInvoice for incoming, CashuPayment for outgoing)
     @observable public cdkInvoices: Array<CashuInvoice> = [];
     @observable public seedVersion?: string;
@@ -1068,8 +1079,32 @@ export default class CashuStore {
 
         // Create melt quote first, then execute melt with quote ID
         const quote = await CashuDevKit.createMeltQuote(mintUrl, bolt11);
-        const result = await CashuDevKit.melt(mintUrl, quote.id);
+        const result = await this.trackAndMelt({
+            quote: quote.id,
+            mintUrl,
+            source: 'claim',
+            amount: quote.amount,
+            feeReserve: quote.fee_reserve,
+            request: bolt11,
+            expiry: quote.expiry,
+            createdAt: Date.now()
+        });
         await this.syncCDKBalances();
+
+        // A resolved melt is not a paid one. Callers treat a returned result
+        // as a completed payment, so refuse to hand one back for an invoice
+        // the mint has not settled. It stays tracked unless the mint settled
+        // it without paying, so a late settlement is still reconciled.
+        if (!isMeltPaid(result.state)) {
+            if (isMeltSettledUnpaid(result.state)) {
+                await this.untrackPendingMelt(quote.id);
+            }
+            throw new Error(
+                localeString('stores.CashuStore.errorPayingInvoice')
+            );
+        }
+
+        await this.untrackPendingMelt(quote.id);
 
         return result;
     };
@@ -1904,6 +1939,7 @@ export default class CashuStore {
         this.payments = undefined;
         this.receivedTokens = undefined;
         this.sentTokens = undefined;
+        this.pendingMelts = [];
         this.seedVersion = undefined;
         this.seedPhrase = undefined;
         this.seed = undefined;
@@ -3210,10 +3246,291 @@ export default class CashuStore {
         });
     };
 
+    private persistPendingMelts = async () =>
+        await Storage.setItem(
+            `${this.getNodeDir()}-cashu-pending-melts`,
+            this.pendingMelts
+        );
+
     /**
-     * Fire-and-forget sweep of pending invoices and unspent sent tokens.
-     * Deferred to idle time so the mint round trips do not compete with
-     * startup work. Use checkSentTokensSpentStatus when you need to await.
+     * Records a melt as in flight, before it is executed.
+     *
+     * A melt the mint does not settle immediately leaves no trace otherwise.
+     * CDK keeps the proofs reserved against the quote, so the ecash is not
+     * lost, but nothing would ever look at that quote again: a payment the
+     * mint completes minutes later could be neither noticed nor recorded, and
+     * the balance would simply drop. Written before the melt rather than
+     * after, so a crash or kill mid-melt is covered too.
+     */
+    private trackPendingMelt = async (melt: PendingMelt) => {
+        runInAction(() => {
+            this.pendingMelts = [
+                ...this.pendingMelts.filter(
+                    (pending) => pending.quote !== melt.quote
+                ),
+                melt
+            ];
+        });
+        await this.persistPendingMelts();
+    };
+
+    private untrackPendingMelt = async (quote: string) => {
+        if (!this.pendingMelts.some((pending) => pending.quote === quote)) {
+            return;
+        }
+        runInAction(() => {
+            this.pendingMelts = this.pendingMelts.filter(
+                (pending) => pending.quote !== quote
+            );
+        });
+        await this.persistPendingMelts();
+    };
+
+    /**
+     * Tracks a melt and executes it. The quote is marked in progress before
+     * it is tracked: a reconcile pass that saw it tracked but not yet in
+     * progress would find a quote no melt saga holds yet, read it as settled
+     * unpaid and untrack it just before the melt starts.
+     */
+    private trackAndMelt = async (melt: PendingMelt) => {
+        this.meltsInProgress.add(melt.quote);
+        try {
+            await this.trackPendingMelt(melt);
+            return await CashuDevKit.melt(melt.mintUrl, melt.quote);
+        } finally {
+            this.meltsInProgress.delete(melt.quote);
+        }
+    };
+
+    /**
+     * Records the payment a tracked melt turned out to be once the mint
+     * reports it paid.
+     *
+     * Only a `payment` melt produces a history entry: sweeps and self-custody
+     * claims pay an invoice from the user's own node, so a late settlement
+     * arrives as an incoming payment and is recorded there. The fee is only
+     * known if the pay path stored the payment from its melt result; what the
+     * mint spent is not in the quote, so an entry settled from the quote is
+     * marked fee unknown rather than shown as free. The balance itself comes
+     * from CDK.
+     */
+    private recordSettledMelt = async (
+        melt: PendingMelt,
+        preimage: string
+    ): Promise<boolean> => {
+        if (melt.source !== 'payment') return false;
+
+        const payments = this.payments || [];
+        const index = payments.findIndex(
+            (payment) => payment.meltResponse?.quote?.quote === melt.quote
+        );
+        const existing = index > -1 ? payments[index] : undefined;
+        const feeKnown =
+            !!existing && !existing.isInTransit && !existing.fee_unknown;
+
+        const settled = new CashuPayment({
+            ...(existing ? { ...existing } : {}),
+            bolt11: existing?.bolt11 || melt.request,
+            meltResponse: {
+                ...(existing?.meltResponse || {}),
+                quote: {
+                    ...(existing?.meltResponse?.quote || {
+                        quote: melt.quote,
+                        amount: melt.amount,
+                        fee_reserve: melt.feeReserve,
+                        expiry: melt.expiry || 0
+                    }),
+                    state: 'PAID',
+                    payment_preimage: preimage || null
+                },
+                state: 'PAID',
+                preimage
+            },
+            amount: existing?.amount ?? melt.amount,
+            fee: feeKnown ? existing.fee : 0,
+            fee_unknown: !feeKnown,
+            ...(existing
+                ? {}
+                : { creation_date: Math.floor(melt.createdAt / 1000) }),
+            status: 'SUCCEEDED',
+            payment_preimage: preimage,
+            mintUrl: melt.mintUrl
+        });
+
+        runInAction(() => {
+            if (index > -1) {
+                const updated = [...payments];
+                updated[index] = settled;
+                this.payments = updated;
+            } else {
+                this.payments = [...payments, settled];
+            }
+        });
+        await Storage.setItem(
+            `${this.getNodeDir()}-cashu-payments`,
+            this.payments
+        );
+        return true;
+    };
+
+    /**
+     * Records a payment whose melt the mint has taken but not settled, so an
+     * invoice that may still be paid is visible as in flight instead of
+     * vanishing. No preimage and no fee: neither exists until the mint
+     * settles, and reconcilePendingMelts fills in what it learns.
+     */
+    private recordInFlightPayment = async (melt: PendingMelt, payReq?: any) => {
+        const payment = new CashuPayment({
+            ...(payReq || {}),
+            bolt11: melt.request,
+            meltResponse: {
+                quote: {
+                    quote: melt.quote,
+                    amount: melt.amount,
+                    fee_reserve: melt.feeReserve,
+                    expiry: melt.expiry || 0
+                }
+            },
+            amount: melt.amount,
+            fee: 0,
+            // When the melt started. Without it an entry recovered after a
+            // kill has no time at all and sorts as 1970.
+            creation_date: Math.floor(melt.createdAt / 1000),
+            status: 'IN_FLIGHT',
+            payment_preimage: '',
+            mintUrl: melt.mintUrl
+        });
+
+        runInAction(() => {
+            this.payments = [...(this.payments || []), payment];
+        });
+        await Storage.setItem(
+            `${this.getNodeDir()}-cashu-payments`,
+            this.payments
+        );
+        activityStore.getSortedActivity();
+    };
+
+    private dropInFlightPayment = async (quote: string): Promise<boolean> => {
+        const payments = this.payments || [];
+        const remaining = payments.filter(
+            (payment) => payment.meltResponse?.quote?.quote !== quote
+        );
+        if (remaining.length === payments.length) return false;
+
+        runInAction(() => {
+            this.payments = remaining;
+        });
+        await Storage.setItem(
+            `${this.getNodeDir()}-cashu-payments`,
+            this.payments
+        );
+        return true;
+    };
+
+    /**
+     * Re-checks every melt still in flight with its mint and settles the
+     * wallet's record of it: one the mint has since paid becomes the payment
+     * it turned out to be, one the mint settled without paying is dropped,
+     * and one still pending is left for the next sweep.
+     */
+    @action
+    public reconcilePendingMelts = async () => {
+        if (!this.cdkInitialized || this.pendingMelts.length === 0) return;
+
+        // Same removed-mint gate as checkPendingItems: checking a quote goes
+        // through ensureMintAdded, which would re-add a removed mint
+        const knownMints = new Set(
+            this.mintUrls.map((url) => this.normalizeMintUrl(url))
+        );
+        const nowSeconds = Math.floor(Date.now() / 1000);
+        let activityChanged = false;
+
+        for (const melt of [...this.pendingMelts]) {
+            if (!knownMints.has(this.normalizeMintUrl(melt.mintUrl))) continue;
+            if (this.meltsInProgress.has(melt.quote)) continue;
+            // Settled by its caller while earlier quotes were being checked
+            if (
+                !this.pendingMelts.some(
+                    (pending) => pending.quote === melt.quote
+                )
+            ) {
+                continue;
+            }
+
+            let quote;
+            try {
+                quote = await CashuDevKit.checkMeltQuote(
+                    melt.mintUrl,
+                    melt.quote
+                );
+            } catch (e) {
+                console.error(
+                    `CashuStore: Error checking melt quote ${melt.quote}:`,
+                    e
+                );
+                // CDK only asks the mint, and so only fails here, once no
+                // melt saga holds the quote. Past its expiry such a quote
+                // cannot settle any more, so stop asking and drop the
+                // in-flight entry with it. An unexpired one is kept: the mint
+                // being unreachable says nothing about the payment.
+                if (melt.expiry && melt.expiry < nowSeconds) {
+                    if (melt.source === 'payment') {
+                        activityChanged =
+                            (await this.dropInFlightPayment(melt.quote)) ||
+                            activityChanged;
+                    }
+                    await this.untrackPendingMelt(melt.quote);
+                }
+                continue;
+            }
+
+            const outcome = meltQuoteOutcome(quote);
+            if (outcome === 'inFlight') {
+                // A melt interrupted by a crash or kill has no entry yet.
+                // Show it as in flight rather than leave the balance
+                // dropping with nothing in the activity list to explain it.
+                if (
+                    melt.source === 'payment' &&
+                    !(this.payments || []).some(
+                        (payment) =>
+                            payment.meltResponse?.quote?.quote === melt.quote
+                    )
+                ) {
+                    await this.recordInFlightPayment(melt);
+                    activityChanged = true;
+                }
+                continue;
+            }
+
+            if (outcome === 'paid') {
+                activityChanged =
+                    (await this.recordSettledMelt(
+                        melt,
+                        quote?.payment_preimage || ''
+                    )) || activityChanged;
+            } else if (melt.source === 'payment') {
+                activityChanged =
+                    (await this.dropInFlightPayment(melt.quote)) ||
+                    activityChanged;
+            }
+
+            await this.untrackPendingMelt(melt.quote);
+            // The proofs a settled melt spent, or released back to the
+            // wallet, only reach the balance through CDK
+            await this.syncCDKBalances(true);
+        }
+
+        if (activityChanged) {
+            activityStore.getSortedActivity();
+        }
+    };
+
+    /**
+     * Fire-and-forget sweep of pending invoices, unspent sent tokens and
+     * unsettled melts. Deferred to idle time so the mint round trips do not
+     * compete with startup work. Use checkSentTokensSpentStatus when you need
+     * to await.
      */
     @action
     public checkPendingItems = async () => {
@@ -3277,6 +3594,16 @@ export default class CashuStore {
             // Refresh activity list if any tokens were updated
             if (tokensUpdated) {
                 activityStore.getSortedActivity();
+            }
+
+            // Check melts the mint has not settled yet
+            try {
+                await this.reconcilePendingMelts();
+            } catch (e) {
+                console.error(
+                    'CashuStore: Error reconciling pending melts:',
+                    e
+                );
             }
         });
     };
@@ -3410,6 +3737,14 @@ export default class CashuStore {
                 0
             );
         }
+
+        // Load melts the mint had not settled when the app last ran
+        const storedPendingMelts = await Storage.getItem(
+            `${lndDir}-cashu-pending-melts`
+        );
+        this.pendingMelts = storedPendingMelts
+            ? JSON.parse(storedPendingMelts)
+            : [];
 
         // Load spent pending tokens (rugged tokens awaiting user review)
         const storedSpentPending = await Storage.getItem(
@@ -4602,7 +4937,90 @@ export default class CashuStore {
             }
 
             // Use existing melt quote directly instead of meltCDK
-            const meltResult = await CashuDevKit.melt(mintUrl, meltQuote.quote);
+            const pendingMelt: PendingMelt = {
+                quote: meltQuote.quote,
+                mintUrl,
+                source: 'payment',
+                amount: meltQuote.amount,
+                feeReserve: meltQuote.fee_reserve,
+                request: bolt11,
+                expiry: meltQuote.expiry,
+                createdAt: Date.now()
+            };
+
+            // fee_paid is left out when only the melt quote says the
+            // invoice was paid: the quote does not carry the fee
+            let meltResult: Omit<CDKMelted, 'fee_paid'> & {
+                fee_paid?: number;
+            };
+            try {
+                meltResult = await this.trackAndMelt(pendingMelt);
+            } catch (meltError) {
+                // CDK waits while the mint reports the melt Pending, and
+                // when it stops waiting (connection lost, mint unreachable)
+                // it throws while its saga still holds the quote and the
+                // proofs. Ask CDK which it is before calling it a failure.
+                let quote: CDKMeltQuote | undefined;
+                let outcome;
+                try {
+                    quote = await CashuDevKit.checkMeltQuote(
+                        mintUrl,
+                        meltQuote.quote
+                    );
+                    outcome = meltQuoteOutcome(quote);
+                } catch (checkError) {
+                    console.error(
+                        'CDK payLnInvoiceFromEcash: Failed to check melt quote after error:',
+                        checkError
+                    );
+                }
+
+                if (quote && outcome === 'paid') {
+                    // The mint paid while CDK was no longer waiting, and
+                    // checking the quote finalized the melt: report the
+                    // payment rather than an in-flight one
+                    meltResult = {
+                        state: quote.state,
+                        amount: meltQuote.amount,
+                        preimage: quote.payment_preimage
+                    };
+                } else {
+                    if (outcome === 'unpaid') {
+                        await this.untrackPendingMelt(meltQuote.quote);
+                    } else if (outcome) {
+                        // In flight: record it as such and let
+                        // reconcilePendingMelts settle it
+                        await this.recordInFlightPayment(pendingMelt, payReq);
+                        throw new Error(
+                            localeString('stores.CashuStore.paymentInFlight')
+                        );
+                    }
+                    throw meltError;
+                }
+            }
+
+            // Only a Paid melt means the mint settled the invoice. Anything
+            // else is surfaced as an error rather than recorded as a payment,
+            // matching the multimint path below.
+            if (!isMeltPaid(meltResult.state)) {
+                if (isMeltSettledUnpaid(meltResult.state)) {
+                    // The mint is finished with the melt and did not pay:
+                    // nothing is in flight and there is nothing to record.
+                    await this.untrackPendingMelt(meltQuote.quote);
+                    throw new Error(
+                        localeString('stores.CashuStore.errorPayingInvoice')
+                    );
+                }
+
+                // The mint has the ecash and may still pay. Record the
+                // payment as in flight so it is visible and so
+                // reconcilePendingMelts can settle it either way, rather
+                // than leaving a payment that may complete with no trace.
+                await this.recordInFlightPayment(pendingMelt, payReq);
+                throw new Error(
+                    localeString('stores.CashuStore.paymentInFlight')
+                );
+            }
 
             const realFee = meltResult.fee_paid;
             const paymentPreimage = meltResult.preimage || '';
@@ -4615,7 +5033,8 @@ export default class CashuStore {
                     change: meltResult.change
                 },
                 amount: meltResult.amount,
-                fee: realFee,
+                fee: realFee ?? 0,
+                ...(realFee === undefined ? { fee_unknown: true } : {}),
                 payment_preimage: paymentPreimage,
                 mintUrl
             });
@@ -4627,6 +5046,12 @@ export default class CashuStore {
                 `${this.getNodeDir()}-cashu-payments`,
                 this.payments
             );
+
+            // Untracked only once the payment is stored. CDK history keeps
+            // no outgoing record, so a kill between the two writes in the
+            // other order would lose the payment. In this order reconcile
+            // finds the stored entry by quote and settles it in place.
+            await this.untrackPendingMelt(meltQuote.quote);
 
             // CDK handles balance updates internally
             await this.syncCDKBalances(true); // Include transactions for activity
@@ -4655,6 +5080,21 @@ export default class CashuStore {
         } catch (err: any) {
             const errorMsg = cashuErrorForDisplay(err);
             console.error('CDK payLnInvoiceFromEcash error:', err);
+
+            // A melt that did not pay still moved proofs: CDK reserves them
+            // against the quote for as long as the mint may settle it. Only
+            // the success path synced, so the balance on screen was the one
+            // from before the attempt. meltCDK and sweepMint already sync
+            // before their guard.
+            try {
+                await this.syncCDKBalances(true);
+            } catch (syncError) {
+                console.error(
+                    'CDK payLnInvoiceFromEcash: Failed to sync balances after error:',
+                    syncError
+                );
+            }
+
             if (!isDonationPayment) {
                 runInAction(() => {
                     this.paymentError = true;
@@ -4803,15 +5243,10 @@ export default class CashuStore {
                                   partialAmount * 1000
                               );
 
-                        const meltState = (
-                            meltResult.state ||
-                            meltQuote.state ||
-                            ''
-                        ).toString();
-                        const normalizedMeltState =
-                            meltState.length > 0
-                                ? meltState.toUpperCase()
-                                : 'PAID';
+                        const normalizedMeltState = normalizeMeltState(
+                            meltResult.state,
+                            meltQuote.state
+                        );
 
                         if (normalizedMeltState !== 'PAID') {
                             throw new Error(
@@ -5428,8 +5863,25 @@ export default class CashuStore {
                     }
                 }
 
-                // Melt via CDK to pay the invoice
-                await this.meltCDK(mintUrl, invoice.paymentRequest);
+                // Melt via CDK to pay the invoice. The token has already been
+                // received at this point, so a melt that does not pay is not
+                // a failed claim: the ecash is in the wallet and the proofs
+                // are spent, so reporting failure would send the user looking
+                // for a token they already hold and cannot claim again.
+                try {
+                    await this.meltCDK(mintUrl, invoice.paymentRequest);
+                } catch (e: any) {
+                    console.error('CDK claimToken self-custody sweep:', e);
+                    await this.syncCDKBalances(true);
+                    this.loading = false;
+                    return {
+                        success: true,
+                        errorMessage: '',
+                        warningMessage: localeString(
+                            'stores.CashuStore.claimedButNotSwept'
+                        )
+                    };
+                }
 
                 await this.syncCDKBalances(true); // Include transactions for activity
             } else {
@@ -5624,10 +6076,16 @@ export default class CashuStore {
             if (__DEV__) {
                 console.log(`Sweep ${mintUrl}: Executing melt via CDK`);
             }
-            const meltResponse = await CashuDevKit.melt(
+            const meltResponse = await this.trackAndMelt({
+                quote: finalMeltQuote.id,
                 mintUrl,
-                finalMeltQuote.id
-            );
+                source: 'sweep',
+                amount: finalMeltQuote.amount,
+                feeReserve: finalMeltQuote.fee_reserve,
+                request: finalInvoice.paymentRequest,
+                expiry: finalMeltQuote.expiry,
+                createdAt: Date.now()
+            });
             if (__DEV__) {
                 console.log(
                     `Sweep ${mintUrl}: Melt response received`,
@@ -5637,6 +6095,22 @@ export default class CashuStore {
 
             // 6. Update balances from CDK
             await this.syncCDKBalances(true);
+
+            // The sweep only moved funds if the mint paid the invoice it was
+            // handed. A Pending melt leaves the sats at the mint, so reporting
+            // a successful sweep would be wrong. It stays tracked unless the
+            // mint settled it without paying, so a sweep that completes later
+            // is still reconciled.
+            if (!isMeltPaid(meltResponse.state)) {
+                if (isMeltSettledUnpaid(meltResponse.state)) {
+                    await this.untrackPendingMelt(finalMeltQuote.id);
+                }
+                throw new Error(
+                    localeString('stores.CashuStore.errorPayingInvoice')
+                );
+            }
+
+            await this.untrackPendingMelt(finalMeltQuote.id);
 
             if (__DEV__) {
                 console.log(
@@ -5890,6 +6364,7 @@ export default class CashuStore {
             await Storage.removeItem(`${lndDir}-cashu-offline-pending-tokens`);
             await Storage.removeItem(`${lndDir}-cashu-offline-spent-tokens`);
             await Storage.removeItem(`${lndDir}-cashu-sent-tokens`);
+            await Storage.removeItem(`${lndDir}-cashu-pending-melts`);
 
             // Storage.removeItem clears only the device-local partition. A
             // pre-desync synchronizable twin of the seed survives until the

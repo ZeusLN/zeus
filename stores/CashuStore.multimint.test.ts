@@ -864,7 +864,8 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
         expect(store.paymentErrorMsg).toBe('refused');
     });
 
-    it('currently treats a part with no melt state as paid', async () => {
+    // An absent state is ambiguous, so it must not be reported as paid
+    it('does not treat a part with no melt state as paid', async () => {
         const store = await plannedStore();
         // MPP quotes from the mint arrive with state UNPAID, so blank both
         cdk.meltPartial.mockResolvedValue({ amount: 0, fee_paid: 0 });
@@ -875,9 +876,9 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
 
         await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
 
-        // #4696 changes this: an absent state is not Paid
-        expect(store.paymentSuccess).toBe(true);
-        expect(store.payments).toHaveLength(2);
+        expect(store.paymentSuccess).toBe(false);
+        expect(store.paymentError).toBe(true);
+        expect(store.payments).toEqual([]);
     });
 
     it('currently records MPP parts without their quote id', async () => {
