@@ -6144,7 +6144,9 @@ export default class CashuStore {
         value: string;
         pubkey?: string;
         lockTime?: number;
-    }): Promise<{ token: string; decoded: CashuToken } | undefined> => {
+    }): Promise<
+        { token: string; decoded: CashuToken; saveFailed: boolean } | undefined
+    > => {
         runInAction(() => {
             this.mintingToken = true;
             this.mintingTokenError = false;
@@ -6237,12 +6239,21 @@ export default class CashuStore {
                 value: cdkToken.value
             });
 
-            // Record sent token activity
+            // Record sent token activity. CDK has already taken the proofs,
+            // so a failed write must not keep the token from the caller:
+            // it is the only copy the user can share. The token stays in
+            // memory and is persisted by the next write of sentTokens.
             this.sentTokens?.push(decoded);
-            await Storage.setItem(
-                `${this.getNodeDir()}-cashu-sent-tokens`,
-                this.sentTokens
-            );
+            let saveFailed = false;
+            try {
+                await Storage.setItem(
+                    `${this.getNodeDir()}-cashu-sent-tokens`,
+                    this.sentTokens
+                );
+            } catch (e) {
+                console.error('CDK mintToken: failed to save sent token:', e);
+                saveFailed = true;
+            }
 
             // CDK handles balance updates internally
             await this.syncCDKBalances();
@@ -6251,7 +6262,7 @@ export default class CashuStore {
                 this.mintingToken = false;
             });
 
-            return { token, decoded };
+            return { token, decoded, saveFailed };
         } catch (e: any) {
             const errorMsg =
                 cashuErrorForDisplay(e) ||

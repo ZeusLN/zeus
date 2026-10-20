@@ -2360,6 +2360,7 @@
     "views.Cashu.CashuToken.proofCount": "Number of proofs",
     "views.Cashu.CashuToken.notSupported": "This token has a unit that is not supported",
     "views.Cashu.CashuToken.success": "Successfully received token",
+    "views.Cashu.CashuToken.saveFailed": "This token could not be saved to your activity. Copy or share it before leaving this screen, as it may not be shown again.",
     "views.Cashu.CashuToken.meltTokenSelfCustody": "Receive to self-custody",
     "views.Cashu.CashuToken.tokenSweep": "Cashu token sweep",
     "views.Cashu.CashuToken.feeAdjusted": "Fee adjusted",

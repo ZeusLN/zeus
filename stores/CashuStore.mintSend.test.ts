@@ -761,6 +761,7 @@ describe('CashuStore.mintToken online', () => {
             'node1-cashu-sent-tokens',
             store.sentTokens
         );
+        expect(result!.saveFailed).toBe(false);
         expect(store.mintingToken).toBe(false);
         expect(store.mintingTokenError).toBe(false);
     });
@@ -814,21 +815,43 @@ describe('CashuStore.mintToken online', () => {
         );
     });
 
-    it('currently drops the token when saving it fails after CDK sent it', async () => {
+    it('returns the token and flags the failure when saving it fails after CDK sent it', async () => {
         const store = newStore();
         storage.setItem.mockRejectedValue(new Error('keychain full'));
 
         const result = await store.mintToken({ memo: '', value: '1000' });
 
-        // CDK has already taken the proofs for this token, but the caller
-        // gets no token string to share and an error instead
+        // CDK has already taken the proofs, so the caller must still get
+        // the token string to share
         expect(cdk.send).toHaveBeenCalledTimes(1);
-        expect(result).toBeUndefined();
-        expect(store.mintingTokenError).toBe(true);
-        expect(store.error_msg).toBe('keychain full');
-        // the token is still in memory until the next restart
+        expect(result!.token).toBe('cashuBtoken');
+        expect(result!.decoded.encodedToken).toBe('cashuBtoken');
+        expect(result!.saveFailed).toBe(true);
+        expect(store.mintingToken).toBe(false);
+        expect(store.mintingTokenError).toBe(false);
+        expect(store.error_msg).toBeUndefined();
+        // kept in memory so the next sentTokens write persists it
         expect(store.sentTokens!.map((t) => t.encodedToken)).toEqual([
             'cashuBtoken'
+        ]);
+        expect(cdk.getBalances).toHaveBeenCalled();
+    });
+
+    it('persists a token whose save failed on the next send', async () => {
+        const store = newStore();
+        storage.setItem.mockRejectedValueOnce(new Error('keychain full'));
+        cdk.send
+            .mockResolvedValueOnce(cdkToken())
+            .mockResolvedValueOnce({ ...cdkToken(), encoded: 'cashuBsecond' });
+
+        await store.mintToken({ memo: '', value: '1000' });
+        const second = await store.mintToken({ memo: '', value: '1000' });
+
+        expect(second!.saveFailed).toBe(false);
+        const saved = storage.setItem.mock.calls[1][1] as any[];
+        expect(saved.map((t) => t.encodedToken)).toEqual([
+            'cashuBtoken',
+            'cashuBsecond'
         ]);
     });
 });
