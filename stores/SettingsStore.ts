@@ -2373,10 +2373,17 @@ export default class SettingsStore {
                 typeof newSetting === 'function'
                     ? newSetting(existingSettings)
                     : newSetting;
-            const newSettings = {
-                ...existingSettings,
-                ...resolvedSetting
-            };
+            // Round-tripped through JSON so memory and the returned
+            // settings match what storage keeps: JSON drops
+            // undefined-valued keys, and a node kept in memory with them
+            // no longer isEqual-matches its persisted copy (wallet
+            // deletion locates its config that way, #4969).
+            const newSettings = JSON.parse(
+                JSON.stringify({
+                    ...existingSettings,
+                    ...resolvedSetting
+                })
+            );
 
             const persisted = await this.setSettings(newSettings);
             if (!persisted) {
@@ -2399,10 +2406,7 @@ export default class SettingsStore {
                         JSON.parse(JSON.stringify(existingSettings)),
                         REFRESH_EXEMPT_SETTINGS
                     ),
-                    omit(
-                        JSON.parse(JSON.stringify(newSettings)),
-                        REFRESH_EXEMPT_SETTINGS
-                    )
+                    omit(newSettings, REFRESH_EXEMPT_SETTINGS)
                 )
             ) {
                 this.triggerSettingsRefresh = true;
