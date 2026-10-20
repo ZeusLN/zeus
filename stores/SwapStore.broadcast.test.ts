@@ -52,7 +52,8 @@ jest.mock('../utils/MigrationUtils', () => ({
 }));
 jest.mock('../utils/TorUtils', () => ({
     doTorRequest: jest.fn(),
-    RequestMethod: {}
+    doTorRequestRaw: jest.fn(),
+    RequestMethod: { GET: 'GET', POST: 'POST' }
 }));
 jest.mock('../utils/LdkNodeUtils', () => ({
     DEFAULT_SCORER_URL: '',
@@ -86,15 +87,17 @@ import { Transaction } from 'bitcoinjs-lib';
 
 import SwapStore from './SwapStore';
 import Storage from '../storage';
+import { doTorRequestRaw } from '../utils/TorUtils';
 import { SWAPS_KEY, REVERSE_SWAPS_KEY } from '../utils/SwapUtils';
 
 const storageBacking = (Storage as any).__store as { [key: string]: string };
 const fetchMock = ReactNativeBlobUtil.fetch as jest.Mock;
+const torMock = doTorRequestRaw as jest.Mock;
 
-const newStore = () =>
+const newStore = (enableTor = false) =>
     new SwapStore(
         { nodeInfo: { nodeId: 'node-pubkey', isTestNet: false } } as any,
-        { settings: {}, implementation: 'lnd' } as any
+        { settings: {}, implementation: 'lnd', enableTor } as any
     );
 
 const claimTx = () => {
@@ -233,7 +236,12 @@ describe('SwapStore.broadcastSwapTransaction', () => {
             await expect(
                 newStore().broadcastSwapTransaction(CLAIM_HEX, HOST)
             ).resolves.toBe(CLAIM_TXID);
-            expect(fetchMock).toHaveBeenLastCalledWith('GET', LOOKUP);
+            expect(fetchMock).toHaveBeenLastCalledWith(
+                'GET',
+                LOOKUP,
+                undefined,
+                undefined
+            );
         });
 
         it.each([
@@ -247,7 +255,12 @@ describe('SwapStore.broadcastSwapTransaction', () => {
             await expect(
                 newStore().broadcastSwapTransaction(CLAIM_HEX, HOST)
             ).rejects.toThrow(/mempool\.test.*swaps\.test/);
-            expect(fetchMock).toHaveBeenLastCalledWith('GET', LOOKUP);
+            expect(fetchMock).toHaveBeenLastCalledWith(
+                'GET',
+                LOOKUP,
+                undefined,
+                undefined
+            );
         });
     });
 
@@ -288,6 +301,37 @@ describe('SwapStore.broadcastSwapTransaction', () => {
             ).rejects.toThrow('no broadcast endpoint for this network');
             expect(fetchMock).not.toHaveBeenCalled();
         });
+    });
+
+    it('sends the transaction and the lookup over Tor when Tor is enabled', async () => {
+        const LOOKUP = `https://mempool.test/api/tx/${CLAIM_TXID}`;
+        torMock.mockImplementation(async (url: string) =>
+            url === LOOKUP
+                ? { status: 200, body: JSON.stringify({ txid: CLAIM_TXID }) }
+                : { status: 400, body: 'bad-txns-inputs-missingorspent' }
+        );
+
+        await expect(
+            newStore(true).broadcastSwapTransaction(CLAIM_HEX, HOST)
+        ).resolves.toBe(CLAIM_TXID);
+
+        expect(torMock).toHaveBeenCalledTimes(3);
+        expect(torMock).toHaveBeenCalledWith(MEMPOOL_TX, 'POST', CLAIM_HEX, {
+            'Content-Type': 'text/plain'
+        });
+        expect(torMock).toHaveBeenCalledWith(
+            HOST_TX,
+            'POST',
+            JSON.stringify({ hex: CLAIM_HEX }),
+            { 'Content-Type': 'application/json' }
+        );
+        expect(torMock).toHaveBeenCalledWith(
+            LOOKUP,
+            'GET',
+            undefined,
+            undefined
+        );
+        expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it('rejects a transaction it cannot decode without sending it', async () => {
@@ -429,7 +473,25 @@ describe('SwapStore.getReverseLockupTransactionHex', () => {
         await expect(
             newStore().getReverseLockupTransactionHex('swap', HOST)
         ).resolves.toEqual({ status: 'found', hex: 'lockuphex' });
-        expect(fetchMock).toHaveBeenCalledWith('GET', URL);
+        expect(fetchMock).toHaveBeenCalledWith(
+            'GET',
+            URL,
+            undefined,
+            undefined
+        );
+    });
+
+    it('asks the host over Tor when Tor is enabled', async () => {
+        torMock.mockResolvedValue({
+            status: 200,
+            body: JSON.stringify({ id: 'lockup', hex: 'lockuphex' })
+        });
+
+        await expect(
+            newStore(true).getReverseLockupTransactionHex('swap', HOST)
+        ).resolves.toEqual({ status: 'found', hex: 'lockuphex' });
+        expect(torMock).toHaveBeenCalledWith(URL, 'GET', undefined, undefined);
+        expect(fetchMock).not.toHaveBeenCalled();
     });
 
     it.each([400, 404])(
