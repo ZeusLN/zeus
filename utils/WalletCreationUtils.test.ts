@@ -326,10 +326,20 @@ describe('createOnboardingWallet', () => {
             expect(settingsStore.walletJustCreated).toBe(false);
         });
 
-        // The embedded LND branch awaits updateSettings outside a try, so a
-        // rejected write escapes createOnboardingWallet; both onboarding
-        // callers await it without a catch, which leaves the spinner up and
-        // the new wallet's seed unsaved
-        it.todo('reports an error when the embedded LND settings write fails');
+        // Both onboarding callers await createOnboardingWallet without a
+        // catch, so a rejection that escaped it left the spinner up (#5024)
+        it('reports an error, not success, when the embedded LND settings write fails', async () => {
+            const settingsStore = makeSettingsStore();
+            settingsStore.updateSettings.mockRejectedValue(new Error('disk'));
+            const params = makeParams(settingsStore);
+
+            await expect(createOnboardingWallet(params)).resolves.toBe(
+                undefined
+            );
+
+            expect(params.onError).toHaveBeenCalledTimes(1);
+            expect(params.onSuccess).not.toHaveBeenCalled();
+            expect(settingsStore.setConnectingStatus).not.toHaveBeenCalled();
+        });
     });
 });
