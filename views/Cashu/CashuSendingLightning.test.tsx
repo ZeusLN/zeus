@@ -175,4 +175,60 @@ describe('CashuSendingLightning', () => {
             isDonationPayment: true
         });
     });
+
+    // The screen stays mounted under anything pushed on top of it (Add a
+    // note, then a payment opened from a link). paymentSuccess is shared by
+    // every payment, so a later one flips it back to false and then true.
+    const laterPaymentSucceeds = async (
+        cashuStore: any,
+        rerender: (el: React.ReactElement) => Promise<void> | void,
+        params: any
+    ) => {
+        cashuStore.paymentSuccess = false;
+        await rerender(view(cashuStore, params));
+        cashuStore.paymentSuccess = true;
+        await rerender(view(cashuStore, params));
+    };
+
+    const donationParams = {
+        paymentAmount: '100',
+        paymentRequest: 'lnbc1reviewed',
+        donationAmount: '25'
+    };
+
+    it('does not send the donation again on a later payment when its invoice could not be fetched', async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue(null);
+        const cashuStore = buildCashuStore();
+
+        const { rerender } = await render(view(cashuStore, donationParams));
+        cashuStore.paymentSuccess = true;
+        await rerender(view(cashuStore, donationParams));
+        await waitFor(() => expect(loadDonationLnurl).toHaveBeenCalledTimes(1));
+
+        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+        await laterPaymentSucceeds(cashuStore, rerender, donationParams);
+        await new Promise((r) => setImmediate(r));
+
+        expect(loadDonationLnurl).toHaveBeenCalledTimes(1);
+        expect(cashuStore.getPayReq).not.toHaveBeenCalled();
+    });
+
+    it('does not send the donation again on a later payment when it was not paid', async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+        const cashuStore = buildCashuStore();
+
+        const { rerender } = await render(view(cashuStore, donationParams));
+        cashuStore.paymentSuccess = true;
+        await rerender(view(cashuStore, donationParams));
+        await waitFor(() =>
+            expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledTimes(2)
+        );
+
+        await laterPaymentSucceeds(cashuStore, rerender, donationParams);
+        await new Promise((r) => setImmediate(r));
+
+        // the payment and one donation attempt
+        expect(cashuStore.payLnInvoiceFromEcash).toHaveBeenCalledTimes(2);
+        expect(loadDonationLnurl).toHaveBeenCalledTimes(1);
+    });
 });

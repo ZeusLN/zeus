@@ -65,7 +65,6 @@ interface CashuSendingLightningState {
     donationHandled: boolean;
     donationPreimage: string;
     amountDonated: number | null;
-    donationIsPaid: boolean;
     showPaymentDetails: boolean;
 }
 
@@ -81,6 +80,12 @@ export default class CashuSendingLightning extends React.Component<
 
     private cancelPaymentKickoff: (() => void) | undefined;
 
+    // The donation is attempted once, after this screen's payment. The
+    // success flag it waits for is shared by every payment, so while this
+    // screen stays mounted under another one (Add a note, then a payment
+    // opened from a link), a later payment sets it again.
+    private donationAttempted = false;
+
     constructor(props: CashuSendingLightningProps) {
         super(props);
         this.state = {
@@ -92,7 +97,6 @@ export default class CashuSendingLightning extends React.Component<
             amountDonated: null,
             wasSuccessful: false,
             paymentType: 'main',
-            donationIsPaid: false,
             showPaymentDetails: false
         };
     }
@@ -139,7 +143,6 @@ export default class CashuSendingLightning extends React.Component<
 
     componentDidUpdate() {
         const { CashuStore, route } = this.props;
-        const { donationIsPaid } = this.state;
         const { donationAmount } = route.params;
 
         const wasSuccessful = this.successfullySent(CashuStore);
@@ -157,8 +160,9 @@ export default class CashuSendingLightning extends React.Component<
             wasSuccessful &&
             !this.state.wasSuccessful &&
             donationAmount &&
-            !donationIsPaid
+            !this.donationAttempted
         ) {
+            this.donationAttempted = true;
             this.handleDonationPayment(donationAmount);
         }
     }
@@ -213,7 +217,6 @@ export default class CashuSendingLightning extends React.Component<
 
             this.setState({
                 donationHandled: true,
-                donationIsPaid: true,
                 amountDonated: parseFloat(amountDonated?.toString() || '0'),
                 donationPreimage: paymentPreimage || ''
             });

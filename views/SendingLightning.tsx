@@ -101,6 +101,13 @@ export default class SendingLightning extends React.Component<
 
     private focusListener: (() => void) | undefined;
 
+    // The donation is attempted once, after this screen's payment. Its
+    // conditions are re-checked on every update, so without this a failed
+    // attempt would start another as soon as it set its state, and the
+    // status it waits for is shared by every payment, so a later payment
+    // made while this screen stays mounted would send it again.
+    private donationAttempted = false;
+
     constructor(props: SendingLightningProps) {
         super(props);
         this.state = {
@@ -177,9 +184,9 @@ export default class SendingLightning extends React.Component<
             enableDonations &&
             donationAmount &&
             !donationIsPaid &&
-            !this.state.payingDonation &&
-            !this.state.donationHandled
+            !this.donationAttempted
         ) {
+            this.donationAttempted = true;
             this.handleDonationPayment(donationAmount);
         }
     }
