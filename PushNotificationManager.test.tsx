@@ -24,6 +24,7 @@ jest.mock('./NavigationService', () => ({
 
 import PushNotificationManager from './PushNotificationManager';
 import NavigationService from './NavigationService';
+import { processPendingNwcActivityLink } from './utils/NwcActivityLinkUtils';
 
 describe('PushNotificationManager.goToNwcActivityFromNotif', () => {
     const payload = {
@@ -36,8 +37,10 @@ describe('PushNotificationManager.goToNwcActivityFromNotif', () => {
         (new PushNotificationManager({}) as any).goToNwcActivityFromNotif(p);
 
     beforeEach(() => {
-        jest.clearAllMocks();
         mockAuthRequired = false;
+        // drop a link a previous test left queued
+        processPendingNwcActivityLink();
+        jest.clearAllMocks();
     });
 
     it('opens the connection activity when no login is required', () => {
@@ -55,6 +58,41 @@ describe('PushNotificationManager.goToNwcActivityFromNotif', () => {
         tap(payload);
 
         expect(NavigationService.navigateWhenReady).not.toHaveBeenCalled();
+    });
+
+    it('opens the connection activity once after the login', () => {
+        mockAuthRequired = true;
+        tap(payload);
+
+        mockAuthRequired = false;
+        processPendingNwcActivityLink();
+
+        expect(NavigationService.navigateWhenReady).toHaveBeenCalledTimes(1);
+        expect(NavigationService.navigateWhenReady).toHaveBeenCalledWith(
+            'NWCConnectionActivity',
+            { connectionId: 'conn-1', failedActivityId: 'act-1' }
+        );
+
+        processPendingNwcActivityLink();
+
+        expect(NavigationService.navigateWhenReady).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the tap queued while login is still required', () => {
+        mockAuthRequired = true;
+        tap({ ...payload, zeusNwcFailedActivityId: undefined });
+
+        processPendingNwcActivityLink();
+
+        expect(NavigationService.navigateWhenReady).not.toHaveBeenCalled();
+
+        mockAuthRequired = false;
+        processPendingNwcActivityLink();
+
+        expect(NavigationService.navigateWhenReady).toHaveBeenCalledWith(
+            'NWCConnectionActivity',
+            { connectionId: 'conn-1' }
+        );
     });
 
     it('ignores notifications that are not NWC activity links', () => {
