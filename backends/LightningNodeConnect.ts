@@ -322,6 +322,14 @@ export default class LightningNodeConnect {
                 outpoints: data.outpoints
             })
             .then((data: lnrpc.SendCoinsResponse) => snakeize(data));
+    estimateOnchainFee = async (data: any) =>
+        await this.lnc.lnd.lightning
+            .estimateFee({
+                AddrToAmount: data.addr_to_amount,
+                target_conf: data.target_conf,
+                spend_unconfirmed: data.spend_unconfirmed
+            })
+            .then((data: lnrpc.EstimateFeeResponse) => snakeize(data));
     sendCustomMessage = async (data: any) =>
         await this.lnc.lnd.lightning
             .sendCustomMessage({
@@ -1157,6 +1165,7 @@ export default class LightningNodeConnect {
     supportsLnurlAuth = () => true;
     supportsOnchainBalance = () => true;
     supportsOnchainSends = () => this.permSendCoins;
+    supportsOnchainFeeEstimation = () => this.permSendCoins;
     supportsOnchainReceiving = () => this.permNewAddress;
     supportsUnconfirmedTransactionOrigin = () => true;
     supportsLightningSends = () => this.permSendLN;
