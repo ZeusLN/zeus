@@ -48,6 +48,9 @@ export default class InvoicesStore {
     @observable invoicesCount: number;
     @observable watchedInvoicePaid = false;
     @observable watchedInvoicePaidAmt: number | string | null = null;
+    // bumped by every getPayReq, getWithdrawalReq and reset, so a decode
+    // answer can tell whether its request is still the current one
+    private payReqRequestId = 0;
     settingsStore: SettingsStore;
     lspStore: LSPStore;
     channelsStore: ChannelsStore;
@@ -105,6 +108,7 @@ export default class InvoicesStore {
     @action
     public reset = () => {
         this.invoiceRequestSeq++;
+        this.payReqRequestId++;
         this.paymentRequest = '';
         this.onChainAddress = '';
         this.loading = false;
@@ -979,6 +983,7 @@ export default class InvoicesStore {
 
     @action
     public getPayReq = (paymentRequest: string) => {
+        const requestId = ++this.payReqRequestId;
         this.loading = true;
         this.pay_req = null;
         this.paymentRequest = paymentRequest;
@@ -988,8 +993,12 @@ export default class InvoicesStore {
             .then((data: any) => {
                 // drop the response of a superseded request: applying it
                 // would leave pay_req (what the user reviews) describing a
-                // different invoice than paymentRequest (what gets paid)
-                if (this.paymentRequest !== paymentRequest) return;
+                // different invoice than paymentRequest (what gets paid).
+                // Compare ids, not strings: two decodes of the same string
+                // can settle out of order on backends without restReq
+                // de-duplication, and an older failure must not clear a
+                // newer success
+                if (requestId !== this.payReqRequestId) return;
                 runInAction(() => {
                     // thread the original bolt11 string through: several
                     // backends' decode responses omit it, leaving the
@@ -1001,7 +1010,7 @@ export default class InvoicesStore {
                 return;
             })
             .catch((error: Error) => {
-                if (this.paymentRequest !== paymentRequest) return;
+                if (requestId !== this.payReqRequestId) return;
                 const error_friendly = errorToUserFriendly(error);
                 runInAction(() => {
                     this.pay_req = null;
@@ -1013,6 +1022,7 @@ export default class InvoicesStore {
 
     @action
     public getWithdrawalReq = (withdrawalReq: string) => {
+        const requestId = ++this.payReqRequestId;
         this.loading = true;
         this.withdrawal_req = null;
         this.paymentRequest = withdrawalReq;
@@ -1021,7 +1031,7 @@ export default class InvoicesStore {
         return BackendUtils.decodePaymentRequest([withdrawalReq])
             .then((data: any) => {
                 // same guard as getPayReq: both share paymentRequest
-                if (this.paymentRequest !== withdrawalReq) return;
+                if (requestId !== this.payReqRequestId) return;
                 runInAction(() => {
                     this.withdrawal_req = new WithdrawalRequest(data);
                     this.getPayReqError = null;
@@ -1030,7 +1040,7 @@ export default class InvoicesStore {
                 return;
             })
             .catch((error: Error) => {
-                if (this.paymentRequest !== withdrawalReq) return;
+                if (requestId !== this.payReqRequestId) return;
                 const error_friendly = errorToUserFriendly(error);
                 runInAction(() => {
                     this.withdrawal_req = null;
