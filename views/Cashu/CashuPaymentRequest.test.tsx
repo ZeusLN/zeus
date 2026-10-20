@@ -26,6 +26,8 @@ jest.mock('../../utils/BackendUtils', () => ({}));
 jest.mock('../../utils/UnitsUtils', () => ({ numberWithCommas: String }));
 jest.mock('react-native-blob-util', () => ({}));
 jest.mock('../../utils/LnurlPayUtils', () => ({}));
+jest.mock('../../utils/NetworkUtils', () => ({}));
+jest.mock('../../stores/Stores', () => ({}));
 jest.mock('../../utils/DonationUtils', () => ({
     getDonationToSend: jest.requireActual('../../utils/DonationUtils')
         .getDonationToSend
