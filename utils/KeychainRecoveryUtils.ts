@@ -262,12 +262,12 @@ class KeychainRecoveryUtils {
             // Scan other data keys
             for (const { key, description } of OTHER_KEYS) {
                 const keyResults = await this.scanKey(key, description);
-                // Only add results that are NOT from current storage
-                // (we're looking for orphaned/lost data)
-                const orphanedResults = keyResults.filter(
-                    (r) => r.source !== 'current'
-                );
-                result.otherDataFound.push(...orphanedResults);
+                // A key current storage can read is live, not orphaned.
+                // Legacy copies of it are older snapshots (the migration
+                // never deleted them), so offering them would invite
+                // overwriting live data.
+                if (keyResults.some((r) => r.source === 'current')) continue;
+                result.otherDataFound.push(...keyResults);
             }
 
             console.log(
@@ -394,6 +394,100 @@ class KeychainRecoveryUtils {
                 error: String(error)
             };
         }
+    }
+
+    /**
+     * Order in which legacy sources are trusted when the same key was found in
+     * more than one of them.
+     *
+     * `scanKey` returns one result per source, so `otherDataFound` can hold up
+     * to four copies of a key, written at different times. Restoring them all
+     * would write the key several times and leave whichever came last in the
+     * array, which is arbitrary.
+     *
+     * Newest writer first, from git history:
+     * - EncryptedStorage: v0.7.1 to v0.9.4. It never held any of the
+     *   `OTHER_KEYS` names, so it can't produce a result here.
+     * - Unprefixed keychain: from v0.9.5, which also renamed the keys.
+     * - `zeus:` prefix: from v0.12.2. `prefixed-cloud` only shows up when
+     *   the current read misses (the stuck-desync case), and then it is newer
+     *   than the unprefixed copies.
+     *
+     * Whether `unprefixed-local` should rank above `unprefixed-cloud` is
+     * unverified: before v0.12.2 `Storage` wrote with `cloudSync: false`, but
+     * on iOS that flag may not have controlled which partition was used.
+     * Local stays first to match `migrateKey`, which reads local first.
+     */
+    private static readonly SOURCE_PRECEDENCE: Array<RecoveryResult['source']> =
+        [
+            'prefixed-cloud',
+            'unprefixed-local',
+            'unprefixed-cloud',
+            'encrypted-storage'
+        ];
+
+    /**
+     * Groups recovery results by key: one group per key, most trusted first.
+     *
+     * Results for a key are returned newest-trusted-first, so `[0]` is the
+     * copy `restoreOtherData` would write and the rest are what a UI can offer
+     * as alternatives.
+     */
+    public groupByKey(
+        results: RecoveryResult[]
+    ): Map<string, RecoveryResult[]> {
+        const grouped = new Map<string, RecoveryResult[]>();
+
+        for (const result of results) {
+            const existing = grouped.get(result.key);
+            if (existing) {
+                existing.push(result);
+            } else {
+                grouped.set(result.key, [result]);
+            }
+        }
+
+        const rank = (source: RecoveryResult['source']) => {
+            const index =
+                KeychainRecoveryUtils.SOURCE_PRECEDENCE.indexOf(source);
+            // An unranked source sorts last rather than first, so adding a
+            // source without updating the list cannot silently win.
+            return index === -1
+                ? KeychainRecoveryUtils.SOURCE_PRECEDENCE.length
+                : index;
+        };
+
+        for (const [, group] of grouped) {
+            group.sort((a, b) => rank(a.source) - rank(b.source));
+        }
+
+        return grouped;
+    }
+
+    /**
+     * Restores one entry per key, taking the most trusted source for each.
+     *
+     * Returns a result per key rather than a single boolean: one key failing
+     * to write says nothing about the others, and the caller needs to be able
+     * to tell the user which came back.
+     */
+    public async restoreOtherData(results: RecoveryResult[]): Promise<{
+        restored: string[];
+        failed: Array<{ key: string; error: string }>;
+    }> {
+        const restored: string[] = [];
+        const failed: Array<{ key: string; error: string }> = [];
+
+        for (const [key, group] of this.groupByKey(results)) {
+            const result = await this.restoreDataKey(group[0]);
+            if (result.success) {
+                restored.push(key);
+            } else {
+                failed.push({ key, error: result.error ?? 'Unknown error' });
+            }
+        }
+
+        return { restored, failed };
     }
 
     /**
