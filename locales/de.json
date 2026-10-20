@@ -2383,6 +2383,8 @@
     "stores.CashuStore.claimError.inconsistentLocking": "Token ist an mehrere verschiedene Wallets gebunden",
     "stores.CashuStore.errorMintingToken": "Fehler beim Erstellen des Tokens",
     "stores.CashuStore.errorPayingInvoice": "Fehler beim Bezahlen der Rechnung",
+    "stores.CashuStore.paymentInFlight": "The mint has not settled this payment yet. It is in flight: check the payment in your activity before trying again.",
+    "stores.CashuStore.claimedButNotSwept": "This token was claimed into your ecash wallet, but paying it out to your node did not complete. The ecash is in your wallet: check your balance before trying again.",
     "stores.CashuStore.errorDeletingData": "Fehler beim Löschen der Cashu-Daten",
     "stores.CashuStore.invalidToken": "Ungültiger Cashu-Token",
     "stores.CashuStore.sweepError": "Fehler beim Übertragen des Guthabens",
