@@ -1,8 +1,9 @@
 // DonationUtils.ts
 import BigNumber from 'bignumber.js';
-import ReactNativeBlobUtil from 'react-native-blob-util';
+import { settingsStore } from '../stores/Stores';
 
 import { getLnurlpUrl, verifyLnurlPayInvoice } from './LnurlPayUtils';
+import { networkFetch } from './NetworkUtils';
 
 const DONATION_ADDRESS = 'tips@pay.zeusln.app';
 
@@ -94,7 +95,11 @@ export const loadDonationLnurl = async (
             return null;
         }
 
-        const response = await ReactNativeBlobUtil.fetch('GET', url);
+        const response = await networkFetch({
+            method: 'GET',
+            url,
+            enableTor: settingsStore.enableTor
+        });
         const lnurlData = response.json();
 
         // The invoice returned by this callback is paid silently, with no
@@ -110,10 +115,11 @@ export const loadDonationLnurl = async (
 
         const callbackUrl = `${callback}?amount=${amountMsat.toString()}`;
 
-        const invoiceResponse = await ReactNativeBlobUtil.fetch(
-            'GET',
-            callbackUrl
-        );
+        const invoiceResponse = await networkFetch({
+            method: 'GET',
+            url: callbackUrl,
+            enableTor: settingsStore.enableTor
+        });
         const invoiceData = invoiceResponse.json();
         const pr = invoiceData?.pr;
         if (typeof pr !== 'string') {
