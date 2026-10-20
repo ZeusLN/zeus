@@ -19,7 +19,9 @@ jest.mock('../stores/Stores', () => ({
 }));
 
 jest.mock('./LocaleUtils', () => ({
-    localeString: (key: string) => key
+    localeString: (key: string) => key,
+    allLocaleStrings: (key: string) =>
+        jest.requireActual('./LocaleUtils').allLocaleStrings(key)
 }));
 
 jest.mock('./BackendUtils', () => ({
@@ -539,15 +541,79 @@ describe('NostrConnectUtils', () => {
             expect(weeks.customExpiryUnit).toBe('Weeks');
         });
 
-        it('gives a label it cannot map back the shortest unit', () => {
+        it('reads a label stored in another language as its unit', () => {
             expect(NostrConnectUtils.normalizeTimeUnit('Heures')).toBe('Hours');
-            expect(NostrConnectUtils.normalizeTimeUnit('Ans')).toBe('Hours');
+            expect(NostrConnectUtils.normalizeTimeUnit('Ans')).toBe('Years');
+        });
+
+        it('gives a label it cannot map back the shortest unit', () => {
+            expect(NostrConnectUtils.normalizeTimeUnit('xyz')).toBe('Hours');
+            expect(NostrConnectUtils.normalizeTimeUnit('')).toBe('Hours');
             expect(
                 NostrConnectUtils.calculateCustomExpiryDate(
                     2,
-                    'Ans' as any
+                    'xyz' as any
                 ).getTime() - Date.now()
             ).toBe(2 * HOUR_MS);
+        });
+    });
+
+    describe('custom expiry units after a language change', () => {
+        const english: { [key: string]: string } = {
+            'time.hours': 'Hours',
+            'time.days': 'Days',
+            'time.weeks': 'Weeks',
+            'time.months': 'Months',
+            'time.years': 'Years'
+        };
+        const HOUR_MS = 60 * 60 * 1000;
+        let localeStringSpy: jest.SpyInstance;
+
+        beforeEach(() => {
+            jest.useFakeTimers().setSystemTime(
+                new Date('2024-01-15T12:00:00Z')
+            );
+            localeStringSpy = jest
+                .spyOn(jest.requireMock('./LocaleUtils'), 'localeString')
+                .mockImplementation((key: any) => english[key] ?? key);
+        });
+
+        afterEach(() => {
+            localeStringSpy.mockRestore();
+            jest.useRealTimers();
+        });
+
+        it('regenerates a German label saved before the switch to English', () => {
+            const { expiresAt, customExpiryUnit } =
+                NostrConnectUtils.refreshExpiryForRegenerate({
+                    expiresAt: new Date('2024-01-17T12:00:00Z'),
+                    createdAt: new Date('2024-01-15T12:00:00Z'),
+                    customExpiryValue: 2,
+                    customExpiryUnit: 'Tage' as any
+                });
+            expect(expiresAt!.getTime() - Date.now()).toBe(48 * HOUR_MS);
+            expect(customExpiryUnit).toBe('Days');
+        });
+
+        it('maps labels from any locale to their unit', () => {
+            expect(NostrConnectUtils.normalizeTimeUnit('Jahre')).toBe('Years');
+            expect(NostrConnectUtils.normalizeTimeUnit('일')).toBe('Days');
+            expect(NostrConnectUtils.normalizeTimeUnit('Wochen')).toBe('Weeks');
+            expect(NostrConnectUtils.normalizeTimeUnit('xyz')).toBe('Hours');
+        });
+
+        it('has no label that means two different units', () => {
+            const { allLocaleStrings } = jest.requireActual('./LocaleUtils');
+            const unitByLabel: { [label: string]: string } = {};
+            NostrConnectUtils.TIME_UNITS.forEach((unit) => {
+                allLocaleStrings(`time.${unit.toLowerCase()}`).forEach(
+                    (label: string) => {
+                        expect([undefined, unit]).toContain(unitByLabel[label]);
+                        unitByLabel[label] = unit;
+                    }
+                );
+            });
+            expect(Object.keys(unitByLabel).length).toBeGreaterThan(5);
         });
     });
 

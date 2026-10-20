@@ -25,7 +25,7 @@ import { lnrpc } from '../proto/lightning';
 
 import Base64Utils from './Base64Utils';
 import { FAILURE_REASON_LOCALE_KEYS } from './ErrorUtils';
-import { localeString } from './LocaleUtils';
+import { allLocaleStrings, localeString } from './LocaleUtils';
 import dateTimeUtils from './DateTimeUtils';
 import Bolt11Utils from './Bolt11Utils';
 import BackendUtils from './BackendUtils';
@@ -145,14 +145,19 @@ export default class NostrConnectUtils {
         }));
     }
 
-    // Earlier versions stored the translated label instead of the unit. A
-    // label that cannot be mapped back gets the shortest unit so that a
-    // mismatch never extends a connection.
+    // Earlier versions stored the translated label instead of the unit, in
+    // whatever language the app was in at the time, so a label is looked up
+    // in every locale. A label that cannot be mapped back gets the shortest
+    // unit so that a mismatch never extends a connection.
     static normalizeTimeUnit(unit: string): TimeUnit {
         return (
-            NostrConnectUtils.getTimeUnitOptions().find(
-                (option) => option.value === unit || option.key === unit
-            )?.value || 'Hours'
+            NostrConnectUtils.TIME_UNITS.find(
+                (timeUnit) =>
+                    timeUnit === unit ||
+                    allLocaleStrings(`time.${timeUnit.toLowerCase()}`).includes(
+                        unit
+                    )
+            ) || 'Hours'
         );
     }
 
