@@ -139,7 +139,8 @@ const renderView = async (
         broadcastSwapTransaction: jest.fn().mockResolvedValue('claim-txid'),
         getReverseLockupTransactionHex: jest
             .fn()
-            .mockResolvedValue({ status: 'none' })
+            .mockResolvedValue({ status: 'none' }),
+        transactionPaysAddress: jest.fn().mockResolvedValue(true)
     };
     const view = await render(
         <SwapDetails
@@ -584,19 +585,86 @@ describe('SwapDetails lockup verification retry wiring', () => {
             );
         });
 
-        it('treats a lockup already spent as done, not as an error', async () => {
+        const SPENT = {
+            status: 'invalid',
+            reason: 'lockup-spent',
+            spendingTxid: 'spender'
+        };
+
+        it('treats a lockup spent by our claim as done, not as an error', async () => {
             const { store } = await renderView();
             store.getReverseLockupTransactionHex.mockResolvedValue(FOUND);
-            store.verifyReverseLockup.mockResolvedValue({
-                status: 'invalid',
-                reason: 'lockup-spent'
-            });
+            store.verifyReverseLockup.mockResolvedValue(SPENT);
+
+            await sendStatus('invoice.settled');
+            await advance(120000);
+
+            expect(store.transactionPaysAddress).toHaveBeenCalledWith(
+                'spender',
+                'destination'
+            );
+            expect(nativeClaim).not.toHaveBeenCalled();
+            expect(errorShown()).toBeUndefined();
+            expect(noticeShown()).toBeUndefined();
+            expect(store.verifyReverseLockup).toHaveBeenCalledTimes(1);
+        });
+
+        it('reports a lockup spent by a transaction that does not pay the claim address', async () => {
+            const { store } = await renderView();
+            store.getReverseLockupTransactionHex.mockResolvedValue(FOUND);
+            store.verifyReverseLockup.mockResolvedValue(SPENT);
+            store.transactionPaysAddress.mockResolvedValue(false);
 
             await sendStatus('invoice.settled');
             await advance(120000);
 
             expect(nativeClaim).not.toHaveBeenCalled();
+            expect(errorShown()).toBe('views.SwapDetails.lockupSpentElsewhere');
+            expect(store.verifyReverseLockup).toHaveBeenCalledTimes(1);
+        });
+
+        it.each([
+            ['the spender cannot be looked up', SPENT, undefined],
+            [
+                'the mempool instance does not name the spender',
+                { status: 'invalid', reason: 'lockup-spent' },
+                true
+            ]
+        ])('checks again later when %s', async (_case, spent, paysClaim) => {
+            const { store } = await renderView();
+            store.getReverseLockupTransactionHex.mockResolvedValue(FOUND);
+            store.verifyReverseLockup.mockResolvedValue(spent);
+            store.transactionPaysAddress.mockResolvedValue(paysClaim);
+
+            await sendStatus('invoice.settled');
+            await advance(2000);
+
             expect(errorShown()).toBeUndefined();
+            expect(noticeShown()).toBe(
+                'views.SwapDetails.lockupVerificationUnavailable'
+            );
+
+            store.verifyReverseLockup.mockResolvedValue(SPENT);
+            store.transactionPaysAddress.mockResolvedValue(true);
+            await advance(60000);
+            await advance(2000);
+
+            expect(store.verifyReverseLockup).toHaveBeenCalledTimes(2);
+            expect(noticeShown()).toBeUndefined();
+            expect(errorShown()).toBeUndefined();
+        });
+
+        it('stops checking the spender once the screen is closed', async () => {
+            const { store, unmount } = await renderView();
+            store.getReverseLockupTransactionHex.mockResolvedValue(FOUND);
+            store.verifyReverseLockup.mockResolvedValue(SPENT);
+            store.transactionPaysAddress.mockResolvedValue(undefined);
+
+            await sendStatus('invoice.settled');
+            await advance(2000);
+            await unmount();
+            await jest.advanceTimersByTimeAsync(180000);
+
             expect(store.verifyReverseLockup).toHaveBeenCalledTimes(1);
         });
 

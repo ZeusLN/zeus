@@ -571,10 +571,51 @@ export default class SwapDetails extends React.Component<
                     invoiceSettled &&
                     lockup.reason === 'lockup-spent'
                 ) {
-                    console.log(
-                        'Reverse swap lockup already spent after the invoice settled'
-                    );
+                    // Usually this wallet's own earlier claim, but after the
+                    // timeout the host's refund spends the lockup too
+                    const claimAddress =
+                        this.state.swapData?.claimDestinationAddress;
+                    const paysClaim = !lockup.spendingTxid
+                        ? undefined
+                        : claimAddress
+                        ? await SwapStore.transactionPaysAddress(
+                              lockup.spendingTxid,
+                              claimAddress
+                          )
+                        : false;
+                    if (stopped) return;
+                    if (paysClaim === undefined) {
+                        this.setState({
+                            lockupNotice: localeString(
+                                'views.SwapDetails.lockupVerificationUnavailable'
+                            )
+                        });
+                        lockupRecheck = setTimeout(
+                            () => claimIfLockupVerified(transactionHex),
+                            LOCKUP_RECHECK_MS
+                        );
+                        return;
+                    }
                     stopRechecks();
+                    if (paysClaim) {
+                        console.log(
+                            'Reverse swap lockup already spent by our claim after the invoice settled'
+                        );
+                        this.setState({ lockupNotice: null });
+                        return;
+                    }
+                    console.error(
+                        'Reverse swap lockup verification failed:',
+                        'lockup-spent-elsewhere',
+                        lockup.spendingTxid
+                    );
+                    this.setState({
+                        error: localeString(
+                            'views.SwapDetails.lockupSpentElsewhere'
+                        ),
+                        lockupNotice: null,
+                        loading: false
+                    });
                     return;
                 }
 

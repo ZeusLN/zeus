@@ -359,6 +359,32 @@ describe('SwapStore.verifyReverseLockup', () => {
         }
     );
 
+    it('names the spending transaction, even past the refund deadline', async () => {
+        esplora(200);
+        const fetch = fetchMock.getMockImplementation()!;
+        fetchMock.mockImplementation(async (method, url) => {
+            if (url.includes('/outspend/')) {
+                return {
+                    info: () => ({ status: 200 }),
+                    json: () => ({ spent: true, txid: 'ab'.repeat(32) })
+                };
+            }
+            // the host may have refunded itself by now
+            if (url.endsWith('/blocks/tip/height')) {
+                return {
+                    info: () => ({ status: 200 }),
+                    text: () => String(TIMEOUT + 10)
+                };
+            }
+            return fetch(method, url);
+        });
+        await expect(verify()).resolves.toEqual({
+            status: 'invalid',
+            reason: 'lockup-spent',
+            spendingTxid: 'ab'.repeat(32)
+        });
+    });
+
     it.each([{}, { spent: 'false' }, null])(
         'fails closed on malformed outspend data %j',
         async (body) => {
@@ -777,5 +803,59 @@ describe('SwapStore.verifyReverseLockup', () => {
             await expect(verify()).resolves.toEqual({ status: 'ok' });
             expect(getPayments).not.toHaveBeenCalled();
         });
+    });
+});
+
+describe('SwapStore.transactionPaysAddress', () => {
+    const TXID = 'cd'.repeat(32);
+    const respond = (status: number, body?: any) =>
+        fetchMock.mockResolvedValue({
+            info: () => ({ status }),
+            json: () => body
+        });
+
+    beforeEach(() => fetchMock.mockReset());
+
+    it('is true when an output pays the address, in any case', async () => {
+        respond(200, {
+            vout: [
+                { scriptpubkey_address: 'bc1qother' },
+                { scriptpubkey_address: 'BC1QCLAIM' }
+            ]
+        });
+        await expect(
+            newStore().transactionPaysAddress(TXID, 'bc1qclaim')
+        ).resolves.toBe(true);
+        expect(fetchMock).toHaveBeenCalledWith(
+            'GET',
+            `https://mempool.test/api/tx/${TXID}`
+        );
+    });
+
+    it('is false when no output pays the address', async () => {
+        respond(200, {
+            vout: [{ scriptpubkey_address: 'bc1qhost' }, { value: 1 }]
+        });
+        await expect(
+            newStore().transactionPaysAddress(TXID, 'bc1qclaim')
+        ).resolves.toBe(false);
+    });
+
+    it.each([
+        ['an error status', () => respond(404)],
+        ['no outputs', () => respond(200, {})],
+        ['a failed request', () => fetchMock.mockRejectedValue(new Error())]
+    ])('is unknown on %s', async (_case, setUp) => {
+        setUp();
+        await expect(
+            newStore().transactionPaysAddress(TXID, 'bc1qclaim')
+        ).resolves.toBeUndefined();
+    });
+
+    it('does not request a txid that is not 64 hex characters', async () => {
+        await expect(
+            newStore().transactionPaysAddress('../blocks', 'bc1qclaim')
+        ).resolves.toBeUndefined();
+        expect(fetchMock).not.toHaveBeenCalled();
     });
 });

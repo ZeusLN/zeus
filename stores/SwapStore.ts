@@ -60,6 +60,8 @@ export type ReverseLockupCheck = {
     // this wallet's own payment for the swap in sats, with 'confirm-amount'
     // when the lockup falls short of the floor for it
     paidAmount?: number;
+    // the transaction spending the lockup, with 'lockup-spent'
+    spendingTxid?: string;
 };
 
 interface SubmarineSwapInfo {
@@ -943,7 +945,14 @@ export default class SwapStore {
             }
             const outspend = response.json();
             if (outspend?.spent === true) {
-                return { status: 'invalid', reason: 'lockup-spent' };
+                return {
+                    status: 'invalid',
+                    reason: 'lockup-spent',
+                    spendingTxid:
+                        typeof outspend.txid === 'string'
+                            ? outspend.txid
+                            : undefined
+                };
             }
             if (outspend?.spent !== false) {
                 return { status: 'unavailable', reason: 'invalid-outspend' };
@@ -969,6 +978,36 @@ export default class SwapStore {
         if (needsConfirmation) return { status: 'confirm-amount', amount };
         if (amount >= rescuedLockupFloor(paidAmount!)) return deadline;
         return { status: 'confirm-amount', amount, paidAmount };
+    };
+
+    /**
+     * Whether a transaction on the user's mempool instance pays the given
+     * address. undefined when it could not be looked up.
+     */
+    public transactionPaysAddress = async (
+        txid: string,
+        address: string
+    ): Promise<boolean | undefined> => {
+        // the txid comes from the mempool instance and goes into a URL
+        if (!/^[0-9a-f]{64}$/i.test(txid)) return undefined;
+        const apiUrl = UrlUtils.getMempoolApiUrl(this.nodeInfoStore.nodeInfo);
+        try {
+            const response = await ReactNativeBlobUtil.fetch(
+                'GET',
+                `${apiUrl}/tx/${txid}`
+            );
+            if (response.info().status !== 200) return undefined;
+            const vout = response.json()?.vout;
+            if (!Array.isArray(vout)) return undefined;
+            return vout.some(
+                (output: any) =>
+                    typeof output?.scriptpubkey_address === 'string' &&
+                    output.scriptpubkey_address.toLowerCase() ===
+                        address.toLowerCase()
+            );
+        } catch {
+            return undefined;
+        }
     };
 
     /**
