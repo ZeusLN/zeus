@@ -8,7 +8,8 @@ import Base64Utils from '../utils/Base64Utils';
 // WalletKit
 
 // The BumpFee view passes strings, which Long.fromValue misparses when
-// they contain a decimal point, so convert them to numbers first. A value
+// they contain a decimal point, so convert them to numbers first
+// (fundPsbt gets numbers, so 1.5 is truncated to 1 the same way). A value
 // that is not a number or is below 1 would be sent as 0, which makes LND
 // choose its own value instead of the one the user typed, so refuse it.
 const toLongAtLeastOne = (
@@ -114,7 +115,9 @@ export const fundPsbt = async ({
         raw,
         psbt,
         spend_unconfirmed,
-        sat_per_vbyte: sat_per_vbyte ? Long.fromValue(sat_per_vbyte) : undefined
+        // TransactionsStore sends Number(fee rate), which is NaN when no
+        // fee rate is given, so NaN is left to LND rather than refused
+        sat_per_vbyte: toLongAtLeastOne(sat_per_vbyte, FEE_RATE_ERROR)
     };
     const response = await sendCommand<
         walletrpc.IFundPsbtRequest,
