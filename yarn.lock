@@ -7879,10 +7879,10 @@ pngjs@^5.0.0:
   resolved "https://registry.yarnpkg.com/pngjs/-/pngjs-5.0.0.tgz#e79dd2b215767fd9c04561c01236df960bce7fbb"
   integrity sha512-40QW5YalBNfQo5yRYmiw7Yz6TKKVr3h6970B2YE+3fQpsWcrbj1PzJgxeJ19DRQjhMbKPIuMY8rFaXc8moolVw==
 
-pod-install@0.1.38:
-  version "0.1.38"
-  resolved "https://registry.yarnpkg.com/pod-install/-/pod-install-0.1.38.tgz#1c16a800a5fc1abea0cafcc0e190f376368c76ab"
-  integrity sha512-NeDWGigjJRriOIKBOvpW2/tK2tYLfyUT7ia6C6L+oarCAhBNP+IGODWdU+GEAqvfsseqOApcFclpXAJTL0UPzA==
+pod-install@1.2.1:
+  version "1.2.1"
+  resolved "https://registry.yarnpkg.com/pod-install/-/pod-install-1.2.1.tgz#d60e8e25100fa0702c06b5272dadb64d01b7e0eb"
+  integrity sha512-A1RKWVrHNhBjn4/jjRiV139CzdFziGh21avjatdFgeF+R9UZZujDlGrHJQi0JaKYyHmuJrNlESTFwK6MYA4bbA==
 
 possible-typed-array-names@^1.0.0:
   version "1.1.0"
