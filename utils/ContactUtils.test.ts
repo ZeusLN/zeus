@@ -119,6 +119,7 @@ describe('ContactUtils', () => {
                 lnAddress: ['tips@coffee.example'],
                 bolt12Address: [],
                 bolt12Offer: [],
+                noffer: ['noffer1'],
                 onchainAddress: [],
                 nip05: [],
                 nostrNpub: [],

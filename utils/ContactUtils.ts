@@ -104,6 +104,7 @@ const toCardContact = (contact: any) => ({
     lnAddress: contact.lnAddress ?? [],
     bolt12Address: contact.bolt12Address ?? [],
     bolt12Offer: contact.bolt12Offer ?? [],
+    noffer: contact.noffer ?? [],
     onchainAddress: contact.onchainAddress ?? [],
     nip05: contact.nip05 ?? [],
     nostrNpub: contact.nostrNpub ?? [],
