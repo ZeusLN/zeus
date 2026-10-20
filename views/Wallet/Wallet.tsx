@@ -69,6 +69,7 @@ import { isBatterySaverEnabled } from '../../utils/BatteryUtils';
 import { fetchLncData } from '../../utils/LncFetchUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { protectedNavigation } from '../../utils/NavigationUtils';
+import { processPendingNwcActivityLink } from '../../utils/NwcActivityLinkUtils';
 import { isLightTheme, themeColor } from '../../utils/ThemeUtils';
 import { restartNeeded } from '../../utils/RestartUtils';
 import WalletRefreshRunner from '../../utils/WalletRefreshRunner';
@@ -1483,6 +1484,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
 
         // Process any deep link that was deferred while login was required
         LinkingUtils.processPendingDeepLink(this.props.navigation);
+        processPendingNwcActivityLink();
 
         // Process pending share intent after wallet is fully loaded and synced
         this.processPendingShareIntent();
