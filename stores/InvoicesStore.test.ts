@@ -89,7 +89,7 @@ describe('InvoicesStore.isInvoicePaid', () => {
 });
 
 // PaymentRequest renders pay_req and pays paymentRequest,
-// so the two must always describe the same invoice
+// so pay_req must never come from a stale decode
 describe('InvoicesStore superseded decode requests', () => {
     let settle: {
         [request: string]: {
@@ -149,6 +149,46 @@ describe('InvoicesStore superseded decode requests', () => {
         expect(store.paymentRequest).toBe('lnbc-first');
         expect(store.pay_req!.getPaymentRequest).toBe('lnbc-first');
         expect(store.pay_req!.getRequestAmount).toBe(1000000);
+        expect(store.loading).toBe(false);
+    });
+
+    it('keeps a newer success when an older decode of the same string fails later', async () => {
+        // backends without restReq de-duplication (embedded LND, LDK, LNC,
+        // NWC) run each decode separately, e.g. Send decoding on input and
+        // handleAnything decoding the same string again on submit
+        const calls: Array<{
+            resolve: (data: any) => void;
+            reject: (error: Error) => void;
+        }> = [];
+        (BackendUtils.decodePaymentRequest as jest.Mock).mockImplementation(
+            () =>
+                new Promise((resolve, reject) => {
+                    calls.push({ resolve, reject });
+                })
+        );
+
+        const store = newStore();
+        const first = store.getPayReq('lnbc-same');
+        const second = store.getPayReq('lnbc-same');
+        calls[1].resolve({ num_satoshis: '1000000' });
+        calls[0].reject(new Error('decode failed'));
+        await Promise.all([first, second]);
+
+        expect(store.getPayReqError).toBeNull();
+        expect(store.pay_req!.getPaymentRequest).toBe('lnbc-same');
+        expect(store.pay_req!.getRequestAmount).toBe(1000000);
+        expect(store.loading).toBe(false);
+    });
+
+    it('ignores a decode answer that arrives after reset', async () => {
+        const store = newStore();
+        const first = store.getPayReq('lnbc-first');
+        store.reset();
+        settle['lnbc-first'].resolve({ num_satoshis: '10' });
+        await first;
+
+        expect(store.paymentRequest).toBe('');
+        expect(store.pay_req).toBeNull();
         expect(store.loading).toBe(false);
     });
 
