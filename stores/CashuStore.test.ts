@@ -18,6 +18,7 @@ jest.mock('../utils/BackendUtils', () => ({
     }
 }));
 jest.mock('../ldknode/LdkNodeInjection', () => ({}));
+jest.mock('../utils/NetworkUtils', () => ({ networkFetch: jest.fn() }));
 jest.mock('@nostr-dev-kit/ndk', () => ({
     __esModule: true,
     default: jest.fn()
