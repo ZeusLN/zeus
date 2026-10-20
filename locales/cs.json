@@ -2383,6 +2383,8 @@
     "stores.CashuStore.claimError.inconsistentLocking": "Token je uzamčen k vícero jiným peněženkám",
     "stores.CashuStore.errorMintingToken": "Chyba při mintování tokenu",
     "stores.CashuStore.errorPayingInvoice": "Během placení faktury nastala chyba",
+    "stores.CashuStore.paymentInFlight": "Mint tuto platbu dosud nevypořádal. Platba stále probíhá: zkontrolujte platbu v sekci Aktivita předtím, než zkusíte platbu odeslat znovu.",
+    "stores.CashuStore.claimedButNotSwept": "This token was claimed into your ecash wallet, but paying it out to your node did not complete. The ecash is in your wallet: check your balance before trying again.",
     "stores.CashuStore.errorDeletingData": "Během odstraňování dat Cashu nastala chyba",
     "stores.CashuStore.invalidToken": "Neplatný Cashu token",
     "stores.CashuStore.sweepError": "Během sweepování prostředků nastala chyba",
