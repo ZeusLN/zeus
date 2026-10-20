@@ -212,7 +212,7 @@ export default class NeutrinoPeers extends React.Component<
                                         }}
                                     >
                                         {localeString(
-                                            'views.Settings.EmbeddedNode.NeutrinoPeers.dontAllowOtherPeers'
+                                            'views.Settings.EmbeddedNode.NeutrinoPeers.allowOtherPeers'
                                         )}
                                     </ListItem.Title>
                                     <View
@@ -223,7 +223,7 @@ export default class NeutrinoPeers extends React.Component<
                                         }}
                                     >
                                         <Switch
-                                            value={dontAllowOtherPeers ?? false}
+                                            value={!dontAllowOtherPeers}
                                             onValueChange={async () => {
                                                 this.setState({
                                                     dontAllowOtherPeers:
@@ -249,7 +249,22 @@ export default class NeutrinoPeers extends React.Component<
                                         }}
                                     >
                                         {localeString(
-                                            'views.Settings.EmbeddedNode.NeutrinoPeers.dontAllowOtherPeers.subtitle'
+                                            'views.Settings.EmbeddedNode.NeutrinoPeers.allowOtherPeers.subtitle1'
+                                        )}
+                                    </Text>
+                                </View>
+                                <View
+                                    style={{
+                                        margin: 10
+                                    }}
+                                >
+                                    <Text
+                                        style={{
+                                            color: themeColor('secondaryText')
+                                        }}
+                                    >
+                                        {localeString(
+                                            'views.Settings.EmbeddedNode.NeutrinoPeers.allowOtherPeers.subtitle2'
                                         )}
                                     </Text>
                                 </View>
