@@ -82,20 +82,13 @@ export const stopLnd = async (): Promise<{ data: string }> => {
 export const startLnd = async ({
     args,
     lndDir,
-    isTorEnabled = false,
     isTestnet = false
 }: {
     args?: string;
     lndDir: string;
-    isTorEnabled: boolean;
     isTestnet: boolean;
 }): Promise<{ data: string }> => {
-    return await LndMobile.startLnd(
-        args || '',
-        lndDir,
-        isTorEnabled,
-        isTestnet
-    );
+    return await LndMobile.startLnd(args || '', lndDir, isTestnet);
 };
 
 /**
