@@ -151,6 +151,7 @@ export default class Bolt12OfferReview extends React.Component<
             isFiatDenominated,
             expectsQuantity,
             isUnderpaying,
+            isMissingAmount,
             offerAmountSats,
             cannotPay: cannotPayOffer
         } = getOfferPayBlockers(decodedOffer, satAmount);
@@ -196,6 +197,13 @@ export default class Bolt12OfferReview extends React.Component<
                             ]
                                 .filter(Boolean)
                                 .join(' ')}
+                        />
+                    )}
+                    {isMissingAmount && (
+                        <ErrorMessage
+                            message={localeString(
+                                'views.Send.payBolt12.specifyAmount'
+                            )}
                         />
                     )}
                     {isUnderpaying && (

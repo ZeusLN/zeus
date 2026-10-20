@@ -247,7 +247,13 @@ describe('Bolt12OfferReview confirmation', () => {
             },
             '2500'
         ],
-        ['underpaid', { amountType: 'bitcoin', amountMsats: 5_000_000 }, '4999']
+        [
+            'underpaid',
+            { amountType: 'bitcoin', amountMsats: 5_000_000 },
+            '4999'
+        ],
+        ['without an amount for a zero amount', {}, '0'],
+        ['without an amount for an empty amount', {}, '']
     ] as const)(
         'cannot dispatch an offer %s',
         async (_label, overrides, satAmount) => {
@@ -308,6 +314,14 @@ describe('Bolt12OfferReview confirmation', () => {
         // the tap does nothing and the expired message does not appear (#5063)
         expect(payControl().disabled).toBe(false);
         expect(expiredMessageShown()).toBe(false);
+    });
+
+    it('shows the specify-amount error for a zero amount on an amountless offer', async () => {
+        await renderView({ satAmount: '0' });
+
+        expect(hostOfType('ErrorMessage')?.props.message).toEqual(
+            'views.Send.payBolt12.specifyAmount'
+        );
     });
 });
 
