@@ -23,11 +23,14 @@ jest.mock('../cashu-cdk', () => ({
     isValidToken: jest.fn(),
     checkMeltQuote: jest.fn(),
     createMeltQuote: jest.fn(),
-    getMintBalance: jest.fn()
+    getMintBalance: jest.fn(),
+    removeMint: jest.fn().mockResolvedValue(undefined),
+    deleteWalletDatabase: jest.fn().mockResolvedValue(undefined)
 }));
 jest.mock('../storage', () => ({
     setItem: jest.fn().mockResolvedValue(true),
     getItem: jest.fn(),
+    removeItem: jest.fn().mockResolvedValue(true),
     getRawItem: jest.fn(),
     KEY_PREFIX: 'zeus:'
 }));
@@ -1472,5 +1475,39 @@ describe('CashuStore reconcilePendingMelts', () => {
 
         expect(CashuDevKit.checkMeltQuote).not.toHaveBeenCalled();
         expect(store.pendingMelts).toHaveLength(1);
+    });
+});
+
+describe('CashuStore deleteCashuData', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        Platform.OS = 'android';
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('removes the pending melts with the rest of the cashu data', async () => {
+        const store = newStore();
+        jest.spyOn(store, 'getNostrBackupSeed').mockReturnValue(null);
+        store.mintUrls = ['https://mint.example'];
+        store.pendingMelts = [
+            {
+                quote: 'q1',
+                mintUrl: 'https://mint.example',
+                source: 'payment',
+                amount: 21,
+                feeReserve: 2,
+                createdAt: 1700000000000
+            }
+        ];
+
+        await store.deleteCashuData();
+
+        expect(Storage.removeItem).toHaveBeenCalledWith(
+            'lnd-cashu-pending-melts'
+        );
+        expect(store.pendingMelts).toEqual([]);
     });
 });
