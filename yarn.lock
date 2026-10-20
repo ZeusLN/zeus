@@ -2313,20 +2313,20 @@
   dependencies:
     nanoid "^3.3.11"
 
-"@rneui/base@5.0.0-beta.1":
-  version "5.0.0-beta.1"
-  resolved "https://registry.yarnpkg.com/@rneui/base/-/base-5.0.0-beta.1.tgz#79b97ca2b629322a7a6d6728ba4d224a2a5ba45c"
-  integrity sha512-3PRl6vpf3ulv9Lzwg4iLgAaXLUl8JzowRgi+MHeNPNAq+er00sCm73a9oO170oRS05TMGqcZ+WxFTWOg5lttww==
+"@rneui/base@5.0.0":
+  version "5.0.0"
+  resolved "https://registry.yarnpkg.com/@rneui/base/-/base-5.0.0.tgz#48b544cf89036f096874c6e450ed794fa22389f0"
+  integrity sha512-8nXCybRiLExmQlbTtCR5NEQudfTXTEkpoLBXinnxtBHPIF5L8YEdtuX00GlFoT/iU1h58AOl5koDMy35qSxgFQ==
   dependencies:
     color "^3.2.1"
     deepmerge "^4.2.2"
     hoist-non-react-statics "^3.3.2"
     react-native-size-matters "^0.4.0"
 
-"@rneui/themed@5.0.0-beta.1":
-  version "5.0.0-beta.1"
-  resolved "https://registry.yarnpkg.com/@rneui/themed/-/themed-5.0.0-beta.1.tgz#21a14ca1891d1479bb27729369c2bb3769ecbf87"
-  integrity sha512-UEt5OvSkZs1Giz9OI2zinGWziFS0uuUrtLr68eAcaQW9Q3Yad32De1i2VMwwPk/mdyKrvfReLKMsNO+BreGjrw==
+"@rneui/themed@5.0.0":
+  version "5.0.0"
+  resolved "https://registry.yarnpkg.com/@rneui/themed/-/themed-5.0.0.tgz#e08afdf3cca88e54319955e31f89b89c91f63993"
+  integrity sha512-bNmJLOnXqyot7+mN45Y9yNoANfGJAstnkT8J9W8pSMyDMd5yYxDhyYkDfTZOLuBAW7znNm0bPh6nJC64zMpE+Q==
 
 "@rtsao/scc@^1.1.0":
   version "1.1.0"
