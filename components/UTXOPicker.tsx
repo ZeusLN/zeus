@@ -9,13 +9,14 @@ import {
     TouchableOpacity
 } from 'react-native';
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
-import { Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
 import { reaction } from 'mobx';
 
 import AccountFilter from '../components/AccountFilter';
 import Amount from './Amount';
 import Button from '../components/Button';
+import OutlinedButton from './OutlinedButton';
+import SectionCard from './SectionCard';
 import LoadingIndicator from './LoadingIndicator';
 import ModalBox from './ModalBox';
 
@@ -538,30 +539,10 @@ export default class UTXOPicker extends React.Component<
                     </View>
                 </ModalBox>
 
-                <View
-                    style={{
-                        ...styles.card,
-                        backgroundColor: themeColor('secondary')
-                    }}
+                <SectionCard
+                    title={title || DEFAULT_TITLE}
+                    onInfoPress={this.showInfo}
                 >
-                    <View style={styles.cardHeader}>
-                        <Text
-                            style={{
-                                ...styles.cardTitle,
-                                color: themeColor('secondaryText')
-                            }}
-                        >
-                            {title || DEFAULT_TITLE}
-                        </Text>
-                        <Icon
-                            name="info"
-                            onPress={this.showInfo}
-                            color={themeColor('text')}
-                            underlayColor="transparent"
-                            size={26}
-                            accessibilityLabel={localeString('general.info')}
-                        />
-                    </View>
                     {utxosSet.length > 0 && (
                         <View style={styles.committed}>
                             <Text
@@ -584,52 +565,20 @@ export default class UTXOPicker extends React.Component<
                     )}
                     <View style={styles.cardActions}>
                         {utxosSet.length > 0 && (
-                            <TouchableOpacity
-                                style={{
-                                    ...styles.outlineButton,
-                                    borderColor: themeColor('text'),
-                                    marginRight: 10
-                                }}
+                            <OutlinedButton
+                                title={localeString('general.clear')}
                                 onPress={() => this.clearSelection()}
-                                accessibilityRole="button"
-                                accessibilityLabel={localeString(
-                                    'general.clear'
-                                )}
-                            >
-                                <Text
-                                    style={{
-                                        ...styles.outlineButtonText,
-                                        color: themeColor('text')
-                                    }}
-                                >
-                                    {localeString('general.clear')}
-                                </Text>
-                            </TouchableOpacity>
+                                style={{ marginRight: 10 }}
+                            />
                         )}
-                        <TouchableOpacity
-                            style={{
-                                ...styles.outlineButton,
-                                borderColor: themeColor('text')
-                            }}
-                            onPress={() => this.openPicker()}
-                            accessibilityRole="button"
-                            accessibilityLabel={localeString(
+                        <OutlinedButton
+                            title={localeString(
                                 'components.UTXOPicker.selectUTXOs'
                             )}
-                        >
-                            <Text
-                                style={{
-                                    ...styles.outlineButtonText,
-                                    color: themeColor('text')
-                                }}
-                            >
-                                {localeString(
-                                    'components.UTXOPicker.selectUTXOs'
-                                )}
-                            </Text>
-                        </TouchableOpacity>
+                            onPress={() => this.openPicker()}
+                        />
                     </View>
-                </View>
+                </SectionCard>
             </React.Fragment>
         );
     }
@@ -746,19 +695,6 @@ const styles = StyleSheet.create({
         paddingTop: 10,
         paddingBottom: 10
     },
-    card: {
-        borderRadius: 15,
-        padding: 20
-    },
-    cardHeader: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        justifyContent: 'space-between'
-    },
-    cardTitle: {
-        flex: 1,
-        fontFamily: 'PPNeueMontreal-Book'
-    },
     committed: {
         paddingTop: 12
     },
@@ -771,15 +707,5 @@ const styles = StyleSheet.create({
         justifyContent: 'flex-end',
         flexWrap: 'wrap',
         paddingTop: 20
-    },
-    outlineButton: {
-        borderWidth: 1,
-        borderRadius: 5,
-        paddingVertical: 10,
-        paddingHorizontal: 16
-    },
-    outlineButtonText: {
-        fontSize: 16,
-        fontFamily: 'PPNeueMontreal-Book'
     }
 });

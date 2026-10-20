@@ -18,7 +18,7 @@ jest.mock('../utils/BackendUtils', () => ({
     supportsOnchainSends: () => true,
     supportsOnchainSendMax: () => true,
     supportsOnchainSendFeeRate: () => false,
-    supportsOnchainBatching: () => false,
+    supportsOnchainBatching: jest.fn(() => false),
     supportsCoinControl: () => false,
     supportsKeysend: jest.fn(() => false),
     supportsAMP: () => false,
@@ -200,6 +200,119 @@ describe('Send send max toggle', () => {
                 fundMax: false
             })
         );
+    });
+});
+
+describe('Send on-chain amount card', () => {
+    const supportsOnchainBatching =
+        BackendUtils.supportsOnchainBatching as jest.Mock;
+
+    beforeEach(() => supportsOnchainBatching.mockReturnValue(true));
+    afterEach(() => supportsOnchainBatching.mockReturnValue(false));
+
+    const addOutput = () =>
+        fireEvent.press(
+            screen.getByRole('button', { name: 'views.Send.addOutput' })
+        );
+    const removeButtons = () =>
+        screen.queryAllByRole('button', { name: 'views.Send.removeOutput' });
+    // the destination and amount inputs of each additional output, in order
+    const outputInputs = () => ({
+        addresses: hosts('TextInput').slice(1),
+        amounts: hosts('AmountInput').slice(1)
+    });
+    const fillOutput = async (index: number, address: string, sats: number) => {
+        await fireEvent.changeText(outputInputs().addresses[index], address);
+        await fireEvent(
+            outputInputs().amounts[index],
+            'amountChange',
+            String(sats),
+            sats
+        );
+    };
+
+    it('sets the amount input off from the card', async () => {
+        await renderView();
+
+        expect(amountInput().props.inputBackgroundColor).toBe('#000000');
+    });
+
+    it('adds numbered outputs after the main one', async () => {
+        await renderView();
+        expect(removeButtons()).toHaveLength(0);
+
+        await addOutput();
+        await addOutput();
+
+        expect(screen.getByText('views.PSBT.output 2')).toBeOnTheScreen();
+        expect(screen.getByText('views.PSBT.output 3')).toBeOnTheScreen();
+        expect(removeButtons()).toHaveLength(2);
+    });
+
+    it('removes only the output whose button is pressed', async () => {
+        await renderView();
+        await addOutput();
+        await addOutput();
+        await fillOutput(0, 'bcrt1qfirst', 1000);
+        await fillOutput(1, 'bcrt1qsecond', 2000);
+
+        await fireEvent.press(removeButtons()[0]);
+
+        expect(removeButtons()).toHaveLength(1);
+        expect(outputInputs().addresses[0].props.value).toBe('bcrt1qsecond');
+        expect(outputInputs().amounts[0].props.amount).toBe('2000');
+    });
+
+    it('passes the filled outputs on when Proceed is pressed', async () => {
+        const { navigation } = await renderView();
+        await enterAmount('50000', 50000);
+        await addOutput();
+        await fillOutput(0, 'bcrt1qsecond', 2000);
+
+        await fireEvent.press(button('general.proceed'));
+
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'VerifyOnChain',
+            expect.objectContaining({
+                satAmount: 50000,
+                additionalOutputs: [
+                    {
+                        address: 'bcrt1qsecond',
+                        amount: '2000',
+                        satAmount: 2000
+                    }
+                ]
+            })
+        );
+    });
+
+    it('blocks Proceed while an output has an address but no amount', async () => {
+        await renderView();
+        await enterAmount('50000', 50000);
+        await addOutput();
+
+        await fireEvent.changeText(outputInputs().addresses[0], 'bcrt1qsecond');
+
+        expect(isProceedDisabled()).toBe(true);
+    });
+
+    it('hides Add output while send max is on', async () => {
+        await renderView();
+
+        await turnSendMaxOn();
+
+        expect(
+            screen.queryByRole('button', { name: 'views.Send.addOutput' })
+        ).toBeNull();
+    });
+
+    it('offers no outputs when the backend cannot batch', async () => {
+        supportsOnchainBatching.mockReturnValue(false);
+        await renderView();
+
+        expect(
+            screen.queryByRole('button', { name: 'views.Send.addOutput' })
+        ).toBeNull();
     });
 });
 
