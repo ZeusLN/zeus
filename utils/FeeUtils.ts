@@ -111,3 +111,37 @@ class FeeUtils {
 
 const feeUtils = new FeeUtils();
 export default feeUtils;
+
+/**
+ * The recommended rates offered as presets wherever a fee rate is picked,
+ * fastest first. These are also the choices for the preferred rate in
+ * settings.
+ */
+export const FEE_PRESET_KEYS = [
+    'fastestFee',
+    'halfHourFee',
+    'hourFee',
+    'minimumFee'
+] as const;
+
+export type FeePreset = typeof FEE_PRESET_KEYS[number];
+
+/**
+ * Which preset a fee rate matches, or 'custom' when none does. Presets
+ * often share a rate (hour and minimum are both 1 sat/vB in a quiet
+ * mempool), so the preferred preset wins a tie, then the fastest one.
+ */
+export const presetForFee = (
+    fee: string | undefined,
+    recommendedFees: { [key: string]: number | undefined },
+    preferred?: string
+): FeePreset | 'custom' => {
+    if (!fee) return 'custom';
+    const rate = Number(fee);
+    const matches = FEE_PRESET_KEYS.filter(
+        (key) =>
+            recommendedFees[key] !== undefined && recommendedFees[key] === rate
+    );
+    if (matches.length === 0) return 'custom';
+    return matches.find((key) => key === preferred) || matches[0];
+};

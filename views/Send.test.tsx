@@ -48,7 +48,7 @@ jest.mock('../components/SuccessErrorMessage', () => ({
     ErrorMessage: 'ErrorMessage'
 }));
 jest.mock('../components/Header', () => 'Header');
-jest.mock('../components/OnchainFeeInput', () => 'OnchainFeeInput');
+jest.mock('../components/OnchainFeePicker', () => 'OnchainFeePicker');
 jest.mock('../components/Screen', () => {
     const { View } = require('react-native');
     return ({ children }: any) => <View>{children}</View>;

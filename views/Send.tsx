@@ -42,7 +42,7 @@ import {
 } from '../components/SuccessErrorMessage';
 import Header from '../components/Header';
 import OutlinedButton from '../components/OutlinedButton';
-import OnchainFeeInput from '../components/OnchainFeeInput';
+import OnchainFeePicker from '../components/OnchainFeePicker';
 import Screen from '../components/Screen';
 import SectionCard from '../components/SectionCard';
 import SwipeButton from '../components/SwipeButton';
@@ -1234,39 +1234,30 @@ export default class Send extends React.Component<SendProps, SendState> {
                                 )}
 
                                 {supportsOnchainSendFeeRate ? (
-                                    <>
+                                    <OnchainFeePicker
+                                        fee={fee}
+                                        onChangeFee={(text: string) =>
+                                            this.setState({ fee: text })
+                                        }
+                                    />
+                                ) : (
+                                    <SectionCard
+                                        title={localeString(
+                                            'views.Send.feeSatsVbyte'
+                                        )}
+                                    >
                                         <Text
                                             style={{
                                                 ...styles.text,
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
+                                                color: themeColor('text'),
+                                                paddingTop: 10
                                             }}
                                         >
                                             {localeString(
-                                                'views.Send.feeSatsVbyte'
+                                                'views.Send.feeRateSetAutomatically'
                                             )}
                                         </Text>
-
-                                        <OnchainFeeInput
-                                            fee={fee}
-                                            onChangeFee={(text: string) =>
-                                                this.setState({ fee: text })
-                                            }
-                                            navigation={navigation}
-                                        />
-                                    </>
-                                ) : (
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Send.feeRateSetAutomatically'
-                                        )}
-                                    </Text>
+                                    </SectionCard>
                                 )}
 
                                 <View

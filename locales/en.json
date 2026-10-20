@@ -289,6 +289,8 @@
     "components.QRCodeScanner.flashOn": "Flash on",
     "components.QRCodeScanner.flashOff": "Flash off",
     "components.OnchainFeeInput.placeholder": "Enter fee rate",
+    "components.OnchainFeePicker.info.rate": "The fee rate is what you pay miners for each virtual byte of the transaction. A higher rate usually confirms sooner.",
+    "components.OnchainFeePicker.info.presets": "The suggested rates come from your mempool server and estimate how soon the transaction confirms.",
     "views.RawTxHex.broadcastToInstance": "Broadcast to {{instance}}",
     "models.Channel.unknownId": "Unknown Channel ID",
     "models.Invoice.noMemo": "No memo",

@@ -71,4 +71,29 @@ describe('OutlinedButton', () => {
         });
         expect(icons()[0].props.color).toBe('theme:secondaryText');
     });
+
+    it('shows a value after the title and includes it in the label', async () => {
+        await render(
+            <OutlinedButton title="Hour fee" value="1" onPress={jest.fn()} />
+        );
+
+        expect(screen.getByText('1')).toBeOnTheScreen();
+        expect(
+            screen.getByRole('button', { name: 'Hour fee 1' })
+        ).toBeOnTheScreen();
+    });
+
+    it('marks a selected option in the highlight color', async () => {
+        await render(
+            <OutlinedButton title="Custom" onPress={jest.fn()} selected />
+        );
+
+        expect(screen.getByRole('button')).toBeSelected();
+        expect(screen.getByRole('button')).toHaveStyle({
+            borderColor: 'theme:highlight'
+        });
+        expect(screen.getByText('Custom')).toHaveStyle({
+            color: 'theme:highlight'
+        });
+    });
 });
