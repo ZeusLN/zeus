@@ -3,7 +3,7 @@ jest.mock('./utils', () => ({
 }));
 
 import { sendCommand } from './utils';
-import { bumpFee, bumpForceCloseFee } from './wallet';
+import { bumpFee, bumpForceCloseFee, fundPsbt } from './wallet';
 
 describe('wallet', () => {
     const sentOptions = () =>
@@ -89,5 +89,36 @@ describe('wallet', () => {
         await bumpForceCloseFee({ chan_point: {} as any, immediate: true });
         expect(sentOptions().starting_feerate).toBeUndefined();
         expect(sentOptions().budget).toBeUndefined();
+    });
+
+    describe('fundPsbt', () => {
+        // sendCoinsLNDCoinControl passes Number(fee rate)
+        it.each([
+            [2, '2'],
+            [1.5, '1'],
+            ['1.00000001', '1']
+        ])('sends a fee rate of %p as %p', async (feeRate, expected) => {
+            await fundPsbt({ sat_per_vbyte: feeRate as any });
+            expect(sentOptions().sat_per_vbyte.toString()).toBe(expected);
+        });
+
+        // Long.fromValue sent 0.5 as 0, so LND chose its own fee
+        it.each([0.5, -2, Infinity])(
+            'refuses a fee rate of %p',
+            async (feeRate) => {
+                await expect(
+                    fundPsbt({ sat_per_vbyte: feeRate as any })
+                ).rejects.toThrow('Fee rate must be at least 1 sat/vB');
+                expect(sendCommand).not.toHaveBeenCalled();
+            }
+        );
+
+        it.each([undefined, NaN])(
+            'leaves a fee rate of %p to LND',
+            async (feeRate) => {
+                await fundPsbt({ sat_per_vbyte: feeRate as any });
+                expect(sentOptions().sat_per_vbyte).toBeUndefined();
+            }
+        );
     });
 });
