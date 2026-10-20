@@ -434,6 +434,19 @@ describe('NodeConfigUtils', () => {
             ).toEqual([remote]);
         });
 
+        it('strips on-device node dirs from remote configs', () => {
+            expect(
+                getImportableNodes([
+                    {
+                        implementation: 'lnd',
+                        host: 'a',
+                        lndDir: 'lnd',
+                        ldkNodeDir: 'ldk'
+                    }
+                ])
+            ).toEqual([{ implementation: 'lnd', host: 'a' }]);
+        });
+
         it('drops entries that are not node objects', () => {
             const remote = { implementation: 'lnd', host: 'a' };
             expect(

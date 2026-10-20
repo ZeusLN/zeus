@@ -30,15 +30,21 @@ export const isValidExportPassword = (password: string): boolean =>
 const NON_IMPORTABLE_IMPLEMENTATIONS = ['embedded-lnd', 'ldk-node'];
 
 // Drops entries that are not node objects or that belong to an on-device
-// implementation. Applied to every node list read from an import file.
+// implementation, and strips the on-device node dirs from the remote configs
+// that remain: those dirs name another wallet's local data and keychain
+// namespaces. Applied to every node list read from an import file.
 export const getImportableNodes = (nodes: unknown[]): Node[] =>
-    nodes.filter(
-        (node: any): node is Node =>
-            !!node &&
-            typeof node === 'object' &&
-            !Array.isArray(node) &&
-            !NON_IMPORTABLE_IMPLEMENTATIONS.includes(node.implementation)
-    );
+    nodes
+        .filter(
+            (node: any): node is Node =>
+                !!node &&
+                typeof node === 'object' &&
+                !Array.isArray(node) &&
+                !NON_IMPORTABLE_IMPLEMENTATIONS.includes(node.implementation)
+        )
+        .map(
+            ({ lndDir: _lndDir, ldkNodeDir: _ldkNodeDir, ...node }: any) => node
+        );
 
 interface NodeConfigExport {
     version: number;
