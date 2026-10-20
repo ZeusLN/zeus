@@ -12,6 +12,8 @@ jest.mock('@rneui/themed', () => ({
 }));
 jest.mock('react-native-blob-util', () => ({}));
 jest.mock('../../utils/LnurlPayUtils', () => ({}));
+jest.mock('../../utils/NetworkUtils', () => ({}));
+jest.mock('../../stores/Stores', () => ({}));
 jest.mock('../../components/Amount', () => 'Amount');
 jest.mock('../../components/Button', () => 'Button');
 jest.mock('../../components/DonationGiftIcon', () => 'DonationGiftIcon');
