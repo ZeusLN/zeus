@@ -6,6 +6,7 @@ jest.mock('./SettingsStore', () => ({
     DEFAULT_NOSTR_RELAYS: ['wss://relay.one', 'wss://relay.two']
 }));
 jest.mock('react-native-blob-util', () => ({}));
+jest.mock('../utils/NetworkUtils', () => ({ networkFetch: jest.fn() }));
 jest.mock('@nostr-dev-kit/ndk', () => ({
     __esModule: true,
     default: jest.fn()

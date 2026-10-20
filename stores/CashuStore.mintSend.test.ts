@@ -15,6 +15,10 @@ jest.mock('react-native-blob-util', () => ({
     __esModule: true,
     default: { fetch: jest.fn() }
 }));
+jest.mock('../utils/TorUtils', () => ({
+    doTorRequestRaw: jest.fn(),
+    RequestMethod: { GET: 'GET', POST: 'POST' }
+}));
 jest.mock('@nostr-dev-kit/ndk', () => ({
     __esModule: true,
     default: jest.fn()
@@ -59,6 +63,7 @@ jest.mock('../storage', () => ({
 import { Alert } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import CashuStore from './CashuStore';
+import { doTorRequestRaw } from '../utils/TorUtils';
 import CashuDevKit from '../cashu-cdk';
 import Storage from '../storage';
 import Bolt11Utils from '../utils/Bolt11Utils';
@@ -69,6 +74,7 @@ const cdk = CashuDevKit as unknown as Record<string, jest.Mock>;
 const storage = Storage as unknown as Record<string, jest.Mock>;
 const decode = Bolt11Utils.decode as jest.Mock;
 const blobFetch = ReactNativeBlobUtil.fetch as jest.Mock;
+const torFetch = doTorRequestRaw as jest.Mock;
 
 const A = 'https://a.mint';
 const B = 'https://b.mint';
@@ -78,9 +84,14 @@ const PUBKEY = `02${'11'.repeat(32)}`;
 // BIP-39 zero-entropy test vector, never a real wallet
 const MNEMONIC = `${'abandon '.repeat(11)}about`.split(' ');
 
-const newStore = (mints: string[] = [A, B]) => {
+const newStore = (mints: string[] = [A, B], enableTor = false) => {
     const store = new CashuStore(
-        { implementation: 'lnd', lndDir: 'node1', settings: {} } as any,
+        {
+            implementation: 'lnd',
+            lndDir: 'node1',
+            settings: {},
+            enableTor
+        } as any,
         {} as any,
         {} as any,
         {} as any
@@ -273,6 +284,27 @@ describe('CashuStore.createInvoice', () => {
                 requested.startsWith('https://service.example/withdraw?')
             ).toBe(true);
             expect(query.get('session')).toBe('abc');
+            expect(query.get('k1')).toBe('k1value');
+            expect(query.get('pr')).toBe(REQUEST);
+            expect(alert).not.toHaveBeenCalled();
+        });
+
+        it('sends the callback over Tor when Tor is enabled', async () => {
+            const store = newStore([A, B], true);
+            torFetch.mockResolvedValue({
+                status: 200,
+                body: JSON.stringify({ status: 'OK' })
+            });
+            const alert = jest.spyOn(Alert, 'alert');
+
+            await store.createInvoice({ memo: '', value: '10', lnurl });
+            await new Promise((resolve) => setImmediate(resolve));
+
+            expect(blobFetch).not.toHaveBeenCalled();
+            expect(torFetch).toHaveBeenCalledTimes(1);
+            const [requested, method] = torFetch.mock.calls[0];
+            expect(method).toBe('GET');
+            const query = new URL(requested).searchParams;
             expect(query.get('k1')).toBe('k1value');
             expect(query.get('pr')).toBe(REQUEST);
             expect(alert).not.toHaveBeenCalled();
