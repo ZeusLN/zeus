@@ -17,6 +17,7 @@ import TextInput from '../../components/TextInput';
 import { localeString } from '../../utils/LocaleUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { getButtonGroupStyles } from '../../utils/buttonGroupStyles';
+import { networkFetch } from '../../utils/NetworkUtils';
 
 import SettingsStore from '../../stores/SettingsStore';
 
@@ -151,15 +152,19 @@ export default class Bolt12AddressSettings extends React.Component<
         }
 
         try {
-            const res = await fetch(`https://${HOST}/record`, {
+            const res = await networkFetch({
                 method: 'POST',
+                url: `https://${HOST}/record`,
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     localPart: newLocalPart,
                     bolt12: data.bolt12
-                })
+                }),
+                enableTor: SettingsStore.enableTor
             });
+            const status = res.info().status;
 
-            if (res.status === 409) {
+            if (status === 409) {
                 this.setState({
                     loading: false,
                     error: localeString(
@@ -167,7 +172,7 @@ export default class Bolt12AddressSettings extends React.Component<
                     )
                 });
                 return;
-            } else if (res.status !== 201) {
+            } else if (status !== 201) {
                 this.setState({
                     loading: false,
                     error: localeString(
