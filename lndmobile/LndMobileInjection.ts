@@ -101,8 +101,8 @@ import { sweepRemoteClosed } from './chantools';
 import {
     // swaps
     createClaimTransaction,
-    createReverseClaimTransaction,
-    createRefundTransaction
+    buildReverseClaimTransaction,
+    buildRefundTransaction
 } from './swaps';
 
 import {
@@ -560,21 +560,7 @@ export interface ILndMobileInjections {
             transactionHash: string;
             pubNonce: string;
         }) => Promise<string>;
-        createReverseClaimTransaction: ({
-            endpoint,
-            swapId,
-            claimLeaf,
-            refundLeaf,
-            privateKey,
-            servicePubKey,
-            preimageHex,
-            transactionHex,
-            lockupAddress,
-            destinationAddress,
-            feeRate,
-            minerFee,
-            isTestnet
-        }: {
+        buildReverseClaimTransaction: (args: {
             endpoint: string;
             swapId: string;
             claimLeaf: string;
@@ -587,23 +573,9 @@ export interface ILndMobileInjections {
             destinationAddress: string;
             feeRate: number;
             minerFee: number;
-            isTestnet?: boolean;
+            network: string;
         }) => Promise<string>;
-        createRefundTransaction: ({
-            endpoint,
-            swapId,
-            claimLeaf,
-            refundLeaf,
-            transactionHex,
-            privateKey,
-            servicePubKey,
-            feeRate,
-            timeoutBlockHeight,
-            destinationAddress,
-            lockupAddress,
-            cooperative,
-            isTestnet
-        }: {
+        buildRefundTransaction: (args: {
             endpoint: string;
             swapId: string;
             claimLeaf: string;
@@ -612,11 +584,12 @@ export interface ILndMobileInjections {
             privateKey: string;
             servicePubKey: string;
             feeRate: number;
+            minerFee?: number;
             timeoutBlockHeight: number;
             destinationAddress: string;
             lockupAddress: string;
-            cooperative: boolean;
-            isTestnet?: boolean;
+            cooperative?: boolean;
+            network: string;
         }) => Promise<string>;
     };
     wtclient: {
@@ -759,8 +732,8 @@ export default {
     },
     swaps: {
         createClaimTransaction,
-        createReverseClaimTransaction,
-        createRefundTransaction
+        buildReverseClaimTransaction,
+        buildRefundTransaction
     },
     wtclient: {
         WatchtowerClientAddTower,
