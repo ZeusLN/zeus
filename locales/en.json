@@ -1766,6 +1766,7 @@
     "components.UTXOPicker.modal.title": "Select UTXOs to use",
     "components.UTXOPicker.modal.description": "Select the UTXOs to be used in this operation. You may want to only use specific UTXOs to preserve your privacy.",
     "components.UTXOPicker.modal.set": "Set UTXOs",
+    "components.UTXOPicker.infoModal.automatic": "If you don't select any, your wallet chooses which UTXOs to spend.",
     "components.ChannelPicker.modal.title": "Select Channel to use",
     "components.ChannelPicker.modal.title.multiple": "Select Channel(s) to use",
     "components.ChannelPicker.modal.description": "Select the channel to be used in this operation. You may want to only use specific channels to preserve your privacy.",

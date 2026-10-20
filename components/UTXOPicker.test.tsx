@@ -36,6 +36,18 @@ jest.mock('../components/Button', () => {
         </Pressable>
     );
 });
+jest.mock('@rneui/themed', () => {
+    const { Pressable } = require('react-native');
+    return {
+        Icon: ({ onPress, accessibilityLabel }: any) => (
+            <Pressable
+                role="button"
+                onPress={onPress}
+                accessibilityLabel={accessibilityLabel}
+            />
+        )
+    };
+});
 jest.mock('../components/AccountFilter', () => 'AccountFilter');
 jest.mock('./Amount', () => 'Amount');
 jest.mock('./LoadingIndicator', () => 'LoadingIndicator');
@@ -95,14 +107,23 @@ const renderPicker = async ({
         getUTXOs: jest.fn(),
         listAccounts: jest.fn()
     });
+    const ModalStore: any = { toggleInfoModal: jest.fn() };
     const onValueChange = jest.fn();
     const element = () => (
-        <UTXOPicker {...({ UTXOsStore, onValueChange, ...props } as any)} />
+        <UTXOPicker
+            {...({ UTXOsStore, ModalStore, onValueChange, ...props } as any)}
+        />
     );
     const view = await render(element());
     // observer is mocked out, so store changes need an explicit rerender
     const rerender = () => view.rerender(element());
-    return { UTXOsStore, onValueChange, rerender, unmount: view.unmount };
+    return {
+        UTXOsStore,
+        ModalStore,
+        onValueChange,
+        rerender,
+        unmount: view.unmount
+    };
 };
 
 const button = (name: string) => screen.getByRole('button', { name });
@@ -160,6 +181,70 @@ describe('UTXOPicker loading', () => {
         expect(
             screen.getByText('components.UTXOPicker.defaultTitle')
         ).toBeOnTheScreen();
+    });
+});
+
+describe('UTXOPicker field', () => {
+    const fieldAmounts = () =>
+        screen.container
+            .queryAll((n) => n.type === 'Amount')
+            .map((n) => n.props.sats);
+
+    it('explains coin control from the info button', async () => {
+        const { ModalStore } = await renderPicker();
+
+        await fireEvent.press(button('general.info'));
+
+        expect(ModalStore.toggleInfoModal).toHaveBeenCalledWith({
+            title: 'components.UTXOPicker.defaultTitle',
+            text: [
+                'components.UTXOPicker.modal.description',
+                'components.UTXOPicker.infoModal.automatic'
+            ]
+        });
+        expect(sheetOpen()).toBe(false);
+    });
+
+    it('titles the info with the given title', async () => {
+        const { ModalStore } = await renderPicker({ title: 'Coins' });
+
+        await fireEvent.press(button('general.info'));
+
+        expect(ModalStore.toggleInfoModal.mock.calls[0][0].title).toBe('Coins');
+    });
+
+    it('offers only the select button before anything is set', async () => {
+        await renderPicker();
+
+        expect(button('components.UTXOPicker.selectUTXOs')).toBeOnTheScreen();
+        expect(
+            screen.queryByRole('button', { name: 'general.clear' })
+        ).toBeNull();
+        expect(fieldAmounts()).toEqual([]);
+    });
+
+    it('shows the set UTXOs and their total', async () => {
+        await renderPicker();
+        await openPicker();
+        await pick(A, C);
+
+        await setSelection();
+
+        expect(screen.getByText('aaaa...11:0, cccc...33:0')).toBeOnTheScreen();
+        expect(fieldAmounts()).toEqual([15_000]);
+        expect(button('general.clear')).toBeOnTheScreen();
+    });
+
+    it('drops the total when the selection is cleared', async () => {
+        await renderPicker();
+        await openPicker();
+        await pick(A);
+        await setSelection();
+
+        await fireEvent.press(button('general.clear'));
+
+        expect(fieldAmounts()).toEqual([]);
+        expect(screen.queryByText('aaaa...11:0')).toBeNull();
     });
 });
 
