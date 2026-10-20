@@ -39,12 +39,23 @@ describe('SectionCard', () => {
         ).toBeNull();
     });
 
+    it('sets the title in the heavier weight', async () => {
+        await render(<SectionCard title="Amount" />);
+
+        expect(screen.getByText('Amount')).toHaveStyle({
+            fontFamily: 'PPNeueMontreal-Medium',
+            fontSize: 18,
+            color: 'theme:secondaryText'
+        });
+    });
+
     it('uses the screen background when nested', async () => {
         await render(<SectionCard title="Output 2" nested />);
 
         expect(screen.getByText('Output 2').parent!.parent).toHaveStyle({
             backgroundColor: 'theme:background'
         });
+        expect(screen.getByText('Output 2')).toHaveStyle({ fontSize: 16 });
     });
 
     it('opens the info from the info button', async () => {

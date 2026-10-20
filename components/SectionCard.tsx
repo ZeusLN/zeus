@@ -38,6 +38,7 @@ export default function SectionCard({
                     <Text
                         style={{
                             ...styles.title,
+                            ...(nested ? styles.nestedTitle : {}),
                             color: themeColor('secondaryText')
                         }}
                     >
@@ -72,6 +73,10 @@ const styles = StyleSheet.create({
     },
     title: {
         flex: 1,
-        fontFamily: 'PPNeueMontreal-Book'
+        fontSize: 18,
+        fontFamily: 'PPNeueMontreal-Medium'
+    },
+    nestedTitle: {
+        fontSize: 16
     }
 });
