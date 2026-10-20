@@ -1,0 +1,180 @@
+// AddressUtils (source of CUSTODIAL_LNDHUBS) transitively imports the store
+// graph and protobufs; stub them so this stays a fast, isolated unit test.
+jest.mock('../stores/Stores', () => ({ nodeInfoStore: {} }));
+
+import {
+    redactSettings,
+    REDACTED,
+    REDACTED_HOST
+} from './DiagnosticsRedaction';
+
+describe('redactSettings', () => {
+    const buildSettings = () => ({
+        passphrase: 'super-secret-pin-phrase',
+        duressPin: '0000',
+        lspAccessKey: 'lsp-key',
+        pos: { squareAccessToken: 'sq-token' },
+        lightningAddress: {
+            enabled: true,
+            nostrPrivateKey: 'nsec-hex-zaplocker-key'
+        },
+        privacy: {
+            defaultBlockExplorer: 'mempool.space',
+            customBlockExplorer: 'https://my-explorer.example.com',
+            customMempoolInstance: 'https://my-mempool.example.com',
+            stealthMode: true,
+            stealthVpnCountry: 'Iceland',
+            stealthVpnServer: 'is-rey-wg-001'
+        },
+        swaps: {
+            hostMainnet: 'https://api.boltz.exchange',
+            customHost: 'https://my-boltz.example.com',
+            proEnabled: false
+        },
+        feeEstimator: 'Custom',
+        customFeeEstimator: 'https://my-fees.example.com',
+        customSpeedloader: 'https://my-speedloader.example.com',
+        neutrinoPeersMainnet: [
+            'btcd-mainnet.lightning.computer',
+            'my-own-node.example.com'
+        ],
+        fiatEnabled: true,
+        selectedNode: 0,
+        nodes: [
+            {
+                implementation: 'lnd',
+                host: 'my-private-node.example.com',
+                port: '8080',
+                macaroonHex: 'deadbeef',
+                certVerification: true,
+                nickname: 'home'
+            },
+            {
+                implementation: 'lndhub',
+                lndhubUrl: 'https://lndhub.io',
+                username: 'alice',
+                password: 'hunter2',
+                accessKey: 'ak'
+            },
+            {
+                implementation: 'lndhub',
+                lndhubUrl: 'https://my-private-lndhub.example.com',
+                username: 'bob',
+                password: 'hunter2'
+            },
+            {
+                implementation: 'embedded-lnd',
+                host: 'localhost',
+                port: '10009',
+                seedPhrase: ['word1', 'word2', 'word3'],
+                walletPassword: 'wallet-pw',
+                embeddedLndNetwork: 'Mainnet'
+            },
+            {
+                implementation: 'lightning-node-connect',
+                pairingPhrase: 'a b c d',
+                mailboxServer: 'mailbox.example.com'
+            },
+            {
+                implementation: 'nostr-wallet-connect',
+                nostrWalletConnectUrl:
+                    'nostr+walletconnect://pubkey?secret=deadbeef'
+            }
+        ]
+    });
+
+    it('removes every secret value from the whole blob', () => {
+        const out = redactSettings(buildSettings());
+
+        expect(out.passphrase).toBe(REDACTED);
+        expect(out.duressPin).toBe(REDACTED);
+        expect(out.lspAccessKey).toBe(REDACTED);
+        expect(out.pos.squareAccessToken).toBe(REDACTED);
+        expect(out.lightningAddress.nostrPrivateKey).toBe(REDACTED);
+        expect(out.lightningAddress.enabled).toBe(true);
+
+        expect(out.nodes[0].macaroonHex).toBe(REDACTED);
+        expect(out.nodes[1].username).toBe(REDACTED);
+        expect(out.nodes[1].password).toBe(REDACTED);
+        expect(out.nodes[1].accessKey).toBe(REDACTED);
+        expect(out.nodes[3].seedPhrase).toBe(REDACTED);
+        expect(out.nodes[3].walletPassword).toBe(REDACTED);
+        expect(out.nodes[4].pairingPhrase).toBe(REDACTED);
+        expect(out.nodes[5].nostrWalletConnectUrl).toBe(REDACTED);
+    });
+
+    it('masks a remote node host and keeps non-sensitive metadata', () => {
+        const out = redactSettings(buildSettings());
+
+        expect(out.nodes[0].host).toBe(REDACTED_HOST);
+        expect(out.nodes[0].port).toBe(REDACTED_HOST);
+        expect(out.nodes[0].nickname).toBe('home');
+        expect(out.nodes[0].certVerification).toBe(true);
+    });
+
+    it('keeps a known custodial LNDHub host but redacts a private one', () => {
+        const out = redactSettings(buildSettings());
+
+        expect(out.nodes[1].lndhubUrl).toBe('https://lndhub.io');
+        expect(out.nodes[2].lndhubUrl).toBe(REDACTED_HOST);
+    });
+
+    it('drops host/port for local embedded nodes', () => {
+        const out = redactSettings(buildSettings());
+
+        expect(out.nodes[3].host).toBeUndefined();
+        expect(out.nodes[3].port).toBeUndefined();
+        expect(out.nodes[3].embeddedLndNetwork).toBe('Mainnet');
+    });
+
+    it('masks LNC / NWC connection endpoints', () => {
+        const out = redactSettings(buildSettings());
+
+        expect(out.nodes[4].mailboxServer).toBe(REDACTED_HOST);
+    });
+
+    it('masks custom endpoints outside the nodes array', () => {
+        const out = redactSettings(buildSettings());
+
+        expect(out.privacy.customBlockExplorer).toBe(REDACTED_HOST);
+        expect(out.privacy.customMempoolInstance).toBe(REDACTED_HOST);
+        expect(out.swaps.customHost).toBe(REDACTED_HOST);
+        expect(out.customFeeEstimator).toBe(REDACTED_HOST);
+        expect(out.customSpeedloader).toBe(REDACTED_HOST);
+
+        // built-in picks stay intact: they carry signal and identify nothing
+        expect(out.privacy.defaultBlockExplorer).toBe('mempool.space');
+        expect(out.swaps.hostMainnet).toBe('https://api.boltz.exchange');
+        expect(out.feeEstimator).toBe('Custom');
+    });
+
+    it('masks neutrino peer entries but keeps the count', () => {
+        const out = redactSettings(buildSettings());
+
+        expect(out.neutrinoPeersMainnet).toEqual([
+            REDACTED_HOST,
+            REDACTED_HOST
+        ]);
+    });
+
+    it('redacts the stealth-unlock VPN trigger configuration', () => {
+        const out = redactSettings(buildSettings());
+
+        expect(out.privacy.stealthVpnCountry).toBe(REDACTED);
+        expect(out.privacy.stealthVpnServer).toBe(REDACTED);
+        expect(out.privacy.stealthMode).toBe(true);
+    });
+
+    it('does not mutate the original settings object', () => {
+        const original = buildSettings();
+        redactSettings(original);
+
+        expect(original.nodes[0].macaroonHex).toBe('deadbeef');
+        expect(original.passphrase).toBe('super-secret-pin-phrase');
+    });
+
+    it('handles undefined / empty input safely', () => {
+        expect(redactSettings(undefined)).toEqual({});
+        expect(redactSettings({})).toEqual({});
+    });
+});
