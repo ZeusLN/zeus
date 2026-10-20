@@ -98,4 +98,34 @@ describe('ContactUtils', () => {
             expect(transformedContact).toBeInstanceOf(Object);
         });
     });
+
+    describe('toCardContact', () => {
+        it('keeps only the members a zeuscontact: card carries', () => {
+            expect(
+                ContactUtils.toCardContact({
+                    contactId: '1',
+                    name: 'Coffee shop',
+                    lnAddress: ['tips@coffee.example'],
+                    photo: 'https://beacon.example/photo.png',
+                    banner: 'rnfs://banner.png',
+                    noffer: ['noffer1'],
+                    isFavourite: true,
+                    id: 'legacy-id'
+                })
+            ).toEqual({
+                contactId: '1',
+                name: 'Coffee shop',
+                description: '',
+                lnAddress: ['tips@coffee.example'],
+                bolt12Address: [],
+                bolt12Offer: [],
+                noffer: ['noffer1'],
+                onchainAddress: [],
+                nip05: [],
+                nostrNpub: [],
+                pubkey: [],
+                cashuPubkey: []
+            });
+        });
+    });
 });

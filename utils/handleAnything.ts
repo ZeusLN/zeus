@@ -1065,9 +1065,14 @@ const handleAnything = async (
         }
     } else if (data.startsWith('zeuscontact:')) {
         const zeusContactData = data.replace('zeuscontact:', '');
-        const contact = JSON.parse(zeusContactData);
+        const card = JSON.parse(zeusContactData);
 
-        if (contact?.contactId) {
+        if (card?.contactId) {
+            // Cards made before v0.11.0 could carry remote photo/banner
+            // URLs, which ContactDetails would load as soon as it opens
+            // and again on every display after saving.
+            const contact = ContactUtils.toCardContact(card);
+
             return [
                 'ContactDetails',
                 {
