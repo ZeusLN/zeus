@@ -27,7 +27,6 @@ import { sendingStyles } from '../../components/sendingStyles';
 import CashuStore from '../../stores/CashuStore';
 import ContactStore from '../../stores/ContactStore';
 import LnurlPayStore from '../../stores/LnurlPayStore';
-import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import ContactUtils from '../../utils/ContactUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -47,12 +46,10 @@ interface CashuSendingLightningProps {
     CashuStore: CashuStore;
     ContactStore: ContactStore;
     LnurlPayStore: LnurlPayStore;
-    NodeInfoStore: NodeInfoStore;
     route: Route<
         'CashuSendingLightning',
         {
             donationAmount?: string;
-            enableDonations: boolean;
             paymentAmount?: string;
             paymentRequest?: string;
         }
@@ -72,7 +69,7 @@ interface CashuSendingLightningState {
     showPaymentDetails: boolean;
 }
 
-@inject('CashuStore', 'ContactStore', 'LnurlPayStore', 'NodeInfoStore')
+@inject('CashuStore', 'ContactStore', 'LnurlPayStore')
 @observer
 export default class CashuSendingLightning extends React.Component<
     CashuSendingLightningProps,
@@ -141,9 +138,9 @@ export default class CashuSendingLightning extends React.Component<
     }
 
     componentDidUpdate() {
-        const { CashuStore, NodeInfoStore, route } = this.props;
+        const { CashuStore, route } = this.props;
         const { donationIsPaid } = this.state;
-        const { donationAmount, enableDonations } = route.params;
+        const { donationAmount } = route.params;
 
         const wasSuccessful = this.successfullySent(CashuStore);
 
@@ -153,11 +150,12 @@ export default class CashuSendingLightning extends React.Component<
             this.setState({ wasSuccessful: false });
         }
 
+        // donationAmount is only set when CashuPaymentRequest resolved a
+        // donation to send, against the same balance check it showed the
+        // user. Deciding again here could send one that was never counted.
         if (
-            NodeInfoStore!.nodeInfo.isMainNet &&
             wasSuccessful &&
             !this.state.wasSuccessful &&
-            enableDonations &&
             donationAmount &&
             !donationIsPaid
         ) {

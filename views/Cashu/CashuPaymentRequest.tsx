@@ -220,29 +220,43 @@ export default class CashuPaymentRequest extends React.Component<
         }
     }
 
-    sendPayment = ({ payment_request, amount }: SendPaymentReq) => {
-        const { SettingsStore, navigation } = this.props;
-        const { settings } = SettingsStore;
-
-        const enableDonations =
-            Platform.OS !== 'ios' && settings?.payments?.enableDonations;
+    // The donation that will actually be sent with this payment. Resolved in
+    // one place so the coverage check below and the amount handed to the
+    // sending views cannot disagree: those views take this as decided rather
+    // than re-reading the store, which is what stops a donation the check
+    // never counted from going out once nodeInfo arrives mid-payment.
+    resolveDonationToSend = () => {
+        const { CashuStore, SettingsStore, NodeInfoStore } = this.props;
         const { donationAmount } = this.state;
 
+        const donationsAllowed =
+            Platform.OS !== 'ios' &&
+            !!CashuStore.payReq?.getRequestAmount &&
+            SettingsStore.settings?.payments?.enableDonations;
+
+        return getDonationToSend(
+            NodeInfoStore?.nodeInfo?.isMainNet,
+            donationsAllowed,
+            donationAmount
+        );
+    };
+
+    sendPayment = ({ payment_request, amount }: SendPaymentReq) => {
+        const { navigation } = this.props;
+        const donationToSend = this.resolveDonationToSend();
+
         navigation.navigate('CashuSendingLightning', {
-            enableDonations,
-            ...(enableDonations &&
-                donationAmount > 0 && {
-                    donationAmount: donationAmount.toString()
-                }),
+            ...(donationToSend > 0 && {
+                donationAmount: donationToSend.toString()
+            }),
             paymentAmount: amount ? amount : undefined,
             paymentRequest: payment_request
         });
     };
 
     triggerPayment = () => {
-        const { CashuStore, SettingsStore, navigation } = this.props;
-        const { multiMintEnabled, donationAmount, reviewedPaymentRequest } =
-            this.state;
+        const { CashuStore, navigation } = this.props;
+        const { multiMintEnabled, reviewedPaymentRequest } = this.state;
 
         // Fail closed: if the invoice in the store no longer matches the one
         // the user reviewed, it was swapped out from under the review screen.
@@ -280,24 +294,19 @@ export default class CashuPaymentRequest extends React.Component<
             ? requestAmount.toString()
             : undefined;
 
-        const enableDonations =
-            Platform.OS !== 'ios' &&
-            SettingsStore.settings?.payments?.enableDonations;
-
         const isMultiMint =
             multiMintEnabled &&
             Array.isArray(CashuStore?.multiMintSelectedUrls) &&
             CashuStore!.multiMintSelectedUrls.length > 1;
 
         if (isMultiMint) {
+            const donationToSend = this.resolveDonationToSend();
             navigation.navigate('MultimintPayment', {
                 paymentAmount,
                 paymentRequest: reviewedPaymentRequest,
-                enableDonations,
-                ...(enableDonations &&
-                    donationAmount > 0 && {
-                        donationAmount: donationAmount.toString()
-                    })
+                ...(donationToSend > 0 && {
+                    donationAmount: donationToSend.toString()
+                })
             });
             return;
         }
@@ -355,8 +364,7 @@ export default class CashuPaymentRequest extends React.Component<
     };
 
     render() {
-        const { CashuStore, SettingsStore, NodeInfoStore, navigation } =
-            this.props;
+        const { CashuStore, SettingsStore, navigation } = this.props;
         const {
             slideToPayThreshold,
             donationsToggle,
@@ -416,14 +424,10 @@ export default class CashuPaymentRequest extends React.Component<
             settings?.payments?.enableDonations;
 
         // The donation is a second payment drawn from the same mint right
-        // after this one, so the balance has to cover both. Only count it
-        // under the conditions CashuSendingLightning checks before it sends
-        // the donation; anything else means nothing extra leaves the wallet.
-        const donationToCover = getDonationToSend(
-            NodeInfoStore?.nodeInfo?.isMainNet,
-            enableDonations,
-            donationAmount
-        );
+        // after this one, so the balance has to cover both. This is the same
+        // value the sending views are handed, so what is checked here and
+        // what is sent are the same number.
+        const donationToCover = this.resolveDonationToSend();
         // payReqMintBalance is 0 when the single-mint check did not run, and
         // getPayReqError already covers the invoice falling short on its own.
         const donationLeavesTooLittle =

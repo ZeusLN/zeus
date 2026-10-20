@@ -124,7 +124,6 @@ const view = (cashuStore: any, params: any) => (
         CashuStore={cashuStore}
         ContactStore={{ contacts: [] } as any}
         LnurlPayStore={{} as any}
-        NodeInfoStore={{ nodeInfo: { isMainNet: true } } as any}
     />
 );
 

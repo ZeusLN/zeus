@@ -24,7 +24,12 @@ jest.mock('../../components/SuccessErrorMessage', () => ({
 }));
 jest.mock('../../utils/BackendUtils', () => ({}));
 jest.mock('../../utils/UnitsUtils', () => ({ numberWithCommas: String }));
-jest.mock('../../utils/DonationUtils', () => ({}));
+jest.mock('react-native-blob-util', () => ({}));
+jest.mock('../../utils/LnurlPayUtils', () => ({}));
+jest.mock('../../utils/DonationUtils', () => ({
+    getDonationToSend: jest.requireActual('../../utils/DonationUtils')
+        .getDonationToSend
+}));
 
 import { Platform } from 'react-native';
 import { observable, runInAction } from 'mobx';

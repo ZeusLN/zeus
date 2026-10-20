@@ -7,7 +7,10 @@ jest.mock('../../utils/LocaleUtils');
 jest.mock('../../utils/ThemeUtils', () => ({
     themeColor: (key: string) => `theme:${key}`
 }));
+jest.mock('react-native-blob-util', () => ({}));
+jest.mock('../../utils/LnurlPayUtils', () => ({}));
 jest.mock('../../utils/DonationUtils', () => ({
+    ...jest.requireActual('../../utils/DonationUtils'),
     loadDonationLnurl: jest.fn()
 }));
 jest.mock('../../utils/UrlUtils', () => ({}));
