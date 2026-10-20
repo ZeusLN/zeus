@@ -81,3 +81,70 @@ describe('SectionCard', () => {
         });
     });
 });
+
+describe('SectionCard collapsible', () => {
+    const renderCard = (expanded: boolean, onToggle = jest.fn()) =>
+        render(
+            <SectionCard
+                title="Fee"
+                expanded={expanded}
+                onToggle={onToggle}
+                summary={<Text>Fastest fee 5</Text>}
+                onInfoPress={jest.fn()}
+            >
+                <Text>presets</Text>
+            </SectionCard>
+        ).then(() => onToggle);
+
+    it('shows the summary in place of the children when closed', async () => {
+        await renderCard(false);
+
+        expect(screen.getByText('Fastest fee 5')).toBeOnTheScreen();
+        expect(screen.queryByText('presets')).toBeNull();
+        expect(
+            screen.getByRole('button', { name: 'Fee' }).props.accessibilityState
+                .expanded
+        ).toBe(false);
+    });
+
+    it('shows the children in place of the summary when open', async () => {
+        await renderCard(true);
+
+        expect(screen.getByText('presets')).toBeOnTheScreen();
+        expect(screen.queryByText('Fastest fee 5')).toBeNull();
+        expect(
+            screen.getByRole('button', { name: 'Fee' }).props.accessibilityState
+                .expanded
+        ).toBe(true);
+    });
+
+    it('toggles from the title and from the summary', async () => {
+        const onToggle = await renderCard(false);
+
+        await fireEvent.press(screen.getByRole('button', { name: 'Fee' }));
+        await fireEvent.press(screen.getByText('Fastest fee 5'));
+
+        expect(onToggle).toHaveBeenCalledTimes(2);
+    });
+
+    it('keeps the info button separate from the toggle', async () => {
+        const onToggle = await renderCard(false);
+
+        await fireEvent.press(
+            screen.getByRole('button', { name: 'general.info' })
+        );
+
+        expect(onToggle).not.toHaveBeenCalled();
+    });
+
+    it('cannot be closed without onToggle', async () => {
+        await render(
+            <SectionCard title="Amount" expanded={false}>
+                <Text>input</Text>
+            </SectionCard>
+        );
+
+        expect(screen.getByText('input')).toBeOnTheScreen();
+        expect(screen.queryByRole('button', { name: 'Amount' })).toBeNull();
+    });
+});

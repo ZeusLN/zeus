@@ -1,5 +1,11 @@
 import * as React from 'react';
-import { StyleSheet, Text, View, ViewStyle } from 'react-native';
+import {
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+    ViewStyle
+} from 'react-native';
 import { Icon } from '@rneui/themed';
 
 import { localeString } from '../utils/LocaleUtils';
@@ -12,6 +18,11 @@ interface SectionCardProps {
     // Nested cards use the screen background so they stand out from the
     // card around them
     nested?: boolean;
+    // With onToggle the title opens and closes the card. A closed card
+    // shows the summary in place of its children.
+    expanded?: boolean;
+    onToggle?: () => void;
+    summary?: React.ReactNode;
     style?: ViewStyle;
     children?: React.ReactNode;
 }
@@ -20,9 +31,27 @@ export default function SectionCard({
     title,
     onInfoPress,
     nested,
+    expanded,
+    onToggle,
+    summary,
     style,
     children
 }: SectionCardProps) {
+    const collapsible = !!onToggle;
+    const open = !collapsible || !!expanded;
+
+    const titleText = (
+        <Text
+            style={{
+                ...styles.title,
+                ...(nested ? styles.nestedTitle : {}),
+                color: themeColor('secondaryText')
+            }}
+        >
+            {title}
+        </Text>
+    );
+
     return (
         <View
             style={{
@@ -35,15 +64,25 @@ export default function SectionCard({
         >
             {(title || onInfoPress) && (
                 <View style={styles.header}>
-                    <Text
-                        style={{
-                            ...styles.title,
-                            ...(nested ? styles.nestedTitle : {}),
-                            color: themeColor('secondaryText')
-                        }}
-                    >
-                        {title}
-                    </Text>
+                    {collapsible ? (
+                        <TouchableOpacity
+                            style={styles.toggle}
+                            onPress={onToggle}
+                            accessibilityRole="button"
+                            accessibilityLabel={title}
+                            accessibilityState={{ expanded: open }}
+                        >
+                            {titleText}
+                            <Icon
+                                name={open ? 'expand-less' : 'expand-more'}
+                                color={themeColor('secondaryText')}
+                                size={26}
+                                accessible={false}
+                            />
+                        </TouchableOpacity>
+                    ) : (
+                        titleText
+                    )}
                     {onInfoPress && (
                         <Icon
                             name="info"
@@ -52,11 +91,25 @@ export default function SectionCard({
                             underlayColor="transparent"
                             size={26}
                             accessibilityLabel={localeString('general.info')}
+                            containerStyle={
+                                collapsible ? styles.infoAfterToggle : undefined
+                            }
                         />
                     )}
                 </View>
             )}
-            {children}
+            {open ? (
+                children
+            ) : summary ? (
+                <TouchableOpacity
+                    style={styles.summary}
+                    onPress={onToggle}
+                    accessibilityRole="button"
+                    accessibilityHint={title}
+                >
+                    {summary}
+                </TouchableOpacity>
+            ) : null}
         </View>
     );
 }
@@ -71,6 +124,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between'
     },
+    toggle: {
+        flex: 1,
+        flexDirection: 'row',
+        alignItems: 'center'
+    },
     title: {
         flex: 1,
         fontSize: 18,
@@ -78,5 +136,11 @@ const styles = StyleSheet.create({
     },
     nestedTitle: {
         fontSize: 16
+    },
+    infoAfterToggle: {
+        marginLeft: 10
+    },
+    summary: {
+        paddingTop: 15
     }
 });

@@ -38,6 +38,8 @@ function OnchainFeePicker({ fee, onChangeFee, title }: OnchainFeePickerProps) {
 
     const [selected, setSelected] = useState<FeePreset | 'custom' | ''>('');
     const [customFee, setCustomFee] = useState('');
+    // Closed by default: the chosen rate shows in the summary
+    const [expanded, setExpanded] = useState(false);
     // The last rate this picker reported, to tell a fee set from outside
     // (new route params on Send) apart from our own
     const reported = useRef(fee);
@@ -65,7 +67,9 @@ function OnchainFeePicker({ fee, onChangeFee, title }: OnchainFeePickerProps) {
             .then((fees: any) => {
                 if (!mounted.current) return;
                 if (!fees) {
-                    // nothing to pick from, so ask for a rate
+                    // nothing to pick from, so open the card and ask for
+                    // a rate
+                    setExpanded(true);
                     setSelected('custom');
                     setCustomFee(given);
                     report(given);
@@ -78,6 +82,7 @@ function OnchainFeePicker({ fee, onChangeFee, title }: OnchainFeePickerProps) {
             })
             .catch(() => {
                 if (!mounted.current) return;
+                setExpanded(true);
                 setSelected('custom');
                 setCustomFee(given);
                 report(given);
@@ -137,10 +142,51 @@ function OnchainFeePicker({ fee, onChangeFee, title }: OnchainFeePickerProps) {
         </>
     );
 
+    const summary = () => {
+        if (loading) return <LoadingIndicator size={30} />;
+        if (!fee || !isPlausibleSatPerVbyte(fee)) {
+            return (
+                <Text style={{ ...styles.text, color: themeColor('warning') }}>
+                    {localeString(
+                        error
+                            ? 'views.EditFee.error'
+                            : 'components.OnchainFeeInput.placeholder'
+                    )}
+                </Text>
+            );
+        }
+        return (
+            <View style={styles.summaryRow}>
+                <Text
+                    style={{ ...styles.summaryText, color: themeColor('text') }}
+                >
+                    {selected && selected !== 'custom'
+                        ? presetLabel(selected)
+                        : localeString('general.custom')}
+                </Text>
+                <Text
+                    style={{
+                        ...styles.summaryValue,
+                        color: themeColor('text')
+                    }}
+                >
+                    {fee}
+                </Text>
+            </View>
+        );
+    };
+
     return (
         <SectionCard
             title={title || localeString('views.Send.feeSatsVbyte')}
             onInfoPress={showInfo}
+            {...(enableMempoolRates
+                ? {
+                      expanded,
+                      onToggle: () => setExpanded(!expanded),
+                      summary: summary()
+                  }
+                : {})}
         >
             <View style={styles.body}>
                 {!enableMempoolRates ? (
@@ -209,6 +255,19 @@ const styles = StyleSheet.create({
     },
     body: {
         paddingTop: 15
+    },
+    summaryRow: {
+        flexDirection: 'row',
+        alignItems: 'center'
+    },
+    summaryText: {
+        fontSize: 16,
+        fontFamily: 'PPNeueMontreal-Book'
+    },
+    summaryValue: {
+        fontSize: 16,
+        fontFamily: 'PPNeueMontreal-Medium',
+        marginLeft: 8
     },
     presets: {
         flexDirection: 'row',

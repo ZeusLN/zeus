@@ -64,17 +64,40 @@ beforeEach(() => {
     Object.assign(modalStore, { toggleInfoModal: jest.fn() });
 });
 
-const renderPicker = async (fee = '') => {
+const TITLE = 'views.Send.feeSatsVbyte';
+// the title that opens and closes the card, when it can be closed
+const toggle = () => screen.queryByRole('button', { name: TITLE });
+const isOpen = () => toggle()!.props.accessibilityState.expanded;
+
+// Renders the picker in a host that keeps the rate the way Send does,
+// passing each reported rate back in. Unless `closed`, it then opens the
+// card the way a tap on its title does, so the presets can be pressed.
+const renderPicker = async (fee = '', { closed = false } = {}) => {
     const onChangeFee = jest.fn();
-    const element = (value: string) => (
-        <OnchainFeePicker fee={value} onChangeFee={onChangeFee} />
-    );
-    const view = await render(element(fee));
+    let setFee: (value: string) => void = () => {};
+    function Host() {
+        const [value, setValue] = React.useState(fee);
+        setFee = setValue;
+        return (
+            <OnchainFeePicker
+                fee={value}
+                onChangeFee={(rate: string) => {
+                    onChangeFee(rate);
+                    setValue(rate);
+                }}
+            />
+        );
+    }
+    await render(<Host />);
     // let the mempool fetch settle
     await act(async () => {});
+    if (!closed && toggle() && !isOpen()) {
+        await fireEvent.press(toggle()!);
+    }
     return {
         onChangeFee,
-        rerender: (value: string) => view.rerender(element(value))
+        // a rate set from outside, like new route params on Send
+        rerender: (value: string) => act(() => setFee(value))
     };
 };
 
@@ -88,6 +111,106 @@ const MINIMUM = 'views.EditFee.minimumFee 1';
 const CUSTOM = 'general.custom';
 const rateInput = () =>
     screen.container.queryAll((n) => n.type === 'TextInput')[0];
+
+describe('OnchainFeePicker closed card', () => {
+    it('starts closed with the preferred rate in the summary', async () => {
+        await renderPicker('', { closed: true });
+
+        expect(isOpen()).toBe(false);
+        // the presets are hidden; the summary reads like the chosen one
+        expect(screen.queryByRole('button', { name: CUSTOM })).toBeNull();
+        expect(screen.getByText('views.EditFee.fastestFee')).toBeOnTheScreen();
+        expect(screen.getByText('5')).toBeOnTheScreen();
+    });
+
+    it('opens and closes from the title', async () => {
+        await renderPicker('', { closed: true });
+
+        await fireEvent.press(toggle()!);
+        expect(isOpen()).toBe(true);
+        expect(preset(FASTEST)).toBeOnTheScreen();
+
+        await fireEvent.press(toggle()!);
+        expect(isOpen()).toBe(false);
+        // the presets are hidden; the summary reads like the chosen one
+        expect(screen.queryByRole('button', { name: CUSTOM })).toBeNull();
+    });
+
+    it('opens from the summary', async () => {
+        await renderPicker('', { closed: true });
+
+        await fireEvent.press(screen.getByText('5'));
+
+        expect(isOpen()).toBe(true);
+    });
+
+    it('shows the picked preset once closed again', async () => {
+        const { rerender } = await renderPicker();
+        await fireEvent.press(preset(HOUR));
+        // Send passes the reported rate back in
+        await rerender('1');
+
+        await fireEvent.press(toggle()!);
+
+        expect(screen.getByText('views.EditFee.hourFee')).toBeOnTheScreen();
+        expect(screen.getByText('1')).toBeOnTheScreen();
+    });
+
+    it('shows a custom rate as custom', async () => {
+        await renderPicker('7', { closed: true });
+
+        expect(screen.getByText('general.custom')).toBeOnTheScreen();
+        expect(screen.getByText('7')).toBeOnTheScreen();
+    });
+
+    it.each([[''], ['5000']])(
+        'asks for a rate when the custom rate is %p',
+        async (rate) => {
+            const { rerender } = await renderPicker();
+            await fireEvent.press(preset(CUSTOM));
+            await fireEvent.changeText(rateInput(), rate);
+            await rerender(rate);
+
+            await fireEvent.press(toggle()!);
+
+            expect(
+                screen.getByText('components.OnchainFeeInput.placeholder')
+            ).toHaveStyle({ color: 'theme:warning' });
+        }
+    );
+
+    it('shows a spinner in the summary while the rates load', async () => {
+        feeStore.loading = true;
+        feeStore.getOnchainFeesviaMempool = jest.fn(
+            () => new Promise(() => {})
+        );
+        await renderPicker('', { closed: true });
+
+        expect(isOpen()).toBe(false);
+        expect(
+            screen.container.queryAll((n) => n.type === 'LoadingIndicator')
+        ).toHaveLength(1);
+    });
+
+    it('opens by itself when the rates cannot be fetched', async () => {
+        feeStore.getOnchainFeesviaMempool = fetchResult(undefined);
+        await renderPicker('', { closed: true });
+
+        expect(isOpen()).toBe(true);
+        expect(rateInput()).toBeDefined();
+    });
+
+    it('says the fetch failed once closed', async () => {
+        feeStore.getOnchainFeesviaMempool = fetchResult(undefined);
+        await renderPicker('', { closed: true });
+
+        await fireEvent.press(toggle()!);
+
+        expect(screen.getByText('views.EditFee.error')).toHaveStyle({
+            color: 'theme:warning'
+        });
+    });
+});
 
 describe('OnchainFeePicker presets', () => {
     it('offers the four recommended rates and a custom one', async () => {
@@ -274,6 +397,7 @@ describe('OnchainFeePicker without mempool rates', () => {
         const { onChangeFee } = await renderPicker('3');
 
         expect(feeStore.getOnchainFeesviaMempool).not.toHaveBeenCalled();
+        expect(toggle()).toBeNull();
         expect(screen.queryByRole('button', { name: CUSTOM })).toBeNull();
         expect(rateInput().props.value).toBe('3');
 
