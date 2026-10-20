@@ -517,6 +517,114 @@ describe('SwapDetails lockup verification retry wiring', () => {
             expect(errorShown()).toBe('views.SwapDetails.claimBroadcastFailed');
         });
 
+        it('sends the stored claim again a minute after every broadcast fails', async () => {
+            const { store } = await renderView();
+            store.broadcastSwapTransaction.mockRejectedValue(
+                new Error('mempool down')
+            );
+
+            await sendConfirmedLockup();
+            expect(store.broadcastSwapTransaction).toHaveBeenCalledTimes(11);
+
+            store.broadcastSwapTransaction.mockReset();
+            store.broadcastSwapTransaction.mockResolvedValue('claim-txid');
+            await advance(59000);
+            expect(store.broadcastSwapTransaction).not.toHaveBeenCalled();
+
+            await advance(2000);
+            expect(store.broadcastSwapTransaction).toHaveBeenCalledTimes(1);
+            expect(store.broadcastSwapTransaction).toHaveBeenCalledWith(
+                'claimhex',
+                'https://provider.test/v2'
+            );
+            expect(store.verifyReverseLockup).toHaveBeenCalledTimes(1);
+            expect(nativeClaim).toHaveBeenCalledTimes(1);
+            expect(store.saveClaimTxid).toHaveBeenCalledWith(
+                'swap',
+                'claim-txid'
+            );
+            expect(errorShown()).toBeUndefined();
+
+            await advance(120000);
+            expect(store.broadcastSwapTransaction).toHaveBeenCalledTimes(1);
+        });
+
+        it('keeps sending a claim stored on an earlier visit', async () => {
+            const { store } = await renderView({
+                claimTransactionHex: 'storedhex'
+            });
+            store.broadcastSwapTransaction.mockRejectedValue(
+                new Error('mempool down')
+            );
+
+            await sendStatus('invoice.settled');
+            await advance(60000);
+            await advance(60000);
+
+            expect(store.broadcastSwapTransaction).toHaveBeenCalledTimes(33);
+            expect(store.getReverseLockupTransactionHex).not.toHaveBeenCalled();
+            expect(nativeClaim).not.toHaveBeenCalled();
+            expect(errorShown()).toBe('views.SwapDetails.claimBroadcastFailed');
+        });
+
+        it('stops sending the stored claim once the screen is closed', async () => {
+            const { store, unmount } = await renderView();
+            store.broadcastSwapTransaction.mockRejectedValue(
+                new Error('mempool down')
+            );
+
+            await sendConfirmedLockup();
+            await unmount();
+            await jest.advanceTimersByTimeAsync(180000);
+
+            expect(store.broadcastSwapTransaction).toHaveBeenCalledTimes(11);
+        });
+
+        it('does not schedule another send when the screen closes during a broadcast', async () => {
+            const { store, unmount } = await renderView({
+                claimTransactionHex: 'storedhex'
+            });
+            let fail!: (error: Error) => void;
+            store.broadcastSwapTransaction
+                .mockReturnValueOnce(
+                    new Promise((_resolve, reject) => {
+                        fail = reject;
+                    })
+                )
+                .mockRejectedValue(new Error('mempool down'));
+
+            let settled!: Promise<void>;
+            await act(async () => {
+                settled = socket.onmessage({
+                    data: JSON.stringify({
+                        event: 'update',
+                        args: [{ status: 'invoice.settled' }]
+                    })
+                });
+            });
+            await unmount();
+            const timers = jest.getTimerCount();
+            fail(new Error('mempool down'));
+            await settled;
+
+            // a claim that may have reached the host is still sent in full
+            expect(store.broadcastSwapTransaction).toHaveBeenCalledTimes(11);
+            expect(jest.getTimerCount()).toBe(timers);
+        });
+
+        it('does not retry when no claim could be built', async () => {
+            const { store } = await renderView();
+            nativeClaim.mockRejectedValue(new Error('build failed'));
+
+            await sendConfirmedLockup();
+            const builds = nativeClaim.mock.calls.length;
+            await advance(180000);
+
+            expect(nativeClaim).toHaveBeenCalledTimes(builds);
+            expect(store.broadcastSwapTransaction).not.toHaveBeenCalled();
+            expect(errorShown()).toBe('views.SwapDetails.claimBroadcastFailed');
+        });
+
         it('resends a claim stored on an earlier visit without rechecking or rebuilding', async () => {
             const { store } = await renderView({
                 claimTransactionHex: 'storedhex'

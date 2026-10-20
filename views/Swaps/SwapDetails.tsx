@@ -506,6 +506,17 @@ export default class SwapDetails extends React.Component<
                     confirmedLockupAmount,
                     () => stopped
                 );
+                if (result === 'unsent') {
+                    // Boltz sends no update after invoice.settled, so send
+                    // the stored claim again while the screen is open
+                    if (!stopped) {
+                        lockupRecheck = setTimeout(
+                            () => claimIfLockupVerified(transactionHex),
+                            LOCKUP_RECHECK_MS
+                        );
+                    }
+                    return;
+                }
                 if (typeof result === 'boolean') {
                     submitted = result;
                     return;
@@ -941,7 +952,7 @@ export default class SwapDetails extends React.Component<
         // true once the screen is done with the swap: no new native claim
         // may start after that, though one already running finishes
         isStopped: () => boolean = () => false
-    ): Promise<boolean | ReverseLockupCheck> => {
+    ): Promise<boolean | 'unsent' | ReverseLockupCheck> => {
         try {
             const { SwapStore } = this.props;
             if (!SwapStore) return { status: 'unavailable' };
@@ -1090,7 +1101,8 @@ export default class SwapDetails extends React.Component<
                 error: localeString('views.SwapDetails.claimBroadcastFailed'),
                 loading: false
             });
-            return false;
+            // a signed claim is stored, but no broadcast went through
+            return claimHex ? 'unsent' : false;
         } catch (e) {
             console.log('Error creating reverse claim tx ', e);
             this.setState({

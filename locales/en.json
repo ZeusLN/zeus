@@ -2523,7 +2523,7 @@
     "views.SwapDetails.lockupVerificationUnavailable": "Could not reach your mempool instance to verify the swap lockup. Retrying shortly.",
     "views.SwapDetails.lockupVerificationFailed": "The swap provider's lockup could not be verified on-chain, so this swap will not be claimed. Your Lightning payment will be returned when the swap times out.",
     "views.SwapDetails.lockupSpentElsewhere": "This swap's lockup was spent by a transaction that does not pay your claim address. The swap provider may have taken it back after the swap timed out.",
-    "views.SwapDetails.claimBroadcastFailed": "Could not broadcast the claim transaction for this swap. Open this swap again to retry.",
+    "views.SwapDetails.claimBroadcastFailed": "Could not broadcast the claim transaction for this swap. ZEUS tries again every minute while this swap is open.",
     "views.SwapDetails.confirmLockupAmount": "Confirm swap amount",
     "views.SwapDetails.confirmLockupAmount.message": "The swap provider has locked up {{amount}} sats for this swap. This wallet has no record of the Lightning payment you made for it, so ZEUS can't check that amount. Claim only if it matches what you paid, less the swap fees. Claiming reveals the secret that lets the provider collect your payment.",
     "views.SwapDetails.confirmLockupAmount.shortfall": "You paid {{paid}} sats for this swap, but the swap provider has locked up only {{amount}} sats, more than swap fees should take. Claim only if you accept that amount. Claiming reveals the secret that lets the provider collect your full payment. If you don't claim, your Lightning payment is returned when the swap times out.",
