@@ -1,4 +1,5 @@
 import { NostrWebLNProvider } from '@getalby/sdk';
+import BigNumber from 'bignumber.js';
 
 import { settingsStore } from '../stores/Stores';
 
@@ -30,10 +31,19 @@ export default class NostrWalletConnect {
         return { invoices };
     };
     createInvoice = async (data: any) => {
-        const result = await this.nwc.makeInvoice({
-            defaultMemo: data.memo,
-            amount: Number(data.value)
+        // the SDK rejects msat amounts that are not whole numbers, and the
+        // keypad allows fractional sats
+        const amount = Math.round(
+            new BigNumber(data.value).times(1000).toNumber()
+        );
+        if (!(amount >= 1)) {
+            throw new Error('No amount specified');
+        }
+        const { invoice } = await this.nwc.client.makeInvoice({
+            description: data.memo,
+            amount
         });
+        const result: any = { paymentRequest: invoice };
 
         // NWC only returns { paymentRequest }. createUnifiedInvoice
         // requires a valid rHash, so extract payment_hash from the
