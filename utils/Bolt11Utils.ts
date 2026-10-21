@@ -51,9 +51,9 @@ class Bolt11Utils {
     // so an LRU cache keyed by the raw input collapses those into a single
     // recovery per unique invoice.
     private readonly CACHE_LIMIT = 256;
-    // Longest payment request that fits in a single QR code (version 40,
-    // alphanumeric); LDK rejects anything longer. The tag loop and prefix
-    // regex below are quadratic in the input length, so cap it.
+    // Same cap as LND and LDK (7089, the numeric capacity of a version 40
+    // QR code). The tag loop and prefix regex below are quadratic in the
+    // input length, so cap it.
     private readonly MAX_LENGTH = 7089;
     private cache: Map<string, DecodedBolt11> = new Map();
 
