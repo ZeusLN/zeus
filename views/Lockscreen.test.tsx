@@ -11,7 +11,13 @@ jest.mock('../components/Screen', () => {
     return ({ children }: any) => <View>{children}</View>;
 });
 jest.mock('../components/Button', () => () => null);
-jest.mock('../components/Header', () => () => null);
+// Each header shows which Back it wires up
+jest.mock('../components/Header', () => {
+    const { Text } = require('react-native');
+    return ({ onBack }: any) => (
+        <Text testID="header">{onBack ? 'dismiss' : 'back'}</Text>
+    );
+});
 jest.mock('../components/LoadingIndicator', () => () => null);
 // Stands in for the keypad: one press submits the stored PIN
 jest.mock('../components/Pin', () => {
@@ -68,11 +74,15 @@ const deferred = () => {
 
 const renderLockscreen = async (
     updateSettings: jest.Mock,
-    { biometry = false }: { biometry?: boolean } = {}
+    {
+        biometry = false,
+        posStatus = 'inactive',
+        params = {}
+    }: { biometry?: boolean; posStatus?: string; params?: any } = {}
 ) => {
     const SettingsStore = {
         settings: { pin: PIN },
-        posStatus: 'inactive',
+        posStatus,
         triggerSettingsRefresh: false,
         isBiometryConfigured: jest.fn(() => biometry),
         isPosEnabled: jest.fn(() => false),
@@ -91,7 +101,7 @@ const renderLockscreen = async (
         <Lockscreen
             SettingsStore={SettingsStore as any}
             navigation={navigation as any}
-            route={{ params: {} } as any}
+            route={{ params } as any}
         />
     );
     return { SettingsStore, navigation };
@@ -174,5 +184,36 @@ describe('Lockscreen login', () => {
             'Failed to reset authentication attempts',
             error
         );
+    });
+});
+
+describe('Lockscreen header', () => {
+    const headers = () =>
+        screen.queryAllByTestId('header').map((h) => h.props.children);
+
+    it('shows one Back that dismisses a POS share intent that also has a pending screen', async () => {
+        await renderLockscreen(jest.fn(), {
+            posStatus: 'active',
+            params: {
+                shareIntentData: { qrData: 'lnbc1' },
+                pendingNavigation: { screen: 'LSPS1' }
+            }
+        });
+
+        expect(headers()).toEqual(['dismiss']);
+    });
+
+    it('shows the regular Back for a pending screen', async () => {
+        await renderLockscreen(jest.fn(), {
+            params: { pendingNavigation: { screen: 'Menu' } }
+        });
+
+        expect(headers()).toEqual(['back']);
+    });
+
+    it('shows no Back on a plain unlock', async () => {
+        await renderLockscreen(jest.fn());
+
+        expect(headers()).toEqual([]);
     });
 });
