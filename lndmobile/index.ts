@@ -1,13 +1,11 @@
-import { NativeModules } from 'react-native';
+import { EmitterSubscription, NativeModules } from 'react-native';
 import { sendCommand, sendStreamCommand, decodeStreamResult } from './utils';
 import { lnrpc, routerrpc, invoicesrpc } from './../proto/lightning';
 import Long from 'long';
 
 import Base64Utils from '../utils/Base64Utils';
-import {
-    getExpectedPaymentHash,
-    matchesExpectedPayment
-} from '../utils/EmbeddedLndPayUtils';
+import { matchesExpectedPayment } from '../utils/EmbeddedLndPayUtils';
+import { deriveExpectedPaymentHash } from '../utils/LncPayUtils';
 import { localeString } from '../utils/LocaleUtils';
 import {
     checkLndStreamErrorResponse,
@@ -303,6 +301,96 @@ const forcedTimeout = async (time_ms: number, response: any) => {
     return response;
 };
 
+// Sends one RouterSendPaymentV2 request and waits for its terminal event,
+// or for timeout_seconds + 1 with an outcome-unknown result. Every in-flight
+// call shares the stream's events, so each listener skips events for other
+// payment hashes.
+const sendPaymentV2Stream = async (
+    options: routerrpc.ISendPaymentRequest,
+    expectedPaymentHash: string | undefined,
+    timeout_seconds: number
+): Promise<lnrpc.Payment> => {
+    let listener: EmitterSubscription | undefined;
+    const call = () =>
+        new Promise<lnrpc.Payment>((resolve, reject) => {
+            listener = LndMobileEventEmitter.addListener(
+                'RouterSendPaymentV2',
+                (e) => {
+                    try {
+                        const error = checkLndStreamErrorResponse(
+                            'RouterSendPaymentV2',
+                            e
+                        );
+
+                        if (error === 'EOF') {
+                            return;
+                        } else if (error) {
+                            console.log('Got error from RouterSendPaymentV2', [
+                                error
+                            ]);
+                            listener?.remove();
+                            return reject(error);
+                        }
+
+                        const response = decodeSendPaymentV2Result(e.data);
+                        // a concurrent payment's event: leave it for that
+                        // payment's listener
+                        if (
+                            !matchesExpectedPayment(
+                                expectedPaymentHash,
+                                response
+                            )
+                        ) {
+                            return;
+                        }
+                        listener?.remove();
+                        resolve(response);
+                    } catch (error: any) {
+                        listener?.remove();
+                        reject(error.message || error.toString());
+                    }
+                }
+            );
+
+            sendStreamCommand<
+                routerrpc.ISendPaymentRequest,
+                routerrpc.SendPaymentRequest
+            >(
+                {
+                    request: routerrpc.SendPaymentRequest,
+                    method: 'RouterSendPaymentV2',
+                    options
+                },
+                false
+            ).catch((error) => {
+                listener?.remove();
+                reject(error);
+            });
+        });
+
+    try {
+        const result: any = await Promise.race([
+            forcedTimeout((timeout_seconds + 1) * 1000, {
+                payment_error: localeString(
+                    'views.SendingLightning.paymentTimedOut'
+                ),
+                // outcome unknown on the node: lets the caller track the
+                // payment to a terminal state instead of reporting failure
+                payment_timed_out: true,
+                // in-process call: the request reached lnd at dispatch
+                dispatch_deadline_ms: Date.now()
+            }),
+            call()
+        ]);
+
+        return result;
+    } finally {
+        // if the timeout won the race, stop listening so a late event
+        // cannot be mistaken for a different payment's outcome
+        if (listener) listener.remove();
+    }
+};
+
 export const sendPaymentV2Sync = async (
     sendPaymentReq: any
 ): Promise<lnrpc.Payment> => {
@@ -342,87 +430,11 @@ export const sendPaymentV2Sync = async (
         dest
     };
 
-    const expectedPaymentHash = getExpectedPaymentHash(options);
-
-    let listener: any;
-    const call = () =>
-        new Promise((resolve, reject) => {
-            listener = LndMobileEventEmitter.addListener(
-                'RouterSendPaymentV2',
-                (e) => {
-                    try {
-                        const error = checkLndStreamErrorResponse(
-                            'RouterSendPaymentV2',
-                            e
-                        );
-
-                        if (error === 'EOF') {
-                            return;
-                        } else if (error) {
-                            console.log('Got error from RouterSendPaymentV2', [
-                                error
-                            ]);
-                            listener.remove();
-                            return reject(error);
-                        }
-
-                        const response = decodeSendPaymentV2Result(e.data);
-                        // a concurrent payment's event: leave it for that
-                        // payment's listener
-                        if (
-                            !matchesExpectedPayment(
-                                expectedPaymentHash,
-                                response
-                            )
-                        ) {
-                            return;
-                        }
-                        listener.remove();
-                        resolve(response);
-                    } catch (error: any) {
-                        listener.remove();
-                        reject(error.message || error.toString());
-                    }
-                }
-            );
-
-            sendStreamCommand<
-                routerrpc.ISendPaymentRequest,
-                routerrpc.SendPaymentRequest
-            >(
-                {
-                    request: routerrpc.SendPaymentRequest,
-                    method: 'RouterSendPaymentV2',
-                    options
-                },
-                false
-            ).catch((error) => {
-                listener.remove();
-                reject(error);
-            });
-        });
-
-    try {
-        const result: any = await Promise.race([
-            forcedTimeout((timeout_seconds + 1) * 1000, {
-                payment_error: localeString(
-                    'views.SendingLightning.paymentTimedOut'
-                ),
-                // outcome unknown on the node: lets the caller track the
-                // payment to a terminal state instead of reporting failure
-                payment_timed_out: true,
-                // in-process call: the request reached lnd at dispatch
-                dispatch_deadline_ms: Date.now()
-            }),
-            call()
-        ]);
-
-        return result;
-    } finally {
-        // if the timeout won the race, stop listening so a late event
-        // cannot be mistaken for a different payment's outcome
-        if (listener) listener.remove();
-    }
+    return await sendPaymentV2Stream(
+        options,
+        deriveExpectedPaymentHash({ payment_hash, payment_request, amp }),
+        timeout_seconds
+    );
 };
 
 // TODO error handling
@@ -465,86 +477,11 @@ export const sendKeysendPaymentV2 = async (
         amp
     };
 
-    const expectedPaymentHash = getExpectedPaymentHash(options);
-
-    let listener: any;
-    const call = () =>
-        new Promise((resolve, reject) => {
-            listener = LndMobileEventEmitter.addListener(
-                'RouterSendPaymentV2',
-                (e) => {
-                    try {
-                        const error = checkLndStreamErrorResponse(
-                            'RouterSendPaymentV2',
-                            e
-                        );
-                        if (error === 'EOF') {
-                            return;
-                        } else if (error) {
-                            console.log('Got error from RouterSendPaymentV2', [
-                                error
-                            ]);
-                            listener.remove();
-                            return reject(error);
-                        }
-
-                        const response = decodeSendPaymentV2Result(e.data);
-                        // a concurrent payment's event: leave it for that
-                        // payment's listener
-                        if (
-                            !matchesExpectedPayment(
-                                expectedPaymentHash,
-                                response
-                            )
-                        ) {
-                            return;
-                        }
-                        listener.remove();
-                        resolve(response);
-                    } catch (error: any) {
-                        listener.remove();
-                        reject(error.message || error.toString());
-                    }
-                }
-            );
-
-            sendStreamCommand<
-                routerrpc.ISendPaymentRequest,
-                routerrpc.SendPaymentRequest
-            >(
-                {
-                    request: routerrpc.SendPaymentRequest,
-                    method: 'RouterSendPaymentV2',
-                    options
-                },
-                false
-            ).catch((error) => {
-                listener.remove();
-                reject(error);
-            });
-        });
-
-    try {
-        const result: any = await Promise.race([
-            forcedTimeout((timeout_seconds + 1) * 1000, {
-                payment_error: localeString(
-                    'views.SendingLightning.paymentTimedOut'
-                ),
-                // outcome unknown on the node: lets the caller track the
-                // payment to a terminal state instead of reporting failure
-                payment_timed_out: true,
-                // in-process call: the request reached lnd at dispatch
-                dispatch_deadline_ms: Date.now()
-            }),
-            call()
-        ]);
-
-        return result;
-    } finally {
-        // if the timeout won the race, stop listening so a late event
-        // cannot be mistaken for a different payment's outcome
-        if (listener) listener.remove();
-    }
+    return await sendPaymentV2Stream(
+        options,
+        deriveExpectedPaymentHash({ payment_hash, amp }),
+        timeout_seconds
+    );
 };
 
 /**
