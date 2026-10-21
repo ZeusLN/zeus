@@ -220,7 +220,8 @@ describe('SwapStore.createReverseSwap response verification', () => {
     );
 
     it('fails closed before payment when the explorer height is unusable', async () => {
-        const { navigation, stored } = await create({}, 'not a height');
+        const { store, navigation, stored } = await create({}, 'not a height');
+        expect(store.apiError).toBe('views.Swaps.tipHeightUnavailable');
         expect(stored).toHaveLength(0);
         expect(navigation.navigate).not.toHaveBeenCalled();
     });

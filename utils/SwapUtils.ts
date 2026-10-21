@@ -108,6 +108,21 @@ export const aggregateMusigKeys = (pubkeys: Buffer[]): Buffer => {
 };
 
 /**
+ * The refund leaf of a Boltz swap in either direction: the refund key can
+ * spend once the chain reaches timeoutBlockHeight.
+ */
+const buildRefundLeaf = (
+    refundPubKey: Buffer,
+    timeoutBlockHeight: number
+): Buffer =>
+    bitcoinScript.compile([
+        toXOnly(refundPubKey),
+        opcodes.OP_CHECKSIGVERIFY,
+        bitcoinScript.number.encode(timeoutBlockHeight),
+        opcodes.OP_CHECKLOCKTIMEVERIFY
+    ]);
+
+/**
  * The two tapscript leaves of a Boltz reverse swap, as boltz-client's
  * SwapTree.Check expects them. The claim leaf pays our key against the
  * preimage, the refund leaf pays the server's key after the timeout.
@@ -133,12 +148,7 @@ export const buildReverseSwapLeaves = ({
         toXOnly(claimPubKey),
         opcodes.OP_CHECKSIG
     ]),
-    refundLeaf: bitcoinScript.compile([
-        toXOnly(refundPubKey),
-        opcodes.OP_CHECKSIGVERIFY,
-        bitcoinScript.number.encode(timeoutBlockHeight),
-        opcodes.OP_CHECKLOCKTIMEVERIFY
-    ])
+    refundLeaf: buildRefundLeaf(refundPubKey, timeoutBlockHeight)
 });
 
 /**
@@ -164,13 +174,7 @@ export const buildSubmarineSwapLeaves = ({
         toXOnly(claimPubKey),
         opcodes.OP_CHECKSIG
     ]),
-    // same refund leaf as a reverse swap, for our key instead of the server's
-    refundLeaf: buildReverseSwapLeaves({
-        claimPubKey,
-        refundPubKey,
-        preimageHash,
-        timeoutBlockHeight
-    }).refundLeaf
+    refundLeaf: buildRefundLeaf(refundPubKey, timeoutBlockHeight)
 });
 
 /**
@@ -409,6 +413,7 @@ export type SubmarineSwapResponseCheck =
               | 'missing-fields'
               | 'server-key-encoding'
               | 'leaf-version'
+              | 'timeout'
               | 'claim-leaf-mismatch'
               | 'refund-leaf-mismatch'
               | 'lockup-address-mismatch'
@@ -485,7 +490,7 @@ export const verifySubmarineSwapResponse = ({
         timeoutBlockHeight! <= 0 ||
         timeoutBlockHeight! >= LOCKTIME_THRESHOLD
     ) {
-        return { valid: false, reason: 'refund-leaf-mismatch' };
+        return { valid: false, reason: 'timeout' };
     }
 
     const { claimLeaf, refundLeaf } = buildSubmarineSwapLeaves({

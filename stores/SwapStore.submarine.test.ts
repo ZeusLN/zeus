@@ -93,7 +93,10 @@ const PAYMENT_HASH = Buffer.from(
 );
 // 0.5% service fee and 300 sats of miner fees: the Swaps screen shows
 // 123 + 1 + 300 = 424 sats to send
-const SUB_INFO = { fees: { percentage: 0.5, minerFees: 300 } };
+const SUB_INFO = {
+    hash: 'quote-pair-hash',
+    fees: { percentage: 0.5, minerFees: 300 }
+};
 const EXPECTED_AMOUNT = 424;
 
 const storageBacking = (Storage as any).__store as { [key: string]: string };
@@ -166,6 +169,21 @@ const newStore = () => {
     return store;
 };
 
+const TIP_URL = 'https://mempool.test/api/blocks/tip/height';
+
+// answers the tip lookup with `tip` and the swap request with `response`
+const mockHttp = (response: any, tip: any = TIP, onCreate = () => {}) =>
+    fetchMock.mockImplementation(async (_method: string, url: string) => {
+        if (url === TIP_URL) {
+            return { info: () => ({ status: 200 }), text: () => String(tip) };
+        }
+        onCreate();
+        return { data: JSON.stringify(response) };
+    });
+
+const createRequests = () =>
+    fetchMock.mock.calls.filter(([, url]) => url !== TIP_URL);
+
 const storedSwaps = () =>
     storageBacking[SWAPS_KEY] ? JSON.parse(storageBacking[SWAPS_KEY]) : [];
 
@@ -177,19 +195,16 @@ beforeEach(() => {
 describe('SwapStore.createSubmarineSwap response verification', () => {
     const create = async (responseOverrides: any = {}, tip: any = TIP) => {
         storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
-        fetchMock.mockResolvedValueOnce({
-            data: JSON.stringify({
+        mockHttp(
+            {
                 id: 'submarine-swap',
                 expectedAmount: EXPECTED_AMOUNT,
                 acceptZeroConf: false,
                 ...VALID,
                 ...responseOverrides
-            })
-        });
-        fetchMock.mockResolvedValue({
-            info: () => ({ status: 200 }),
-            text: () => String(tip)
-        });
+            },
+            tip
+        );
 
         const store = newStore();
         const navigation = { navigate: jest.fn() };
@@ -214,9 +229,30 @@ describe('SwapStore.createSubmarineSwap response verification', () => {
             'SwapDetails',
             expect.anything()
         );
-        expect(fetchMock).toHaveBeenLastCalledWith(
-            'GET',
-            'https://mempool.test/api/blocks/tip/height'
+        // the tip is read before the host is asked to create the swap
+        expect(fetchMock.mock.calls.map(([, url]) => url)).toEqual([
+            TIP_URL,
+            expect.stringMatching(/\/swap\/submarine$/)
+        ]);
+    });
+
+    it("sends the quote's pair hash so the host refuses a changed quote", async () => {
+        await create();
+        expect(JSON.parse(createRequests()[0][3]).pairHash).toBe(
+            'quote-pair-hash'
+        );
+    });
+
+    it('omits the pair hash when the quote has none', async () => {
+        storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
+        mockHttp({ id: 'submarine-swap', expectedAmount: 424, ...VALID });
+        const store = newStore();
+        store.subInfo = { fees: SUB_INFO.fees };
+        await store.createSubmarineSwap(INVOICE, { navigate: jest.fn() });
+
+        expect(storedSwaps()).toHaveLength(1);
+        expect(JSON.parse(createRequests()[0][3])).not.toHaveProperty(
+            'pairHash'
         );
     });
 
@@ -268,8 +304,6 @@ describe('SwapStore.createSubmarineSwap response verification', () => {
         'aborts before saving or offering payment when the provider returns %s',
         async (_, overrides) => {
             expectAborted(await create(overrides));
-            // the tip is not looked up for a swap that is already refused
-            expect(fetchMock).toHaveBeenCalledTimes(1);
         }
     );
 
@@ -314,50 +348,52 @@ describe('SwapStore.createSubmarineSwap response verification', () => {
         }
     );
 
-    it('fails closed when the explorer height is unusable', async () => {
+    it('does not ask the host for a swap when the explorer height is unusable', async () => {
         const { store, navigation, stored } = await create({}, 'not a height');
-        expect(store.apiError).toBe(
-            'views.SwapDetails.lockupVerificationUnavailable'
-        );
+        expect(store.apiError).toBe('views.Swaps.tipHeightUnavailable');
+        expect(store.loading).toBe(false);
         expect(stored).toHaveLength(0);
         expect(navigation.navigate).not.toHaveBeenCalled();
+        // a retry with the same invoice can still create the swap
+        expect(createRequests()).toHaveLength(0);
     });
 
     it('compares the amount with the fees shown when the swap was started', async () => {
         storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
         const store = newStore();
-        fetchMock.mockImplementationOnce(async () => {
-            // new rates arrive while the request is in flight
-            store.subInfo = { fees: { percentage: 50, minerFees: 100000 } };
-            return {
-                data: JSON.stringify({
-                    id: 'submarine-swap',
-                    ...VALID,
-                    expectedAmount: 100000
-                })
-            };
-        });
+        mockHttp(
+            { id: 'submarine-swap', ...VALID, expectedAmount: 100000 },
+            TIP,
+            () => {
+                // new rates arrive while the request is in flight
+                store.subInfo = {
+                    fees: { percentage: 50, minerFees: 100000 }
+                };
+            }
+        );
         const navigation = { navigate: jest.fn() };
         await store.createSubmarineSwap(INVOICE, navigation);
 
         expectAborted({ store, navigation, stored: storedSwaps() });
     });
 
-    it('refuses the swap when no fee quote was loaded', async () => {
+    it('does not ask the host for a swap when no fee quote was loaded', async () => {
         storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
-        fetchMock.mockResolvedValueOnce({
-            data: JSON.stringify({
-                id: 'submarine-swap',
-                expectedAmount: EXPECTED_AMOUNT,
-                ...VALID
-            })
+        mockHttp({
+            id: 'submarine-swap',
+            expectedAmount: EXPECTED_AMOUNT,
+            ...VALID
         });
         const store = newStore();
         store.subInfo = {};
         const navigation = { navigate: jest.fn() };
         await store.createSubmarineSwap(INVOICE, navigation);
 
-        expectAborted({ store, navigation, stored: storedSwaps() });
+        expect(store.apiError).toBe('views.Swaps.fetchFeesFailed');
+        expect(store.loading).toBe(false);
+        expect(storedSwaps()).toHaveLength(0);
+        expect(navigation.navigate).not.toHaveBeenCalled();
+        expect(fetchMock).not.toHaveBeenCalled();
     });
 });
 

@@ -1437,17 +1437,17 @@ describe('SwapUtils', () => {
             [
                 'the timeout is a timestamp',
                 swap({ timeoutBlockHeight: 1700000000 }),
-                'refund-leaf-mismatch'
+                'timeout'
             ],
             [
                 'the timeout is missing',
                 { timeoutBlockHeight: undefined },
-                'refund-leaf-mismatch'
+                'timeout'
             ],
             [
                 'the timeout is a string',
                 { timeoutBlockHeight: String(TIMEOUT) },
-                'refund-leaf-mismatch'
+                'timeout'
             ],
             [
                 'a leaf has a non-tapscript version',

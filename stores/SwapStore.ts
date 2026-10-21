@@ -55,7 +55,7 @@ export type ReverseLockupFetch =
     | { status: 'none' }
     | { status: 'unavailable' };
 
-export type ReverseLockupCheck = {
+export type SwapCheck = {
     // 'confirm-amount': every check passed, but nothing trusted says how
     // much the lockup should hold; ask the user before claiming
     status: 'ok' | 'unconfirmed' | 'invalid' | 'unavailable' | 'confirm-amount';
@@ -72,9 +72,13 @@ export type ReverseLockupCheck = {
     spentBy?: LockupSpender;
 };
 
+export type ReverseLockupCheck = SwapCheck;
+
 export type LockupSpender = 'claim' | 'refund';
 
 interface SubmarineSwapInfo {
+    // the quote's pair hash, sent back so the host refuses a changed quote
+    hash?: string;
     fees?: {
         percentage?: number;
         minerFees?: number;
@@ -503,9 +507,37 @@ export default class SwapStore {
         const { implementation } = this.settingsStore;
         const { nodeInfo } = this.nodeInfoStore;
         const nodePubkey = nodeInfo.nodeId;
-        // the fees the Swaps screen showed when the user started the swap
+        // the quote the Swaps screen showed when the user started the swap
         const fees = this.subInfo?.fees;
+        const pairHash = this.subInfo?.hash;
+        const apiUrl = UrlUtils.getMempoolApiUrl(nodeInfo);
         try {
+            // Run the checks that don't need the host's answer before the
+            // host creates the swap: the Swaps screen retries with the same
+            // invoice, and the host refuses a second swap for its payment
+            // hash.
+            if (!fees) {
+                runInAction(() => {
+                    this.apiError = localeString('views.Swaps.fetchFeesFailed');
+                    this.loading = false;
+                });
+                return;
+            }
+            const tip = await this.fetchTipHeight(apiUrl);
+            if (tip.status !== 'ok') {
+                runInAction(() => {
+                    this.apiError = localeString(
+                        'views.Swaps.tipHeightUnavailable'
+                    );
+                    this.loading = false;
+                });
+                console.error(
+                    'Submarine swap tip height unavailable:',
+                    tip.reason
+                );
+                return;
+            }
+
             console.log('Creating submarine swap using rescue key...');
 
             const { keys } = await this.generateNewKey();
@@ -525,6 +557,7 @@ export default class SwapStore {
                     to: 'BTC',
                     from: 'BTC',
                     refundPublicKey,
+                    ...(pairHash && { pairHash }),
                     ...(this.referralId && { referralId: this.referralId })
                 })
             );
@@ -565,8 +598,8 @@ export default class SwapStore {
                 ),
                 maxExpectedAmount: calculateSendAmount(
                     invoiceSats,
-                    fees?.percentage || 0,
-                    fees?.minerFees || 0,
+                    fees.percentage || 0,
+                    fees.minerFees || 0,
                     false
                 ).toNumber(),
                 bech32Prefix:
@@ -574,6 +607,8 @@ export default class SwapStore {
             });
             if (!responseCheck.valid) {
                 runInAction(() => {
+                    // the text does not name a swap direction, so the
+                    // reverse swap's key is reused here
                     this.apiError = localeString(
                         'views.Swaps.invalidReverseSwapResponse'
                     );
@@ -586,16 +621,14 @@ export default class SwapStore {
                 return;
             }
 
-            const timeout = await this.verifySubmarineSwapTimeout(
+            const timeout = this.checkSubmarineSwapTimeout(
                 responseData.timeoutBlockHeight,
-                UrlUtils.getMempoolApiUrl(nodeInfo)
+                tip.height
             );
             if (timeout.status !== 'ok') {
                 runInAction(() => {
                     this.apiError = localeString(
-                        timeout.status === 'unavailable'
-                            ? 'views.SwapDetails.lockupVerificationUnavailable'
-                            : 'views.Swaps.invalidReverseSwapResponse'
+                        'views.Swaps.invalidReverseSwapResponse'
                     );
                     this.loading = false;
                 });
@@ -817,7 +850,7 @@ export default class SwapStore {
                 runInAction(() => {
                     this.apiError = localeString(
                         deadline.status === 'unavailable'
-                            ? 'views.SwapDetails.lockupVerificationUnavailable'
+                            ? 'views.Swaps.tipHeightUnavailable'
                             : 'views.Swaps.invalidReverseSwapResponse'
                     );
                     this.loading = false;
@@ -912,13 +945,11 @@ export default class SwapStore {
     // Until its timeout a submarine swap's coins only come back if the
     // provider co-signs the refund, so the timeout must be ahead of the tip
     // and no further than MAX_SUBMARINE_SWAP_TIMEOUT_BLOCKS.
-    private verifySubmarineSwapTimeout = async (
+    private checkSubmarineSwapTimeout = (
         timeoutBlockHeight: number,
-        apiUrl: string
-    ): Promise<ReverseLockupCheck> => {
-        const tip = await this.fetchTipHeight(apiUrl);
-        if (tip.status !== 'ok') return tip;
-        const blocksLeft = timeoutBlockHeight - tip.height;
+        tipHeight: number
+    ): SwapCheck => {
+        const blocksLeft = timeoutBlockHeight - tipHeight;
         if (blocksLeft <= 0 || blocksLeft > MAX_SUBMARINE_SWAP_TIMEOUT_BLOCKS) {
             return { status: 'invalid', reason: 'refund-timeout' };
         }
