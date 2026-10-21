@@ -3460,3 +3460,85 @@ describe('NostrWalletConnectStore wallet deletion', () => {
         expect(storedItems.has(NWC_SERVICE_KEYS)).toBe(false);
     });
 });
+
+describe('NostrWalletConnectStore cashu pay_invoice budget', () => {
+    const invoice = 'lnbc1cashubudgettest';
+
+    // 100 sat invoice against a 103 sat budget
+    const payWithFeeReserve = async (feeEstimate: number) => {
+        const payLnInvoiceFromEcash = jest.fn().mockResolvedValue({
+            isFailed: false,
+            getPreimage: 'c'.repeat(64),
+            getPaymentRequest: invoice,
+            getFee: 0
+        });
+        const { store } = createStore({
+            cashuStore: {
+                selectedMintUrl: 'https://mint.example',
+                totalBalanceSats: 100_000,
+                paymentError: false,
+                paymentErrorMsg: '',
+                paymentRequest: invoice,
+                payReq: new Invoice({
+                    payment_request: invoice,
+                    num_satoshis: '100'
+                } as any),
+                getPayReqError: null,
+                // set by getPayReq from the melt quote's fee_reserve
+                feeEstimate,
+                getPayReq: jest.fn().mockResolvedValue(undefined),
+                payLnInvoiceFromEcash,
+                isProperlyConfigured: () => true,
+                payments: []
+            }
+        });
+        store.cashuEnabled = true;
+        const connection = addConnection(store, { maxAmountSats: 103 });
+        const response = await (store as any).handleCashuPayInvoice(
+            connection,
+            { invoice }
+        );
+        return { response, connection, payLnInvoiceFromEcash };
+    };
+
+    beforeEach(() => {
+        jest.spyOn(
+            NostrConnectUtils,
+            'getPayInvoiceAmountSats'
+        ).mockResolvedValue(100);
+        jest.spyOn(NostrConnectUtils, 'decodeInvoiceTags').mockResolvedValue({
+            paymentRequest: invoice,
+            paymentHash: hex64('6'),
+            descriptionHash: '',
+            description: '',
+            amount: 100,
+            expiryTime: 0,
+            createdAt: 0,
+            isExpired: false,
+            network: 'bitcoin'
+        });
+        jest.spyOn(
+            NostrConnectUtils,
+            'notifyOutgoingNwcPayment'
+        ).mockImplementation(() => undefined);
+    });
+
+    it('rejects before melting when the amount fits but the fee reserve does not', async () => {
+        const { response, connection, payLnInvoiceFromEcash } =
+            await payWithFeeReserve(4);
+
+        expect(payLnInvoiceFromEcash).not.toHaveBeenCalled();
+        expect(response.error?.code).toBe(Nip47ErrorCode.INSUFFICIENT_BALANCE);
+        expect(connection.totalSpendSats).toBe(0);
+        expect(connection.activity).toHaveLength(0);
+    });
+
+    it('melts when the amount plus the fee reserve fits', async () => {
+        const { response, connection, payLnInvoiceFromEcash } =
+            await payWithFeeReserve(3);
+
+        expect(payLnInvoiceFromEcash).toHaveBeenCalled();
+        expect(response.error).toBeUndefined();
+        expect(connection.totalSpendSats).toBe(100);
+    });
+});

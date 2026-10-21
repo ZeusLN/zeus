@@ -2903,9 +2903,14 @@ export default class NostrWalletConnectStore {
             );
         }
 
+        // The mint can spend up to the melt quote's fee reserve on top of
+        // the amount, and nothing caps the fee below that, so the budget
+        // has to cover both. getPayReq above fetched the quote.
+        const feeReserveSats =
+            Math.ceil(Number(this.cashuStore.feeEstimate)) || 0;
         const budgetCheck = this.validateBudgetBeforePayment(
             connection,
-            amountSats,
+            amountSats + feeReserveSats,
             Nip47ErrorCode.INSUFFICIENT_BALANCE
         );
         if (!budgetCheck.success) {
