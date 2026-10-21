@@ -459,3 +459,134 @@ describe('LnurlPay ecash payment', () => {
         expect(Alert.alert).not.toHaveBeenCalled();
     });
 });
+
+describe('LnurlPay invoice decode', () => {
+    const PR = 'lnbc-from-lnurl';
+
+    beforeEach(() => {
+        unitsStore.units = 'sats';
+        (verifyLnurlPayInvoice as jest.Mock).mockReturnValue({ ok: true });
+        mockBlobFetch.mockResolvedValueOnce({
+            json: () => ({ pr: PR, successAction: { tag: 'noop' } })
+        });
+    });
+
+    afterEach(() => {
+        mockBlobFetch.mockImplementation(() => new Promise(() => {}));
+        jest.restoreAllMocks();
+    });
+
+    // InvoicesStore whose getPayReq ends in the given state
+    const invoicesStore = (after: { [key: string]: any }) => {
+        const store: { [key: string]: any } = {
+            paymentRequest: '',
+            pay_req: null,
+            getPayReqError: null
+        };
+        store.getPayReq = jest.fn(async (request: string) => {
+            store.paymentRequest = request;
+            Object.assign(store, after);
+        });
+        return store;
+    };
+
+    const confirm = async (InvoicesStore: { [key: string]: any }) => {
+        const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+        const LnurlPayStore = { keep: jest.fn() };
+        const navigate = jest.fn();
+        await render(
+            <LnurlPay
+                {...({
+                    navigation: {
+                        addListener: jest.fn(),
+                        removeListener: jest.fn(),
+                        navigate,
+                        goBack: jest.fn()
+                    },
+                    route: { params: { lnurlParams: lnurlParams(1, 1000) } },
+                    UnitsStore: { resetUnits: jest.fn() },
+                    ContactStore: { contacts: [] },
+                    CashuStore: {},
+                    InvoicesStore,
+                    LnurlPayStore
+                } as any)}
+            />
+        );
+        await fireEvent(hostOfType('AmountInput'), 'amountChange', '10', 10);
+        await fireEvent.press(screen.getByRole('button', { name: CONFIRM }));
+        await act(async () => {
+            await new Promise((resolve) => setImmediate(resolve));
+        });
+        expect(InvoicesStore.getPayReq).toHaveBeenCalledWith(PR);
+        return { alert, keep: LnurlPayStore.keep, navigate };
+    };
+
+    it('binds the LNURL to the decoded invoice and opens PaymentRequest', async () => {
+        const { keep, navigate } = await confirm(
+            invoicesStore({
+                pay_req: { payment_hash: 'aa', description_hash: 'dd' }
+            })
+        );
+
+        expect(keep).toHaveBeenCalledWith(
+            'aa',
+            'example.com',
+            undefined,
+            expect.any(String),
+            'dd',
+            { tag: 'noop' },
+            ''
+        );
+        expect(navigate).toHaveBeenCalledWith('PaymentRequest');
+    });
+
+    it('stops when a newer request replaced the decode', async () => {
+        const { alert, keep, navigate } = await confirm(
+            invoicesStore({
+                paymentRequest: 'lnbc-deep-link',
+                pay_req: { payment_hash: 'bb', description_hash: 'ee' }
+            })
+        );
+
+        expect(keep).not.toHaveBeenCalled();
+        expect(navigate).not.toHaveBeenCalled();
+        expect(alert).not.toHaveBeenCalled();
+    });
+
+    it("doesn't show the error of a newer request that replaced the decode", async () => {
+        const { alert, keep, navigate } = await confirm(
+            invoicesStore({
+                paymentRequest: 'lnbc-deep-link',
+                getPayReqError: 'decode failed'
+            })
+        );
+
+        expect(alert).not.toHaveBeenCalled();
+        expect(keep).not.toHaveBeenCalled();
+        expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it('stops when the decode was dropped with nothing decoded yet', async () => {
+        // a newer decode of the same string is still in flight
+        const { alert, keep, navigate } = await confirm(invoicesStore({}));
+
+        expect(keep).not.toHaveBeenCalled();
+        expect(navigate).not.toHaveBeenCalled();
+        expect(alert).not.toHaveBeenCalled();
+    });
+
+    it('still shows the error of its own failed decode', async () => {
+        const { alert, keep, navigate } = await confirm(
+            invoicesStore({ getPayReqError: 'decode failed' })
+        );
+
+        expect(alert).toHaveBeenCalledWith(
+            'views.LnurlPay.LnurlPay.invalidInvoice',
+            'decode failed',
+            expect.any(Array),
+            expect.any(Object)
+        );
+        expect(keep).not.toHaveBeenCalled();
+        expect(navigate).not.toHaveBeenCalled();
+    });
+});
