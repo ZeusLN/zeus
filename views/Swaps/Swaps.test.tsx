@@ -68,7 +68,7 @@ import { reverseClaimMinerFee } from '../../utils/FeeUtils';
 // A reverse swap with a 0.5% service fee, a 400 sat lockup fee and a 300
 // sat claim quote. At 1 sat/vB the quote is kept, at 25 sat/vB the claim
 // fee is raised to 25 x 152 = 3800 sats.
-const renderView = async (mempoolFees: Promise<any>) => {
+const renderView = async (mempoolFees: Promise<any>, claimQuote = 300) => {
     const swapStore: any = {
         loading: false,
         apiError: '',
@@ -77,7 +77,10 @@ const renderView = async (mempoolFees: Promise<any>) => {
             limits: { minimal: 1000, maximal: 1000000 }
         },
         reverseInfo: {
-            fees: { percentage: 0.5, minerFees: { claim: 300, lockup: 400 } },
+            fees: {
+                percentage: 0.5,
+                minerFees: { claim: claimQuote, lockup: 400 }
+            },
             limits: { minimal: 1000, maximal: 1000000 }
         },
         clearError: jest.fn(),
@@ -233,5 +236,63 @@ describe('Swaps reverse amounts and the claim fee rate', () => {
 
         expect(receiveInput().props.amount).toBe('');
         expect(initiate().props.disabled).toBe(true);
+    });
+});
+
+describe('Swaps reverse claim fee errors', () => {
+    beforeEach(() => {
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+    afterEach(() => jest.restoreAllMocks());
+
+    const errorsShown = () =>
+        byType('ErrorMessage').map((e: any) => e.props.message);
+
+    it('does not ask for a rate while the mempool rate is on its way', async () => {
+        await renderView(new Promise(() => {}));
+
+        expect(errorsShown()).not.toContain(
+            'views.Swaps.reverseClaimFeeRateRequired'
+        );
+    });
+
+    it('asks for a rate once the mempool lookup fails', async () => {
+        const offline = Promise.reject(new Error('offline'));
+        // handled by the screen once it asks; not an unhandled rejection
+        offline.catch(() => {});
+        await renderView(offline);
+
+        expect(errorsShown()).toContain(
+            'views.Swaps.reverseClaimFeeRateRequired'
+        );
+    });
+
+    it('asks for a rate when the user enters an unusable one', async () => {
+        await renderView(new Promise(() => {}));
+
+        await setFeeRate('0');
+
+        expect(errorsShown()).toContain(
+            'views.Swaps.reverseClaimFeeRateRequired'
+        );
+    });
+
+    it('says why Initiate is disabled when the claim quote is above the maximum', async () => {
+        // more than 2000 sat/vB on the largest claim
+        await renderView(mempool(5), 2000 * 152 + 1);
+        await enterAddress();
+        await enter(sendInput(), '1000000');
+
+        expect(initiate().props.disabled).toBe(true);
+        expect(errorsShown()).toEqual([
+            'views.Swaps.invalidReverseSwapResponse'
+        ]);
+    });
+
+    it('shows no error for a usable rate and quote', async () => {
+        await renderView(mempool(5));
+
+        expect(errorsShown()).toEqual([]);
     });
 });

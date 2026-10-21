@@ -449,6 +449,35 @@ describe('SwapDetails reverse claim fee', () => {
         expect(claimedFee()).toBe(2 * 152);
     });
 
+    it('looks the rate up again at claim time when the lookup on open failed', async () => {
+        const FeeStore = {
+            getOnchainFeesviaMempool: jest
+                .fn()
+                .mockRejectedValueOnce(new Error('offline'))
+                .mockResolvedValue({ fastestFee: 30 })
+        };
+        const { store } = await renderView(
+            { claimMinerFee: 1, onchainAmount: 99100 },
+            {},
+            { FeeStore }
+        );
+        expect(store.getReverseSwapReceiveAmount).toHaveBeenLastCalledWith(
+            99100,
+            2 * 152
+        );
+
+        nativeClaim.mockResolvedValue(undefined);
+        await sendConfirmedLockup();
+
+        expect(FeeStore.getOnchainFeesviaMempool).toHaveBeenCalledTimes(2);
+        expect(claimedFee()).toBe(30 * 152);
+        // the amount shown follows the rate the claim paid
+        expect(store.getReverseSwapReceiveAmount).toHaveBeenLastCalledWith(
+            99100,
+            30 * 152
+        );
+    });
+
     it('does not claim with a stored fee above the maximum', async () => {
         await claim({ claimMinerFee: 2000 * 152 + 1, claimFeeRate: 25 });
 

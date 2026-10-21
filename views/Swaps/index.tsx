@@ -110,6 +110,9 @@ interface SwapState {
     flowLspNotConfigured: boolean;
     // the amount field the user set last, kept when the network fee changes
     lastEditedAmount: 'input' | 'output';
+    // a mempool rate lookup has finished, so an empty rate is now missing
+    // rather than still on its way
+    feeRateLookupDone: boolean;
 }
 
 @inject(
@@ -151,7 +154,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         showRescueKeyBtn: false,
         enableLSP: true,
         flowLspNotConfigured: true,
-        lastEditedAmount: 'input' as 'input' | 'output'
+        lastEditedAmount: 'input' as 'input' | 'output',
+        feeRateLookupDone: false
     };
 
     private isNavigatingAway = false;
@@ -516,6 +520,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 this.setState({ fee: feeRate.toString() });
             } catch (error) {
                 console.error('Failed to fetch mempool fees:', error);
+            } finally {
+                this.setState({ feeRateLookupDone: true });
             }
         }
 
@@ -952,7 +958,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             feeSettingToggle,
             showRescueKeyBtn,
             enableLSP,
-            flowLspNotConfigured
+            flowLspNotConfigured,
+            feeRateLookupDone
         } = this.state;
         const { subInfo, reverseInfo, loading, apiError, clearError } =
             SwapStore;
@@ -2465,13 +2472,27 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                     </Row>
                                                 </View>
                                             </TouchableOpacity>
-                                            {!isPlausibleSatPerVbyte(fee) && (
-                                                <ErrorMessage
-                                                    message={localeString(
-                                                        'views.Swaps.reverseClaimFeeRateRequired'
-                                                    )}
-                                                />
-                                            )}
+                                            {!isPlausibleSatPerVbyte(fee) &&
+                                                (fee !== '' ||
+                                                    feeRateLookupDone) && (
+                                                    <ErrorMessage
+                                                        message={localeString(
+                                                            'views.Swaps.reverseClaimFeeRateRequired'
+                                                        )}
+                                                    />
+                                                )}
+                                            {/* a usable rate, but a claim quote
+                                                no plausible fee reaches */}
+                                            {isPlausibleSatPerVbyte(fee) &&
+                                                SwapStore.getReverseClaimMinerFee(
+                                                    fee
+                                                ) === undefined && (
+                                                    <ErrorMessage
+                                                        message={localeString(
+                                                            'views.Swaps.invalidReverseSwapResponse'
+                                                        )}
+                                                    />
+                                                )}
                                             {feeSettingToggle && (
                                                 <>
                                                     <Text

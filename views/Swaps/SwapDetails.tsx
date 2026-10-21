@@ -948,10 +948,20 @@ export default class SwapDetails extends React.Component<
     // The rate the Swaps screen would pre-fill now, for a swap that has
     // none stored. Looked up once and kept in state, so the amount shown
     // and the claim use the same rate. Undefined if none is needed or the
-    // lookup fails, and then both use the 2 sat/vB floor.
+    // lookup fails, and then both use the 2 sat/vB floor. A failed lookup
+    // is not kept, so a claim made later looks the rate up again.
     loadCurrentClaimFeeRate = (): Promise<number | undefined> => {
         if (!this.currentClaimFeeRateLookup) {
-            this.currentClaimFeeRateLookup = this.fetchCurrentClaimFeeRate();
+            const lookup = this.fetchCurrentClaimFeeRate().then((rate) => {
+                if (
+                    rate === undefined &&
+                    this.currentClaimFeeRateLookup === lookup
+                ) {
+                    this.currentClaimFeeRateLookup = undefined;
+                }
+                return rate;
+            });
+            this.currentClaimFeeRateLookup = lookup;
         }
         return this.currentClaimFeeRateLookup;
     };
