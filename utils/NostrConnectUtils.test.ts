@@ -1513,6 +1513,17 @@ describe('NostrConnectUtils', () => {
             ).toBe(true);
         });
 
+        it('abandons a cashu hold after max age', () => {
+            const activity = baseActivity();
+            activity.payment_source = 'cashu';
+            activity.createdAt = new Date(
+                now - NostrConnectUtils.UNRESOLVED_PAY_INVOICE_MAX_AGE_MS - 1000
+            );
+            expect(
+                NostrConnectUtils.isPayInvoiceHoldAbandoned(activity, now)
+            ).toBe(true);
+        });
+
         it('keeps a recent unresolved hold', () => {
             expect(
                 NostrConnectUtils.isPayInvoiceHoldAbandoned(baseActivity(), now)
