@@ -276,7 +276,8 @@ export default class EmbeddedLND extends LND {
             max_shard_size_msat: data.max_shard_size_msat,
             max_parts: data.max_parts,
             cltv_limit: data.cltv_limit,
-            amp: data.amp
+            amp: data.amp,
+            timeout_seconds: data.timeout_seconds
         }).catch((error) => {
             throw markNodeResponded(error, error?.grpcCode);
         });

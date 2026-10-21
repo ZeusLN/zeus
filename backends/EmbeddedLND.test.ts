@@ -310,6 +310,20 @@ describe('EmbeddedLND payment rejections', () => {
         expect(isPaymentRefusedAsDuplicate(error)).toBe(true);
     });
 
+    it('passes the payment timeout to keysend', async () => {
+        mockSendKeysendPaymentV2.mockResolvedValue({ status: 'SUCCEEDED' });
+
+        await new EmbeddedLND().sendKeysend({
+            pubkey: PUBKEY,
+            amt: 1000,
+            timeout_seconds: 30
+        });
+
+        expect(mockSendKeysendPaymentV2).toHaveBeenCalledWith(
+            expect.objectContaining({ timeout_seconds: 30 })
+        );
+    });
+
     it('tags a rejected keysend as a response from the node', async () => {
         mockSendKeysendPaymentV2.mockRejectedValue(
             new Error('insufficient local balance')
