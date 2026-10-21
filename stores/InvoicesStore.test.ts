@@ -5,6 +5,7 @@ jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
     default: {
         decodePaymentRequest: jest.fn(),
+        getRoutes: jest.fn(),
         getNewAddress: jest.fn(),
         getNewChangeAddress: jest.fn(),
         isLNDBased: jest.fn(() => false),
@@ -239,6 +240,141 @@ describe('InvoicesStore superseded decode requests', () => {
         expect(store.paymentRequest).toBe('lnr-second');
         expect(store.pay_req).toBeNull();
         expect(store.withdrawal_req).not.toBeNull();
+    });
+});
+
+// the pay_req reaction queries routes on LND-based backends; the fee
+// estimate and success probability shown must belong to the current pay_req
+describe('InvoicesStore superseded route queries', () => {
+    type Deferred = {
+        resolve: (data: any) => void;
+        reject: (error: Error) => void;
+    };
+    let decodes: { [request: string]: Deferred };
+    let routes: { [destination: string]: Deferred };
+
+    const flush = () => new Promise((resolve) => setImmediate(resolve));
+
+    beforeEach(() => {
+        decodes = {};
+        routes = {};
+        (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(true);
+        (BackendUtils.decodePaymentRequest as jest.Mock).mockImplementation(
+            ([request]: string[]) =>
+                new Promise((resolve, reject) => {
+                    decodes[request] = { resolve, reject };
+                })
+        );
+        (BackendUtils.getRoutes as jest.Mock).mockReset();
+        (BackendUtils.getRoutes as jest.Mock).mockImplementation(
+            ([destination]: string[]) =>
+                new Promise((resolve, reject) => {
+                    routes[destination] = { resolve, reject };
+                })
+        );
+    });
+
+    afterEach(() => {
+        (BackendUtils.isLNDBased as jest.Mock).mockReturnValue(false);
+    });
+
+    // decodes request, leaving its route query in flight
+    const decodeWithRoutes = async (
+        store: InvoicesStore,
+        request: string,
+        destination: string
+    ) => {
+        const call = store.getPayReq(request);
+        decodes[request].resolve({ destination, num_satoshis: '1000' });
+        await call;
+        expect(routes[destination]).toBeDefined();
+    };
+
+    it('ignores a route answer for an earlier pay_req', async () => {
+        const store = newStore();
+        await decodeWithRoutes(store, 'lnbc-first', 'node-first');
+        await decodeWithRoutes(store, 'lnbc-second', 'node-second');
+
+        routes['node-second'].resolve({
+            routes: [{ total_fees: 5 }],
+            success_prob: 0.9
+        });
+        routes['node-first'].resolve({
+            routes: [{ total_fees: 500 }],
+            success_prob: 0.1
+        });
+        await flush();
+
+        expect(store.feeEstimate).toBe(5);
+        expect(store.successProbability).toBe(90);
+        expect(store.loadingFeeEstimate).toBe(false);
+    });
+
+    it('ignores a route error for an earlier pay_req', async () => {
+        const store = newStore();
+        await decodeWithRoutes(store, 'lnbc-first', 'node-first');
+        await decodeWithRoutes(store, 'lnbc-second', 'node-second');
+
+        routes['node-second'].resolve({
+            routes: [{ total_fees: 5 }],
+            success_prob: 0.9
+        });
+        await flush();
+        routes['node-first'].reject(new Error('no route'));
+        await flush();
+
+        expect(store.feeEstimate).toBe(5);
+        expect(store.successProbability).toBe(90);
+    });
+
+    it('stops loading the fee estimate when the newer decode fails', async () => {
+        const store = newStore();
+        await decodeWithRoutes(store, 'lnbc-first', 'node-first');
+        expect(store.loadingFeeEstimate).toBe(true);
+
+        const second = store.getPayReq('lnbc-second');
+        decodes['lnbc-second'].reject(new Error('decode failed'));
+        await second;
+        routes['node-first'].resolve({
+            routes: [{ total_fees: 500 }],
+            success_prob: 0.1
+        });
+        await flush();
+
+        expect(store.loadingFeeEstimate).toBe(false);
+        expect(store.feeEstimate).toBeNull();
+        expect(store.successProbability).toBeNull();
+    });
+
+    it('ignores a decode answer that arrives after clearPayReq', async () => {
+        const store = newStore();
+        const call = store.getPayReq('lnbc-first');
+        store.clearPayReq();
+        decodes['lnbc-first'].resolve({
+            destination: 'node-first',
+            num_satoshis: '1000'
+        });
+        await call;
+
+        expect(store.pay_req).toBeNull();
+        expect(store.loading).toBe(false);
+        expect(BackendUtils.getRoutes).not.toHaveBeenCalled();
+    });
+
+    it('ignores a route answer that arrives after clearPayReq', async () => {
+        const store = newStore();
+        await decodeWithRoutes(store, 'lnbc-first', 'node-first');
+        store.clearPayReq();
+        expect(store.loadingFeeEstimate).toBe(false);
+
+        routes['node-first'].resolve({
+            routes: [{ total_fees: 500 }],
+            success_prob: 0.1
+        });
+        await flush();
+
+        expect(store.feeEstimate).toBeNull();
+        expect(store.successProbability).toBeNull();
     });
 });
 
