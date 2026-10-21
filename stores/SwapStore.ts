@@ -2,7 +2,7 @@ import { action, observable, computed, runInAction, reaction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
 import { ECPairAPI, ECPairFactory } from 'ecpair';
-import ecc from '@bitcoinerlab/secp256k1';
+import ecc from '../zeus_modules/noble_ecc';
 import { crypto, initEccLib, Transaction } from 'bitcoinjs-lib';
 import { HDKey } from '@scure/bip32';
 import { mnemonicToSeedSync, generateMnemonic } from '@scure/bip39';
