@@ -875,17 +875,23 @@ export default class WalletConfiguration extends React.Component<
             // change of target: end the deleted wallet's connection here
             if (active) SettingsStore.invalidateConnection();
 
-            // Delete the active wallet's NWC connections first, while the
-            // wallet they are matched by is still the current one, so they
-            // are no longer served now or when the same node is added again.
+            // Delete the wallet's NWC connections first, so they are no
+            // longer served now or when the same node is added again. The
+            // active wallet's are matched while it is still the current
+            // one; an inactive wallet's by its config.
             // Best effort: a storage failure here must not block the
             // deletion, and the last-wallet sweep below removes leftovers.
-            if (active) {
-                try {
+            try {
+                if (active) {
                     await NostrWalletConnectStore.deleteCurrentWalletConnections();
-                } catch (error) {
-                    console.error('Error deleting NWC connections:', error);
+                } else {
+                    await NostrWalletConnectStore.deleteWalletConfigConnections(
+                        deletedNode,
+                        (nodes || []).filter((_, i) => i !== index)
+                    );
                 }
+            } catch (error) {
+                console.error('Error deleting NWC connections:', error);
             }
 
             // If deleting active embedded LND wallet, stop it first

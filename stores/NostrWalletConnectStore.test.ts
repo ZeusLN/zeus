@@ -3441,6 +3441,133 @@ describe('NostrWalletConnectStore wallet deletion', () => {
         expect(store.isInitialized).toBe(false);
     });
 
+    describe('deleteWalletConfigConnections', () => {
+        const WALLET_A = {
+            implementation: 'lnd',
+            host: 'a.example.com',
+            port: '8080'
+        };
+        const WALLET_B = { ...WALLET_A, host: 'b.example.com' };
+        const B_CONNECTION = {
+            id: 'conn-b',
+            name: 'Wallet B App',
+            pubkey: hex64('b'),
+            nodePubkey: 'node-b-pubkey'
+        };
+        const B_KEY = hex64('8');
+
+        // Pairs a client to wallet B while it is the current wallet, the
+        // way the app stores it, then switches to wallet A
+        const pairWithWalletBThenSwitchToA = async () => {
+            storedItems.set(
+                NWC_CONNECTIONS_KEY,
+                JSON.stringify([
+                    connectionData({ id: 'conn-a', pubkey: hex64('a') }),
+                    connectionData(B_CONNECTION)
+                ])
+            );
+            storedItems.set(
+                NWC_CLIENT_KEYS,
+                JSON.stringify({
+                    [hex64('a')]: hex64('3'),
+                    [B_CONNECTION.pubkey]: B_KEY
+                })
+            );
+            const walletB = createStore({
+                settingsStore: { ...WALLET_B, settings: {} },
+                nodeInfoStore: {
+                    nodeInfo: { nodeId: B_CONNECTION.nodePubkey },
+                    getNodeInfo: jest.fn()
+                }
+            });
+            await walletB.store.loadConnections();
+            await jest.advanceTimersByTimeAsync(SERVICE_START_MS);
+
+            return createStore({
+                settingsStore: { ...WALLET_A, settings: {} }
+            });
+        };
+
+        it('loadConnections stamps the current wallet config on its connections only', async () => {
+            await pairWithWalletBThenSwitchToA();
+
+            const [a, b] = persistedConnections();
+            expect(b.walletConfigId).toBe(
+                NostrConnectUtils.getWalletConfigId(WALLET_B)
+            );
+            expect(a.walletConfigId).toBeUndefined();
+        });
+
+        it("deletes an inactive wallet's connections and client keys so a re-added node has none", async () => {
+            const { store } = await pairWithWalletBThenSwitchToA();
+            await store.loadConnections();
+
+            await store.deleteWalletConfigConnections(WALLET_B, [WALLET_A]);
+
+            expect(persistedConnections().map((c) => c.id)).toEqual(['conn-a']);
+            expect(storedClientKeys()).toEqual({ [hex64('a')]: hex64('3') });
+            expect(store.connections.map((c) => c.id)).toEqual(['conn-a']);
+
+            // The same node added back as a new config
+            const readded = createStore({
+                settingsStore: { ...WALLET_B, settings: {} },
+                nodeInfoStore: {
+                    nodeInfo: { nodeId: B_CONNECTION.nodePubkey },
+                    getNodeInfo: jest.fn()
+                }
+            });
+            await readded.store.loadConnections();
+            expect(readded.store.connections).toEqual([]);
+        });
+
+        it('createConnection stamps the current wallet config', async () => {
+            const { store } = await startService([{}], {
+                settingsStore: { ...WALLET_A, settings: {} }
+            });
+
+            await store.createConnection({
+                name: 'New App',
+                relayUrl: OLD_RELAY
+            });
+
+            const created = persistedConnections().find(
+                (c) => c.name === 'New App'
+            );
+            expect(created.walletConfigId).toBe(
+                NostrConnectUtils.getWalletConfigId(WALLET_A)
+            );
+        });
+
+        it('keeps the connections while a duplicate of the config remains', async () => {
+            const { store } = await pairWithWalletBThenSwitchToA();
+
+            await store.deleteWalletConfigConnections(WALLET_B, [
+                WALLET_A,
+                { ...WALLET_B, nickname: 'Copy' } as any
+            ]);
+
+            expect(persistedConnections().map((c) => c.id)).toEqual([
+                'conn-a',
+                'conn-b'
+            ]);
+            expect(storedClientKeys()[B_CONNECTION.pubkey]).toBe(B_KEY);
+        });
+
+        it('leaves connections that were never loaded with a wallet config id', async () => {
+            storedItems.set(
+                NWC_CONNECTIONS_KEY,
+                JSON.stringify([connectionData(B_CONNECTION)])
+            );
+            const { store } = createStore({
+                settingsStore: { ...WALLET_A, settings: {} }
+            });
+
+            await store.deleteWalletConfigConnections(WALLET_B, [WALLET_A]);
+
+            expect(persistedConnections().map((c) => c.id)).toEqual(['conn-b']);
+        });
+    });
+
     it('deleteAllConnectionData removes every stored connection and key', async () => {
         const { store, connections } = await startService();
         storedItems.set(

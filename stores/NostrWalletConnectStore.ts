@@ -36,7 +36,8 @@ import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import NostrConnectUtils, {
     DEFAULT_INVOICE_EXPIRY_SECONDS,
-    Nip47ErrorCode
+    Nip47ErrorCode,
+    WalletConfigFields
 } from '../utils/NostrConnectUtils';
 import IOSAudioKeepAliveUtils from '../utils/IOSAudioKeepAliveUtils';
 import { satsToMillisats, millisatsToSats } from '../utils/AmountUtils';
@@ -645,6 +646,9 @@ export default class NostrWalletConnectStore {
                 customExpiryUnit,
                 nodePubkey,
                 implementation,
+                walletConfigId: NostrConnectUtils.getWalletConfigId(
+                    this.settingsStore
+                ),
                 activity: params.activity || []
             };
 
@@ -763,10 +767,60 @@ export default class NostrWalletConnectStore {
     };
 
     /**
+     * Deletes the stored connections and client keys of a wallet config
+     * that is not the current wallet, when that config is deleted. They are
+     * matched by the wallet config id stamped on them when the wallet last
+     * loaded them (loadConnections); connections not loaded since carry no
+     * id and stay until the last wallet is deleted. Skipped when a
+     * remaining config has the same id (a duplicated wallet), since the
+     * connections are that wallet's too.
+     */
+    public deleteWalletConfigConnections = async (
+        node: WalletConfigFields | undefined,
+        remainingNodes: WalletConfigFields[]
+    ): Promise<void> => {
+        const walletConfigId = NostrConnectUtils.getWalletConfigId(node);
+        if (
+            !walletConfigId ||
+            remainingNodes.some(
+                (other) =>
+                    NostrConnectUtils.getWalletConfigId(other) ===
+                    walletConfigId
+            )
+        ) {
+            return;
+        }
+        // Write out a pending save of the current wallet's connections
+        // first, so it cannot write back the records deleted here
+        await this.flushScheduledSave();
+        const connectionsData = await Storage.getItem(NWC_CONNECTIONS_KEY);
+        if (!connectionsData) return;
+        const stored: NWCConnectionData[] = JSON.parse(connectionsData);
+        const deleted = stored.filter(
+            (c) =>
+                c.walletConfigId === walletConfigId &&
+                !this.connectionBelongsToCurrentWallet(c)
+        );
+        if (deleted.length === 0) return;
+        await Storage.setItem(
+            NWC_CONNECTIONS_KEY,
+            JSON.stringify(stored.filter((c) => !deleted.includes(c)))
+        );
+        const storedKeys = await Storage.getItem(NWC_CLIENT_KEYS);
+        if (storedKeys) {
+            const keys: ClientKeys = JSON.parse(storedKeys);
+            for (const { pubkey } of deleted) {
+                delete keys[pubkey];
+            }
+            await Storage.setItem(NWC_CLIENT_KEYS, JSON.stringify(keys));
+        }
+    };
+
+    /**
      * Stops the service and removes all stored NWC connections, client keys
      * and service keys. Called when the last wallet config is deleted, so
-     * connections of wallets that could not be matched above (for example
-     * a wallet deleted while another one was active) do not remain.
+     * connections that could not be matched to their wallet when it was
+     * deleted (no wallet config id yet) do not remain.
      */
     public deleteAllConnectionData = async (): Promise<void> => {
         await this.reset(true);
@@ -1025,6 +1079,13 @@ export default class NostrWalletConnectStore {
             const connectionsData = await Storage.getItem(NWC_CONNECTIONS_KEY);
             if (connectionsData) {
                 const connections = JSON.parse(connectionsData);
+                // Stamp the current wallet config on its connections, so
+                // they can be deleted with that config while another
+                // wallet is current (deleteWalletConfigConnections)
+                const walletConfigId = NostrConnectUtils.getWalletConfigId(
+                    this.settingsStore
+                );
+                let stamped = false;
                 runInAction(() => {
                     const filtered = this.hasWalletContext()
                         ? connections.filter((c: NWCConnectionData) =>
@@ -1033,9 +1094,22 @@ export default class NostrWalletConnectStore {
                         : [];
 
                     this.connections = filtered.map(
-                        (data: NWCConnectionData) => new NWCConnection(data)
+                        (data: NWCConnectionData) => {
+                            if (
+                                !walletConfigId ||
+                                data.walletConfigId === walletConfigId
+                            ) {
+                                return new NWCConnection(data);
+                            }
+                            stamped = true;
+                            return new NWCConnection({
+                                ...data,
+                                walletConfigId
+                            });
+                        }
                     );
                 });
+                if (stamped) this.scheduleSave();
                 await this.checkAndResetAllBudgets();
             } else {
                 runInAction(() => {

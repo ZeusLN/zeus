@@ -454,6 +454,68 @@ describe('NostrConnectUtils', () => {
         });
     });
 
+    describe('getWalletConfigId', () => {
+        const id = NostrConnectUtils.getWalletConfigId;
+
+        it('is the same for the same embedded node dir and differs between dirs', () => {
+            const a = { implementation: 'embedded-lnd', lndDir: 'dir-a' };
+
+            expect(id(a)).toBe(id({ ...a, nickname: 'renamed' } as any));
+            expect(id(a)).not.toBe(
+                id({ implementation: 'embedded-lnd', lndDir: 'dir-b' })
+            );
+        });
+
+        it('applies the default dirs to legacy embedded configs', () => {
+            expect(id({ implementation: 'embedded-lnd' })).toBe(
+                id({ implementation: 'embedded-lnd', lndDir: 'lnd' })
+            );
+            expect(id({ implementation: 'ldk-node' })).toBe(
+                id({ implementation: 'ldk-node', ldkNodeDir: 'ldk' })
+            );
+        });
+
+        it('matches remote nodes by implementation, host and port', () => {
+            const node = { host: 'node.example.com', port: '8080' };
+
+            expect(id(node)).toBe(id({ ...node, implementation: 'lnd' }));
+            expect(id(node)).not.toBe(id({ ...node, port: '8081' }));
+            expect(id(node)).not.toBe(
+                id({ ...node, implementation: 'cln-rest' })
+            );
+        });
+
+        it('matches LndHub accounts by URL and username', () => {
+            const account = {
+                implementation: 'lndhub',
+                lndhubUrl: 'https://lndhub.example.com',
+                username: 'alice'
+            };
+
+            expect(id(account)).not.toBe(id({ ...account, username: 'bob' }));
+            expect(id(account)).not.toBe(
+                id({ ...account, lndhubUrl: 'https://other.example.com' })
+            );
+        });
+
+        it('does not contain the LNC pairing phrase', () => {
+            const pairingPhrase = 'alpha bravo charlie delta';
+            const value = id({
+                implementation: 'lightning-node-connect',
+                pairingPhrase
+            });
+
+            expect(value).toMatch(/^[0-9a-f]{64}$/);
+            expect(value).not.toContain('alpha');
+        });
+
+        it('is undefined without a config or its identifying fields', () => {
+            expect(id(undefined)).toBeUndefined();
+            expect(id({ implementation: 'lnd' })).toBeUndefined();
+            expect(id({ implementation: 'lndhub' })).toBeUndefined();
+        });
+    });
+
     describe('resolveFeeSats', () => {
         it('rounds fractional sats from msat division', () => {
             expect(NostrConnectUtils.resolveFeeSats(1.2)).toBe(1);
