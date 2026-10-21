@@ -460,7 +460,8 @@ export const sendKeysendPaymentV2 = async (
         amp
     } = request;
 
-    const timeout_seconds = 60;
+    // the store sends the configured payment timeout; 60 matches its default
+    const timeout_seconds = Number(request.timeout_seconds) || 60;
 
     const options: routerrpc.ISendPaymentRequest = {
         dest: Base64Utils.hexToBytes(dest),

@@ -106,6 +106,28 @@ describe('sendKeysendPaymentV2', () => {
         await jest.advanceTimersByTimeAsync(60_999);
         expect(settled).toBe(false);
     });
+
+    it('uses the timeout_seconds the store sends', async () => {
+        (sendStreamCommand as jest.Mock).mockClear();
+        let settled = false;
+        sendKeysendPaymentV2({
+            dest: '02'.repeat(33),
+            amt: 1000,
+            payment_hash: Buffer.from('ab'.repeat(32), 'hex').toString(
+                'base64'
+            ),
+            timeout_seconds: 30
+        }).then(() => (settled = true));
+
+        expect(
+            (sendStreamCommand as jest.Mock).mock.calls[0][0].options
+                .timeout_seconds
+        ).toBe(30);
+        await jest.advanceTimersByTimeAsync(30_999);
+        expect(settled).toBe(false);
+        await jest.advanceTimersByTimeAsync(1);
+        expect(settled).toBe(true);
+    });
 });
 
 describe('concurrent RouterSendPaymentV2 calls', () => {

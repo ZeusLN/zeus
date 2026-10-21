@@ -268,7 +268,8 @@ export interface ILndMobileInjections {
             payment_hash,
             amp,
             dest,
-            dest_custom_records
+            dest_custom_records,
+            timeout_seconds
         }: {
             amt?: Long;
             max_shard_size_msat?: string;
@@ -280,6 +281,7 @@ export interface ILndMobileInjections {
             amp: boolean;
             dest: string;
             dest_custom_records?: any;
+            timeout_seconds?: number;
         }) => Promise<lnrpc.Payment>;
         fundingStateStep: ({
             shim_register,
