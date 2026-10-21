@@ -1068,7 +1068,11 @@ export default class NostrConnectUtils {
         activity: ConnectionActivity,
         nowMs: number = Date.now()
     ): boolean {
-        if (activity.type !== 'pay_invoice' || activity.isBudgetDebited) {
+        if (
+            activity.type !== 'pay_invoice' ||
+            activity.payment_source === 'cashu' ||
+            activity.isBudgetDebited
+        ) {
             return false;
         }
 

@@ -3261,7 +3261,9 @@ export default class NostrWalletConnectStore {
                 });
                 return true;
             }
-            return this.abandonStaleUnresolvedPayInvoiceHold(activity);
+            // No age limit: a melt the wallet has not loaded yet may have
+            // settled, and a released hold would never be debited
+            return false;
         }
 
         if (payment.isInTransit) return false;

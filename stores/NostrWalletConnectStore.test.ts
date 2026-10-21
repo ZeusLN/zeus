@@ -3745,7 +3745,9 @@ describe('NostrWalletConnectStore cashu pay_invoice in-flight melt', () => {
         expect(connection.pendingSpendSats).toBe(103);
     });
 
-    it('releases a hold CashuStore never resolves after the max age', async () => {
+    // Releasing it would let a melt that settled while the wallet was not
+    // loaded escape the budget once CashuStore marks it paid
+    it('keeps an aged hold until CashuStore loads, then debits the settled melt', async () => {
         const { store, connection, cashuStore } = await payInFlight();
         cashuStore.payments = undefined;
         cashuStore.cdkInitialized = false;
@@ -3757,9 +3759,43 @@ describe('NostrWalletConnectStore cashu pay_invoice in-flight melt', () => {
 
         await (store as any).reconcilePendingPayInvoiceActivities(connection);
 
-        expect(connection.activity[0].status).toBe('failed');
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.pendingSpendSats).toBe(103);
+
+        cashuStore.cdkInitialized = true;
+        cashuStore.payments = [
+            new CashuPayment({
+                ...inFlightPayment(),
+                status: 'SUCCEEDED',
+                fee: 2,
+                payment_preimage: preimage
+            })
+        ];
+        cashuStore.pendingMelts = [];
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0]).toMatchObject({
+            status: 'success',
+            isBudgetDebited: true
+        });
+        expect(connection.totalSpendSats).toBe(102);
         expect(connection.pendingSpendSats).toBe(0);
-        expect(connection.totalSpendSats).toBe(0);
+    });
+
+    it('keeps an aged hold while the melt is still tracked', async () => {
+        const { store, connection, cashuStore } = await payInFlight();
+        cashuStore.payments = [];
+        connection.activity[0].createdAt = new Date(
+            Date.now() -
+                NostrConnectUtils.UNRESOLVED_PAY_INVOICE_MAX_AGE_MS -
+                1000
+        );
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.pendingSpendSats).toBe(103);
     });
 });
 

@@ -3438,10 +3438,20 @@ export default class CashuStore {
         runInAction(() => {
             this.payments = [...(this.payments || []), payment];
         });
-        await Storage.setItem(
-            `${this.getNodeDir()}-cashu-payments`,
-            this.payments
-        );
+        // A failed write must not hide the in-flight outcome from callers.
+        // The melt stays tracked, so reconcilePendingMelts records it again
+        // after a restart.
+        try {
+            await Storage.setItem(
+                `${this.getNodeDir()}-cashu-payments`,
+                this.payments
+            );
+        } catch (e) {
+            console.error(
+                'CashuStore: Failed to persist in-flight payment:',
+                e
+            );
+        }
         activityStore.getSortedActivity();
         return payment;
     };
