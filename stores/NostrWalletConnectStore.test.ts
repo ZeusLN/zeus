@@ -2214,6 +2214,34 @@ describe('NostrWalletConnectStore timeout-failed pay_invoice reconcile', () => {
         expect(connection.canSpend(1)).toBe(false);
     });
 
+    it('keeps the hold when a payment listed as failed still has an HTLC in flight', async () => {
+        // matches both isListedPaymentFailed (FAILED status) and
+        // isListedPaymentInTransit (open HTLC), so this only holds if in
+        // transit is checked first
+        const invoice = 'lnbc1lnd-failed-htlc-out';
+        const paymentHash = hex64('7');
+        const { store } = storeWithNodePayments([
+            new Payment({
+                payment_request: invoice,
+                payment_hash: paymentHash,
+                status: 'FAILED',
+                failure_reason: 'FAILURE_REASON_NONE',
+                payment_preimage: hex64('0'),
+                htlcs: [{ status: 'FAILED' }, { status: 'IN_FLIGHT' }]
+            })
+        ]);
+        const connection = addConnection(store, {
+            maxAmountSats: 10000,
+            activity: [timeoutFailedActivity(invoice, { paymentHash })]
+        });
+
+        await (store as any).reconcilePendingPayInvoiceActivities(connection);
+
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.pendingSpendSats).toBe(10000);
+        expect(connection.canSpend(1)).toBe(false);
+    });
+
     it('does not debit a genuine route failure that never settled', async () => {
         const { store } = storeWithNodePayments([]);
         const connection = addConnection(store, {

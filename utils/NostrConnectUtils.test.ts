@@ -864,6 +864,29 @@ describe('NostrConnectUtils', () => {
                     });
                 });
 
+                it('holds budget when a payment listed as failed still has an HTLC in flight', () => {
+                    // isListedPaymentFailed matches the FAILED status and
+                    // isListedPaymentInTransit the open HTLC, so this only
+                    // holds if in transit is checked first
+                    const failedWithHtlcOut = new Payment({
+                        payment_request: INVOICE_A,
+                        payment_hash: HASH_A,
+                        status: 'FAILED',
+                        failure_reason: 'FAILURE_REASON_NONE',
+                        payment_preimage: ZERO_PREIMAGE,
+                        htlcs: [{ status: 'FAILED' }, { status: 'IN_FLIGHT' }]
+                    });
+                    const result = resolve({
+                        payments: [failedWithHtlcOut],
+                        paymentState: storeState.timedOut()
+                    });
+
+                    expect(result).toEqual({
+                        inTransit: true,
+                        payment: failedWithHtlcOut
+                    });
+                });
+
                 it('holds budget when CLN lists a pending retry after a failed attempt', () => {
                     const pending = paymentFixtures.pendingCln();
                     const result = resolve({

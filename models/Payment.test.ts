@@ -177,6 +177,25 @@ describe('Payment.isFailed / isInTransit with retried HTLC attempts', () => {
         expect(payment.getAmount).toBe(50000);
     });
 
+    it('is in transit, not failed, between two attempts (embedded LND enum statuses)', () => {
+        const payment = new Payment({
+            status: lnrpc.Payment.PaymentStatus.IN_FLIGHT,
+            failure_reason: lnrpc.PaymentFailureReason.FAILURE_REASON_NONE,
+            value_sat: 50000,
+            payment_preimage: zeroPreimage,
+            htlcs: [
+                {
+                    status: lnrpc.HTLCAttempt.HTLCStatus.FAILED,
+                    route: { total_amt: 50000 }
+                }
+            ]
+        });
+
+        expect(payment.isInTransit).toBe(true);
+        expect(payment.isFailed).toBe(false);
+        expect(payment.getAmount).toBe(50000);
+    });
+
     it('is in transit while a part is out after a failure reason is set', () => {
         const payment = new Payment({
             status: 'IN_FLIGHT',
