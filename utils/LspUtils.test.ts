@@ -1,4 +1,4 @@
-import { verifyWrappedInvoice } from './LspUtils';
+import { verifyOrderInvoice, verifyWrappedInvoice } from './LspUtils';
 
 // Deterministic fixtures signed with throwaway test keys. The scenario:
 // the user requests 100 000 sats with a quoted zero-conf fee of
@@ -126,4 +126,66 @@ describe('verifyWrappedInvoice', () => {
             error: 'decode_failure'
         });
     });
+});
+
+// reuses the fixtures above: WRAPPED_EXACT is a 100 000 sat invoice,
+// WRAPPED_SUBSAT_OVER is 99 000 999 msat
+describe('verifyOrderInvoice', () => {
+    it('accepts an invoice for exactly the order total', () => {
+        expect(verifyOrderInvoice(WRAPPED_EXACT, '100000')).toEqual({
+            valid: true
+        });
+        expect(verifyOrderInvoice(WRAPPED_EXACT, 100000)).toEqual({
+            valid: true
+        });
+    });
+
+    it('rejects an invoice for more than the order total', () => {
+        expect(verifyOrderInvoice(WRAPPED_EXACT, '1000')).toEqual({
+            valid: false,
+            error: 'amount_mismatch'
+        });
+    });
+
+    it('rejects an invoice for less than the order total', () => {
+        expect(verifyOrderInvoice(INNER, '100000')).toEqual({
+            valid: false,
+            error: 'amount_mismatch'
+        });
+    });
+
+    it('rejects a sub-sat difference in either direction', () => {
+        expect(verifyOrderInvoice(WRAPPED_SUBSAT_OVER, '99000')).toEqual({
+            valid: false,
+            error: 'amount_mismatch'
+        });
+        expect(verifyOrderInvoice(WRAPPED_SUBSAT_OVER, '99001')).toEqual({
+            valid: false,
+            error: 'amount_mismatch'
+        });
+    });
+
+    it('rejects an amountless invoice', () => {
+        expect(verifyOrderInvoice(WRAPPED_AMOUNTLESS, '100000')).toEqual({
+            valid: false,
+            error: 'amount_missing'
+        });
+    });
+
+    it('rejects an invoice that does not decode', () => {
+        expect(verifyOrderInvoice('lnbc1notaninvoice', '100000')).toEqual({
+            valid: false,
+            error: 'decode_failure'
+        });
+    });
+
+    it.each([undefined, '', '0', 0, '-1000', '1000.5', 1000.5, '1e5', 'abc'])(
+        'rejects order total %p',
+        (total) => {
+            expect(verifyOrderInvoice(WRAPPED_EXACT, total as any)).toEqual({
+                valid: false,
+                error: 'order_total_invalid'
+            });
+        }
+    );
 });

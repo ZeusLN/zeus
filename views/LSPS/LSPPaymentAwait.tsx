@@ -30,6 +30,7 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 import BackendUtils from '../../utils/BackendUtils';
 import handleAnything from '../../utils/handleAnything';
 import { localeString } from '../../utils/LocaleUtils';
+import { OrderInvoiceCheck, verifyOrderInvoice } from '../../utils/LspUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Storage from '../../storage';
@@ -69,12 +70,15 @@ export default class LSPPaymentAwait extends React.Component<
     private isPolling: boolean = false;
     private isUnmounted: boolean = false;
     private backPressSubscription: NativeEventSubscription | null = null;
+    private invoiceCheck: OrderInvoiceCheck;
 
     constructor(props: LSPPaymentAwaitProps) {
         super(props);
         this.state = {
             paymentState: PaymentAwaitState.POLLING
         };
+        const { invoice, satAmount } = props.route.params;
+        this.invoiceCheck = verifyOrderInvoice(invoice, satAmount);
     }
 
     async componentDidMount() {
@@ -84,6 +88,9 @@ export default class LSPPaymentAwait extends React.Component<
             'hardwareBackPress',
             this.handleBackPress
         );
+
+        // nothing to wait for when the invoice is not shown
+        if (!this.invoiceCheck.valid) return;
 
         try {
             const responseArrayString = await Storage.getItem(LSPS_ORDERS_KEY);
@@ -254,6 +261,12 @@ export default class LSPPaymentAwait extends React.Component<
         const { navigation, LSPStore } = this.props;
         const { invoice, satAmount, service } = this.props.route.params;
         const { paymentState } = this.state;
+        const invoiceRejected =
+            paymentState === PaymentAwaitState.POLLING &&
+            !this.invoiceCheck.valid;
+        const awaitingPayment =
+            paymentState === PaymentAwaitState.POLLING &&
+            this.invoiceCheck.valid;
 
         const successSubtitle =
             service === LSPService.LSPS7
@@ -288,7 +301,32 @@ export default class LSPPaymentAwait extends React.Component<
                             : undefined
                     }
                 />
-                {paymentState === PaymentAwaitState.POLLING && (
+                {invoiceRejected && (
+                    <View
+                        style={{
+                            flex: 1,
+                            justifyContent: 'space-between',
+                            paddingHorizontal: 20,
+                            paddingBottom: 20
+                        }}
+                    >
+                        <View style={{ paddingTop: 20 }}>
+                            <ErrorMessage
+                                message={localeString(
+                                    'views.LSPS1.invoiceAmountMismatch'
+                                )}
+                            />
+                        </View>
+                        <Button
+                            title={localeString(
+                                'views.SendingLightning.goToWallet'
+                            )}
+                            onPress={this.goToWallet}
+                            secondary
+                        />
+                    </View>
+                )}
+                {awaitingPayment && (
                     <ScrollView
                         contentContainerStyle={{
                             paddingHorizontal: 15,

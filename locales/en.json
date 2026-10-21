@@ -1720,6 +1720,7 @@
     "views.LSPS1.awaitingPayment": "Awaiting payment",
     "views.LSPS1.checkingOrderStatus": "Checking order status...",
     "views.LSPS1.payFromZeus": "Pay from ZEUS wallet",
+    "views.LSPS1.invoiceAmountMismatch": "The LSP sent an invoice that does not match the order total. Do not pay this order.",
     "views.LSPS1.paymentReceived": "Payment successfully received",
     "views.LSPS1.channelOnlineSoon": "Your new channel will be online in a few moments",
     "views.LSPS1.orderCompleted": "Order completed",
