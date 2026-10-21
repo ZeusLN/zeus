@@ -82,8 +82,10 @@ import Storage from '../storage';
 import Swap from '../models/Swap';
 import {
     REVERSE_SWAPS_KEY,
+    SWAPS_KEY,
     SWAPS_RESCUE_KEY,
     buildReverseSwapLeaves,
+    buildSubmarineSwapLeaves,
     deriveReverseSwapOutputKey,
     deriveSwapPreimage
 } from '../utils/SwapUtils';
@@ -145,6 +147,20 @@ const newStore = () =>
         { nodeInfo: { nodeId: 'node-pubkey', isTestNet: false } } as any,
         { settings: {}, implementation: 'lnd' } as any
     );
+
+// members a swap creation response is not expected to have: "model" and
+// "qrCodeValue" are names of Swap getters, which new Swap() can't assign,
+// and "imported" marks a rescued swap
+const EXTRA_MEMBERS = {
+    model: 'not a swap',
+    qrCodeValue: 'lnbc-other-invoice',
+    imported: true
+};
+const expectNoExtraMembers = (swap: any) => {
+    for (const member of Object.keys(EXTRA_MEMBERS)) {
+        expect(Object.keys(swap)).not.toContain(member);
+    }
+};
 
 beforeEach(() => {
     for (const key of Object.keys(storageBacking)) delete storageBacking[key];
@@ -256,6 +272,107 @@ describe('SwapStore.createReverseSwap response verification', () => {
             expect(navigation.navigate).not.toHaveBeenCalled();
         }
     );
+
+    it('stores and opens only the reverse swap fields of the response', async () => {
+        const { store, navigation, stored } = await create(EXTRA_MEMBERS);
+
+        expect(store.apiError).toBe('');
+        expect(stored).toHaveLength(1);
+        const { swapData } = navigation.navigate.mock.calls[0][1];
+        for (const swap of [swapData, stored[0]]) {
+            expectNoExtraMembers(swap);
+            const model = new Swap(swap);
+            expect(model.qrCodeValue).toBe('lnbc-provider-invoice');
+            expect(model.claimDestinationAddress).toBe('bc1qdestination');
+        }
+    });
+
+    it('still reports an error from the provider', async () => {
+        const { store, navigation, stored } = await create({
+            error: 'invalid pair'
+        });
+
+        expect(store.apiError).toBe('invalid pair');
+        expect(stored).toHaveLength(0);
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+});
+
+describe('SwapStore.createSubmarineSwap', () => {
+    // regtest BOLT11 vector: 123 sats
+    const INVOICE =
+        'lnbcrt1230n1pj429x7pp57t97q4awqj3f529snr0pa6senk83sq5pp760qf5a4jzvd7xgwcksdqqcqzzsxqrrsssp57eqtv7vxr46arupna3w4ct0lkf2mqmz9wt044cwkks0rwlnhfr5s9qyyssqragwpwav7nfwv2xyuuamxxj4pnnpzv2hlw7j473repd3sq7st698ta9kmzmygt0w7tmncl56a6mnma0w7e5dlpqd0wy6x3v35rssldspjhh8p0';
+    afterEach(() => fetchMock.mockReset());
+
+    it('stores and opens only the submarine swap fields of the response', async () => {
+        storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
+        // the swap tree a Boltz-style host builds for our refund key and
+        // the invoice's payment hash, so the response passes its checks
+        const ourPubKey = Buffer.from(OUR_KEYS.publicKey);
+        const { claimLeaf, refundLeaf } = buildSubmarineSwapLeaves({
+            claimPubKey: SERVER_PUBKEY,
+            refundPubKey: ourPubKey,
+            preimageHash: Buffer.from(
+                Bolt11Utils.decode(INVOICE).payment_hash || '',
+                'hex'
+            ),
+            timeoutBlockHeight: TIMEOUT
+        });
+        const address = payments.p2tr({
+            pubkey: deriveReverseSwapOutputKey({
+                ourPubKey,
+                serverPubKey: SERVER_PUBKEY,
+                claimLeaf,
+                refundLeaf
+            })
+        }).address!;
+        fetchMock.mockImplementation(async (_method: string, url: string) =>
+            url.endsWith('/blocks/tip/height')
+                ? {
+                      info: () => ({ status: 200 }),
+                      text: () => String(TIMEOUT - 100)
+                  }
+                : {
+                      data: JSON.stringify({
+                          id: 'submarine-swap',
+                          bip21: `bitcoin:${address}?amount=0.00000424`,
+                          address,
+                          expectedAmount: 424,
+                          swapTree: {
+                              claimLeaf: {
+                                  version: 192,
+                                  output: claimLeaf.toString('hex')
+                              },
+                              refundLeaf: {
+                                  version: 192,
+                                  output: refundLeaf.toString('hex')
+                              }
+                          },
+                          claimPublicKey: SERVER_PUBKEY.toString('hex'),
+                          timeoutBlockHeight: TIMEOUT,
+                          ...EXTRA_MEMBERS
+                      })
+                  }
+        );
+        const store = newStore();
+        // 0.5% and 300 sats: up to 424 sats to send for 123
+        store.subInfo = { fees: { percentage: 0.5, minerFees: 300 } };
+
+        const navigation = { navigate: jest.fn() };
+        await store.createSubmarineSwap(INVOICE, navigation);
+
+        const { swapData } = navigation.navigate.mock.calls[0][1];
+        const stored = JSON.parse(storageBacking[SWAPS_KEY]);
+        expect(stored).toHaveLength(1);
+        for (const swap of [swapData, stored[0]]) {
+            expectNoExtraMembers(swap);
+            const model = new Swap(swap);
+            expect(model.qrCodeValue).toBe(
+                `bitcoin:${address}?amount=0.00000424`
+            );
+            expect(model.expectedAmount).toBe(424);
+        }
+    });
 });
 
 describe('SwapStore.createReverseSwap claim fee', () => {
