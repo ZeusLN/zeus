@@ -389,6 +389,23 @@ describe('CashuStore melting into our own invoice', () => {
         expect(result.success).toBe(false);
     });
 
+    it.each([
+        ['not hex', 'not-a-preimage'],
+        ['64 chars, not hex', 'z'.repeat(64)],
+        ['odd-length hex', '1'.repeat(63)]
+    ])(
+        'falls back to the node when the preimage is %s',
+        async (_label, badPreimage) => {
+            const { result, isInvoicePaid } = await claimWithMeltPreimage(
+                badPreimage,
+                true
+            );
+
+            expect(result).toEqual({ success: true, errorMessage: '' });
+            expect(isInvoicePaid).toHaveBeenCalledWith(paymentHash);
+        }
+    );
+
     const sweepWithMeltPreimage = async (
         meltPreimage: string | undefined,
         nodeSaysPaid: boolean
