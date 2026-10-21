@@ -40,7 +40,11 @@ const mountAndLeave = async (privacy: any) => {
         updateSettingsGroupDebounced: jest.fn()
     };
     const { unmount } = await render(
-        <Privacy navigation={{} as any} SettingsStore={SettingsStore as any} />
+        <Privacy
+            navigation={{} as any}
+            ModalStore={{} as any}
+            SettingsStore={SettingsStore as any}
+        />
     );
     expect(SettingsStore.getSettings).toHaveBeenCalled();
     await unmount();
