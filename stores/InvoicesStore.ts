@@ -197,7 +197,8 @@ export default class InvoicesStore {
         forceLsp,
         useLsp,
         skipOnchain,
-        confirmLspFee
+        confirmLspFee,
+        silent
     }: {
         memo: string;
         value: string;
@@ -218,8 +219,11 @@ export default class InvoicesStore {
             feeSats: number,
             amountSats: string
         ) => Promise<boolean>;
+        // create the invoice without touching the fields the Receive
+        // screen shows; the caller takes it from the return value
+        silent?: boolean;
     }) => {
-        this.creatingInvoice = true;
+        if (!silent) this.creatingInvoice = true;
         return this.createInvoice({
             memo,
             value,
@@ -234,14 +238,16 @@ export default class InvoicesStore {
             noLsp,
             forceLsp,
             useLsp,
-            confirmLspFee
+            confirmLspFee,
+            silent
         })
             .then((result) => {
                 if (!result?.rHash || !result?.paymentRequest) {
-                    runInAction(() => {
-                        this.loading = false;
-                        this.creatingInvoice = false;
-                    });
+                    if (!silent)
+                        runInAction(() => {
+                            this.loading = false;
+                            this.creatingInvoice = false;
+                        });
                     return Promise.reject(
                         new Error(
                             localeString(
@@ -268,7 +274,7 @@ export default class InvoicesStore {
                                 this.loading = false;
                                 this.creatingInvoice = false;
                             });
-                            return { rHash, onChainAddress };
+                            return { rHash, paymentRequest, onChainAddress };
                         })
                         .catch(() => {
                             runInAction(() => {
@@ -277,17 +283,19 @@ export default class InvoicesStore {
                             });
                         });
                 } else {
-                    runInAction(() => {
-                        this.payment_request = paymentRequest;
-                        this.creatingInvoice = false;
-                    });
-                    return { rHash };
+                    if (!silent)
+                        runInAction(() => {
+                            this.payment_request = paymentRequest;
+                            this.creatingInvoice = false;
+                        });
+                    return { rHash, paymentRequest };
                 }
             })
             .catch((error: any) => {
-                runInAction(() => {
-                    this.loading = false;
-                });
+                if (!silent)
+                    runInAction(() => {
+                        this.loading = false;
+                    });
                 throw error;
             });
     };
@@ -307,7 +315,8 @@ export default class InvoicesStore {
         noLsp,
         forceLsp,
         useLsp,
-        confirmLspFee
+        confirmLspFee,
+        silent
     }: {
         memo: string;
         value: string;
@@ -328,6 +337,7 @@ export default class InvoicesStore {
             feeSats: number,
             amountSats: string
         ) => Promise<boolean>;
+        silent?: boolean;
     }) => {
         // useLsp is the caller's own decision. Receive passes it because
         // its LSP switch writes enableLSP through the settings queue, so
@@ -347,18 +357,20 @@ export default class InvoicesStore {
             value !== '0' &&
             !noLsp;
 
-        // Only an invoice that asks for its own quote drops the answer to
-        // another fee request still in flight.
-        if (lspFeeRequested) {
-            this.lspStore?.resetFee();
-        } else {
-            this.lspStore?.clearFee();
+        if (!silent) {
+            // Only an invoice that asks for its own quote drops the answer
+            // to another fee request still in flight.
+            if (lspFeeRequested) {
+                this.lspStore?.resetFee();
+            } else {
+                this.lspStore?.clearFee();
+            }
+            this.payment_request = null;
+            this.payment_request_amt = null;
+            if (!unified) this.creatingInvoice = true;
+            this.creatingInvoiceError = false;
+            this.error_msg = null;
         }
-        this.payment_request = null;
-        this.payment_request_amt = null;
-        if (!unified) this.creatingInvoice = true;
-        this.creatingInvoiceError = false;
-        this.error_msg = null;
 
         const req: any = {
             memo,
@@ -549,9 +561,10 @@ export default class InvoicesStore {
             }
 
             if (!quote) {
-                runInAction(() => {
-                    this.creatingInvoice = false;
-                });
+                if (!silent)
+                    runInAction(() => {
+                        this.creatingInvoice = false;
+                    });
                 return;
             }
             lspQuote = quote;
@@ -566,33 +579,36 @@ export default class InvoicesStore {
                 if (data.error) {
                     const data_message = data.message?.toString();
                     const data_error = data.error.toString();
+                    const errString = data_message || data_error;
+                    const error_msg =
+                        errString === 'Bad arguments' &&
+                        this.settingsStore.implementation === 'lndhub' &&
+                        req.value === '0'
+                            ? localeString(
+                                  'stores.InvoicesStore.zeroAmountLndhub'
+                              )
+                            : errString ||
+                              localeString(
+                                  'stores.InvoicesStore.errorCreatingInvoice'
+                              );
+                    if (silent) throw new Error(error_msg);
                     runInAction(() => {
                         this.creatingInvoiceError = true;
                         if (!unified) this.creatingInvoice = false;
-                        const errString = data_message || data_error;
-                        this.error_msg =
-                            errString === 'Bad arguments' &&
-                            this.settingsStore.implementation === 'lndhub' &&
-                            req.value === '0'
-                                ? localeString(
-                                      'stores.InvoicesStore.zeroAmountLndhub'
-                                  )
-                                : errString ||
-                                  localeString(
-                                      'stores.InvoicesStore.errorCreatingInvoice'
-                                  );
+                        this.error_msg = error_msg;
                     });
                     return;
                 }
                 const invoice = new Invoice(data);
 
-                runInAction(() => {
-                    if (!unified)
-                        this.payment_request = invoice.getPaymentRequest;
-                    this.payment_request_amt = value;
+                if (!silent)
+                    runInAction(() => {
+                        if (!unified)
+                            this.payment_request = invoice.getPaymentRequest;
+                        this.payment_request_amt = value;
 
-                    if (!unified) this.creatingInvoice = false;
-                });
+                        if (!unified) this.creatingInvoice = false;
+                    });
 
                 let jit_bolt11: string = '';
                 if (lspFeeRequested) {
@@ -668,6 +684,7 @@ export default class InvoicesStore {
                 };
             })
             .catch((error: any) => {
+                if (silent) throw error;
                 const error_msg = error?.toString();
                 runInAction(() => {
                     this.creatingInvoiceError = true;
