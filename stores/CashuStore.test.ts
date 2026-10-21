@@ -999,6 +999,8 @@ describe('CashuStore single-mint melt state', () => {
         expect(store.payments).toHaveLength(1);
         expect(store.payments[0].isInTransit).toBe(true);
         expect(store.payments[0].payment_preimage).toBe('');
+        // callers such as NWC tell this apart from a failure
+        expect(store.inFlightPayment).toBe(store.payments[0]);
         expect(store.pendingMelts).toEqual([
             expect.objectContaining({
                 quote: 'quote-1',
@@ -1034,6 +1036,32 @@ describe('CashuStore single-mint melt state', () => {
         expect(store.pendingMelts).toEqual([]);
     });
 
+    it('clears the in-flight payment from a previous attempt', async () => {
+        const store = payingStore();
+        (CashuDevKit.melt as jest.Mock).mockResolvedValueOnce({
+            state: 'Pending',
+            amount: 1000,
+            fee_paid: 0
+        });
+        await store.payLnInvoiceFromEcash({
+            amount: '1000',
+            paymentRequest: 'lnbc10n1ptestinvoice'
+        });
+        expect(store.inFlightPayment).toBeDefined();
+
+        (CashuDevKit.melt as jest.Mock).mockResolvedValueOnce({
+            state: 'Unpaid',
+            amount: 1000,
+            fee_paid: 0
+        });
+        await store.payLnInvoiceFromEcash({
+            amount: '1000',
+            paymentRequest: 'lnbc10n1ptestinvoice'
+        });
+
+        expect(store.inFlightPayment).toBeUndefined();
+    });
+
     // The melt is tracked before it is executed, so a crash mid-melt is
     // recoverable. A melt that resolves Paid has to clear that tracking.
     it('records a Paid melt as a successful payment and stops tracking it', async () => {
@@ -1054,6 +1082,7 @@ describe('CashuStore single-mint melt state', () => {
         expect(store.paymentSuccess).toBe(true);
         expect(store.paymentPreimage).toBe('a'.repeat(64));
         expect(store.paymentFee).toBe(2);
+        expect(store.inFlightPayment).toBeUndefined();
         expect(store.payments).toHaveLength(1);
         expect(store.payments[0].isInTransit).toBe(false);
         expect(store.pendingMelts).toEqual([]);
@@ -1136,6 +1165,7 @@ describe('CashuStore single-mint melt state', () => {
         expect(store.payments).toHaveLength(1);
         expect(store.payments[0].isInTransit).toBe(true);
         expect(store.payments[0].bolt11).toBe('lnbc10n1ptestinvoice');
+        expect(store.inFlightPayment).toBe(store.payments[0]);
         expect(store.pendingMelts).toHaveLength(1);
     });
 
@@ -1238,6 +1268,7 @@ describe('CashuStore single-mint melt state', () => {
         expect(store.paymentErrorMsg).not.toBe(
             'stores.CashuStore.paymentInFlight'
         );
+        expect(store.inFlightPayment).toBeUndefined();
         expect(store.payments).toEqual([]);
         expect(store.pendingMelts).toEqual([]);
     });

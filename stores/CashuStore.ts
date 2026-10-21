@@ -250,6 +250,9 @@ export default class CashuStore {
     @observable public getPayReqError?: string;
     @observable public paymentError?: boolean;
     @observable public paymentErrorMsg?: string;
+    // Set alongside paymentError when the mint took the melt but has not
+    // settled it, so callers can tell an in-flight payment from a failure
+    @observable public inFlightPayment?: CashuPayment;
     @observable public feeEstimate?: number;
     // Inputs of the sufficiency check run by getPayReq(), exposed so the
     // payment views can extend it with the donation that is sent from the
@@ -374,6 +377,7 @@ export default class CashuStore {
         this.paymentSuccess = false;
         this.paymentError = false;
         this.paymentErrorMsg = '';
+        this.inFlightPayment = undefined;
         this.paymentStartTime = undefined;
         this.noteKey = undefined;
     };
@@ -2095,6 +2099,7 @@ export default class CashuStore {
         this.error = false;
         this.paymentError = false;
         this.paymentErrorMsg = undefined;
+        this.inFlightPayment = undefined;
         this.paymentStartTime = undefined;
         this.paymentDuration = undefined;
         this.paymentFee = undefined;
@@ -3489,7 +3494,10 @@ export default class CashuStore {
      * vanishing. No preimage and no fee: neither exists until the mint
      * settles, and reconcilePendingMelts fills in what it learns.
      */
-    private recordInFlightPayment = async (melt: PendingMelt, payReq?: any) => {
+    private recordInFlightPayment = async (
+        melt: PendingMelt,
+        payReq?: any
+    ): Promise<CashuPayment> => {
         const payment = new CashuPayment({
             ...(payReq || {}),
             bolt11: melt.request,
@@ -3519,6 +3527,7 @@ export default class CashuStore {
             this.payments
         );
         activityStore.getSortedActivity();
+        return payment;
     };
 
     private dropInFlightPayment = async (quote: string): Promise<boolean> => {
@@ -4948,6 +4957,16 @@ export default class CashuStore {
         }
     };
 
+    private setInFlightPayment = (
+        payment: CashuPayment,
+        isDonationPayment: boolean
+    ) => {
+        if (isDonationPayment) return;
+        runInAction(() => {
+            this.inFlightPayment = payment;
+        });
+    };
+
     @action
     public payLnInvoiceFromEcash = async ({
         amount,
@@ -4970,6 +4989,7 @@ export default class CashuStore {
             this.paymentSuccess = false;
             this.paymentError = false;
             this.paymentErrorMsg = '';
+            this.inFlightPayment = undefined;
             this.paymentStartTime = Date.now();
         }
 
@@ -5120,7 +5140,11 @@ export default class CashuStore {
                     } else if (outcome) {
                         // In flight: record it as such and let
                         // reconcilePendingMelts settle it
-                        await this.recordInFlightPayment(pendingMelt, payReq);
+                        const inFlight = await this.recordInFlightPayment(
+                            pendingMelt,
+                            payReq
+                        );
+                        this.setInFlightPayment(inFlight, isDonationPayment);
                         throw new Error(
                             localeString('stores.CashuStore.paymentInFlight')
                         );
@@ -5146,7 +5170,11 @@ export default class CashuStore {
                 // payment as in flight so it is visible and so
                 // reconcilePendingMelts can settle it either way, rather
                 // than leaving a payment that may complete with no trace.
-                await this.recordInFlightPayment(pendingMelt, payReq);
+                const inFlight = await this.recordInFlightPayment(
+                    pendingMelt,
+                    payReq
+                );
+                this.setInFlightPayment(inFlight, isDonationPayment);
                 throw new Error(
                     localeString('stores.CashuStore.paymentInFlight')
                 );
