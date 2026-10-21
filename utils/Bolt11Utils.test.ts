@@ -732,6 +732,60 @@ describe('duplicate singleton tags', () => {
         expect(decoded.payeeNodeKey).toBe(PAYEE_A);
     });
 
+    // zpay32 skips fixed-size fields with the wrong word length, so a short
+    // first occurrence must not block a valid second one.
+    it('skips a wrong-length payee tag and keeps the next valid one', () => {
+        const decoded = Bolt11Utils.decode(
+            buildInvoice([
+                tag(1, hexToWords(HASH_A)),
+                tag(19, hexToWords('cc'.repeat(20))),
+                tag(19, hexToWords(PAYEE_B))
+            ])
+        );
+
+        expect(decoded.destination).toBe(PAYEE_B);
+        expect(decoded.payeeNodeKey).toBe(PAYEE_B);
+    });
+
+    it('skips a wrong-length description_hash and keeps the next valid one', () => {
+        const decoded = Bolt11Utils.decode(
+            buildInvoice([
+                tag(1, hexToWords(HASH_A)),
+                tag(23, hexToWords('cc'.repeat(20))),
+                tag(23, hexToWords(HASH_B))
+            ])
+        );
+
+        expect(decoded.description_hash).toBe(HASH_B);
+    });
+
+    it('skips a wrong-length payment_secret and keeps the next valid one', () => {
+        const decoded = Bolt11Utils.decode(
+            buildInvoice([
+                tag(1, hexToWords(HASH_A)),
+                tag(16, hexToWords('cc'.repeat(20))),
+                tag(16, hexToWords(HASH_B))
+            ])
+        );
+
+        expect(decoded.payment_secret).toBe(HASH_B);
+    });
+
+    // With no well-formed payee tag, destination comes from signature
+    // recovery. The zeroed signature cannot recover, so it stays unset
+    // rather than taking the short tag's value.
+    it('falls back to signature recovery when the only payee tag has the wrong length', () => {
+        const decoded = Bolt11Utils.decode(
+            buildInvoice([
+                tag(1, hexToWords(HASH_A)),
+                tag(19, hexToWords('cc'.repeat(20)))
+            ])
+        );
+
+        expect(decoded.destination).toBeUndefined();
+        expect(decoded.payeeNodeKey).toBeUndefined();
+    });
+
     it('throws when no payment_hash tag is present', () => {
         // lnd's zpay32 rejects such invoices outright; no node can
         // settle them.

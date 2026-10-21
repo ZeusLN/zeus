@@ -457,8 +457,8 @@ class Bolt11Utils {
     // p / s / h fields span exactly 52 words, the 33-byte payee pubkey
     // (n) spans 53. lnd's zpay32 skips occurrences of any other length,
     // so the reader here must too.
-    private HASH_TAG_WORDS = 52;
-    private PAYEE_TAG_WORDS = 53;
+    private readonly HASH_TAG_WORDS = 52;
+    private readonly PAYEE_TAG_WORDS = 53;
 
     private TAGPARSERS: { [tagCode: string]: (words: number[]) => any } = {
         '1': (words: number[]) => this.wordsToHex(words),
