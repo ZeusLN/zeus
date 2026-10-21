@@ -1,7 +1,9 @@
 source 'https://rubygems.org'
 
 # You may use http://rbenv.org/ or https://rvm.io/ to install and use this version
-ruby ">= 2.6.10"
+# 3.1 is the minimum for activesupport 7.2, the oldest line with the fixes
+# required below.
+ruby ">= 3.1.0"
 
 # Exclude problematic cocoapods versions
 gem 'cocoapods', '>= 1.13', '!= 1.15.0', '!= 1.15.1'
