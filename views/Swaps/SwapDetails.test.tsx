@@ -140,7 +140,7 @@ const renderView = async (
         getReverseLockupTransactionHex: jest
             .fn()
             .mockResolvedValue({ status: 'none' }),
-        transactionPaysAddress: jest.fn().mockResolvedValue(true)
+        checkStoredClaim: jest.fn().mockResolvedValue({ status: 'ok' })
     };
     const view = await render(
         <SwapDetails
@@ -670,6 +670,124 @@ describe('SwapDetails lockup verification retry wiring', () => {
             expect(store.saveClaimTxid).toHaveBeenCalled();
         });
 
+        // #5288 review: after the timeout the host can refund, and the
+        // stored claim can then never confirm
+        describe('checks the lockup before resending a stored claim', () => {
+            const spent = (spentBy?: string) => ({
+                status: 'invalid',
+                reason: 'lockup-spent',
+                spendingTxid: 'spender',
+                spentBy
+            });
+
+            it('looks up the lockup the stored claim spends', async () => {
+                const { store } = await renderView({
+                    claimTransactionHex: 'storedhex',
+                    preimage: 'preimage'
+                });
+
+                await sendStatus('invoice.settled');
+
+                expect(store.checkStoredClaim).toHaveBeenCalledWith(
+                    'storedhex',
+                    'preimage'
+                );
+            });
+
+            it("stops and reports the host's refund", async () => {
+                const { store } = await renderView({
+                    claimTransactionHex: 'storedhex'
+                });
+                store.checkStoredClaim.mockResolvedValue(spent('refund'));
+
+                await sendStatus('invoice.settled');
+                await advance(180000);
+
+                expect(store.broadcastSwapTransaction).not.toHaveBeenCalled();
+                expect(store.checkStoredClaim).toHaveBeenCalledTimes(1);
+                expect(errorShown()).toBe(
+                    'views.SwapDetails.lockupSpentElsewhere'
+                );
+            });
+
+            it('stops once the retry finds the lockup refunded', async () => {
+                const { store } = await renderView({
+                    claimTransactionHex: 'storedhex'
+                });
+                store.broadcastSwapTransaction.mockRejectedValue(
+                    new Error('missing inputs')
+                );
+
+                await sendStatus('invoice.settled');
+                expect(errorShown()).toBe(
+                    'views.SwapDetails.claimBroadcastFailed'
+                );
+
+                store.checkStoredClaim.mockResolvedValue(spent('refund'));
+                await advance(61000);
+                await advance(180000);
+
+                expect(store.broadcastSwapTransaction).toHaveBeenCalledTimes(
+                    11
+                );
+                expect(store.checkStoredClaim).toHaveBeenCalledTimes(2);
+                expect(errorShown()).toBe(
+                    'views.SwapDetails.lockupSpentElsewhere'
+                );
+            });
+
+            it('stops without an error when another claim spent it', async () => {
+                const { store } = await renderView({
+                    claimTransactionHex: 'storedhex'
+                });
+                store.checkStoredClaim.mockResolvedValue(spent('claim'));
+
+                await sendStatus('invoice.settled');
+                await advance(180000);
+
+                expect(store.broadcastSwapTransaction).not.toHaveBeenCalled();
+                expect(errorShown()).toBeUndefined();
+                expect(noticeShown()).toBeUndefined();
+            });
+
+            it('checks again later, without sending, when the spender is unknown', async () => {
+                const { store } = await renderView({
+                    claimTransactionHex: 'storedhex'
+                });
+                store.checkStoredClaim.mockResolvedValue(spent(undefined));
+
+                await sendStatus('invoice.settled');
+                expect(noticeShown()).toBe(
+                    'views.SwapDetails.lockupVerificationUnavailable'
+                );
+
+                store.checkStoredClaim.mockResolvedValue(spent('refund'));
+                await advance(61000);
+
+                expect(store.broadcastSwapTransaction).not.toHaveBeenCalled();
+                expect(errorShown()).toBe(
+                    'views.SwapDetails.lockupSpentElsewhere'
+                );
+            });
+
+            it('still sends the claim when the lockup cannot be looked up', async () => {
+                const { store } = await renderView({
+                    claimTransactionHex: 'storedhex'
+                });
+                store.checkStoredClaim.mockResolvedValue({
+                    status: 'unavailable'
+                });
+
+                await sendStatus('invoice.settled');
+
+                expect(store.broadcastSwapTransaction).toHaveBeenCalledWith(
+                    'storedhex',
+                    'https://provider.test/v2'
+                );
+                expect(store.saveClaimTxid).toHaveBeenCalled();
+            });
+        });
+
         it('fetches the lockup and claims it through the usual checks', async () => {
             const { store } = await renderView();
             store.getReverseLockupTransactionHex.mockResolvedValue(FOUND);
@@ -696,8 +814,10 @@ describe('SwapDetails lockup verification retry wiring', () => {
         const SPENT = {
             status: 'invalid',
             reason: 'lockup-spent',
-            spendingTxid: 'spender'
+            spendingTxid: 'spender',
+            spentBy: 'claim'
         };
+        const REFUNDED = { ...SPENT, spentBy: 'refund' };
 
         it('treats a lockup spent by our claim as done, not as an error', async () => {
             const { store } = await renderView();
@@ -707,21 +827,34 @@ describe('SwapDetails lockup verification retry wiring', () => {
             await sendStatus('invoice.settled');
             await advance(120000);
 
-            expect(store.transactionPaysAddress).toHaveBeenCalledWith(
-                'spender',
-                'destination'
-            );
             expect(nativeClaim).not.toHaveBeenCalled();
             expect(errorShown()).toBeUndefined();
             expect(noticeShown()).toBeUndefined();
             expect(store.verifyReverseLockup).toHaveBeenCalledTimes(1);
         });
 
-        it('reports a lockup spent by a transaction that does not pay the claim address', async () => {
-            const { store } = await renderView();
+        // #5288 review: the original device's claim pays an address this
+        // device never had, and must not read as a refund
+        it('treats a rescued swap claimed on another device as done', async () => {
+            const { store } = await renderView({
+                imported: true,
+                destinationAddress: undefined
+            });
             store.getReverseLockupTransactionHex.mockResolvedValue(FOUND);
             store.verifyReverseLockup.mockResolvedValue(SPENT);
-            store.transactionPaysAddress.mockResolvedValue(false);
+
+            await sendStatus('invoice.settled');
+            await advance(120000);
+
+            expect(nativeClaim).not.toHaveBeenCalled();
+            expect(errorShown()).toBeUndefined();
+            expect(noticeShown()).toBeUndefined();
+        });
+
+        it("reports a lockup spent by the host's refund", async () => {
+            const { store } = await renderView();
+            store.getReverseLockupTransactionHex.mockResolvedValue(FOUND);
+            store.verifyReverseLockup.mockResolvedValue(REFUNDED);
 
             await sendStatus('invoice.settled');
             await advance(120000);
@@ -732,17 +865,18 @@ describe('SwapDetails lockup verification retry wiring', () => {
         });
 
         it.each([
-            ['the spender cannot be looked up', SPENT, undefined],
+            [
+                'the spender cannot be looked up',
+                { ...SPENT, spentBy: undefined }
+            ],
             [
                 'the mempool instance does not name the spender',
-                { status: 'invalid', reason: 'lockup-spent' },
-                true
+                { status: 'invalid', reason: 'lockup-spent' }
             ]
-        ])('checks again later when %s', async (_case, spent, paysClaim) => {
+        ])('checks again later when %s', async (_case, spent) => {
             const { store } = await renderView();
             store.getReverseLockupTransactionHex.mockResolvedValue(FOUND);
             store.verifyReverseLockup.mockResolvedValue(spent);
-            store.transactionPaysAddress.mockResolvedValue(paysClaim);
 
             await sendStatus('invoice.settled');
             await advance(2000);
@@ -753,7 +887,6 @@ describe('SwapDetails lockup verification retry wiring', () => {
             );
 
             store.verifyReverseLockup.mockResolvedValue(SPENT);
-            store.transactionPaysAddress.mockResolvedValue(true);
             await advance(60000);
             await advance(2000);
 
@@ -765,8 +898,10 @@ describe('SwapDetails lockup verification retry wiring', () => {
         it('stops checking the spender once the screen is closed', async () => {
             const { store, unmount } = await renderView();
             store.getReverseLockupTransactionHex.mockResolvedValue(FOUND);
-            store.verifyReverseLockup.mockResolvedValue(SPENT);
-            store.transactionPaysAddress.mockResolvedValue(undefined);
+            store.verifyReverseLockup.mockResolvedValue({
+                ...SPENT,
+                spentBy: undefined
+            });
 
             await sendStatus('invoice.settled');
             await advance(2000);
