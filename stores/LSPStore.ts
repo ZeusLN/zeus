@@ -32,6 +32,9 @@ export interface ZeroConfFeeQuote {
     feeId: string | undefined;
 }
 
+// The quote an invoice is priced with, with a missing fee counted as 0.
+export type PricedZeroConfFeeQuote = ZeroConfFeeQuote & { feeSats: number };
+
 const CUSTOM_MESSAGE_TYPE = 37913;
 const JSON_RPC_VERSION = '2.0';
 
@@ -530,6 +533,20 @@ export default class LSPStore {
                                     : undefined,
                             feeId: data.id
                         };
+                        // not stored, so no screen shows it as the fee
+                        if (
+                            quote.feeSats !== undefined &&
+                            !(quote.feeSats >= 0)
+                        ) {
+                            runInAction(() => {
+                                this.flow_error = true;
+                                this.flow_error_msg = localeString(
+                                    'stores.LSPStore.getInfoResponseError'
+                                );
+                            });
+                            reject();
+                            return;
+                        }
                         runInAction(() => {
                             this.zeroConfFee = quote.feeSats;
                             this.feeId = quote.feeId;
@@ -664,13 +681,13 @@ export default class LSPStore {
         }
     };
 
-    @action
     // quote is the one bolt11 was priced with. The caller passes it so a
     // quote that has replaced zeroConfFee/feeId since can't change the
     // fee_id sent or move the verification bound.
+    @action
     public getZeroConfInvoice = (
         bolt11: string,
-        quote: { feeSats: number; feeId: string | undefined }
+        quote: PricedZeroConfFeeQuote
     ) => {
         this.flow_error = false;
         this.flow_error_msg = '';

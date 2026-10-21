@@ -10,7 +10,7 @@ import Invoice from '../models/Invoice';
 import Channel from '../models/Channel';
 import ChannelInfo from '../models/ChannelInfo';
 import SettingsStore from './SettingsStore';
-import LSPStore, { ZeroConfFeeQuote } from './LSPStore';
+import LSPStore, { PricedZeroConfFeeQuote, ZeroConfFeeQuote } from './LSPStore';
 import BackendUtils from '../utils/BackendUtils';
 import { toWalletrpcAddressTypeName } from '../utils/LndUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -434,7 +434,7 @@ export default class InvoicesStore {
         // proposal sends. lspStore.zeroConfFee/feeId are shared with the
         // screens and can hold another request's quote by the time they
         // would be read again.
-        let lspQuote: { feeSats: number; feeId: string | undefined } = {
+        let lspQuote: PricedZeroConfFeeQuote = {
             feeSats: 0,
             feeId: undefined
         };
@@ -461,7 +461,7 @@ export default class InvoicesStore {
             }
 
             // undefined when there is no usable quote: the request failed
-            // (flow_error is set), was replaced, or returned a negative fee.
+            // (flow_error is set, also for a negative fee) or was replaced.
             // A replaced request stops without an error of its own: it was
             // replaced by a newer LSP invoice or fee preview, which reports
             // its own result, or by LSPStore.reset() on a wallet switch, and
@@ -475,17 +475,11 @@ export default class InvoicesStore {
                 } catch (e) {
                     return;
                 }
-                const feeSats = quote.feeSats || 0;
-                if (!(feeSats >= 0)) {
-                    runInAction(() => {
-                        this.lspStore.flow_error = true;
-                        this.lspStore.flow_error_msg = localeString(
-                            'stores.LSPStore.getInfoResponseError'
-                        );
-                    });
-                    return;
-                }
-                return { feeSats, feeId: quote.feeId, quotedAt: Date.now() };
+                return {
+                    feeSats: quote.feeSats || 0,
+                    feeId: quote.feeId,
+                    quotedAt: Date.now()
+                };
             };
 
             let quote = await fetchQuote();

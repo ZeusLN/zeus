@@ -540,21 +540,6 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
         expect(store.creatingInvoice).toBe(false);
     });
 
-    it('creates no invoice for a negative quote', async () => {
-        const { store, lspStore } = setup({
-            getZeroConfFee: jest.fn(() => quote(-5000))
-        });
-
-        await store.createInvoice({
-            memo: '',
-            value: '50000',
-            expirySeconds: '3600'
-        });
-
-        expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
-        expect(lspStore.flow_error).toBe(true);
-    });
-
     it('still adds a fee above the amount on top for a regular receive', async () => {
         // shown next to the invoice before it is shared
         const { store, lspStore } = setup({

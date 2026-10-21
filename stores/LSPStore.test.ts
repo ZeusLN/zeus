@@ -820,6 +820,21 @@ describe('LSPStore.getZeroConfFee superseded requests', () => {
         expect(store.flow_error_msg).toBe('');
     });
 
+    it('rejects a negative quote without storing it', async () => {
+        // the Swaps fee box shows any stored zeroConfFee
+        const store = makeStore();
+        const request = store.getZeroConfFee(100000000);
+        answers[0].resolve(quote(-5000, 'negative'));
+
+        await expect(request).rejects.toBeUndefined();
+        expect(store.zeroConfFee).toBeUndefined();
+        expect(store.feeId).toBeUndefined();
+        expect(store.flow_error).toBe(true);
+        expect(store.flow_error_msg).toBe(
+            'stores.LSPStore.getInfoResponseError'
+        );
+    });
+
     it('still records the quote of the latest request', async () => {
         const store = makeStore();
         const request = store.getZeroConfFee(50000000);
