@@ -110,6 +110,7 @@ export default class PaymentRequest extends React.Component<
     InvoiceState
 > {
     focusListener: any;
+    beforeRemoveListener: any;
     donationDisposer: any;
     swipeResetDisposer: any;
     donationLockRequest?: string;
@@ -142,6 +143,16 @@ export default class PaymentRequest extends React.Component<
         this.isComponentMounted = true;
         const { SettingsStore, InvoicesStore, BalanceStore, route } =
             this.props;
+
+        // Clear the decode on every way of leaving (header Back, Android
+        // hardware back, iOS swipe, popTo after a payment), not only the
+        // header Back: a decode still in flight would otherwise land after
+        // the user left and start route queries or LDK probes. Registered
+        // before the first await so an early back is not missed
+        this.beforeRemoveListener = this.props.navigation.addListener(
+            'beforeRemove',
+            () => InvoicesStore.clearPayReq()
+        );
         const { getSettings, implementation } = SettingsStore;
         // balance is not refreshed elsewhere after channel changes, so
         // the no-balance warning could otherwise be stale
@@ -264,6 +275,9 @@ export default class PaymentRequest extends React.Component<
         this.isComponentMounted = false;
         if (this.focusListener) {
             this.focusListener();
+        }
+        if (this.beforeRemoveListener) {
+            this.beforeRemoveListener();
         }
         if (this.donationDisposer) {
             this.donationDisposer();
@@ -507,8 +521,7 @@ export default class PaymentRequest extends React.Component<
             loading,
             loadingFeeEstimate,
             successProbability,
-            feeEstimate,
-            clearPayReq
+            feeEstimate
         } = InvoicesStore;
 
         const locale = SettingsStore.settings.locale;
@@ -644,9 +657,6 @@ export default class PaymentRequest extends React.Component<
             <Screen>
                 <Header
                     leftComponent="Back"
-                    onBack={() => {
-                        clearPayReq();
-                    }}
                     centerComponent={{
                         text: localeString('views.PaymentRequest.title'),
                         style: {
