@@ -169,6 +169,68 @@ describe('PosStore.processCheckout', () => {
         expect(params.amount).toBe('10.80');
     });
 
+    describe.each([
+        ['a zero rate', [{ code: 'USD', rate: 0 }]],
+        ['a negative rate', [{ code: 'USD', rate: -1 }]],
+        ['a string rate', [{ code: 'USD', rate: 'x' }]],
+        ['no rate for the currency', [{ code: 'EUR', rate: RATE }]],
+        ['no rates', undefined]
+    ])('with %s', (_, fiatRates) => {
+        it.each(['sats', 'fiat'])(
+            'shows the order instead of invoicing a fiat-priced order (%s)',
+            async (units) => {
+                const store = new PosStore(
+                    { settings: { fiat: 'USD', pos: {} } } as any,
+                    { fiatRates, getRate: () => '$N/A' } as any,
+                    { units } as any
+                );
+                const order = makeOrder([fiatItem(10)]);
+                store.currentOrder = order;
+                store.recalculateCurrentOrder();
+
+                const navigate = jest.fn();
+                await store.processCheckout({ navigate } as any, true);
+
+                expect(navigate).toHaveBeenCalledTimes(1);
+                expect(navigate).toHaveBeenCalledWith('Order', { order });
+            }
+        );
+    });
+
+    it('invoices a sats-priced order without a rate in sats', async () => {
+        const store = new PosStore(
+            { settings: { fiat: 'USD', pos: {} } } as any,
+            { fiatRates: undefined, getRate: () => '$N/A' } as any,
+            { units: 'sats' } as any
+        );
+        store.currentOrder = makeOrder([satsItem(10000)]);
+        store.recalculateCurrentOrder();
+
+        const navigate = jest.fn();
+        await store.processCheckout({ navigate } as any, true);
+
+        expect(navigate).toHaveBeenCalledWith(
+            'Receive',
+            expect.objectContaining({ amount: '10000', orderTotal: '10000' })
+        );
+    });
+
+    it('shows a sats-priced order instead of invoicing it in fiat without a rate', async () => {
+        const store = new PosStore(
+            { settings: { fiat: 'USD', pos: {} } } as any,
+            { fiatRates: undefined, getRate: () => '$N/A' } as any,
+            { units: 'fiat' } as any
+        );
+        const order = makeOrder([satsItem(10000)]);
+        store.currentOrder = order;
+        store.recalculateCurrentOrder();
+
+        const navigate = jest.fn();
+        await store.processCheckout({ navigate } as any, true);
+
+        expect(navigate).toHaveBeenCalledWith('Order', { order });
+    });
+
     it('clears the current order once checked out', async () => {
         const store = makeStore('0');
         store.currentOrder = makeOrder([fiatItem(10, '8')]);
