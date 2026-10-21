@@ -75,7 +75,7 @@ import UTXOsStore from '../stores/UTXOsStore';
 import { localeString } from '../utils/LocaleUtils';
 import BackendUtils from '../utils/BackendUtils';
 import { toWalletrpcAddressTypeName } from '../utils/LndUtils';
-import { scanNfcTag } from '../utils/NFCUtils';
+import { isNfcWithdraw, scanNfcTag } from '../utils/NFCUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { numberWithCommas, SATS_PER_BTC } from '../utils/UnitsUtils';
 import { getAmountFromSats } from '../utils/AmountUtils';
@@ -158,6 +158,8 @@ interface ReceiveState {
     accountAddressType?: string;
     blindedPaths: boolean;
     nfcSupported: boolean;
+    // the last NFC read was not an LNURL-withdraw card
+    nfcError: boolean;
     // POS
     orderId: string;
     orderTotal: string;
@@ -224,6 +226,7 @@ export default class Receive extends React.Component<
             account: 'default',
             blindedPaths: false,
             nfcSupported: false,
+            nfcError: false,
             // POS
             orderId: '',
             orderTip: '',
@@ -795,7 +798,9 @@ export default class Receive extends React.Component<
 
     scanNfc = async () => {
         const str = await scanNfcTag(this.props.ModalStore);
-        if (str) this.validateAddress(str);
+        if (!str) return;
+        this.setState({ nfcError: false });
+        this.validateAddress(str);
     };
 
     validateAddress = (text: string) => {
@@ -811,15 +816,9 @@ export default class Receive extends React.Component<
                     const [route, props] = response;
                     const { lnurlParams } = props;
                     // NFC reads here are for LNURL-withdraw (e.g. a Bolt
-                    // Card) only; ignore anything else. Check the route as
-                    // well as the tag: for a Lightning address the tag comes
-                    // from the server, and the route is LnurlPay whatever
-                    // it says. With ecash enabled, a withdraw request opens
-                    // ChoosePaymentMethod instead of Receive.
-                    if (
-                        !['Receive', 'ChoosePaymentMethod'].includes(route) ||
-                        lnurlParams?.tag !== 'withdrawRequest'
-                    ) {
+                    // Card) only; tell staff about anything else
+                    if (!isNfcWithdraw(route, lnurlParams)) {
+                        this.setState({ nfcError: true });
                         return;
                     }
                     const { memo } = lnurlParams.defaultDescription;
@@ -869,7 +868,7 @@ export default class Receive extends React.Component<
                     }
                 } catch (e) {}
             })
-            .catch();
+            .catch(() => this.setState({ nfcError: true }));
     };
 
     handlePaymentReceived = (
@@ -1642,6 +1641,13 @@ export default class Receive extends React.Component<
                                 <ErrorMessage
                                     message={invoiceErrorMsg}
                                     dismissable
+                                />
+                            )}
+                            {this.state.nfcError && (
+                                <ErrorMessage
+                                    message={localeString(
+                                        'views.Receive.nfcNotWithdraw'
+                                    )}
                                 />
                             )}
 

@@ -865,6 +865,7 @@
     "views.Receive.warningLndHub": "Please note that LNDHub has a fixed on-chain address",
     "views.Receive.andSentTo": "and sent to",
     "views.Receive.errorCreate": "Error creating invoice",
+    "views.Receive.nfcNotWithdraw": "This card can't pay this invoice. Tap a Bolt Card or another LNURL-withdraw card.",
     "views.Receive.copyInvoice": "Copy Invoice",
     "views.Receive.memo": "Memo",
     "views.Receive.memoPlaceholder": "A tribute to the gods",

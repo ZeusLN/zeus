@@ -15,7 +15,10 @@ jest.mock('../../utils/handleAnything', () => ({
     default: jest.fn()
 }));
 jest.mock('../../utils/BackendUtils', () => ({}));
-jest.mock('../../utils/NFCUtils', () => ({ scanNfcTag: jest.fn() }));
+jest.mock('../../utils/NFCUtils', () => ({
+    isNfcWithdraw: jest.requireActual('../../utils/NFCUtils').isNfcWithdraw,
+    scanNfcTag: jest.fn()
+}));
 jest.mock('../../utils/AmountUtils', () => ({ getAmountFromSats: jest.fn() }));
 jest.mock('../../utils/LocaleUtils', () => ({
     localeString: (key: string) => key
@@ -62,7 +65,12 @@ const withdrawParams = {
 };
 
 // what Pay via NFC does once the tag resolves to `response`
-const scanTag = async (response: any, amount: string, createFails = false) => {
+const scanTag = async (
+    response: any,
+    amount: string,
+    createFails = false,
+    readFails = false
+) => {
     const navigate = jest.fn();
     const createInvoice = jest.fn(() =>
         createFails ? Promise.reject(new Error('offline')) : Promise.resolve()
@@ -77,12 +85,19 @@ const scanTag = async (response: any, amount: string, createFails = false) => {
         SettingsStore: { posStatus: 'active', settings: {} }
     } as unknown as React.ComponentProps<typeof ReceiveEcash>);
     view.subscribeInvoice = jest.fn();
+    view.setState = jest.fn();
     (scanNfcTag as jest.Mock).mockResolvedValue('tag text');
-    (handleAnything as jest.Mock).mockResolvedValue(response);
+    if (readFails) {
+        (handleAnything as jest.Mock).mockRejectedValue(
+            new Error('unsupported')
+        );
+    } else {
+        (handleAnything as jest.Mock).mockResolvedValue(response);
+    }
 
     await view.scanNfc();
     await new Promise((resolve) => setImmediate(resolve));
-    return { navigate, createInvoice };
+    return { navigate, createInvoice, setState: view.setState as jest.Mock };
 };
 
 describe('ReceiveEcash.validateAddress (Pay via NFC)', () => {
@@ -107,6 +122,28 @@ describe('ReceiveEcash.validateAddress (Pay via NFC)', () => {
         expect(navigate).toHaveBeenCalledWith('ChoosePaymentMethod', props);
     });
 
+    it('clears the NFC error on a new read and keeps it off for a withdraw card', async () => {
+        const { setState } = await scanTag(
+            ['ChoosePaymentMethod', { lnurlParams: withdrawParams }],
+            '0'
+        );
+
+        expect(setState).toHaveBeenCalledWith({ nfcError: false });
+        expect(setState).not.toHaveBeenCalledWith({ nfcError: true });
+    });
+
+    it('shows the NFC error when the tag cannot be read as a payment code', async () => {
+        const { navigate, setState } = await scanTag(
+            undefined,
+            '0',
+            false,
+            true
+        );
+
+        expect(navigate).not.toHaveBeenCalled();
+        expect(setState).toHaveBeenLastCalledWith({ nfcError: true });
+    });
+
     it.each([
         ['LnurlPay', { tag: 'payRequest', defaultDescription: 'x' }],
         // Lightning address: the server picks the tag
@@ -116,6 +153,7 @@ describe('ReceiveEcash.validateAddress (Pay via NFC)', () => {
     ])('opens no screen for a %s result (%j)', async (route, lnurlParams) => {
         const zero = await scanTag([route, { lnurlParams }], '0');
         expect(zero.navigate).not.toHaveBeenCalled();
+        expect(zero.setState).toHaveBeenLastCalledWith({ nfcError: true });
 
         const failed = await scanTag([route, { lnurlParams }], '1000', true);
         expect(failed.createInvoice).not.toHaveBeenCalled();

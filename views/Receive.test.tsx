@@ -26,7 +26,10 @@ jest.mock('../utils/ThemeUtils', () => ({
 jest.mock('../utils/LndUtils', () => ({
     toWalletrpcAddressTypeName: jest.fn()
 }));
-jest.mock('../utils/NFCUtils', () => ({ scanNfcTag: jest.fn() }));
+jest.mock('../utils/NFCUtils', () => ({
+    isNfcWithdraw: jest.requireActual('../utils/NFCUtils').isNfcWithdraw,
+    scanNfcTag: jest.fn()
+}));
 jest.mock('../utils/UnitsUtils', () => ({
     SATS_PER_BTC: 100000000,
     numberWithCommas: (x: string | number) => `${x}`
@@ -332,6 +335,7 @@ describe('Receive.validateAddress (Pay via NFC)', () => {
             NodeInfoStore: { nodeInfo: { block_height: 900000 } }
         } as unknown as React.ComponentProps<typeof Receive>);
         view.subscribeInvoice = jest.fn();
+        view.setState = jest.fn();
         return { view, navigation, createUnifiedInvoice };
     };
 
@@ -385,8 +389,23 @@ describe('Receive.validateAddress (Pay via NFC)', () => {
 
             expect(navigation.navigate).not.toHaveBeenCalled();
             expect(createUnifiedInvoice).not.toHaveBeenCalled();
+            expect(view.setState).toHaveBeenCalledWith({ nfcError: true });
         }
     );
+
+    it('shows the NFC error when the tag cannot be read as a payment code', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(0);
+        (handleAnything as unknown as jest.Mock).mockRejectedValue(
+            new Error('unsupported')
+        );
+        const { view, navigation } = makeNfcView('0');
+
+        view.validateAddress('hello');
+        await flush();
+
+        expect(navigation.navigate).not.toHaveBeenCalled();
+        expect(view.setState).toHaveBeenCalledWith({ nfcError: true });
+    });
 
     it('opens no screen for an LNURL-pay request when invoice creation fails', async () => {
         (getSatAmount as jest.Mock).mockReturnValue(5000);
@@ -425,6 +444,7 @@ describe('Receive.validateAddress (Pay via NFC)', () => {
         await flush();
 
         expect(navigation.navigate).toHaveBeenCalledWith('Receive', props);
+        expect(view.setState).not.toHaveBeenCalledWith({ nfcError: true });
     });
 
     it('creates an invoice for the card to pay when an amount is set', async () => {
