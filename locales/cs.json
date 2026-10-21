@@ -2385,6 +2385,7 @@
     "stores.CashuStore.errorPayingInvoice": "Během placení faktury nastala chyba",
     "stores.CashuStore.paymentInFlight": "Mint tuto platbu dosud nevypořádal. Platba stále probíhá: zkontrolujte platbu v sekci Aktivita předtím, než zkusíte platbu odeslat znovu.",
     "stores.CashuStore.claimedButNotSwept": "Tento token byl nárokován do vaší ecash peněženky, ale jeho vyplacení do vašeho uzlu nebylo dokončeno. Ecash je na vaší peněžence: předtím, než jej zkusíte znovu nárokovat, zkontrolujte svůj zůstatek.",
+    "stores.CashuStore.invoiceNotPaid": "The mint reported the payment as sent, but it did not reach your wallet",
     "stores.CashuStore.errorDeletingData": "Během odstraňování dat Cashu nastala chyba",
     "stores.CashuStore.invalidToken": "Neplatný Cashu token",
     "stores.CashuStore.sweepError": "Během sweepování prostředků nastala chyba",
