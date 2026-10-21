@@ -2385,6 +2385,7 @@
     "stores.CashuStore.errorPayingInvoice": "支付发票时出错",
     "stores.CashuStore.paymentInFlight": "The mint has not settled this payment yet. It is in flight: check the payment in your activity before trying again.",
     "stores.CashuStore.claimedButNotSwept": "This token was claimed into your ecash wallet, but paying it out to your node did not complete. The ecash is in your wallet: check your balance before trying again.",
+    "stores.CashuStore.invoiceNotPaid": "The mint reported the payment as sent, but it did not reach your wallet",
     "stores.CashuStore.errorDeletingData": "删除 Cashu 数据时出错",
     "stores.CashuStore.invalidToken": "无效的 Cashu 代币",
     "stores.CashuStore.sweepError": "扫入资金时出错",
