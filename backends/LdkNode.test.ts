@@ -6,6 +6,7 @@ const mockSendSpontaneousPayment = jest.fn();
 const mockBolt12SendUsingAmount = jest.fn();
 const mockBolt12InitiateRefund = jest.fn();
 const mockBolt12DecodeOffer = jest.fn();
+const mockBolt12RequestRefundPayment = jest.fn();
 const mockListChannels = jest.fn();
 const mockCloseChannel = jest.fn();
 const mockForceCloseChannel = jest.fn();
@@ -38,7 +39,9 @@ jest.mock('../ldknode/LdkNodeInjection', () => ({
             bolt12InitiateRefund: (...args: any[]) =>
                 mockBolt12InitiateRefund(...args),
             bolt12DecodeOffer: (...args: any[]) =>
-                mockBolt12DecodeOffer(...args)
+                mockBolt12DecodeOffer(...args),
+            bolt12RequestRefundPayment: (...args: any[]) =>
+                mockBolt12RequestRefundPayment(...args)
         }
     }
 }));
@@ -489,6 +492,126 @@ describe('LdkNode.createWithdrawalRequest', () => {
         expect(mockBolt12InitiateRefund).toHaveBeenCalledWith(
             expect.objectContaining({ amountMsat: 100_000 })
         );
+    });
+});
+
+describe('LdkNode.redeemWithdrawalRequest', () => {
+    let ldk: LdkNode;
+    let payments: any[];
+
+    const refundPayment = (
+        id: string,
+        status: string,
+        direction = 'inbound'
+    ) => ({
+        id,
+        direction,
+        status,
+        amountMsat: 250_000_000,
+        latestUpdateTimestamp: 0,
+        kind: { type: 'bolt12Refund', hash: `${id}-hash` }
+    });
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.useFakeTimers();
+        ldk = new LdkNode();
+        ldk.subscribeToEvents = () => () => {};
+        // A withdrawal request redeemed earlier, still pending
+        payments = [refundPayment('earlier', 'pending')];
+        mockListPayments.mockImplementation(async () => [...payments]);
+        // ldk-node lists the new payment as pending and returns at once
+        mockBolt12RequestRefundPayment.mockImplementation(async () => {
+            payments.push(refundPayment('offered', 'pending'));
+            return 'lni1...';
+        });
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    const redeem = () => {
+        const outcome: any = {};
+        ldk.redeemWithdrawalRequest({ invreq: 'lnr1...', label: '' }).then(
+            (result) => (outcome.result = result),
+            (error) => (outcome.error = error)
+        );
+        return outcome;
+    };
+
+    it('does not resolve before the payment is received', async () => {
+        const outcome = redeem();
+
+        await jest.advanceTimersByTimeAsync(5_000);
+
+        expect(mockBolt12RequestRefundPayment).toHaveBeenCalledWith('lnr1...');
+        expect(outcome).toEqual({});
+    });
+
+    it('resolves once the payment has been received', async () => {
+        const outcome = redeem();
+        await jest.advanceTimersByTimeAsync(5_000);
+
+        payments[1] = refundPayment('offered', 'succeeded');
+        await jest.advanceTimersByTimeAsync(1_000);
+
+        expect(outcome.error).toBeUndefined();
+        expect(outcome.result).toEqual({
+            bolt12: 'lni1...',
+            payment_hash: 'offered-hash'
+        });
+    });
+
+    it('ignores an earlier refund payment that succeeds meanwhile', async () => {
+        const outcome = redeem();
+        await jest.advanceTimersByTimeAsync(1_000);
+
+        payments[0] = refundPayment('earlier', 'succeeded');
+        await jest.advanceTimersByTimeAsync(5_000);
+
+        expect(outcome).toEqual({});
+    });
+
+    it('rejects when the invoice is not paid in time', async () => {
+        const outcome = redeem();
+
+        await jest.advanceTimersByTimeAsync(100_000);
+
+        expect(outcome.result).toBeUndefined();
+        expect(outcome.error.message).toEqual(
+            'backends.LdkNode.withdrawalRequestNotPaid'
+        );
+    });
+
+    it('rejects when no new inbound refund payment is listed', async () => {
+        mockBolt12RequestRefundPayment.mockResolvedValue('lni1...');
+
+        const outcome = redeem();
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(outcome.error.message).toEqual(
+            'backends.LdkNode.withdrawalRequestNotPaid'
+        );
+    });
+
+    it('rejects when the payment fails', async () => {
+        const outcome = redeem();
+        await jest.advanceTimersByTimeAsync(1_000);
+
+        payments[1] = refundPayment('offered', 'failed');
+        await jest.advanceTimersByTimeAsync(1_000);
+
+        expect(outcome.error.message).toEqual('PAYMENT_FAILED_UNKNOWN');
+    });
+
+    it('rejects when ldk-node refuses the request', async () => {
+        mockBolt12RequestRefundPayment.mockRejectedValue(new Error('refused'));
+
+        const outcome = redeem();
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(outcome.error.message).toEqual('refused');
     });
 });
 
