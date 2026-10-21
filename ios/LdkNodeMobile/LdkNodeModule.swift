@@ -1051,6 +1051,36 @@ class LdkNodeModule: RCTEventEmitter {
         }
     }
 
+    @objc(spliceIn:counterpartyNodeId:spliceAmountSats:resolver:rejecter:)
+    func spliceIn(_ userChannelId: String, counterpartyNodeId: String, spliceAmountSats: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        do {
+            try node.spliceIn(userChannelId: userChannelId, counterpartyNodeId: counterpartyNodeId, spliceAmountSats: spliceAmountSats.uint64Value)
+            resolve(["status": "ok"])
+        } catch {
+            reject("error", self.errorMessage(error), error)
+        }
+    }
+
+    @objc(spliceOut:counterpartyNodeId:address:spliceAmountSats:resolver:rejecter:)
+    func spliceOut(_ userChannelId: String, counterpartyNodeId: String, address: String, spliceAmountSats: NSNumber, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        do {
+            try node.spliceOut(userChannelId: userChannelId, counterpartyNodeId: counterpartyNodeId, address: address, spliceAmountSats: spliceAmountSats.uint64Value)
+            resolve(["status": "ok"])
+        } catch {
+            reject("error", self.errorMessage(error), error)
+        }
+    }
+
     // MARK: - On-chain Methods
 
     @objc(newOnchainAddress:rejecter:)
@@ -1276,6 +1306,86 @@ class LdkNodeModule: RCTEventEmitter {
             resolve(["invoice": invoice.description])
         } catch {
             reject("error", self.errorMessage(error), error)
+        }
+    }
+
+    // A fee limit of 0 means no limit
+    @objc(receiveViaJitChannel:invoiceDescription:expirySecs:maxLspFeeLimitMsat:resolver:rejecter:)
+    func receiveViaJitChannel(_ amountMsat: Double, invoiceDescription: String, expirySecs: Double, maxLspFeeLimitMsat: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        guard let amount = toUInt64(amountMsat), let expiry = toUInt32(expirySecs) else {
+            reject("error", "Invalid amount or expiry", nil)
+            return
+        }
+
+        // A fee limit of 0 means no limit
+        var maxFeeMsat: UInt64? = nil
+        if maxLspFeeLimitMsat > 0 {
+            guard let limit = toUInt64(maxLspFeeLimitMsat) else {
+                reject("error", "Invalid fee limit", nil)
+                return
+            }
+            maxFeeMsat = limit
+        }
+
+        // Connects to the LSP and waits on two LSPS2 requests
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let bolt11 = node.bolt11Payment()
+                let descriptionObj = Bolt11InvoiceDescription.direct(description: invoiceDescription)
+                let invoice = try bolt11.receiveViaJitChannel(
+                    amountMsat: amount,
+                    description: descriptionObj,
+                    expirySecs: expiry,
+                    maxLspFeeLimitMsat: maxFeeMsat
+                )
+                resolve(["invoice": invoice.description])
+            } catch {
+                reject("error", self.errorMessage(error), error)
+            }
+        }
+    }
+
+    // A fee limit of 0 means no limit
+    @objc(receiveVariableAmountViaJitChannel:expirySecs:maxProportionalLspFeeLimitPpmMsat:resolver:rejecter:)
+    func receiveVariableAmountViaJitChannel(_ invoiceDescription: String, expirySecs: Double, maxProportionalLspFeeLimitPpmMsat: Double, resolver resolve: @escaping RCTPromiseResolveBlock, rejecter reject: @escaping RCTPromiseRejectBlock) {
+        guard let node = self.getNode() else {
+            reject("error", "Node not initialized", nil)
+            return
+        }
+
+        guard let expiry = toUInt32(expirySecs) else {
+            reject("error", "Invalid expiry", nil)
+            return
+        }
+
+        // A fee limit of 0 means no limit
+        var maxFeePpmMsat: UInt64? = nil
+        if maxProportionalLspFeeLimitPpmMsat > 0 {
+            guard let limit = toUInt64(maxProportionalLspFeeLimitPpmMsat) else {
+                reject("error", "Invalid fee limit", nil)
+                return
+            }
+            maxFeePpmMsat = limit
+        }
+
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                let bolt11 = node.bolt11Payment()
+                let descriptionObj = Bolt11InvoiceDescription.direct(description: invoiceDescription)
+                let invoice = try bolt11.receiveVariableAmountViaJitChannel(
+                    description: descriptionObj,
+                    expirySecs: expiry,
+                    maxProportionalLspFeeLimitPpmMsat: maxFeePpmMsat
+                )
+                resolve(["invoice": invoice.description])
+            } catch {
+                reject("error", self.errorMessage(error), error)
+            }
         }
     }
 
@@ -1932,7 +2042,8 @@ class LdkNodeModule: RCTEventEmitter {
                 "channelId": channelId,
                 "userChannelId": userChannelId,
                 "counterpartyNodeId": counterpartyNodeId,
-                "newFundingTxo": ["txid": newFundingTxo.txid, "vout": newFundingTxo.vout]
+                "newFundingTxo_txid": newFundingTxo.txid,
+                "newFundingTxo_vout": newFundingTxo.vout
             ]
         case .spliceFailed(let channelId, let userChannelId, let counterpartyNodeId, let abandonedFundingTxo):
             return [
@@ -1940,7 +2051,8 @@ class LdkNodeModule: RCTEventEmitter {
                 "channelId": channelId,
                 "userChannelId": userChannelId,
                 "counterpartyNodeId": counterpartyNodeId,
-                "abandonedFundingTxo": abandonedFundingTxo.map { ["txid": $0.txid, "vout": $0.vout] } as Any
+                "abandonedFundingTxo_txid": abandonedFundingTxo?.txid as Any,
+                "abandonedFundingTxo_vout": abandonedFundingTxo?.vout as Any
             ]
         }
     }

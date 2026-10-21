@@ -316,6 +316,10 @@ export default class InvoicesStore {
         // taps Create invoice right after flipping the switch.
         const lspRequested =
             useLsp ?? (!!this.settingsStore.settings?.enableLSP || !!forceLsp);
+        // An LDK node with a dedicated LSPS2 LSP gets JIT channels from it
+        // instead of Flow. forceLsp comes from Flow's own settings screen.
+        const lsps2 =
+            lspRequested && !forceLsp && !!BackendUtils.isLsps2Active();
 
         this.lspStore?.resetFee();
         this.payment_request = null;
@@ -394,9 +398,12 @@ export default class InvoicesStore {
 
         if (customPreimage) req.preimage = customPreimage;
 
+        if (lsps2 && value && value !== '0' && !noLsp) req.lsps2_jit = true;
+
         if (
             BackendUtils.supportsFlowLSP() &&
             lspRequested &&
+            !lsps2 &&
             value &&
             value !== '0' &&
             !noLsp
@@ -472,10 +479,22 @@ export default class InvoicesStore {
                     if (!unified) this.creatingInvoice = false;
                 });
 
+                if (data.lsp_fee_msat) {
+                    // shown in Receive's setup fee card. Rounded down like
+                    // Flow's fee: a fee just under the amount must not reach
+                    // it and be treated as a fee on top
+                    runInAction(() => {
+                        this.lspStore.zeroConfFee = Math.floor(
+                            data.lsp_fee_msat / 1000
+                        );
+                    });
+                }
+
                 let jit_bolt11: string = '';
                 if (
                     BackendUtils.supportsFlowLSP() &&
                     lspRequested &&
+                    !lsps2 &&
                     value !== '0' &&
                     !noLsp
                 ) {

@@ -1,6 +1,7 @@
 const mockMkdir = jest.fn();
 const mockExists = jest.fn();
 const mockStart = jest.fn();
+const mockInitializeNode = jest.fn();
 
 jest.mock('react-native', () => ({
     Platform: { OS: 'ios' }
@@ -15,7 +16,13 @@ jest.mock('react-native-fs', () => ({
 
 jest.mock('../ldknode/LdkNodeInjection', () => ({
     __esModule: true,
-    default: { node: { start: (...args: any[]) => mockStart(...args) } }
+    default: {
+        node: { start: (...args: any[]) => mockStart(...args) },
+        utils: {
+            initializeNode: (...args: any[]) => mockInitializeNode(...args)
+        },
+        crypto: { mnemonicToSeed: async () => '00' }
+    }
 }));
 
 jest.mock('./LocaleUtils', () => ({
@@ -23,12 +30,17 @@ jest.mock('./LocaleUtils', () => ({
 }));
 
 jest.mock('./VssAuthUtils', () => ({
-    deriveVssSigningKeyFromSeed: jest.fn()
+    deriveVssSigningKeyFromSeed: () => ({
+        privateKey: new Uint8Array(32),
+        publicKey: new Uint8Array(33)
+    })
 }));
 
 import { Platform } from 'react-native';
 import {
     createLdkNodeDirectory,
+    createLdkNodeWallet,
+    getActiveLsps2NodeId,
     ensureLdkNodeBackupExclusion,
     getLdkNodeBaseDirectory,
     getLdkNodeStoragePath,
@@ -149,5 +161,62 @@ describe('LdkNodeUtils', () => {
             );
             warnSpy.mockRestore();
         });
+    });
+});
+
+describe('getActiveLsps2NodeId', () => {
+    const lsps2Config = {
+        nodeId: '02a8a7efb269645f1ca1e39637e72f74d45e8ec766c80cc184531d5453149695e6',
+        address: '127.0.0.1:9735'
+    };
+    const create = () =>
+        createLdkNodeWallet({
+            nodeDir: 'dir',
+            seedMnemonic: 'seed',
+            network: 'mutinynet',
+            lsps2Config
+        });
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockMkdir.mockResolvedValue(undefined);
+        mockExists.mockResolvedValue(true);
+    });
+
+    it('records the LSPS2 LSP the built node registered', async () => {
+        mockInitializeNode.mockResolvedValue({
+            lsps2NodeId: lsps2Config.nodeId
+        });
+
+        await create();
+
+        expect(mockInitializeNode).toHaveBeenCalledWith(
+            expect.objectContaining({ lsps2Config })
+        );
+        expect(getActiveLsps2NodeId()).toEqual(lsps2Config.nodeId);
+    });
+
+    it('clears it when the next build registers none', async () => {
+        mockInitializeNode.mockResolvedValueOnce({
+            lsps2NodeId: lsps2Config.nodeId
+        });
+        await create();
+
+        mockInitializeNode.mockResolvedValueOnce({});
+        await create();
+
+        expect(getActiveLsps2NodeId()).toBeUndefined();
+    });
+
+    it('clears it when the build fails', async () => {
+        mockInitializeNode.mockResolvedValueOnce({
+            lsps2NodeId: lsps2Config.nodeId
+        });
+        await create();
+
+        mockInitializeNode.mockRejectedValueOnce({ code: 'vss_error' });
+        await expect(create()).rejects.toEqual({ code: 'vss_error' });
+
+        expect(getActiveLsps2NodeId()).toBeUndefined();
     });
 });

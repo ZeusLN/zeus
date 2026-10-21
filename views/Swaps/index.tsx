@@ -511,7 +511,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                 prevState.enableLSP !== this.state.enableLSP) &&
             this.state.enableLSP &&
             !this.state.reverse &&
-            !this.state.flowLspNotConfigured
+            !this.state.flowLspNotConfigured &&
+            !BackendUtils.isLsps2Active()
         ) {
             const { LSPStore } = this.props;
             const outputSats = new BigNumber(this.state.outputSats);
@@ -1951,6 +1952,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                     </View>
                                     {BackendUtils.supportsFlowLSP() &&
                                         !flowLspNotConfigured &&
+                                        !BackendUtils.isLsps2Active() &&
                                         !reverse && (
                                             <View
                                                 style={{
@@ -2177,7 +2179,9 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                     settings
                                                                         ?.invoices
                                                                         ?.expirySeconds ||
-                                                                    '3600'
+                                                                    '3600',
+                                                                // no way to show an LSPS2 fee here yet
+                                                                noLsp: !!BackendUtils.isLsps2Active()
                                                             }
                                                         );
 

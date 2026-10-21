@@ -153,3 +153,21 @@ describe('Invoice.determineFormattedOriginalTimeUntilExpiry', () => {
         expect(invoice.formattedOriginalTimeUntilExpiry).toBe('1 hour');
     });
 });
+
+describe('Invoice.getLspFee', () => {
+    it('is the fee an LSP withheld, in sats', () => {
+        expect(new Invoice({ lsp_fee_msat: '10000500' }).getLspFee).toBe(
+            10000.5
+        );
+    });
+
+    it('is zero without one', () => {
+        expect(new Invoice({}).getLspFee).toBe(0);
+    });
+
+    it('is not reported as a fee paid', () => {
+        expect((new Invoice({ lsp_fee_msat: '1000' }) as any).getFee).toBe(
+            undefined
+        );
+    });
+});

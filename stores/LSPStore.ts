@@ -426,6 +426,8 @@ export default class LSPStore {
         const { implementation, settings, enableTor } = this.settingsStore;
         if (
             settings.enableLSP &&
+            // receives go through the node's LSPS2 LSP instead
+            !BackendUtils.isLsps2Active() &&
             (implementation !== 'lnd' ||
                 (!enableTor &&
                     !this.nodeInfoStore.flowLspNotConfigured()
