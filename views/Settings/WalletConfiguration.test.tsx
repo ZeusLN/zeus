@@ -662,6 +662,58 @@ describe('WalletConfiguration', () => {
             ).toHaveBeenCalledWith(LND_NODE, [OTHER_NODE]);
         });
 
+        it('moves NWC connections to the new config id when a saved wallet is edited', async () => {
+            const nodes = [LND_NODE, OTHER_NODE];
+            const settings = { nodes, selectedNode: 1, privacy: {} };
+            const NostrWalletConnectStore = {
+                rekeyWalletConfigConnections: jest.fn(() => Promise.resolve())
+            };
+            await render(
+                <WalletConfiguration
+                    {...({
+                        navigation: {
+                            goBack: jest.fn(),
+                            navigate: jest.fn(),
+                            popTo: jest.fn(),
+                            reset: jest.fn()
+                        },
+                        route: {
+                            params: {
+                                node: LND_NODE,
+                                index: 0,
+                                active: false,
+                                saved: true
+                            }
+                        },
+                        SettingsStore: {
+                            settings,
+                            updateSettings: jest.fn(async (update: any) =>
+                                typeof update === 'function'
+                                    ? update(settings)
+                                    : update
+                            ),
+                            setConnectingStatus: jest.fn()
+                        },
+                        NostrWalletConnectStore
+                    } as any)}
+                />
+            );
+
+            await fireEvent.changeText(
+                screen.getByPlaceholderText('443/8080'),
+                '9090'
+            );
+            await save();
+
+            expect(
+                NostrWalletConnectStore.rekeyWalletConfigConnections
+            ).toHaveBeenCalledWith(
+                LND_NODE,
+                expect.objectContaining({ host: LND_NODE.host, port: '9090' }),
+                [OTHER_NODE]
+            );
+        });
+
         it('still deletes an inactive wallet when its NWC connections cannot be deleted', async () => {
             const consoleError = jest
                 .spyOn(console, 'error')

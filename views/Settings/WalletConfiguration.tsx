@@ -618,7 +618,8 @@ export default class WalletConfiguration extends React.Component<
         recoveryCipherSeed?: string,
         newEmbeddedLndWallet?: boolean
     ) => {
-        const { SettingsStore, navigation } = this.props;
+        const { SettingsStore, NostrWalletConnectStore, navigation } =
+            this.props;
         const {
             nickname,
             dismissCustodialWarning,
@@ -707,12 +708,14 @@ export default class WalletConfiguration extends React.Component<
         // Built inside the queued update so a write still in the queue
         // cannot be undone by a nodes array copied before it landed
         let originalNode: Node;
+        let otherNodes: Node[] = [];
         const update = (current: Settings) => {
             let nodes: Node[];
             if (current.nodes) {
                 nodes = [...current.nodes];
                 if (index != null) {
                     originalNode = nodes[index];
+                    otherNodes = nodes.filter((_, i) => i !== index);
                     nodes[index] = node;
                 } else {
                     nodes.push(node);
@@ -736,6 +739,20 @@ export default class WalletConfiguration extends React.Component<
 
         updateSettings(update)
             .then(async () => {
+                // Keep this wallet's NWC connections matched to its config
+                // when an edit changes the fields its id is derived from.
+                // Best effort, like the deletion cleanup.
+                if (originalNode != null) {
+                    try {
+                        await NostrWalletConnectStore.rekeyWalletConfigConnections(
+                            originalNode,
+                            node,
+                            otherNodes
+                        );
+                    } catch (error) {
+                        console.error('Error updating NWC connections:', error);
+                    }
+                }
                 if (recoveryCipherSeed) {
                     await updateSettings({
                         recovery: true
