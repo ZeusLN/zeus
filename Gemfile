@@ -5,7 +5,9 @@ ruby ">= 2.6.10"
 
 # Exclude problematic cocoapods versions
 gem 'cocoapods', '>= 1.13', '!= 1.15.0', '!= 1.15.1'
-gem 'activesupport', '>= 6.1.7.5', '!= 7.1.0'
+# 7.2.3.1 fixes GHSA-cg4j-q9v8-6v38, GHSA-89vf-4333-qx8v and
+# GHSA-2j26-frm8-cmj9. CocoaPods caps activesupport below 8.
+gem 'activesupport', '~> 7.2', '>= 7.2.3.1'
 
 # Ruby 3.4 compatibility
 gem 'bigdecimal'
