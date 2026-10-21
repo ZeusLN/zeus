@@ -237,12 +237,28 @@ it('control: a refresh with no switch connects and clears connecting', async () 
     expect(settings.connecting).toBe(false);
 });
 
-it('hands a wipe that did not finish to the Lockscreen before loading settings', async () => {
+it('hands a wipe that did not finish to the Lockscreen before connecting', async () => {
     const { settings, view, refresh, isWipePending } = setup(1);
     isWipePending.mockResolvedValue(true);
     view.props.navigation = { navigate: jest.fn() };
     await refresh();
     expect(view.props.navigation.navigate).toHaveBeenCalledWith('Lockscreen');
+    expect(settings.getSettings).not.toHaveBeenCalled();
+    expect(view.props.NodeInfoStore.getNodeInfo).not.toHaveBeenCalled();
+});
+
+it('a second launch refresh does not connect once the Lockscreen is running the wipe', async () => {
+    const { settings, view, refresh, isWipePending } = setup(1);
+    // the second check runs while clearAllData() is in progress, which
+    // isWipePending() does not report
+    isWipePending.mockResolvedValueOnce(true).mockResolvedValue(false);
+    view.props.navigation = { navigate: jest.fn() };
+    await refresh();
+    await refresh();
+    expect(view.props.navigation.navigate.mock.calls).toEqual([
+        ['Lockscreen'],
+        ['Lockscreen']
+    ]);
     expect(settings.getSettings).not.toHaveBeenCalled();
     expect(view.props.NodeInfoStore.getNodeInfo).not.toHaveBeenCalled();
 });

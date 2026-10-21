@@ -203,6 +203,10 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
     // selection screen; late focus/AppState triggers must not connect to
     // the previously selected wallet or consume the initial deep link
     private _replacedForWalletSelection = false;
+    // Set once a refresh finds a wipe that did not finish. Launch runs two
+    // refreshes, and by the second the Lockscreen may be running the wipe,
+    // when isWipePending() no longer reports it
+    private wipePending = false;
 
     constructor(props: WalletProps) {
         super(props);
@@ -416,8 +420,9 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             const { posStatus, setPosStatus, initialStart } = SettingsStore;
 
             // A wipe cut short by the end of the process is finished by the
-            // Lockscreen, before the settings it had not cleared are loaded
-            if (await isWipePending()) {
+            // Lockscreen, before this screen connects to a node it is deleting
+            if (this.wipePending || (await isWipePending())) {
+                this.wipePending = true;
                 navigation.navigate('Lockscreen');
                 return;
             }
