@@ -787,7 +787,7 @@ export default class LSPStore {
         }
         const peer = Base64Utils.base64ToHex(decoded.peer);
 
-        console.log('Received custom message', { peer, data });
+        console.log('Received custom message', { peer, id: data?.id });
 
         if (data.id === this.getInfoId) {
             if (data.error) {
@@ -1017,10 +1017,9 @@ export default class LSPStore {
                     id: this.getInfoId
                 })
             })
-                .then((response) => {
+                .then(() => {
                     console.log(
-                        `Response for custom message (${method}) received:`,
-                        response
+                        `Response for custom message (${method}) received`
                     );
                 })
                 .catch((error) => {
@@ -1083,7 +1082,7 @@ export default class LSPStore {
                     runInAction(() => {
                         this.createOrderResponse = responseData;
                         this.loadingLSPS1 = false;
-                        console.log('Response received:', responseData);
+                        console.log('Response received');
                     });
                 }
             })
@@ -1165,10 +1164,9 @@ export default class LSPStore {
                     id: this.createOrderId
                 })
             })
-                .then((response) => {
+                .then(() => {
                     console.log(
-                        `Response for custom message (${method}) received:`,
-                        response
+                        `Response for custom message (${method}) received`
                     );
                 })
                 .catch((error) => {
@@ -1199,7 +1197,7 @@ export default class LSPStore {
         })
             .then((response) => {
                 const responseData = JSON.parse(response.data);
-                console.log('Response received:', responseData);
+                console.log('Response received');
                 runInAction(() => {
                     if (responseData.error) {
                         this.error = true;
@@ -1258,10 +1256,9 @@ export default class LSPStore {
                     id: this.getOrderId
                 })
             })
-                .then((response) => {
+                .then(() => {
                     console.log(
-                        `Response for custom message (${method}) received:`,
-                        response
+                        `Response for custom message (${method}) received`
                     );
                 })
                 .catch((error) => {
@@ -1489,8 +1486,8 @@ export default class LSPStore {
                     id: this.getExtendableChannelsId
                 })
             })
-                .then((response) => {
-                    console.log(`Custom message (${method}) sent:`, response);
+                .then(() => {
+                    console.log(`Custom message (${method}) sent`);
                 })
                 .catch((error) => {
                     console.error(
@@ -1585,10 +1582,9 @@ export default class LSPStore {
                     id: this.createExtensionOrderId
                 })
             })
-                .then((response) => {
+                .then(() => {
                     console.log(
-                        `Response for custom message (${method}) received:`,
-                        response
+                        `Response for custom message (${method}) received`
                     );
                 })
                 .catch((error) => {
@@ -1668,10 +1664,9 @@ export default class LSPStore {
                     id: this.getExtensionOrderId
                 })
             })
-                .then((response) => {
+                .then(() => {
                     console.log(
-                        `Response for custom message (${method}) received:`,
-                        response
+                        `Response for custom message (${method}) received`
                     );
                 })
                 .catch((error) => {
