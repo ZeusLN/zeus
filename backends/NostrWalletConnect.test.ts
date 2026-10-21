@@ -303,6 +303,30 @@ describe('NostrWalletConnect.createInvoice', () => {
         });
     });
 
+    it.each([
+        ['1000', 1_000_000],
+        ['1.005', 1005],
+        ['2.01', 2010],
+        ['0.001', 1],
+        ['2.5', 2500]
+    ])('sends %s sats as whole msat', async (value, msat) => {
+        const { backend, client } = await setup();
+        client.makeInvoice.mockResolvedValue(
+            nip47Tx({ state: 'pending', settled_at: undefined })
+        );
+
+        await backend.createInvoice({ value, memo: '' });
+
+        expect(client.makeInvoice).toHaveBeenCalledWith({
+            amount: msat,
+            description: ''
+        });
+        // the real SDK rejects anything else
+        expect(
+            Number.isSafeInteger(client.makeInvoice.mock.calls[0][0].amount)
+        ).toBe(true);
+    });
+
     it('returns the invoice with the payment hash decoded from it', async () => {
         const { backend, client } = await setup();
         client.makeInvoice.mockResolvedValue(
