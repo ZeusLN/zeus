@@ -64,20 +64,24 @@ const INVOICE_AMOUNTLESS =
 const MISMATCH = 'views.LSPS1.invoiceAmountMismatch';
 const PAY_FROM_ZEUS = 'views.LSPS1.payFromZeus';
 
+const navigation = { navigate: jest.fn(), popTo: jest.fn() } as any;
+
+const viewFor = (payment: any, service = LSPService.LSPS1) => (
+    <LSPPaymentAwait
+        navigation={navigation}
+        route={
+            {
+                params: buildPaymentAwaitParams(payment, 'order-1', service)
+            } as any
+        }
+        LSPStore={{} as any}
+        ChannelsStore={{} as any}
+        NodeInfoStore={{} as any}
+    />
+);
+
 const renderView = (payment: any, service = LSPService.LSPS1) =>
-    render(
-        <LSPPaymentAwait
-            navigation={{ navigate: jest.fn(), popTo: jest.fn() } as any}
-            route={
-                {
-                    params: buildPaymentAwaitParams(payment, 'order-1', service)
-                } as any
-            }
-            LSPStore={{} as any}
-            ChannelsStore={{} as any}
-            NodeInfoStore={{} as any}
-        />
-    );
+    render(viewFor(payment, service));
 
 describe('LSPPaymentAwait invoice check', () => {
     beforeEach(() => {
@@ -129,6 +133,23 @@ describe('LSPPaymentAwait invoice check', () => {
             expect(Storage.getItem).not.toHaveBeenCalled();
         }
     );
+
+    it('rechecks the invoice when the route params change after mount', async () => {
+        const { rerender } = await renderView({
+            bolt11: { invoice: INVOICE_100K, order_total_sat: '100000' }
+        });
+        expect(screen.getByTestId('order-qr')).toBeTruthy();
+
+        await rerender(
+            viewFor({
+                bolt11: { invoice: INVOICE_100K, order_total_sat: '1000' }
+            })
+        );
+
+        expect(screen.getByText(MISMATCH)).toBeTruthy();
+        expect(screen.queryByTestId('order-qr')).toBeNull();
+        expect(screen.queryByText(PAY_FROM_ZEUS)).toBeNull();
+    });
 
     it('rejects an amountless invoice', async () => {
         await renderView({

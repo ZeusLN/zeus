@@ -70,15 +70,20 @@ export default class LSPPaymentAwait extends React.Component<
     private isPolling: boolean = false;
     private isUnmounted: boolean = false;
     private backPressSubscription: NativeEventSubscription | null = null;
-    private invoiceCheck: OrderInvoiceCheck;
 
     constructor(props: LSPPaymentAwaitProps) {
         super(props);
         this.state = {
             paymentState: PaymentAwaitState.POLLING
         };
-        const { invoice, satAmount } = props.route.params;
-        this.invoiceCheck = verifyOrderInvoice(invoice, satAmount);
+    }
+
+    // checked against the current params on every use so the decision
+    // always describes the invoice being rendered; Bolt11Utils caches
+    // decodes, so repeat calls are cheap
+    private getInvoiceCheck(): OrderInvoiceCheck {
+        const { invoice, satAmount } = this.props.route.params;
+        return verifyOrderInvoice(invoice, satAmount);
     }
 
     async componentDidMount() {
@@ -90,7 +95,7 @@ export default class LSPPaymentAwait extends React.Component<
         );
 
         // nothing to wait for when the invoice is not shown
-        if (!this.invoiceCheck.valid) return;
+        if (!this.getInvoiceCheck().valid) return;
 
         try {
             const responseArrayString = await Storage.getItem(LSPS_ORDERS_KEY);
@@ -261,12 +266,11 @@ export default class LSPPaymentAwait extends React.Component<
         const { navigation, LSPStore } = this.props;
         const { invoice, satAmount, service } = this.props.route.params;
         const { paymentState } = this.state;
+        const invoiceValid = this.getInvoiceCheck().valid;
         const invoiceRejected =
-            paymentState === PaymentAwaitState.POLLING &&
-            !this.invoiceCheck.valid;
+            paymentState === PaymentAwaitState.POLLING && !invoiceValid;
         const awaitingPayment =
-            paymentState === PaymentAwaitState.POLLING &&
-            this.invoiceCheck.valid;
+            paymentState === PaymentAwaitState.POLLING && invoiceValid;
 
         const successSubtitle =
             service === LSPService.LSPS7
