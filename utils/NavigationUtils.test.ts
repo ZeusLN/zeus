@@ -272,6 +272,23 @@ describe('NavigationUtils', () => {
             expect(names(next)).toEqual(['Wallet']);
         });
 
+        it.each([
+            ['pop', StackActions.pop()],
+            ['goBack', CommonActions.goBack()]
+        ])(
+            'opens the Lockscreen when %s would show a wallet screen',
+            (_, action) => {
+                const state = stackOf('Menu', 'Wallet');
+
+                const next = router.getStateForAction(state, action, options);
+
+                expect(names(next)).toEqual(['Menu', 'Wallet', 'Lockscreen']);
+                expect(top(next).params).toEqual({
+                    pendingNavigation: { screen: 'Menu', params: undefined }
+                });
+            }
+        );
+
         it('only updates the pending screen when the Lockscreen is already in front', () => {
             const state = stackOf('Wallet', [
                 'Lockscreen',
