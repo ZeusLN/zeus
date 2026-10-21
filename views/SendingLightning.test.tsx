@@ -347,4 +347,46 @@ describe('SendingLightning donation', () => {
         expect(loadDonationLnurl).toHaveBeenCalledTimes(1);
         expect(TransactionsStore.sendPaymentSilently).not.toHaveBeenCalled();
     });
+
+    // An earlier screen, still mounted underneath, finishes its donation
+    // after the next payment has started. Its outcome is not shared with
+    // the new screen, which still sends its own donation.
+    it("sends the donation when an earlier screen's donation is paid during the payment", async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+        let payEarlierDonation: (result: any) => void = () => {};
+        const TransactionsStore: any = {
+            loading: false,
+            error: false,
+            status: null,
+            sendPaymentSilently: jest
+                .fn()
+                .mockImplementationOnce(
+                    () => new Promise((r) => (payEarlierDonation = r))
+                )
+                .mockResolvedValueOnce({ status: 'FAILED' })
+        };
+
+        const earlier = await render(donationView(TransactionsStore));
+        TransactionsStore.status = 'SUCCEEDED';
+        await earlier.rerender(donationView(TransactionsStore));
+        await waitFor(() =>
+            expect(TransactionsStore.sendPaymentSilently).toHaveBeenCalledTimes(
+                1
+            )
+        );
+
+        TransactionsStore.status = null;
+        const later = await render(donationView(TransactionsStore));
+        payEarlierDonation({ status: 'SUCCEEDED', num_satoshis: 25 });
+        await new Promise((r) => setImmediate(r));
+        TransactionsStore.status = 'SUCCEEDED';
+        await later.rerender(donationView(TransactionsStore));
+
+        await waitFor(() =>
+            expect(TransactionsStore.sendPaymentSilently).toHaveBeenCalledTimes(
+                2
+            )
+        );
+        expect(loadDonationLnurl).toHaveBeenCalledTimes(2);
+    });
 });

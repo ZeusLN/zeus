@@ -80,10 +80,8 @@ export default class CashuSendingLightning extends React.Component<
 
     private cancelPaymentKickoff: (() => void) | undefined;
 
-    // The donation is attempted once, after this screen's payment. The
-    // success flag it waits for is shared by every payment, so while this
-    // screen stays mounted under another one (Add a note, then a payment
-    // opened from a link), a later payment sets it again.
+    // One attempt per screen: CashuStore.paymentSuccess is shared with
+    // later payments made while this screen stays mounted.
     private donationAttempted = false;
 
     constructor(props: CashuSendingLightningProps) {

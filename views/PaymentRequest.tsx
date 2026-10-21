@@ -336,8 +336,6 @@ export default class PaymentRequest extends React.Component<
         const { InvoicesStore, TransactionsStore, SettingsStore, navigation } =
             this.props;
 
-        TransactionsStore.donationIsPaid = false;
-
         const { settings } = SettingsStore;
 
         const enableDonations =
