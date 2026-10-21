@@ -514,11 +514,13 @@ describe('LdkNode createInvoice', () => {
             expiry_seconds: String(0xffffffff)
         });
 
-        expect(mockReceiveBolt11).toHaveBeenCalledWith({
-            amountMsat: 21_000_000,
-            description: 'order 17',
-            expirySecs: 0xffffffff
-        });
+        expect(mockReceiveBolt11).toHaveBeenCalledWith(
+            expect.objectContaining({
+                amountMsat: 21_000_000,
+                description: 'order 17',
+                expirySecs: 0xffffffff
+            })
+        );
     });
 
     // The native module converts these with UInt32(_:) / UInt64(_:), which
@@ -591,5 +593,90 @@ describe('LdkNode.getPayments', () => {
         expect(payment.getPreimage).toEqual('');
         expect(payment.isIncomplete).toBe(true);
         expect(payment.isFailed).toBe(false);
+    });
+});
+
+describe('LdkNode.createInvoice route hints', () => {
+    let ldk: LdkNode;
+    let consoleError: jest.SpyInstance;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        ldk = new LdkNode();
+        mockReceiveBolt11.mockResolvedValue('lnbcrt1fake');
+        mockReceiveVariableAmountBolt11.mockResolvedValue('lnbcrt1fake');
+        // the fake invoice cannot be decoded; that path only logs
+        consoleError = jest.spyOn(console, 'error').mockImplementation();
+    });
+
+    afterEach(() => consoleError.mockRestore());
+
+    it('uses automatic hints when no channels are selected', async () => {
+        await ldk.createInvoice({ memo: 'm', value: '10' });
+
+        expect(mockReceiveBolt11).toHaveBeenCalledWith({
+            amountMsat: 10000,
+            description: 'm',
+            expirySecs: 3600,
+            routeHintsMode: 'automatic',
+            customRouteHintUserChannelIds: undefined
+        });
+    });
+
+    it('uses custom hints with the selected user channel ids', async () => {
+        await ldk.createInvoice({
+            memo: '',
+            value: '10',
+            route_hint_user_channel_ids: ['a', 'b']
+        });
+
+        expect(mockReceiveBolt11).toHaveBeenCalledWith(
+            expect.objectContaining({
+                routeHintsMode: 'custom',
+                customRouteHintUserChannelIds: ['a', 'b']
+            })
+        );
+    });
+
+    it('passes the hints through for amountless invoices', async () => {
+        await ldk.createInvoice({
+            memo: '',
+            route_hint_user_channel_ids: ['a']
+        });
+
+        expect(mockReceiveBolt11).not.toHaveBeenCalled();
+        expect(mockReceiveVariableAmountBolt11).toHaveBeenCalledWith(
+            expect.objectContaining({
+                routeHintsMode: 'custom',
+                customRouteHintUserChannelIds: ['a']
+            })
+        );
+    });
+});
+
+describe('LdkNode.formatChannel forwarding info', () => {
+    const format = (overrides: any = {}) =>
+        (new LdkNode() as any).formatChannel({
+            channelId: 'abc',
+            counterpartyNodeId: 'peer-1',
+            channelValueSats: 100000,
+            outboundCapacityMsat: 40000000,
+            inboundCapacityMsat: 59000000,
+            isChannelReady: true,
+            userChannelId: '1',
+            ...overrides
+        });
+
+    it('flags channels whose peer has sent forwarding info', () => {
+        const channel = format({
+            counterpartyForwardingInfoFeeBaseMsat: 1000,
+            counterpartyForwardingInfoFeeProportionalMillionths: 1,
+            counterpartyForwardingInfoCltvExpiryDelta: 144
+        });
+        expect(channel.has_counterparty_forwarding_info).toBe(true);
+    });
+
+    it('does not flag channels without forwarding info', () => {
+        expect(format().has_counterparty_forwarding_info).toBe(false);
     });
 });
