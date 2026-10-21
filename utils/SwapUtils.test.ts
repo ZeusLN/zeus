@@ -25,6 +25,8 @@ import {
     calculateServiceFeeOnSend,
     calculateSendAmount,
     calculateLimit,
+    quoteSwapAmounts,
+    swapNetworkFee,
     fetchBlockHeight,
     isValidRescueKey,
     refundFailureAction,
@@ -158,6 +160,70 @@ describe('SwapUtils', () => {
                 false
             );
             expect(result.toString()).toBe('1000'); // 940 + 9.4 (ceil=10) + 50 = 1000 → ceil = 1000
+        });
+    });
+
+    describe('swapNetworkFee', () => {
+        it('adds the claim and lockup fees for a reverse swap', () => {
+            const info = { fees: { minerFees: { claim: 300, lockup: 500 } } };
+            expect(swapNetworkFee(info, true)).toBe(800);
+        });
+
+        it('uses the miner fee for a submarine swap', () => {
+            expect(swapNetworkFee({ fees: { minerFees: 200 } }, false)).toBe(
+                200
+            );
+        });
+
+        it('returns 0 without a quote', () => {
+            expect(swapNetworkFee(undefined, true)).toBe(0);
+            expect(swapNetworkFee(undefined, false)).toBe(0);
+        });
+    });
+
+    describe('quoteSwapAmounts', () => {
+        const reverseQuote = (percentage: number, lockup: number) => ({
+            fees: { percentage, minerFees: { claim: 300, lockup } }
+        });
+
+        it('quotes a reverse swap', () => {
+            const { receiveAmount, serviceFee } = quoteSwapAmounts(
+                new BigNumber(100000),
+                reverseQuote(0.5, 500),
+                true
+            );
+            expect(serviceFee.toString()).toBe('500');
+            expect(receiveAmount.toString()).toBe('98700');
+        });
+
+        it('lowers the receive amount when the provider raises its fees', () => {
+            const { receiveAmount, serviceFee } = quoteSwapAmounts(
+                new BigNumber(100000),
+                reverseQuote(0.6, 700),
+                true
+            );
+            expect(serviceFee.toString()).toBe('600');
+            expect(receiveAmount.toString()).toBe('98400');
+        });
+
+        it('quotes a submarine swap', () => {
+            const { receiveAmount, serviceFee } = quoteSwapAmounts(
+                new BigNumber(100000),
+                { fees: { percentage: 0.1, minerFees: 200 } },
+                false
+            );
+            // (100000 - 200) / 1.001 = 99700.29..., floored
+            expect(receiveAmount.toString()).toBe('99700');
+            expect(serviceFee.toString()).toBe('100');
+        });
+
+        it('receives nothing when the fees exceed the send amount', () => {
+            const { receiveAmount } = quoteSwapAmounts(
+                new BigNumber(500),
+                reverseQuote(0.5, 500),
+                true
+            );
+            expect(receiveAmount.toString()).toBe('0');
         });
     });
 

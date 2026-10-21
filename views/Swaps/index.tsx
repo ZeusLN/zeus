@@ -46,6 +46,7 @@ import {
     calculateServiceFeeOnSend,
     calculateSendAmount,
     calculateLimit,
+    quoteSwapAmounts,
     SWAPS_RESCUE_KEY
 } from '../../utils/SwapUtils';
 
@@ -231,6 +232,52 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         if (this.state.isValid !== newIsValid) {
             this.setState({ isValid: newIsValid });
         }
+    };
+
+    // createReverseSwap refetched the quote because the provider's fees
+    // changed. Keep the amount the user sends and recompute what they
+    // receive, so a retry is not made against the old receive amount.
+    refreshAmountsForNewQuote = () => {
+        const { SwapStore, UnitsStore, FiatStore, SettingsStore } = this.props;
+        const { reverse, inputSats } = this.state;
+        const info: any = reverse ? SwapStore.reverseInfo : SwapStore.subInfo;
+        const { units } = UnitsStore;
+        const { fiatRates } = FiatStore;
+        const { fiat } = SettingsStore.settings;
+        const fiatEntry =
+            fiat && fiatRates
+                ? fiatRates.filter((entry: any) => entry.code === fiat)[0]
+                : null;
+        const rate = fiat && fiatRates && fiatEntry ? fiatEntry.rate : 0;
+
+        const { receiveAmount, serviceFee } = quoteSwapAmounts(
+            new BigNumber(inputSats || 0),
+            info,
+            reverse
+        );
+
+        let outputDisplay = '';
+        if (receiveAmount.isGreaterThan(0)) {
+            if (units === 'fiat' && rate > 0) {
+                outputDisplay = receiveAmount
+                    .div(SATS_PER_BTC)
+                    .times(rate)
+                    .toFixed(2);
+            } else if (units === 'BTC') {
+                outputDisplay = receiveAmount.div(SATS_PER_BTC).toFixed(8);
+            } else if (units === 'sats') {
+                outputDisplay = receiveAmount.toFixed(0);
+            }
+        }
+
+        this.setState(
+            {
+                outputSats: receiveAmount,
+                outputDisplay,
+                serviceFeeSats: serviceFee
+            },
+            () => this.checkIsValid()
+        );
     };
 
     async componentDidMount() {
@@ -2362,21 +2409,26 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                             title={localeString(
                                                 'views.Swaps.initiate'
                                             )}
-                                            onPress={() => {
-                                                reverse
-                                                    ? SwapStore?.createReverseSwap(
-                                                          invoice,
-                                                          Number(
-                                                              this.state
-                                                                  .inputSats
-                                                          ),
-                                                          this.state.fee,
-                                                          navigation
-                                                      )
-                                                    : SwapStore?.createSubmarineSwap(
-                                                          invoice,
-                                                          navigation
-                                                      );
+                                            onPress={async () => {
+                                                if (!reverse) {
+                                                    SwapStore?.createSubmarineSwap(
+                                                        invoice,
+                                                        navigation
+                                                    );
+                                                    return;
+                                                }
+                                                const result =
+                                                    await SwapStore?.createReverseSwap(
+                                                        invoice,
+                                                        Number(
+                                                            this.state.inputSats
+                                                        ),
+                                                        this.state.fee,
+                                                        navigation
+                                                    );
+                                                if (result === 'fees-changed') {
+                                                    this.refreshAmountsForNewQuote();
+                                                }
                                             }}
                                             {...(!reverse
                                                 ? {

@@ -732,6 +732,42 @@ export const calculateSendAmount = (
           );
 };
 
+// The network fee the Swaps screen charges: the claim and lockup miner
+// fees for a reverse swap, the miner fee for a submarine swap
+export const swapNetworkFee = (info: any, reverse: boolean): number =>
+    (reverse
+        ? new BigNumber(info?.fees?.minerFees?.claim || 0).plus(
+              info?.fees?.minerFees?.lockup || 0
+          )
+        : new BigNumber(info?.fees?.minerFees || 0)
+    ).toNumber();
+
+// The receive amount and service fee for a send amount under a quote. Used
+// to refresh the Swaps screen when the provider's quote changes after the
+// user entered an amount.
+export const quoteSwapAmounts = (
+    sendAmount: BigNumber,
+    info: any,
+    reverse: boolean
+): { receiveAmount: BigNumber; serviceFee: BigNumber } => {
+    const serviceFeePct = info?.fees?.percentage || 0;
+    const networkFee = swapNetworkFee(info, reverse);
+    return {
+        receiveAmount: calculateReceiveAmount(
+            sendAmount,
+            serviceFeePct,
+            networkFee,
+            reverse
+        ),
+        serviceFee: calculateServiceFeeOnSend(
+            sendAmount,
+            serviceFeePct,
+            networkFee,
+            reverse
+        )
+    };
+};
+
 export const calculateLimit = (
     limit: number,
     serviceFeePct: number,

@@ -687,7 +687,9 @@ export default class SwapStore {
             console.log('Created reverse swap:', responseData);
 
             // The provider's fees changed since the quote: fetch the new
-            // quote so the Swaps screen shows it, and ask the user to retry
+            // quote and ask the user to retry. The caller must recompute
+            // the amounts it shows, since the Swaps screen keeps them in
+            // its own state.
             if (responseData?.error === INVALID_PAIR_HASH_ERROR) {
                 await this.getSwapFees();
                 runInAction(() => {
@@ -698,7 +700,7 @@ export default class SwapStore {
                     }
                     this.loading = false;
                 });
-                return;
+                return 'fees-changed';
             }
 
             // Handle API errors
@@ -737,12 +739,13 @@ export default class SwapStore {
             }
 
             // Verify the rest of the response before saving or paying: the
-            // swap tree must pay our key against our preimage hash, the
-            // lockup address must be that tree's taproot output, and the
-            // provider must lock up at least the amount the Swaps screen
-            // showed plus the claim fee, which the claim pays out of the
-            // lockup, less REVERSE_LOCKUP_ROUNDING_SLACK. Otherwise a host could point the claim at an output
-            // it controls and still learn the preimage when we claim.
+            // swap tree must pay our key against our preimage hash, and the
+            // lockup address must be that tree's taproot output. Otherwise
+            // a host could point the claim at an output it controls and
+            // still learn the preimage when we claim. The provider must
+            // also lock up at least the amount the Swaps screen showed
+            // plus the claim fee, which the claim pays out of the lockup,
+            // less REVERSE_LOCKUP_ROUNDING_SLACK.
             const minOnchainAmount = calculateReceiveAmount(
                 new BigNumber(invoiceAmount),
                 fees?.percentage || 0,

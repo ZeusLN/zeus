@@ -182,7 +182,7 @@ describe('SwapStore.createReverseSwap response verification', () => {
         const store = newStore();
         store.reverseInfo = REVERSE_INFO;
         const navigation = { navigate: jest.fn() };
-        await store.createReverseSwap(
+        const result = await store.createReverseSwap(
             'bc1qdestination',
             INVOICE_AMOUNT,
             '2',
@@ -191,12 +191,13 @@ describe('SwapStore.createReverseSwap response verification', () => {
         const stored = storageBacking[REVERSE_SWAPS_KEY]
             ? JSON.parse(storageBacking[REVERSE_SWAPS_KEY])
             : [];
-        return { store, navigation, stored };
+        return { store, navigation, stored, result };
     };
 
     it('saves and opens a swap whose tree, address and amount check out', async () => {
-        const { store, navigation, stored } = await create();
+        const { store, navigation, stored, result } = await create();
 
+        expect(result).toBeUndefined();
         expect(store.apiError).toBe('');
         expect(stored).toHaveLength(1);
         expect(stored[0].onchainAmountVerified).toBe(true);
@@ -1176,7 +1177,7 @@ describe('SwapStore.createReverseSwap on-chain amount minimum', () => {
             };
         });
         const navigation = { navigate: jest.fn() };
-        await store.createReverseSwap(
+        const result = await store.createReverseSwap(
             'bc1qdestination',
             invoiceAmount,
             // at 1 sat/vB any claim fee floor stays below the 300 quoted
@@ -1186,7 +1187,7 @@ describe('SwapStore.createReverseSwap on-chain amount minimum', () => {
         const stored = storageBacking[REVERSE_SWAPS_KEY]
             ? JSON.parse(storageBacking[REVERSE_SWAPS_KEY])
             : [];
-        return { store, navigation, stored };
+        return { store, navigation, stored, result };
     };
 
     const expectRefused = ({ store, navigation, stored }: any) => {
@@ -1327,10 +1328,11 @@ describe('SwapStore.createReverseSwap on-chain amount minimum', () => {
                     minerFees: { claim: 300, lockup: 500 }
                 }
             };
-            const { store, navigation, stored } = await create({
+            const { store, navigation, stored, result } = await create({
                 responseData: JSON.stringify({ error: 'invalid pair hash' }),
                 feesResponse: { status: 200, json: { BTC: { BTC: newQuote } } }
             });
+            expect(result).toBe('fees-changed');
             expect(store.reverseInfo).toEqual(newQuote);
             expect(store.apiError).toBe('views.Swaps.swapFeesChanged');
             expect(store.loading).toBe(false);
@@ -1338,11 +1340,21 @@ describe('SwapStore.createReverseSwap on-chain amount minimum', () => {
             expect(navigation.navigate).not.toHaveBeenCalled();
         });
 
+        it('does not report a fee change for other provider errors', async () => {
+            const { store, result } = await create({
+                responseData: JSON.stringify({ error: 'amount too low' })
+            });
+            expect(result).toBeUndefined();
+            expect(store.apiError).toBe('amount too low');
+            expect(store.reverseInfo).toEqual(REVERSE_INFO);
+        });
+
         it('shows the fetch error when the refresh fails', async () => {
-            const { store, stored } = await create({
+            const { store, stored, result } = await create({
                 responseData: JSON.stringify({ error: 'invalid pair hash' }),
                 feesResponse: { status: 200, json: {} }
             });
+            expect(result).toBe('fees-changed');
             expect(store.apiError).toBe('views.Swaps.fetchFeesFailed');
             expect(store.loading).toBe(false);
             expect(stored).toHaveLength(0);
