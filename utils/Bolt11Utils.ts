@@ -95,7 +95,7 @@ class Bolt11Utils {
         if (decoded.words.length < 7 + 104) {
             throw new Error('Invoice is too short to hold a signature');
         }
-        paymentRequest = paymentRequest.toLowerCase();
+        paymentRequest = cacheKey;
         const prefix = decoded.prefix;
         let words = decoded.words;
         let letters = paymentRequest.slice(prefix.length + 1);
