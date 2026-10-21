@@ -309,7 +309,7 @@ import WIFSweeper from './views/Tools/WIFSweeper';
 
 import { isLightTheme, themeColor } from './utils/ThemeUtils';
 import LinkingUtils from './utils/LinkingUtils';
-import { posRouteGuard } from './utils/NavigationUtils';
+import { lockRouteGuard } from './utils/NavigationUtils';
 import CreateWithdrawalRequest from './views/Tools/CreateWithdrawalRequest';
 import WithdrawalRequestInfo from './views/WithdrawalRequestInfo';
 import RedeemWithdrawalRequest from './views/RedeemWithdrawalRequest';
@@ -551,7 +551,7 @@ export default class App extends React.PureComponent {
                                                                     this.backPressListenerSubscription?.remove()
                                                             })}
                                                             UNSTABLE_router={
-                                                                posRouteGuard
+                                                                lockRouteGuard
                                                             }
                                                         >
                                                             <Stack.Screen

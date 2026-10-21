@@ -4,6 +4,7 @@ jest.mock('../stores/Stores', () => ({
         settings: {},
         setPosStatus: jest.fn(),
         loginMethodConfigured: jest.fn(),
+        loginRequired: jest.fn(),
         sessionStarted: jest.fn()
     }
 }));
@@ -17,7 +18,7 @@ import {
 import { settingsStore } from '../stores/Stores';
 import {
     POS_ROUTES,
-    posRouteGuard,
+    lockRouteGuard,
     protectedNavigation,
     reAuthNavigation
 } from './NavigationUtils';
@@ -144,7 +145,7 @@ describe('NavigationUtils', () => {
         });
     });
 
-    describe('posRouteGuard', () => {
+    describe('lockRouteGuard', () => {
         // The real stack router, so a change in how it handles navigate,
         // replace, reset or popTo shows up here
         const routeNames = [
@@ -165,7 +166,7 @@ describe('NavigationUtils', () => {
             routeGetIdList: {}
         };
         const stack = StackRouter({});
-        const router: any = { ...stack, ...posRouteGuard(stack as any) };
+        const router: any = { ...stack, ...lockRouteGuard(stack as any) };
 
         const stackOf = (...routes: Array<string | [string, any]>): any => {
             const initial = stack.getInitialState(options);
@@ -186,6 +187,7 @@ describe('NavigationUtils', () => {
         beforeEach(() => {
             mockSettingsStore.posStatus = 'active';
             mockSettingsStore.loginMethodConfigured.mockReturnValue(true);
+            mockSettingsStore.loginRequired.mockReturnValue(false);
         });
 
         it.each([
@@ -367,6 +369,144 @@ describe('NavigationUtils', () => {
             );
 
             expect(top(next).name).toBe('Invoice');
+        });
+
+        describe('while locked outside POS', () => {
+            const buried = ['Wallet', 'Menu', 'Mints'];
+            // as dispatched through a buried screen's navigation prop
+            const from = (state: any, name: string, action: any) => ({
+                ...action,
+                source: state.routes.find((r: any) => r.name === name).key
+            });
+
+            beforeEach(() => {
+                mockSettingsStore.posStatus = 'inactive';
+                mockSettingsStore.loginRequired.mockReturnValue(true);
+            });
+
+            it.each([
+                ['navigate', navigate('LnurlPay', { a: 1 })],
+                ['push', StackActions.push('Invoice')],
+                ['pop', StackActions.pop()],
+                ['popTo', StackActions.popTo('Menu')],
+                ['popToTop', StackActions.popToTop()],
+                ['goBack', CommonActions.goBack()],
+                ['replace', StackActions.replace('Wallets')],
+                [
+                    'reset',
+                    CommonActions.reset({
+                        index: 0,
+                        routes: [{ name: 'Wallet' }]
+                    })
+                ]
+            ])('drops %s from a screen under the Lockscreen', (_, action) => {
+                const state = stackOf(...buried, 'Lockscreen');
+
+                expect(
+                    router.getStateForAction(
+                        state,
+                        from(state, 'Mints', action),
+                        options
+                    )
+                ).toBe(state);
+            });
+
+            it('drops an action without a source', () => {
+                const state = stackOf(...buried, 'Lockscreen');
+
+                expect(
+                    router.getStateForAction(
+                        state,
+                        StackActions.popTo('Wallet'),
+                        options
+                    )
+                ).toBe(state);
+            });
+
+            it("drops the Lockscreen's own pop before login", () => {
+                const state = stackOf(...buried, 'Lockscreen');
+
+                expect(
+                    router.getStateForAction(
+                        state,
+                        from(state, 'Lockscreen', StackActions.pop()),
+                        options
+                    )
+                ).toBe(state);
+            });
+
+            it('lets the Lockscreen navigate away once logged in', () => {
+                mockSettingsStore.loginRequired.mockReturnValue(false);
+                const state = stackOf(...buried, 'Lockscreen');
+
+                const next = router.getStateForAction(
+                    state,
+                    from(state, 'Lockscreen', StackActions.pop()),
+                    options
+                );
+
+                expect(names(next)).toEqual(buried);
+            });
+
+            it('lets the app put the Lockscreen in front', () => {
+                const state = stackOf(...buried);
+
+                const next = router.getStateForAction(
+                    state,
+                    navigate('Lockscreen'),
+                    options
+                );
+
+                expect(names(next)).toEqual([...buried, 'Lockscreen']);
+            });
+
+            it('leaves navigation alone while the Lockscreen is not in front', () => {
+                const state = stackOf(...buried);
+
+                const next = router.getStateForAction(
+                    state,
+                    from(state, 'Mints', navigate('Invoice')),
+                    options
+                );
+
+                expect(top(next).name).toBe('Invoice');
+            });
+
+            it('lets a share intent reach a Lockscreen that carries it', () => {
+                const locked = stackOf('Wallet', 'Lockscreen');
+
+                const processing = router.getStateForAction(
+                    locked,
+                    navigate('ShareIntentProcessing'),
+                    options
+                );
+                expect(names(processing)).toEqual([
+                    'Wallet',
+                    'Lockscreen',
+                    'ShareIntentProcessing'
+                ]);
+
+                expect(
+                    router.getStateForAction(
+                        processing,
+                        StackActions.replace('LnurlPay'),
+                        options
+                    )
+                ).toBe(processing);
+
+                const next = router.getStateForAction(
+                    processing,
+                    StackActions.replace('Lockscreen', {
+                        shareIntentData: { qrData: 'lnbc1' }
+                    }),
+                    options
+                );
+                expect(names(next)).toEqual([
+                    'Wallet',
+                    'Lockscreen',
+                    'Lockscreen'
+                ]);
+            });
         });
 
         it('passes on actions the stack does not handle', () => {
