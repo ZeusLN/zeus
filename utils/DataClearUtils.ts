@@ -2,6 +2,7 @@ import * as Keychain from 'react-native-keychain';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import RNFS from 'react-native-fs';
 import { Notifications } from 'react-native-notifications';
 // @ts-ignore: Networking is exported at runtime but missing from the legacy typings
 import { BackHandler, Networking, Platform } from 'react-native';
@@ -854,6 +855,41 @@ async function clearOrphanedNodeDataDirectories(settings: any): Promise<void> {
     }
 }
 
+// Name exportChannelDb (utils/ChannelMigrationUtils.ts) gives the channel
+// database zip it saves to the public Downloads folder on Android. Kept
+// anchored to that exact shape so files the user named themselves stay.
+const CHANNEL_DB_EXPORT_REGEX = /^zeus-lnd-(mainnet|testnet)-\d+\.zip$/;
+
+/**
+ * Deletes the unencrypted channel database exports ("Export Channels to
+ * other device") that ZEUS wrote to the public Downloads folder on Android.
+ * They sit outside the app sandbox, so removing the node data directories
+ * does not touch them. Only run on a full wipe: until then the export may be
+ * the only copy of the wallet's channels. Best effort, like the rescue key
+ * purge: a renamed or moved copy, or one written by a previous install of
+ * the app, is not ours to delete under scoped storage.
+ */
+export async function purgeChannelDbExports(): Promise<void> {
+    if (Platform.OS !== 'android') return;
+    try {
+        const entries = await RNFS.readDir(RNFS.DownloadDirectoryPath);
+        for (const entry of entries) {
+            if (!entry.isFile() || !CHANNEL_DB_EXPORT_REGEX.test(entry.name))
+                continue;
+            try {
+                await RNFS.unlink(entry.path);
+            } catch (e) {
+                console.warn(
+                    '[ClearData] Error deleting channel database export:',
+                    e
+                );
+            }
+        }
+    } catch (e) {
+        console.warn('[ClearData] Error listing Downloads:', e);
+    }
+}
+
 /**
  * Clears all app data including:
  * - Storage (new zeus: namespace)
@@ -917,6 +953,8 @@ export async function clearAllData(): Promise<void> {
     // clears above, so they must be unlinked explicitly.
     await clearNodeDataDirectories(settings);
     await clearOrphanedNodeDataDirectories(settings);
+    // Channel database exports saved to public Downloads (Android).
+    await purgeChannelDbExports();
 
     // 2d. Delete any plaintext rescue-key exports. Legacy files live outside
     // the app sandbox (public Downloads on Android, Files-visible Documents
