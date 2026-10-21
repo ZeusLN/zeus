@@ -41,8 +41,10 @@ import {
     ErrorMessage
 } from '../components/SuccessErrorMessage';
 import Header from '../components/Header';
-import OnchainFeeInput from '../components/OnchainFeeInput';
+import OutlinedButton from '../components/OutlinedButton';
+import OnchainFeePicker from '../components/OnchainFeePicker';
 import Screen from '../components/Screen';
+import SectionCard from '../components/SectionCard';
 import SwipeButton from '../components/SwipeButton';
 import Switch from '../components/Switch';
 import TextInput from '../components/TextInput';
@@ -384,6 +386,29 @@ export default class Send extends React.Component<SendProps, SendState> {
                 this.validateAdditionalOutputFields(output);
             return (hasAddress || hasAmount) && !(hasAddress && hasAmount);
         });
+    };
+
+    addOutput = () => {
+        this.setState(({ additionalOutputs }) => ({
+            additionalOutputs: [
+                ...additionalOutputs,
+                { address: '', amount: '', satAmount: '' }
+            ]
+        }));
+    };
+
+    removeOutput = (index: number) => {
+        this.setState(({ additionalOutputs }) => ({
+            additionalOutputs: additionalOutputs.filter((_, i) => i !== index)
+        }));
+    };
+
+    updateOutput = (index: number, update: Partial<AdditionalOutput>) => {
+        this.setState(({ additionalOutputs }) => ({
+            additionalOutputs: additionalOutputs.map((output, i) =>
+                i === index ? { ...output, ...update } : output
+            )
+        }));
     };
 
     getValidAdditionalOutputs = () => {
@@ -748,6 +773,7 @@ export default class Send extends React.Component<SendProps, SendState> {
             BackendUtils.supportsOnchainSendFeeRate();
         const isInvalidFee =
             supportsOnchainSendFeeRate && (fee === '0' || !fee);
+        const canAddOutput = BackendUtils.supportsOnchainBatching() && !fundMax;
 
         const slideToPayThreshold =
             SettingsStore.settings?.payments?.slideToPayThreshold ??
@@ -1010,122 +1036,123 @@ export default class Send extends React.Component<SendProps, SendState> {
                     {transactionType === 'On-chain' &&
                         BackendUtils.supportsOnchainSends() && (
                             <React.Fragment>
-                                <AmountInput
-                                    amount={
-                                        fundMax
-                                            ? utxoBalance > 0
-                                                ? utxoBalance.toString()
-                                                : confirmedBlockchainBalance.toString()
-                                            : amount
-                                    }
+                                <SectionCard
                                     title={localeString('general.amount')}
-                                    onAmountChange={(
-                                        amount: string,
-                                        satAmount: string | number
-                                    ) => {
-                                        this.setState({
-                                            amount,
-                                            satAmount
-                                        });
-                                    }}
-                                    hideConversion={amount === 'all'}
-                                    locked={fundMax}
-                                    forceUnit={
-                                        fundMax || fiatError
-                                            ? 'sats'
-                                            : undefined
-                                    }
-                                    hideUnitChangeButton={!!fiatError}
-                                    fiatError={fiatError}
-                                />
+                                    style={{ marginBottom: 20 }}
+                                >
+                                    <AmountInput
+                                        amount={
+                                            fundMax
+                                                ? utxoBalance > 0
+                                                    ? utxoBalance.toString()
+                                                    : confirmedBlockchainBalance.toString()
+                                                : amount
+                                        }
+                                        onAmountChange={(
+                                            amount: string,
+                                            satAmount: string | number
+                                        ) => {
+                                            this.setState({
+                                                amount,
+                                                satAmount
+                                            });
+                                        }}
+                                        hideConversion={amount === 'all'}
+                                        locked={fundMax}
+                                        forceUnit={
+                                            fundMax || fiatError
+                                                ? 'sats'
+                                                : undefined
+                                        }
+                                        hideUnitChangeButton={!!fiatError}
+                                        fiatError={fiatError}
+                                        inputBackgroundColor={themeColor(
+                                            'background'
+                                        )}
+                                    />
 
-                                {BackendUtils.supportsCoinControl() && (
-                                    <View style={{ marginBottom: 20 }}>
-                                        <UTXOPicker
-                                            onValueChange={this.selectUTXOs}
-                                            UTXOsStore={UTXOsStore}
-                                        />
-                                    </View>
-                                )}
+                                    {BackendUtils.supportsOnchainSendMax() &&
+                                        additionalOutputs.length === 0 &&
+                                        account === 'default' && (
+                                            <View style={styles.sendMaxRow}>
+                                                <Text
+                                                    style={{
+                                                        ...styles.text,
+                                                        flex: 1,
+                                                        marginRight: 12,
+                                                        color: themeColor(
+                                                            'secondaryText'
+                                                        )
+                                                    }}
+                                                >
+                                                    {localeString(
+                                                        utxos.length > 0
+                                                            ? 'views.Send.fundMaxUtxos'
+                                                            : 'views.OpenChannel.fundMax'
+                                                    )}
+                                                </Text>
+                                                <Switch
+                                                    value={fundMax}
+                                                    onValueChange={() => {
+                                                        const newValue: boolean =
+                                                            !fundMax;
+                                                        if (newValue) {
+                                                            // keep the entered amount, also an
+                                                            // empty one, to put it back when
+                                                            // send max is turned off
+                                                            this.previousAmount =
+                                                                amount;
+                                                            this.previousSatAmount =
+                                                                satAmount;
+                                                            this.setState({
+                                                                fundMax:
+                                                                    newValue,
+                                                                amount:
+                                                                    implementation ===
+                                                                    'cln-rest'
+                                                                        ? 'all'
+                                                                        : '',
+                                                                satAmount:
+                                                                    utxoBalance >
+                                                                    0
+                                                                        ? utxoBalance
+                                                                        : confirmedBlockchainBalance
+                                                            });
+                                                        } else {
+                                                            this.setState({
+                                                                fundMax:
+                                                                    newValue,
+                                                                amount:
+                                                                    this
+                                                                        .previousAmount ||
+                                                                    '',
+                                                                satAmount:
+                                                                    this
+                                                                        .previousSatAmount ||
+                                                                    '0'
+                                                            });
+                                                        }
+                                                    }}
+                                                />
+                                            </View>
+                                        )}
 
-                                {BackendUtils.supportsOnchainSendMax() &&
-                                    additionalOutputs.length === 0 &&
-                                    account === 'default' && (
-                                        <View
-                                            style={{
-                                                flexDirection: 'row',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                marginBottom: 18
-                                            }}
+                                    {additionalOutputs.map((output, index) => (
+                                        <SectionCard
+                                            key={`additionalOutput-${index}`}
+                                            title={`${localeString(
+                                                'views.PSBT.output'
+                                            )} ${index + 2}`}
+                                            nested
+                                            style={{ marginTop: 20 }}
                                         >
-                                            <Text
-                                                style={{
-                                                    flex: 1,
-                                                    marginRight: 12,
-                                                    color: themeColor(
-                                                        'secondaryText'
-                                                    )
-                                                }}
-                                            >
-                                                {localeString(
-                                                    utxos.length > 0
-                                                        ? 'views.Send.fundMaxUtxos'
-                                                        : 'views.OpenChannel.fundMax'
-                                                )}
-                                            </Text>
-                                            <Switch
-                                                value={fundMax}
-                                                onValueChange={() => {
-                                                    const newValue: boolean =
-                                                        !fundMax;
-                                                    if (newValue) {
-                                                        // keep the entered amount, also an
-                                                        // empty one, to put it back when
-                                                        // send max is turned off
-                                                        this.previousAmount =
-                                                            amount;
-                                                        this.previousSatAmount =
-                                                            satAmount;
-                                                        this.setState({
-                                                            fundMax: newValue,
-                                                            amount:
-                                                                implementation ===
-                                                                'cln-rest'
-                                                                    ? 'all'
-                                                                    : '',
-                                                            satAmount:
-                                                                utxoBalance > 0
-                                                                    ? utxoBalance
-                                                                    : confirmedBlockchainBalance
-                                                        });
-                                                    } else {
-                                                        this.setState({
-                                                            fundMax: newValue,
-                                                            amount:
-                                                                this
-                                                                    .previousAmount ||
-                                                                '',
-                                                            satAmount:
-                                                                this
-                                                                    .previousSatAmount ||
-                                                                '0'
-                                                        });
-                                                    }
-                                                }}
-                                            />
-                                        </View>
-                                    )}
-
-                                {additionalOutputs.map((output, index) => {
-                                    return (
-                                        <View key={`additionalOutput-${index}`}>
                                             <Text
                                                 style={{
                                                     ...styles.text,
                                                     color: themeColor(
                                                         'secondaryText'
-                                                    )
+                                                    ),
+                                                    marginTop: 15
                                                 }}
                                             >
                                                 {localeString(
@@ -1140,20 +1167,11 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                     marginTop: 10,
                                                     marginBottom: 10
                                                 }}
-                                                onChangeText={(
-                                                    text: string
-                                                ) => {
-                                                    let newOutputs =
-                                                        additionalOutputs;
-
-                                                    newOutputs[index].address =
-                                                        text;
-
-                                                    this.setState({
-                                                        additionalOutputs:
-                                                            newOutputs
-                                                    });
-                                                }}
+                                                onChangeText={(text: string) =>
+                                                    this.updateOutput(index, {
+                                                        address: text
+                                                    })
+                                                }
                                             />
                                             <AmountInput
                                                 amount={output?.amount.toString()}
@@ -1163,21 +1181,12 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 onAmountChange={(
                                                     amount: string,
                                                     satAmount: string | number
-                                                ) => {
-                                                    let newOutputs =
-                                                        additionalOutputs;
-
-                                                    newOutputs[index].amount =
-                                                        amount;
-                                                    newOutputs[
-                                                        index
-                                                    ].satAmount = satAmount;
-
-                                                    this.setState({
-                                                        additionalOutputs:
-                                                            newOutputs
-                                                    });
-                                                }}
+                                                ) =>
+                                                    this.updateOutput(index, {
+                                                        amount,
+                                                        satAmount
+                                                    })
+                                                }
                                                 forceUnit={
                                                     fiatError
                                                         ? 'sats'
@@ -1188,119 +1197,67 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 }
                                                 fiatError={fiatError}
                                             />
-                                            <View
-                                                style={{
-                                                    marginTop: 10,
-                                                    marginBottom: 20
-                                                }}
-                                            >
-                                                <Button
+                                            <View style={styles.outputActions}>
+                                                <OutlinedButton
                                                     title={localeString(
                                                         'views.Send.removeOutput'
                                                     )}
-                                                    icon={{
-                                                        name: 'remove',
-                                                        size: 25,
-                                                        color: themeColor(
-                                                            'background'
-                                                        )
-                                                    }}
-                                                    onPress={() => {
-                                                        let newOutputs =
-                                                            additionalOutputs;
-
-                                                        newOutputs =
-                                                            newOutputs.filter(
-                                                                (item) =>
-                                                                    item !==
-                                                                    output
-                                                            );
-
-                                                        this.setState({
-                                                            additionalOutputs:
-                                                                newOutputs
-                                                        });
-                                                    }}
-                                                    tertiary
+                                                    icon="delete-outline"
+                                                    onPress={() =>
+                                                        this.removeOutput(index)
+                                                    }
                                                 />
                                             </View>
-                                        </View>
-                                    );
-                                })}
+                                        </SectionCard>
+                                    ))}
 
-                                {transactionType === 'On-chain' &&
-                                    BackendUtils.supportsOnchainBatching() &&
-                                    !fundMax && (
-                                        <View
-                                            style={{
-                                                marginTop: 0,
-                                                marginBottom: 20
-                                            }}
-                                        >
-                                            <Button
+                                    {canAddOutput && (
+                                        <View style={styles.addOutputRow}>
+                                            <OutlinedButton
                                                 title={localeString(
                                                     'views.Send.addOutput'
                                                 )}
-                                                icon={{
-                                                    name: 'add',
-                                                    size: 25,
-                                                    color: themeColor(
-                                                        'background'
-                                                    )
-                                                }}
-                                                onPress={() => {
-                                                    const additionalOutputs =
-                                                        this.state
-                                                            .additionalOutputs;
-
-                                                    additionalOutputs.push({
-                                                        address: '',
-                                                        amount: '',
-                                                        satAmount: ''
-                                                    });
-
-                                                    this.setState({
-                                                        additionalOutputs
-                                                    });
-                                                }}
+                                                icon="add"
+                                                onPress={this.addOutput}
                                             />
                                         </View>
                                     )}
+                                </SectionCard>
+
+                                {BackendUtils.supportsCoinControl() && (
+                                    <View style={{ marginBottom: 20 }}>
+                                        <UTXOPicker
+                                            onValueChange={this.selectUTXOs}
+                                            UTXOsStore={UTXOsStore}
+                                        />
+                                    </View>
+                                )}
 
                                 {supportsOnchainSendFeeRate ? (
-                                    <>
+                                    <OnchainFeePicker
+                                        fee={fee}
+                                        onChangeFee={(text: string) =>
+                                            this.setState({ fee: text })
+                                        }
+                                    />
+                                ) : (
+                                    <SectionCard
+                                        title={localeString(
+                                            'views.Send.feeSatsVbyte'
+                                        )}
+                                    >
                                         <Text
                                             style={{
                                                 ...styles.text,
-                                                color: themeColor(
-                                                    'secondaryText'
-                                                )
+                                                color: themeColor('text'),
+                                                paddingTop: 10
                                             }}
                                         >
                                             {localeString(
-                                                'views.Send.feeSatsVbyte'
+                                                'views.Send.feeRateSetAutomatically'
                                             )}
                                         </Text>
-
-                                        <OnchainFeeInput
-                                            fee={fee}
-                                            onChangeFee={(text: string) =>
-                                                this.setState({ fee: text })
-                                            }
-                                            navigation={navigation}
-                                        />
-                                    </>
-                                ) : (
-                                    <Text
-                                        style={{
-                                            ...styles.text,
-                                            color: themeColor('secondaryText')
-                                        }}
-                                    >
-                                        {localeString(
-                                            'views.Send.feeRateSetAutomatically'
-                                        )}
-                                    </Text>
+                                    </SectionCard>
                                 )}
 
                                 <View
@@ -1796,6 +1753,21 @@ export default class Send extends React.Component<SendProps, SendState> {
 }
 
 const styles = StyleSheet.create({
+    sendMaxRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between'
+    },
+    outputActions: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        marginTop: 10
+    },
+    addOutputRow: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        marginTop: 20
+    },
     text: {
         fontFamily: 'PPNeueMontreal-Book'
     },

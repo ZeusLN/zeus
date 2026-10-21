@@ -15,6 +15,8 @@ import { reaction } from 'mobx';
 import AccountFilter from '../components/AccountFilter';
 import Amount from './Amount';
 import Button from '../components/Button';
+import OutlinedButton from './OutlinedButton';
+import SectionCard from './SectionCard';
 import LoadingIndicator from './LoadingIndicator';
 import ModalBox from './ModalBox';
 
@@ -22,6 +24,7 @@ import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
+import ModalStore from '../stores/ModalStore';
 import UTXOsStore from '../stores/UTXOsStore';
 import storage from '../storage';
 
@@ -32,6 +35,7 @@ interface UTXOPickerProps {
     displayValue?: string;
     onValueChange: (value: any, balance: number, account: string) => void;
     UTXOsStore: UTXOsStore;
+    ModalStore?: ModalStore;
 }
 
 interface UTXOPickerState {
@@ -49,7 +53,7 @@ const DEFAULT_TITLE = localeString('components.UTXOPicker.defaultTitle');
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 const FOOTER_PADDING_BOTTOM = 12;
 
-@inject('UTXOsStore')
+@inject('UTXOsStore', 'ModalStore')
 @observer
 export default class UTXOPicker extends React.Component<
     UTXOPickerProps,
@@ -195,6 +199,17 @@ export default class UTXOPicker extends React.Component<
         this.props.onValueChange([], 0, this.state.account);
     }
 
+    showInfo = () => {
+        const { title, ModalStore } = this.props;
+        ModalStore?.toggleInfoModal({
+            title: title || DEFAULT_TITLE,
+            text: [
+                localeString('components.UTXOPicker.modal.description'),
+                localeString('components.UTXOPicker.infoModal.automatic')
+            ]
+        });
+    };
+
     formatOutpoints(outpoints: string[]): string {
         const display: string[] = [];
         outpoints.forEach((utxo: string) => {
@@ -307,6 +322,7 @@ export default class UTXOPicker extends React.Component<
             utxosSet,
             showUtxoModal,
             selectedBalance,
+            setBalance,
             account
         } = this.state;
         const { utxos, loading, getUTXOs, accounts } = UTXOsStore;
@@ -523,75 +539,46 @@ export default class UTXOPicker extends React.Component<
                     </View>
                 </ModalBox>
 
-                <View>
-                    <Text
-                        style={{
-                            ...styles.secondaryText,
-                            color: themeColor('secondaryText')
-                        }}
-                    >
-                        {title || DEFAULT_TITLE}
-                    </Text>
-                    {utxosSet.length > 0 ? (
-                        <View style={styles.committedRow}>
-                            <TouchableOpacity
-                                style={styles.committedValue}
-                                onPress={() => this.openPicker()}
-                                accessibilityRole="button"
-                                accessibilityLabel={localeString(
-                                    'components.UTXOPicker.selectUTXOs'
-                                )}
-                            >
-                                <Text
-                                    style={{
-                                        ...styles.text,
-                                        color: themeColor('text'),
-                                        paddingTop: 10,
-                                        paddingLeft: 10,
-                                        fontSize: 16
-                                    }}
-                                >
-                                    {this.formatOutpoints(utxosSet)}
-                                </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                onPress={() => this.clearSelection()}
-                                accessibilityRole="button"
-                                accessibilityLabel={localeString(
-                                    'general.clear'
-                                )}
-                            >
-                                <Text
-                                    style={{
-                                        ...styles.text,
-                                        color: themeColor('highlight'),
-                                        fontSize: 16,
-                                        paddingLeft: 12,
-                                        paddingTop: 10
-                                    }}
-                                >
-                                    {localeString('general.clear')}
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    ) : (
-                        <TouchableOpacity onPress={() => this.openPicker()}>
+                <SectionCard
+                    title={title || DEFAULT_TITLE}
+                    onInfoPress={this.showInfo}
+                >
+                    {utxosSet.length > 0 && (
+                        <View style={styles.committed}>
                             <Text
                                 style={{
                                     ...styles.text,
                                     color: themeColor('text'),
-                                    paddingTop: 10,
-                                    paddingLeft: 10,
                                     fontSize: 16
                                 }}
                             >
-                                {localeString(
-                                    'components.UTXOPicker.selectUTXOs'
-                                )}
+                                {this.formatOutpoints(utxosSet)}
                             </Text>
-                        </TouchableOpacity>
+                            <View style={styles.committedAmount}>
+                                <Amount
+                                    sats={setBalance}
+                                    sensitive={true}
+                                    color="secondaryText"
+                                />
+                            </View>
+                        </View>
                     )}
-                </View>
+                    <View style={styles.cardActions}>
+                        {utxosSet.length > 0 && (
+                            <OutlinedButton
+                                title={localeString('general.clear')}
+                                onPress={() => this.clearSelection()}
+                                style={{ marginRight: 10 }}
+                            />
+                        )}
+                        <OutlinedButton
+                            title={localeString(
+                                'components.UTXOPicker.selectUTXOs'
+                            )}
+                            onPress={() => this.openPicker()}
+                        />
+                    </View>
+                </SectionCard>
             </React.Fragment>
         );
     }
@@ -599,9 +586,6 @@ export default class UTXOPicker extends React.Component<
 
 const styles = StyleSheet.create({
     text: {
-        fontFamily: 'PPNeueMontreal-Book'
-    },
-    secondaryText: {
         fontFamily: 'PPNeueMontreal-Book'
     },
     sheet: {
@@ -711,12 +695,17 @@ const styles = StyleSheet.create({
         paddingTop: 10,
         paddingBottom: 10
     },
-    committedRow: {
-        flexDirection: 'row',
-        alignItems: 'center'
+    committed: {
+        paddingTop: 12
     },
-    committedValue: {
-        flex: 1,
-        flexShrink: 1
+    committedAmount: {
+        alignSelf: 'flex-start',
+        marginTop: 4
+    },
+    cardActions: {
+        flexDirection: 'row',
+        justifyContent: 'flex-end',
+        flexWrap: 'wrap',
+        paddingTop: 20
     }
 });

@@ -141,6 +141,25 @@ describe('AmountInput display', () => {
             borderColor: 'theme:error'
         });
     });
+
+    it('fills the input with the secondary color by default', async () => {
+        await renderInput({ amount: '1' });
+
+        expect(screen.getByText('1 sat').parent).toHaveStyle({
+            backgroundColor: 'theme:secondary'
+        });
+    });
+
+    it('fills the input with the given background color', async () => {
+        await renderInput({
+            amount: '1',
+            inputBackgroundColor: 'theme:background'
+        });
+
+        expect(screen.getByText('1 sat').parent).toHaveStyle({
+            backgroundColor: 'theme:background'
+        });
+    });
 });
 
 describe('AmountInput conversions', () => {

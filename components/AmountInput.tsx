@@ -41,6 +41,9 @@ interface AmountInputProps {
     // Why the amount could not be shown in fiat. Shown under the input in
     // place of the conversion rate.
     fiatError?: string;
+    // Defaults to the theme's secondary color. Inside a card, which already
+    // uses that color, pass the screen background instead.
+    inputBackgroundColor?: string;
 }
 
 interface AmountInputState {
@@ -183,7 +186,8 @@ export default class AmountInput extends React.Component<
             forceUnit,
             prefix,
             error,
-            fiatError
+            fiatError,
+            inputBackgroundColor
         } = this.props;
         const { units }: any = UnitsStore;
         const effectiveUnits = forceUnit || units;
@@ -231,7 +235,9 @@ export default class AmountInput extends React.Component<
                         style={[
                             styles.amountDisplay,
                             {
-                                backgroundColor: themeColor('secondary'),
+                                backgroundColor:
+                                    inputBackgroundColor ||
+                                    themeColor('secondary'),
                                 borderWidth: error ? 1 : 0,
                                 borderColor: error
                                     ? themeColor('error')

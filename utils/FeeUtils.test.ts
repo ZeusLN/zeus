@@ -1,6 +1,7 @@
 import FeeUtils, {
     hasUsableClaimFee,
     isPlausibleSatPerVbyte,
+    presetForFee,
     sanitizeRecommendedFees,
     MAX_SAT_PER_VBYTE
 } from './FeeUtils';
@@ -230,5 +231,42 @@ describe('FeeUtils', () => {
                 false
             );
         });
+    });
+});
+
+describe('presetForFee', () => {
+    const fees = { fastestFee: 5, halfHourFee: 4, hourFee: 1, minimumFee: 1 };
+
+    it.each([
+        ['5', 'fastestFee'],
+        ['4', 'halfHourFee'],
+        ['1', 'hourFee']
+    ])('matches a rate of %p to %p', (fee, preset) => {
+        expect(presetForFee(fee, fees)).toBe(preset);
+    });
+
+    it('lets the preferred preset win a tie', () => {
+        expect(presetForFee('1', fees, 'minimumFee')).toBe('minimumFee');
+    });
+
+    it('ignores a preferred preset with another rate', () => {
+        expect(presetForFee('1', fees, 'fastestFee')).toBe('hourFee');
+    });
+
+    it.each([['3'], ['1.5'], [''], [undefined]])(
+        'calls a rate of %p custom',
+        (fee) => {
+            expect(presetForFee(fee, fees)).toBe('custom');
+        }
+    );
+
+    it('calls everything custom before the rates load', () => {
+        expect(presetForFee('5', {})).toBe('custom');
+    });
+
+    it('does not match economyFee, which is not a preset', () => {
+        expect(presetForFee('2', { fastestFee: 5, economyFee: 2 })).toBe(
+            'custom'
+        );
     });
 });
