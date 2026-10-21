@@ -1295,17 +1295,18 @@
     "@eslint/core" "^0.17.0"
     levn "^0.4.1"
 
-"@getalby/lightning-tools@^8.1.1":
-  version "8.1.1"
-  resolved "https://registry.yarnpkg.com/@getalby/lightning-tools/-/lightning-tools-8.1.1.tgz#4bf8be9f30dd76f7dd082262e862e63c16591fae"
-  integrity sha512-gB+3fvTGz9bbl31JNgKMWqG4dZWgCxSB51fYn+F4tZ3x2h5oI/yHjvb6W9GBo2Zscr5gMP64gs0LlzKYoETlvQ==
+"@getalby/lightning-tools@^9.0.2":
+  version "9.0.2"
+  resolved "https://registry.yarnpkg.com/@getalby/lightning-tools/-/lightning-tools-9.0.2.tgz#6d5bf6575c6149354f73f3089157ce640efbab91"
+  integrity sha512-h58Bw8oQg9MXdGud5agfRnjGVY24Hzj8hCljdIEZyijXjfkVdSXet2Mpjc3lz/BpIdZz51uM8CXuwnXi0BOqFg==
 
-"@getalby/sdk@8.0.3":
-  version "8.0.3"
-  resolved "https://registry.yarnpkg.com/@getalby/sdk/-/sdk-8.0.3.tgz#dd59ce94682c1c041fa90b42c16e959aa2d59f03"
-  integrity sha512-vPEogAWwLHbL55COeXrRN7yRBXMDGDxX1M2A+o3Lqw60FFng6fa9FK9sw8ptdILMD1dQZq8FzPXuabQ7seoDBA==
+"@getalby/sdk@8.1.1":
+  version "8.1.1"
+  resolved "https://registry.yarnpkg.com/@getalby/sdk/-/sdk-8.1.1.tgz#17aac5f7938e5aa2625bb47d9215055f56eab142"
+  integrity sha512-2Y+5bpSkqlUAh5azEjJl1BZ7hp52Yxy/Gaa1esAXJw6D0UszbycKO1WViX2FWGjqq1gW/wmRNkXWdwgaUk9qrg==
   dependencies:
-    "@getalby/lightning-tools" "^8.1.1"
+    "@getalby/lightning-tools" "^9.0.2"
+    "@webbtc/webln-types" "^3.0.0"
     nostr-tools "^2.23.3"
 
 "@hapi/hoek@^9.0.0", "@hapi/hoek@^9.3.0":
@@ -3028,6 +3029,11 @@
   version "9.3.1"
   resolved "https://registry.yarnpkg.com/@vscode/sudo-prompt/-/sudo-prompt-9.3.1.tgz#c562334bc6647733649fd42afc96c0eea8de3b65"
   integrity sha512-9ORTwwS74VaTn38tNbQhsA5U44zkJfcb0BdTSyyG6frP4e8KMtHuTXYmwefe5dpL8XB1aGSIVTaLjD3BbWb5iA==
+
+"@webbtc/webln-types@^3.0.0":
+  version "3.0.0"
+  resolved "https://registry.yarnpkg.com/@webbtc/webln-types/-/webln-types-3.0.0.tgz#448b2138423865087ba8859e9e6430fc2463b864"
+  integrity sha512-aXfTHLKz5lysd+6xTeWl+qHNh/p3qVYbeLo+yDN5cUDmhie2ZoGvkppfWxzbGkcFBzb6dJyQ2/i2cbmDHas+zQ==
 
 "@xmldom/xmldom@^0.8.8":
   version "0.8.15"
