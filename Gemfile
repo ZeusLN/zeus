@@ -13,5 +13,12 @@ gem 'logger'
 gem 'benchmark'
 gem 'mutex_m'
 gem 'nkf'
-gem 'xcodeproj', '< 1.26.0'
 gem 'concurrent-ruby', '< 1.3.8'
+
+# Deliberate divergence from the React Native template, which still pins
+# xcodeproj '< 1.26.0'. Our app extension targets (ShareQR, NWCWidget) use
+# PBXFileSystemSynchronizedRootGroup, an ISA that Xcodeproj only understands
+# from 1.26.0 on, so the template pin makes `bundle exec pod install` fail
+# outright here. 1.28.0 adds Xcode 26 project support and 1.28.1 declares the
+# nkf and base64 dependencies that Bundler needs on Ruby 3.4+.
+gem 'xcodeproj', '>= 1.28.1'
