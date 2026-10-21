@@ -2284,9 +2284,9 @@ export default class NostrWalletConnectStore {
                     );
                 }
             }
-            this.invoicesStore.creatingInvoiceError = false;
-            this.invoicesStore.error_msg = null;
-
+            // silent: the invoice comes back in the result, so concurrent
+            // requests don't read each other's, and the Receive screen
+            // keeps the invoice it is showing
             const invoiceResult = await this.invoicesStore.createUnifiedInvoice(
                 {
                     value: millisatsToSats(request.amount).toString(),
@@ -2294,24 +2294,19 @@ export default class NostrWalletConnectStore {
                     expirySeconds: String(
                         request.expiry || DEFAULT_INVOICE_EXPIRY_SECONDS
                     ),
-                    noLsp: true
+                    noLsp: true,
+                    skipOnchain: true,
+                    silent: true
                 }
             );
 
-            const paymentRequest = this.invoicesStore.payment_request;
+            const paymentRequest = invoiceResult?.paymentRequest;
 
-            const unifiedInvoiceCreationFailed =
-                this.invoicesStore.creatingInvoiceError ||
-                (!invoiceResult && !paymentRequest) ||
-                !paymentRequest ||
-                typeof paymentRequest !== 'string';
-
-            if (unifiedInvoiceCreationFailed) {
+            if (!paymentRequest || typeof paymentRequest !== 'string') {
                 throw new Error(
-                    this.invoicesStore.error_msg ||
-                        localeString(
-                            'stores.NostrWalletConnectStore.error.failedToCreateInvoice'
-                        )
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.failedToCreateInvoice'
+                    )
                 );
             }
 

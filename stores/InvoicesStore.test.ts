@@ -9,6 +9,7 @@ jest.mock('../utils/BackendUtils', () => ({
         getNewChangeAddress: jest.fn(),
         isLNDBased: jest.fn(() => false),
         supportsFlowLSP: jest.fn(() => false),
+        supportsOnchainReceiving: jest.fn(() => false),
         createInvoice: jest.fn(),
         lookupInvoice: jest.fn()
     }
@@ -1030,5 +1031,111 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
             expect(requestedValue()).toBe('50000');
             expect(submittedInvoice()).toBe('lnbc-wrapped');
         });
+    });
+});
+
+describe('InvoicesStore.createUnifiedInvoice', () => {
+    const deferred = () => {
+        let resolve: (value: any) => void = () => {};
+        const promise = new Promise((r) => (resolve = r));
+        return { promise, resolve };
+    };
+
+    const newUnifiedStore = () =>
+        new InvoicesStore(
+            { settings: {} } as any,
+            {
+                resetFee: jest.fn(),
+                clearFee: jest.fn(),
+                flow_error: false
+            } as any,
+            {} as any,
+            {} as any
+        );
+
+    const params = { memo: '', value: '1000', expirySeconds: '3600' };
+
+    afterEach(() => {
+        (BackendUtils.createInvoice as jest.Mock).mockReset();
+    });
+
+    it('returns each overlapping call its own payment request', async () => {
+        const first = deferred();
+        const second = deferred();
+        (BackendUtils.createInvoice as jest.Mock)
+            .mockReturnValueOnce(first.promise)
+            .mockReturnValueOnce(second.promise);
+
+        const store = newUnifiedStore();
+        const a = store.createUnifiedInvoice(params);
+        const b = store.createUnifiedInvoice(params);
+        // both backend calls finish in the same tick
+        first.resolve({ payment_request: 'lnbc-first', r_hash: 'aa' });
+        second.resolve({ payment_request: 'lnbc-second', r_hash: 'bb' });
+
+        const [resultA, resultB]: any[] = await Promise.all([a, b]);
+        expect(resultA).toEqual({ rHash: 'aa', paymentRequest: 'lnbc-first' });
+        expect(resultB).toEqual({
+            rHash: 'bb',
+            paymentRequest: 'lnbc-second'
+        });
+    });
+
+    it('leaves the invoice shown on the Receive screen alone when silent', async () => {
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            payment_request: 'lnbc-nwc',
+            r_hash: 'cc'
+        });
+
+        const store = newUnifiedStore();
+        store.payment_request = 'lnbc-on-screen';
+        store.payment_request_amt = '500';
+
+        const result: any = await store.createUnifiedInvoice({
+            ...params,
+            noLsp: true,
+            silent: true
+        });
+
+        expect(result.paymentRequest).toBe('lnbc-nwc');
+        expect(store.payment_request).toBe('lnbc-on-screen');
+        expect(store.payment_request_amt).toBe('500');
+        expect(store.creatingInvoice).toBeFalsy();
+        // the fee quote and LSP error shown on the Receive screen stay too
+        expect(store.lspStore.clearFee).not.toHaveBeenCalled();
+        expect(store.lspStore.resetFee).not.toHaveBeenCalled();
+    });
+
+    it('throws the backend error instead of setting error_msg when silent', async () => {
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            error: true,
+            message: 'node offline'
+        });
+
+        const store = newUnifiedStore();
+
+        await expect(
+            store.createUnifiedInvoice({
+                ...params,
+                noLsp: true,
+                silent: true
+            })
+        ).rejects.toThrow('node offline');
+        expect(store.creatingInvoiceError).toBeFalsy();
+        expect(store.error_msg).toBeFalsy();
+    });
+
+    it('still updates the Receive screen fields by default', async () => {
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            payment_request: 'lnbc-receive',
+            r_hash: 'dd'
+        });
+
+        const store = newUnifiedStore();
+        await store.createUnifiedInvoice(params);
+
+        expect(store.payment_request).toBe('lnbc-receive');
+        expect(store.payment_request_amt).toBe('1000');
+        expect(store.creatingInvoice).toBe(false);
     });
 });

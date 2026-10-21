@@ -2,6 +2,9 @@ jest.mock('../stores/Stores');
 
 jest.mock('../utils/LocaleUtils');
 
+jest.mock('react-native-blob-util', () => ({}));
+jest.mock('../ldknode/LdkNodeInjection', () => ({}));
+
 jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
     default: {
@@ -9,7 +12,10 @@ jest.mock('../utils/BackendUtils', () => ({
         supportsCashuWallet: jest.fn(),
         supportsMessageSigning: jest.fn(),
         supportsCustomFeeLimit: jest.fn(),
-        decodePaymentRequest: jest.fn()
+        decodePaymentRequest: jest.fn(),
+        createInvoice: jest.fn(),
+        supportsFlowLSP: jest.fn(() => false),
+        supportsOnchainReceiving: jest.fn(() => false)
     }
 }));
 
@@ -72,6 +78,7 @@ import Payment from '../models/Payment';
 import CashuPayment from '../models/CashuPayment';
 import Base64Utils from '../utils/Base64Utils';
 import NostrConnectUtils, { Nip47ErrorCode } from '../utils/NostrConnectUtils';
+import InvoicesStore from './InvoicesStore';
 import NostrWalletConnectStore, {
     NWC_CLIENT_KEYS,
     NWC_CONNECTIONS_KEY,
@@ -1967,6 +1974,102 @@ describe('NostrWalletConnectStore make_invoice limits', () => {
         const result = (store as any).checkMakeInvoiceLimits(connection);
 
         expect(result?.error?.code).toBe(Nip47ErrorCode.RATE_LIMITED);
+    });
+});
+
+describe('NostrWalletConnectStore make_invoice invoice isolation', () => {
+    const deferred = () => {
+        let resolve: (value: any) => void = () => {};
+        const promise = new Promise((r) => (resolve = r));
+        return { promise, resolve };
+    };
+
+    const setup = () => {
+        const invoicesStore = new InvoicesStore(
+            { settings: {} } as any,
+            { resetFee: jest.fn(), flow_error: false } as any,
+            {} as any,
+            {} as any
+        );
+        (invoicesStore as any).getInvoices = jest.fn().mockResolvedValue([]);
+        const { store } = createStore({ invoicesStore });
+        const connection = addConnection(store, {
+            permissions: ['make_invoice']
+        });
+        return { store, connection, invoicesStore };
+    };
+
+    beforeEach(() => {
+        jest.spyOn(
+            NostrConnectUtils,
+            'decodeInvoiceTagsForMakeInvoice'
+        ).mockImplementation(async (_paymentRequest, rHash) => ({
+            paymentHash: rHash || '',
+            descriptionHash: '',
+            expiryTime: 4_000_000_000
+        }));
+        jest.spyOn(NostrConnectUtils, 'notifyNwcInvoiceReady').mockReturnValue(
+            undefined as any
+        );
+    });
+
+    it('answers overlapping make_invoice requests with their own invoices', async () => {
+        const { store, connection } = setup();
+        const first = deferred();
+        const second = deferred();
+        (BackendUtils.createInvoice as jest.Mock)
+            .mockReturnValueOnce(first.promise)
+            .mockReturnValueOnce(second.promise);
+
+        const a = (store as any).handleMakeInvoice(connection, {
+            amount: 1000_000
+        });
+        const b = (store as any).handleMakeInvoice(connection, {
+            amount: 2000_000
+        });
+        await flushMicrotasks();
+        // both backend calls finish in the same tick
+        first.resolve({ payment_request: 'lnbc-first', r_hash: 'aa' });
+        second.resolve({ payment_request: 'lnbc-second', r_hash: 'bb' });
+
+        const [responseA, responseB] = await Promise.all([a, b]);
+        expect(responseA.error).toBeUndefined();
+        expect(responseB.error).toBeUndefined();
+        expect(responseA.result.invoice).toBe('lnbc-first');
+        expect(responseB.result.invoice).toBe('lnbc-second');
+    });
+
+    it('does not replace the invoice shown on the Receive screen', async () => {
+        const { store, connection, invoicesStore } = setup();
+        invoicesStore.payment_request = 'lnbc-on-screen';
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            payment_request: 'lnbc-nwc',
+            r_hash: 'cc'
+        });
+
+        const response = await (store as any).handleMakeInvoice(connection, {
+            amount: 1000_000
+        });
+
+        expect(response.result.invoice).toBe('lnbc-nwc');
+        expect(invoicesStore.payment_request).toBe('lnbc-on-screen');
+    });
+
+    it('returns the backend error when the invoice cannot be created', async () => {
+        const { store, connection, invoicesStore } = setup();
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            error: true,
+            message: 'node offline'
+        });
+
+        const response = await (store as any).handleMakeInvoice(connection, {
+            amount: 1000_000
+        });
+
+        expect(response.error?.code).toBe(Nip47ErrorCode.INTERNAL_ERROR);
+        expect(response.error?.message).toBe('node offline');
+        expect(invoicesStore.error_msg).toBeFalsy();
+        expect(connection.activity).toHaveLength(0);
     });
 });
 
