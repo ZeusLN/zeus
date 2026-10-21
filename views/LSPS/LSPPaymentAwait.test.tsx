@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { act, render, screen } from '@testing-library/react-native';
 
 // mobx-react's main entry needs react-dom; the stores arrive as props here
 jest.mock('mobx-react', () => ({
@@ -41,8 +41,8 @@ jest.mock('../../storage', () => ({
     getItem: jest.fn(() => Promise.resolve(null))
 }));
 jest.mock('../../utils/BackendUtils', () => ({
-    supportsLSPS1rest: () => false,
-    supportsLSPScustomMessage: () => false,
+    supportsLSPS1rest: () => true,
+    supportsLSPScustomMessage: () => true,
     supportsLSPS7native: () => false
 }));
 jest.mock('../../utils/handleAnything', () => jest.fn());
@@ -66,6 +66,27 @@ const PAY_FROM_ZEUS = 'views.LSPS1.payFromZeus';
 
 const navigation = { navigate: jest.fn(), popTo: jest.fn() } as any;
 
+const ENDPOINT = 'https://lsp.example.com/api/v1';
+const PEER = '02abc@lsp.example.com:9735';
+
+// order history entry the screen reads its poll endpoint and peer from
+const storedOrders = JSON.stringify([
+    JSON.stringify({
+        order: { result: { order_id: 'order-1' } },
+        endpoint: ENDPOINT,
+        peer: PEER
+    })
+]);
+
+let lspStore: any;
+
+// the first poll runs before the stored endpoint/peer reach state, so the
+// first request goes out on the next poll, 5 seconds later
+const advancePastFirstPoll = () =>
+    act(async () => {
+        jest.advanceTimersByTime(5000);
+    });
+
 const viewFor = (payment: any, service = LSPService.LSPS1) => (
     <LSPPaymentAwait
         navigation={navigation}
@@ -74,7 +95,7 @@ const viewFor = (payment: any, service = LSPService.LSPS1) => (
                 params: buildPaymentAwaitParams(payment, 'order-1', service)
             } as any
         }
-        LSPStore={{} as any}
+        LSPStore={lspStore}
         ChannelsStore={{} as any}
         NodeInfoStore={{} as any}
     />
@@ -85,10 +106,21 @@ const renderView = (payment: any, service = LSPService.LSPS1) =>
 
 describe('LSPPaymentAwait invoice check', () => {
     beforeEach(() => {
-        (Storage.getItem as jest.Mock).mockClear();
+        (Storage.getItem as jest.Mock)
+            .mockClear()
+            .mockResolvedValue(storedOrders);
+        lspStore = {
+            lsps1GetOrderREST: jest.fn(() => Promise.resolve()),
+            lsps7GetOrderCustomMessage: jest.fn(() => Promise.resolve())
+        };
     });
 
-    it('shows the QR and starts polling when the invoice matches the order total', async () => {
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('shows the QR and polls the LSPS1 order when the invoice matches the order total', async () => {
+        jest.useFakeTimers();
         await renderView({
             bolt11: { invoice: INVOICE_100K, order_total_sat: '100000' }
         });
@@ -98,7 +130,40 @@ describe('LSPPaymentAwait invoice check', () => {
         );
         expect(screen.getByText(PAY_FROM_ZEUS)).toBeTruthy();
         expect(screen.queryByText(MISMATCH)).toBeNull();
-        expect(Storage.getItem).toHaveBeenCalled();
+        await advancePastFirstPoll();
+        expect(lspStore.lsps1GetOrderREST).toHaveBeenCalledWith(
+            'order-1',
+            ENDPOINT
+        );
+    });
+
+    it('polls the LSPS7 order when the invoice matches the order total', async () => {
+        jest.useFakeTimers();
+        await renderView(
+            { bolt11: { invoice: INVOICE_100K, order_total_sat: '100000' } },
+            LSPService.LSPS7
+        );
+
+        expect(screen.getByTestId('order-qr')).toBeTruthy();
+        await advancePastFirstPoll();
+        expect(lspStore.lsps7GetOrderCustomMessage).toHaveBeenCalledWith(
+            'order-1',
+            PEER
+        );
+    });
+
+    it('never polls a rejected order, including after the poll interval', async () => {
+        jest.useFakeTimers();
+        await renderView({
+            bolt11: { invoice: INVOICE_100K, order_total_sat: '1000' }
+        });
+
+        await advancePastFirstPoll();
+        await advancePastFirstPoll();
+
+        expect(screen.getByText(MISMATCH)).toBeTruthy();
+        expect(lspStore.lsps1GetOrderREST).not.toHaveBeenCalled();
+        expect(lspStore.lsps7GetOrderCustomMessage).not.toHaveBeenCalled();
     });
 
     it.each([
@@ -131,6 +196,8 @@ describe('LSPPaymentAwait invoice check', () => {
             expect(screen.queryByTestId('order-qr')).toBeNull();
             expect(screen.queryByText(PAY_FROM_ZEUS)).toBeNull();
             expect(Storage.getItem).not.toHaveBeenCalled();
+            expect(lspStore.lsps1GetOrderREST).not.toHaveBeenCalled();
+            expect(lspStore.lsps7GetOrderCustomMessage).not.toHaveBeenCalled();
         }
     );
 
