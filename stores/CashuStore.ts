@@ -3685,7 +3685,6 @@ export default class CashuStore {
         this.startConnectivityMonitoring();
 
         const lndDir = this.getNodeDir();
-        await MigrationsUtils.migrateLegacyCashuKeysToNodeDir(this);
 
         // Load app-specific data from local storage (activity, preferences, seed)
         const [
