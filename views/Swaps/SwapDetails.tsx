@@ -1187,9 +1187,17 @@ export default class SwapDetails extends React.Component<
 
         const serviceProvider = this.props.route.params?.serviceProvider ?? '';
 
+        // the host's status alone can't tell whether this wallet has paid
+        const funded =
+            swapData.isSubmarineSwap && !!SwapStore?.isSwapFunded(swapData);
+
         const progressUpdate = swapData.isSubmarineSwap
             ? updates === SwapState.InvoiceSet
-                ? localeString('views.SwapDetails.waitingForOnchainTx')
+                ? funded
+                    ? localeString(
+                          'views.SwapDetails.paymentSentWaitingForProvider'
+                      )
+                    : localeString('views.SwapDetails.waitingForOnchainTx')
                 : updates === SwapState.TransactionMempool
                 ? localeString('views.SwapDetails.waitingForConf')
                 : ''
@@ -1223,6 +1231,7 @@ export default class SwapDetails extends React.Component<
         const failure = failureReason || swapData.failureReason;
 
         const showPayButton =
+            !funded &&
             !!swapData.qrCodeValue &&
             (updates === SwapState.InvoiceSet || updates === SwapState.Created);
 
@@ -1251,6 +1260,7 @@ export default class SwapDetails extends React.Component<
                                 <LoadingIndicator size={35} />
                             )}
                             {!this.state.loading &&
+                                !funded &&
                                 (updates === SwapState.InvoiceSet ||
                                     (swapData.type === SwapType.Reverse &&
                                         updates === SwapState.Created)) && (
