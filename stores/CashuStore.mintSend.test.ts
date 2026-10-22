@@ -250,6 +250,96 @@ describe('CashuStore.createInvoice', () => {
         );
     });
 
+    describe('overlapping requests', () => {
+        // Resolves the next createMintQuote call when release() is called
+        const deferQuote = (id: string, request: string) => {
+            let release: () => void = () => {};
+            cdk.createMintQuote.mockImplementationOnce(
+                () =>
+                    new Promise((resolve) => {
+                        release = () =>
+                            resolve(mintQuote('Unpaid', { id, request }));
+                    })
+            );
+            return () => release();
+        };
+
+        it('keeps the newer invoice when an older request resolves last', async () => {
+            const store = newStore();
+            const releaseOld = deferQuote('quote-old', 'lnbc-old');
+            const releaseNew = deferQuote('quote-new', 'lnbc-new');
+
+            const older = store.createInvoice({ memo: '', value: '10' });
+            const newer = store.createInvoice({ memo: '', value: '20' });
+            await new Promise((resolve) => setImmediate(resolve));
+
+            releaseNew();
+            expect(await newer).toEqual({ paymentRequest: 'lnbc-new' });
+            releaseOld();
+            expect(await older).toBeUndefined();
+
+            expect(store.invoice).toBe('lnbc-new');
+            expect(store.quoteId).toBe('quote-new');
+            expect(store.creatingInvoice).toBe(false);
+            // the older quote is still recorded so it can be checked later
+            expect(store.invoices!.map((i: any) => i.quote)).toEqual([
+                'quote-new',
+                'quote-old'
+            ]);
+        });
+
+        it('does not show or withdraw into a quote that arrives after clearInvoice', async () => {
+            const store = newStore();
+            const release = deferQuote('quote-old', 'lnbc-old');
+            const lnurl = {
+                callback: 'https://service.example/withdraw',
+                k1: 'k1value',
+                domain: 'service.example'
+            } as any;
+
+            const pending = store.createInvoice({
+                memo: '',
+                value: '10',
+                lnurl
+            });
+            await new Promise((resolve) => setImmediate(resolve));
+            store.clearInvoice();
+            release();
+            await pending;
+            await new Promise((resolve) => setImmediate(resolve));
+
+            expect(store.invoice).toBeUndefined();
+            expect(store.quoteId).toBeUndefined();
+            expect(store.creatingInvoice).toBe(false);
+            expect(blobFetch).not.toHaveBeenCalled();
+        });
+
+        it('does not report the error of a superseded request', async () => {
+            const store = newStore();
+            let fail: () => void = () => {};
+            cdk.createMintQuote.mockImplementationOnce(
+                () =>
+                    new Promise((_, reject) => {
+                        fail = () => reject(new Error('mint offline'));
+                    })
+            );
+            const releaseNew = deferQuote('quote-new', 'lnbc-new');
+
+            const older = store.createInvoice({ memo: '', value: '10' });
+            const newer = store.createInvoice({ memo: '', value: '20' });
+            await new Promise((resolve) => setImmediate(resolve));
+
+            releaseNew();
+            await newer;
+            fail();
+            await older;
+
+            expect(store.invoice).toBe('lnbc-new');
+            expect(store.creatingInvoiceError).toBe(false);
+            expect(store.error_msg).toBeUndefined();
+        });
+    });
+
     describe('LNURL withdraw', () => {
         const lnurl = {
             callback: 'https://service.example/withdraw?session=abc',
