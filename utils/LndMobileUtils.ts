@@ -989,10 +989,46 @@ async function waitForLndReady({
     return statePromise;
 }
 
+/**
+ * Whether a Neutrino peer list contains a host that ZEUS does not ship,
+ * i.e. one the user added. An empty list is also the user's doing.
+ */
+export function hasUserNeutrinoPeers(
+    peers: string[] | undefined,
+    knownPeers: string[]
+): boolean {
+    if (!peers) return false;
+    if (peers.length === 0) return true;
+    return peers.some((peer) => !knownPeers.includes(peer));
+}
+
 export async function optimizeNeutrinoPeers(
     isTestnet?: boolean,
-    peerTargetCount: number = 3
+    peerTargetCount: number = 3,
+    overwriteUserPeers: boolean = false
 ) {
+    // The peer lists and dontAllowOtherPeers are shared by every embedded LND
+    // wallet. Creating or restoring a wallet may re-pick among the peers ZEUS
+    // ships, but must not replace peers the user entered on either network
+    if (!overwriteUserPeers) {
+        const settings = settingsStore?.settings;
+        if (
+            hasUserNeutrinoPeers(
+                settings?.neutrinoPeersMainnet,
+                DEFAULT_NEUTRINO_PEERS_MAINNET.concat(
+                    ...SECONDARY_NEUTRINO_PEERS_MAINNET
+                )
+            ) ||
+            hasUserNeutrinoPeers(
+                settings?.neutrinoPeersTestnet,
+                DEFAULT_NEUTRINO_PEERS_TESTNET
+            )
+        ) {
+            console.log('Keeping user-selected Neutrino peers');
+            return;
+        }
+    }
+
     console.log('Optimizing Neutrino peers');
     let peers = isTestnet
         ? DEFAULT_NEUTRINO_PEERS_TESTNET

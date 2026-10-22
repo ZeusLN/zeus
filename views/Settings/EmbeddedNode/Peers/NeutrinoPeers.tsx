@@ -551,7 +551,11 @@ export default class NeutrinoPeers extends React.Component<
                                     this.setState({
                                         loading: true
                                     });
-                                    await optimizeNeutrinoPeers();
+                                    await optimizeNeutrinoPeers(
+                                        false,
+                                        undefined,
+                                        true
+                                    );
                                     const { getSettings } = SettingsStore;
                                     const settings = await getSettings();
                                     this.setState({
