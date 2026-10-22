@@ -150,7 +150,9 @@ export default class LND {
                 timeoutPromise
             ]).catch((error) => {
                 calls.delete(id);
-                console.log('Request timed out for:', url);
+                // url carries the node host and route params such as
+                // invoices, so it is not logged
+                console.log('REST request failed:', method);
                 throw error;
             });
 
@@ -355,7 +357,7 @@ export default class LND {
         ws.addEventListener('message', (e: any) => {
             // a message was received
             const data = JSON.parse(e.data);
-            console.log('subscribeCustomMessagews message', data);
+            console.log('subscribeCustomMessages ws message');
             if (data.error) {
                 onError(data.error);
             } else {
