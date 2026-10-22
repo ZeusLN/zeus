@@ -76,8 +76,13 @@ const otherMintUrl = 'https://other.example';
 const pendingKey = 'lnd-cashu-pendingRestoreMints';
 const unreachable = new Error('Http transport error');
 
-// A seed-recovered embedded LND wallet starting the app
-const startApp = async () => {
+// Cached info keeps fetchMintInfo from leaving its timeout timer behind
+const cacheMintInfos = (store: CashuStore) => {
+    store.mintInfos = { [mintUrl]: {} as any, [otherMintUrl]: {} as any };
+};
+
+// A seed-recovered embedded LND wallet
+const createStore = () => {
     const store = new CashuStore(
         { implementation: 'embedded-lnd', seedPhrase: words } as any,
         {} as any,
@@ -85,14 +90,45 @@ const startApp = async () => {
         {} as any
     );
     store.reset();
-    // Cached info keeps fetchMintInfo from leaving its timeout timer behind
-    store.mintInfos = { [mintUrl]: {} as any, [otherMintUrl]: {} as any };
-    await store.initializeWallets();
+    cacheMintInfos(store);
     return store;
 };
 
+// Starts the app and waits for the background restore retries too
+const startApp = async () => {
+    const store = createStore();
+    await store.initializeWallets();
+    await retryOf(store);
+    return store;
+};
+
+const retryOf = (store: CashuStore): Promise<void> | undefined =>
+    (store as any).pendingRestoreRetry;
+
 const restoredMints = () =>
     (CashuDevKit.restore as jest.Mock).mock.calls.map(([url]) => url);
+
+// A mint left in CDK by an interrupted restore on an earlier start
+const seedPendingMints = (...urls: string[]) => {
+    mockStorage.set('lnd-cashu-mintUrls', JSON.stringify(urls));
+    mockStorage.set(pendingKey, JSON.stringify(urls));
+    mockCdkMints.push(...urls);
+};
+
+const deferred = <T>() => {
+    let resolve!: (value: T) => void;
+    const promise = new Promise<T>((r) => (resolve = r));
+    return { promise, resolve };
+};
+
+// Resolves to whether the promise settled within the time limit
+const settlesWithin = (promise: Promise<unknown>, ms = 200) =>
+    Promise.race([
+        promise.then(() => true),
+        new Promise<boolean>((r) => setTimeout(() => r(false), ms))
+    ]);
+
+const flush = () => new Promise((r) => setTimeout(r, 0));
 
 describe('CashuStore: ecash restore after seed recovery', () => {
     beforeEach(() => {
@@ -100,6 +136,12 @@ describe('CashuStore: ecash restore after seed recovery', () => {
         mockStorage.clear();
         mockCdkMints.length = 0;
         (CashuDevKit.restore as jest.Mock).mockReset().mockResolvedValue(0);
+        (CashuDevKit.getBalances as jest.Mock)
+            .mockReset()
+            .mockResolvedValue({});
+        (CashuDevKit.getTotalBalance as jest.Mock)
+            .mockReset()
+            .mockResolvedValue(0);
         (restoreMintsFromNostr as jest.Mock).mockReset().mockResolvedValue({
             mints: [mintUrl],
             timestamp: 1
@@ -192,6 +234,110 @@ describe('CashuStore: ecash restore after seed recovery', () => {
         expect(mockStorage.get(pendingKey)).toBe(JSON.stringify([mintUrl]));
 
         await store.removeMint(mintUrl);
+        expect(mockStorage.has(pendingKey)).toBe(false);
+    });
+
+    it('does not wait for a pending restore retry to finish', async () => {
+        seedPendingMints(mintUrl);
+        (CashuDevKit.restore as jest.Mock).mockImplementation(
+            () => new Promise(() => {})
+        );
+
+        const store = createStore();
+        expect(await settlesWithin(store.initializeWallets())).toBe(true);
+        await flush();
+        expect(store.initializing).toBe(false);
+        expect(store.mintUrls).toEqual([mintUrl]);
+        expect(store.selectedMintUrl).toBe(mintUrl);
+        expect(restoredMints()).toEqual([mintUrl]);
+        expect(mockStorage.get(pendingKey)).toBe(JSON.stringify([mintUrl]));
+    });
+
+    it('updates the balance and clears the pending entry when a background retry succeeds', async () => {
+        seedPendingMints(mintUrl);
+        const restore = deferred<number>();
+        (CashuDevKit.restore as jest.Mock).mockReturnValueOnce(restore.promise);
+
+        const store = createStore();
+        expect(await settlesWithin(store.initializeWallets())).toBe(true);
+        await flush();
+        expect(store.totalBalanceSats).toBe(0);
+        expect(mockStorage.get(pendingKey)).toBe(JSON.stringify([mintUrl]));
+
+        (CashuDevKit.getBalances as jest.Mock).mockResolvedValue({
+            [mintUrl]: 21
+        });
+        (CashuDevKit.getTotalBalance as jest.Mock).mockResolvedValue(21);
+        restore.resolve(21);
+        await retryOf(store);
+
+        expect(store.totalBalanceSats).toBe(21);
+        expect(store.mintBalances).toEqual({ [mintUrl]: 21 });
+        expect(mockStorage.has(pendingKey)).toBe(false);
+    });
+
+    it('drops a background retry that finishes after reset', async () => {
+        seedPendingMints(mintUrl, otherMintUrl);
+        const restore = deferred<number>();
+        (CashuDevKit.restore as jest.Mock).mockReturnValueOnce(restore.promise);
+
+        const store = createStore();
+        expect(await settlesWithin(store.initializeWallets())).toBe(true);
+        await flush();
+        const retry = retryOf(store);
+        store.reset();
+
+        (CashuDevKit.getBalances as jest.Mock).mockResolvedValue({
+            [mintUrl]: 21
+        });
+        (CashuDevKit.getTotalBalance as jest.Mock).mockResolvedValue(21);
+        restore.resolve(21);
+        await retry;
+
+        // The second mint is not attempted and nothing is written back
+        expect(restoredMints()).toEqual([mintUrl]);
+        expect(store.totalBalanceSats).toBe(0);
+        expect(store.mintBalances).toEqual({});
+        expect(mockStorage.get(pendingKey)).toBe(
+            JSON.stringify([mintUrl, otherMintUrl])
+        );
+    });
+
+    it('does not start a second retry while one is running', async () => {
+        seedPendingMints(mintUrl);
+        const restore = deferred<number>();
+        (CashuDevKit.restore as jest.Mock).mockReturnValueOnce(restore.promise);
+
+        const store = createStore();
+        expect(await settlesWithin(store.initializeWallets())).toBe(true);
+        await flush();
+        expect(await settlesWithin(store.initializeWallets())).toBe(true);
+        await flush();
+        expect(restoredMints()).toEqual([mintUrl]);
+
+        restore.resolve(0);
+        await retryOf(store);
+        expect(restoredMints()).toEqual([mintUrl]);
+        expect(mockStorage.has(pendingKey)).toBe(false);
+    });
+
+    it('waits for a retry from before reset before retrying again', async () => {
+        seedPendingMints(mintUrl);
+        const restore = deferred<number>();
+        (CashuDevKit.restore as jest.Mock).mockReturnValueOnce(restore.promise);
+
+        const store = createStore();
+        expect(await settlesWithin(store.initializeWallets())).toBe(true);
+        await flush();
+        store.reset();
+        cacheMintInfos(store);
+        expect(await settlesWithin(store.initializeWallets())).toBe(true);
+        await flush();
+        expect(restoredMints()).toEqual([mintUrl]);
+
+        restore.resolve(0);
+        await retryOf(store);
+        expect(restoredMints()).toEqual([mintUrl, mintUrl]);
         expect(mockStorage.has(pendingKey)).toBe(false);
     });
 
