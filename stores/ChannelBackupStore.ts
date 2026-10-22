@@ -13,6 +13,10 @@ import {
 } from '../lndmobile/channel';
 
 import BackendUtils from '../utils/BackendUtils';
+import {
+    isValidAuthChallenge,
+    INVALID_AUTH_CHALLENGE_ERROR
+} from '../utils/AuthChallengeUtils';
 import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
@@ -101,6 +105,9 @@ export default class ChannelBackupStore {
             }
 
             const { verification } = authResponse.json();
+            if (!isValidAuthChallenge(verification)) {
+                throw new Error(INVALID_AUTH_CHALLENGE_ERROR);
+            }
 
             const messageSignData = await BackendUtils.signMessage(
                 verification
@@ -147,6 +154,9 @@ export default class ChannelBackupStore {
         const { verification } = parseBackupsResponse(authResponse, 'Auth');
         if (!verification) {
             throw new Error('Auth response has no verification');
+        }
+        if (!isValidAuthChallenge(verification)) {
+            throw new Error(INVALID_AUTH_CHALLENGE_ERROR);
         }
 
         const messageSignData = await BackendUtils.signMessage(verification);
@@ -218,6 +228,9 @@ export default class ChannelBackupStore {
             const { verification } = parseBackupsResponse(authResponse, 'Auth');
             if (!verification) {
                 throw new Error('Auth response has no verification');
+            }
+            if (!isValidAuthChallenge(verification)) {
+                throw new Error(INVALID_AUTH_CHALLENGE_ERROR);
             }
 
             const messageSignData = await BackendUtils.signMessage(

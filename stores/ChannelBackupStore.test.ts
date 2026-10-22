@@ -7,7 +7,8 @@ jest.mock('../lndmobile/LndMobileInjection', () => ({
     default: { channel: { subscribeChannelEvents: jest.fn() } }
 }));
 jest.mock('../lndmobile/channel', () => ({
-    exportAllChannelBackups: jest.fn()
+    exportAllChannelBackups: jest.fn(),
+    restoreChannelBackups: jest.fn()
 }));
 jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
@@ -28,6 +29,7 @@ jest.mock('./SettingsStore', () => ({}));
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import ChannelBackupStore, {
+    BACKUPS_HOST,
     LAST_CHANNEL_BACKUP_STATUS,
     LAST_CHANNEL_BACKUP_TIME
 } from './ChannelBackupStore';
@@ -36,6 +38,10 @@ import { exportAllChannelBackups } from '../lndmobile/channel';
 import Storage from '../storage';
 
 const PUBKEY = '02'.padEnd(66, 'a');
+// Olympus issues 64 random bytes as lowercase hex
+const CHALLENGE = 'a1'.repeat(64);
+const CANONICAL_PHRASE =
+    'DO NOT EVER SIGN THIS TEXT WITH YOUR PRIVATE KEYS! IT IS ONLY USED FOR DERIVATION OF LNURL-AUTH HASHING-KEY, DISCLOSING ITS SIGNATURE WILL COMPROMISE YOUR LNURL-AUTH IDENTITY AND MAY LEAD TO LOSS OF FUNDS!';
 
 const jsonResponse = (status: number, body: any) => ({
     info: () => ({ status }),
@@ -54,7 +60,7 @@ const htmlResponse = (status: number) => ({
 const mockServer = (response: any) => {
     (ReactNativeBlobUtil.fetch as jest.Mock)
         .mockResolvedValueOnce(
-            jsonResponse(200, { success: true, verification: 'nonce' })
+            jsonResponse(200, { success: true, verification: CHALLENGE })
         )
         .mockResolvedValueOnce(response);
 };
@@ -261,7 +267,7 @@ describe('ChannelBackupStore', () => {
             expect(url).toBe('https://backups.lnolymp.us/api/backup');
             expect(JSON.parse(body)).toMatchObject({
                 pubkey: PUBKEY,
-                message: 'nonce',
+                message: CHALLENGE,
                 signature: 'signature'
             });
             expect(Storage.setItem).toHaveBeenCalledWith(
@@ -351,6 +357,115 @@ describe('ChannelBackupStore', () => {
             await store.initSubscribeChannelEvents();
 
             expect(backupChannels).toHaveBeenCalledTimes(expected ? 1 : 0);
+        });
+    });
+});
+
+const fetchMock = ReactNativeBlobUtil.fetch as jest.Mock;
+const signMessage = BackendUtils.signMessage as jest.Mock;
+
+// Answers /api/auth with the given challenge and every other path with a
+// successful empty-ish reply.
+const serveChallenge = (verification: any) =>
+    fetchMock.mockImplementation(async (_m: string, url: string) => {
+        const path = url.replace(BACKUPS_HOST, '');
+        const body =
+            path === '/api/auth'
+                ? { success: true, verification }
+                : { success: true, backup: 'b', backups: [] };
+        return { info: () => ({ status: 200 }), json: () => body };
+    });
+
+const paths = () =>
+    fetchMock.mock.calls.map(([, url]) => url.replace(BACKUPS_HOST, ''));
+
+describe('ChannelBackupStore auth challenge', () => {
+    let consoleError: jest.SpyInstance;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        consoleError = jest
+            .spyOn(console, 'error')
+            .mockImplementation(() => {});
+        signMessage.mockResolvedValue({ zbase: 'zsig' });
+        (exportAllChannelBackups as jest.Mock).mockResolvedValue({
+            multi_chan_backup: { multi_chan_backup: new Uint8Array([1]) }
+        });
+    });
+
+    afterEach(() => {
+        consoleError.mockRestore();
+    });
+
+    describe('backupChannels', () => {
+        it('signs a hex challenge and uploads the backup', async () => {
+            serveChallenge(CHALLENGE);
+
+            await expect(createStore().backupChannels()).resolves.toBe(true);
+
+            expect(signMessage).toHaveBeenCalledWith(CHALLENGE);
+            expect(paths()).toEqual(['/api/auth', '/api/backup']);
+        });
+
+        it.each([
+            ['the LNURL-auth canonical phrase', CANONICAL_PHRASE],
+            ['uppercase hex', CHALLENGE.toUpperCase()],
+            ['short hex', 'a1'.repeat(32)],
+            ['a missing challenge', undefined]
+        ])('refuses to sign %s', async (_label, verification) => {
+            serveChallenge(verification);
+
+            await expect(createStore().backupChannels()).rejects.toThrow();
+
+            expect(signMessage).not.toHaveBeenCalled();
+            expect(paths()).toEqual(['/api/auth']);
+        });
+    });
+
+    describe('recoverStaticChannelBackup', () => {
+        it('refuses to sign the LNURL-auth canonical phrase', async () => {
+            serveChallenge(CANONICAL_PHRASE);
+
+            await expect(
+                createStore().recoverStaticChannelBackup()
+            ).rejects.toThrow('Invalid auth challenge');
+
+            expect(signMessage).not.toHaveBeenCalled();
+            expect(paths()).toEqual(['/api/auth']);
+        });
+
+        it('signs a hex challenge', async () => {
+            serveChallenge(CHALLENGE);
+            const store = createStore();
+            jest.spyOn(store, 'triggerRecovery').mockResolvedValue();
+
+            await store.recoverStaticChannelBackup();
+
+            expect(signMessage).toHaveBeenCalledWith(CHALLENGE);
+            expect(paths()).toEqual(['/api/auth', '/api/recover']);
+        });
+    });
+
+    describe('advancedRecoveryList', () => {
+        it('refuses to sign the LNURL-auth canonical phrase', async () => {
+            serveChallenge(CANONICAL_PHRASE);
+            const store = createStore();
+
+            await expect(store.advancedRecoveryList()).resolves.toBeUndefined();
+
+            expect(signMessage).not.toHaveBeenCalled();
+            expect(paths()).toEqual(['/api/auth']);
+            expect(store.error).toBe(true);
+            expect(store.loading).toBe(false);
+        });
+
+        it('signs a hex challenge', async () => {
+            serveChallenge(CHALLENGE);
+
+            await createStore().advancedRecoveryList();
+
+            expect(signMessage).toHaveBeenCalledWith(CHALLENGE);
+            expect(paths()).toEqual(['/api/auth', '/api/recoverAdvanced']);
         });
     });
 });

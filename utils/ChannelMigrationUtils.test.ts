@@ -71,12 +71,14 @@ jest.mock('react-native', () => ({
 
 import { Alert } from 'react-native';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import BackendUtils from './BackendUtils';
 import { signMessageNodePubkey } from '../lndmobile/wallet';
 import { LNURLAUTH_CANONICAL_PHRASE } from './LnurlAuthUtils';
 import {
     graphDataExists,
     validateChannelBackupFile,
     importChannelDb,
+    uploadChannelBackupToOlympus,
     restoreChannelBackupFromOlympus
 } from './ChannelMigrationUtils';
 
@@ -89,7 +91,32 @@ const jsonResponse = (body: any) => ({
     json: () => body
 });
 
-const CHALLENGE = 'ab'.repeat(64);
+const BACKUPS = 'https://backups.example.com';
+// The server issues 64 random bytes as lowercase hex
+const CHALLENGE = 'a1'.repeat(64);
+
+const signMessageMock = (BackendUtils as any).signMessage as jest.Mock;
+
+// Answers each /api/auth call with the next challenge in the list and
+// every other path with a successful reply.
+const serveChallenges = (challenges: any[], statusBody: any = {}) => {
+    const queue = [...challenges];
+    mockFetch.mockImplementation(async (_m: string, url: string) => {
+        const path = url.replace(BACKUPS, '');
+        const body =
+            path === '/api/auth'
+                ? { success: true, verification: queue.shift() }
+                : { success: true, ...statusBody };
+        return {
+            info: () => ({ status: 200 }),
+            json: () => body,
+            text: async () => 'ZW5j'
+        };
+    });
+};
+
+const fetchedPaths = () =>
+    mockFetch.mock.calls.map(([, url]) => url.replace(BACKUPS, ''));
 
 describe('ChannelMigrationUtils', () => {
     beforeEach(() => {
@@ -355,20 +382,13 @@ describe('ChannelMigrationUtils', () => {
 
         it('does not sign a look-alike of the LNURL-auth phrase as the phrase bytes', async () => {
             const lookAlike = '\u0144' + LNURLAUTH_CANONICAL_PHRASE.slice(1);
-            mockFetch
-                .mockResolvedValueOnce(
-                    jsonResponse({ success: true, verification: lookAlike })
-                )
-                .mockResolvedValueOnce(
-                    jsonResponse({ success: true, last_backup_at: null })
-                );
-
-            await restore();
-
-            const signed = mockSignNodePubkey.mock.calls[0][0];
-            expect(Buffer.from(signed).toString('latin1')).not.toBe(
-                LNURLAUTH_CANONICAL_PHRASE
+            mockFetch.mockResolvedValueOnce(
+                jsonResponse({ success: true, verification: lookAlike })
             );
+
+            await expect(restore()).rejects.toThrow('Invalid auth response');
+            expect(mockSignNodePubkey).not.toHaveBeenCalled();
+            expect(mockFetch).toHaveBeenCalledTimes(1);
         });
 
         it('refuses the LNURL-auth phrase as the status challenge', async () => {
@@ -379,7 +399,7 @@ describe('ChannelMigrationUtils', () => {
                 })
             );
 
-            await expect(restore()).rejects.toThrow('LNURL-auth');
+            await expect(restore()).rejects.toThrow('Invalid auth response');
             expect(mockSignNodePubkey).not.toHaveBeenCalled();
             expect(mockFetch).toHaveBeenCalledTimes(1);
         });
@@ -402,7 +422,7 @@ describe('ChannelMigrationUtils', () => {
                     })
                 );
 
-            await expect(restore()).rejects.toThrow('LNURL-auth');
+            await expect(restore()).rejects.toThrow('Invalid auth response');
             expect(mockSignNodePubkey).toHaveBeenCalledTimes(1);
             expect(mockFetch).toHaveBeenCalledTimes(3);
             expect(mockFetch).not.toHaveBeenCalledWith(
@@ -411,6 +431,119 @@ describe('ChannelMigrationUtils', () => {
                 expect.anything(),
                 expect.anything()
             );
+        });
+    });
+
+    describe('Olympus auth challenge', () => {
+        beforeEach(() => {
+            jest.spyOn(console, 'log').mockImplementation(() => {});
+            jest.spyOn(console, 'error').mockImplementation(() => {});
+        });
+
+        afterEach(() => jest.restoreAllMocks());
+
+        describe('uploadChannelBackupToOlympus', () => {
+            it('refuses to sign a status challenge that is not hex', async () => {
+                serveChallenges([LNURLAUTH_CANONICAL_PHRASE]);
+
+                await uploadChannelBackupToOlympus(
+                    'lnd',
+                    false,
+                    '03cd',
+                    'seed'
+                );
+
+                expect(signMessageMock).not.toHaveBeenCalled();
+                expect(fetchedPaths()).toEqual(['/api/auth']);
+                expect(mockAlert).toHaveBeenCalledWith(
+                    'general.error',
+                    'views.Tools.migration.export.failedToUpload'
+                );
+            });
+
+            it('refuses to sign an upload challenge that is not hex', async () => {
+                serveChallenges([CHALLENGE, LNURLAUTH_CANONICAL_PHRASE]);
+
+                await uploadChannelBackupToOlympus(
+                    'lnd',
+                    false,
+                    '03cd',
+                    'seed'
+                );
+
+                expect(signMessageMock).toHaveBeenCalledTimes(1);
+                expect(signMessageMock).toHaveBeenCalledWith(CHALLENGE);
+                expect(fetchedPaths()).toEqual([
+                    '/api/auth',
+                    '/api/status',
+                    '/api/auth'
+                ]);
+                expect(mockZipFolder).not.toHaveBeenCalled();
+            });
+
+            it('signs hex challenges and uploads', async () => {
+                serveChallenges([CHALLENGE, 'b2'.repeat(64)]);
+
+                await uploadChannelBackupToOlympus(
+                    'lnd',
+                    false,
+                    '03cd',
+                    'seed'
+                );
+
+                expect(signMessageMock.mock.calls).toEqual([
+                    [CHALLENGE],
+                    ['b2'.repeat(64)]
+                ]);
+                expect(fetchedPaths()).toContain('/api/channels-backup');
+            });
+        });
+
+        describe('restoreChannelBackupFromOlympus', () => {
+            it('refuses to sign a status challenge that is not hex', async () => {
+                serveChallenges([CHALLENGE.toUpperCase()]);
+
+                await expect(
+                    restoreChannelBackupFromOlympus(
+                        'lnd',
+                        false,
+                        '03cd',
+                        'seed'
+                    )
+                ).rejects.toThrow('Invalid auth response');
+
+                expect(mockSignNodePubkey).not.toHaveBeenCalled();
+                expect(fetchedPaths()).toEqual(['/api/auth']);
+            });
+
+            it('refuses to sign a restore challenge that is not hex', async () => {
+                serveChallenges([CHALLENGE, LNURLAUTH_CANONICAL_PHRASE], {
+                    last_backup_at: '2026-01-01T00:00:00Z'
+                });
+                // confirm the restore dialog
+                mockAlert.mockImplementation((_t, _m, buttons) =>
+                    buttons?.[1]?.onPress?.()
+                );
+
+                await expect(
+                    restoreChannelBackupFromOlympus(
+                        'lnd',
+                        false,
+                        '03cd',
+                        'seed'
+                    )
+                ).rejects.toThrow('Invalid auth response');
+
+                expect(mockSignNodePubkey).toHaveBeenCalledTimes(1);
+                expect(
+                    Buffer.from(mockSignNodePubkey.mock.calls[0][0]).toString()
+                ).toBe(CHALLENGE);
+                expect(fetchedPaths()).toEqual([
+                    '/api/auth',
+                    '/api/status',
+                    '/api/auth'
+                ]);
+            });
         });
     });
 });
