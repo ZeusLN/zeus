@@ -44,6 +44,10 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import {
+    formatSwapIdList,
+    getStoredUnfinishedSwapIds
+} from '../../utils/SwapStateUtils';
+import {
     graphDataExists,
     handleExportChannels
 } from '../../utils/ChannelMigrationUtils';
@@ -79,6 +83,8 @@ interface SeedState {
     understood: boolean;
     showModal: boolean;
     isDeleteModalVisible: boolean;
+    // set once the user confirmed deletion while swaps are unfinished
+    unfinishedSwapIds: string[] | null;
     isChannelExporting: boolean;
     channelExportMessage: string;
     revealResetKey: number;
@@ -140,6 +146,7 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         understood: this.props.route.params?.skipWarning ?? false,
         showModal: false,
         isDeleteModalVisible: false,
+        unfinishedSwapIds: null,
         isChannelExporting: false,
         channelExportMessage: '',
         revealResetKey: 0,
@@ -189,12 +196,37 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         this.setState({ graphDataOnDisk });
     };
 
-    renderDeleteModal = () => {
+    closeDeleteModal = () =>
+        this.setState({ isDeleteModalVisible: false, unfinishedSwapIds: null });
+
+    // The stored swap lists and keys are the only way to claim or refund a
+    // swap from this wallet, so a first confirmation with unfinished swaps
+    // stored asks again and names them.
+    confirmDelete = async () => {
         const { navigation } = this.props;
+        if (this.state.unfinishedSwapIds === null) {
+            const unfinishedSwapIds = await getStoredUnfinishedSwapIds();
+            if (unfinishedSwapIds.length > 0) {
+                this.setState({ unfinishedSwapIds });
+                return;
+            }
+        }
+        await Storage.removeItem(SWAPS_RESCUE_KEY);
+        await Storage.removeItem(SWAPS_KEY);
+        await Storage.removeItem(REVERSE_SWAPS_KEY);
+        await Storage.removeItem(SWAPS_LAST_USED_KEY);
+        await purgeLegacyRescueKeyFiles();
+        await unlinkRescueKeyStagingFile();
+        this.closeDeleteModal();
+        navigation.popTo('Swaps');
+    };
+
+    renderDeleteModal = () => {
+        const { unfinishedSwapIds } = this.state;
         return (
             <ModalBox
                 isOpen={this.state.isDeleteModalVisible}
-                onClosed={() => this.setState({ isDeleteModalVisible: false })}
+                onClosed={this.closeDeleteModal}
                 style={{
                     backgroundColor: 'transparent'
                 }}
@@ -226,31 +258,27 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                                 marginBottom: 20
                             }}
                         >
-                            {localeString(
-                                'views.Swaps.rescueKey.deleteConfirmation'
-                            )}
+                            {unfinishedSwapIds
+                                ? localeString(
+                                      'views.Swaps.rescueKey.deleteUnfinishedSwaps'
+                                  ).replace(
+                                      '{{swaps}}',
+                                      formatSwapIdList(unfinishedSwapIds)
+                                  )
+                                : localeString(
+                                      'views.Swaps.rescueKey.deleteConfirmation'
+                                  )}
                         </Text>
 
                         <Button
                             title={localeString('general.confirm')}
-                            onPress={async () => {
-                                await Storage.removeItem(SWAPS_RESCUE_KEY);
-                                await Storage.removeItem(SWAPS_KEY);
-                                await Storage.removeItem(REVERSE_SWAPS_KEY);
-                                await Storage.removeItem(SWAPS_LAST_USED_KEY);
-                                await purgeLegacyRescueKeyFiles();
-                                await unlinkRescueKeyStagingFile();
-                                this.setState({ isDeleteModalVisible: false });
-                                navigation.popTo('Swaps');
-                            }}
+                            onPress={this.confirmDelete}
                             containerStyle={{ marginBottom: 10 }}
                             warning
                         />
                         <Button
                             title={localeString('general.cancel')}
-                            onPress={() =>
-                                this.setState({ isDeleteModalVisible: false })
-                            }
+                            onPress={this.closeDeleteModal}
                             secondary
                         />
                     </View>
