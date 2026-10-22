@@ -901,10 +901,6 @@ export default class LSPStore {
                     data.error
                 );
                 this.getExtendableChannelsError = true;
-                this.error = true;
-                this.error_msg = data?.error?.message
-                    ? errorToUserFriendly(data?.error?.message)
-                    : '';
             } else {
                 this.getExtendableChannelsError = false;
                 this.getExtendableChannelsData =
@@ -1488,11 +1484,12 @@ export default class LSPStore {
 
     // LSPS7
 
+    // Background fetch run when the channel list changes. Failures only set
+    // getExtendableChannelsError, which the channel view reads, and leave the
+    // shared error alone so a channel refresh can't replace or clear an error
+    // the LSPS1 or LSPS7 screens are showing.
     @action
     public getExtendableChannels = async () => {
-        this.error = false;
-        this.error_msg = '';
-
         // Use native LSPS7 method if available (LDK Node backend)
         if (BackendUtils.supportsLSPS7native()) {
             // The channels reaction can start a new call before the last one
@@ -1529,21 +1526,15 @@ export default class LSPStore {
                 );
                 runInAction(() => {
                     this.getExtendableChannelsError = true;
-                    this.error = true;
-                    this.error_msg =
-                        error?.message ||
-                        localeString('error.getExtendableChannels');
                     this.loadingLSPS7 = false;
                 });
                 return;
             }
         }
 
-        // Fall back to custom message for other backends. This is a background
-        // probe with no spinner, so a timeout or send failure only sets
-        // getExtendableChannelsError for the channel view and leaves the
-        // shared error and spinner alone. Starting a new probe settles the
-        // previous one without marking it failed.
+        // Fall back to custom message for other backends. A timeout or send
+        // failure also leaves the LSPS7 spinner alone. Starting a new probe
+        // settles the previous one without marking it failed.
         this.getExtendableChannelsResponseResolver?.();
 
         this.getExtendableChannelsId = uuidv4();

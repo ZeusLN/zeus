@@ -270,7 +270,7 @@ describe('LSPStore.getExtendableChannels over custom messages', () => {
         expect(store.getExtendableChannelsError).toBe(false);
     });
 
-    it('sets the error on a JSON-RPC error reply', async () => {
+    it('sets only the lease error on a JSON-RPC error reply', async () => {
         const store = makeStore();
         const probe = store.getExtendableChannels();
 
@@ -280,7 +280,24 @@ describe('LSPStore.getExtendableChannels over custom messages', () => {
         await probe;
 
         expect(store.getExtendableChannelsError).toBe(true);
+        expect(store.error).toBe(false);
+        expect(store.error_msg).toBe('');
         expect(store.getExtendableChannelsData).toEqual([]);
+    });
+
+    it('keeps an error another LSP screen is showing', async () => {
+        const store = makeStore();
+        store.error = true;
+        store.error_msg = 'order failed';
+        const probe = store.getExtendableChannels();
+
+        extendableChannelsReply(store, {
+            result: { extendable_channels: [channel] }
+        });
+        await probe;
+
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe('order failed');
     });
 
     it('does not time out once the reply arrives', async () => {
@@ -468,7 +485,7 @@ describe('LSPStore.getExtendableChannels on LDK Node', () => {
         expect(BackendUtils.sendCustomMessage).not.toHaveBeenCalled();
     });
 
-    it('sets the error when the native call rejects', async () => {
+    it('sets only the lease error when the native call rejects', async () => {
         jest.mocked(BackendUtils.lsps7GetExtendableChannels).mockRejectedValue(
             new Error('Liquidity request timed out')
         );
@@ -477,9 +494,23 @@ describe('LSPStore.getExtendableChannels on LDK Node', () => {
         await store.getExtendableChannels();
 
         expect(store.getExtendableChannelsError).toBe(true);
-        expect(store.error).toBe(true);
-        expect(store.error_msg).toBe('Liquidity request timed out');
+        expect(store.error).toBe(false);
+        expect(store.error_msg).toBe('');
         expect(store.getExtendableChannelsData).toEqual([]);
+    });
+
+    it('keeps an error another LSP screen is showing', async () => {
+        jest.mocked(BackendUtils.lsps7GetExtendableChannels).mockResolvedValue([
+            nativeChannel
+        ]);
+        const store = makeStore('ldk-node');
+        store.error = true;
+        store.error_msg = 'order failed';
+
+        await store.getExtendableChannels();
+
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe('order failed');
     });
 
     it('drops a rejection from an older call after a newer success', async () => {
