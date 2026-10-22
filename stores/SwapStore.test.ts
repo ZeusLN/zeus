@@ -400,3 +400,73 @@ describe('SwapStore.getSwapFees', () => {
         expect(store.reverseInfo.fees?.minerFees?.claim).toBe(300);
     });
 });
+
+describe('SwapStore funded submarine swaps', () => {
+    const SWAP = {
+        id: SWAP_ID,
+        type: SwapType.Submarine,
+        status: SwapState.InvoiceSet,
+        bip21: 'bitcoin:bc1pswap?amount=0.001004'
+    };
+    const OTHER = { id: 'swap-def', type: SwapType.Submarine };
+
+    // an in-memory SWAPS_KEY, so writes see each other as on a device
+    let stored: { [key: string]: string };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        stored = { swaps: JSON.stringify([OTHER, SWAP]) };
+        (Storage.getItem as jest.Mock).mockImplementation(
+            async (key: string) => stored[key]
+        );
+        (Storage.setItem as jest.Mock).mockImplementation(
+            async (key: string, value: string) => {
+                stored[key] = value;
+            }
+        );
+    });
+
+    const storedSwaps = () => JSON.parse(stored.swaps);
+
+    it('is not funded until this wallet has paid', () => {
+        expect(buildStore().isSwapFunded(SWAP)).toBe(false);
+    });
+
+    it('records the payment in storage and in the store', async () => {
+        const store = buildStore();
+
+        await expect(store.markSwapFunded(SWAP_ID)).resolves.toBe(true);
+
+        expect(storedSwaps()).toEqual([OTHER, { ...SWAP, funded: true }]);
+        // an open SwapDetails still holds the swap without the mark
+        expect(store.isSwapFunded(SWAP)).toBe(true);
+        expect(store.isSwapFunded(OTHER)).toBe(false);
+    });
+
+    it('keeps the mark when the host goes on reporting invoice.set', async () => {
+        const store = buildStore();
+        await store.markSwapFunded(SWAP_ID);
+
+        await store.updateSwapStatus(SWAP_ID, SwapState.InvoiceSet, true);
+
+        expect(storedSwaps()[1]).toEqual({ ...SWAP, funded: true });
+    });
+
+    it('keeps the mark through a status write that started first', async () => {
+        const store = buildStore();
+
+        const statusWrite = store.updateSwapStatus(
+            SWAP_ID,
+            SwapState.InvoiceSet,
+            true
+        );
+        const mark = store.markSwapFunded(SWAP_ID);
+        await Promise.all([statusWrite, mark]);
+
+        expect(storedSwaps()[1].funded).toBe(true);
+    });
+
+    it('reads the mark back from a stored swap', () => {
+        expect(buildStore().isSwapFunded({ ...SWAP, funded: true })).toBe(true);
+    });
+});

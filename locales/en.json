@@ -2544,6 +2544,7 @@
     "views.SwapDetails.lockupAddress": "Lockup address",
     "views.SwapDetails.preimageHash": "Preimage hash",
     "views.SwapDetails.waitingForOnchainTx": "Waiting for on-chain transaction...",
+    "views.SwapDetails.paymentSentWaitingForProvider": "Payment sent, waiting for the swap provider to see the transaction...",
     "views.SwapDetails.waitingForConf": "Transaction is in mempool, waiting for confirmation...",
     "views.SwapDetails.waitingForInvoicePayment": "Waiting for invoice to be paid...",
     "views.SwapDetails.claimAddressFailed": "Could not generate an on-chain address to claim these funds to. Connect a wallet that can receive on-chain, then open this swap again.",
