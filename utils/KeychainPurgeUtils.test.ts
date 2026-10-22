@@ -477,6 +477,107 @@ describe('KeychainPurgeUtils', () => {
         });
     });
 
+    describe('executePurge legacy LNC entries', () => {
+        const lncSettings = (...phrases: string[]) =>
+            JSON.stringify({
+                nodes: phrases.map((pairingPhrase) => ({
+                    implementation: 'lightning-node-connect',
+                    pairingPhrase
+                }))
+            });
+        const scan = {
+            syncServers: [],
+            legacyLocalServers: [],
+            hasLegacyEncryptedSettings: true
+        };
+        let encrypted: Map<string, string>;
+
+        beforeEach(() => {
+            encrypted = new Map();
+            EncryptedStorage.getItem.mockImplementation(
+                async (key: string) => encrypted.get(key) ?? null
+            );
+            EncryptedStorage.removeItem.mockImplementation(
+                async (key: string) => {
+                    if (!encrypted.has(key)) throw new Error('not found');
+                    encrypted.delete(key);
+                }
+            );
+        });
+
+        it("removes a deleted wallet's entries named in the legacy blob", async () => {
+            encrypted.set('zeus-settings', lncSettings('deleted phrase'));
+            encrypted.set('lnc-rn:hashed(deleted phrase)', '{"localKey":"a"}');
+            encrypted.set('lnc-rn:hashed(deleted phrase):host', 'host:443');
+            StorageModule.getItem.mockResolvedValue(lncSettings());
+
+            const result = await executePurge(scan);
+
+            expect([...encrypted.keys()]).toEqual([]);
+            expect(result.deleted).toBe(3);
+            expect(result.failures).toEqual([]);
+            expect(result.skipped).toEqual([]);
+        });
+
+        it("removes a configured wallet's entries once the keychain has them", async () => {
+            encrypted.set('lnc-rn:hashed(live phrase)', '{"localKey":"a"}');
+            StorageModule.getItem.mockResolvedValue(lncSettings('live phrase'));
+            StorageModule.getRawItem.mockImplementation(
+                async (server: string) =>
+                    server === 'zeus:lnc-rn:hashed(live phrase)' ? 'copy' : null
+            );
+
+            const result = await executePurge({
+                ...scan,
+                hasLegacyEncryptedSettings: false
+            });
+
+            expect(encrypted.has('lnc-rn:hashed(live phrase)')).toBe(false);
+            expect(result.deleted).toBe(1);
+            expect(result.skipped).toEqual([]);
+        });
+
+        it("keeps a configured wallet's entry that has no keychain copy", async () => {
+            encrypted.set('zeus-settings', lncSettings('live phrase'));
+            encrypted.set('lnc-rn:hashed(live phrase)', '{"localKey":"a"}');
+            StorageModule.getItem.mockResolvedValue(lncSettings('live phrase'));
+
+            const result = await executePurge(scan);
+
+            expect(encrypted.has('lnc-rn:hashed(live phrase)')).toBe(true);
+            expect(result.skipped).toEqual(['lnc-rn:hashed(live phrase)']);
+            expect(encrypted.has('zeus-settings')).toBe(false);
+        });
+
+        it('keeps every entry without a keychain copy when live settings are unreadable', async () => {
+            encrypted.set('zeus-settings', lncSettings('some phrase'));
+            encrypted.set('lnc-rn:hashed(some phrase)', '{"localKey":"a"}');
+            StorageModule.getItem.mockResolvedValue(false);
+
+            const result = await executePurge(scan);
+
+            expect(encrypted.has('lnc-rn:hashed(some phrase)')).toBe(true);
+            expect(result.skipped).toEqual(['lnc-rn:hashed(some phrase)']);
+        });
+
+        it('keeps the legacy blob when an entry it names fails to delete', async () => {
+            encrypted.set('zeus-settings', lncSettings('deleted phrase'));
+            encrypted.set('lnc-rn:hashed(deleted phrase)', '{"localKey":"a"}');
+            StorageModule.getItem.mockResolvedValue(lncSettings());
+            EncryptedStorage.removeItem.mockImplementation(
+                async (key: string) => {
+                    if (key.startsWith('lnc-rn:')) throw new Error('boom');
+                    encrypted.delete(key);
+                }
+            );
+
+            const result = await executePurge(scan);
+
+            expect(encrypted.has('zeus-settings')).toBe(true);
+            expect(result.failures).toEqual(['lnc-rn:hashed(deleted phrase)']);
+        });
+    });
+
     describe('autoPurgeLegacyKeychain', () => {
         it('never runs off iOS', async () => {
             Platform.OS = 'android';

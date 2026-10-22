@@ -715,8 +715,23 @@ export async function deleteNodeDataDirectoryWithRetry(
  */
 async function clearLncCredentials(pairingPhrase: string) {
     const baseKey = `${LNC_STORAGE_KEY}:${lncHash(pairingPhrase)}`;
-    await clearKey(baseKey);
-    await clearKey(`${baseKey}:host`);
+    for (const key of [baseKey, `${baseKey}:host`]) {
+        await clearKey(key);
+        // Builds up to v0.9.4 kept these in EncryptedStorage, and the
+        // storage migration copied them to the keychain without removing
+        // the originals. Read first: on iOS removeItem rejects when the
+        // item does not exist.
+        try {
+            if ((await EncryptedStorage.getItem(key)) !== null) {
+                await EncryptedStorage.removeItem(key);
+            }
+        } catch (e) {
+            console.warn(
+                `[ClearData] Error clearing legacy LNC entry ${key}:`,
+                e
+            );
+        }
+    }
 }
 
 /**
