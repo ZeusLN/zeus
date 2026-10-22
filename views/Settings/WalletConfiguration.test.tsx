@@ -719,13 +719,15 @@ describe('WalletConfiguration', () => {
                 channels = [],
                 pendingChannels = [],
                 confirmedBlockchainBalance = 0,
-                unconfirmedBlockchainBalance = 0
+                unconfirmedBlockchainBalance = 0,
+                vssError = null
             }: {
                 active?: boolean;
                 channels?: any[];
                 pendingChannels?: any[];
                 confirmedBlockchainBalance?: number;
                 unconfirmedBlockchainBalance?: number;
+                vssError?: string | null;
             } = {}
         ) => {
             const nodes = [node, LND_NODE];
@@ -754,6 +756,7 @@ describe('WalletConfiguration', () => {
                             params: { node, index: 0, active, saved: true }
                         },
                         SettingsStore,
+                        AlertStore: { vssError },
                         ChannelsStore: { channels, pendingChannels },
                         BalanceStore: {
                             confirmedBlockchainBalance,
@@ -813,6 +816,29 @@ describe('WalletConfiguration', () => {
                 'views.Settings.WalletConfiguration.deleteWallet.channelsWarningLdk'
             );
             expect(SettingsStore.updateSettings).not.toHaveBeenCalled();
+        });
+
+        it('warns that channel state is local only when VSS is failing', async () => {
+            const SettingsStore = await confirmDelete(LDK_NODE, {
+                channels: [{ channelId: 'a' }],
+                vssError: 'connection refused'
+            });
+
+            expect(alertMessage()).toBe(
+                'views.Settings.WalletConfiguration.deleteWallet.channelsWarningLdkVssError'
+            );
+            expect(SettingsStore.updateSettings).not.toHaveBeenCalled();
+        });
+
+        it('keeps the balance warning for an LDK Node wallet without channels when VSS is failing', async () => {
+            await confirmDelete(LDK_NODE, {
+                confirmedBlockchainBalance: 1000,
+                vssError: 'connection refused'
+            });
+
+            expect(alertMessage()).toBe(
+                'views.Settings.WalletConfiguration.deleteWallet.balanceWarning'
+            );
         });
 
         it('offers the seed backup from the LDK Node channels warning', async () => {

@@ -56,6 +56,7 @@ import VssServerPicker, {
 import { Row } from '../../components/layout/Row';
 import ShowHideToggle from '../../components/ShowHideToggle';
 
+import AlertStore from '../../stores/AlertStore';
 import BalanceStore from '../../stores/BalanceStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 import NostrWalletConnectStore from '../../stores/NostrWalletConnectStore';
@@ -97,6 +98,7 @@ import {
 
 interface WalletConfigurationProps {
     navigation: NativeStackNavigationProp<any, any>;
+    AlertStore: AlertStore;
     BalanceStore: BalanceStore;
     ChannelsStore: ChannelsStore;
     NostrWalletConnectStore: NostrWalletConnectStore;
@@ -194,6 +196,7 @@ const ScanBadge = ({ onPress }: { onPress: () => void }) => (
 );
 
 @inject(
+    'AlertStore',
     'BalanceStore',
     'ChannelsStore',
     'NostrWalletConnectStore',
@@ -1087,7 +1090,8 @@ export default class WalletConfiguration extends React.Component<
 
     private performDelete = () => {
         const { implementation, active } = this.state;
-        const { ChannelsStore, BalanceStore, navigation } = this.props;
+        const { AlertStore, ChannelsStore, BalanceStore, navigation } =
+            this.props;
         const isLdkNode = implementation === 'ldk-node';
         // On-device wallets: channel and balance checks below read the
         // stores, which only hold the active wallet's data
@@ -1121,13 +1125,16 @@ export default class WalletConfiguration extends React.Component<
             (ChannelsStore.channels.length > 0 ||
                 ChannelsStore.pendingChannels.length > 0)
         ) {
+            // Only the active wallet reaches this branch, so a VSS error in
+            // AlertStore is this wallet's: its channel state is local only
+            const channelsWarning = !isLdkNode
+                ? 'views.Settings.WalletConfiguration.deleteWallet.channelsWarning'
+                : AlertStore?.vssError
+                ? 'views.Settings.WalletConfiguration.deleteWallet.channelsWarningLdkVssError'
+                : 'views.Settings.WalletConfiguration.deleteWallet.channelsWarningLdk';
             Alert.alert(
                 localeString('general.warning'),
-                localeString(
-                    isLdkNode
-                        ? 'views.Settings.WalletConfiguration.deleteWallet.channelsWarningLdk'
-                        : 'views.Settings.WalletConfiguration.deleteWallet.channelsWarning'
-                ),
+                localeString(channelsWarning),
                 [
                     {
                         text: localeString(
