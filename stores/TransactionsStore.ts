@@ -179,6 +179,10 @@ export default class TransactionsStore {
     // attempt's, and a skewed clock must not make a success look stale: a
     // keysend retry gets a fresh hash and would pay again.
     private inFlightIsKeysend = false;
+    // whether the guard-owning payment is a keysend whose preimage the node
+    // picks itself (CLN and LDK Node ignore the one generated here), so the
+    // preimage it returns can't be checked against inFlightPaymentHash
+    private inFlightNodePicksPreimage = false;
     // sequence currently being tracked to a terminal state (null when none)
     private trackingSeq: number | null = null;
     // payments the user released the guard for, whose late results must
@@ -217,6 +221,7 @@ export default class TransactionsStore {
         this.inFlightPaymentHash = null;
         this.inFlightDispatchTime = null;
         this.inFlightIsKeysend = false;
+        this.inFlightNodePicksPreimage = false;
         this.paymentInFlightConfirmed = false;
         this.paymentOutcomeUnverified = false;
         this.error = false;
@@ -719,6 +724,10 @@ export default class TransactionsStore {
         this.inFlightPaymentHash = null;
         this.inFlightDispatchTime = Date.now();
         this.inFlightIsKeysend = !!pubkey;
+        this.inFlightNodePicksPreimage =
+            !!pubkey &&
+            (this.settingsStore.implementation === 'cln-rest' ||
+                this.settingsStore.implementation === 'ldk-node');
         this.paymentInFlightConfirmed = false;
         this.paymentStartTime = Date.now();
         this.paymentDuration = null;
@@ -875,6 +884,7 @@ export default class TransactionsStore {
         this.inFlightPaymentHash = null;
         this.inFlightDispatchTime = null;
         this.inFlightIsKeysend = false;
+        this.inFlightNodePicksPreimage = false;
         this.paymentInFlightConfirmed = false;
     };
 
@@ -1220,7 +1230,9 @@ export default class TransactionsStore {
         // the hash of the invoice (or keysend preimage) this payment was
         // sent for, read before clearPaymentInFlight resets it
         const expectedPaymentHash =
-            seq !== undefined && this.inFlightOwnerSeq === seq
+            seq !== undefined &&
+            this.inFlightOwnerSeq === seq &&
+            !this.inFlightNodePicksPreimage
                 ? this.inFlightPaymentHash
                 : null;
         this.clearPaymentInFlight(seq);
