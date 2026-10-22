@@ -76,8 +76,8 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
     }
 
     // A sweep spends the whole balance at the fee rate in the input, which
-    // may have been filled in from the fee estimate, so the user has to see
-    // and accept amount, destination and rate before it is broadcast
+    // starts at a default the user may not have changed, so the user has to
+    // see and accept amount, destination and rate before it is broadcast
     confirmSweep = () =>
         new Promise<boolean>((resolve) => {
             const { BalanceStore } = this.props;
