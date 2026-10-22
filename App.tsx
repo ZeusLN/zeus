@@ -324,6 +324,7 @@ export default class App extends React.PureComponent {
         'SendingLightning',
         'SendingOnChain',
         'CashuSendingLightning',
+        'MultimintPayment',
         'IntroSplash',
         'NostrContacts'
     ];
@@ -1646,6 +1647,10 @@ export default class App extends React.PureComponent {
                                                                 component={
                                                                     MultimintPayment
                                                                 }
+                                                                options={{
+                                                                    gestureEnabled:
+                                                                        false // disables swipe back
+                                                                }}
                                                             />
                                                             <Stack.Screen
                                                                 name="Mint" // @ts-ignore:next-line
