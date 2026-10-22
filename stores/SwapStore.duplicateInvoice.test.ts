@@ -74,11 +74,19 @@ jest.mock('../storage', () => {
 });
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import ecc from '@bitcoinerlab/secp256k1';
+import { payments } from 'bitcoinjs-lib';
 
 import SwapStore from './SwapStore';
 import Storage from '../storage';
 import { SwapType } from '../models/Swap';
-import { SWAPS_KEY, SWAPS_RESCUE_KEY } from '../utils/SwapUtils';
+import Bolt11Utils from '../utils/Bolt11Utils';
+import {
+    SWAPS_KEY,
+    SWAPS_RESCUE_KEY,
+    buildSubmarineSwapLeaves,
+    deriveReverseSwapOutputKey
+} from '../utils/SwapUtils';
 
 // BIP39 canonical test mnemonic, used as a swap rescue key
 const RESCUE_MNEMONIC =
@@ -97,25 +105,83 @@ const OTHER_INVOICE =
 const storageBacking = (Storage as any).__store as { [key: string]: string };
 const fetchMock = ReactNativeBlobUtil.fetch as jest.Mock;
 
-// a host that makes a swap for whatever it is sent
+const SERVER_PUBKEY = Buffer.from(
+    ecc.pointFromScalar(Buffer.alloc(32, 2), true)!
+);
+const TIP_URL = 'https://mempool.test/api/blocks/tip/height';
+const TIP = 899900;
+const TIMEOUT = 900000;
+
+// the swap requests sent to the host, without the tip height lookups
+let createRequests: any[][] = [];
+
+// Answers the tip height lookup, and passes each swap request to `create`
+const mockHost = (create: (body: any) => any) =>
+    fetchMock.mockImplementation(async (method, url, headers, body) => {
+        if (url === TIP_URL) {
+            return { info: () => ({ status: 200 }), text: () => String(TIP) };
+        }
+        createRequests.push([method, url, headers, body]);
+        return create(JSON.parse(body));
+    });
+
+// a host that makes a swap for whatever it is sent, with the swap tree a
+// Boltz-style host builds for the invoice's payment hash and our refund
+// key, so the swap passes the response checks
 const hostWithoutTheCheck = () =>
-    fetchMock.mockImplementation(async (_method, _url, _headers, body) => {
+    mockHost(({ invoice, refundPublicKey }) => {
+        let preimageHash = Buffer.alloc(32);
+        try {
+            preimageHash = Buffer.from(
+                Bolt11Utils.decode(invoice).payment_hash || '',
+                'hex'
+            );
+        } catch (e) {
+            // the store rejects the response for an undecodable invoice
+        }
+        const refundPubKey = Buffer.from(refundPublicKey, 'hex');
+        const { claimLeaf, refundLeaf } = buildSubmarineSwapLeaves({
+            claimPubKey: SERVER_PUBKEY,
+            refundPubKey,
+            preimageHash,
+            timeoutBlockHeight: TIMEOUT
+        });
+        const pubkey = deriveReverseSwapOutputKey({
+            ourPubKey: refundPubKey,
+            serverPubKey: SERVER_PUBKEY,
+            claimLeaf,
+            refundLeaf
+        });
         return {
             data: JSON.stringify({
-                id: `swap-${fetchMock.mock.calls.length}`,
+                id: `swap-${createRequests.length}`,
                 expectedAmount: 250400,
-                address: 'bc1plockup',
-                refundPublicKey: JSON.parse(body).refundPublicKey
+                address: payments.p2tr({ pubkey }).address,
+                swapTree: {
+                    claimLeaf: {
+                        version: 192,
+                        output: claimLeaf.toString('hex')
+                    },
+                    refundLeaf: {
+                        version: 192,
+                        output: refundLeaf.toString('hex')
+                    }
+                },
+                claimPublicKey: SERVER_PUBKEY.toString('hex'),
+                timeoutBlockHeight: TIMEOUT
             })
         };
     });
 
 const newStore = () => {
     storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
-    return new SwapStore(
+    const store = new SwapStore(
         { nodeInfo: { nodeId: 'node-pubkey', isTestNet: false } } as any,
         { settings: {}, implementation: 'lnd' } as any
     );
+    // 0.5% and 300 sats: up to 251,550 sats to send for INVOICE
+    store.subInfo = { fees: { percentage: 0.5, minerFees: 300 } };
+    return store;
 };
 const newNavigation = () => ({ navigate: jest.fn() });
 const storedIds = () =>
@@ -123,6 +189,7 @@ const storedIds = () =>
 
 beforeEach(() => {
     for (const key of Object.keys(storageBacking)) delete storageBacking[key];
+    createRequests = [];
     jest.clearAllMocks();
 });
 
@@ -187,7 +254,7 @@ describe('SwapStore.createSubmarineSwap for an invoice that already has a swap',
         await store.createSubmarineSwap(INVOICE, navigation);
 
         expect(store.apiError).toBe('');
-        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(createRequests).toHaveLength(1);
         expect(storedIds()).toEqual(['swap-1', 'first']);
         expect(navigation.navigate).toHaveBeenCalledTimes(1);
     });
@@ -201,8 +268,10 @@ describe('SwapStore.createSubmarineSwap for an invoice that already has a swap',
 
         await store.createSubmarineSwap('lnbc-other', newNavigation());
 
-        expect(store.apiError).toBe('');
-        expect(fetchMock).toHaveBeenCalledTimes(1);
+        // the response cannot be checked against an invoice that does not
+        // decode, so the swap still fails, but after the host has seen it
+        expect(store.apiError).not.toBe('views.Swaps.invoiceInUse');
+        expect(createRequests).toHaveLength(1);
     });
 
     it('makes one swap when two requests for an invoice overlap', async () => {
@@ -215,7 +284,7 @@ describe('SwapStore.createSubmarineSwap for an invoice that already has a swap',
             store.createSubmarineSwap(INVOICE, navigation)
         ]);
 
-        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(createRequests).toHaveLength(1);
         expect(storedIds()).toEqual(['swap-1']);
         expect(navigation.navigate).toHaveBeenCalledTimes(1);
         expect(store.apiError).toBe('');
@@ -232,14 +301,16 @@ describe('SwapStore.createSubmarineSwap for an invoice that already has a swap',
             store.createSubmarineSwap(INVOICE_SAME_HASH, navigation)
         ]);
 
-        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(createRequests).toHaveLength(1);
         expect(storedIds()).toEqual(['swap-1']);
         expect(navigation.navigate).toHaveBeenCalledTimes(1);
         expect(store.apiError).toBe('');
     });
 
     it('takes a new request for an invoice once a request for it has failed', async () => {
-        fetchMock.mockRejectedValueOnce(new Error('host unreachable'));
+        mockHost(() => {
+            throw new Error('host unreachable');
+        });
         const store = newStore();
 
         await store.createSubmarineSwap(INVOICE, newNavigation());
@@ -249,7 +320,7 @@ describe('SwapStore.createSubmarineSwap for an invoice that already has a swap',
         const navigation = newNavigation();
         await store.createSubmarineSwap(INVOICE, navigation);
 
-        expect(fetchMock).toHaveBeenCalledTimes(2);
+        expect(createRequests).toHaveLength(2);
         expect(storedIds()).toEqual(['swap-2']);
         expect(navigation.navigate).toHaveBeenCalledTimes(1);
     });
@@ -262,7 +333,7 @@ describe('SwapStore.createSubmarineSwap for an invoice that already has a swap',
         await store.createSubmarineSwap(INVOICE, navigation);
 
         expect(store.apiError).toBe('');
-        expect(JSON.parse(fetchMock.mock.calls[0][3]).invoice).toBe(INVOICE);
+        expect(JSON.parse(createRequests[0][3]).invoice).toBe(INVOICE);
         expect(storedIds()).toEqual(['swap-1']);
         expect(navigation.navigate).toHaveBeenCalledWith(
             'SwapDetails',
