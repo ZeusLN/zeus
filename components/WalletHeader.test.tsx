@@ -66,17 +66,20 @@ import Clipboard from '@react-native-clipboard/clipboard';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import WalletHeader from './WalletHeader';
 import handleAnything, { isClipboardValue } from '../utils/handleAnything';
+import { protectedNavigation } from '../utils/NavigationUtils';
 
 const INVOICE = 'lnbcrt1pexample';
 
 const renderHeader = async ({
     clipboard,
     connecting,
-    settingsLoaded = true
+    settingsLoaded = true,
+    sessionStarted = true
 }: {
     clipboard: boolean;
     connecting?: boolean;
     settingsLoaded?: boolean;
+    sessionStarted?: boolean;
 }) => {
     const listeners: { [event: string]: () => void } = {};
     const navigation = {
@@ -93,7 +96,8 @@ const renderHeader = async ({
                 connecting,
                 SettingsStore: {
                     settings: { privacy: { clipboard } },
-                    settingsLoaded
+                    settingsLoaded,
+                    sessionStarted: () => sessionStarted
                 },
                 CashuStore: { sentTokens: [] },
                 ChannelsStore: { pendingHTLCs: [] },
@@ -201,5 +205,57 @@ describe('WalletHeader clipboard badge', () => {
         expect(Clipboard.getString).toHaveBeenCalledTimes(1);
         await act(async () => onChange('active'));
         expect(Clipboard.getString).toHaveBeenCalledTimes(2);
+    });
+});
+
+describe('WalletHeader before the session starts', () => {
+    const menuIcon = () =>
+        screen.container.queryAll((n) => n.type === 'MenuIcon')[0];
+    const nodeIdenticon = () =>
+        screen.container.queryAll((n) => n.type === 'NodeIdenticon')[0];
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (Clipboard.getString as jest.Mock).mockResolvedValue('');
+    });
+
+    it('draws no menu button or wallet picture on the cold start header', async () => {
+        // the stored PIN and POS mode have not been acted on yet
+        await renderHeader({
+            clipboard: false,
+            connecting: true,
+            settingsLoaded: false,
+            sessionStarted: false
+        });
+
+        expect(menuIcon()).toBeUndefined();
+        expect(nodeIdenticon()).toBeUndefined();
+    });
+
+    it('draws no controls once settings load but before POS mode or login', async () => {
+        await renderHeader({
+            clipboard: false,
+            connecting: true,
+            sessionStarted: false
+        });
+
+        expect(menuIcon()).toBeUndefined();
+        expect(nodeIdenticon()).toBeUndefined();
+    });
+
+    it('draws the menu button and wallet picture once the session has started', async () => {
+        await renderHeader({ clipboard: false, connecting: true });
+
+        expect(menuIcon()).toBeDefined();
+        expect(nodeIdenticon()).toBeDefined();
+
+        await fireEvent.press(menuIcon());
+
+        expect(protectedNavigation).toHaveBeenCalledWith(
+            expect.anything(),
+            'Menu',
+            undefined,
+            { animation: 'fade' }
+        );
     });
 });

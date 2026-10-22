@@ -53,7 +53,7 @@ import CashuInvoice from '../../models/CashuInvoice';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import { scanNfcTag } from '../../utils/NFCUtils';
+import { isNfcWithdraw, scanNfcTag } from '../../utils/NFCUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { getAmountFromSats } from '../../utils/AmountUtils';
 
@@ -98,6 +98,8 @@ interface ReceiveEcashState {
     value: string;
     satAmount: string | number;
     nfcSupported: boolean;
+    // the last NFC read was not an LNURL-withdraw card
+    nfcError: boolean;
     // POS
     orderId: string;
     orderTotal: string;
@@ -129,6 +131,7 @@ export default class ReceiveEcash extends React.Component<
             value: '',
             satAmount: '',
             nfcSupported: false,
+            nfcError: false,
             // POS
             orderId: '',
             orderTip: '',
@@ -267,7 +270,9 @@ export default class ReceiveEcash extends React.Component<
 
     scanNfc = async () => {
         const str = await scanNfcTag(this.props.ModalStore);
-        if (str) this.validateAddress(str);
+        if (!str) return;
+        this.setState({ nfcError: false });
+        this.validateAddress(str);
     };
 
     validateAddress = (text: string) => {
@@ -280,6 +285,12 @@ export default class ReceiveEcash extends React.Component<
                 try {
                     const [route, props] = response;
                     const { lnurlParams } = props;
+                    // NFC reads here are for LNURL-withdraw (e.g. a Bolt
+                    // Card) only; tell staff about anything else
+                    if (!isNfcWithdraw(route, lnurlParams)) {
+                        this.setState({ nfcError: true });
+                        return;
+                    }
                     const { memo } = lnurlParams.defaultDescription;
 
                     // if an amount was entered on the keypad screen before scanning
@@ -305,7 +316,7 @@ export default class ReceiveEcash extends React.Component<
                     }
                 } catch (e) {}
             })
-            .catch();
+            .catch(() => this.setState({ nfcError: true }));
     };
 
     subscribeInvoice = async () => {
@@ -593,6 +604,13 @@ export default class ReceiveEcash extends React.Component<
                             keyboardDismissMode="on-drag"
                         >
                             {error_msg && <ErrorMessage message={error_msg} />}
+                            {this.state.nfcError && (
+                                <ErrorMessage
+                                    message={localeString(
+                                        'views.Receive.nfcNotWithdraw'
+                                    )}
+                                />
+                            )}
 
                             <View>
                                 {!!invoice && (

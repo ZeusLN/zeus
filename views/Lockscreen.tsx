@@ -640,15 +640,19 @@ export default class Lockscreen extends React.Component<
 
         return (
             <Screen>
-                {(this.isSecurityManagementFlow || pendingNavigation) && (
-                    <Header leftComponent="Back" navigation={navigation} />
-                )}
-                {this.isPosShareIntent && (
+                {/* the POS route guard can add a pendingNavigation to a
+                    share intent Lockscreen; proceed() serves the share
+                    intent first, so its Back is the one to show */}
+                {this.isPosShareIntent ? (
                     <Header
                         leftComponent="Back"
                         onBack={this.dismissShareIntent}
                         navigateBackOnBackPress={false}
                     />
+                ) : (
+                    (this.isSecurityManagementFlow || pendingNavigation) && (
+                        <Header leftComponent="Back" navigation={navigation} />
+                    )
                 )}
                 {!!passphrase && (
                     <View

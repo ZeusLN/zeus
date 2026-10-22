@@ -16,7 +16,7 @@ jest.mock('react-native-nfc-manager', () => ({
     Ndef: { text: { decodePayload: () => {} } }
 }));
 
-import { decodeNdefTextPayload } from './NFCUtils';
+import { decodeNdefTextPayload, isNfcWithdraw } from './NFCUtils';
 
 // NDEF Text Record payload structure:
 //   byte 0:   status byte — lower 6 bits = language code length
@@ -52,5 +52,31 @@ describe('decodeNdefTextPayload', () => {
     it('returns null for a truncated multi-byte sequence', () => {
         // 0xC3 starts a 2-byte sequence but has no continuation byte
         expect(decodeNdefTextPayload(withHeader(0xc3))).toBeNull();
+    });
+});
+
+describe('isNfcWithdraw', () => {
+    it.each(['Receive', 'ChoosePaymentMethod'])(
+        'accepts a withdraw request routed to %s',
+        (route) => {
+            expect(isNfcWithdraw(route, { tag: 'withdrawRequest' })).toBe(true);
+        }
+    );
+
+    it.each([
+        ['an LNURL-pay request', 'LnurlPay', { tag: 'payRequest' }],
+        // the Lightning address server picks the tag
+        [
+            'a Lightning address answering withdrawRequest',
+            'LnurlPay',
+            { tag: 'withdrawRequest' }
+        ],
+        ['an LNURL-channel request', 'LnurlChannel', { tag: 'channelRequest' }],
+        ['an LNURL-auth request', 'LnurlAuth', { tag: 'login' }],
+        ['a Receive result with another tag', 'Receive', { tag: 'payRequest' }],
+        ['a result without lnurlParams', 'Send', undefined],
+        ['a Receive result without lnurlParams', 'Receive', undefined]
+    ])('rejects %s', (_, route, lnurlParams) => {
+        expect(isNfcWithdraw(route, lnurlParams)).toBe(false);
     });
 });

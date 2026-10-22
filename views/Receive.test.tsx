@@ -26,7 +26,10 @@ jest.mock('../utils/ThemeUtils', () => ({
 jest.mock('../utils/LndUtils', () => ({
     toWalletrpcAddressTypeName: jest.fn()
 }));
-jest.mock('../utils/NFCUtils', () => ({ scanNfcTag: jest.fn() }));
+jest.mock('../utils/NFCUtils', () => ({
+    isNfcWithdraw: jest.requireActual('../utils/NFCUtils').isNfcWithdraw,
+    scanNfcTag: jest.fn()
+}));
 jest.mock('../utils/UnitsUtils', () => ({
     SATS_PER_BTC: 100000000,
     numberWithCommas: (x: string | number) => `${x}`
@@ -282,7 +285,12 @@ describe('Receive LNURL-withdraw LSP fee', () => {
         (getSatAmount as jest.Mock).mockReturnValue(50000);
         (handleAnything as unknown as jest.Mock).mockResolvedValue([
             'Receive',
-            { lnurlParams: { defaultDescription: { memo: '' } } }
+            {
+                lnurlParams: {
+                    tag: 'withdrawRequest',
+                    defaultDescription: { memo: '' }
+                }
+            }
         ]);
         const createUnifiedInvoice = jest.fn(() => new Promise(() => {}));
         const view = new Receive({
@@ -303,5 +311,160 @@ describe('Receive LNURL-withdraw LSP fee', () => {
                 confirmLspFee: view.confirmLspFee
             })
         );
+    });
+});
+
+describe('Receive.validateAddress (Pay via NFC)', () => {
+    const withdrawParams = {
+        tag: 'withdrawRequest',
+        callback: 'https://card.example/withdraw',
+        k1: 'k1',
+        defaultDescription: 'Bolt Card'
+    };
+
+    const makeNfcView = (amount: string) => {
+        const navigation = { navigate: jest.fn() };
+        const createUnifiedInvoice = jest.fn(() =>
+            Promise.resolve({ rHash: 'rhash' })
+        );
+        const view = new Receive({
+            navigation,
+            route: { params: { amount } },
+            SettingsStore: { settings: {} },
+            InvoicesStore: { createUnifiedInvoice },
+            NodeInfoStore: { nodeInfo: { block_height: 900000 } }
+        } as unknown as React.ComponentProps<typeof Receive>);
+        view.subscribeInvoice = jest.fn();
+        view.setState = jest.fn();
+        return { view, navigation, createUnifiedInvoice };
+    };
+
+    const flush = () => new Promise((resolve) => setImmediate(resolve));
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+    });
+
+    it.each([
+        [
+            'an LNURL-pay request',
+            'LnurlPay',
+            {
+                tag: 'payRequest',
+                callback: 'https://x.example/cb',
+                defaultDescription: 'x'
+            }
+        ],
+        [
+            'a Lightning address whose server answers withdrawRequest',
+            'LnurlPay',
+            {
+                tag: 'withdrawRequest',
+                callback: 'https://x.example/cb',
+                defaultDescription: 'x'
+            }
+        ],
+        [
+            'an LNURL-channel request',
+            'LnurlChannel',
+            { tag: 'channelRequest', defaultDescription: 'x' }
+        ],
+        [
+            'an LNURL-auth request',
+            'LnurlAuth',
+            { tag: 'login', defaultDescription: 'x' }
+        ]
+    ])(
+        'opens no screen for %s on a zero amount',
+        async (_, route, lnurlParams) => {
+            (getSatAmount as jest.Mock).mockReturnValue(0);
+            (handleAnything as unknown as jest.Mock).mockResolvedValue([
+                route,
+                { lnurlParams }
+            ]);
+            const { view, navigation, createUnifiedInvoice } = makeNfcView('0');
+
+            view.validateAddress('https://x.example/lnurlp/tag');
+            await flush();
+
+            expect(navigation.navigate).not.toHaveBeenCalled();
+            expect(createUnifiedInvoice).not.toHaveBeenCalled();
+            expect(view.setState).toHaveBeenCalledWith({ nfcError: true });
+        }
+    );
+
+    it('shows the NFC error when the tag cannot be read as a payment code', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(0);
+        (handleAnything as unknown as jest.Mock).mockRejectedValue(
+            new Error('unsupported')
+        );
+        const { view, navigation } = makeNfcView('0');
+
+        view.validateAddress('hello');
+        await flush();
+
+        expect(navigation.navigate).not.toHaveBeenCalled();
+        expect(view.setState).toHaveBeenCalledWith({ nfcError: true });
+    });
+
+    it('opens no screen for an LNURL-pay request when invoice creation fails', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(5000);
+        (handleAnything as unknown as jest.Mock).mockResolvedValue([
+            'LnurlPay',
+            {
+                lnurlParams: {
+                    tag: 'payRequest',
+                    callback: 'https://x.example/cb',
+                    defaultDescription: 'x'
+                }
+            }
+        ]);
+        const { view, navigation, createUnifiedInvoice } = makeNfcView('5000');
+        createUnifiedInvoice.mockImplementation(() =>
+            Promise.reject(new Error('offline'))
+        );
+
+        view.validateAddress('https://x.example/lnurlp/tag');
+        await flush();
+
+        expect(createUnifiedInvoice).not.toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('opens the withdraw form for an LNURL-withdraw card on a zero amount', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(0);
+        const props = { lnurlParams: withdrawParams };
+        (handleAnything as unknown as jest.Mock).mockResolvedValue([
+            'Receive',
+            props
+        ]);
+        const { view, navigation } = makeNfcView('0');
+
+        view.validateAddress('lnurlw://card.example/w');
+        await flush();
+
+        expect(navigation.navigate).toHaveBeenCalledWith('Receive', props);
+        expect(view.setState).not.toHaveBeenCalledWith({ nfcError: true });
+    });
+
+    it('creates an invoice for the card to pay when an amount is set', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(5000);
+        (handleAnything as unknown as jest.Mock).mockResolvedValue([
+            'Receive',
+            { lnurlParams: withdrawParams }
+        ]);
+        const { view, navigation, createUnifiedInvoice } = makeNfcView('5000');
+
+        view.validateAddress('lnurlw://card.example/w');
+        await flush();
+
+        expect(createUnifiedInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({
+                value: '5000',
+                lnurl: withdrawParams
+            })
+        );
+        expect(view.subscribeInvoice).toHaveBeenCalledWith('rhash', undefined);
+        expect(navigation.navigate).not.toHaveBeenCalled();
     });
 });

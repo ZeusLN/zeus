@@ -1442,6 +1442,42 @@ describe('SettingsStore.externalInputAuthRequired', () => {
     });
 });
 
+describe('SettingsStore.sessionStarted', () => {
+    it('is false on a cold start', () => {
+        expect(new SettingsStore().sessionStarted()).toBe(false);
+    });
+
+    it('is false on a till whose settings loaded before POS mode started', () => {
+        const store = new SettingsStore();
+        store.settings = {
+            pin: '1234',
+            pos: { posEnabled: PosEnabled.Standalone }
+        } as any;
+        expect(store.posStatus).toBe('unselected');
+        expect(store.sessionStarted()).toBe(false);
+    });
+
+    it('is true once logged in', () => {
+        const store = new SettingsStore();
+        store.setLoginStatus(true);
+        expect(store.sessionStarted()).toBe(true);
+    });
+
+    it('is true once POS mode is active, without a login', () => {
+        const store = new SettingsStore();
+        store.setPosStatus('active');
+        expect(store.sessionStarted()).toBe(true);
+    });
+
+    it('is false again after the background lock outside POS', () => {
+        const store = new SettingsStore();
+        store.setLoginStatus(true);
+        store.setPosStatus('inactive');
+        store.setLoginStatus(false);
+        expect(store.sessionStarted()).toBe(false);
+    });
+});
+
 describe('SettingsStore.isPosEnabled', () => {
     const withPos = (pos: any) => {
         const store = new SettingsStore();

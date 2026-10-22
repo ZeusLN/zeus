@@ -3,12 +3,25 @@ jest.mock('../stores/Stores', () => ({
         posStatus: 'inactive',
         settings: {},
         setPosStatus: jest.fn(),
-        loginMethodConfigured: jest.fn()
+        loginMethodConfigured: jest.fn(),
+        loginRequired: jest.fn(),
+        sessionStarted: jest.fn()
     }
 }));
 
+import {
+    CommonActions,
+    StackActions,
+    StackRouter
+} from '@react-navigation/routers';
+
 import { settingsStore } from '../stores/Stores';
-import { protectedNavigation, reAuthNavigation } from './NavigationUtils';
+import {
+    POS_ROUTES,
+    lockRouteGuard,
+    protectedNavigation,
+    reAuthNavigation
+} from './NavigationUtils';
 
 const mockSettingsStore = settingsStore as any;
 
@@ -20,6 +33,7 @@ describe('NavigationUtils', () => {
         navigation = { navigate: jest.fn() };
         mockSettingsStore.posStatus = 'inactive';
         mockSettingsStore.settings = {};
+        mockSettingsStore.sessionStarted.mockReturnValue(true);
     });
 
     describe('reAuthNavigation', () => {
@@ -93,6 +107,28 @@ describe('NavigationUtils', () => {
             expect(navigation.navigate).toHaveBeenCalledWith('Menu', undefined);
         });
 
+        it('does nothing before the session has started', async () => {
+            // cold start: settings still hold the in-memory defaults (no PIN,
+            // POS disabled) and posStatus is 'unselected'
+            mockSettingsStore.sessionStarted.mockReturnValue(false);
+            mockSettingsStore.posStatus = 'unselected';
+
+            await protectedNavigation(navigation, 'Menu');
+            await protectedNavigation(navigation, 'Wallets');
+
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        });
+
+        it('does nothing on a till whose settings loaded before POS mode started', async () => {
+            mockSettingsStore.sessionStarted.mockReturnValue(false);
+            mockSettingsStore.posStatus = 'unselected';
+            mockSettingsStore.settings = { pin: '1234' };
+
+            await protectedNavigation(navigation, 'Menu');
+
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        });
+
         it('deactivates POS when requested on ungated navigation', async () => {
             mockSettingsStore.posStatus = 'inactive';
             mockSettingsStore.settings = {};
@@ -106,6 +142,379 @@ describe('NavigationUtils', () => {
                 'Wallet',
                 undefined
             );
+        });
+    });
+
+    describe('lockRouteGuard', () => {
+        // The real stack router, so a change in how it handles navigate,
+        // replace, reset or popTo shows up here
+        const routeNames = [
+            ...POS_ROUTES,
+            'Menu',
+            'Invoice',
+            'Transaction',
+            'Wallets',
+            'WalletConfiguration',
+            'LightningAddress',
+            'Mints',
+            'Swaps',
+            'LnurlPay'
+        ];
+        const options: any = {
+            routeNames,
+            routeParamList: {},
+            routeGetIdList: {}
+        };
+        const stack = StackRouter({});
+        const router: any = { ...stack, ...lockRouteGuard(stack as any) };
+
+        const stackOf = (...routes: Array<string | [string, any]>): any => {
+            const initial = stack.getInitialState(options);
+            return {
+                ...initial,
+                routes: routes.map((r, i) => {
+                    const [name, params] = typeof r === 'string' ? [r] : r;
+                    return { key: `${name}-${i}`, name, params };
+                }),
+                index: routes.length - 1
+            };
+        };
+        const navigate = (name: string, params?: any) =>
+            CommonActions.navigate(name, params);
+        const names = (state: any) => state.routes.map((r: any) => r.name);
+        const top = (state: any) => state.routes[state.index];
+
+        beforeEach(() => {
+            mockSettingsStore.posStatus = 'active';
+            mockSettingsStore.loginMethodConfigured.mockReturnValue(true);
+            mockSettingsStore.loginRequired.mockReturnValue(false);
+        });
+
+        it.each([
+            ['Invoice', { invoice: { r_hash: 'aa' } }],
+            ['Transaction', { transaction: { tx: 'bb' } }],
+            ['Wallets', undefined],
+            ['WalletConfiguration', { index: 0 }],
+            ['LightningAddress', { skipStatus: true }],
+            ['Mints', undefined],
+            ['Swaps', { initialReverse: true }],
+            ['LnurlPay', { lnurlParams: { tag: 'payRequest' } }]
+        ])(
+            'opens the Lockscreen instead of %s during a POS session with a PIN',
+            (name, params) => {
+                const state = stackOf('Wallet', 'Activity');
+
+                const next = router.getStateForAction(
+                    state,
+                    navigate(name, params),
+                    options
+                );
+
+                expect(names(next)).toEqual([
+                    'Wallet',
+                    'Activity',
+                    'Lockscreen'
+                ]);
+                expect(top(next).params).toEqual({
+                    pendingNavigation: { screen: name, params }
+                });
+            }
+        );
+
+        it.each([
+            ['replace', StackActions.replace('Invoice', { a: 1 })],
+            ['push', StackActions.push('Invoice', { a: 1 })],
+            ['popTo', StackActions.popTo('Invoice', { a: 1 })],
+            [
+                'reset',
+                CommonActions.reset({
+                    index: 1,
+                    routes: [
+                        { name: 'Wallet' },
+                        { name: 'Invoice', params: { a: 1 } }
+                    ]
+                })
+            ]
+        ])('opens the Lockscreen for %s to a wallet screen', (_, action) => {
+            const state = stackOf('Wallet', 'Activity');
+
+            const next = router.getStateForAction(state, action, options);
+
+            expect(names(next)).toEqual(['Wallet', 'Activity', 'Lockscreen']);
+            expect(top(next).params).toEqual({
+                pendingNavigation: { screen: 'Invoice', params: { a: 1 } }
+            });
+        });
+
+        it.each(POS_ROUTES.filter((name) => name !== 'Wallet'))(
+            'lets a POS session open %s',
+            (name) => {
+                const state = stackOf('Wallet');
+
+                const next = router.getStateForAction(
+                    state,
+                    navigate(name, { amount: '10' }),
+                    options
+                );
+
+                expect(top(next).name).toBe(name);
+                expect(top(next).params).toEqual({ amount: '10' });
+            }
+        );
+
+        it('lets a POS session go back to the POS view', () => {
+            const state = stackOf('Wallet', 'Receive');
+
+            const next = router.getStateForAction(
+                state,
+                StackActions.pop(),
+                options
+            );
+
+            expect(names(next)).toEqual(['Wallet']);
+        });
+
+        it.each([
+            ['pop', StackActions.pop()],
+            ['goBack', CommonActions.goBack()]
+        ])(
+            'opens the Lockscreen when %s would show a wallet screen',
+            (_, action) => {
+                const state = stackOf('Menu', 'Wallet');
+
+                const next = router.getStateForAction(state, action, options);
+
+                expect(names(next)).toEqual(['Menu', 'Wallet', 'Lockscreen']);
+                expect(top(next).params).toEqual({
+                    pendingNavigation: { screen: 'Menu', params: undefined }
+                });
+            }
+        );
+
+        it('only updates the pending screen when the Lockscreen is already in front', () => {
+            const state = stackOf('Wallet', [
+                'Lockscreen',
+                { pendingNavigation: { screen: 'Invoice' } }
+            ]);
+
+            const next = router.getStateForAction(
+                state,
+                navigate('Menu'),
+                options
+            );
+
+            expect(names(next)).toEqual(['Wallet', 'Lockscreen']);
+            expect(top(next).params).toEqual({
+                pendingNavigation: { screen: 'Menu', params: undefined }
+            });
+        });
+
+        it("keeps the Lockscreen's share intent when another screen is redirected to it", () => {
+            const shareIntentData = { qrData: 'lnbc1' };
+            const state = stackOf('Wallet', [
+                'Lockscreen',
+                { shareIntentData }
+            ]);
+
+            const next = router.getStateForAction(
+                state,
+                navigate('LnurlPay', { lnurlParams: { tag: 'payRequest' } }),
+                options
+            );
+
+            expect(names(next)).toEqual(['Wallet', 'Lockscreen']);
+            expect(top(next).params).toEqual({
+                shareIntentData,
+                pendingNavigation: {
+                    screen: 'LnurlPay',
+                    params: { lnurlParams: { tag: 'payRequest' } }
+                }
+            });
+        });
+
+        it('opens the pending screen once the Lockscreen has left POS mode', () => {
+            mockSettingsStore.posStatus = 'inactive';
+            const state = stackOf('Wallet', 'Lockscreen');
+
+            const next = router.getStateForAction(
+                state,
+                StackActions.popTo('Invoice', { a: 1 }),
+                options
+            );
+
+            expect(names(next)).toEqual(['Wallet', 'Invoice']);
+        });
+
+        it('leaves navigation alone when POS is not active', () => {
+            mockSettingsStore.posStatus = 'inactive';
+            const state = stackOf('Wallet', 'Activity');
+
+            const next = router.getStateForAction(
+                state,
+                navigate('Invoice'),
+                options
+            );
+
+            expect(top(next).name).toBe('Invoice');
+        });
+
+        it('leaves navigation alone in POS mode without a login method', () => {
+            mockSettingsStore.loginMethodConfigured.mockReturnValue(false);
+            const state = stackOf('Wallet', 'Activity');
+
+            const next = router.getStateForAction(
+                state,
+                navigate('Invoice'),
+                options
+            );
+
+            expect(top(next).name).toBe('Invoice');
+        });
+
+        describe('while locked outside POS', () => {
+            const buried = ['Wallet', 'Menu', 'Mints'];
+            // as dispatched through a buried screen's navigation prop
+            const from = (state: any, name: string, action: any) => ({
+                ...action,
+                source: state.routes.find((r: any) => r.name === name).key
+            });
+
+            beforeEach(() => {
+                mockSettingsStore.posStatus = 'inactive';
+                mockSettingsStore.loginRequired.mockReturnValue(true);
+            });
+
+            it.each([
+                ['navigate', navigate('LnurlPay', { a: 1 })],
+                ['push', StackActions.push('Invoice')],
+                ['pop', StackActions.pop()],
+                ['popTo', StackActions.popTo('Menu')],
+                ['popToTop', StackActions.popToTop()],
+                ['goBack', CommonActions.goBack()],
+                ['replace', StackActions.replace('Wallets')],
+                [
+                    'reset',
+                    CommonActions.reset({
+                        index: 0,
+                        routes: [{ name: 'Wallet' }]
+                    })
+                ]
+            ])('drops %s from a screen under the Lockscreen', (_, action) => {
+                const state = stackOf(...buried, 'Lockscreen');
+
+                expect(
+                    router.getStateForAction(
+                        state,
+                        from(state, 'Mints', action),
+                        options
+                    )
+                ).toBe(state);
+            });
+
+            it('drops an action without a source', () => {
+                const state = stackOf(...buried, 'Lockscreen');
+
+                expect(
+                    router.getStateForAction(
+                        state,
+                        StackActions.popTo('Wallet'),
+                        options
+                    )
+                ).toBe(state);
+            });
+
+            it("drops the Lockscreen's own pop before login", () => {
+                const state = stackOf(...buried, 'Lockscreen');
+
+                expect(
+                    router.getStateForAction(
+                        state,
+                        from(state, 'Lockscreen', StackActions.pop()),
+                        options
+                    )
+                ).toBe(state);
+            });
+
+            it('lets the Lockscreen navigate away once logged in', () => {
+                mockSettingsStore.loginRequired.mockReturnValue(false);
+                const state = stackOf(...buried, 'Lockscreen');
+
+                const next = router.getStateForAction(
+                    state,
+                    from(state, 'Lockscreen', StackActions.pop()),
+                    options
+                );
+
+                expect(names(next)).toEqual(buried);
+            });
+
+            it('lets the app put the Lockscreen in front', () => {
+                const state = stackOf(...buried);
+
+                const next = router.getStateForAction(
+                    state,
+                    navigate('Lockscreen'),
+                    options
+                );
+
+                expect(names(next)).toEqual([...buried, 'Lockscreen']);
+            });
+
+            it('leaves navigation alone while the Lockscreen is not in front', () => {
+                const state = stackOf(...buried);
+
+                const next = router.getStateForAction(
+                    state,
+                    from(state, 'Mints', navigate('Invoice')),
+                    options
+                );
+
+                expect(top(next).name).toBe('Invoice');
+            });
+
+            it('lets a share intent reach a Lockscreen that carries it', () => {
+                const locked = stackOf('Wallet', 'Lockscreen');
+
+                const processing = router.getStateForAction(
+                    locked,
+                    navigate('ShareIntentProcessing'),
+                    options
+                );
+                expect(names(processing)).toEqual([
+                    'Wallet',
+                    'Lockscreen',
+                    'ShareIntentProcessing'
+                ]);
+
+                expect(
+                    router.getStateForAction(
+                        processing,
+                        StackActions.replace('LnurlPay'),
+                        options
+                    )
+                ).toBe(processing);
+
+                const next = router.getStateForAction(
+                    processing,
+                    StackActions.replace('Lockscreen', {
+                        shareIntentData: { qrData: 'lnbc1' }
+                    }),
+                    options
+                );
+                expect(names(next)).toEqual([
+                    'Wallet',
+                    'Lockscreen',
+                    'Lockscreen'
+                ]);
+            });
+        });
+
+        it('passes on actions the stack does not handle', () => {
+            const state = stackOf('Wallet');
+
+            expect(
+                router.getStateForAction(state, StackActions.pop(), options)
+            ).toBeNull();
         });
     });
 });

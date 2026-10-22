@@ -20,6 +20,24 @@ export function decodeNdefTextPayload(data: Uint8Array): string | null {
 }
 
 /**
+ * Whether a handleAnything result for an NFC read in the receive views is
+ * an LNURL-withdraw request (e.g. a Bolt Card), the only kind those views
+ * act on. The route is checked as well as the tag: for a Lightning address
+ * the tag comes from the server, and the route is LnurlPay whatever it
+ * says. With ecash enabled, a withdraw request opens ChoosePaymentMethod
+ * instead of Receive.
+ */
+export function isNfcWithdraw(
+    route: string,
+    lnurlParams?: { tag?: string }
+): boolean {
+    return (
+        ['Receive', 'ChoosePaymentMethod'].includes(route) &&
+        lnurlParams?.tag === 'withdrawRequest'
+    );
+}
+
+/**
  * Checks whether NFC is enabled on the device.
  * If not, shows the AndroidNfcModal with the disabled state and returns false.
  * On iOS, NfcManager.isEnabled() always returns true, so this function
