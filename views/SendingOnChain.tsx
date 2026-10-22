@@ -21,10 +21,12 @@ import { Row } from '../components/layout/Row';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import UrlUtils from '../utils/UrlUtils';
+import { submarineSwapPaidBySend } from '../utils/SwapUtils';
 
 import Storage from '../storage';
 
 import NodeInfoStore from '../stores/NodeInfoStore';
+import SwapStore from '../stores/SwapStore';
 import TransactionsStore from '../stores/TransactionsStore';
 
 import ErrorIcon from '../assets/images/SVG/ErrorIcon.svg';
@@ -33,10 +35,11 @@ import Wordmark from '../assets/images/SVG/wordmark-black.svg';
 interface SendingOnChainProps {
     navigation: NativeStackNavigationProp<any, any>;
     NodeInfoStore: NodeInfoStore;
+    SwapStore: SwapStore;
     TransactionsStore: TransactionsStore;
 }
 
-@inject('NodeInfoStore', 'TransactionsStore')
+@inject('NodeInfoStore', 'SwapStore', 'TransactionsStore')
 @observer
 export default class SendingOnChain extends React.Component<
     SendingOnChainProps,
@@ -45,6 +48,8 @@ export default class SendingOnChain extends React.Component<
     private backPressSubscription: NativeEventSubscription;
 
     private focusListener: (() => void) | undefined;
+
+    private swapMarkedFunded = false;
 
     state = {
         storedNotes: ''
@@ -69,7 +74,27 @@ export default class SendingOnChain extends React.Component<
                     console.error('Error retrieving notes:', error);
                 });
         });
+
+        this.markSwapFunded();
     }
+
+    componentDidUpdate() {
+        this.markSwapFunded();
+    }
+
+    // A send started from a submarine swap's pay button is that swap's
+    // payment. Record it once the transaction is out, so SwapDetails stops
+    // offering to pay the swap again while the host has not reported it.
+    private markSwapFunded = () => {
+        const { SwapStore, TransactionsStore } = this.props;
+        if (this.swapMarkedFunded || !TransactionsStore.publishSuccess) return;
+
+        const swapId = submarineSwapPaidBySend(getRouteStack());
+        if (!swapId) return;
+
+        this.swapMarkedFunded = true;
+        SwapStore.markSwapFunded(swapId);
+    };
 
     componentWillUnmount() {
         if (this.focusListener) {
