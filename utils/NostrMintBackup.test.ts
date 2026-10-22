@@ -7,6 +7,7 @@ import * as bip39 from '@scure/bip39';
 import {
     backupMintsToNostr,
     deriveMintBackupKeypair,
+    MintBackupRelaysUnreachableError,
     restoreMintsFromNostr
 } from './NostrMintBackup';
 import Base64Utils from './Base64Utils';
@@ -48,7 +49,7 @@ function installFakeRelays(scripts: Record<string, RelayScript>) {
                 script.failConnect
                     ? Promise.reject(new Error('connect failed'))
                     : Promise.resolve(),
-            subscribe: (_filters: any, params: any) => {
+            subscribe: jest.fn((_filters: any, params: any) => {
                 const sub = { close: jest.fn() };
                 if (!script.neverRespond) {
                     // Fires after the caller has taken the subscription
@@ -61,7 +62,7 @@ function installFakeRelays(scripts: Record<string, RelayScript>) {
                     });
                 }
                 return sub;
-            },
+            }),
             publish: jest.fn(() => Promise.resolve()),
             close: jest.fn()
         };
@@ -555,7 +556,7 @@ describe('NostrMintBackup', () => {
             expect(relays['wss://relay-a'].close).toHaveBeenCalled();
         });
 
-        it('returns null when all relays fail or have no backup', async () => {
+        it('returns null when the relays that answered have no backup', async () => {
             installFakeRelays({
                 'wss://relay-a': { failConnect: true },
                 'wss://relay-b': { events: [] }
@@ -568,6 +569,51 @@ describe('NostrMintBackup', () => {
             );
 
             expect(result).toBeNull();
+        });
+
+        // "No relay answered" must not read as "no backup": the caller
+        // stores an empty mint list for the latter and never asks again
+        it('throws when no relay can be reached', async () => {
+            installFakeRelays({
+                'wss://relay-a': { failConnect: true },
+                'wss://relay-b': { failConnect: true }
+            });
+
+            await expect(
+                restoreMintsFromNostr(privateKeyHex, publicKeyHex, [
+                    'wss://relay-a',
+                    'wss://relay-b'
+                ])
+            ).rejects.toBeInstanceOf(MintBackupRelaysUnreachableError);
+        });
+
+        it('throws when every relay fails or stays silent', async () => {
+            jest.useFakeTimers();
+            installFakeRelays({
+                'wss://relay-a': { failConnect: true },
+                'wss://relay-b': { neverRespond: true }
+            });
+
+            const promise = restoreMintsFromNostr(privateKeyHex, publicKeyHex, [
+                'wss://relay-a',
+                'wss://relay-b'
+            ]);
+            const outcome = promise.catch((e) => e);
+            await jest.advanceTimersByTimeAsync(10000);
+            expect(await outcome).toBeInstanceOf(
+                MintBackupRelaysUnreachableError
+            );
+        });
+
+        it('keeps nostr-tools from reporting EOSE for a silent relay before the fetch times out', async () => {
+            const relays = installFakeRelays({ 'wss://relay-a': {} });
+
+            await restoreMintsFromNostr(privateKeyHex, publicKeyHex, [
+                'wss://relay-a'
+            ]);
+
+            const params = relays['wss://relay-a'].subscribe.mock.calls[0][1];
+            expect(params.eoseTimeout).toBeGreaterThanOrEqual(10000);
         });
     });
 
