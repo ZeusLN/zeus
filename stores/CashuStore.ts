@@ -5816,7 +5816,10 @@ export default class CashuStore {
                 : undefined;
 
             if (toSelfCustody) {
-                // For toSelfCustody, receive the token first then sweep via melt
+                // Prepare the sweep invoice and fee probe BEFORE receiving
+                // the token: receiving consumes it at the mint, so failures
+                // up to that point must leave the token unclaimed and
+                // retryable
                 const tokenAmt = decoded.getAmount;
 
                 const memo = `${localeString(
@@ -5828,11 +5831,6 @@ export default class CashuStore {
                     routeHints: true,
                     noLsp: true
                 };
-
-                // Pass signing key only when token is P2PK-locked (decoded has proofs)
-
-                await this.receiveTokenCDK(encodedToken, signingKey, mintUrl);
-                await this.syncCDKBalances();
 
                 // Create invoice for sweeping
                 let invoice = await this.invoicesStore.createInvoice({
@@ -5851,57 +5849,74 @@ export default class CashuStore {
                     };
                 }
 
-                // Create melt quote via CDK
+                // Probe the melt fee via CDK
                 const meltQuote = await this.createMeltQuoteCDK(
                     mintUrl,
                     invoice.paymentRequest
                 );
 
-                if (meltQuote.fee_reserve > 0) {
-                    const receiveAmtSat = tokenAmt - meltQuote.fee_reserve;
-                    if (receiveAmtSat <= 0) {
-                        this.loading = false;
-                        return {
-                            success: false,
-                            errorMessage: localeString(
-                                'stores.CashuStore.feeExceedsAmt'
-                            )
-                        };
-                    }
-
-                    // Recreate invoice with adjusted amount
-                    invoice = await this.invoicesStore.createInvoice({
-                        ...invoiceParams,
-                        memo: `${memo} [${localeString(
-                            'views.Cashu.CashuToken.feeAdjusted'
-                        )}]`,
-                        value: receiveAmtSat.toString()
-                    });
-
-                    if (!invoice?.paymentRequest) {
-                        this.loading = false;
-                        return {
-                            success: false,
-                            errorMessage: localeString(
-                                'stores.InvoicesStore.errorCreatingInvoice'
-                            )
-                        };
-                    }
+                if (meltQuote.fee_reserve >= tokenAmt) {
+                    this.loading = false;
+                    return {
+                        success: false,
+                        errorMessage: localeString(
+                            'stores.CashuStore.feeExceedsAmt'
+                        )
+                    };
                 }
 
-                // Melt via CDK to pay the invoice. The token has already been
-                // received at this point, so a melt that does not pay is not
-                // a failed claim: the ecash is in the wallet and the proofs
-                // are spent, so reporting failure would send the user looking
-                // for a token they already hold and cannot claim again.
+                // Pass signing key only when token is P2PK-locked (decoded has proofs)
+
+                // Point of no return: this consumes the token and credits
+                // the wallet's own balance at the mint
+                const receivedAmt = await this.receiveTokenCDK(
+                    encodedToken,
+                    signingKey,
+                    mintUrl
+                );
+                await this.syncCDKBalances();
+
                 let melted: CDKMelted | undefined;
                 try {
+                    // The mint may credit less than face value (input fees),
+                    // so size the sweep from what was actually received
+                    const receiveAmtSat = receivedAmt - meltQuote.fee_reserve;
+                    if (receiveAmtSat <= 0) {
+                        throw new Error(
+                            localeString('stores.CashuStore.feeExceedsAmt')
+                        );
+                    }
+
+                    if (meltQuote.fee_reserve > 0 || receivedAmt !== tokenAmt) {
+                        // Recreate invoice with adjusted amount
+                        invoice = await this.invoicesStore.createInvoice({
+                            ...invoiceParams,
+                            memo: `${memo} [${localeString(
+                                'views.Cashu.CashuToken.feeAdjusted'
+                            )}]`,
+                            value: receiveAmtSat.toString()
+                        });
+
+                        if (!invoice?.paymentRequest) {
+                            throw new Error(
+                                localeString(
+                                    'stores.InvoicesStore.errorCreatingInvoice'
+                                )
+                            );
+                        }
+                    }
+
+                    // Melt via CDK to pay the invoice
                     melted = await this.meltCDK(
                         mintUrl,
                         invoice.paymentRequest
                     );
-                } catch (e: any) {
-                    console.error('CDK claimToken self-custody sweep:', e);
+                } catch (sweepError: any) {
+                    // The token is now spent and its value sits in the
+                    // wallet's own balance at the mint, so a failed sweep
+                    // must not read as a failed claim: a retry would only
+                    // hit "token already spent" against our own receive
+                    console.error('CDK claimToken sweep error:', sweepError);
                     await this.syncCDKBalances(true);
                     this.loading = false;
                     return {

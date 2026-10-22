@@ -303,9 +303,8 @@ describe('CashuStore melting into our own invoice', () => {
         );
         store.cdkInitialized = true;
         jest.spyOn(store, 'isOffline', 'get').mockReturnValue(false);
-        jest.spyOn(store, 'receiveTokenCDK').mockResolvedValue(
-            undefined as any
-        );
+        // receiveTokenCDK resolves to the amount the mint credited
+        jest.spyOn(store, 'receiveTokenCDK').mockResolvedValue(1000);
         jest.spyOn(store, 'syncCDKBalances').mockResolvedValue(
             undefined as any
         );
@@ -1296,7 +1295,7 @@ describe('CashuStore self-custody claim', () => {
         );
         store.cdkInitialized = true;
         store.mintUrls = [mintUrl];
-        store.receiveTokenCDK = jest.fn().mockResolvedValue(undefined);
+        store.receiveTokenCDK = jest.fn().mockResolvedValue(1000);
         store.createMeltQuoteCDK = jest.fn().mockResolvedValue({
             id: 'quote-1',
             amount: 1000,
