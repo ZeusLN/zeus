@@ -199,6 +199,9 @@ export default class CashuStore {
     // not replace the invoice on screen
     private createInvoiceRequestId = 0;
 
+    // Payment hashes of the invoices payLnInvoiceFromEcash is paying now
+    private paymentHashesInFlight = new Set<string>();
+
     @observable public mintUrls: Array<string> = [];
     @observable public selectedMintUrl: string;
     @observable public randomizeMintSelection: boolean = false;
@@ -4767,6 +4770,14 @@ export default class CashuStore {
                 return;
             }
 
+            // Mints know nothing of each other's payments: quoted again
+            // while it is being paid, the invoice would be planned on the
+            // mints that still have funds and could be paid twice
+            if (this.paymentHashesInFlight.has(payReq.payment_hash)) {
+                this.getPayReqError = localeString('stores.CashuStore.pending');
+                return;
+            }
+
             const rawPaymentAmt = payReq.getRequestAmount
                 ? payReq.getRequestAmount
                 : 0;
@@ -4968,6 +4979,14 @@ export default class CashuStore {
         isDonationPayment?: boolean;
         onProgress?: MultimintProgressCallback;
     }) => {
+        // Refuse a second payment of an invoice that is still being paid.
+        // The payment state below belongs to the first attempt, so it is
+        // left as it is.
+        const inFlightHash = this.payReq?.payment_hash;
+        if (inFlightHash && this.paymentHashesInFlight.has(inFlightHash)) {
+            return;
+        }
+
         // Reset payment state (don't set loading=true here as it triggers LoadingIndicator on CashuPaymentRequest)
         if (isDonationPayment) {
             console.log('CDK payLnInvoiceFromEcash: Starting donation payment');
@@ -4984,6 +5003,7 @@ export default class CashuStore {
         // what is checked here is what gets melted and recorded.
         const { payReq, meltQuote, feeEstimate } = this;
         const bolt11 = this.paymentRequest;
+        let paymentHash: string | undefined;
 
         try {
             if (!paymentRequest || paymentRequest !== bolt11) {
@@ -4999,6 +5019,11 @@ export default class CashuStore {
                     });
                 }
                 return;
+            }
+
+            if (payReq?.payment_hash) {
+                paymentHash = payReq.payment_hash;
+                this.paymentHashesInFlight.add(paymentHash);
             }
 
             const rawPaymentAmt = payReq?.getRequestAmount
@@ -5239,6 +5264,8 @@ export default class CashuStore {
                 });
             }
             return;
+        } finally {
+            if (paymentHash) this.paymentHashesInFlight.delete(paymentHash);
         }
     };
 
