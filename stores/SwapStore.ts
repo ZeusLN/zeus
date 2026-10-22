@@ -531,6 +531,33 @@ export default class SwapStore {
         }
     };
 
+    /**
+     * Whether a stored swap was made for an invoice with the same payment
+     * hash. The host claims a submarine swap's lockup with the invoice's
+     * preimage, which it learns by paying the invoice once, so every swap
+     * made for one invoice can be claimed with that one payment. Swaps of
+     * every host and status count: a failed or refunded status can come
+     * from the host, and our own refund mark is set when the refund is
+     * broadcast, not when it confirms.
+     */
+    private isInvoiceInUse = (swaps: any[], invoice: string): boolean => {
+        const paymentHashOf = (paymentRequest: string) => {
+            try {
+                return Bolt11Utils.decode(paymentRequest).payment_hash;
+            } catch {
+                return undefined;
+            }
+        };
+        const paymentHash = paymentHashOf(invoice);
+        // an invoice we cannot decode is left to the host to refuse
+        if (!paymentHash) return false;
+        return swaps.some(
+            (swap: any) =>
+                typeof swap?.invoice === 'string' &&
+                paymentHashOf(swap.invoice) === paymentHash
+        );
+    };
+
     @action
     public createSubmarineSwap = async (invoice: any, navigation: any) => {
         runInAction(() => {
@@ -544,6 +571,21 @@ export default class SwapStore {
         const pairHash = this.subInfo?.hash;
         const apiUrl = UrlUtils.getMempoolApiUrl(nodeInfo);
         try {
+            // before a refund key is used and the host sees the invoice
+            const storedSwaps = await Storage.getItem(SWAPS_KEY);
+            if (
+                this.isInvoiceInUse(
+                    storedSwaps ? JSON.parse(storedSwaps) : [],
+                    invoice
+                )
+            ) {
+                runInAction(() => {
+                    this.apiError = localeString('views.Swaps.invoiceInUse');
+                    this.loading = false;
+                });
+                return;
+            }
+
             // Run the checks that don't need the host's answer before the
             // host creates the swap: the Swaps screen retries with the same
             // invoice, and the host refuses a second swap for its payment
