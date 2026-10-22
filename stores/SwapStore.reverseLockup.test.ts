@@ -1235,7 +1235,9 @@ describe('SwapStore.lockupSpentBy', () => {
         await expect(spentBy()).resolves.toBe('claim');
         expect(fetchMock).toHaveBeenCalledWith(
             'GET',
-            `https://mempool.test/api/tx/${SPENDER}`
+            `https://mempool.test/api/tx/${SPENDER}`,
+            undefined,
+            undefined
         );
     });
 
@@ -1330,7 +1332,9 @@ describe('SwapStore.checkStoredClaim', () => {
         await expect(check()).resolves.toEqual({ status: 'ok' });
         expect(fetchMock).toHaveBeenCalledWith(
             'GET',
-            `https://mempool.test/api/tx/${LOCKUP_TXID}/outspend/2`
+            `https://mempool.test/api/tx/${LOCKUP_TXID}/outspend/2`,
+            undefined,
+            undefined
         );
     });
 
