@@ -85,7 +85,9 @@ export default class LSPStore {
     private getInfoResponseResolver: (() => void) | null = null;
     private createOrderResponseResolver: (() => void) | null = null;
     private getOrderResponseResolver: (() => void) | null = null;
-    private getExtendableChannelsResponseResolver: (() => void) | null = null;
+    private getExtendableChannelsResponseResolver:
+        | ((failed?: boolean) => void)
+        | null = null;
     private createExtensionOrderResponseResolver: (() => void) | null = null;
     private getExtensionOrderResponseResolver: (() => void) | null = null;
 
@@ -99,6 +101,9 @@ export default class LSPStore {
     // Incremented on every start/stop so an in-flight poll that resumes after an
     // await can tell whether its session is still the active one.
     private freeOrderPollSessionId = 0;
+    // Incremented on every native LSPS7 extendable channels call so a call
+    // that settles after a newer one can't overwrite its result.
+    private getExtendableChannelsNativeRequestId = 0;
     // Incremented on every Flow fee request and fee reset, so an answer to a
     // fee request that is no longer the latest one is dropped instead of
     // replacing the quote an invoice was priced with.
@@ -1483,9 +1488,15 @@ export default class LSPStore {
 
         // Use native LSPS7 method if available (LDK Node backend)
         if (BackendUtils.supportsLSPS7native()) {
+            // The channels reaction can start a new call before the last one
+            // settles, so only the latest call writes its result
+            const requestId = ++this.getExtendableChannelsNativeRequestId;
+            const isCurrent = () =>
+                requestId === this.getExtendableChannelsNativeRequestId;
             try {
                 const channels =
                     await BackendUtils.lsps7GetExtendableChannels();
+                if (!isCurrent()) return;
                 // Normalize camelCase keys from native module to snake_case
                 // to match the JSON-RPC custom message format
                 runInAction(() => {
@@ -1504,6 +1515,7 @@ export default class LSPStore {
                 });
                 return;
             } catch (error: any) {
+                if (!isCurrent()) return;
                 console.error(
                     'Error fetching LSPS7 extendable channels:',
                     error
@@ -1521,8 +1533,10 @@ export default class LSPStore {
         }
 
         // Fall back to custom message for other backends. This is a background
-        // probe with no spinner, so a timeout or send failure settles silently
-        // instead of surfacing an error.
+        // probe with no spinner, so a timeout or send failure only sets
+        // getExtendableChannelsError for the channel view and leaves the
+        // shared error and spinner alone. Starting a new probe settles the
+        // previous one without marking it failed.
         this.getExtendableChannelsResponseResolver?.();
 
         this.getExtendableChannelsId = uuidv4();
@@ -1530,19 +1544,24 @@ export default class LSPStore {
 
         await new Promise<void>((resolve) => {
             let settled = false;
-            const settle = () => {
+            const settle = (failed = false) => {
                 if (settled) return;
                 settled = true;
                 clearTimeout(timeoutId);
                 if (this.getExtendableChannelsResponseResolver === settle) {
                     this.getExtendableChannelsResponseResolver = null;
+                    if (failed) {
+                        runInAction(() => {
+                            this.getExtendableChannelsError = true;
+                        });
+                    }
                 }
                 resolve();
             };
-            const timeoutId = setTimeout(
-                settle,
-                CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS
-            );
+            const timeoutId = setTimeout(() => {
+                console.error(`Timed out waiting for (${method}) response`);
+                settle(true);
+            }, CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS);
             this.getExtendableChannelsResponseResolver = settle;
 
             this.sendCustomMessage({
@@ -1564,7 +1583,7 @@ export default class LSPStore {
                         `Error sending (${method}) custom message:`,
                         error
                     );
-                    settle();
+                    settle(true);
                 });
         });
     };
