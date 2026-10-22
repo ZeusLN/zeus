@@ -563,6 +563,36 @@ describe('LND WebSocket calls whose socket closes', () => {
     });
 });
 
+describe('LND.openChannelStream', () => {
+    const realWebSocket = global.WebSocket;
+
+    afterEach(() => {
+        global.WebSocket = realWebSocket;
+    });
+
+    it('sends the close address, as openChannelSync does', () => {
+        const send = jest.fn();
+        (global as any).WebSocket = jest.fn(() => ({
+            send,
+            addEventListener: (event: string, listener: () => void) =>
+                event === 'open' && listener()
+        }));
+        const lnd = new LND();
+        jest.spyOn(lnd, 'getURL').mockReturnValue('wss://node.example.com');
+
+        lnd.openChannelStream({
+            node_pubkey_string: '02ab',
+            local_funding_amount: '500000',
+            close_address: 'bc1qclose',
+            funding_shim: { psbt_shim: { pending_chan_id: 'id' } }
+        } as any);
+
+        expect(JSON.parse(send.mock.calls[0][0]).close_address).toBe(
+            'bc1qclose'
+        );
+    });
+});
+
 describe('LND.lookupPayment', () => {
     const HASH = 'ab'.repeat(32);
 

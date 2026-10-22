@@ -325,7 +325,8 @@ export interface ILndMobileInjections {
             simpleTaprootChannel?: boolean,
             fund_max?: boolean,
             utxos?: Array<string>,
-            funding_shim?: any
+            funding_shim?: any,
+            close_address?: string
         ) => Promise<string>;
         openChannelSync: (
             pubkey: string,

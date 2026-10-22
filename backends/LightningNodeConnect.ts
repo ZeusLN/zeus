@@ -488,6 +488,7 @@ export default class LightningNodeConnect {
             node_pubkey: Base64Utils.hexToBase64(data.node_pubkey_string),
             sat_per_vbyte: !data.funding_shim ? data.sat_per_vbyte : undefined,
             spend_unconfirmed: data.spend_unconfirmed,
+            close_address: data.close_address,
             funding_shim: data.funding_shim
         };
 
