@@ -961,7 +961,8 @@ export default class SeedRecovery extends React.PureComponent<
                                         lndDir,
                                         nodeInfo.testnet,
                                         nodeInfo.identity_pubkey,
-                                        recoveryCipherSeed
+                                        recoveryCipherSeed,
+                                        embeddedLndIsSqlite
                                     );
                                 if (!restored) {
                                     this.setState({
