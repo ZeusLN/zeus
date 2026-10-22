@@ -4042,8 +4042,10 @@ export default class NostrWalletConnectStore {
                     );
                 }
 
-                await NostrConnectModule.initialize();
+                // initialize() starts the service, and with it the Stop
+                // Service action, so listen before it resolves
                 this.setupAndroidServiceStoppedListener();
+                await NostrConnectModule.initialize();
                 this.updateAndroidTranslationCache();
             } catch (serviceError) {
                 console.warn(
@@ -4104,20 +4106,28 @@ export default class NostrWalletConnectStore {
         // Persistent Mode still on means the user pressed "Stop Service".
         // Turning Persistent Mode off also stops the native service, but
         // NWC then keeps running while ZEUS is open.
-        if (this.persistentNWCServiceEnabled) {
-            console.log('Android: Background service stopped by the user');
-            await this.reset(true);
-        }
-        // Android only destroys a stopped service once nothing is bound to
-        // it, and initialize() only starts it again after an unbind
         try {
-            const { NostrConnectModule } = NativeModules;
-            await NostrConnectModule.unbindNostrConnectService();
+            if (this.persistentNWCServiceEnabled) {
+                console.log('Android: Background service stopped by the user');
+                await this.reset(true);
+            }
         } catch (error) {
             console.warn(
-                'Android: Failed to unbind background service:',
-                error
+                'Android: Failed to reset NWC after Stop Service:',
+                error instanceof Error ? error.message : String(error)
             );
+        } finally {
+            // Android only destroys a stopped service once nothing is bound
+            // to it, and initialize() only starts it again after an unbind
+            try {
+                const { NostrConnectModule } = NativeModules;
+                await NostrConnectModule.unbindNostrConnectService();
+            } catch (error) {
+                console.warn(
+                    'Android: Failed to unbind background service:',
+                    error
+                );
+            }
         }
     }
     private async setupAndroidLogListener() {

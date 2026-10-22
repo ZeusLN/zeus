@@ -3485,7 +3485,7 @@ describe('NostrWalletConnectStore Android Stop Service', () => {
     });
 
     // A store serving one connection with Persistent Mode on
-    async function buildRunningStore() {
+    async function buildRunningStore(initialize = true) {
         const store = new NostrWalletConnectStore(
             { connecting: false } as any,
             {} as any,
@@ -3507,7 +3507,9 @@ describe('NostrWalletConnectStore Android Stop Service', () => {
         (store as any).nwcWalletServices.set(RELAY, { connected: true });
         (store as any).publishedRelays.add(RELAY);
         (store as any).activeSubscriptions.set('conn-1', unsubscribe);
-        await (store as any).initializeAndroidPersistentService();
+        if (initialize) {
+            await (store as any).initializeAndroidPersistentService();
+        }
         return store;
     }
 
@@ -3521,6 +3523,36 @@ describe('NostrWalletConnectStore Android Stop Service', () => {
         expect((store as any).activeSubscriptions.size).toBe(0);
         expect(store.isServiceReady()).toBe(false);
         expect((store as any).isInitialized).toBe(false);
+        expect(
+            NativeModules.NostrConnectModule.unbindNostrConnectService
+        ).toHaveBeenCalledTimes(1);
+    });
+
+    it('handles Stop Service pressed before initialize resolves', async () => {
+        const store = await buildRunningStore(false);
+        NativeModules.NostrConnectModule.initialize.mockImplementation(
+            async () => {
+                DeviceEventEmitter.emit('NostrConnectServiceStopped', {});
+                return 0;
+            }
+        );
+
+        await (store as any).initializeAndroidPersistentService();
+        await flushMicrotasks();
+
+        expect(
+            NativeModules.NostrConnectModule.unbindNostrConnectService
+        ).toHaveBeenCalledTimes(1);
+        expect((store as any).activeSubscriptions.size).toBe(0);
+    });
+
+    it('still unbinds when the reset fails', async () => {
+        const store = await buildRunningStore();
+        jest.spyOn(store, 'reset').mockRejectedValue(new Error('x'));
+
+        DeviceEventEmitter.emit('NostrConnectServiceStopped', {});
+        await flushMicrotasks();
+
         expect(
             NativeModules.NostrConnectModule.unbindNostrConnectService
         ).toHaveBeenCalledTimes(1);
