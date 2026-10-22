@@ -5674,10 +5674,11 @@ export default class CashuStore {
                         await this.ensureMintAdded(token.mint);
                     }
 
-                    const isLocked = CashuUtils.isTokenP2PKLocked(token);
-                    const signingKey = isLocked
-                        ? this.deriveCashuSecretKey() ?? undefined
-                        : undefined;
+                    // A token queued from a mint that was not in the wallet
+                    // was decoded without proofs, so isTokenP2PKLocked can't
+                    // tell if it is locked. Always offer our key: CDK only
+                    // uses it for proofs locked to it.
+                    const signingKey = this.deriveCashuSecretKey() ?? undefined;
                     await this.receiveTokenCDK(
                         token.encodedToken,
                         signingKey,
