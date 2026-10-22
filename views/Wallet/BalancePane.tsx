@@ -27,7 +27,7 @@ import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import { reAuthNavigation } from '../../utils/NavigationUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
-import { CHANNEL_MIGRATION_ACTIVE } from '../../utils/ChannelMigrationUtils';
+import { unlockWalletFromMigration } from '../../utils/ChannelMigrationUtils';
 
 import Storage from '../../storage';
 
@@ -173,7 +173,9 @@ export default class BalancePane extends React.PureComponent<
                     ),
                     style: 'destructive',
                     onPress: async () => {
-                        await Storage.removeItem(CHANNEL_MIGRATION_ACTIVE);
+                        await unlockWalletFromMigration(
+                            this.props.SettingsStore.lndDir || 'lnd'
+                        );
                         this.props.onUnlock();
                         RNRestart.Restart();
                     }
