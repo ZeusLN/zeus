@@ -7,6 +7,26 @@ const LNC_STORAGE_KEY = 'lnc-rn';
 const hash = (stringToHash: string) =>
     hashjs.sha256().update(stringToHash).digest('hex');
 
+const storageKeys = (pairingPhrase: string) => {
+    const baseKey = `${LNC_STORAGE_KEY}:${hash(pairingPhrase)}`;
+    return [baseKey, `${baseKey}:host`];
+};
+
+// Storage keys of pairing phrases whose wallet was deleted in this app run.
+// A store can outlive its wallet: the native dial cannot be cancelled, and a
+// connected session keeps reporting keys until another LNC wallet is opened.
+// Writes to these keys are dropped so a late key event cannot put the
+// deleted wallet's credentials back after they were cleared.
+const forgottenKeys = new Set<string>();
+
+/** Drops all later writes for this pairing phrase's credentials */
+const forgetCredentials = (pairingPhrase: string) =>
+    storageKeys(pairingPhrase).forEach((key) => forgottenKeys.add(key));
+
+/** Allows writes again once a configured wallet uses the phrase */
+const rememberCredentials = (pairingPhrase: string) =>
+    storageKeys(pairingPhrase).forEach((key) => forgottenKeys.delete(key));
+
 /**
  * A wrapper around `Storage` used to store sensitive data required
  * by LNC to reconnect after the initial pairing process has been completed.
@@ -212,6 +232,9 @@ export default class LncCredentialStore implements CredentialStore {
     private _enqueue(key: string, value: any) {
         this.writeQueue = this.writeQueue
             .then(async () => {
+                // Checked when the write runs, so writes queued before the
+                // wallet was deleted are dropped too
+                if (forgottenKeys.has(key)) return;
                 await Storage.setItem(key, value);
                 // Read back: a silently dropped keychain write is the one
                 // failure mode this store cannot recover from, so make it
@@ -233,4 +256,4 @@ export default class LncCredentialStore implements CredentialStore {
     }
 }
 
-export { LNC_STORAGE_KEY, hash };
+export { LNC_STORAGE_KEY, hash, forgetCredentials, rememberCredentials };

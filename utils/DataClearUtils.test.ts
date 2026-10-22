@@ -184,6 +184,9 @@ import { deleteLndWallet } from './LndMobileUtils';
 import { deleteLdkNodeWallet, stopLdkNode } from './LdkNodeUtils';
 import { sleep } from './SleepUtils';
 import MigrationUtils from './MigrationUtils';
+import LncCredentialStore, {
+    rememberCredentials
+} from '../backends/LNC/credentialStore';
 
 const mockedDeleteLndWallet = deleteLndWallet as jest.Mock;
 const mockedDeleteLdkNodeWallet = deleteLdkNodeWallet as jest.Mock;
@@ -700,6 +703,29 @@ describe('clearNodeKeychainData (single-wallet deletion helper)', () => {
         const baseKey = `lnc-rn:${lncHash(pairingPhrase)}`;
         expect(removedKeys()).not.toContain(baseKey);
         expect(removedKeys()).not.toContain(`${baseKey}:host`);
+    });
+
+    // The deleted wallet's LNC client can still report keys (a pending
+    // dial cannot be cancelled); its store must not write them back
+    it('stops a live LNC credential store from writing the cleared keys back', async () => {
+        const pairingPhrase = 'over hover clever trigger';
+        const credentials = new LncCredentialStore(pairingPhrase);
+        credentials.localKey = 'local-abc';
+        await credentials.flushWrites();
+
+        await clearNodeKeychainData({
+            implementation: 'lightning-node-connect',
+            pairingPhrase
+        });
+        credentials.remoteKey = 'remote-def';
+        await credentials.flushWrites();
+
+        const baseKey = `lnc-rn:${lncHash(pairingPhrase)}`;
+        expect(Storage.setItem).not.toHaveBeenCalledWith(
+            baseKey,
+            expect.anything()
+        );
+        rememberCredentials(pairingPhrase);
     });
 
     it('is a no-op for a null node', async () => {
