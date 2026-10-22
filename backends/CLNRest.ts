@@ -577,10 +577,15 @@ export default class CLNRest {
             // UI, same as the pay, xpay and xkeysend paths. keysend only
             // gained maxfee in v24.11: on older nodes express the cap as
             // the equivalent percent of the keysend amount (capped at
-            // CLN's 100% param limit)
-            if (data.fee_limit_sat && this.supports('v24.11')) {
+            // CLN's 100% param limit). A limit of 0 is a real cap of
+            // zero, whether it arrives as 0 or '0'.
+            const hasFeeLimit =
+                data.fee_limit_sat != null &&
+                data.fee_limit_sat !== '' &&
+                Number(data.fee_limit_sat) >= 0;
+            if (hasFeeLimit && this.supports('v24.11')) {
                 legacyRequest.maxfee = Number(data.fee_limit_sat) * 1000;
-            } else if (data.fee_limit_sat && data.amt) {
+            } else if (hasFeeLimit && data.amt) {
                 legacyRequest.maxfeepercent = BigNumber.min(
                     new BigNumber(data.fee_limit_sat)
                         .times(100)

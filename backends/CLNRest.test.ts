@@ -350,4 +350,39 @@ describe('CLNRest.sendKeysend legacy fee cap', () => {
         expect(request.maxfeepercent).toBe('0.5');
         expect(request).not.toHaveProperty('maxfee');
     });
+
+    // TransactionsStore passes the fee limit as a number, so a limit of
+    // '0' can arrive as 0 or '0'
+    it.each([0, '0'])('keeps a sat amount of %p as a cap of 0', (limit) => {
+        const request = keysendRequest('v25.09', {
+            fee_limit_sat: limit,
+            max_fee_percent: '5.0'
+        });
+        expect(request.maxfee).toBe(0);
+        expect(request).not.toHaveProperty('maxfeepercent');
+    });
+
+    it.each([0, '0'])(
+        'keeps a sat amount of %p as 0 percent before v24.11',
+        (limit) => {
+            const request = keysendRequest('v24.08', {
+                fee_limit_sat: limit,
+                max_fee_percent: '5.0'
+            });
+            expect(request.maxfeepercent).toBe(0);
+            expect(request).not.toHaveProperty('maxfee');
+        }
+    );
+
+    it.each([undefined, null, ''])(
+        'falls back to the percent for a sat amount of %p',
+        (limit) => {
+            const request = keysendRequest('v25.09', {
+                fee_limit_sat: limit,
+                max_fee_percent: '0.5'
+            });
+            expect(request.maxfeepercent).toBe('0.5');
+            expect(request).not.toHaveProperty('maxfee');
+        }
+    );
 });
