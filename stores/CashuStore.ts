@@ -323,6 +323,10 @@ export default class CashuStore {
     @observable public offlineSpentTokens: Array<CashuToken> = [];
     @observable public showOfflineSpentAlert: boolean = false;
     private isSweeping: boolean = false;
+    // Bumped by reset(). The offline-token sweep holds the value it started
+    // with and stops once it changes, so a sweep started for one wallet does
+    // not claim into or write the queue of the wallet selected after it
+    private walletSession = 0;
 
     settingsStore: SettingsStore;
     invoicesStore: InvoicesStore;
@@ -1955,6 +1959,7 @@ export default class CashuStore {
 
     @action
     public reset = () => {
+        this.walletSession++;
         this.cashuWallets = {};
         this.totalBalanceSats = 0;
         this.mintUrls = [];
@@ -5654,6 +5659,11 @@ export default class CashuStore {
         }
 
         this.isSweeping = true;
+        // After a wallet switch getNodeDir() and the CDK wallet handle point
+        // at the next wallet, so remember which wallet this sweep is for
+        const session = this.walletSession;
+        const nodeDir = this.getNodeDir();
+        let stoppedAt = -1;
 
         try {
             const results = { claimed: 0, alreadySpent: 0, failed: 0 };
@@ -5663,6 +5673,10 @@ export default class CashuStore {
             const tokensToProcess = [...this.offlinePendingTokens];
 
             for (let i = 0; i < tokensToProcess.length; i++) {
+                if (session !== this.walletSession) {
+                    stoppedAt = i;
+                    break;
+                }
                 const token = tokensToProcess[i];
                 if (!token.encodedToken) {
                     remaining.push(token);
@@ -5672,6 +5686,10 @@ export default class CashuStore {
                     // Ensure the token's mint is added to CDK before receiving
                     if (token.mint) {
                         await this.ensureMintAdded(token.mint);
+                    }
+                    if (session !== this.walletSession) {
+                        stoppedAt = i;
+                        break;
                     }
 
                     const isLocked = CashuUtils.isTokenP2PKLocked(token);
@@ -5719,6 +5737,21 @@ export default class CashuStore {
                 }
             }
 
+            if (session !== this.walletSession) {
+                // The store now holds the next wallet's state. Only update
+                // the stored queues of the wallet this sweep was started for
+                const processed =
+                    stoppedAt === -1
+                        ? tokensToProcess
+                        : tokensToProcess.slice(0, stoppedAt);
+                await this.saveStoppedSweep(
+                    nodeDir,
+                    processed.filter((token) => !remaining.includes(token)),
+                    spent
+                );
+                return;
+            }
+
             runInAction(() => {
                 this.offlinePendingTokens = remaining;
                 this.offlinePendingBalance = remaining.reduce(
@@ -5736,12 +5769,12 @@ export default class CashuStore {
 
             // Persist arrays
             await Storage.setItem(
-                `${this.getNodeDir()}-cashu-offline-pending-tokens`,
+                `${nodeDir}-cashu-offline-pending-tokens`,
                 this.offlinePendingTokens
             );
             if (spent.length > 0) {
                 await Storage.setItem(
-                    `${this.getNodeDir()}-cashu-offline-spent-tokens`,
+                    `${nodeDir}-cashu-offline-spent-tokens`,
                     this.offlineSpentTokens
                 );
             }
@@ -5771,7 +5804,41 @@ export default class CashuStore {
                 );
             }
         } finally {
-            this.isSweeping = false;
+            // After a reset the flag belongs to the sweep started since
+            if (session === this.walletSession) {
+                this.isSweeping = false;
+            }
+        }
+    };
+
+    /**
+     * Record what a sweep stopped by reset() got done in the stored queues
+     * of the wallet it was started for: claimed and spent tokens leave the
+     * pending queue, spent ones join the spent list
+     */
+    private saveStoppedSweep = async (
+        nodeDir: string,
+        settled: CashuToken[],
+        spent: CashuToken[]
+    ) => {
+        if (settled.length === 0) return;
+        const settledTokens = new Set(
+            settled.map((token) => token.encodedToken)
+        );
+        const pendingKey = `${nodeDir}-cashu-offline-pending-tokens`;
+        const storedPending = await Storage.getItem(pendingKey);
+        const pending: any[] = storedPending ? JSON.parse(storedPending) : [];
+        await Storage.setItem(
+            pendingKey,
+            pending.filter((token) => !settledTokens.has(token.encodedToken))
+        );
+        if (spent.length > 0) {
+            const spentKey = `${nodeDir}-cashu-offline-spent-tokens`;
+            const storedSpent = await Storage.getItem(spentKey);
+            await Storage.setItem(spentKey, [
+                ...(storedSpent ? JSON.parse(storedSpent) : []),
+                ...spent
+            ]);
         }
     };
 
