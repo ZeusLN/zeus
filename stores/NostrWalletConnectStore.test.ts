@@ -2842,6 +2842,151 @@ describe('NostrWalletConnectStore pay_invoice across a wallet switch', () => {
         expect(response).toEqual(SWITCHED);
         expect(payLnInvoiceFromEcash).not.toHaveBeenCalled();
     });
+
+    describe('and a connection delete or update', () => {
+        // Starts one payment and holds it at the node, then queues a second
+        // request on the same connection behind it
+        const queueBehindPayment = async () => {
+            const harness = await startService(
+                [{ permissions: ['pay_invoice'], maxAmountSats: 100000 }],
+                payCollaborators()
+            );
+            const [connection] = harness.connections;
+            const client = clientFor(connection);
+            const firstPayment = holdNextCall<any>(
+                harness.transactionsStore.sendPaymentSilently
+            );
+            const first = client.payInvoice({ invoice });
+            await firstPayment.entered;
+            const queued = client.payInvoice({ invoice: 'lnbc1queued' });
+            await flushMicrotasks();
+            return { ...harness, connection, firstPayment, first, queued };
+        };
+
+        it('does not run a queued request when the connection is deleted', async () => {
+            const {
+                store,
+                transactionsStore,
+                connection,
+                firstPayment,
+                first,
+                queued
+            } = await queueBehindPayment();
+
+            const deletion = store.deleteConnection(connection.id);
+            await flushMicrotasks();
+            firstPayment.release({});
+            await first;
+
+            expect(await queued).toEqual(UNAUTHORIZED);
+            expect(transactionsStore.sendPaymentSilently).toHaveBeenCalledTimes(
+                1
+            );
+            await settle(deletion);
+            expect(store.connections).toHaveLength(0);
+        });
+
+        it('does not run a queued request while its pay permission is removed', async () => {
+            const {
+                store,
+                transactionsStore,
+                connection,
+                firstPayment,
+                first,
+                queued
+            } = await queueBehindPayment();
+
+            const update = store.updateConnection(connection.id, {
+                permissions: ['get_balance']
+            });
+            await flushMicrotasks();
+            firstPayment.release({});
+            await first;
+
+            expect(await queued).toEqual(RATE_LIMITED);
+            expect(transactionsStore.sendPaymentSilently).toHaveBeenCalledTimes(
+                1
+            );
+            expect((await settle(update)).success).toBe(true);
+            expect(connection.hasPermission('pay_invoice')).toBe(false);
+        });
+
+        it('does not pay when the connection is deleted while the balance is read', async () => {
+            const { store, settingsStore, balanceStore, transactionsStore } =
+                createStore(payCollaborators());
+            const connection = addConnection(store, { maxAmountSats: 100000 });
+            let deletion: Promise<unknown> = Promise.resolve();
+            balanceStore.getLightningBalance.mockImplementation(async () => {
+                deletion = store.deleteConnection(connection.id);
+                return { lightningBalance: 100000 };
+            });
+
+            const response = await (store as any).handleLightningPayInvoice(
+                connection,
+                { invoice },
+                settingsStore.getConnectionGuard()
+            );
+
+            expect(response).toEqual(UNAUTHORIZED);
+            expect(
+                transactionsStore.sendPaymentSilently
+            ).not.toHaveBeenCalled();
+            await settle(deletion);
+        });
+
+        it('does not pay when the connection was removed from the store', async () => {
+            const { store, settingsStore, transactionsStore } = createStore(
+                payCollaborators()
+            );
+            const connection = addConnection(store, { maxAmountSats: 100000 });
+            (BackendUtils.decodePaymentRequest as jest.Mock).mockImplementation(
+                async () => {
+                    store.connections = [];
+                    return {};
+                }
+            );
+
+            const response = await (store as any).handleLightningPayInvoice(
+                connection,
+                { invoice },
+                settingsStore.getConnectionGuard()
+            );
+
+            expect(response).toEqual(UNAUTHORIZED);
+            expect(
+                transactionsStore.sendPaymentSilently
+            ).not.toHaveBeenCalled();
+            expect(connection.activity).toEqual([]);
+        });
+
+        it('does not melt ecash for a connection that is being deleted', async () => {
+            const payLnInvoiceFromEcash = jest.fn();
+            const { store, settingsStore } = createStore({
+                cashuStore: {
+                    selectedMintUrl: 'https://mint.example',
+                    isProperlyConfigured: () => true,
+                    getPayReq: jest.fn(),
+                    payLnInvoiceFromEcash
+                }
+            });
+            store.cashuEnabled = true;
+            const connection = addConnection(store, { maxAmountSats: 100000 });
+            const isCurrent = settingsStore.getConnectionGuard();
+            const keyWrite = holdNextWrite(NWC_CLIENT_KEYS);
+            const deletion = store.deleteConnection(connection.id);
+
+            const response = await (store as any).handleCashuPayInvoice(
+                connection,
+                { invoice },
+                isCurrent
+            );
+
+            expect(response).toEqual(UNAUTHORIZED);
+            expect(payLnInvoiceFromEcash).not.toHaveBeenCalled();
+            keyWrite.release();
+            await settle(deletion);
+        });
+    });
 });
 
 describe('NostrWalletConnectStore handleLightningPayInvoice fee cap', () => {
