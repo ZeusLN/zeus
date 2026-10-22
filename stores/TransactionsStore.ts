@@ -670,6 +670,10 @@ export default class TransactionsStore {
         const paymentData = this.pendingPaymentData;
         const seq = this.pendingPaymentSequence;
         if (paymentData && seq !== null) {
+            // release the payment before hiding the prompt, so hiding
+            // does not treat it as dismissed without an answer
+            this.pendingPaymentData = null;
+            this.pendingPaymentSequence = null;
             this.hideGraphSyncPrompt();
             this.sendPaymentInternal(paymentData, seq);
         }
