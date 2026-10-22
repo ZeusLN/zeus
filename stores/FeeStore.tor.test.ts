@@ -16,8 +16,13 @@ jest.mock('../utils/FeeUtils', () => ({
 }));
 jest.mock('../utils/UrlUtils', () => ({
     __esModule: true,
-    default: { getMempoolApiUrl: () => 'https://mempool.test/api' }
+    default: { getMempoolApiUrl: () => mockMempoolApiUrl }
 }));
+
+// a custom .onion mempool instance always goes over Tor, whatever the setting
+const ONION_API =
+    'http://zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion/api';
+let mockMempoolApiUrl = 'https://mempool.test/api';
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import FeeStore from './FeeStore';
@@ -31,6 +36,7 @@ const FEES = { fastestFee: 10, halfHourFee: 5, hourFee: 2 };
 
 beforeEach(() => {
     jest.clearAllMocks();
+    mockMempoolApiUrl = 'https://mempool.test/api';
     torFetch.mockResolvedValue({ status: 200, body: JSON.stringify(FEES) });
     blobFetch.mockResolvedValue({
         info: () => ({ status: 200 }),
@@ -64,6 +70,25 @@ describe('FeeStore.getOnchainFeesviaMempool', () => {
                 undefined
             );
         }
+        expect(store.recommendedFees).toEqual(FEES);
+    });
+
+    it('fetches fees from an .onion instance over Tor with Tor off', async () => {
+        mockMempoolApiUrl = ONION_API;
+        const store = new FeeStore(
+            { enableTor: false } as any,
+            { nodeInfo: {} } as any
+        );
+
+        await store.getOnchainFeesviaMempool();
+
+        expect(blobFetch).not.toHaveBeenCalled();
+        expect(torFetch).toHaveBeenCalledWith(
+            `${ONION_API}/v1/fees/recommended`,
+            'GET',
+            undefined,
+            undefined
+        );
         expect(store.recommendedFees).toEqual(FEES);
     });
 });

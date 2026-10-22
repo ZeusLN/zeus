@@ -1992,16 +1992,31 @@ describe('handleAnything', () => {
                 expect(mockDnsFetch).not.toHaveBeenCalled();
             });
 
-            it('makes no DoH request with Tor disabled', async () => {
+            it('makes no DoH request and still uses Tor with Tor disabled', async () => {
+                const lnurlParams = { callback: `http://${ONION}/callback` };
+                mockDoTorRequest.mockResolvedValue(lnurlParams);
+
                 const result = await handleAnything(ONION_ADDRESS);
 
                 expect(mockDnsFetch).not.toHaveBeenCalled();
-                expect(mockDoTorRequest).not.toHaveBeenCalled();
-                expect(mockBlobUtilFetch).toHaveBeenCalledWith(
-                    'get',
-                    ONION_LNURLP
+                expect(mockDoTorRequest).toHaveBeenCalledWith(
+                    ONION_LNURLP,
+                    'GET'
                 );
+                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
                 expect(result[0]).toBe('LnurlPay');
+            });
+
+            it('does not fall back to clearnet when Tor fails with Tor disabled', async () => {
+                mockDoTorRequest.mockRejectedValue(new Error('tor failure'));
+                (nip05.queryProfile as jest.Mock).mockClear();
+
+                await expect(handleAnything(ONION_ADDRESS)).rejects.toThrow(
+                    'tor failure'
+                );
+                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+                expect(mockDnsFetch).not.toHaveBeenCalled();
+                expect(nip05.queryProfile).not.toHaveBeenCalled();
             });
 
             it('still looks up a clearnet domain with an .onion label', async () => {

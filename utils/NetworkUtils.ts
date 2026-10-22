@@ -38,12 +38,26 @@ interface NetworkFetchArgs {
     enableTor?: boolean;
 }
 
+// Whether a URL's host is a Tor onion service. Returns false on any URL that
+// won't parse.
+const isOnionUrl = (url: string): boolean => {
+    try {
+        return /\.onion\.?$/i.test(new URL(url).hostname);
+    } catch {
+        return false;
+    }
+};
+
 // Transport-agnostic HTTP request for ancillary (non-node) service calls.
-// When Tor is enabled for the active node the request is routed through the
-// embedded Tor daemon; otherwise it uses ReactNativeBlobUtil directly. In both
-// cases the returned value exposes the same ReactNativeBlobUtil-compatible
-// surface, so status-based branching and body parsing at the call site are
-// identical regardless of transport.
+// When Tor is enabled for the active node, or the host is a .onion service,
+// the request is routed through the embedded Tor daemon; otherwise it uses
+// ReactNativeBlobUtil directly. A .onion host is never handed to the system
+// stack, which would resolve it through the local DNS resolver and send the
+// request to whatever address comes back, so if Tor is unavailable the
+// request fails rather than falling back to clearnet. In both cases the
+// returned value exposes the same ReactNativeBlobUtil-compatible surface, so
+// status-based branching and body parsing at the call site are identical
+// regardless of transport.
 const networkFetch = async ({
     method,
     url,
@@ -51,7 +65,7 @@ const networkFetch = async ({
     body,
     enableTor
 }: NetworkFetchArgs): Promise<NetworkResponse> => {
-    if (enableTor) {
+    if (enableTor || isOnionUrl(url)) {
         const { status, body: responseBody } = await doTorRequestRaw(
             url,
             toRequestMethod(method),
@@ -69,4 +83,4 @@ const networkFetch = async ({
     return ReactNativeBlobUtil.fetch(method, url, headers, body);
 };
 
-export { networkFetch };
+export { isOnionUrl, networkFetch };
