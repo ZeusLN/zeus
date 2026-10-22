@@ -2484,6 +2484,7 @@
     "views.Swaps.generateInvoiceFailed": "Fehler beim Erstellen der Rechnung",
     "views.Swaps.invalidReverseSwapInvoice": "Der Swap-Anbieter hat eine Rechnung zurückgegeben, die nicht zum angeforderten Swap passt. Zu deiner Sicherheit wurde dieser Swap abgebrochen, und es wurde keine Zahlung geleistet.",
     "views.Swaps.invalidReverseSwapResponse": "Der Swap-Anbieter hat Swap-Details zurückgegeben, die nicht zum angeforderten Swap passen. Zu deiner Sicherheit wurde dieser Swap abgebrochen, und es wurde keine Zahlung geleistet.",
+    "views.Swaps.tipHeightUnavailable": "Could not reach your mempool instance to check the swap timeout. Please try again.",
     "views.Swaps.generateOnchainAddress": "On-Chain-Adresse erzeugen",
     "views.Swaps.generateOnchainAddressFailed": "Fehler beim Erzeugen der On-Chain-Adresse",
     "views.Swaps.noUpdates": "Kein Update gefunden!",
