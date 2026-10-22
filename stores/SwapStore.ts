@@ -1646,19 +1646,38 @@ export default class SwapStore {
 
     /**
      * Records that this wallet has sent a submarine swap's on-chain payment,
-     * so the swap is not offered for payment again.
+     * so the swap is not offered for payment again. The in-memory mark
+     * covers this session; the stored one is what survives a restart, so a
+     * failed write is tried once more.
      */
     @action
     public markSwapFunded = async (swapId: string): Promise<boolean> => {
         if (!this.fundedSwapIds.includes(swapId)) {
             this.fundedSwapIds.push(swapId);
         }
-        try {
-            return await this.updateStoredSwap(swapId, { funded: true });
-        } catch (error) {
-            console.error('Error marking swap as funded in storage:', error);
-            return false;
+
+        const persist = async (): Promise<boolean> => {
+            try {
+                return await this.updateStoredSwap(swapId, { funded: true });
+            } catch (error) {
+                console.error(
+                    'Error marking swap as funded in storage:',
+                    error
+                );
+                return false;
+            }
+        };
+
+        if (await persist()) return true;
+
+        console.warn('Could not store swap funded mark, retrying');
+        const persisted = await persist();
+        if (!persisted) {
+            console.error(
+                'Swap funded mark not stored; it will be lost on restart'
+            );
         }
+        return persisted;
     };
 
     /**
