@@ -147,6 +147,11 @@ export default class TransactionsStore {
 
     // monotonic id assigned to each dispatched payment
     private paymentSequence = 0;
+    // id of the latest dispatched payment, whose result this store holds;
+    // lets a send screen tell that result apart from its own payment's
+    public get lastPaymentSequence(): number {
+        return this.paymentSequence;
+    }
     // sequence of the payment that set paymentInFlight (null when none);
     // completion callbacks and the backstop timer only clear the flag on
     // behalf of that payment, so overlapping payments (e.g. one that
