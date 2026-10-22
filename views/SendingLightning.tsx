@@ -60,6 +60,8 @@ interface SendingLightningProps {
         {
             donationAmount?: string;
             enableDonations: boolean;
+            // id TransactionsStore.sendPayment returned for this payment
+            paymentSequence?: number | null;
         }
     >;
     TransactionsStore: TransactionsStore;
@@ -105,18 +107,15 @@ export default class SendingLightning extends React.Component<
     // and TransactionsStore's status is shared with later payments.
     private donationAttempted = false;
 
-    // The payment this screen shows. PaymentRequest dispatches it before
-    // navigating here, or right after if the graph sync prompt holds it.
-    // TransactionsStore's result is for the latest payment, which can be
-    // a later one sent while this screen is still mounted underneath.
-    private readonly paymentSequence: number;
+    // The payment this screen shows, as identified by sendPayment. Null
+    // when the in-flight guard dropped it. TransactionsStore's result is
+    // for the latest payment, which can be a later one sent while this
+    // screen is still mounted underneath.
+    private readonly paymentSequence: number | null;
 
     constructor(props: SendingLightningProps) {
         super(props);
-        const { TransactionsStore } = props;
-        this.paymentSequence =
-            TransactionsStore.lastPaymentSequence +
-            (TransactionsStore.pendingPaymentData ? 1 : 0);
+        this.paymentSequence = props.route.params?.paymentSequence ?? null;
         this.state = {
             storedNotes: '',
             currentPayment: null,
@@ -186,6 +185,7 @@ export default class SendingLightning extends React.Component<
         if (
             NodeInfoStore!.nodeInfo.isMainNet &&
             wasSuccessful &&
+            this.paymentSequence !== null &&
             TransactionsStore.lastPaymentSequence === this.paymentSequence &&
             enableDonations &&
             donationAmount &&

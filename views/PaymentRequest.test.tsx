@@ -102,11 +102,15 @@ const renderView = async ({
         lightningBalance,
         getLightningBalance: jest.fn()
     };
+    const navigation = {
+        addListener: jest.fn(() => jest.fn()),
+        navigate: jest.fn()
+    };
     const result = await render(
         <PaymentRequest
             ref={ref}
             {...({
-                navigation: { addListener: jest.fn(() => jest.fn()) },
+                navigation,
                 route: { params: {} },
                 BalanceStore,
                 SettingsStore: {
@@ -126,7 +130,7 @@ const renderView = async ({
             } as any)}
         />
     );
-    return { BalanceStore, ...result };
+    return { BalanceStore, navigation, ...result };
 };
 
 const payButton = () => screen.getByRole('button', { name: PAY });
@@ -287,5 +291,48 @@ describe('PaymentRequest payment in flight', () => {
         expect(
             screen.queryByText('components.PaymentInFlightNotice.checking')
         ).not.toBeOnTheScreen();
+    });
+});
+
+describe('PaymentRequest sending', () => {
+    it('opens SendingLightning with the id sendPayment gave its payment', async () => {
+        const ref = React.createRef<any>();
+        const sendPayment = jest.fn(() => 7);
+        const { navigation } = await renderView({
+            implementation: 'lnd',
+            TransactionsStore: { paymentInFlight: false, sendPayment },
+            ref
+        });
+
+        await act(async () =>
+            ref.current.sendPayment({ payment_request: 'lnbc1' })
+        );
+
+        expect(sendPayment).toHaveBeenCalledTimes(1);
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'SendingLightning',
+            expect.objectContaining({ paymentSequence: 7 })
+        );
+    });
+
+    it('opens SendingLightning without an id when the request was dropped', async () => {
+        const ref = React.createRef<any>();
+        const { navigation } = await renderView({
+            implementation: 'lnd',
+            TransactionsStore: {
+                paymentInFlight: false,
+                sendPayment: jest.fn(() => null)
+            },
+            ref
+        });
+
+        await act(async () =>
+            ref.current.sendPayment({ payment_request: 'lnbc1' })
+        );
+
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'SendingLightning',
+            expect.objectContaining({ paymentSequence: null })
+        );
     });
 });
