@@ -670,12 +670,12 @@ export const restoreChannelBackupFromOlympus = async (
             await RNFS.mkdir(destFolder);
         }
 
-        try {
-            const existing = await RNFS.readDir(destFolder);
-            for (const item of existing) {
-                if (item.isFile()) await RNFS.unlink(item.path);
-            }
-        } catch (e) {}
+        // A file left behind here could pass assertChannelDbRestored in
+        // place of the backup's database, so a failed clear fails the restore
+        const existing = await RNFS.readDir(destFolder);
+        for (const item of existing) {
+            if (item.isFile()) await RNFS.unlink(item.path);
+        }
 
         await unzipFile(tempZipPath, destFolder);
         await RNFS.unlink(tempZipPath);
@@ -952,14 +952,14 @@ export const importChannelDb = async (
         await RNFS.mkdir(destFolder);
     }
 
-    try {
-        const existing = await RNFS.readDir(destFolder);
-        for (const item of existing) {
-            if (item.isFile()) {
-                await RNFS.unlink(item.path);
-            }
+    // A file left behind here could pass assertChannelDbRestored in place of
+    // the backup's database, so a failed clear fails the import
+    const existing = await RNFS.readDir(destFolder);
+    for (const item of existing) {
+        if (item.isFile()) {
+            await RNFS.unlink(item.path);
         }
-    } catch (e) {}
+    }
 
     await unzipFile(localPath, destFolder);
     await assertChannelDbRestored(destFolder, isSqlite);
