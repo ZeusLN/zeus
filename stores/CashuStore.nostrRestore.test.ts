@@ -123,6 +123,20 @@ describe('CashuStore startup restore of the mint list from Nostr', () => {
             expect(storedMintLists()).toEqual([]);
         });
 
+        it('does not store a mint list left over from a failed orphan removal', async () => {
+            (CashuDevKit.getMintUrls as jest.Mock).mockResolvedValue([
+                'https://m'
+            ]);
+            (CashuDevKit.removeMint as jest.Mock).mockRejectedValueOnce(
+                new Error('removeMint failed')
+            );
+
+            await newStore().initializeWallets();
+
+            expect(CashuDevKit.removeMint).toHaveBeenCalledWith('https://m');
+            expect(storedMintLists()).toEqual([]);
+        });
+
         it('does not add the onboarding mints over the unread backup', async () => {
             const store = newStore(['https://onboarding.example']);
             const addMint = jest
