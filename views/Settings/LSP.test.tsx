@@ -85,6 +85,36 @@ describe('LSP settings discount code', () => {
         expect(fields()[1].props.value).toBe('');
     });
 
+    it('restores the discount code when the host is edited back', async () => {
+        const { SettingsStore } = await mount({
+            lspMainnet: 'https://lsp-a.example',
+            lspAccessKey: 'k'
+        });
+
+        await typeHost('https://lsp-a.exampleX');
+        await typeHost('https://lsp-a.example');
+
+        expect(SettingsStore.updateSettings).toHaveBeenLastCalledWith({
+            lspMainnet: 'https://lsp-a.example',
+            lspAccessKey: 'k'
+        });
+        expect(fields()[1].props.value).toBe('k');
+    });
+
+    it('keeps the discount code when the same host is pasted', async () => {
+        const { SettingsStore } = await mount({
+            lspMainnet: 'https://lsp-a.example',
+            lspAccessKey: 'k'
+        });
+
+        await typeHost(' https://lsp-a.example ');
+
+        expect(SettingsStore.updateSettings).toHaveBeenLastCalledWith({
+            lspMainnet: ' https://lsp-a.example '
+        });
+        expect(fields()[1].props.value).toBe('k');
+    });
+
     it('clears it when the testnet host is edited', async () => {
         const { SettingsStore } = await mount(
             {
