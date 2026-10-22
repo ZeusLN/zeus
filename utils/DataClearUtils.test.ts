@@ -160,7 +160,7 @@ jest.mock('../utils/RatingUtils', () => ({
 
 import hashjs from 'hash.js';
 // @ts-ignore: Networking is exported at runtime but missing from the legacy typings
-import { BackHandler, Networking, Platform } from 'react-native';
+import { BackHandler, NativeModules, Networking, Platform } from 'react-native';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import { Notifications } from 'react-native-notifications';
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -174,6 +174,7 @@ import { deriveEmbeddedNodeId } from './AezeedUtils';
 import {
     blockNavigationDuringWipe,
     clearAllData,
+    clearNfcTagData,
     clearNodeKeychainData,
     clearCDKDatabase,
     clearCDKDatabaseForNode,
@@ -930,6 +931,105 @@ describe('clearAllData keychain backing store deletion (Android)', () => {
         expect(unlinked.some((p: string) => p.includes('RN_KEYCHAIN'))).toBe(
             false
         );
+    });
+});
+
+// The NFC button stores the shared invoice or address in react-native-hce's
+// shared_prefs file, which outlived the wipe.
+describe('clearAllData NFC tag data (Android)', () => {
+    const mockedLs = ReactNativeBlobUtil.fs.ls as jest.Mock;
+    const mockedUnlink = ReactNativeBlobUtil.fs.unlink as jest.Mock;
+    const prefsDir = '/docs/../shared_prefs';
+    let hce: Record<string, jest.Mock>;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+        mockedLs.mockImplementation(async (dir: string) =>
+            dir === prefsDir
+                ? ['RN_KEYCHAIN.xml', 'app.zeusln.zeus.HCE_DATA.xml']
+                : []
+        );
+        hce = {
+            getContent: jest.fn().mockResolvedValue({
+                type: 'text',
+                content: 'bc1qexampleaddress',
+                writable: false
+            }),
+            setEnabled: jest.fn().mockResolvedValue(false),
+            setContent: jest.fn().mockResolvedValue(null)
+        };
+        NativeModules.Hce = hce;
+    });
+
+    afterEach(() => {
+        delete NativeModules.Hce;
+        mockedLs.mockResolvedValue([]);
+    });
+
+    const unlinked = () => mockedUnlink.mock.calls.map((call) => call[0]);
+
+    it('switches the card service off, blanks the value and deletes the file', async () => {
+        setPlatformOS('android');
+
+        await clearAllData();
+
+        expect(hce.setEnabled).toHaveBeenCalledWith(false);
+        expect(hce.setContent).toHaveBeenCalledWith({
+            type: 'text',
+            content: '',
+            writable: false
+        });
+        expect(unlinked()).toContain(
+            `${prefsDir}/app.zeusln.zeus.HCE_DATA.xml`
+        );
+        // the blank value is set before the file is deleted
+        expect(hce.setContent.mock.invocationCallOrder[0]).toBeLessThan(
+            mockedUnlink.mock.invocationCallOrder[
+                unlinked().indexOf(`${prefsDir}/app.zeusln.zeus.HCE_DATA.xml`)
+            ]
+        );
+    });
+
+    it('does not write tag data when nothing was shared', async () => {
+        setPlatformOS('android');
+        hce.getContent.mockResolvedValue(null);
+
+        await clearNfcTagData();
+
+        expect(hce.setEnabled).not.toHaveBeenCalled();
+        expect(hce.setContent).not.toHaveBeenCalled();
+    });
+
+    it('deletes the file when the native module is missing', async () => {
+        setPlatformOS('android');
+        delete NativeModules.Hce;
+
+        await clearNfcTagData();
+
+        expect(unlinked()).toEqual([
+            `${prefsDir}/app.zeusln.zeus.HCE_DATA.xml`
+        ]);
+    });
+
+    it('finishes the wipe when the native module throws', async () => {
+        setPlatformOS('android');
+        hce.getContent.mockRejectedValue(new Error('no HCE'));
+
+        await clearAllData();
+
+        expect(unlinked()).toContain(
+            `${prefsDir}/app.zeusln.zeus.HCE_DATA.xml`
+        );
+        expect(removedKeys()).toContain('lnc-rn');
+    });
+
+    it('does nothing on iOS', async () => {
+        // Platform.OS is 'ios' by default under the react-native jest preset
+        await clearNfcTagData();
+
+        expect(hce.getContent).not.toHaveBeenCalled();
+        expect(mockedUnlink).not.toHaveBeenCalled();
     });
 });
 
