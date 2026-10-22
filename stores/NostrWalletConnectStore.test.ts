@@ -333,6 +333,17 @@ function installCollaboratorDefaults() {
     );
 }
 
+// SettingsStore's connection guard fails once connectionSeq moves on, as
+// it does on a wallet switch or reconnect.
+function withConnectionGuard(settingsStore: any) {
+    settingsStore.connectionSeq ??= 0;
+    settingsStore.getConnectionGuard ??= () => {
+        const seq = settingsStore.connectionSeq;
+        return () => settingsStore.connectionSeq === seq;
+    };
+    return settingsStore;
+}
+
 function createCollaborators(overrides: Record<string, any> = {}) {
     return {
         settingsStore: {
@@ -369,6 +380,7 @@ function createCollaborators(overrides: Record<string, any> = {}) {
 
 function createStore(overrides: Record<string, any> = {}) {
     const collaborators = createCollaborators(overrides);
+    withConnectionGuard(collaborators.settingsStore);
     const store = new NostrWalletConnectStore(
         collaborators.settingsStore,
         collaborators.balanceStore,
@@ -2512,7 +2524,8 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
 
         const response = await (store as any).handleLightningPayInvoice(
             connection,
-            { invoice }
+            { invoice },
+            () => true
         );
 
         expect(transactionsStore.sendPaymentSilently).not.toHaveBeenCalled();
@@ -2542,7 +2555,8 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
 
         const response = await (store as any).handleLightningPayInvoice(
             connection,
-            { invoice }
+            { invoice },
+            () => true
         );
 
         expect(transactionsStore.sendPaymentSilently).toHaveBeenCalled();
@@ -2574,7 +2588,8 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
 
         const response = await (store as any).handleLightningPayInvoice(
             connection,
-            { invoice }
+            { invoice },
+            () => true
         );
 
         expect(response.result?.preimage).toBe(hex64('d'));
@@ -2607,7 +2622,7 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
 
             let settled = false;
             const pendingResponse = (store as any)
-                .handleLightningPayInvoice(connection, { invoice })
+                .handleLightningPayInvoice(connection, { invoice }, () => true)
                 .finally(() => {
                     settled = true;
                 });
@@ -2656,7 +2671,8 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
 
         const response = await (store as any).handleLightningPayInvoice(
             connection,
-            { invoice }
+            { invoice },
+            () => true
         );
 
         expect(response.result).toBeUndefined();
@@ -2665,6 +2681,166 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
         expect(connection.activity[0].status).toBe('failed');
         expect(connection.activity[0].error).toBe('no route');
         expect(connection.totalSpendSats).toBe(0);
+    });
+});
+
+// Backend calls go to whichever wallet is active when they are made, so a
+// pay request that outlives a wallet switch must not read the balance of,
+// or pay from, the wallet switched to.
+describe('NostrWalletConnectStore pay_invoice across a wallet switch', () => {
+    const invoice = 'lnbc1wallet-switch';
+
+    beforeEach(() => {
+        (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue({
+            timestamp: String(Math.floor(Date.now() / 1000) - 60),
+            expiry: '3600'
+        });
+        jest.spyOn(NostrConnectUtils, 'decodeInvoiceTags').mockResolvedValue({
+            paymentRequest: invoice,
+            paymentHash: hex64('c'),
+            descriptionHash: '',
+            description: '',
+            amount: 5000,
+            expiryTime: 0,
+            createdAt: 0,
+            isExpired: false,
+            network: 'bitcoin'
+        });
+        jest.spyOn(
+            NostrConnectUtils,
+            'resolvePayInvoiceAmount'
+        ).mockResolvedValue({ amountSats: 5000, zeroAmountInvoice: false });
+    });
+
+    const payCollaborators = () => ({
+        transactionsStore: {
+            reset: jest.fn(),
+            sendPaymentSilently: jest.fn().mockResolvedValue({}),
+            getPaymentOutcome: jest.fn().mockReturnValue({}),
+            loading: false
+        },
+        paymentsStore: {
+            payments: [],
+            getPayments: jest.fn().mockResolvedValue([])
+        }
+    });
+
+    const SWITCHED = {
+        result: undefined,
+        error: {
+            code: 'INTERNAL_ERROR',
+            message:
+                'stores.NostrWalletConnectStore.error.walletIdentityUnavailable'
+        }
+    };
+
+    it('does not pay when the wallet is switched while the invoice is decoded', async () => {
+        const { store, settingsStore, balanceStore, transactionsStore } =
+            createStore(payCollaborators());
+        const connection = addConnection(store, { maxAmountSats: 100000 });
+        (BackendUtils.decodePaymentRequest as jest.Mock).mockImplementation(
+            async () => {
+                settingsStore.connectionSeq++;
+                return {};
+            }
+        );
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice },
+            settingsStore.getConnectionGuard()
+        );
+
+        expect(response).toEqual(SWITCHED);
+        expect(balanceStore.getLightningBalance).not.toHaveBeenCalled();
+        expect(transactionsStore.sendPaymentSilently).not.toHaveBeenCalled();
+        expect(connection.activity).toEqual([]);
+    });
+
+    it('does not pay when the wallet is switched while the balance is read', async () => {
+        const { store, settingsStore, balanceStore, transactionsStore } =
+            createStore(payCollaborators());
+        const connection = addConnection(store, { maxAmountSats: 100000 });
+        balanceStore.getLightningBalance.mockImplementation(async () => {
+            settingsStore.connectionSeq++;
+            return { lightningBalance: 100000 };
+        });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice },
+            settingsStore.getConnectionGuard()
+        );
+
+        expect(response).toEqual(SWITCHED);
+        expect(transactionsStore.sendPaymentSilently).not.toHaveBeenCalled();
+    });
+
+    it('does not pay when the connection no longer belongs to the active wallet', async () => {
+        const { store, settingsStore, nodeInfoStore, transactionsStore } =
+            createStore(payCollaborators());
+        const connection = addConnection(store, { maxAmountSats: 100000 });
+        nodeInfoStore.nodeInfo = { nodeId: 'another-node-pubkey' };
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice },
+            settingsStore.getConnectionGuard()
+        );
+
+        expect(response).toEqual(SWITCHED);
+        expect(transactionsStore.sendPaymentSilently).not.toHaveBeenCalled();
+    });
+
+    it('does not run a request queued behind another payment after a switch', async () => {
+        const {
+            settingsStore,
+            transactionsStore,
+            connections: [connection]
+        } = await startService(
+            [{ permissions: ['pay_invoice'], maxAmountSats: 100000 }],
+            payCollaborators()
+        );
+        const client = clientFor(connection);
+        const firstPayment = holdNextCall<any>(
+            transactionsStore.sendPaymentSilently
+        );
+
+        const first = client.payInvoice({ invoice });
+        await firstPayment.entered;
+        const queued = client.payInvoice({ invoice: 'lnbc1queued' });
+        await flushMicrotasks();
+        settingsStore.connectionSeq++;
+        firstPayment.release({});
+        await first;
+
+        expect(await queued).toEqual(SWITCHED);
+        expect(transactionsStore.sendPaymentSilently).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not melt ecash when the wallet is switched before the request starts', async () => {
+        const payLnInvoiceFromEcash = jest.fn();
+        const { store, settingsStore } = createStore({
+            cashuStore: {
+                selectedMintUrl: 'https://mint.example',
+                isProperlyConfigured: () => true,
+                getPayReq: jest.fn(),
+                payLnInvoiceFromEcash
+            }
+        });
+        store.cashuEnabled = true;
+        const connection = addConnection(store, { maxAmountSats: 100000 });
+        const isCurrent = settingsStore.getConnectionGuard();
+        settingsStore.connectionSeq++;
+
+        const response = await (store as any).handleCashuPayInvoice(
+            connection,
+            { invoice },
+            isCurrent
+        );
+
+        expect(response).toEqual(SWITCHED);
+        expect(payLnInvoiceFromEcash).not.toHaveBeenCalled();
     });
 });
 
@@ -2722,9 +2898,13 @@ describe('NostrWalletConnectStore handleLightningPayInvoice fee cap', () => {
         const { store, transactionsStore } = buildHandlerStore();
         const connection = addConnection(store, { maxAmountSats: 5400 });
 
-        await (store as any).handleLightningPayInvoice(connection, {
-            invoice: 'lnbc1fee-cap-a'
-        });
+        await (store as any).handleLightningPayInvoice(
+            connection,
+            {
+                invoice: 'lnbc1fee-cap-a'
+            },
+            () => true
+        );
 
         expect(sentFeeLimits(transactionsStore)).toEqual([400]);
     });
@@ -2733,9 +2913,13 @@ describe('NostrWalletConnectStore handleLightningPayInvoice fee cap', () => {
         const { store, transactionsStore } = buildHandlerStore();
         const connection = addConnection(store, {});
 
-        await (store as any).handleLightningPayInvoice(connection, {
-            invoice: 'lnbc1fee-cap-a'
-        });
+        await (store as any).handleLightningPayInvoice(
+            connection,
+            {
+                invoice: 'lnbc1fee-cap-a'
+            },
+            () => true
+        );
 
         expect(sentFeeLimits(transactionsStore)).toEqual([1000]);
     });
@@ -2748,21 +2932,30 @@ describe('NostrWalletConnectStore handleLightningPayInvoice fee cap', () => {
         const { store, transactionsStore } = buildHandlerStore();
         const connection = addConnection(store, { maxAmountSats: 11000 });
 
-        await (store as any).handleLightningPayInvoice(connection, {
-            invoice: 'lnbc1fee-cap-a'
-        });
+        await (store as any).handleLightningPayInvoice(
+            connection,
+            {
+                invoice: 'lnbc1fee-cap-a'
+            },
+            () => true
+        );
         expect(connection.activity[0].status).toBe('pending');
         expect(connection.activity[0].feeLimitSats).toBe(1000);
         expect(connection.pendingSpendSats).toBe(6000);
 
-        await (store as any).handleLightningPayInvoice(connection, {
-            invoice: 'lnbc1fee-cap-b'
-        });
+        await (store as any).handleLightningPayInvoice(
+            connection,
+            {
+                invoice: 'lnbc1fee-cap-b'
+            },
+            () => true
+        );
         expect(connection.pendingSpendSats).toBe(11000);
 
         const third = await (store as any).handleLightningPayInvoice(
             connection,
-            { invoice: 'lnbc1fee-cap-c' }
+            { invoice: 'lnbc1fee-cap-c' },
+            () => true
         );
 
         // sent: 5000 + 1000 and 5000 + 0, within the 11000 sat budget
@@ -2780,7 +2973,8 @@ describe('NostrWalletConnectStore handleLightningPayInvoice fee cap', () => {
 
         const response = await (store as any).handleLightningPayInvoice(
             connection,
-            { invoice: 'lnbc1fee-cap-a' }
+            { invoice: 'lnbc1fee-cap-a' },
+            () => true
         );
 
         const expected =
@@ -2803,7 +2997,8 @@ describe('NostrWalletConnectStore handleLightningPayInvoice fee cap', () => {
 
         const response = await (store as any).handleLightningPayInvoice(
             connection,
-            { invoice: 'lnbc1fee-cap-a' }
+            { invoice: 'lnbc1fee-cap-a' },
+            () => true
         );
 
         expect(sentFeeLimits(transactionsStore)).toEqual([1000]);
@@ -2821,9 +3016,13 @@ describe('NostrWalletConnectStore handleLightningPayInvoice fee cap', () => {
         const { store, transactionsStore } = buildHandlerStore();
         const connection = addConnection(store, { maxAmountSats: 5400 });
 
-        await (store as any).handleLightningPayInvoice(connection, {
-            invoice: 'lnbc1fee-cap-a'
-        });
+        await (store as any).handleLightningPayInvoice(
+            connection,
+            {
+                invoice: 'lnbc1fee-cap-a'
+            },
+            () => true
+        );
 
         expect(sentFeeLimits(transactionsStore)).toEqual([1000]);
         expect(connection.activity[0].status).toBe('pending');
@@ -2844,7 +3043,8 @@ describe('NostrWalletConnectStore handleLightningPayInvoice fee cap', () => {
 
         const response = await (store as any).handleLightningPayInvoice(
             connection,
-            { invoice: 'lnbc1fee-cap-a' }
+            { invoice: 'lnbc1fee-cap-a' },
+            () => true
         );
 
         expect(response.error?.message).toBe('No route found.');
@@ -2861,7 +3061,8 @@ describe('NostrWalletConnectStore handleLightningPayInvoice fee cap', () => {
 
         const response = await (store as any).handleLightningPayInvoice(
             connection,
-            { invoice: 'lnbc1fee-cap-a' }
+            { invoice: 'lnbc1fee-cap-a' },
+            () => true
         );
 
         expect(sentFeeLimits(transactionsStore)).toEqual([400]);
@@ -2884,7 +3085,8 @@ describe('NostrWalletConnectStore handleLightningPayInvoice fee cap', () => {
 
         const response = await (store as any).handleLightningPayInvoice(
             connection,
-            { invoice: 'lnbc1fee-cap-a' }
+            { invoice: 'lnbc1fee-cap-a' },
+            () => true
         );
 
         expect(response.error?.message).toBe('invoice expired');
@@ -2962,7 +3164,8 @@ describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices
 
         const response = await (store as any).handleLightningPayInvoice(
             connection,
-            { invoice, amount: 7_000_000 }
+            { invoice, amount: 7_000_000 },
+            () => true
         );
 
         expect(transactionsStore.sendPaymentSilently).toHaveBeenCalledWith(
@@ -2983,7 +3186,8 @@ describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices
 
         const response = await (store as any).handleLightningPayInvoice(
             connection,
-            { invoice }
+            { invoice },
+            () => true
         );
 
         expect(transactionsStore.sendPaymentSilently).not.toHaveBeenCalled();
@@ -3000,7 +3204,8 @@ describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices
 
             const response = await (store as any).handleLightningPayInvoice(
                 connection,
-                { invoice, amount }
+                { invoice, amount },
+                () => true
             );
 
             expect(
@@ -3017,7 +3222,8 @@ describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices
 
         const response = await (store as any).handleLightningPayInvoice(
             connection,
-            { invoice, amount: 7_000_000 }
+            { invoice, amount: 7_000_000 },
+            () => true
         );
 
         expect(transactionsStore.sendPaymentSilently).not.toHaveBeenCalled();
@@ -3035,7 +3241,8 @@ describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices
 
         const response = await (store as any).handleLightningPayInvoice(
             connection,
-            { invoice, amount: 7_000_000 }
+            { invoice, amount: 7_000_000 },
+            () => true
         );
 
         expect(transactionsStore.sendPaymentSilently).not.toHaveBeenCalled();
@@ -3047,10 +3254,14 @@ describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices
         const { store, transactionsStore } = buildHandlerStore();
         const connection = addConnection(store, { maxAmountSats: 100000 });
 
-        await (store as any).handleLightningPayInvoice(connection, {
-            invoice,
-            amount: 90_000_000
-        });
+        await (store as any).handleLightningPayInvoice(
+            connection,
+            {
+                invoice,
+                amount: 90_000_000
+            },
+            () => true
+        );
 
         const call = (transactionsStore.sendPaymentSilently as jest.Mock).mock
             .calls[0][0];
@@ -3063,10 +3274,14 @@ describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices
         const { store, transactionsStore } = buildHandlerStore();
         const connection = addConnection(store, { maxAmountSats: 100000 });
 
-        await (store as any).handleLightningPayInvoice(connection, {
-            invoice,
-            amount: 7_000_000
-        });
+        await (store as any).handleLightningPayInvoice(
+            connection,
+            {
+                invoice,
+                amount: 7_000_000
+            },
+            () => true
+        );
 
         const call = (transactionsStore.sendPaymentSilently as jest.Mock).mock
             .calls[0][0];
@@ -3084,7 +3299,8 @@ describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices
 
         const response = await (store as any).handleLightningPayInvoice(
             connection,
-            { invoice, amount: 7_000_000 }
+            { invoice, amount: 7_000_000 },
+            () => true
         );
 
         expect(response.error).toBeUndefined();
@@ -3118,10 +3334,14 @@ describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices
         });
         const connection = addConnection(store, { maxAmountSats: 100000 });
 
-        await (store as any).handleLightningPayInvoice(connection, {
-            invoice,
-            amount: 7_000_000
-        });
+        await (store as any).handleLightningPayInvoice(
+            connection,
+            {
+                invoice,
+                amount: 7_000_000
+            },
+            () => true
+        );
 
         expect(connection.activity[0].satAmount).toBe(3000);
         expect(connection.totalSpendSats).toBe(3002);
@@ -3230,7 +3450,8 @@ describe('NostrWalletConnectStore cashu pay_invoice preimage', () => {
         const connection = addConnection(store);
         const response = await (store as any).handleCashuPayInvoice(
             connection,
-            { invoice }
+            { invoice },
+            () => true
         );
         return { response, connection, cashuStore: (store as any).cashuStore };
     };

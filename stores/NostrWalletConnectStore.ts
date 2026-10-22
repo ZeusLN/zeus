@@ -1528,13 +1528,16 @@ export default class NostrWalletConnectStore {
             }
 
             if (connection.hasPermission('pay_invoice')) {
+                // Captured here so a pay request can be held to the wallet
+                // this connection was subscribed for; see walletSwitchRejection
+                const isCurrent = this.settingsStore.getConnectionGuard();
                 const payHandler = this.isCashuConfigured
                     ? this.handleCashuPayInvoice.bind(this, connection)
                     : this.handleLightningPayInvoice.bind(this, connection);
                 handler.payInvoice = (request: Nip47PayInvoiceRequest) =>
                     this.withGlobalHandler(connection.id, () =>
                         this.enqueuePayment(
-                            () => payHandler(request),
+                            () => payHandler(request, isCurrent),
                             () =>
                                 NostrConnectUtils.createNip47Error(
                                     localeString(
@@ -1884,6 +1887,28 @@ export default class NostrWalletConnectStore {
             ),
             Nip47ErrorCode.RATE_LIMITED
         ) as T;
+    }
+
+    // Backend calls use whichever wallet is active when they are made, and a
+    // wallet switch does not stop pay handlers that are queued or awaiting
+    // the node. A handler that outlives the switch would read the balance of
+    // and pay from the newly selected wallet, which never granted the
+    // connection. `isCurrent` is the connection guard captured when the
+    // connection was subscribed; it fails after any wallet switch or
+    // reconnect, both of which also resubscribe the connections.
+    private walletSwitchRejection(
+        isCurrent: () => boolean,
+        connection: NWCConnection
+    ) {
+        if (isCurrent() && this.connectionBelongsToCurrentWallet(connection)) {
+            return undefined;
+        }
+        return NostrConnectUtils.createNip47Error(
+            localeString(
+                'stores.NostrWalletConnectStore.error.walletIdentityUnavailable'
+            ),
+            Nip47ErrorCode.INTERNAL_ERROR
+        );
     }
 
     /**
@@ -2567,8 +2592,17 @@ export default class NostrWalletConnectStore {
 
     private async handleLightningPayInvoice(
         connection: NWCConnection,
-        request: Nip47PayInvoiceRequest
+        request: Nip47PayInvoiceRequest,
+        isCurrent: () => boolean
     ): NWCWalletServiceResponsePromise<Nip47PayResponse> {
+        // Checked on entry (the request may have been queued across a
+        // switch) and again before each later call to the node
+        const switchedBeforeStart = this.walletSwitchRejection(
+            isCurrent,
+            connection
+        );
+        if (switchedBeforeStart) return switchedBeforeStart;
+
         const invoiceInfo = await BackendUtils.decodePaymentRequest([
             request.invoice
         ]);
@@ -2578,6 +2612,12 @@ export default class NostrWalletConnectStore {
                 lightningDecodedPayReq: invoiceInfo,
                 requestedAmountMsat: request.amount
             });
+
+        const switchedDuringDecode = this.walletSwitchRejection(
+            isCurrent,
+            connection
+        );
+        if (switchedDuringDecode) return switchedDuringDecode;
 
         if (invoiceInfo.expiry && invoiceInfo.timestamp) {
             const expiryTime =
@@ -2639,6 +2679,12 @@ export default class NostrWalletConnectStore {
             return { result: undefined, error: budgetCheck.error };
         }
 
+        const switchedDuringReconcile = this.walletSwitchRejection(
+            isCurrent,
+            connection
+        );
+        if (switchedDuringReconcile) return switchedDuringReconcile;
+
         const lightningBalance = await this.balanceStore.getLightningBalance(
             true
         );
@@ -2655,6 +2701,12 @@ export default class NostrWalletConnectStore {
                 Nip47ErrorCode.INSUFFICIENT_BALANCE
             );
         }
+
+        const switchedDuringBalance = this.walletSwitchRejection(
+            isCurrent,
+            connection
+        );
+        if (switchedDuringBalance) return switchedDuringBalance;
 
         // the fee cap is limited to the budget left after the amount.
         // Backends that ignore fee_limit_sat (LndHub) keep the full cap and
@@ -2817,8 +2869,16 @@ export default class NostrWalletConnectStore {
 
     private async handleCashuPayInvoice(
         connection: NWCConnection,
-        request: Nip47PayInvoiceRequest
+        request: Nip47PayInvoiceRequest,
+        isCurrent: () => boolean
     ): NWCWalletServiceResponsePromise<Nip47PayResponse> {
+        // Checked on entry and before the melt, as in handleLightningPayInvoice
+        const switchedBeforeStart = this.walletSwitchRejection(
+            isCurrent,
+            connection
+        );
+        if (switchedBeforeStart) return switchedBeforeStart;
+
         if (!this.isCashuConfigured) {
             const selectedMintUrl = this.cashuStore.selectedMintUrl;
             const errorMessage = !selectedMintUrl
@@ -2925,6 +2985,12 @@ export default class NostrWalletConnectStore {
                 Nip47ErrorCode.INSUFFICIENT_BALANCE
             );
         }
+
+        const switchedDuringDecode = this.walletSwitchRejection(
+            isCurrent,
+            connection
+        );
+        if (switchedDuringDecode) return switchedDuringDecode;
 
         const cashuInvoice = await this.cashuStore.payLnInvoiceFromEcash({
             amount: amountSats.toString(),
