@@ -93,6 +93,15 @@ describe('LdkNode channel balance at or below the reserve', () => {
         expect(await balances()).toEqual(['20000', '20000']);
     });
 
+    it('does not count an unclaimed inbound HTLC as the peer balance', async () => {
+        setChannel({ ours: 20_000, held: 300_000 });
+
+        const { channels } = await new LdkNode().getChannels();
+
+        // Inbound capacity plus the peer's reserve, without the HTLC
+        expect(channels[0].remote_balance).toEqual('4679340');
+    });
+
     it('does not count an unclaimed HTLC on an empty channel', async () => {
         setChannel({ ours: 0, held: 299_998 });
 

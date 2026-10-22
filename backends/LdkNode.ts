@@ -2089,9 +2089,12 @@ export default class LdkNode {
             // Below reserve: outbound is 0, use LDK's own figure
             localBalanceSats = this.claimableOnChannelClose(channel, balances);
         }
-        const remoteBalanceSats = new BigNumber(channel.channelValueSats).minus(
-            localBalanceSats
-        );
+        // Inbound + their reserve, mirroring outbound + our reserve above.
+        // Subtracting local from the capacity would count in-flight HTLCs,
+        // the commit fee and anchors as theirs.
+        const remoteBalanceSats = new BigNumber(channel.inboundCapacityMsat)
+            .dividedBy(1000)
+            .plus(channel.counterpartyUnspendablePunishmentReserve || 0);
 
         return {
             active: channel.isUsable,
