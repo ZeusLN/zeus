@@ -26,7 +26,8 @@ import LdkNode from '../../ldknode/LdkNodeInjection';
 
 import SettingsStore, {
     INTERFACE_KEYS,
-    Node
+    Node,
+    Settings
 } from '../../stores/SettingsStore';
 
 import BackendUtils from '../../utils/BackendUtils';
@@ -34,6 +35,10 @@ import { localeString } from '../../utils/LocaleUtils';
 import { getPhoto } from '../../utils/PhotoUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { sleep } from '../../utils/SleepUtils';
+import {
+    isSameWallet,
+    resolveWalletIndex
+} from '../../utils/WalletIdentityUtils';
 import { walletSelectedShareIntent } from '../../utils/ShareIntentProcessor';
 
 import Add from '../../assets/images/SVG/Add.svg';
@@ -261,15 +266,40 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                 nodes: copy,
                 selectedNode
             });
-            updateSettings({
-                nodes: copy,
-                selectedNode
+            // Reorder the stored list, and only while it still matches the
+            // list on screen. Writing the screen's copy would bring back a
+            // wallet deleted since the list was loaded.
+            let listChanged = false;
+            await updateSettings((current: Settings) => {
+                const stored = current.nodes || [];
+                listChanged =
+                    stored.length !== nodes.length ||
+                    stored.some((node, i) => !isSameWallet(node, nodes[i]));
+                if (listChanged) return {};
+                const reordered = [...stored];
+                const [moved] = reordered.splice(fromIndex, 1);
+                reordered.splice(toIndex, 0, moved);
+                return { nodes: reordered, selectedNode };
             });
+            if (listChanged) await this.refreshSettings();
         };
 
         const selectWallet = async (nodeIndex: number, nodeActive: boolean) => {
+            // The list on screen can be older than the stored one (a wallet
+            // deleted after it was loaded), so find the tapped wallet in
+            // the stored list, and show that list if it is not there
+            const tapped = nodes[nodeIndex];
+            const storedIndex = resolveWalletIndex(
+                SettingsStore.settings?.nodes,
+                tapped,
+                nodeIndex
+            );
+            if (storedIndex === -1) {
+                await this.refreshSettings();
+                return;
+            }
             if (SettingsStore.settings?.justDeletedWallet) {
-                await this.handleJustDeletedWallet(nodeIndex);
+                await this.handleJustDeletedWallet(storedIndex);
                 return;
             }
             if (initialStart) {
@@ -328,10 +358,24 @@ export default class Nodes extends React.Component<NodesProps, NodesState> {
                     });
                 }
 
-                await updateSettings({
-                    nodes,
-                    selectedNode: nodeIndex
-                }).then(() => {
+                // Only the selection is written: the screen's copy of the
+                // list would undo changes stored since it was loaded
+                let selectedIndex = -1;
+                await updateSettings((current: Settings) => {
+                    selectedIndex = resolveWalletIndex(
+                        current.nodes,
+                        tapped,
+                        storedIndex
+                    );
+                    return selectedIndex === -1
+                        ? {}
+                        : { selectedNode: selectedIndex };
+                }).then(async () => {
+                    if (selectedIndex === -1) {
+                        this.setState({ isSelecting: false });
+                        await this.refreshSettings();
+                        return;
+                    }
                     setConnectingStatus(true);
                     // Request the refetch explicitly instead of relying on
                     // the write above: picking the already selected wallet
