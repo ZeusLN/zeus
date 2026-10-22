@@ -973,7 +973,9 @@ export default class SwapStore {
             lockupAddress: swap.effectiveLockupAddress,
             serverPubKey: swap.refundPubKey,
             timeoutBlockHeight: swap.timeoutBlockHeight,
-            onchainAmount: swap.onchainAmount,
+            // a legacy rescue's onchainAmount came from the host and is
+            // ignored below, so it must not fail this check either
+            onchainAmount: swap.imported ? undefined : swap.onchainAmount,
             ourPubKey: Buffer.from(ourPubKey),
             preimageHash: crypto.sha256(Buffer.from(preimageHex, 'hex'))
         });
