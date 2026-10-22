@@ -720,6 +720,33 @@ const ALREADY_BROADCAST =
 export const isAlreadyBroadcastError = (message?: string): boolean =>
     ALREADY_BROADCAST.test(message || '');
 
+/**
+ * The first rescue key index after every index the given swaps used.
+ * Takes stored swaps (keyIndex on the swap) and /swap/restore entries
+ * (keyIndex in claimDetails or refundDetails); an index sent as a string
+ * of digits counts, as getRescuableSwaps accepts it, and entries without a
+ * valid index are ignored. Returns 0 when none has one.
+ */
+export const keyIndexAfter = (swaps: any[]): number => {
+    let next = 0;
+    for (const swap of Array.isArray(swaps) ? swaps : []) {
+        for (const raw of [
+            swap?.keyIndex,
+            swap?.claimDetails?.keyIndex,
+            swap?.refundDetails?.keyIndex
+        ]) {
+            const index =
+                typeof raw === 'string' && /^\d+$/.test(raw)
+                    ? Number(raw)
+                    : raw;
+            if (Number.isSafeInteger(index) && index >= 0 && index >= next) {
+                next = index + 1;
+            }
+        }
+    }
+    return next;
+};
+
 export const SWAPS_KEY = 'swaps';
 export const REVERSE_SWAPS_KEY = 'reverse-swaps';
 export const SWAPS_RESCUE_KEY = 'swaps-rescue-key';

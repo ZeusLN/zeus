@@ -21,6 +21,7 @@ import {
     SWAPS_RESCUE_KEY,
     SWAPS_LAST_USED_KEY,
     isValidRescueKey,
+    keyIndexAfter,
     verifyReverseSwapInvoice,
     verifyReverseSwapResponse,
     verifySubmarineSwapResponse,
@@ -2074,6 +2075,8 @@ export default class SwapStore {
         // wallet seed would expose the wallet's own key tree.
         const mnemonic = generateMnemonic(BIP39_WORD_LIST);
         await Storage.setItem(SWAPS_RESCUE_KEY, mnemonic);
+        // a new key has used no index yet
+        await this.setLastUsedKey(0);
 
         return mnemonic;
     };
@@ -2091,8 +2094,67 @@ export default class SwapStore {
         await Storage.setItem(SWAPS_LAST_USED_KEY, val.toString());
     };
 
+    /**
+     * Moves the key index counter past the swaps given, never back.
+     */
+    private advanceLastUsedKey = async (swaps: any[]): Promise<void> => {
+        const next = keyIndexAfter(swaps);
+        if (next > (await this.getLastUsedKey())) {
+            await this.setLastUsedKey(next);
+        }
+    };
+
+    /**
+     * A rescue key without a key index counter was restored on this device
+     * (new install, or deleted and restored), and the counter would start
+     * over at 0. Each reverse swap's preimage is derived from its index and
+     * handed to the host when the swap is claimed, so reusing an index
+     * reuses a preimage the host already holds. Before the first new swap,
+     * set the counter past every index used by the swaps this device has
+     * rescued and the swaps the host lists for the key.
+     */
+    private skipUsedKeyIndexes = async (): Promise<void> => {
+        const mnemonic = await Storage.getItem(SWAPS_RESCUE_KEY);
+        if (!mnemonic) {
+            throw new Error('Rescue mnemonic not found in storage.');
+        }
+
+        let hostSwaps: any;
+        try {
+            const response = await ReactNativeBlobUtil.fetch(
+                'POST',
+                `${this.getHost}/swap/restore`,
+                {
+                    'Content-Type': 'application/json'
+                },
+                JSON.stringify({
+                    xpub: this.getXpub(mnemonic)
+                })
+            );
+            hostSwaps = JSON.parse(response.data || '[]');
+        } catch (error) {
+            console.error('Could not list the swaps of the rescue key:', error);
+        }
+        if (!Array.isArray(hostSwaps)) {
+            throw new Error(localeString('views.Swaps.usedKeysUnavailable'));
+        }
+
+        const storedSwaps: any[] = [];
+        for (const key of [SWAPS_KEY, REVERSE_SWAPS_KEY]) {
+            const stored = await Storage.getItem(key);
+            if (stored) storedSwaps.push(...JSON.parse(stored));
+        }
+
+        await this.setLastUsedKey(
+            Math.max(keyIndexAfter(hostSwaps), keyIndexAfter(storedSwaps))
+        );
+    };
+
     @action
     public generateNewKey = async () => {
+        if (!(await Storage.getItem(SWAPS_LAST_USED_KEY))) {
+            await this.skipUsedKeyIndexes();
+        }
         const index = await this.getLastUsedKey();
         await this.setLastUsedKey(index + 1);
         const keys = await this.deriveKey(index);
@@ -2227,6 +2289,12 @@ export default class SwapStore {
                 );
 
                 const importedSwaps = JSON.parse(response.data || '[]');
+
+                // new swaps under this key must not reuse the indexes, and
+                // so the preimages, of the swaps found
+                if (mnemonic === (await Storage.getItem(SWAPS_RESCUE_KEY))) {
+                    await this.advanceLastUsedKey(importedSwaps);
+                }
 
                 if (importedSwaps.length > 0) {
                     await this.withSwapStorage(async () => {

@@ -69,7 +69,13 @@ jest.mock('../storage', () => {
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import SwapStore from './SwapStore';
 import Storage from '../storage';
-import { SWAPS_KEY, REVERSE_SWAPS_KEY } from '../utils/SwapUtils';
+import {
+    SWAPS_KEY,
+    REVERSE_SWAPS_KEY,
+    SWAPS_LAST_USED_KEY,
+    SWAPS_RESCUE_KEY,
+    deriveSwapPreimage
+} from '../utils/SwapUtils';
 import Swap from '../models/Swap';
 import { ReverseClaimTransaction } from '../models/ClaimTransaction';
 import { mnemonicToSeedSync } from '@scure/bip39';
@@ -738,5 +744,160 @@ describe('Swap.claimDestinationAddress', () => {
         expect(
             new Swap(getStored(SWAPS_KEY)[0]).claimDestinationAddress
         ).toBeUndefined();
+    });
+});
+
+// A reverse swap's preimage is derived from the rescue key at the key index
+// counter, and claiming the swap hands it to the host. The counter is
+// stored apart from the key, so a restored key must not start it over.
+describe('SwapStore key index after a rescue key restore', () => {
+    const preimageAt = (index: number) => {
+        const hdKey = HDKey.fromMasterSeed(mnemonicToSeedSync(RESCUE_MNEMONIC));
+        return deriveSwapPreimage(
+            hdKey.derive(`m/44/0/0/0/${index}`).privateKey!
+        ).toString('hex');
+    };
+
+    const hostLists = (swaps: any[]) =>
+        (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValue({
+            data: JSON.stringify(swaps)
+        });
+
+    const HOST_SWAPS = [
+        {
+            id: 'claimed-reverse',
+            type: 'reverse',
+            claimDetails: { keyIndex: 0, preimageHash: KEY_0_PREIMAGE_HASH }
+        },
+        { id: 'refunded', type: 'submarine', refundDetails: { keyIndex: 1 } }
+    ];
+
+    beforeEach(() => {
+        // restored on an empty install: the key, and no counter
+        storageBacking[SWAPS_RESCUE_KEY] = RESCUE_MNEMONIC;
+    });
+
+    it('skips the indexes the host lists before deriving a new preimage', async () => {
+        hostLists(HOST_SWAPS);
+        const store = newStore();
+
+        const { index } = await store.generateNewKey();
+
+        expect(index).toBe(2);
+        expect(storageBacking[SWAPS_LAST_USED_KEY]).toBe('3');
+        const preimage = await store.derivePreimageFromRescueKey(index);
+        expect(preimage.toString('hex')).not.toBe(KEY_0_PREIMAGE);
+        expect(preimage.toString('hex')).toBe(preimageAt(2));
+
+        const [method, url, , body] = (ReactNativeBlobUtil.fetch as jest.Mock)
+            .mock.calls[0];
+        expect([method, url]).toEqual([
+            'POST',
+            'https://satsrouting.exchange/v2/swap/restore'
+        ]);
+        expect(JSON.parse(body).xpub).toBe(store.getXpub(RESCUE_MNEMONIC));
+    });
+
+    it('asks the host once, then counts on from the stored counter', async () => {
+        hostLists(HOST_SWAPS);
+        const store = newStore();
+
+        await store.generateNewKey();
+        const { index } = await store.generateNewKey();
+
+        expect(index).toBe(3);
+        expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledTimes(1);
+    });
+
+    it('skips the indexes of swaps rescued into storage', async () => {
+        hostLists([]);
+        setStored(SWAPS_KEY, [{ id: 'rescued', keyIndex: 4 }]);
+
+        const { index } = await newStore().generateNewKey();
+
+        expect(index).toBe(5);
+    });
+
+    it('starts at 0 when the key has no swaps', async () => {
+        hostLists([]);
+
+        const { index } = await newStore().generateNewKey();
+
+        expect(index).toBe(0);
+    });
+
+    it.each([
+        ['cannot be reached', () => Promise.reject(new Error('offline'))],
+        ['answers with an error', async () => ({ data: '{"error":"nope"}' })]
+    ])(
+        'creates no key while the host %s',
+        async (_, answer: () => Promise<any>) => {
+            jest.spyOn(console, 'error').mockImplementation(() => {});
+            (ReactNativeBlobUtil.fetch as jest.Mock).mockImplementation(answer);
+
+            await expect(newStore().generateNewKey()).rejects.toThrow(
+                'views.Swaps.usedKeysUnavailable'
+            );
+            expect(storageBacking[SWAPS_LAST_USED_KEY]).toBeUndefined();
+        }
+    );
+
+    it('does not ask the host while the counter is stored', async () => {
+        storageBacking[SWAPS_LAST_USED_KEY] = '7';
+
+        const { index } = await newStore().generateNewKey();
+
+        expect(index).toBe(7);
+        expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+    });
+
+    it('starts a newly generated key at 0 without asking the host', async () => {
+        delete storageBacking[SWAPS_RESCUE_KEY];
+        storageBacking[SWAPS_LAST_USED_KEY] = '7';
+        const store = newStore();
+
+        await store.generateRescueKey();
+        const { index } = await store.generateNewKey();
+
+        expect(index).toBe(0);
+        expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+    });
+
+    it('moves the counter past the swaps found by Restore swaps', async () => {
+        storageBacking[SWAPS_LAST_USED_KEY] = '1';
+        hostLists(HOST_SWAPS);
+
+        await newStore().getRescuableSwaps({
+            seedArray: RESCUE_MNEMONIC.split(' '),
+            host: 'https://swaps.example.com'
+        });
+
+        expect(storageBacking[SWAPS_LAST_USED_KEY]).toBe('2');
+    });
+
+    it('never moves the counter back', async () => {
+        storageBacking[SWAPS_LAST_USED_KEY] = '9';
+        hostLists(HOST_SWAPS);
+
+        await newStore().getRescuableSwaps({
+            seedArray: RESCUE_MNEMONIC.split(' '),
+            host: 'https://swaps.example.com'
+        });
+
+        expect(storageBacking[SWAPS_LAST_USED_KEY]).toBe('9');
+    });
+
+    it('leaves the counter alone for swaps of another rescue key', async () => {
+        storageBacking[SWAPS_RESCUE_KEY] =
+            'zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo zoo wrong';
+        storageBacking[SWAPS_LAST_USED_KEY] = '1';
+        hostLists(HOST_SWAPS);
+
+        await newStore().getRescuableSwaps({
+            seedArray: RESCUE_MNEMONIC.split(' '),
+            host: 'https://swaps.example.com'
+        });
+
+        expect(storageBacking[SWAPS_LAST_USED_KEY]).toBe('1');
     });
 });

@@ -2539,6 +2539,7 @@
     "views.Swaps.rescueKey.invalid": "Invalid rescue key",
     "views.Swaps.rescueKey.noSwapsFound": "No swaps found for this rescue key",
     "views.Swaps.rescueKey.incorrectHost": "Could not connect to the specified host. Please check the host and try again",
+    "views.Swaps.usedKeysUnavailable": "Could not check which keys your restored rescue key has already used with the swap provider. Please try again.",
     "views.Swaps.rescueKey.delete": "Delete rescue key",
     "views.Swaps.intro.description": "Using the Swap service, you can move funds from on-chain to Lightning, and vice versa, without having to open or close a channel.",
     "views.Swaps.swapFeesChanged": "The swap provider's fees changed. Check the updated amounts and try again.",
