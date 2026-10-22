@@ -84,6 +84,7 @@ jest.mock('../storage', () => {
 });
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import { Transaction } from 'bitcoinjs-lib';
 
 import SwapStore from './SwapStore';
 import Storage from '../storage';
@@ -95,6 +96,13 @@ const fetchMock = ReactNativeBlobUtil.fetch as jest.Mock;
 const torMock = doTorRequestRaw as jest.Mock;
 
 const HOST = 'https://swaps.test/v2';
+const MEMPOOL = 'https://mempool.test/api';
+const LOCKUP_TXID = 'aa'.repeat(32);
+const SPENDING_TXID = 'bb'.repeat(32);
+// a stored claim spending output 0 of LOCKUP_TXID
+const claim = new Transaction();
+claim.addInput(Buffer.from(LOCKUP_TXID, 'hex').reverse(), 0);
+const CLAIM_HEX = claim.toHex();
 // BIP-39 zero-entropy test vector, never a real wallet
 const RESCUE_MNEMONIC = `${'abandon '.repeat(11)}about`;
 // An error body stops every flow right after its request
@@ -204,6 +212,18 @@ const cases: Array<[string, string, string, (store: SwapStore) => any]> = [
             ]);
             return store.fetchAndUpdateSwaps();
         }
+    ],
+    [
+        'lockupSpentBy',
+        'GET',
+        `${MEMPOOL}/tx/${SPENDING_TXID}`,
+        (store) => store.lockupSpentBy(SPENDING_TXID, LOCKUP_TXID, 0, '')
+    ],
+    [
+        'checkStoredClaim',
+        'GET',
+        `${MEMPOOL}/tx/${LOCKUP_TXID}/outspend/0`,
+        (store) => store.checkStoredClaim(CLAIM_HEX, '')
     ],
     [
         'getRescuableSwaps',
