@@ -44,6 +44,7 @@ jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
     default: {
         isLocalWallet: () => false,
+        isLNDBased: () => false,
         supportsChannelManagement: () => false
     }
 }));
@@ -388,5 +389,99 @@ describe('SendingLightning donation', () => {
             )
         );
         expect(loadDonationLnurl).toHaveBeenCalledTimes(2);
+    });
+
+    // Lets the payment succeed, which starts the donation, then gives a
+    // retry loop a few turns to show up as extra calls
+    const donate = async (sendPaymentSilently: jest.Mock) => {
+        const TransactionsStore: any = {
+            loading: false,
+            error: false,
+            status: null,
+            sendPaymentSilently
+        };
+        const { rerender } = await render(donationView(TransactionsStore));
+        TransactionsStore.status = 'SUCCEEDED';
+        await rerender(donationView(TransactionsStore));
+        await waitFor(() => expect(loadDonationLnurl).toHaveBeenCalled());
+        for (let i = 0; i < 5; i++) {
+            await new Promise((r) => setImmediate(r));
+        }
+    };
+
+    const hostProps = (type: string) =>
+        screen.container.queryAll((n) => n.type === type)[0]?.props;
+
+    it('pays the donation once after a successful payment', async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+        const sendPaymentSilently = jest
+            .fn()
+            .mockResolvedValue({ status: 'SUCCEEDED', num_satoshis: 25 });
+
+        await donate(sendPaymentSilently);
+
+        expect(loadDonationLnurl).toHaveBeenCalledTimes(1);
+        expect(sendPaymentSilently).toHaveBeenCalledTimes(1);
+        expect(hostProps('DonationGiftIcon').donationHandled).toBe(true);
+        expect(hostProps('DonationInfoModal').amountDonated).toBe(25);
+    });
+
+    it('tries once when the donation LNURL returns no invoice', async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue(undefined);
+        const sendPaymentSilently = jest.fn();
+
+        await donate(sendPaymentSilently);
+
+        expect(loadDonationLnurl).toHaveBeenCalledTimes(1);
+        expect(sendPaymentSilently).not.toHaveBeenCalled();
+        expect(hostProps('DonationGiftIcon').payingDonation).toBe(false);
+        expect(hostProps('DonationGiftIcon').donationHandled).toBe(false);
+    });
+
+    it('tries once when the donation payment returns a payment error', async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+        const sendPaymentSilently = jest
+            .fn()
+            .mockResolvedValue({ payment_error: 'no route' });
+
+        await donate(sendPaymentSilently);
+
+        expect(loadDonationLnurl).toHaveBeenCalledTimes(1);
+        expect(sendPaymentSilently).toHaveBeenCalledTimes(1);
+        expect(hostProps('DonationGiftIcon').donationHandled).toBe(false);
+    });
+
+    describe('when a step throws', () => {
+        beforeEach(() => {
+            jest.spyOn(console, 'error').mockImplementation(() => {});
+        });
+
+        afterEach(() => jest.restoreAllMocks());
+
+        it('tries once when sending the donation throws', async () => {
+            (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+            const sendPaymentSilently = jest
+                .fn()
+                .mockRejectedValue(new Error('timeout'));
+
+            await donate(sendPaymentSilently);
+
+            expect(loadDonationLnurl).toHaveBeenCalledTimes(1);
+            expect(sendPaymentSilently).toHaveBeenCalledTimes(1);
+            expect(hostProps('DonationGiftIcon').payingDonation).toBe(false);
+        });
+
+        it('tries once when fetching the donation invoice throws', async () => {
+            (loadDonationLnurl as jest.Mock).mockRejectedValue(
+                new Error('offline')
+            );
+            const sendPaymentSilently = jest.fn();
+
+            await donate(sendPaymentSilently);
+
+            expect(loadDonationLnurl).toHaveBeenCalledTimes(1);
+            expect(sendPaymentSilently).not.toHaveBeenCalled();
+            expect(hostProps('DonationGiftIcon').payingDonation).toBe(false);
+        });
     });
 });
