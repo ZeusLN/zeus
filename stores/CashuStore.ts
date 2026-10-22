@@ -655,6 +655,39 @@ export default class CashuStore {
     };
 
     /**
+     * Mints whose seed restore has not completed yet. CDK stores a mint
+     * partway through its first restore, so being listed by CDK does not
+     * mean the restore finished; initializeWallets retries these.
+     */
+    private getPendingRestoreMints = async (): Promise<string[]> => {
+        try {
+            const stored = await Storage.getItem(
+                `${this.getNodeDir()}-cashu-pendingRestoreMints`
+            );
+            const parsed = stored ? JSON.parse(stored) : [];
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            console.warn('CDK: Failed to read pending mint restores:', e);
+            return [];
+        }
+    };
+
+    private setRestorePending = async (mintUrl: string, pending: boolean) => {
+        const normalizedUrl = this.normalizeMintUrl(mintUrl);
+        const current = await this.getPendingRestoreMints();
+        if (current.includes(normalizedUrl) === pending) return;
+        const updated = pending
+            ? [...current, normalizedUrl]
+            : current.filter((url) => url !== normalizedUrl);
+        const key = `${this.getNodeDir()}-cashu-pendingRestoreMints`;
+        if (updated.length === 0) {
+            await Storage.removeItem(key);
+        } else {
+            await Storage.setItem(key, JSON.stringify(updated));
+        }
+    };
+
+    /**
      * Restore v1 legacy proofs from a mint using CDK's restoreFromSeed.
      * This passes the raw v1 seed bytes (lndSeed[32:64]) to CDK's native
      * Rust implementation, which handles all EC crypto natively.
@@ -2988,6 +3021,7 @@ export default class CashuStore {
         await Storage.removeItem(`${walletId}-proofs`);
         await Storage.removeItem(`${walletId}-balance`);
         await Storage.removeItem(`${walletId}-pubkey`);
+        await this.setRestorePending(mintUrl, false);
 
         await this.calculateTotalBalance();
 
@@ -3875,6 +3909,7 @@ export default class CashuStore {
                     }
                 }
                 cdkMintUrls = await CashuDevKit.getMintUrls();
+                const pendingRestoreMints = await this.getPendingRestoreMints();
 
                 for (const mintUrl of localMintUrls) {
                     const inCdk = cdkMintUrls.some(
@@ -3882,7 +3917,10 @@ export default class CashuStore {
                             this.normalizeMintUrl(k) ===
                             this.normalizeMintUrl(mintUrl)
                     );
-                    if (!inCdk) {
+                    const restorePending = pendingRestoreMints.includes(
+                        this.normalizeMintUrl(mintUrl)
+                    );
+                    if (!inCdk || restorePending) {
                         try {
                             await CashuDevKit.addMint(mintUrl);
                             this.addedMintsCache.add(
@@ -3902,8 +3940,18 @@ export default class CashuStore {
                         }
 
                         // Restore any existing funds for this mint.
-                        // Failures here are non-fatal — the mint is already
-                        // added to CDK and will be available on next restart.
+                        // Failures here are non-fatal: the mint stays in the
+                        // pending list and the restore is retried on the
+                        // next start. It is recorded before the attempt so
+                        // that closing the app mid-restore counts too.
+                        try {
+                            await this.setRestorePending(mintUrl, true);
+                        } catch (e) {
+                            console.warn(
+                                `CDK: Failed to record pending restore for ${mintUrl}:`,
+                                e
+                            );
+                        }
                         if (this.originalSeedVersion === 'v1') {
                             runInAction(() => {
                                 this.loadingMsg = localeString(
@@ -3939,6 +3987,7 @@ export default class CashuStore {
                                     `CDK: Restored ${restored} sats from ${mintUrl}`
                                 );
                             }
+                            await this.setRestorePending(mintUrl, false);
                         } catch (e) {
                             console.warn(
                                 `CDK: Restore failed for ${mintUrl}:`,
@@ -6408,6 +6457,7 @@ export default class CashuStore {
             await Storage.removeItem(
                 `${lndDir}-cashu-nostrMintBackupTimestamp`
             );
+            await Storage.removeItem(`${lndDir}-cashu-pendingRestoreMints`);
 
             // Clean up app-specific storage
             await Storage.removeItem(`${lndDir}-cashu-selectedMintUrl`);
