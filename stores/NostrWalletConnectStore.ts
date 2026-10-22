@@ -44,6 +44,7 @@ import IOSAudioKeepAliveUtils from '../utils/IOSAudioKeepAliveUtils';
 import { satsToMillisats, millisatsToSats } from '../utils/AmountUtils';
 import { retry } from '../utils/SleepUtils';
 import { isReservedSigningMessage } from '../utils/LnurlAuthUtils';
+import { deriveExpectedPaymentHash } from '../utils/LncPayUtils';
 import NWCConnection, {
     BudgetRenewalType,
     ConnectionActivity,
@@ -3778,7 +3779,10 @@ export default class NostrWalletConnectStore {
             .then(
                 (result: any): LightningPaymentState => ({
                     ...pending,
-                    ...this.transactionsStore.getPaymentOutcome(result),
+                    ...this.transactionsStore.getPaymentOutcome(
+                        result,
+                        deriveExpectedPaymentHash({ payment_request })
+                    ),
                     loading: false
                 })
             )

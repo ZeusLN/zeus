@@ -97,6 +97,7 @@ import Payment from '../models/Payment';
 import CashuInvoice from '../models/CashuInvoice';
 import CashuPayment from '../models/CashuPayment';
 import Base64Utils from '../utils/Base64Utils';
+import Bolt11Utils from '../utils/Bolt11Utils';
 import NostrConnectUtils, { Nip47ErrorCode } from '../utils/NostrConnectUtils';
 import InvoicesStore from './InvoicesStore';
 import CashuStore from './CashuStore';
@@ -3641,6 +3642,25 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
         expect(connection.activity[0].status).toBe('success');
         expect(connection.activity[0].isBudgetDebited).toBe(true);
         expect(connection.totalSpendSats).toBe(5010);
+    });
+
+    it("checks the payment's preimage against the invoice's payment hash", async () => {
+        jest.spyOn(Bolt11Utils, 'decode').mockReturnValue({
+            payment_hash: paymentHash
+        } as any);
+        const { store, transactionsStore } = buildHandlerStore();
+        const result = { status: 'SUCCEEDED' };
+        transactionsStore.sendPaymentSilently.mockResolvedValue(result);
+        const connection = addConnection(store, { maxAmountSats: 100000 });
+
+        await (store as any).handleLightningPayInvoice(connection, {
+            invoice
+        });
+
+        expect(transactionsStore.getPaymentOutcome).toHaveBeenCalledWith(
+            result,
+            paymentHash
+        );
     });
 
     it("answers with its own payment's result, not the shared store's", async () => {
