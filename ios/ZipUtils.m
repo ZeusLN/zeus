@@ -209,7 +209,6 @@ RCT_EXPORT_METHOD(unzipFile:(NSString *)zipPath
 
         const uint8_t *bytes = zipData.bytes;
         NSUInteger length = zipData.length;
-        NSUInteger offset = 0;
         unsigned long long total = 0;
 
         // Files this call has written, removed again if it fails
@@ -221,26 +220,64 @@ RCT_EXPORT_METHOD(unzipFile:(NSString *)zipPath
             reject(@"ERR_UNZIP", message, nil);
         };
 
-        while (offset + 30 <= length) {
-            uint32_t sig = *(uint32_t *)(bytes + offset);
-            if (sig != ZIP_LOCAL_HEADER_SIGNATURE) break;
+        // Find the end of central directory record (an archive comment may
+        // follow it)
+        NSUInteger eocdOffset = length - 22;
+        while (*(uint32_t *)(bytes + eocdOffset) != ZIP_END_CENTRAL_DIR_SIGNATURE) {
+            if (eocdOffset == 0 || length - eocdOffset >= 22 + UINT16_MAX) {
+                reject(@"ERR_UNZIP", @"Invalid zip file: end of central directory not found", nil);
+                return;
+            }
+            eocdOffset--;
+        }
 
-            uint16_t method = *(uint16_t *)(bytes + offset + 8);
-            uint32_t crc = *(uint32_t *)(bytes + offset + 14);
-            uint32_t compSize = *(uint32_t *)(bytes + offset + 18);
-            uint32_t uncompSize = *(uint32_t *)(bytes + offset + 22);
-            uint16_t nameLen = *(uint16_t *)(bytes + offset + 26);
-            uint16_t extraLen = *(uint16_t *)(bytes + offset + 28);
+        uint16_t numEntries = *(uint16_t *)(bytes + eocdOffset + 10);
+        NSUInteger offset = *(uint32_t *)(bytes + eocdOffset + 16);
 
-            if (offset + 30 + nameLen + extraLen + compSize > length) {
-                fail(@"Truncated zip file");
+        // Read each entry's method, CRC and sizes from the central directory.
+        // Streaming writers such as java.util.zip.ZipOutputStream (used by the
+        // Android ZipUtils.zipFolder) set general purpose flag bit 3 and leave
+        // them zero in the local file header, with the real values in a data
+        // descriptor after the data and in the central directory.
+        for (uint16_t i = 0; i < numEntries; i++) {
+            if (offset + 46 > eocdOffset || *(uint32_t *)(bytes + offset) != ZIP_CENTRAL_DIR_SIGNATURE) {
+                fail(@"Invalid zip file: bad central directory entry");
                 return;
             }
 
-            NSString *entryName = [[NSString alloc] initWithBytes:(bytes + offset + 30) length:nameLen encoding:NSUTF8StringEncoding];
-            NSUInteger dataOffset = offset + 30 + nameLen + extraLen;
+            uint16_t method = *(uint16_t *)(bytes + offset + 10);
+            uint32_t crc = *(uint32_t *)(bytes + offset + 16);
+            uint32_t compSize = *(uint32_t *)(bytes + offset + 20);
+            uint32_t uncompSize = *(uint32_t *)(bytes + offset + 24);
+            uint16_t nameLen = *(uint16_t *)(bytes + offset + 28);
+            uint16_t extraLen = *(uint16_t *)(bytes + offset + 30);
+            uint16_t commentLen = *(uint16_t *)(bytes + offset + 32);
+            NSUInteger localOffset = *(uint32_t *)(bytes + offset + 42);
 
-            offset = dataOffset + compSize;
+            if (offset + 46 + nameLen + extraLen + commentLen > eocdOffset) {
+                fail(@"Invalid zip file: bad central directory entry");
+                return;
+            }
+
+            NSString *entryName = [[NSString alloc] initWithBytes:(bytes + offset + 46) length:nameLen encoding:NSUTF8StringEncoding];
+
+            offset += 46 + nameLen + extraLen + commentLen;
+
+            if (localOffset + 30 > length || *(uint32_t *)(bytes + localOffset) != ZIP_LOCAL_HEADER_SIGNATURE) {
+                fail(@"Invalid zip file: bad local file header");
+                return;
+            }
+
+            // The local header's name and extra field lengths can differ from
+            // the central directory's
+            uint16_t localNameLen = *(uint16_t *)(bytes + localOffset + 26);
+            uint16_t localExtraLen = *(uint16_t *)(bytes + localOffset + 28);
+            NSUInteger dataOffset = localOffset + 30 + localNameLen + localExtraLen;
+
+            if (dataOffset + compSize > length) {
+                fail(@"Truncated zip file");
+                return;
+            }
 
             if (!entryName || [entryName hasSuffix:@"/"] || [entryName containsString:@".."]) continue;
 
@@ -271,10 +308,10 @@ RCT_EXPORT_METHOD(unzipFile:(NSString *)zipPath
                 return;
             }
 
-            // Verify CRC
+            // Verify size and CRC
             uint32_t actualCrc = (uint32_t)crc32(0L, fileData.bytes, (uInt)fileData.length);
-            if (actualCrc != crc && crc != 0) {
-                fail([NSString stringWithFormat:@"CRC mismatch for: %@", entryName]);
+            if (fileData.length != uncompSize || actualCrc != crc) {
+                fail([NSString stringWithFormat:@"Size or CRC mismatch for: %@", entryName]);
                 return;
             }
 
