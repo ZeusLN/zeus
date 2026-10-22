@@ -1921,33 +1921,17 @@ export default class LdkNode {
         invreq: string;
         label: string;
     }): Promise<any> => {
-        const knownPaymentIds = new Set(
-            (await LdkNodeInjection.payments.listPayments()).map((p) => p.id)
-        );
-
-        const invoiceStr =
+        const { invoice, paymentHash } =
             await LdkNodeInjection.bolt12.bolt12RequestRefundPayment(invreq);
 
         // requestRefundPayment only creates the invoice and sends it to the
         // payer; nothing has been received yet. Callers treat a resolved
         // result as paid (CLN's sendinvoice resolves once the invoice is
-        // paid), so wait for the inbound payment this call added, as long as
-        // sendinvoice waits by default. The native call returns no payment
-        // id, so the payment is found by comparing the payment lists.
-        const payment = (await LdkNodeInjection.payments.listPayments()).find(
-            (p) =>
-                !knownPaymentIds.has(p.id) &&
-                p.direction === 'inbound' &&
-                p.kind?.type === 'bolt12Refund'
-        );
-        if (!payment) {
-            throw new Error(
-                localeString('backends.LdkNode.withdrawalRequestNotPaid')
-            );
-        }
-
+        // paid), so wait for the inbound payment, as long as sendinvoice
+        // waits by default. ldk-node stores a refund payment under its
+        // payment hash, so the invoice's hash is the payment id.
         const { hash, pending } = await this.awaitPaymentCompletion(
-            payment.id,
+            paymentHash,
             90,
             { pendingOnTimeout: true }
         );
@@ -1957,7 +1941,7 @@ export default class LdkNode {
             );
         }
 
-        return { bolt12: invoiceStr, payment_hash: hash };
+        return { bolt12: invoice, payment_hash: hash };
     };
 
     // ========================================================================
