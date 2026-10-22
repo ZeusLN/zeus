@@ -97,6 +97,12 @@ export default class AmountInput extends React.Component<
     // sats in. render() shows the digits in whatever unit UnitsStore holds,
     // so a unit change made outside of this input has to be caught here.
     private amountUnits: string;
+    // The sats to convert from on the next outside unit change. Follows
+    // state.satAmount, except when the digits were kept because there was
+    // no fiat rate: their 0 sats are reported, but the amount they were
+    // converted from is kept here so a change back does not lose it. Any
+    // edit to the digits replaces it, even when they convert to 0 sats.
+    private unitChangeSats: string | number;
 
     constructor(props: any) {
         super(props);
@@ -111,7 +117,13 @@ export default class AmountInput extends React.Component<
             satAmount
         };
         this.amountUnits = this.getDisplayUnits();
+        this.unitChangeSats = satAmount;
     }
+
+    setSatAmount = (satAmount: string | number) => {
+        this.unitChangeSats = satAmount;
+        this.setState({ satAmount });
+    };
 
     getDisplayUnits = (): string => {
         const { forceUnit, SettingsStore, UnitsStore } = this.props;
@@ -129,11 +141,12 @@ export default class AmountInput extends React.Component<
         if (amount !== prevProps.amount || forceUnit !== prevProps.forceUnit) {
             if (forceUnit === 'sats' && forceUnit !== prevProps.forceUnit) {
                 const currentSatAmount = getSatAmount(amount || '', forceUnit);
-                this.setState({ satAmount: currentSatAmount });
+                this.setSatAmount(currentSatAmount);
 
                 onAmountChange(currentSatAmount.toString(), currentSatAmount);
             } else {
                 const satAmount = getSatAmount(amount || '', forceUnit);
+                this.unitChangeSats = satAmount;
                 if (satAmount !== this.state.satAmount) {
                     this.setState({ satAmount });
                 }
@@ -144,14 +157,21 @@ export default class AmountInput extends React.Component<
             // are now shown in the new unit, so convert the sat amount into
             // it, or the field no longer matches what the parent will use.
             const converted = getRawAmountFromSats(
-                this.state.satAmount,
+                this.unitChangeSats,
                 forceUnit
             );
-            // with no fiat rate, keep the digits; they convert to 0 sats
-            const newAmount = converted.error ? amount : converted.amount;
-            const satAmount = getSatAmount(newAmount, forceUnit);
-            onAmountChange(newAmount, satAmount);
-            this.setState({ satAmount });
+            if (converted.error) {
+                // with no fiat rate, keep the digits; they convert to 0
+                // sats, but unitChangeSats keeps the amount to convert
+                // from if the unit changes again
+                const satAmount = getSatAmount(amount, forceUnit);
+                onAmountChange(amount, satAmount);
+                this.setState({ satAmount });
+                return;
+            }
+            const satAmount = getSatAmount(converted.amount, forceUnit);
+            onAmountChange(converted.amount, satAmount);
+            this.setSatAmount(satAmount);
         }
     }
 
@@ -161,7 +181,7 @@ export default class AmountInput extends React.Component<
         this.amountUnits = this.getDisplayUnits();
         const satAmount = getSatAmount(amount, this.props.forceUnit);
         onAmountChange(amount, satAmount);
-        this.setState({ satAmount });
+        this.setSatAmount(satAmount);
     };
 
     getDisplayValue = (): string => {
@@ -198,7 +218,7 @@ export default class AmountInput extends React.Component<
                     this.amountUnits = this.getDisplayUnits();
                     const satAmount = getSatAmount(newAmount, forceUnit);
                     onAmountChange(newAmount, satAmount);
-                    this.setState({ satAmount });
+                    this.setSatAmount(satAmount);
                 }
             });
         }

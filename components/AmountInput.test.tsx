@@ -384,6 +384,37 @@ describe('AmountInput units changed outside of the input', () => {
         expect(parent).toEqual({ amount: '1000', satAmount: 0 });
     });
 
+    it('converts from the last known sats when the unit changes back after a missing fiat rate', async () => {
+        const { parent, storeChanged } = await renderWithParent('1000');
+
+        await storeChanged(() => {
+            fiatStore.fiatRates = [];
+            unitsStore.units = 'fiat';
+        });
+        await storeChanged(() => (unitsStore.units = 'sats'));
+
+        expect(parent).toEqual({ amount: '1000', satAmount: 1000 });
+        expect(screen.getByText('1,000 sats')).toBeOnTheScreen();
+    });
+
+    it('does not bring back old sats after the digits are edited without a fiat rate', async () => {
+        const { parent, storeChanged } = await renderWithParent('1000');
+        await storeChanged(() => {
+            fiatStore.fiatRates = [];
+            unitsStore.units = 'fiat';
+        });
+
+        // the user types a new fiat amount that cannot be converted
+        await openKeypad('$1000');
+        await act(() => keypadParams().onConfirm('5'));
+        await storeChanged(() => undefined);
+        expect(parent).toEqual({ amount: '5', satAmount: 0 });
+
+        await storeChanged(() => (unitsStore.units = 'sats'));
+
+        expect(parent).toEqual({ amount: '0', satAmount: 0 });
+    });
+
     it('does nothing on a re-render without a unit change', async () => {
         const { onAmountChange, storeChanged } = await renderWithParent('1000');
         onAmountChange.mockClear();
