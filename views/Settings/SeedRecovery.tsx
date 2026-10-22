@@ -828,7 +828,7 @@ export default class SeedRecovery extends React.PureComponent<
                     });
 
                     // Node is already built — tell Wallet.tsx to skip re-init
-                    SettingsStore.walletJustCreated = true;
+                    SettingsStore.walletJustCreated = nodeDir;
 
                     this.saveLdkNodeWalletConfiguration(
                         mnemonic,
