@@ -85,6 +85,8 @@ interface SeedState {
     isDeleteModalVisible: boolean;
     // set once the user confirmed deletion while swaps are unfinished
     unfinishedSwapIds: string[] | null;
+    // set with unfinishedSwapIds when a stored swap list could not be read
+    swapListsUnreadable: boolean;
     isChannelExporting: boolean;
     channelExportMessage: string;
     revealResetKey: number;
@@ -142,11 +144,12 @@ const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
 @inject('SettingsStore', 'NodeInfoStore', 'SyncStore', 'ChannelsStore')
 @observer
 export default class Seed extends React.PureComponent<SeedProps, SeedState> {
-    state = {
+    state: SeedState = {
         understood: this.props.route.params?.skipWarning ?? false,
         showModal: false,
         isDeleteModalVisible: false,
         unfinishedSwapIds: null,
+        swapListsUnreadable: false,
         isChannelExporting: false,
         channelExportMessage: '',
         revealResetKey: 0,
@@ -154,6 +157,11 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
     };
 
     private appStateSubscription: NativeEventSubscription | undefined;
+
+    // Bumped whenever the delete modal closes, so a swap check that was
+    // still running when the user cancelled is dropped.
+    private deleteCheckSession = 0;
+    private checkingSwaps = false;
 
     componentDidMount() {
         // make sure we have latest settings and the seed phrase is accessible
@@ -196,18 +204,34 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         this.setState({ graphDataOnDisk });
     };
 
-    closeDeleteModal = () =>
-        this.setState({ isDeleteModalVisible: false, unfinishedSwapIds: null });
+    closeDeleteModal = () => {
+        this.deleteCheckSession += 1;
+        this.checkingSwaps = false;
+        this.setState({
+            isDeleteModalVisible: false,
+            unfinishedSwapIds: null,
+            swapListsUnreadable: false
+        });
+    };
 
     // The stored swap lists and keys are the only way to claim or refund a
     // swap from this wallet, so a first confirmation with unfinished swaps
-    // stored asks again and names them.
+    // stored, or with a list that could not be read, asks again before
+    // anything is deleted.
     confirmDelete = async () => {
         const { navigation } = this.props;
+        if (this.checkingSwaps) return;
         if (this.state.unfinishedSwapIds === null) {
-            const unfinishedSwapIds = await getStoredUnfinishedSwapIds();
-            if (unfinishedSwapIds.length > 0) {
-                this.setState({ unfinishedSwapIds });
+            const session = this.deleteCheckSession;
+            this.checkingSwaps = true;
+            const { ids, unreadable } = await getStoredUnfinishedSwapIds();
+            if (session !== this.deleteCheckSession) return;
+            this.checkingSwaps = false;
+            if (ids.length > 0 || unreadable) {
+                this.setState({
+                    unfinishedSwapIds: ids,
+                    swapListsUnreadable: unreadable
+                });
                 return;
             }
         }
@@ -222,7 +246,14 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
     };
 
     renderDeleteModal = () => {
-        const { unfinishedSwapIds } = this.state;
+        const { unfinishedSwapIds, swapListsUnreadable } = this.state;
+        const textStyle = {
+            color: themeColor('text'),
+            fontFamily: 'PPNeueMontreal-Book',
+            fontSize: 18,
+            textAlign: 'center' as const,
+            marginBottom: 20
+        };
         return (
             <ModalBox
                 isOpen={this.state.isDeleteModalVisible}
@@ -249,16 +280,15 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                             width: '90%'
                         }}
                     >
-                        <Text
-                            style={{
-                                color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                fontSize: 18,
-                                textAlign: 'center',
-                                marginBottom: 20
-                            }}
-                        >
-                            {unfinishedSwapIds
+                        {swapListsUnreadable && (
+                            <Text style={textStyle}>
+                                {localeString(
+                                    'views.Swaps.rescueKey.deleteSwapsUnreadable'
+                                )}
+                            </Text>
+                        )}
+                        <Text style={textStyle}>
+                            {unfinishedSwapIds && unfinishedSwapIds.length > 0
                                 ? localeString(
                                       'views.Swaps.rescueKey.deleteUnfinishedSwaps'
                                   ).replace(

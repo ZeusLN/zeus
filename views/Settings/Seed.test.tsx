@@ -36,13 +36,19 @@ jest.mock('../../utils/SwapUtils', () => ({
     saveRescueKeyFile: jest.fn(),
     unlinkRescueKeyStagingFile: jest.fn(async () => {})
 }));
+// Latest onPress per button title, so a test can start a press without
+// waiting for its handler to finish.
+const mockOnPress: { [title: string]: () => any } = {};
 jest.mock('../../components/Button', () => {
     const { Text, TouchableOpacity } = require('react-native');
-    return ({ title, onPress }: any) => (
-        <TouchableOpacity accessibilityRole="button" onPress={onPress}>
-            <Text>{title}</Text>
-        </TouchableOpacity>
-    );
+    return ({ title, onPress }: any) => {
+        mockOnPress[title] = onPress;
+        return (
+            <TouchableOpacity accessibilityRole="button" onPress={onPress}>
+                <Text>{title}</Text>
+            </TouchableOpacity>
+        );
+    };
 });
 jest.mock('../../components/ModalBox', () => {
     const { View } = require('react-native');
@@ -67,11 +73,25 @@ jest.mock('../../assets/images/SVG/Skull.svg', () => 'Skull');
 jest.mock('../../assets/images/SVG/QR.svg', () => 'QR');
 
 import * as React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import Storage from '../../storage';
 import Seed from './Seed';
 
 const removeItem = Storage.removeItem as jest.Mock;
+const getItem = Storage.getItem as jest.Mock;
+
+// Holds the next read, which confirmDelete makes for the submarine swap
+// list, until the returned function is called.
+const deferSwapsRead = () => {
+    let resolve: (value: string | undefined) => void = () => {};
+    getItem.mockImplementationOnce(
+        () =>
+            new Promise<string | undefined>((res) => {
+                resolve = res;
+            })
+    );
+    return (value: string | undefined) => resolve(value);
+};
 
 const RESCUE_KEY = 'abandon '.repeat(11).concat('about').split(' ');
 
@@ -103,10 +123,18 @@ const mountRescueKey = async () => {
 
 const pressConfirm = () => fireEvent.press(screen.getByText('general.confirm'));
 
+// Starts Confirm without waiting for its swap check to finish.
+const startConfirm = (): Promise<void> =>
+    act(async () => {
+        mockOnPress['general.confirm']();
+    });
+
 describe('Seed rescue key deletion', () => {
     beforeEach(() => {
         for (const key of Object.keys(mockStored)) delete mockStored[key];
         removeItem.mockClear();
+        getItem.mockReset();
+        getItem.mockImplementation(async (key: string) => mockStored[key]);
     });
 
     it('deletes on the first confirmation when every swap is finished', async () => {
@@ -162,5 +190,85 @@ describe('Seed rescue key deletion', () => {
         await pressConfirm();
 
         expect(removeItem).not.toHaveBeenCalled();
+    });
+
+    it('asks again when the stored swaps cannot be read', async () => {
+        mockStored.swaps = '{';
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const navigation = await mountRescueKey();
+
+        await pressConfirm();
+
+        expect(removeItem).not.toHaveBeenCalled();
+        expect(navigation.popTo).not.toHaveBeenCalled();
+        expect(
+            screen.getByText('views.Swaps.rescueKey.deleteSwapsUnreadable')
+        ).toBeTruthy();
+        expect(
+            screen.getByText('views.Swaps.rescueKey.deleteConfirmation')
+        ).toBeTruthy();
+
+        await pressConfirm();
+
+        expect(removeItem).toHaveBeenCalledWith('swaps-rescue-key');
+        expect(navigation.popTo).toHaveBeenCalledWith('Swaps');
+        (console.warn as jest.Mock).mockRestore();
+    });
+
+    it('does not delete when cancelled during the swap check', async () => {
+        const resolveSwaps = deferSwapsRead();
+        const navigation = await mountRescueKey();
+
+        await startConfirm();
+        await fireEvent.press(screen.getByText('general.cancel'));
+        await act(async () => resolveSwaps(undefined));
+
+        expect(removeItem).not.toHaveBeenCalled();
+        expect(navigation.popTo).not.toHaveBeenCalled();
+    });
+
+    it('does not carry a cancelled swap check into the next prompt', async () => {
+        const resolveSwaps = deferSwapsRead();
+        await mountRescueKey();
+
+        await startConfirm();
+        await fireEvent.press(screen.getByText('general.cancel'));
+        await act(async () =>
+            resolveSwaps(
+                JSON.stringify([
+                    {
+                        id: 'sub1',
+                        type: 'Submarine',
+                        status: 'invoice.pending'
+                    }
+                ])
+            )
+        );
+        await fireEvent.press(screen.getByText('views.Swaps.rescueKey.delete'));
+
+        expect(
+            screen.getByText('views.Swaps.rescueKey.deleteConfirmation')
+        ).toBeTruthy();
+        expect(screen.queryByText(/Unfinished swaps/)).toBeNull();
+        expect(removeItem).not.toHaveBeenCalled();
+    });
+
+    it('checks only once when Confirm is pressed twice', async () => {
+        const resolveSwaps = deferSwapsRead();
+        const navigation = await mountRescueKey();
+
+        const first = mockOnPress['general.confirm']();
+        const second = mockOnPress['general.confirm']();
+        await act(async () => {
+            resolveSwaps(undefined);
+            await first;
+            await second;
+        });
+
+        expect(getItem).toHaveBeenCalledTimes(2);
+        expect(
+            removeItem.mock.calls.filter(([k]) => k === 'swaps-rescue-key')
+        ).toHaveLength(1);
+        expect(navigation.popTo).toHaveBeenCalledTimes(1);
     });
 });

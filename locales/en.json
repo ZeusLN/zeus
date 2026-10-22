@@ -2518,6 +2518,7 @@
     "views.Swaps.intro.continue": "Continue",
     "views.Swaps.rescueKey.deleteConfirmation": "Are you sure you want to delete the rescue key? All swaps will also be deleted from your swap history. Please back up your keys before proceeding, as you can use them later to recover those swaps.",
     "views.Swaps.rescueKey.deleteUnfinishedSwaps": "These swaps are not finished yet: {{swaps}}. Deleting the rescue key also deletes their data, and ZEUS will no longer be able to claim or refund them. Only continue if you have backed up the rescue key. Delete anyway?",
+    "views.Swaps.rescueKey.deleteSwapsUnreadable": "ZEUS could not read all of your stored swaps, so it cannot tell whether any of them are still unfinished. If they are, deleting the rescue key leaves ZEUS unable to claim or refund them.",
     "views.SwapDetails.title": "Swap Details",
     "views.SwapDetails.acceptZeroConf": "Accept Zero Conf",
     "views.SwapDetails.expectedAmount": "Expected amount",
