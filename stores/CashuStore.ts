@@ -323,9 +323,8 @@ export default class CashuStore {
     @observable public offlineSpentTokens: Array<CashuToken> = [];
     @observable public showOfflineSpentAlert: boolean = false;
     private isSweeping: boolean = false;
-    // Bumped by reset(). The offline-token sweep holds the value it started
-    // with and stops once it changes, so a sweep started for one wallet does
-    // not claim into or write the queue of the wallet selected after it
+    // Bumped by reset() so background work started for one wallet session
+    // can tell that the wallet changed while it ran
     private walletSession = 0;
 
     settingsStore: SettingsStore;
