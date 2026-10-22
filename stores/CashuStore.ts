@@ -65,6 +65,7 @@ import CashuUtils, {
     PendingMelt
 } from '../utils/CashuUtils';
 import { cashuErrorForDisplay, errorToUserFriendly } from '../utils/ErrorUtils';
+import { maxCashuSweepFeeReserve } from '../utils/FeeUtils';
 import { localeString } from '../utils/LocaleUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { themeColor, getUpgradeBackgroundColor } from '../utils/ThemeUtils';
@@ -175,6 +176,8 @@ interface ClaimTokenResponse {
     success: boolean;
     errorMessage: string;
     warningMessage?: string;
+    // Sats paid to the node by a self-custody claim, after the mint's fee
+    receivedAmtSat?: number;
 }
 
 // Reason a mint was excluded by the multi-mint planner. 'selfSend' marks
@@ -1070,7 +1073,8 @@ export default class CashuStore {
      */
     public meltCDK = async (
         mintUrl: string,
-        bolt11: string
+        bolt11: string,
+        maxFeeReserve?: number
     ): Promise<CDKMelted> => {
         if (!this.cdkInitialized) {
             throw new Error('CDK not initialized');
@@ -1080,6 +1084,11 @@ export default class CashuStore {
 
         // Create melt quote first, then execute melt with quote ID
         const quote = await CashuDevKit.createMeltQuote(mintUrl, bolt11);
+        if (maxFeeReserve !== undefined && quote.fee_reserve > maxFeeReserve) {
+            throw new Error(
+                `Melt fee reserve ${quote.fee_reserve} exceeds ${maxFeeReserve}`
+            );
+        }
         const result = await this.trackAndMelt({
             quote: quote.id,
             mintUrl,
@@ -5857,14 +5866,36 @@ export default class CashuStore {
                     invoice.paymentRequest
                 );
 
+                let receiveAmtSat = tokenAmt;
                 if (meltQuote.fee_reserve > 0) {
-                    const receiveAmtSat = tokenAmt - meltQuote.fee_reserve;
+                    receiveAmtSat = tokenAmt - meltQuote.fee_reserve;
                     if (receiveAmtSat <= 0) {
                         this.loading = false;
                         return {
                             success: false,
                             errorMessage: localeString(
                                 'stores.CashuStore.feeExceedsAmt'
+                            )
+                        };
+                    }
+
+                    // The reserve comes out of what the node receives. The
+                    // token is already in the ecash wallet, so leave it there
+                    // rather than pay out most of it as fees.
+                    if (
+                        meltQuote.fee_reserve >
+                        maxCashuSweepFeeReserve(tokenAmt)
+                    ) {
+                        this.loading = false;
+                        return {
+                            success: true,
+                            errorMessage: '',
+                            warningMessage: localeString(
+                                'stores.CashuStore.sweepFeeTooHigh',
+                                {
+                                    fee: meltQuote.fee_reserve,
+                                    amount: tokenAmt
+                                }
                             )
                         };
                     }
@@ -5896,9 +5927,12 @@ export default class CashuStore {
                 // for a token they already hold and cannot claim again.
                 let melted: CDKMelted | undefined;
                 try {
+                    // The quote for the adjusted invoice must not reserve
+                    // more than the one it was sized from
                     melted = await this.meltCDK(
                         mintUrl,
-                        invoice.paymentRequest
+                        invoice.paymentRequest,
+                        meltQuote.fee_reserve
                     );
                 } catch (e: any) {
                     console.error('CDK claimToken self-custody sweep:', e);
@@ -5929,6 +5963,13 @@ export default class CashuStore {
                         )
                     };
                 }
+
+                this.loading = false;
+                return {
+                    success: true,
+                    errorMessage: '',
+                    receivedAmtSat: receiveAmtSat
+                };
             } else {
                 // Regular receive via CDK
                 await this.receiveTokenCDK(encodedToken, signingKey, mintUrl);
