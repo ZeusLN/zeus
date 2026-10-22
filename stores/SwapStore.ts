@@ -60,7 +60,14 @@ export type ReverseLockupCheck = {
     // this wallet's own payment for the swap in sats, with 'confirm-amount'
     // when the lockup falls short of the floor for it
     paidAmount?: number;
+    // the transaction spending the lockup, with 'lockup-spent'
+    spendingTxid?: string;
+    // whose spend that is, with 'lockup-spent'; unset when it could not
+    // be looked up
+    spentBy?: LockupSpender;
 };
+
+export type LockupSpender = 'claim' | 'refund';
 
 interface SubmarineSwapInfo {
     fees?: {
@@ -971,7 +978,23 @@ export default class SwapStore {
             }
             const outspend = response.json();
             if (outspend?.spent === true) {
-                return { status: 'invalid', reason: 'lockup-spent' };
+                const spendingTxid =
+                    typeof outspend.txid === 'string'
+                        ? outspend.txid
+                        : undefined;
+                return {
+                    status: 'invalid',
+                    reason: 'lockup-spent',
+                    spendingTxid,
+                    spentBy: spendingTxid
+                        ? await this.lockupSpentBy(
+                              spendingTxid,
+                              txid,
+                              vout,
+                              preimageHex
+                          )
+                        : undefined
+                };
             }
             if (outspend?.spent !== false) {
                 return { status: 'unavailable', reason: 'invalid-outspend' };
@@ -997,6 +1020,111 @@ export default class SwapStore {
         if (needsConfirmation) return { status: 'confirm-amount', amount };
         if (amount >= rescuedLockupFloor(paidAmount!)) return deadline;
         return { status: 'confirm-amount', amount, paidAmount };
+    };
+
+    /**
+     * Whose spend of a reverse swap lockup output a transaction is, read
+     * from the witness of its input for that output. A key-path spend
+     * needs this wallet's key share and a claim-leaf spend reveals the
+     * preimage, so both are a claim, whichever device sent it. Any other
+     * spend is the host's refund. undefined when it could not be looked up.
+     */
+    public lockupSpentBy = async (
+        spendingTxid: string,
+        lockupTxid: string,
+        vout: number,
+        preimageHex: string
+    ): Promise<LockupSpender | undefined> => {
+        // the txid comes from the mempool instance and goes into a URL
+        if (!/^[0-9a-f]{64}$/i.test(spendingTxid)) return undefined;
+        const apiUrl = UrlUtils.getMempoolApiUrl(this.nodeInfoStore.nodeInfo);
+        try {
+            const response = await ReactNativeBlobUtil.fetch(
+                'GET',
+                `${apiUrl}/tx/${spendingTxid}`
+            );
+            if (response.info().status !== 200) return undefined;
+            const vin = response.json()?.vin;
+            if (!Array.isArray(vin)) return undefined;
+            const input = vin.find(
+                (i: any) =>
+                    typeof i?.txid === 'string' &&
+                    i.txid.toLowerCase() === lockupTxid.toLowerCase() &&
+                    i.vout === vout
+            );
+            if (!input || !Array.isArray(input.witness)) return undefined;
+            const witness: string[] = input.witness.map((item: any) =>
+                String(item).toLowerCase()
+            );
+            if (witness.length === 1) return 'claim';
+            if (preimageHex && witness.includes(preimageHex.toLowerCase())) {
+                return 'claim';
+            }
+            return 'refund';
+        } catch {
+            return undefined;
+        }
+    };
+
+    /**
+     * Whether a stored reverse claim is still worth broadcasting. 'ok'
+     * while the lockup it spends is unspent or spent by this claim,
+     * 'unavailable' when the lockup could not be looked up, and 'invalid'
+     * with 'lockup-spent' once another transaction spent it, such as the
+     * host's refund after the timeout.
+     */
+    public checkStoredClaim = async (
+        claimHex: string,
+        preimage: any
+    ): Promise<ReverseLockupCheck> => {
+        let claim: Transaction;
+        try {
+            claim = Transaction.fromHex(claimHex);
+        } catch (e) {
+            return { status: 'invalid', reason: 'undecodable-claim' };
+        }
+        const input = claim.ins[0];
+        if (!input) return { status: 'invalid', reason: 'undecodable-claim' };
+        const lockupTxid = Buffer.from(input.hash).reverse().toString('hex');
+        const apiUrl = UrlUtils.getMempoolApiUrl(this.nodeInfoStore.nodeInfo);
+        let outspend: any;
+        try {
+            const response = await ReactNativeBlobUtil.fetch(
+                'GET',
+                `${apiUrl}/tx/${lockupTxid}/outspend/${input.index}`
+            );
+            if (response.info().status !== 200) {
+                return {
+                    status: 'unavailable',
+                    reason: 'outspend-unavailable'
+                };
+            }
+            outspend = response.json();
+        } catch {
+            return { status: 'unavailable', reason: 'outspend-unavailable' };
+        }
+        if (outspend?.spent === false) return { status: 'ok' };
+        if (outspend?.spent !== true) {
+            return { status: 'unavailable', reason: 'invalid-outspend' };
+        }
+        const spendingTxid =
+            typeof outspend.txid === 'string' ? outspend.txid : undefined;
+        if (spendingTxid?.toLowerCase() === claim.getId()) {
+            return { status: 'ok' };
+        }
+        return {
+            status: 'invalid',
+            reason: 'lockup-spent',
+            spendingTxid,
+            spentBy: spendingTxid
+                ? await this.lockupSpentBy(
+                      spendingTxid,
+                      lockupTxid,
+                      input.index,
+                      preimageHexFrom(preimage) || ''
+                  )
+                : undefined
+        };
     };
 
     /**

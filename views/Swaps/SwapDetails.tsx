@@ -506,6 +506,17 @@ export default class SwapDetails extends React.Component<
                     confirmedLockupAmount,
                     () => stopped
                 );
+                if (result === 'unsent') {
+                    // Boltz sends no update after invoice.settled, so send
+                    // the stored claim again while the screen is open
+                    if (!stopped) {
+                        lockupRecheck = setTimeout(
+                            () => claimIfLockupVerified(transactionHex),
+                            LOCKUP_RECHECK_MS
+                        );
+                    }
+                    return;
+                }
                 if (typeof result === 'boolean') {
                     submitted = result;
                     return;
@@ -568,13 +579,45 @@ export default class SwapDetails extends React.Component<
 
                 if (
                     lockup.status === 'invalid' &&
-                    invoiceSettled &&
-                    lockup.reason === 'lockup-spent'
+                    lockup.reason === 'lockup-spent' &&
+                    (invoiceSettled || this.state.swapData?.claimTransactionHex)
                 ) {
-                    console.log(
-                        'Reverse swap lockup already spent after the invoice settled'
-                    );
+                    // The host may hold the preimage, so the spend is
+                    // usually this wallet's claim, possibly sent from
+                    // another device. After the timeout the host's refund
+                    // spends the lockup too.
+                    if (!lockup.spentBy) {
+                        this.setState({
+                            lockupNotice: localeString(
+                                'views.SwapDetails.lockupVerificationUnavailable'
+                            )
+                        });
+                        lockupRecheck = setTimeout(
+                            () => claimIfLockupVerified(transactionHex),
+                            LOCKUP_RECHECK_MS
+                        );
+                        return;
+                    }
                     stopRechecks();
+                    if (lockup.spentBy === 'claim') {
+                        console.log(
+                            'Reverse swap lockup already spent by a claim from this wallet'
+                        );
+                        this.setState({ lockupNotice: null });
+                        return;
+                    }
+                    console.error(
+                        'Reverse swap lockup verification failed:',
+                        'lockup-refunded',
+                        lockup.spendingTxid
+                    );
+                    this.setState({
+                        error: localeString(
+                            'views.SwapDetails.lockupSpentElsewhere'
+                        ),
+                        lockupNotice: null,
+                        loading: false
+                    });
                     return;
                 }
 
@@ -900,7 +943,7 @@ export default class SwapDetails extends React.Component<
         // true once the screen is done with the swap: no new native claim
         // may start after that, though one already running finishes
         isStopped: () => boolean = () => false
-    ): Promise<boolean | ReverseLockupCheck> => {
+    ): Promise<boolean | 'unsent' | ReverseLockupCheck> => {
         try {
             const { SwapStore } = this.props;
             if (!SwapStore) return { status: 'unavailable' };
@@ -911,6 +954,16 @@ export default class SwapDetails extends React.Component<
             let claimHex: string | undefined =
                 this.state.swapData?.claimTransactionHex;
             let claim: ReturnType<typeof ReverseClaimTransaction.build> = null;
+
+            // Once something else spent the lockup, such as the host's
+            // refund after the timeout, the stored claim can never confirm
+            if (claimHex) {
+                const spend = await SwapStore.checkStoredClaim(
+                    claimHex,
+                    preimage
+                );
+                if (spend.status === 'invalid') return spend;
+            }
 
             if (!claimHex) {
                 // legacy swaps predate claimMinerFee being stored at
@@ -1049,7 +1102,8 @@ export default class SwapDetails extends React.Component<
                 error: localeString('views.SwapDetails.claimBroadcastFailed'),
                 loading: false
             });
-            return false;
+            // a signed claim is stored, but no broadcast went through
+            return claimHex ? 'unsent' : false;
         } catch (e) {
             console.log('Error creating reverse claim tx ', e);
             this.setState({

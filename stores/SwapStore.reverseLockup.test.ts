@@ -362,6 +362,47 @@ describe('SwapStore.verifyReverseLockup', () => {
         }
     );
 
+    it('names the spending transaction and whose it is, even past the refund deadline', async () => {
+        esplora(200);
+        const fetch = fetchMock.getMockImplementation()!;
+        fetchMock.mockImplementation(async (method, url) => {
+            if (url.endsWith(`/tx/${'ab'.repeat(32)}`)) {
+                return {
+                    info: () => ({ status: 200 }),
+                    json: () => ({
+                        vin: [
+                            {
+                                txid: LOCKUP_TX.getId(),
+                                vout: 0,
+                                witness: ['sig', 'refundscript', 'control']
+                            }
+                        ]
+                    })
+                };
+            }
+            if (url.includes('/outspend/')) {
+                return {
+                    info: () => ({ status: 200 }),
+                    json: () => ({ spent: true, txid: 'ab'.repeat(32) })
+                };
+            }
+            // the host may have refunded itself by now
+            if (url.endsWith('/blocks/tip/height')) {
+                return {
+                    info: () => ({ status: 200 }),
+                    text: () => String(TIMEOUT + 10)
+                };
+            }
+            return fetch(method, url);
+        });
+        await expect(verify()).resolves.toEqual({
+            status: 'invalid',
+            reason: 'lockup-spent',
+            spendingTxid: 'ab'.repeat(32),
+            spentBy: 'refund'
+        });
+    });
+
     it.each([{}, { spent: 'false' }, null])(
         'fails closed on malformed outspend data %j',
         async (body) => {
@@ -891,5 +932,178 @@ describe('SwapStore.verifyReverseLockup', () => {
             ).resolves.toEqual({ status: 'ok' });
             expect(decode).not.toHaveBeenCalled();
         });
+    });
+});
+
+describe('SwapStore.lockupSpentBy', () => {
+    const SPENDER = 'cd'.repeat(32);
+    const LOCKUP = 'ef'.repeat(32);
+    const PREIMAGE_HEX = PREIMAGE.toString('hex');
+    const spenderWith = (vin: any) =>
+        fetchMock.mockResolvedValue({
+            info: () => ({ status: 200 }),
+            json: () => ({ vin })
+        });
+    const spentBy = () =>
+        newStore().lockupSpentBy(SPENDER, LOCKUP, 1, PREIMAGE_HEX);
+
+    beforeEach(() => fetchMock.mockReset());
+
+    it('reads a key-path spend as a claim', async () => {
+        spenderWith([{ txid: LOCKUP, vout: 1, witness: ['ab'.repeat(64)] }]);
+        await expect(spentBy()).resolves.toBe('claim');
+        expect(fetchMock).toHaveBeenCalledWith(
+            'GET',
+            `https://mempool.test/api/tx/${SPENDER}`
+        );
+    });
+
+    it('reads a claim-leaf spend that reveals the preimage as a claim', async () => {
+        spenderWith([
+            { txid: 'aa'.repeat(32), vout: 0, witness: ['sig'] },
+            {
+                txid: LOCKUP.toUpperCase(),
+                vout: 1,
+                witness: [
+                    'sig',
+                    PREIMAGE_HEX.toUpperCase(),
+                    'claimscript',
+                    'control'
+                ]
+            }
+        ]);
+        await expect(spentBy()).resolves.toBe('claim');
+    });
+
+    it('reads any other spend as the refund', async () => {
+        spenderWith([
+            {
+                txid: LOCKUP,
+                vout: 1,
+                witness: ['sig', 'refundscript', 'control']
+            }
+        ]);
+        await expect(spentBy()).resolves.toBe('refund');
+    });
+
+    it('only reads the input for the lockup output', async () => {
+        // a key-path spend of another output of the lockup transaction
+        spenderWith([
+            { txid: LOCKUP, vout: 0, witness: ['sig'] },
+            { txid: LOCKUP, vout: 1, witness: ['sig', 'refundscript', 'c'] }
+        ]);
+        await expect(spentBy()).resolves.toBe('refund');
+    });
+
+    it.each([
+        [
+            'an error status',
+            () => fetchMock.mockResolvedValue({ info: () => ({ status: 404 }) })
+        ],
+        ['no inputs', () => spenderWith(undefined)],
+        [
+            'no input for the lockup',
+            () => spenderWith([{ txid: LOCKUP, vout: 0, witness: ['sig'] }])
+        ],
+        ['no witness', () => spenderWith([{ txid: LOCKUP, vout: 1 }])],
+        ['a failed request', () => fetchMock.mockRejectedValue(new Error())]
+    ])('is unknown on %s', async (_case, setUp) => {
+        setUp();
+        await expect(spentBy()).resolves.toBeUndefined();
+    });
+
+    it('does not request a txid that is not 64 hex characters', async () => {
+        await expect(
+            newStore().lockupSpentBy('../blocks', LOCKUP, 1, PREIMAGE_HEX)
+        ).resolves.toBeUndefined();
+        expect(fetchMock).not.toHaveBeenCalled();
+    });
+});
+
+describe('SwapStore.checkStoredClaim', () => {
+    const LOCKUP_TXID = 'ef'.repeat(32);
+    const claimTx = () => {
+        const tx = new Transaction();
+        // inputs carry the txid in internal (reversed) byte order
+        tx.addInput(Buffer.from(LOCKUP_TXID, 'hex').reverse(), 2);
+        tx.addOutput(VALID.outputScript, 1000);
+        return tx;
+    };
+    const CLAIM = claimTx();
+    const SPENDER = 'cd'.repeat(32);
+    const respond = (outspend: any, spender?: any) =>
+        fetchMock.mockImplementation(async (_method: string, url: string) =>
+            url.includes('/outspend/')
+                ? { info: () => ({ status: 200 }), json: () => outspend }
+                : spender
+                ? { info: () => ({ status: 200 }), json: () => spender }
+                : { info: () => ({ status: 404 }) }
+        );
+    const check = (hex = CLAIM.toHex()) =>
+        newStore().checkStoredClaim(hex, JSON.parse(JSON.stringify(PREIMAGE)));
+
+    beforeEach(() => fetchMock.mockReset());
+
+    it('allows the resend while the lockup is unspent', async () => {
+        respond({ spent: false });
+        await expect(check()).resolves.toEqual({ status: 'ok' });
+        expect(fetchMock).toHaveBeenCalledWith(
+            'GET',
+            `https://mempool.test/api/tx/${LOCKUP_TXID}/outspend/2`
+        );
+    });
+
+    it('allows the resend when the stored claim is the spender', async () => {
+        respond({ spent: true, txid: CLAIM.getId() });
+        await expect(check()).resolves.toEqual({ status: 'ok' });
+    });
+
+    it.each([
+        ['the refund leaf', ['sig', 'refundscript', 'control'], 'refund'],
+        ['the preimage', ['sig', PREIMAGE.toString('hex'), 's', 'c'], 'claim']
+    ])(
+        'names another spender with %s in its witness',
+        async (_case, witness, spentBy) => {
+            respond(
+                { spent: true, txid: SPENDER },
+                { vin: [{ txid: LOCKUP_TXID, vout: 2, witness }] }
+            );
+            await expect(check()).resolves.toEqual({
+                status: 'invalid',
+                reason: 'lockup-spent',
+                spendingTxid: SPENDER,
+                spentBy
+            });
+        }
+    );
+
+    it('leaves the spender unknown when it cannot be looked up', async () => {
+        respond({ spent: true, txid: SPENDER });
+        await expect(check()).resolves.toEqual({
+            status: 'invalid',
+            reason: 'lockup-spent',
+            spendingTxid: SPENDER,
+            spentBy: undefined
+        });
+    });
+
+    it.each([
+        [
+            'an error status',
+            () => fetchMock.mockResolvedValue({ info: () => ({ status: 500 }) })
+        ],
+        ['malformed outspend data', () => respond({ spent: 'true' })],
+        ['a failed request', () => fetchMock.mockRejectedValue(new Error())]
+    ])('is unavailable on %s', async (_case, setUp) => {
+        setUp();
+        await expect(check()).resolves.toMatchObject({ status: 'unavailable' });
+    });
+
+    it('fails closed on a stored claim that does not decode', async () => {
+        await expect(check('zz')).resolves.toEqual({
+            status: 'invalid',
+            reason: 'undecodable-claim'
+        });
+        expect(fetchMock).not.toHaveBeenCalled();
     });
 });
