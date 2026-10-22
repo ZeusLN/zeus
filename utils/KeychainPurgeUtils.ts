@@ -178,11 +178,45 @@ const hasValue = (value: any): boolean =>
     value !== '' &&
     !(Array.isArray(value) && value.length === 0);
 
+// Missing values default the same way SettingsStore.updateNodeProperties does
+const nodeImplementation = (node: any): string => node?.implementation || 'lnd';
+
+/**
+ * The node fields, besides its secrets, that tell one wallet of an
+ * implementation from another. LNC and NWC have none: the pairing phrase
+ * and the connection URL are the identity. An implementation not listed
+ * here has no known identity, so its nodes are never treated as covered.
+ */
+const walletIdentity = (node: any): any[] | null => {
+    switch (nodeImplementation(node)) {
+        case 'lndhub':
+            return [node.lndhubUrl];
+        case 'lnd':
+        case 'cln-rest':
+            return [node.host, node.port];
+        case 'embedded-lnd':
+            return [node.lndDir || 'lnd'];
+        case 'ldk-node':
+            return [node.ldkNodeDir];
+        case 'lightning-node-connect':
+        case 'nostr-wallet-connect':
+            return [];
+        default:
+            return null;
+    }
+};
+
+const sameValue = (a: any, b: any): boolean =>
+    JSON.stringify(a) === JSON.stringify(b);
+
 /**
  * Whether the live settings blob holds every wallet of a legacy settings
- * blob: each legacy node needs a live node with the same value for every
- * secret field the legacy node has set (nickname, host and other settings
- * may differ). Throws when either blob does not parse.
+ * blob: each legacy node needs a live node with the same implementation,
+ * the same identity fields (see walletIdentity) and the same value for
+ * every secret field the legacy node has set. Nickname and other settings
+ * may differ. A legacy node with no secrets is never covered, since there
+ * is nothing to show the live node is the same wallet. Throws when either
+ * blob does not parse.
  */
 export const liveSettingsCoverLegacy = (
     legacyJson: string,
@@ -193,12 +227,16 @@ export const liveSettingsCoverLegacy = (
         const secrets = WALLET_SECRET_FIELDS.filter((field) =>
             hasValue(node?.[field])
         );
-        return liveNodes.some((live: any) =>
-            secrets.every(
-                (field) =>
-                    JSON.stringify(live?.[field]) ===
-                    JSON.stringify(node[field])
-            )
+        if (secrets.length === 0) return false;
+        const identity = walletIdentity(node);
+        if (identity === null) return false;
+        return liveNodes.some(
+            (live: any) =>
+                live &&
+                typeof live === 'object' &&
+                nodeImplementation(live) === nodeImplementation(node) &&
+                sameValue(walletIdentity(live), identity) &&
+                secrets.every((field) => sameValue(live?.[field], node[field]))
         );
     });
 };
