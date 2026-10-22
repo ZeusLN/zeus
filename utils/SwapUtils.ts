@@ -246,6 +246,7 @@ export type ReverseSwapResponseCheck =
               | 'claim-leaf-mismatch'
               | 'refund-leaf-mismatch'
               | 'lockup-address-mismatch'
+              | 'onchain-amount-invalid'
               | 'onchain-amount-low';
       };
 
@@ -253,9 +254,11 @@ export type ReverseSwapResponseCheck =
  * Verifies the provider's reverse swap details against what ZEUS chose:
  * the claim leaf must pay our key against our preimage hash, the refund
  * leaf must pay the server key, and the lockup address must be the
- * taproot output of exactly that tree. When minOnchainAmount is given,
- * the provider must also lock up more than that (the amount the Swaps
- * screen showed the user they would receive).
+ * taproot output of exactly that tree. A given onchainAmount must be a
+ * whole, positive number of sats. When minOnchainAmount is given, the
+ * provider must also lock up at least that much (the amount the Swaps
+ * screen showed the user they would receive, plus the claim fee that is
+ * paid out of the lockup).
  *
  * Without this a provider can hand out a lockup address it controls, or
  * a tree we can't claim from, and still get the preimage when we claim.
@@ -351,9 +354,19 @@ export const verifyReverseSwapResponse = ({
         return { valid: false, reason: 'lockup-address-mismatch' };
     }
 
+    // The stored amount is the lockup floor at claim time, so it has to
+    // survive the JSON round trip: 1e999 parses to Infinity and is saved
+    // as null, and a numeric string or array would pass Number() here but
+    // compare differently later. Rescued swaps store no amount.
+    if (
+        onchainAmount != null &&
+        (!Number.isSafeInteger(onchainAmount) || onchainAmount <= 0)
+    ) {
+        return { valid: false, reason: 'onchain-amount-invalid' };
+    }
     if (
         minOnchainAmount != null &&
-        !(Number(onchainAmount) > minOnchainAmount)
+        !(onchainAmount != null && onchainAmount >= minOnchainAmount)
     ) {
         return { valid: false, reason: 'onchain-amount-low' };
     }
@@ -717,6 +730,42 @@ export const calculateSendAmount = (
                   )
                   .plus(minerFee)
           );
+};
+
+// The network fee the Swaps screen charges: the claim and lockup miner
+// fees for a reverse swap, the miner fee for a submarine swap
+export const swapNetworkFee = (info: any, reverse: boolean): number =>
+    (reverse
+        ? new BigNumber(info?.fees?.minerFees?.claim || 0).plus(
+              info?.fees?.minerFees?.lockup || 0
+          )
+        : new BigNumber(info?.fees?.minerFees || 0)
+    ).toNumber();
+
+// The receive amount and service fee for a send amount under a quote. Used
+// to refresh the Swaps screen when the provider's quote changes after the
+// user entered an amount.
+export const quoteSwapAmounts = (
+    sendAmount: BigNumber,
+    info: any,
+    reverse: boolean
+): { receiveAmount: BigNumber; serviceFee: BigNumber } => {
+    const serviceFeePct = info?.fees?.percentage || 0;
+    const networkFee = swapNetworkFee(info, reverse);
+    return {
+        receiveAmount: calculateReceiveAmount(
+            sendAmount,
+            serviceFeePct,
+            networkFee,
+            reverse
+        ),
+        serviceFee: calculateServiceFeeOnSend(
+            sendAmount,
+            serviceFeePct,
+            networkFee,
+            reverse
+        )
+    };
 };
 
 export const calculateLimit = (
