@@ -16,8 +16,13 @@ jest.mock('../utils/EventListenerUtils', () => ({
 jest.mock('../utils/SyncUtils', () => ({ __esModule: true, default: {} }));
 jest.mock('../utils/UrlUtils', () => ({
     __esModule: true,
-    default: { getMempoolApiUrl: () => 'https://mempool.test/api' }
+    default: { getMempoolApiUrl: () => mockMempoolApiUrl }
 }));
+
+// a custom .onion mempool instance always goes over Tor, whatever the setting
+const ONION_API =
+    'http://zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion/api';
+let mockMempoolApiUrl = 'https://mempool.test/api';
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import SyncStore from './SyncStore';
@@ -30,6 +35,7 @@ const URL = 'https://mempool.test/api/blocks/tip/height';
 
 beforeEach(() => {
     jest.clearAllMocks();
+    mockMempoolApiUrl = 'https://mempool.test/api';
     torFetch.mockResolvedValue({ status: 200, body: '900000' });
     blobFetch.mockResolvedValue({
         info: () => ({ status: 200 }),
@@ -63,6 +69,25 @@ describe('SyncStore block tip lookup', () => {
                 undefined
             );
         }
+        expect(store.bestBlockHeight).toBe(900000);
+    });
+
+    it('fetches the tip from an .onion instance over Tor with Tor off', async () => {
+        mockMempoolApiUrl = ONION_API;
+        const store = new SyncStore(
+            { enableTor: false, embeddedLndNetwork: 'Mainnet' } as any,
+            { onReconnect: jest.fn() } as any
+        );
+
+        await (store as any).getBestBlockHeight();
+
+        expect(blobFetch).not.toHaveBeenCalled();
+        expect(torFetch).toHaveBeenCalledWith(
+            `${ONION_API}/blocks/tip/height`,
+            'GET',
+            undefined,
+            undefined
+        );
         expect(store.bestBlockHeight).toBe(900000);
     });
 });

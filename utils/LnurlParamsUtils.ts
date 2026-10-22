@@ -2,24 +2,26 @@ import querystring from 'querystring-es3';
 import { getParams } from 'js-lnurl';
 import { decodelnurl, getDomain } from 'js-lnurl/lib/helpers';
 
-import { networkFetch } from './NetworkUtils';
+import { isOnionUrl, networkFetch } from './NetworkUtils';
 
 // js-lnurl's getParams fetches with cross-fetch, which cannot use Tor. With
-// Tor enabled, resolve the params here instead: the same steps and result
-// shape as js-lnurl 0.6.0 getParams, but the request goes through
-// networkFetch. With Tor disabled, js-lnurl is used unchanged.
+// Tor enabled, or for a .onion host, resolve the params here instead: the
+// same steps and result shape as js-lnurl 0.6.0 getParams, but the request
+// goes through networkFetch, which sends .onion hosts over Tor whatever the
+// setting. Otherwise js-lnurl is used unchanged.
 export const getLnurlParams = async (
     lnurl: string,
     enableTor?: boolean
 ): Promise<any> => {
-    if (!enableTor) return getParams(lnurl);
-
     let url: string;
     try {
         url = decodelnurl(lnurl);
     } catch (err) {
+        if (!enableTor) return getParams(lnurl);
         return { status: 'ERROR', reason: `invalid lnurl '${lnurl}'` };
     }
+
+    if (!enableTor && !isOnionUrl(url)) return getParams(lnurl);
 
     // login and fully specified withdraw links carry everything needed,
     // so there is nothing to fetch
