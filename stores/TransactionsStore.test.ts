@@ -50,6 +50,7 @@ import TransactionsStore, {
     PAYMENT_STALE_ATTEMPT_SLACK_MS
 } from './TransactionsStore';
 import BackendUtils from '../utils/BackendUtils';
+import { checkGraphSyncBeforePayment } from '../utils/GraphSyncUtils';
 import {
     markNodeResponded,
     paymentLookupInconclusiveError
@@ -1395,5 +1396,89 @@ describe('TransactionsStore.sendPaymentSilently', () => {
         expect(payLightningInvoice).toHaveBeenLastCalledWith(
             expect.objectContaining({ fee_limit_sat: expected })
         );
+    });
+});
+
+describe('TransactionsStore.sendPayment held back by the graph sync prompt', () => {
+    const checkGraphSync = checkGraphSyncBeforePayment as jest.Mock;
+
+    // a store whose last payment succeeded and whose next one is held back
+    const storeWithHeldPayment = async () => {
+        payLightningInvoice.mockResolvedValueOnce({
+            payment_hash: HASH,
+            payment_preimage: 'cd'.repeat(32),
+            status: 'SUCCEEDED'
+        });
+        const store = newStore('embedded-lnd');
+        store.sendPayment({ payment_request: 'lnbc1first' });
+        await flushPromises();
+        expect(store.status).toBe('SUCCEEDED');
+        expect(store.paymentInFlight).toBe(false);
+
+        checkGraphSync.mockImplementationOnce(
+            (_settings, _implementation, paymentData, transactionsStore) => {
+                transactionsStore.pendingPaymentData = paymentData;
+                transactionsStore.showGraphSyncPrompt = true;
+                return false;
+            }
+        );
+        store.sendPayment({ payment_request: 'lnbc1second' });
+        return store;
+    };
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        payLightningInvoice.mockReset();
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it("clears the previous payment's outcome while the prompt is open", async () => {
+        const store = await storeWithHeldPayment();
+
+        expect(payLightningInvoice).toHaveBeenCalledTimes(1);
+        expect(store.showGraphSyncPrompt).toBe(true);
+        expect(store.loading).toBe(true);
+        expect(store.error).toBe(false);
+        expect(store.status).toBeNull();
+        expect(store.payment_hash).toBeNull();
+        expect(store.payment_preimage).toBeNull();
+    });
+
+    it('drops the payment and reports it as not sent when the prompt is dismissed', async () => {
+        const store = await storeWithHeldPayment();
+        store.hideGraphSyncPrompt();
+
+        expect(payLightningInvoice).toHaveBeenCalledTimes(1);
+        expect(store.showGraphSyncPrompt).toBe(false);
+        expect(store.pendingPaymentData).toBeNull();
+        expect(store.loading).toBe(false);
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe('views.GraphSyncPrompt.paymentNotSent');
+        expect(store.status).toBeNull();
+
+        // nothing is left to dispatch
+        store.proceedWithPayment();
+        expect(payLightningInvoice).toHaveBeenCalledTimes(1);
+    });
+
+    it('dispatches the payment when the prompt is answered', async () => {
+        const store = await storeWithHeldPayment();
+        payLightningInvoice.mockReturnValue(deferred().promise);
+        store.proceedWithPayment();
+
+        expect(payLightningInvoice).toHaveBeenCalledTimes(2);
+        expect(payLightningInvoice).toHaveBeenLastCalledWith(
+            expect.objectContaining({ payment_request: 'lnbc1second' })
+        );
+        expect(store.showGraphSyncPrompt).toBe(false);
+        expect(store.pendingPaymentData).toBeNull();
+
+        // the modal's onClosed fires once it has animated out
+        store.hideGraphSyncPrompt();
+        expect(store.loading).toBe(true);
+        expect(store.error).toBe(false);
     });
 });
