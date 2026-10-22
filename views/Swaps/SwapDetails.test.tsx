@@ -902,7 +902,61 @@ describe('SwapDetails submarine refund after the timeout', () => {
     });
 
     it('is offered when the host says nothing', async () => {
+        await openAt(TIMEOUT + 10, { status: 'transaction.confirmed' });
+
+        expect(refundOffered()).toBe(true);
+    });
+
+    it('is offered for a stored lockup when the host says nothing', async () => {
+        await openAt(TIMEOUT + 10, {
+            status: 'invoice.set',
+            lockupTransaction: { hex: 'lockuphex' }
+        });
+
+        expect(refundOffered()).toBe(true);
+    });
+
+    it('is not offered for a swap that was never funded', async () => {
         await openAt(TIMEOUT + 10, { status: 'invoice.set' });
+
+        expect(refundOffered()).toBe(false);
+    });
+
+    it.each([
+        ['invoice.pending'],
+        ['invoice.paid'],
+        ['transaction.claim.pending']
+    ])('is not offered while the host reports %s', async (status) => {
+        // transaction.claim.pending also has the view sign the host's claim
+        const preimage = '11'.repeat(32);
+        (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValue({
+            json: () => ({ preimage })
+        });
+        jest.spyOn(Bolt11Utils, 'decode').mockReturnValue({
+            payment_hash: crypto
+                .sha256(Buffer.from(preimage, 'hex'))
+                .toString('hex')
+        } as any);
+        await openAt(TIMEOUT + 10, { status: 'transaction.confirmed' });
+        await sendStatus(status);
+
+        expect(refundOffered()).toBe(false);
+    });
+
+    it.each([['invoice.paid'], ['transaction.claim.pending']])(
+        'is not offered for a swap stored as %s',
+        async (status) => {
+            await openAt(TIMEOUT + 10, {
+                status,
+                lockupTransaction: { hex: 'lockuphex' }
+            });
+
+            expect(refundOffered()).toBe(false);
+        }
+    );
+
+    it('is offered for a swap stored as invoice.pending when the host says nothing', async () => {
+        await openAt(TIMEOUT + 10, { status: 'invoice.pending' });
 
         expect(refundOffered()).toBe(true);
     });
