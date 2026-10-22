@@ -1068,6 +1068,61 @@ describe('TransactionsStore payment tracking (issue #4317)', () => {
         expect(BackendUtils.lookupPayment).not.toHaveBeenCalled();
     });
 
+    it('shows a CLN keysend timeout, which has no hash to track, as in transit, not failed', async () => {
+        // CLNRest has a payment lookup, but CLN picks the keysend preimage
+        // and the timed-out result carries no hash to look up
+        isLNDBased.mockReturnValue(false);
+        sendKeysend.mockResolvedValue({
+            payment_error: 'views.SendingLightning.paymentTimedOut',
+            payment_timed_out: true
+        });
+
+        const store = newStore('cln-rest');
+        store.sendPayment({ pubkey: '02ab', amount: '100' });
+        await flush();
+
+        expect(sendKeysend).toHaveBeenCalledTimes(1);
+        // no error or payment_error: the send screen offers no Try Again
+        expect(store.error).toBe(false);
+        expect(store.payment_error).toBeNull();
+        expect(store.status).toBe('IN_FLIGHT');
+        expect(store.paymentOutcomeUnverified).toBe(true);
+        expect(store.paymentInFlight).toBe(false);
+        expect(BackendUtils.lookupPayment).not.toHaveBeenCalled();
+    });
+
+    it('shows a timed-out AMP payment, which has no hash to track, as in transit', async () => {
+        (BackendUtils.payLightningInvoice as jest.Mock).mockResolvedValue({
+            payment_error: 'views.SendingLightning.paymentTimedOut',
+            payment_timed_out: true
+        });
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake', amp: true });
+        await flush();
+
+        expect(store.error).toBe(false);
+        expect(store.payment_error).toBeNull();
+        expect(store.status).toBe('IN_FLIGHT');
+        expect(store.paymentOutcomeUnverified).toBe(true);
+        expect(BackendUtils.lookupPayment).not.toHaveBeenCalled();
+    });
+
+    it('still shows a failed CLN payment as failed', async () => {
+        isLNDBased.mockReturnValue(false);
+        sendKeysend.mockResolvedValue({
+            payment_error: 'route not found'
+        });
+
+        const store = newStore('cln-rest');
+        store.sendPayment({ pubkey: '02ab', amount: '100' });
+        await flush();
+
+        expect(store.error).toBe(true);
+        expect(store.paymentOutcomeUnverified).toBe(false);
+        expect(store.paymentInFlight).toBe(false);
+    });
+
     it('ignores a second send while a tracked payment is unresolved', async () => {
         (BackendUtils.payLightningInvoice as jest.Mock).mockResolvedValue({
             status: 'IN_FLIGHT',

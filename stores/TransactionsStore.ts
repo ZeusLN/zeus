@@ -1463,6 +1463,20 @@ export default class TransactionsStore {
             return;
         }
 
+        // A client-side timeout that can't be tracked because there is no
+        // payment hash to look up (AMP settles under per-attempt hashes; a
+        // CLN keysend's preimage is picked by the node and its timed-out
+        // result carries no hash): the payment may still settle, so show
+        // it as in transit with an unverified outcome, as when tracking
+        // stops without a terminal state, rather than as failed with a
+        // retry that can double-pay.
+        if (result.payment_timed_out) {
+            this.clearPaymentInFlight(seq);
+            this.status = 'IN_FLIGHT';
+            this.paymentOutcomeUnverified = true;
+            return;
+        }
+
         this.clearPaymentInFlight(seq);
         this.payment_route = result.payment_route;
         // keys the outcome leaves unset keep their current values
