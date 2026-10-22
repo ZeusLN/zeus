@@ -49,6 +49,11 @@ public class NostrConnectService extends Service {
     public int onStartCommand(Intent intent, int flags, int startid) {
         if (intent != null && intent.getAction() != null) {
             if (intent.getAction().equals("app.zeusln.zeus.android.intent.action.STOP_NOSTR_SERVICE")) {
+                // NostrConnectModule stays bound, so stopSelf() alone does not destroy
+                // the service, and the relay subscriptions live in JS. Stop the monitor
+                // and tell JS to tear NWC down and unbind.
+                stopConnectionMonitoring();
+                NostrConnectModule.emitServiceStoppedEvent();
                 stopForeground(STOP_FOREGROUND_REMOVE);
                 stopSelf();
                 return START_NOT_STICKY;
@@ -114,7 +119,7 @@ public class NostrConnectService extends Service {
         isServiceRunning = false;
         stopConnectionMonitoring();
         if (notificationManager != null) {
-            notificationManager.cancelAll();
+            notificationManager.cancel(ONGOING_NOTIFICATION_ID);
         }
         super.onDestroy();
     }

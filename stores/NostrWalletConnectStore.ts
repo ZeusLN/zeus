@@ -192,6 +192,7 @@ export default class NostrWalletConnectStore {
     private iosAudioSuspendedUnsub: (() => void) | null = null;
     private iosAudioAppStateListener: AppStateSubscription | null = null;
     private androidReconnectionListener: EmitterSubscription | null = null;
+    private androidServiceStoppedListener: EmitterSubscription | null = null;
     private appStateListener: AppStateSubscription | null = null;
     private androidLogListener: EmitterSubscription | null = null;
     private _scheduledSave: ReturnType<typeof setTimeout> | null = null;
@@ -4042,6 +4043,7 @@ export default class NostrWalletConnectStore {
                 }
 
                 await NostrConnectModule.initialize();
+                this.setupAndroidServiceStoppedListener();
                 this.updateAndroidTranslationCache();
             } catch (serviceError) {
                 console.warn(
@@ -4083,6 +4085,40 @@ export default class NostrWalletConnectStore {
                 await this.handleAndroidReconnectionCheck();
             }
         );
+    }
+    // Android: "Stop Service" on the NWC notification. The native service
+    // only keeps the process alive; the relay subscriptions that answer
+    // paired apps live here. Kept across reset(), like the binding itself.
+    private setupAndroidServiceStoppedListener() {
+        if (this.androidServiceStoppedListener) {
+            this.androidServiceStoppedListener.remove();
+        }
+        this.androidServiceStoppedListener = DeviceEventEmitter.addListener(
+            'NostrConnectServiceStopped',
+            async () => {
+                await this.handleAndroidServiceStopped();
+            }
+        );
+    }
+    private async handleAndroidServiceStopped(): Promise<void> {
+        // Persistent Mode still on means the user pressed "Stop Service".
+        // Turning Persistent Mode off also stops the native service, but
+        // NWC then keeps running while ZEUS is open.
+        if (this.persistentNWCServiceEnabled) {
+            console.log('Android: Background service stopped by the user');
+            await this.reset(true);
+        }
+        // Android only destroys a stopped service once nothing is bound to
+        // it, and initialize() only starts it again after an unbind
+        try {
+            const { NostrConnectModule } = NativeModules;
+            await NostrConnectModule.unbindNostrConnectService();
+        } catch (error) {
+            console.warn(
+                'Android: Failed to unbind background service:',
+                error
+            );
+        }
     }
     private async setupAndroidLogListener() {
         if (this.androidLogListener) {
