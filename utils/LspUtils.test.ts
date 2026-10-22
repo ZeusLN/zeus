@@ -1,4 +1,4 @@
-import { verifyWrappedInvoice } from './LspUtils';
+import { getLeaseDisplay, verifyWrappedInvoice } from './LspUtils';
 
 // Deterministic fixtures signed with throwaway test keys. The scenario:
 // the user requests 100 000 sats with a quoted zero-conf fee of
@@ -124,6 +124,105 @@ describe('verifyWrappedInvoice', () => {
         expect(verifyWrappedInvoice(INNER, '', QUOTED_FEE_SATS)).toEqual({
             valid: false,
             error: 'decode_failure'
+        });
+    });
+});
+
+describe('getLeaseDisplay', () => {
+    const base = { fetchError: false, isLspChannel: true };
+
+    it('shows the expiry without a button at the max lifetime', () => {
+        expect(
+            getLeaseDisplay({
+                ...base,
+                scid: '800000x1x0',
+                maxExtensionInBlocks: 0,
+                expirationBlock: 852560
+            })
+        ).toEqual({
+            showFetchError: false,
+            showLease: true,
+            showExtendButton: false
+        });
+    });
+
+    it('shows the button when the lease can be extended', () => {
+        expect(
+            getLeaseDisplay({
+                ...base,
+                scid: '800000x1x0',
+                maxExtensionInBlocks: 26280,
+                expirationBlock: 852560
+            })
+        ).toEqual({
+            showFetchError: false,
+            showLease: true,
+            showExtendButton: true
+        });
+    });
+
+    it('offers a lease purchase for a channel with no expiry', () => {
+        expect(
+            getLeaseDisplay({
+                ...base,
+                scid: '800000x1x0',
+                maxExtensionInBlocks: 26280,
+                expirationBlock: 0
+            })
+        ).toEqual({
+            showFetchError: false,
+            showLease: true,
+            showExtendButton: true
+        });
+    });
+
+    it('treats a negative max extension as none', () => {
+        expect(
+            getLeaseDisplay({
+                ...base,
+                scid: '800000x1x0',
+                maxExtensionInBlocks: -500,
+                expirationBlock: 852560
+            })
+        ).toEqual({
+            showFetchError: false,
+            showLease: true,
+            showExtendButton: false
+        });
+    });
+
+    it('warns for an LSP channel with no lease data when the fetch failed', () => {
+        expect(getLeaseDisplay({ ...base, fetchError: true })).toEqual({
+            showFetchError: true,
+            showLease: false,
+            showExtendButton: false
+        });
+    });
+
+    it('does not warn when the fetch succeeded', () => {
+        expect(getLeaseDisplay(base).showFetchError).toBe(false);
+    });
+
+    it('does not warn for a channel with another peer', () => {
+        expect(
+            getLeaseDisplay({ fetchError: true, isLspChannel: false })
+                .showFetchError
+        ).toBe(false);
+    });
+
+    it('does not warn for a channel the LSP listed with no lease', () => {
+        expect(
+            getLeaseDisplay({
+                ...base,
+                fetchError: true,
+                scid: '800000x1x0',
+                maxExtensionInBlocks: 0,
+                expirationBlock: 0
+            })
+        ).toEqual({
+            showFetchError: false,
+            showLease: false,
+            showExtendButton: false
         });
     });
 });

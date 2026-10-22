@@ -37,6 +37,7 @@ import DateTimeUtils from '../../utils/DateTimeUtils';
 import PrivacyUtils from '../../utils/PrivacyUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { getLeaseDisplay } from '../../utils/LspUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
@@ -333,6 +334,12 @@ export default class ChannelView extends React.Component<
             blocks_til_maturity
         } = channel as ClosedChannel;
 
+        const leaseDisplay = getLeaseDisplay({
+            ...renewalInfo,
+            fetchError: LSPStore.getExtendableChannelsError,
+            isLspChannel: remotePubkey === LSPStore.getLSPSPubkey()
+        });
+
         const privateChannel = channel.private;
         const confs = channel.getConfirmations(
             NodeInfoStore.nodeInfo.currentBlockHeight
@@ -490,18 +497,14 @@ export default class ChannelView extends React.Component<
                                 )}: ${confs.current} / ${confs.total}`}
                             </Text>
                         )}
-                        {LSPStore.getExtendableChannelsError &&
-                            remotePubkey === LSPStore.getLSPSPubkey() &&
-                            !renewalInfo.maxExtensionInBlocks &&
-                            !renewalInfo.expirationBlock && (
-                                <WarningMessage
-                                    message={localeString(
-                                        'views.Channel.lease.fetchError'
-                                    )}
-                                />
-                            )}
-                        {(!!renewalInfo.maxExtensionInBlocks ||
-                            !!renewalInfo.expirationBlock) && (
+                        {leaseDisplay.showFetchError && (
+                            <WarningMessage
+                                message={localeString(
+                                    'views.Channel.lease.fetchError'
+                                )}
+                            />
+                        )}
+                        {leaseDisplay.showLease && (
                             <>
                                 <Row
                                     justify="space-between"
@@ -609,7 +612,7 @@ export default class ChannelView extends React.Component<
                                             </Text>
                                         </TouchableOpacity>
                                     )}
-                                    {!!renewalInfo.maxExtensionInBlocks && (
+                                    {leaseDisplay.showExtendButton && (
                                         <ElementButton
                                             title={
                                                 renewalInfo.expiresInBlocks

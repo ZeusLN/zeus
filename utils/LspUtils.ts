@@ -76,3 +76,37 @@ export function verifyWrappedInvoice(
 
     return { valid: true };
 }
+
+export interface LeaseDisplay {
+    // the LSP couldn't be asked about this channel's lease
+    showFetchError: boolean;
+    // the lease section, with the expiry when it is known
+    showLease: boolean;
+    // the extend or purchase lease button
+    showExtendButton: boolean;
+}
+
+// What the channel view shows for a channel's LSPS7 lease. scid is set when
+// the LSP listed the channel in get_extendable_channels. A channel at the
+// LSP's max lifetime has no extension left but still shows its expiry, and a
+// negative max extension is treated as none.
+export function getLeaseDisplay({
+    scid,
+    maxExtensionInBlocks,
+    expirationBlock,
+    fetchError,
+    isLspChannel
+}: {
+    scid?: string;
+    maxExtensionInBlocks?: number;
+    expirationBlock?: number;
+    fetchError: boolean;
+    isLspChannel: boolean;
+}): LeaseDisplay {
+    const canExtend = Number(maxExtensionInBlocks) > 0;
+    return {
+        showFetchError: fetchError && isLspChannel && !scid,
+        showLease: canExtend || Number(expirationBlock) > 0,
+        showExtendButton: canExtend
+    };
+}
