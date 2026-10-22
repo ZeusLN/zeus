@@ -37,11 +37,14 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import { getRenewalInfo } from '../../utils/LspUtils';
+import {
+    getLeaseExpirationStatus,
+    getRenewalInfo
+} from '../../utils/LeaseUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Channel from '../../models/Channel';
-import { Status, ExpirationStatus } from '../../models/Status';
+import { Status } from '../../models/Status';
 import ClosedChannel from '../../models/ClosedChannel';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import handleAnything from '../../utils/handleAnything';
@@ -173,26 +176,13 @@ export default class ChannelsPane extends React.PureComponent<
             const currentBlockHeight =
                 NodeInfoStore?.nodeInfo?.currentBlockHeight;
 
-            const { expiresInBlocks, expirationBlock } = getRenewalInfo(
-                LSPStore?.getExtendableChannelsData,
-                item,
-                currentBlockHeight
+            return getLeaseExpirationStatus(
+                getRenewalInfo(
+                    LSPStore?.getExtendableChannelsData,
+                    item,
+                    currentBlockHeight
+                )
             );
-
-            if (expiresInBlocks !== undefined && expiresInBlocks <= 0) {
-                return ExpirationStatus.Expired;
-            } else if (
-                expiresInBlocks !== undefined &&
-                expiresInBlocks < 2016
-            ) {
-                // less than 2 weeks
-                return ExpirationStatus.Expiring;
-            } else if (expirationBlock === 0) {
-                // at LSP's discretion
-                return ExpirationStatus.LSPDiscretion;
-            }
-
-            return undefined;
         };
 
         const forceCloseTimeLabel = (maturity: number) => {

@@ -32,11 +32,14 @@ import TextInput from '../../components/TextInput';
 import { ContactAvatar } from '../../components/ContactAvatar';
 import { SharedScreen, SharedText } from '../../components/SharedTransition';
 
-import DateTimeUtils from '../../utils/DateTimeUtils';
 import PrivacyUtils from '../../utils/PrivacyUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import { getLeaseDisplay, getRenewalInfo } from '../../utils/LspUtils';
+import {
+    formatLeaseDuration,
+    getLeaseDisplay,
+    getRenewalInfo
+} from '../../utils/LeaseUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
@@ -280,28 +283,7 @@ export default class ChannelView extends React.Component<
             channel,
             NodeInfoStore.nodeInfo.currentBlockHeight
         );
-        // "~2 months, 3 days", empty when the lease expires within a day
-        const expiresApproxParts: string[] = [];
-        if (renewalInfo.expiresInBlocks) {
-            const { months, days } = DateTimeUtils.blocksToMonthsAndDays(
-                renewalInfo.expiresInBlocks
-            );
-            if (months) {
-                expiresApproxParts.push(
-                    `${numberWithCommas(Math.abs(months))} ${localeString(
-                        Math.abs(months) > 1 ? 'time.months' : 'time.month'
-                    ).toLowerCase()}`
-                );
-            }
-            if (days) {
-                expiresApproxParts.push(
-                    `${numberWithCommas(Math.abs(days))} ${localeString(
-                        Math.abs(days) > 1 ? 'time.days' : 'time.day'
-                    ).toLowerCase()}`
-                );
-            }
-        }
-        const expiresApprox = expiresApproxParts.join(', ');
+        const expiresApprox = formatLeaseDuration(renewalInfo.expiresInBlocks);
         const leaseDisplay = getLeaseDisplay({
             ...renewalInfo,
             fetchError: LSPStore.getExtendableChannelsError,
