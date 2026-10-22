@@ -13,6 +13,8 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
     setItem: jest.fn().mockResolvedValue(undefined)
 }));
 jest.mock('react-native-encrypted-storage', () => ({
+    getItem: jest.fn().mockResolvedValue(null),
+    setItem: jest.fn().mockResolvedValue(undefined),
     removeItem: jest.fn().mockResolvedValue(undefined),
     clear: jest.fn().mockResolvedValue(undefined)
 }));
@@ -34,6 +36,8 @@ jest.mock('../storage', () => ({
     setItem: jest.fn().mockResolvedValue(true),
     blockWrites: jest.fn(),
     getInternetPasswordServers: jest.fn().mockResolvedValue([]),
+    KEY_PREFIX: 'zeus:',
+    getRawItem: jest.fn().mockResolvedValue(null),
     removeRawItem: jest.fn().mockResolvedValue(undefined)
 }));
 
@@ -715,42 +719,79 @@ describe('clearNodeKeychainData (single-wallet deletion helper)', () => {
     describe('swap rescue key', () => {
         const ldkMnemonic =
             'legal winner thank year wave sausage worth useful legal winner thank yellow';
+        const independentKey =
+            'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
         const asyncStorage = require('@react-native-async-storage/async-storage');
-
-        it("clears the rescue key and its index when it is the deleted wallet's mnemonic", async () => {
-            mockedStorageGetItem.mockImplementation((key: string) =>
-                Promise.resolve(key === 'swaps-rescue-key' ? ldkMnemonic : null)
+        const StorageModule = require('../storage');
+        const ldkNode = {
+            implementation: 'ldk-node',
+            ldkNodeDir: 'ldk-1',
+            ldkMnemonic
+        };
+        // keychain entries keyed '<local|sync>:<server>'
+        const seedKeychain = (entries: Record<string, string>) =>
+            StorageModule.getRawItem.mockImplementation(
+                async (server: string, cloudSync: boolean) =>
+                    entries[`${cloudSync ? 'sync' : 'local'}:${server}`] ?? null
+            );
+        const rawRemoved = () =>
+            StorageModule.removeRawItem.mock.calls.map(
+                ([server, cloudSync]: [string, boolean]) =>
+                    `${cloudSync ? 'sync' : 'local'}:${server}`
             );
 
-            await clearNodeKeychainData({
-                implementation: 'ldk-node',
-                ldkNodeDir: 'ldk-1',
-                ldkMnemonic
+        beforeEach(() => {
+            setPlatformOS('ios');
+            StorageModule.getRawItem.mockReset().mockResolvedValue(null);
+            StorageModule.removeRawItem.mockClear();
+            asyncStorage.setItem.mockClear();
+        });
+
+        it("clears every copy of the rescue key and its index when it is the deleted wallet's mnemonic", async () => {
+            seedKeychain({
+                'local:zeus:swaps-rescue-key': ldkMnemonic,
+                'sync:zeus:swaps-rescue-key': ldkMnemonic,
+                'local:swaps-rescue-key': ldkMnemonic
             });
 
-            expect(removedKeys()).toContain('swaps-rescue-key');
-            expect(removedKeys()).toContain('swaps-last-used-key');
+            await clearNodeKeychainData(ldkNode);
+
+            expect(rawRemoved()).toEqual(
+                expect.arrayContaining([
+                    'local:zeus:swaps-rescue-key',
+                    'sync:zeus:swaps-rescue-key',
+                    'local:swaps-rescue-key',
+                    'local:zeus:swaps-last-used-key',
+                    'sync:zeus:swaps-last-used-key'
+                ])
+            );
             expect(asyncStorage.setItem).toHaveBeenCalledWith(
                 'swaps-rescue-key-replaced',
                 'true'
             );
         });
 
-        it('keeps an independent rescue key', async () => {
-            mockedStorageGetItem.mockImplementation((key: string) =>
-                Promise.resolve(
-                    key === 'swaps-rescue-key'
-                        ? 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about'
-                        : null
-                )
-            );
-
-            await clearNodeKeychainData({
-                implementation: 'ldk-node',
-                ldkNodeDir: 'ldk-1',
-                ldkMnemonic
+        it("clears an iCloud copy that is the deleted wallet's mnemonic when the local key is independent", async () => {
+            seedKeychain({
+                'local:zeus:swaps-rescue-key': independentKey,
+                'sync:zeus:swaps-rescue-key': ldkMnemonic
             });
 
+            await clearNodeKeychainData(ldkNode);
+
+            expect(rawRemoved()).toEqual(['sync:zeus:swaps-rescue-key']);
+            expect(asyncStorage.setItem).not.toHaveBeenCalled();
+        });
+
+        it('keeps an independent rescue key', async () => {
+            seedKeychain({
+                'local:zeus:swaps-rescue-key': independentKey,
+                'sync:zeus:swaps-rescue-key': independentKey
+            });
+
+            await clearNodeKeychainData(ldkNode);
+
+            expect(rawRemoved()).toEqual([]);
             expect(removedKeys()).not.toContain('swaps-rescue-key');
             expect(removedKeys()).not.toContain('swaps-last-used-key');
             expect(asyncStorage.setItem).not.toHaveBeenCalled();

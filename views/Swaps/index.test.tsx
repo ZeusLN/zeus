@@ -7,6 +7,11 @@ jest.mock('bitcoinjs-lib', () => ({ initEccLib: jest.fn() }));
 jest.mock('ecpair', () => ({ ECPairFactory: jest.fn() }));
 jest.mock('@bitcoinerlab/secp256k1', () => ({}));
 jest.mock('../../storage', () => ({ getItem: jest.fn() }));
+jest.mock('@react-native-async-storage/async-storage', () => ({
+    getItem: jest.fn(),
+    setItem: jest.fn(),
+    removeItem: jest.fn()
+}));
 jest.mock('../../utils/AddressUtils', () => ({
     isValidBitcoinAddressForNode: (value: string) => value.startsWith('bc1'),
     isValidLightningPaymentRequest: (value: string) => value.startsWith('lnbc')

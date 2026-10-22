@@ -82,11 +82,10 @@ import {
     REVERSE_SWAPS_KEY,
     SWAPS_RESCUE_KEY,
     SWAPS_LAST_USED_KEY,
-    RESCUE_KEY_REPLACED_KEY,
-    isWalletSeed,
     purgeLegacyRescueKeyFiles,
     unlinkRescueKeyStagingFile
 } from '../utils/SwapUtils';
+import { retireWalletSeedRescueKeyCopies } from './RescueKeyRetirementUtils';
 
 import {
     TimePeriod,
@@ -106,7 +105,6 @@ const KEYCHAIN_MIGRATION_KEY = 'ios-keychain-cloud-sync-migration-v1';
 const CASHU_MIGRATION_KEY = 'ios-keychain-cashu-fix-v1';
 
 import EncryptedStorage from 'react-native-encrypted-storage';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Storage, {
     KEY_PREFIX,
     getInternetPasswordServers,
@@ -930,18 +928,20 @@ class MigrationsUtils {
     // one. Saved swaps keep their own keys and preimages, so their claims
     // and refunds do not need the rescue key. The notice flag is written
     // first and the rescue key last, so a crash mid-way retries on the
-    // next load.
+    // next load. Every keychain copy is removed, including the iCloud
+    // and unprefixed ones (see retireWalletSeedRescueKeyCopies).
     public async retireWalletSeedRescueKey(settings: any) {
         const MOD_KEY_WALLET_SEED_RESCUE_KEY =
             'swaps-rescue-key-wallet-seed-v1';
         const mod = await this.readFlag(MOD_KEY_WALLET_SEED_RESCUE_KEY);
         if (mod) return;
 
-        const rescueKey = await Storage.getItem(SWAPS_RESCUE_KEY);
-        if (isWalletSeed(rescueKey, settings?.nodes)) {
-            await AsyncStorage.setItem(RESCUE_KEY_REPLACED_KEY, 'true');
-            await Storage.removeItem(SWAPS_LAST_USED_KEY);
-            await Storage.removeItem(SWAPS_RESCUE_KEY);
+        try {
+            await retireWalletSeedRescueKeyCopies(settings?.nodes);
+        } catch (e) {
+            // flag left unset, so the next load retries
+            console.warn('Could not retire the swap rescue key', e);
+            return;
         }
 
         await this.writeFlag(MOD_KEY_WALLET_SEED_RESCUE_KEY);

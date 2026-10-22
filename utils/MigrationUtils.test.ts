@@ -1715,7 +1715,9 @@ describe('MigrationUtils', () => {
         const EncryptedStorage = require('react-native-encrypted-storage');
         const AsyncStorage = require('@react-native-async-storage/async-storage');
         const Storage = require('../storage');
+        const { Platform } = require('react-native');
         const FLAG = 'swaps-rescue-key-wallet-seed-v1';
+        const RETIRED = 'keychain-retired-servers-v1';
         const ldkMnemonic =
             'legal winner thank year wave sausage worth useful legal winner thank yellow';
         const independentKey =
@@ -1726,15 +1728,21 @@ describe('MigrationUtils', () => {
                 { implementation: 'ldk-node', ldkNodeDir: 'a', ldkMnemonic }
             ]
         };
+        const partition = (cloudSync: boolean) =>
+            cloudSync ? 'sync' : 'local';
+        const originalOS = Platform.OS;
         let order: string[];
+        let keychain: Record<string, string>;
 
-        const storeRescueKey = (value: string | false) =>
-            Storage.getItem.mockImplementation((key: string) =>
-                Promise.resolve(key === 'swaps-rescue-key' ? value : false)
-            );
+        // keychain entries keyed '<local|sync>:<server>'
+        const seed = (entries: Record<string, string>) => {
+            keychain = { ...entries };
+        };
 
         beforeEach(() => {
             order = [];
+            keychain = {};
+            Platform.OS = 'ios';
             EncryptedStorage.getItem.mockReset().mockResolvedValue(null);
             EncryptedStorage.setItem
                 .mockReset()
@@ -1746,71 +1754,174 @@ describe('MigrationUtils', () => {
                 .mockImplementation(async (key: string) => {
                     order.push(`notice:${key}`);
                 });
-            Storage.getItem.mockReset();
-            Storage.removeItem
+            Storage.getRawItem
                 .mockReset()
-                .mockImplementation(async (key: string) => {
-                    order.push(`remove:${key}`);
-                });
+                .mockImplementation(
+                    async (server: string, cloudSync: boolean) =>
+                        keychain[`${partition(cloudSync)}:${server}`] ?? null
+                );
+            Storage.removeRawItem
+                .mockReset()
+                .mockImplementation(
+                    async (server: string, cloudSync: boolean) => {
+                        order.push(`remove:${partition(cloudSync)}:${server}`);
+                        delete keychain[`${partition(cloudSync)}:${server}`];
+                    }
+                );
         });
 
         afterAll(() => {
-            Storage.getItem.mockReset();
-            Storage.removeItem.mockReset();
+            Platform.OS = originalOS;
+            Storage.getRawItem.mockReset().mockResolvedValue(null);
+            Storage.removeRawItem.mockReset().mockResolvedValue(undefined);
         });
 
-        it("removes a rescue key that is an LDK Node wallet's mnemonic", async () => {
-            storeRescueKey(ldkMnemonic);
+        it("removes every copy of a rescue key that is an LDK Node wallet's mnemonic", async () => {
+            seed({
+                'local:zeus:swaps-rescue-key': ldkMnemonic,
+                'sync:zeus:swaps-rescue-key': ldkMnemonic,
+                'local:swaps-rescue-key': ldkMnemonic,
+                'sync:swaps-rescue-key': ldkMnemonic,
+                'local:zeus:swaps-last-used-key': '3',
+                'sync:zeus:swaps-last-used-key': '2'
+            });
 
             await MigrationUtils.retireWalletSeedRescueKey(settings);
 
-            // notice first and rescue key last, so an interrupted run is
-            // retried on the next load with the notice in place
+            // notice and retired-servers list first, the local rescue key
+            // last and the flag after it, so an interrupted run is retried
+            // on the next load with the notice in place
             expect(order).toEqual([
                 'notice:swaps-rescue-key-replaced',
-                'remove:swaps-last-used-key',
-                'remove:swaps-rescue-key',
+                `flag:${RETIRED}`,
+                'remove:local:zeus:swaps-last-used-key',
+                'remove:local:swaps-last-used-key',
+                'remove:sync:zeus:swaps-last-used-key',
+                'remove:sync:swaps-last-used-key',
+                'remove:local:swaps-rescue-key',
+                'remove:sync:zeus:swaps-rescue-key',
+                'remove:sync:swaps-rescue-key',
+                'remove:local:zeus:swaps-rescue-key',
                 `flag:${FLAG}`
             ]);
+            expect(keychain).toEqual({});
+            expect(EncryptedStorage.setItem).toHaveBeenCalledWith(
+                RETIRED,
+                JSON.stringify([
+                    'zeus:swaps-rescue-key',
+                    'zeus:swaps-last-used-key'
+                ])
+            );
         });
 
         it('keeps an independent rescue key', async () => {
-            storeRescueKey(independentKey);
+            seed({
+                'local:zeus:swaps-rescue-key': independentKey,
+                'sync:zeus:swaps-rescue-key': independentKey,
+                'local:zeus:swaps-last-used-key': '3'
+            });
 
             await MigrationUtils.retireWalletSeedRescueKey(settings);
 
-            expect(Storage.removeItem).not.toHaveBeenCalled();
+            expect(Storage.removeRawItem).not.toHaveBeenCalled();
             expect(AsyncStorage.setItem).not.toHaveBeenCalled();
             expect(order).toEqual([`flag:${FLAG}`]);
         });
 
-        it('sets the flag when there is no rescue key', async () => {
-            storeRescueKey(false);
+        it('removes a wallet-seed iCloud copy but keeps an independent local key and its index', async () => {
+            seed({
+                'local:zeus:swaps-rescue-key': independentKey,
+                'sync:zeus:swaps-rescue-key': ldkMnemonic,
+                'local:zeus:swaps-last-used-key': '3',
+                'sync:zeus:swaps-last-used-key': '2'
+            });
 
             await MigrationUtils.retireWalletSeedRescueKey(settings);
 
-            expect(Storage.removeItem).not.toHaveBeenCalled();
+            expect(order).toEqual([
+                `flag:${RETIRED}`,
+                'remove:sync:zeus:swaps-rescue-key',
+                `flag:${FLAG}`
+            ]);
+            expect(keychain).toEqual({
+                'local:zeus:swaps-rescue-key': independentKey,
+                'local:zeus:swaps-last-used-key': '3',
+                'sync:zeus:swaps-last-used-key': '2'
+            });
+        });
+
+        it('retires a wallet-seed iCloud copy when there is no local key', async () => {
+            seed({
+                'sync:zeus:swaps-rescue-key': ldkMnemonic,
+                'sync:zeus:swaps-last-used-key': '2'
+            });
+
+            await MigrationUtils.retireWalletSeedRescueKey(settings);
+
+            expect(order[0]).toBe('notice:swaps-rescue-key-replaced');
+            expect(keychain).toEqual({});
+        });
+
+        it('does not touch the synchronizable partition on Android', async () => {
+            Platform.OS = 'android';
+            seed({
+                'local:zeus:swaps-rescue-key': ldkMnemonic,
+                'local:swaps-rescue-key': ldkMnemonic,
+                'local:zeus:swaps-last-used-key': '3'
+            });
+
+            await MigrationUtils.retireWalletSeedRescueKey(settings);
+
+            const calls = [
+                ...Storage.getRawItem.mock.calls,
+                ...Storage.removeRawItem.mock.calls
+            ];
+            expect(calls.every(([, cloudSync]) => cloudSync === false)).toBe(
+                true
+            );
+            expect(keychain).toEqual({});
+            expect(order[order.length - 1]).toBe(`flag:${FLAG}`);
+        });
+
+        it('sets the flag when there is no rescue key', async () => {
+            await MigrationUtils.retireWalletSeedRescueKey(settings);
+
+            expect(Storage.removeRawItem).not.toHaveBeenCalled();
             expect(order).toEqual([`flag:${FLAG}`]);
         });
 
         it('keeps the rescue key when no wallets are configured', async () => {
-            storeRescueKey(ldkMnemonic);
+            seed({ 'local:zeus:swaps-rescue-key': ldkMnemonic });
 
             await MigrationUtils.retireWalletSeedRescueKey({});
 
-            expect(Storage.removeItem).not.toHaveBeenCalled();
+            expect(Storage.removeRawItem).not.toHaveBeenCalled();
+        });
+
+        it('leaves the flag unset when the keychain read fails, so the next load retries', async () => {
+            Storage.getRawItem.mockRejectedValue(new Error('locked'));
+            const warn = jest
+                .spyOn(console, 'warn')
+                .mockImplementation(() => {});
+
+            await expect(
+                MigrationUtils.retireWalletSeedRescueKey(settings)
+            ).resolves.toBeUndefined();
+
+            expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
+            warn.mockRestore();
         });
 
         it('does nothing once the flag is set', async () => {
             EncryptedStorage.getItem.mockImplementation((key: string) =>
                 Promise.resolve(key === FLAG ? 'true' : null)
             );
-            storeRescueKey(ldkMnemonic);
+            seed({ 'local:zeus:swaps-rescue-key': ldkMnemonic });
 
             await MigrationUtils.retireWalletSeedRescueKey(settings);
 
-            expect(Storage.getItem).not.toHaveBeenCalled();
-            expect(Storage.removeItem).not.toHaveBeenCalled();
+            expect(Storage.getRawItem).not.toHaveBeenCalled();
+            expect(Storage.removeRawItem).not.toHaveBeenCalled();
             expect(EncryptedStorage.setItem).not.toHaveBeenCalled();
         });
     });

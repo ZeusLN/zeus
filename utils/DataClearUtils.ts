@@ -56,11 +56,10 @@ import {
     REVERSE_SWAPS_KEY,
     SWAPS_RESCUE_KEY,
     SWAPS_LAST_USED_KEY,
-    RESCUE_KEY_REPLACED_KEY,
-    isWalletSeed,
     purgeLegacyRescueKeyFiles,
     unlinkRescueKeyStagingFile
 } from '../utils/SwapUtils';
+import { retireWalletSeedRescueKeyCopies } from './RescueKeyRetirementUtils';
 import {
     NWC_CONNECTIONS_KEY,
     NWC_CLIENT_KEYS,
@@ -688,14 +687,11 @@ export async function clearNodeKeychainData(
     }
     // v13.0.0 to v13.1.3 stored an LDK Node wallet's mnemonic as the
     // app-wide swap rescue key; it must not outlive the wallet.
+    // Every keychain copy is removed, including the iCloud and unprefixed
+    // ones, and such a copy is removed even when the local key differs.
     if (node.ldkMnemonic) {
         try {
-            const rescueKey = await Storage.getItem(SWAPS_RESCUE_KEY);
-            if (isWalletSeed(rescueKey, [node])) {
-                await AsyncStorage.setItem(RESCUE_KEY_REPLACED_KEY, 'true');
-                await clearKey(SWAPS_LAST_USED_KEY);
-                await clearKey(SWAPS_RESCUE_KEY);
-            }
+            await retireWalletSeedRescueKeyCopies([node]);
         } catch (e) {
             console.warn('[ClearData] Error checking swap rescue key:', e);
         }
