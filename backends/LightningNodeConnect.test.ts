@@ -637,6 +637,21 @@ describe('LightningNodeConnect', () => {
                 false
             );
         });
+
+        it('sends the close address, as openChannelSync does', () => {
+            backend.openChannelStream({
+                node_pubkey_string: '02ab',
+                local_funding_amount: '500000',
+                close_address: 'bc1qclose',
+                funding_shim: { psbt_shim: { pending_chan_id: 'id' } }
+            } as any);
+
+            expect(lnc.subscribe).toHaveBeenCalledWith(
+                EVENT,
+                expect.objectContaining({ close_address: 'bc1qclose' }),
+                expect.any(String)
+            );
+        });
     });
 
     describe('payLightningInvoice', () => {
