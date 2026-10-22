@@ -11,7 +11,6 @@ import {
 import { inject, observer } from 'mobx-react';
 import { duration } from 'moment';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import BigNumber from 'bignumber.js';
 
 import { ChannelsHeader } from '../../components/Channels/ChannelsHeader';
 import { ChannelItem } from '../../components/Channels/ChannelItem';
@@ -38,6 +37,7 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import { getRenewalInfo } from '../../utils/LspUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Channel from '../../models/Channel';
@@ -173,35 +173,21 @@ export default class ChannelsPane extends React.PureComponent<
             const currentBlockHeight =
                 NodeInfoStore?.nodeInfo?.currentBlockHeight;
 
-            const renewalInfo = LSPStore?.getExtendableChannelsData?.filter(
-                (extendableChannel: any) => {
-                    return (
-                        extendableChannel.short_channel_id ===
-                            item.shortChannelId ||
-                        extendableChannel.short_channel_id ===
-                            item.peerScidAlias ||
-                        extendableChannel.short_channel_id ===
-                            item.zeroConfConfirmedScid
-                    );
-                }
-            )[0];
+            const { expiresInBlocks, expirationBlock } = getRenewalInfo(
+                LSPStore?.getExtendableChannelsData,
+                item,
+                currentBlockHeight
+            );
 
-            let expiresInBlocks;
-            if (currentBlockHeight && renewalInfo?.expiration_block) {
-                expiresInBlocks = new BigNumber(renewalInfo.expiration_block)
-                    .minus(currentBlockHeight)
-                    .toNumber();
-            }
-
-            if (expiresInBlocks && new BigNumber(expiresInBlocks).lt(0)) {
+            if (expiresInBlocks !== undefined && expiresInBlocks <= 0) {
                 return ExpirationStatus.Expired;
             } else if (
-                expiresInBlocks &&
-                new BigNumber(expiresInBlocks).lt(2016)
+                expiresInBlocks !== undefined &&
+                expiresInBlocks < 2016
             ) {
                 // less than 2 weeks
                 return ExpirationStatus.Expiring;
-            } else if (renewalInfo?.expiration_block === 0) {
+            } else if (expirationBlock === 0) {
                 // at LSP's discretion
                 return ExpirationStatus.LSPDiscretion;
             }

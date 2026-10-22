@@ -6,7 +6,6 @@ import { inject, observer } from 'mobx-react';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import LinearGradient from '../../components/LinearGradient';
-import BigNumber from 'bignumber.js';
 import { duration } from 'moment';
 
 import Channel from '../../models/Channel';
@@ -281,13 +280,28 @@ export default class ChannelView extends React.Component<
             channel,
             NodeInfoStore.nodeInfo.currentBlockHeight
         );
-        let expiresMonths: number | undefined, expiresDays: number | undefined;
+        // "~2 months, 3 days", empty when the lease expires within a day
+        const expiresApproxParts: string[] = [];
         if (renewalInfo.expiresInBlocks) {
-            ({ months: expiresMonths, days: expiresDays } =
-                DateTimeUtils.blocksToMonthsAndDays(
-                    renewalInfo.expiresInBlocks
-                ));
+            const { months, days } = DateTimeUtils.blocksToMonthsAndDays(
+                renewalInfo.expiresInBlocks
+            );
+            if (months) {
+                expiresApproxParts.push(
+                    `${numberWithCommas(Math.abs(months))} ${localeString(
+                        Math.abs(months) > 1 ? 'time.months' : 'time.month'
+                    ).toLowerCase()}`
+                );
+            }
+            if (days) {
+                expiresApproxParts.push(
+                    `${numberWithCommas(Math.abs(days))} ${localeString(
+                        Math.abs(days) > 1 ? 'time.days' : 'time.day'
+                    ).toLowerCase()}`
+                );
+            }
         }
+        const expiresApprox = expiresApproxParts.join(', ');
         const leaseDisplay = getLeaseDisplay({
             ...renewalInfo,
             fetchError: LSPStore.getExtendableChannelsError,
@@ -490,39 +504,9 @@ export default class ChannelView extends React.Component<
                                                 renewalInfo.expiresInBlocks
                                             )} ${localeString(
                                                 'general.blocks'
-                                            )}\n ~${
-                                                expiresMonths
-                                                    ? `${numberWithCommas(
-                                                          Math.abs(
-                                                              expiresMonths
-                                                          )
-                                                      )} ${localeString(
-                                                          new BigNumber(
-                                                              Math.abs(
-                                                                  expiresMonths
-                                                              )
-                                                          ).gt(1)
-                                                              ? 'time.months'
-                                                              : 'time.month'
-                                                      ).toLowerCase()}`
-                                                    : ''
-                                            }${
-                                                expiresMonths && expiresDays
-                                                    ? ', '
-                                                    : ''
-                                            }${
-                                                expiresDays
-                                                    ? `${numberWithCommas(
-                                                          Math.abs(expiresDays)
-                                                      )} ${localeString(
-                                                          new BigNumber(
-                                                              Math.abs(
-                                                                  expiresDays
-                                                              )
-                                                          ).gt(1)
-                                                              ? 'time.days'
-                                                              : 'time.day'
-                                                      ).toLowerCase()}`
+                                            )}${
+                                                expiresApprox
+                                                    ? `\n ~${expiresApprox}`
                                                     : ''
                                             }`}</Text>
                                         </View>

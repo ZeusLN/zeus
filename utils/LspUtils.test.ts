@@ -293,6 +293,23 @@ describe('getRenewalInfo', () => {
         ).toBe(-440);
     });
 
+    it('counts a lease expiring at the current height as zero blocks', () => {
+        const info = getRenewalInfo(
+            [entry],
+            { shortChannelId: '800000x1x0' },
+            852560
+        );
+        expect(info.expiresInBlocks).toBe(0);
+        // shown as expired, not as kept open at the LSP's discretion
+        expect(
+            getLeaseDisplay({
+                ...info,
+                fetchError: false,
+                isLspChannel: true
+            }).hasLease
+        ).toBe(true);
+    });
+
     it('has no expiry for a channel kept open at the LSP discretion', () => {
         expect(
             getRenewalInfo(
