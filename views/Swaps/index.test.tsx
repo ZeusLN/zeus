@@ -85,7 +85,12 @@ const generate = async (state: any, title: string) => {
         navigation: { navigate: jest.fn() },
         route: { params: {} },
         NodeInfoStore: {},
-        SwapStore: { clearError: jest.fn(), subInfo: {}, reverseInfo: {} },
+        SwapStore: {
+            clearError: jest.fn(),
+            subInfo: {},
+            reverseInfo: {},
+            getReverseClaimMinerFee: () => undefined
+        },
         UnitsStore: { units: 'sats', getNextUnit: () => 'BTC' },
         FiatStore: { fiatRates: [] },
         // the global setting stays on throughout

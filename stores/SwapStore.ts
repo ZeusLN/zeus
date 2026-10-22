@@ -12,6 +12,10 @@ import { localeString } from '../utils/LocaleUtils';
 import { BIP39_WORD_LIST } from '../utils/Bip39Utils';
 import UrlUtils from '../utils/UrlUtils';
 import {
+    isPlausibleSatPerVbyte,
+    reverseClaimMinerFee
+} from '../utils/FeeUtils';
+import {
     SWAPS_KEY,
     REVERSE_SWAPS_KEY,
     SWAPS_RESCUE_KEY,
@@ -252,6 +256,11 @@ export default class SwapStore {
     @computed get claimMinerFee(): number {
         return this.reverseInfo?.fees?.minerFees?.claim || 0;
     }
+
+    // The claim fee a reverse swap started now at this rate would store
+    // and pay, or undefined if it must not start (see reverseClaimMinerFee)
+    getReverseClaimMinerFee = (feeRate: unknown): number | undefined =>
+        reverseClaimMinerFee(this.reverseInfo?.fees?.minerFees?.claim, feeRate);
 
     getReverseSwapReceiveAmount = (
         onchainAmount: number | undefined,
@@ -653,7 +662,40 @@ export default class SwapStore {
         // reverseInfo, and the checks below must use the quote the user saw
         const fees = this.reverseInfo?.fees;
         const pairHash = this.reverseInfo?.hash;
-        const claimMinerFee = this.claimMinerFee;
+
+        // Decided once, before the invoice exists, and stored with the
+        // swap: the Swaps screen showed this fee, and the claim pays it
+        const claimMinerFee = this.getReverseClaimMinerFee(fee);
+        if (claimMinerFee === undefined) {
+            // without a usable rate the problem is ours, not the host's
+            runInAction(() => {
+                this.apiError = localeString(
+                    isPlausibleSatPerVbyte(fee)
+                        ? 'views.Swaps.invalidReverseSwapResponse'
+                        : 'views.Swaps.reverseClaimFeeRateRequired'
+                );
+                this.loading = false;
+            });
+            return;
+        }
+        // the host locks up the amount less its service and lockup fees,
+        // and the claim pays its fee from that
+        const expectedLockup = calculateReceiveAmount(
+            new BigNumber(invoiceAmount || 0),
+            fees?.percentage || 0,
+            Number(fees?.minerFees?.lockup) || 0,
+            true
+        );
+        if (expectedLockup.isLessThanOrEqualTo(claimMinerFee)) {
+            runInAction(() => {
+                this.apiError = localeString(
+                    'views.Swaps.reverseClaimFeeExceedsAmount'
+                );
+                this.loading = false;
+            });
+            return;
+        }
+
         try {
             initEccLib(ecc);
             console.log('Creating reverse swap using rescue key...');
@@ -784,6 +826,22 @@ export default class SwapStore {
                 return;
             }
 
+            // the claim pays claimMinerFee from the lockup, so a lockup no
+            // larger than it leaves nothing to receive
+            if (!(Number(responseData.onchainAmount) > claimMinerFee)) {
+                runInAction(() => {
+                    this.apiError = localeString(
+                        'views.Swaps.invalidReverseSwapResponse'
+                    );
+                    this.loading = false;
+                });
+                console.error(
+                    'Reverse swap response verification failed:',
+                    'lockup-below-claim-fee'
+                );
+                return;
+            }
+
             const deadline = await this.verifyReverseSwapDeadline(
                 responseCheck.timeoutBlockHeight,
                 UrlUtils.getMempoolApiUrl(this.nodeInfoStore.nodeInfo)
@@ -809,6 +867,8 @@ export default class SwapStore {
             responseData.preimage = preimage;
             responseData.destinationAddress = destinationAddress;
             responseData.claimMinerFee = claimMinerFee;
+            // kept so a swap reopened later claims at the rate chosen here
+            responseData.claimFeeRate = Number(fee);
             // onchainAmount passed the check above, so the claim can use it
             // as the lockup floor
             responseData.onchainAmountVerified = true;
