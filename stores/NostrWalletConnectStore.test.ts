@@ -3460,3 +3460,154 @@ describe('NostrWalletConnectStore wallet deletion', () => {
         expect(storedItems.has(NWC_SERVICE_KEYS)).toBe(false);
     });
 });
+
+describe('NostrWalletConnectStore request event age and expiration', () => {
+    const NOW = 1_800_000_000;
+
+    // SDK-shaped service: subscribe opens a pool subscription whose
+    // onevent decrypts the request and dispatches it to the handler
+    function createSdkLikeService() {
+        const service: any = {
+            delivered: [] as ((event: any) => Promise<void>)[],
+            pool: {
+                subscribe: jest.fn(
+                    (_relays: string[], _filter: any, params: any) => {
+                        service.delivered.push(params.onevent);
+                        return { close: jest.fn() };
+                    }
+                )
+            },
+            decrypt: jest.fn(async (_keypair: any, content: string) => content),
+            publishWalletServiceInfoEvent: jest.fn(),
+            close: jest.fn(),
+            subscribe: jest.fn(
+                async (
+                    _keypair: any,
+                    handler: NWCWalletServiceRequestHandler
+                ) => {
+                    service.pool.subscribe(
+                        [OLD_RELAY],
+                        { kinds: [23194] },
+                        {
+                            onevent: async (event: any) => {
+                                const request = JSON.parse(
+                                    await service.decrypt(
+                                        _keypair,
+                                        event.content
+                                    )
+                                );
+                                if (request.method === 'pay_invoice') {
+                                    await handler.payInvoice?.(request.params);
+                                } else if (request.method === 'get_info') {
+                                    await handler.getInfo?.();
+                                }
+                            }
+                        }
+                    );
+                    return () => {};
+                }
+            )
+        };
+        return service;
+    }
+
+    async function subscribe() {
+        const sdkService = createSdkLikeService();
+        (NWCWalletService as unknown as jest.Mock).mockImplementation(
+            () => sdkService
+        );
+        const { store } = createStore();
+        addConnection(store, { permissions: ['pay_invoice', 'get_info'] });
+        (store as any).walletServiceKeys = { privateKey: hex64('f') };
+        await (store as any).initializeNWCWalletServices();
+        const service = (store as any).nwcWalletServices.get(OLD_RELAY);
+        const handler = {
+            payInvoice: jest.fn().mockResolvedValue({}),
+            getInfo: jest.fn().mockResolvedValue({})
+        };
+        await service.subscribe({ clientPubkey: hex64('a') }, handler);
+        const deliver = (event: any) =>
+            sdkService.delivered[0]({
+                id: hex64('e'),
+                pubkey: hex64('a'),
+                tags: [],
+                ...event
+            });
+        return { handler, deliver };
+    }
+
+    const payInvoice = JSON.stringify({
+        method: 'pay_invoice',
+        params: { invoice: 'lnbc1late' }
+    });
+    const getInfo = JSON.stringify({ method: 'get_info', params: {} });
+
+    beforeEach(() => {
+        jest.spyOn(Date, 'now').mockReturnValue(NOW * 1000);
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('pays a pay_invoice request signed a minute ago', async () => {
+        const { handler, deliver } = await subscribe();
+
+        await deliver({ created_at: NOW - 60, content: payInvoice });
+
+        expect(handler.payInvoice).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores a pay_invoice request delivered two hours after it was signed', async () => {
+        const { handler, deliver } = await subscribe();
+
+        await deliver({ created_at: NOW - 2 * 60 * 60, content: payInvoice });
+
+        expect(handler.payInvoice).not.toHaveBeenCalled();
+    });
+
+    it('ignores a pay_invoice request dated far in the future', async () => {
+        const { handler, deliver } = await subscribe();
+
+        await deliver({ created_at: NOW + 60 * 60, content: payInvoice });
+
+        expect(handler.payInvoice).not.toHaveBeenCalled();
+    });
+
+    it('ignores a request whose expiration tag has passed', async () => {
+        const { handler, deliver } = await subscribe();
+
+        await deliver({
+            created_at: NOW - 30,
+            tags: [['expiration', String(NOW - 1)]],
+            content: payInvoice
+        });
+        await deliver({
+            created_at: NOW - 30,
+            tags: [['expiration', String(NOW - 1)]],
+            content: getInfo
+        });
+
+        expect(handler.payInvoice).not.toHaveBeenCalled();
+        expect(handler.getInfo).not.toHaveBeenCalled();
+    });
+
+    it('pays a request whose expiration tag has not passed', async () => {
+        const { handler, deliver } = await subscribe();
+
+        await deliver({
+            created_at: NOW - 30,
+            tags: [['expiration', String(NOW + 30)]],
+            content: payInvoice
+        });
+
+        expect(handler.payInvoice).toHaveBeenCalledTimes(1);
+    });
+
+    it('still answers an old request that does not pay', async () => {
+        const { handler, deliver } = await subscribe();
+
+        await deliver({ created_at: NOW - 2 * 60 * 60, content: getInfo });
+
+        expect(handler.getInfo).toHaveBeenCalledTimes(1);
+    });
+});

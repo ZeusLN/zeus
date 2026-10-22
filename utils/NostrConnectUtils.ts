@@ -1054,6 +1054,56 @@ export default class NostrConnectUtils {
     }
 
     /**
+     * How far a pay request's created_at may lie from now, either way.
+     * NIP-47 clients wait about a minute for a reply (the Alby SDK client
+     * gives up after 60 s) and Zeus queues a payment for at most 30 s, so
+     * a request older than that has no client waiting for it. 10 minutes
+     * leaves room for clocks that are a few minutes off while still
+     * refusing a request delivered long after it was signed.
+     */
+    static readonly PAY_REQUEST_MAX_CLOCK_DIFFERENCE_SECONDS = 10 * 60;
+
+    static readonly PAY_REQUEST_METHODS: string[] = [
+        'pay_invoice',
+        'pay_keysend',
+        'multi_pay_invoice',
+        'multi_pay_keysend'
+    ];
+
+    /**
+     * True when a request event carries a NIP-40 expiration tag that has
+     * passed. An expiration that is not a number counts as passed.
+     */
+    static isRequestEventExpired(
+        event: { tags?: string[][] },
+        nowSeconds: number = Math.floor(Date.now() / 1000)
+    ): boolean {
+        const tag = event?.tags?.find((t) => t?.[0] === 'expiration');
+        if (!tag) return false;
+        const expiration = Number(tag[1]);
+        if (!tag[1] || !Number.isFinite(expiration)) return true;
+        return expiration <= nowSeconds;
+    }
+
+    /**
+     * True when a request event's created_at is within
+     * PAY_REQUEST_MAX_CLOCK_DIFFERENCE_SECONDS of now.
+     */
+    static isRequestEventRecent(
+        event: { created_at?: number },
+        nowSeconds: number = Math.floor(Date.now() / 1000)
+    ): boolean {
+        const createdAt = event?.created_at;
+        if (typeof createdAt !== 'number' || !Number.isFinite(createdAt)) {
+            return false;
+        }
+        return (
+            Math.abs(nowSeconds - createdAt) <=
+            NostrConnectUtils.PAY_REQUEST_MAX_CLOCK_DIFFERENCE_SECONDS
+        );
+    }
+
+    /**
      * Max hold when the node never lists the payment (LndHub, paginated
      * history). Must outlast an outgoing HTLC: LND and Core Lightning allow
      * a route time lock of up to 2016 blocks (about two weeks) by default.
