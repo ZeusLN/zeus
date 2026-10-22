@@ -74,6 +74,7 @@ import Scan from '../../assets/images/SVG/Scan.svg';
 import AddIcon from '../../assets/images/SVG/Add.svg';
 
 import { getPhoto } from '../../utils/PhotoUtils';
+import { addRecoveryWallet } from '../../utils/WalletRecoveryUtils';
 import {
     clearNodeKeychainData,
     clearCDKDatabase,
@@ -796,9 +797,9 @@ export default class WalletConfiguration extends React.Component<
                     }
                 }
                 if (recoveryCipherSeed) {
-                    await updateSettings({
-                        recovery: true
-                    });
+                    await updateSettings((current: Settings) =>
+                        addRecoveryWallet(current, lndDir || 'lnd')
+                    );
                 }
 
                 this.setState({
