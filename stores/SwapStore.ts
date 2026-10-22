@@ -1,5 +1,4 @@
 import { action, observable, computed, runInAction, reaction } from 'mobx';
-import ReactNativeBlobUtil from 'react-native-blob-util';
 import BigNumber from 'bignumber.js';
 import { ECPairAPI, ECPairFactory } from 'ecpair';
 import ecc from '@bitcoinerlab/secp256k1';
@@ -1335,10 +1334,11 @@ export default class SwapStore {
         if (!/^[0-9a-f]{64}$/i.test(spendingTxid)) return undefined;
         const apiUrl = UrlUtils.getMempoolApiUrl(this.nodeInfoStore.nodeInfo);
         try {
-            const response = await ReactNativeBlobUtil.fetch(
-                'GET',
-                `${apiUrl}/tx/${spendingTxid}`
-            );
+            const response = await networkFetch({
+                method: 'GET',
+                url: `${apiUrl}/tx/${spendingTxid}`,
+                enableTor: this.settingsStore.enableTor
+            });
             if (response.info().status !== 200) return undefined;
             const vin = response.json()?.vin;
             if (!Array.isArray(vin)) return undefined;
@@ -1385,10 +1385,11 @@ export default class SwapStore {
         const apiUrl = UrlUtils.getMempoolApiUrl(this.nodeInfoStore.nodeInfo);
         let outspend: any;
         try {
-            const response = await ReactNativeBlobUtil.fetch(
-                'GET',
-                `${apiUrl}/tx/${lockupTxid}/outspend/${input.index}`
-            );
+            const response = await networkFetch({
+                method: 'GET',
+                url: `${apiUrl}/tx/${lockupTxid}/outspend/${input.index}`,
+                enableTor: this.settingsStore.enableTor
+            });
             if (response.info().status !== 200) {
                 return {
                     status: 'unavailable',
