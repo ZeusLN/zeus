@@ -79,6 +79,11 @@ import {
     clearPendingPaymentData
 } from '../../utils/GraphSyncUtils';
 import { CHANNEL_MIGRATION_ACTIVE } from '../../utils/ChannelMigrationUtils';
+import {
+    bindLegacyRecovery,
+    clearRecoveryWallet,
+    isRecoveryPending
+} from '../../utils/WalletRecoveryUtils';
 import { repairMissingChannelEdges } from '../../utils/ChannelEdgeRepairUtils';
 
 import {
@@ -107,6 +112,7 @@ import PosStore from '../../stores/PosStore';
 import SettingsStore, {
     PosEnabled,
     INTERFACE_KEYS,
+    Settings,
     getLspConfigForNetwork
 } from '../../stores/SettingsStore';
 import SyncStore from '../../stores/SyncStore';
@@ -653,11 +659,29 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
             pos,
             rescan,
             compactDb,
-            recovery,
             lightningAddress,
             embeddedTor,
             initialLoad
         } = settings;
+        // The recovery flag belongs to the restored wallets only: another
+        // wallet must neither act on it nor clear it, or a recovery left
+        // pending by a failed attempt is lost
+        const walletDir = implementation === 'ldk-node' ? ldkNodeDir : lndDir;
+        const isOnDeviceWallet =
+            implementation === 'embedded-lnd' || implementation === 'ldk-node';
+        let recovery = isRecoveryPending(settings, walletDir);
+        if (isOnDeviceWallet && bindLegacyRecovery(settings, walletDir)) {
+            const updated = await updateSettings(
+                (current: Settings) =>
+                    bindLegacyRecovery(current, walletDir) || {}
+            );
+            if (!isCurrent()) return;
+            recovery = isRecoveryPending(updated, walletDir);
+        }
+        const clearRecovery = () =>
+            updateSettings((current: Settings) =>
+                clearRecoveryWallet(current, walletDir)
+            );
         const expressGraphSyncEnabled =
             settings.expressGraphSync && embeddedLndNetwork === 'Mainnet';
 
@@ -1202,9 +1226,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                     try {
                         await ChannelBackupStore.recoverStaticChannelBackup();
                         if (!isCurrent()) return;
-                        await updateSettings({
-                            recovery: false
-                        });
+                        await clearRecovery();
                         if (!isCurrent()) return;
                         if (
                             SettingsStore.settings
@@ -1342,9 +1364,7 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 });
 
                 if (recovery) {
-                    await updateSettings({
-                        recovery: false
-                    });
+                    await clearRecovery();
                     if (!isCurrent()) return;
                 }
             } catch (connectionError) {

@@ -239,6 +239,10 @@ export interface Settings {
     rescan: boolean;
     compactDb: boolean;
     recovery: boolean;
+    // Data directories (lndDir / ldkNodeDir) of the restored wallets whose
+    // recovery is still pending. Unset by versions that kept only the
+    // install-wide flag (see utils/WalletRecoveryUtils.ts)
+    recoveryWalletDirs?: string[];
     initialLoad: boolean;
     embeddedTor: boolean;
     feeEstimator: string;
@@ -1722,7 +1726,8 @@ const REFRESH_EXEMPT_SETTINGS: Array<keyof Settings> = [
     'initialLoad',
     'resetExpressGraphSyncOnStartup',
     'rescan',
-    'recovery'
+    'recovery',
+    'recoveryWalletDirs'
 ];
 
 export default class SettingsStore {
