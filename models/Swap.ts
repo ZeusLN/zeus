@@ -57,6 +57,9 @@ export default class Swap extends BaseModel {
     claimFeeRate?: number;
     failureReason?: string;
     imported?: boolean;
+    // set once this wallet has sent a submarine swap's on-chain payment from
+    // its pay button, so the swap is not offered for payment again
+    funded?: boolean;
     claimAddressFromWallet?: boolean;
     onchainAmountVerified?: boolean;
     keyIndex?: number;
