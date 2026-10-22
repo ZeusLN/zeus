@@ -255,6 +255,33 @@ describe('AddressUtils', () => {
         });
     });
 
+    describe('processBIP21Uri scheme handling', () => {
+        it('accepts the bitcoin: scheme in any case', () => {
+            expect(
+                AddressUtils.processBIP21Uri(
+                    'Bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual({
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                satAmount: '170003'
+            });
+        });
+
+        it('only treats bitcoin: as a scheme at the start of the input', () => {
+            const embedded =
+                'https://example.com/pay?uri=bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003';
+            expect(AddressUtils.processBIP21Uri(embedded)).toEqual({
+                value: embedded
+            });
+
+            const prefixed =
+                'note bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu';
+            expect(AddressUtils.processBIP21Uri(prefixed)).toEqual({
+                value: prefixed
+            });
+        });
+    });
+
     describe('extractBolt12Offer', () => {
         const offer =
             'lno1pgqpvggr3l9u9ppv79mzn7g9v98cf8zw900skucuz53zr5vvjss454zrnyes';
