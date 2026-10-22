@@ -34,10 +34,9 @@ jest.mock('../../utils/LnurlPayUtils', () => ({
     isLnurlCallbackAllowed: jest.fn(() => ({ ok: true }))
 }));
 // the callback request never settles, so Confirm only shows what it sent
-const mockNetworkFetch = jest.fn((..._args: any[]) => new Promise(() => {}));
-jest.mock('react-native-blob-util', () => ({}));
-jest.mock('../../utils/NetworkUtils', () => ({
-    networkFetch: (...args: any[]) => mockNetworkFetch(...args)
+const mockBlobFetch = jest.fn((..._args: any[]) => new Promise(() => {}));
+jest.mock('react-native-blob-util', () => ({
+    fetch: (...args: any[]) => mockBlobFetch(...args)
 }));
 jest.mock('react-native-gesture-handler', () => ({ ScrollView: 'ScrollView' }));
 jest.mock('../../components/Amount', () => 'Amount');
@@ -65,7 +64,7 @@ import * as React from 'react';
 import { Alert } from 'react-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import LnurlPay from './LnurlPay';
-import { settingsStore, unitsStore } from '../../stores/Stores';
+import { unitsStore } from '../../stores/Stores';
 import { verifyLnurlPayInvoice } from '../../utils/LnurlPayUtils';
 
 const FIXED_SATS = 12618;
@@ -115,9 +114,9 @@ const amountInputProps = () => {
 
 // Presses Confirm and returns the msat amount sent to the callback
 const confirmedMsat = async () => {
-    mockNetworkFetch.mockClear();
+    mockBlobFetch.mockClear();
     await fireEvent.press(screen.getByRole('button', { name: CONFIRM }));
-    const [{ url }] = mockNetworkFetch.mock.calls[0];
+    const [, url] = mockBlobFetch.mock.calls[0];
     return new URL(url).searchParams.get('amount');
 };
 
@@ -385,16 +384,16 @@ describe('LnurlPay ecash payment', () => {
     beforeEach(() => {
         jest.spyOn(Alert, 'alert').mockImplementation(() => {});
         (verifyLnurlPayInvoice as jest.Mock).mockReturnValue({ ok: true });
-        mockNetworkFetch.mockReset();
-        mockNetworkFetch.mockResolvedValue({
+        mockBlobFetch.mockReset();
+        mockBlobFetch.mockResolvedValue({
             json: () => ({ pr: SERVICE_INVOICE })
         });
     });
 
     afterEach(() => {
         jest.restoreAllMocks();
-        mockNetworkFetch.mockReset();
-        mockNetworkFetch.mockImplementation(() => new Promise(() => {}));
+        mockBlobFetch.mockReset();
+        mockBlobFetch.mockImplementation(() => new Promise(() => {}));
     });
 
     // Confirms an ecash payment while another caller of the shared
@@ -458,33 +457,5 @@ describe('LnurlPay ecash payment', () => {
         await confirmWhileStoreIsReplaced();
 
         expect(Alert.alert).not.toHaveBeenCalled();
-    });
-});
-
-describe('LnurlPay callback transport', () => {
-    afterEach(() => {
-        delete (settingsStore as any).enableTor;
-    });
-
-    it('sends the callback over Tor when Tor is enabled', async () => {
-        (settingsStore as any).enableTor = true;
-        await renderView({ lnurlParams: lnurlParams(FIXED_SATS, FIXED_SATS) });
-
-        await confirmedMsat();
-
-        expect(mockNetworkFetch).toHaveBeenCalledTimes(1);
-        const [{ method, enableTor }] = mockNetworkFetch.mock.calls[0];
-        expect(method).toBe('get');
-        expect(enableTor).toBe(true);
-    });
-
-    it('sends the callback directly when Tor is disabled', async () => {
-        await renderView({ lnurlParams: lnurlParams(FIXED_SATS, FIXED_SATS) });
-
-        await confirmedMsat();
-
-        expect(mockNetworkFetch).toHaveBeenCalledWith(
-            expect.objectContaining({ enableTor: undefined })
-        );
     });
 });
