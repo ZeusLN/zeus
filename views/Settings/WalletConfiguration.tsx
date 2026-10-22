@@ -282,10 +282,26 @@ export default class WalletConfiguration extends React.Component<
     // server's address, credentials and input errors. Fields a form hides
     // are still saved with the node, and a stale error flag keeps Save
     // disabled. saved: false shows Save on an existing wallet.
-    resetConnection = (implementation: Implementations) => ({
+    //
+    // keepCertVerification (used by the clipboard imports) keeps the
+    // user's Certificate Verification choice instead of the dropdown's
+    // per-interface value, so an import never turns verification off. The
+    // lndhub form forces verification on and hides the switch, so a value
+    // carried to or from lndhub is not the user's and is reset.
+    resetConnection = (
+        implementation: Implementations,
+        {
+            keepCertVerification = false
+        }: { keepCertVerification?: boolean } = {}
+    ) => ({
         implementation,
         saved: false,
-        certVerification: implementation === 'lndhub',
+        certVerification:
+            keepCertVerification &&
+            implementation !== 'lndhub' &&
+            this.state.implementation !== 'lndhub'
+                ? this.state.certVerification
+                : implementation === 'lndhub',
         host: '',
         port: '',
         macaroonHex: '',
@@ -317,7 +333,9 @@ export default class WalletConfiguration extends React.Component<
             // Lightning rune left in the form would be sent to the
             // imported host.
             this.setState({
-                ...this.resetConnection('lnd'),
+                ...this.resetConnection('lnd', {
+                    keepCertVerification: true
+                }),
                 host,
                 port,
                 macaroonHex: macaroonHex || '',
@@ -382,7 +400,9 @@ export default class WalletConfiguration extends React.Component<
             } = ConnectionFormatUtils.processCLNRestConnectUrl(suggestImport);
 
             this.setState({
-                ...this.resetConnection(implementation),
+                ...this.resetConnection(implementation, {
+                    keepCertVerification: true
+                }),
                 host,
                 rune,
                 port,

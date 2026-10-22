@@ -580,14 +580,14 @@ describe('WalletConfiguration', () => {
             await pressButton('views.Settings.AddEditNode.import');
             expect(interfaceDropdown().props.selectedValue).toBe('lnd');
 
-            await saveWithoutCertVerification();
+            await save();
 
             expect(savedNode(updateSettings)).toMatchObject({
                 implementation: 'lnd',
                 host: 'https://new-node.example.com',
                 port: '8080',
                 macaroonHex: '0201036c6e64',
-                certVerification: false,
+                certVerification: true,
                 rune: '',
                 lndhubUrl: '',
                 username: '',
@@ -626,6 +626,43 @@ describe('WalletConfiguration', () => {
             expect(updateSettings).not.toHaveBeenCalled();
         });
 
+        // Only lndhub forces certVerification. Elsewhere it is the user's
+        // choice, and the interface dropdown is the only place that resets it.
+        it.each([
+            ['lndconnect', LNDCONNECT_IMPORT, 'lnd'],
+            ['clnrest', CLNREST_IMPORT, 'cln-rest']
+        ])(
+            'keeps certificate verification on after a %s import',
+            async (_, importString, implementation) => {
+                (Clipboard.getString as jest.Mock).mockResolvedValue(
+                    importString
+                );
+                const { updateSettings } = await renderView(
+                    {
+                        implementation: 'cln-rest',
+                        host: 'https://my-cln.example.com',
+                        port: '3010',
+                        rune: 'rune',
+                        certVerification: true
+                    },
+                    { clipboard: true }
+                );
+
+                await pressButton('views.Settings.AddEditNode.import');
+                await save();
+
+                expect(
+                    screen.queryByText(
+                        'views.Settings.AddEditNode.certificateWarning1'
+                    )
+                ).not.toBeOnTheScreen();
+                expect(savedNode(updateSettings)).toMatchObject({
+                    implementation,
+                    certVerification: true
+                });
+            }
+        );
+
         it('can be saved on a saved wallet', async () => {
             (Clipboard.getString as jest.Mock).mockResolvedValue(
                 LNDCONNECT_IMPORT
@@ -641,7 +678,7 @@ describe('WalletConfiguration', () => {
             ).not.toBeOnTheScreen();
 
             await pressButton('views.Settings.AddEditNode.import');
-            await saveWithoutCertVerification();
+            await save();
 
             expect(savedNode(updateSettings)).toMatchObject({
                 implementation: 'lnd',
@@ -720,7 +757,7 @@ describe('WalletConfiguration', () => {
             await pressButton('views.Settings.AddEditNode.import');
             expect(interfaceDropdown().props.selectedValue).toBe('cln-rest');
 
-            await saveWithoutCertVerification();
+            await save();
 
             expect(savedNode(updateSettings)).toMatchObject({
                 implementation: 'cln-rest',
