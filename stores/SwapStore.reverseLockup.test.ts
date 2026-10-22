@@ -81,6 +81,7 @@ import Bolt11Utils from '../utils/Bolt11Utils';
 import Storage from '../storage';
 import Swap from '../models/Swap';
 import {
+    SWAPS_KEY,
     REVERSE_SWAPS_KEY,
     SWAPS_RESCUE_KEY,
     buildReverseSwapLeaves,
@@ -222,6 +223,21 @@ describe('SwapStore.createReverseSwap response verification', () => {
             expect.anything()
         );
     });
+
+    it.each([SWAPS_KEY, REVERSE_SWAPS_KEY])(
+        'does not save or offer payment when the ID is already stored under %s',
+        async (key) => {
+            const existing = JSON.stringify([{ id: 'reverse-swap' }]);
+            storageBacking[key] = existing;
+
+            const { store, navigation } = await create();
+
+            expect(store.apiError).toBe('views.Swaps.swapIdInUse');
+            expect(store.loading).toBe(false);
+            expect(storageBacking[key]).toBe(existing);
+            expect(navigation.navigate).not.toHaveBeenCalled();
+        }
+    );
 
     it.each([TIMEOUT + 1, TIMEOUT, TIMEOUT - 1, TIMEOUT - 5])(
         'does not save or offer payment when the explorer tip is %s',
