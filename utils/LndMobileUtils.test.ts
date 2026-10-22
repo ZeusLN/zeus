@@ -462,6 +462,7 @@ describe('optimizeNeutrinoPeers', () => {
     it.each([
         {
             change: 'a mainnet peer of their own',
+            isTestnet: false,
             settings: {
                 neutrinoPeersMainnet: ['bitcoind.home.example'],
                 dontAllowOtherPeers: true
@@ -469,27 +470,62 @@ describe('optimizeNeutrinoPeers', () => {
         },
         {
             change: 'their own peer next to a default one',
+            isTestnet: false,
             settings: {
                 neutrinoPeersMainnet: ['a.mainnet', 'bitcoind.home.example']
             }
         },
         {
             change: 'a testnet peer of their own',
+            isTestnet: true,
             settings: { neutrinoPeersTestnet: ['testnet.home.example'] }
         },
-        { change: 'an empty list', settings: { neutrinoPeersMainnet: [] } }
+        {
+            change: 'an empty list',
+            isTestnet: false,
+            settings: { neutrinoPeersMainnet: [] }
+        }
     ])(
-        'keeps $change when a wallet is added on either network',
-        async ({ settings }) => {
+        'keeps $change when a wallet is added on that network',
+        async ({ isTestnet, settings }) => {
             settingsStore.settings = { ...defaults, ...settings } as any;
 
-            await optimizeNeutrinoPeers(false);
-            await optimizeNeutrinoPeers(true);
+            await optimizeNeutrinoPeers(isTestnet);
 
             expect(global.fetch).not.toHaveBeenCalled();
             expect(settingsStore.updateSettings).not.toHaveBeenCalled();
         }
     );
+
+    it('selects mainnet peers when only testnet peers are their own', async () => {
+        settingsStore.settings = {
+            ...defaults,
+            neutrinoPeersTestnet: ['testnet.home.example']
+        } as any;
+
+        await optimizeNeutrinoPeers(false);
+
+        // dontAllowOtherPeers is shared, so their testnet setup keeps it
+        expect(settingsStore.updateSettings).toHaveBeenCalledTimes(1);
+        expect(settingsStore.updateSettings).toHaveBeenCalledWith({
+            neutrinoPeersMainnet: ['a.mainnet', 'b.mainnet', 'c.mainnet']
+        });
+    });
+
+    it('selects testnet peers when only mainnet peers are their own', async () => {
+        settingsStore.settings = {
+            ...defaults,
+            neutrinoPeersMainnet: ['bitcoind.home.example'],
+            dontAllowOtherPeers: true
+        } as any;
+
+        await optimizeNeutrinoPeers(true);
+
+        expect(settingsStore.updateSettings).toHaveBeenCalledTimes(1);
+        expect(settingsStore.updateSettings).toHaveBeenCalledWith({
+            neutrinoPeersTestnet: ['a.testnet', 'b.testnet', 'c.testnet']
+        });
+    });
 
     it('replaces peers of their own when asked to', async () => {
         settingsStore.settings = {

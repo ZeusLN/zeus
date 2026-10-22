@@ -1009,25 +1009,27 @@ export async function optimizeNeutrinoPeers(
 ) {
     // The peer lists and dontAllowOtherPeers are shared by every embedded LND
     // wallet. Creating or restoring a wallet may re-pick among the peers ZEUS
-    // ships, but must not replace peers the user entered on either network
-    if (!overwriteUserPeers) {
-        const settings = settingsStore?.settings;
-        if (
-            hasUserNeutrinoPeers(
-                settings?.neutrinoPeersMainnet,
-                DEFAULT_NEUTRINO_PEERS_MAINNET.concat(
-                    ...SECONDARY_NEUTRINO_PEERS_MAINNET
-                )
-            ) ||
-            hasUserNeutrinoPeers(
-                settings?.neutrinoPeersTestnet,
-                DEFAULT_NEUTRINO_PEERS_TESTNET
-            )
-        ) {
-            console.log('Keeping user-selected Neutrino peers');
-            return;
-        }
+    // ships, but must not replace peers the user entered. dontAllowOtherPeers
+    // also applies to the other network, so leave it alone when the user
+    // entered peers there
+    const settings = settingsStore?.settings;
+    const mainnetCustomized = hasUserNeutrinoPeers(
+        settings?.neutrinoPeersMainnet,
+        DEFAULT_NEUTRINO_PEERS_MAINNET.concat(
+            ...SECONDARY_NEUTRINO_PEERS_MAINNET
+        )
+    );
+    const testnetCustomized = hasUserNeutrinoPeers(
+        settings?.neutrinoPeersTestnet,
+        DEFAULT_NEUTRINO_PEERS_TESTNET
+    );
+    const targetCustomized = isTestnet ? testnetCustomized : mainnetCustomized;
+    const otherCustomized = isTestnet ? mainnetCustomized : testnetCustomized;
+    if (!overwriteUserPeers && targetCustomized) {
+        console.log('Keeping user-selected Neutrino peers');
+        return;
     }
+    const keepDontAllowOtherPeers = !overwriteUserPeers && otherCustomized;
 
     console.log('Optimizing Neutrino peers');
     let peers = isTestnet
@@ -1182,15 +1184,18 @@ export async function optimizeNeutrinoPeers(
     }
 
     if (selectedPeers.length > 0) {
+        const dontAllowOtherPeers = keepDontAllowOtherPeers
+            ? {}
+            : { dontAllowOtherPeers: selectedPeers.length > 2 ? true : false };
         if (isTestnet) {
             await settingsStore.updateSettings({
                 neutrinoPeersTestnet: selectedPeers,
-                dontAllowOtherPeers: selectedPeers.length > 2 ? true : false
+                ...dontAllowOtherPeers
             });
         } else {
             await settingsStore.updateSettings({
                 neutrinoPeersMainnet: selectedPeers,
-                dontAllowOtherPeers: selectedPeers.length > 2 ? true : false
+                ...dontAllowOtherPeers
             });
         }
 
