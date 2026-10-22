@@ -2148,6 +2148,11 @@ export default class SettingsStore {
                     parsedSettings,
                     fromQueue
                 );
+                // Finishes a legacy storage migration whose non-settings
+                // keys failed after zeus-settings-v2 was written
+                await MigrationsUtils.retryLegacySiblingMigration(
+                    this.settings
+                );
             } else {
                 console.log('attempting to load legacy settings');
 
