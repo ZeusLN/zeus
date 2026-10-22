@@ -112,6 +112,17 @@ export interface PaymentOutcome {
     payment_error?: string;
 }
 
+// true when sha256(preimage) is paymentHash (hex). The preimage may be
+// hex or base64.
+const preimageMatchesHash = (preimage: string, paymentHash: string) => {
+    const preimageHex = normalizePaymentHash(preimage);
+    return (
+        !!preimageHex &&
+        sha256Hex(Base64Utils.hexToBytes(preimageHex)) ===
+            paymentHash.toLowerCase()
+    );
+};
+
 export default class TransactionsStore {
     @observable loading = false;
     // true only while a Lightning payment dispatched via sendPaymentInternal
@@ -1416,12 +1427,20 @@ export default class TransactionsStore {
             return;
         }
 
+        // the hash of the invoice (or keysend preimage) this payment was
+        // sent for, read before clearPaymentInFlight resets it
+        const expectedPaymentHash =
+            seq !== undefined && this.inFlightOwnerSeq === seq
+                ? this.inFlightPaymentHash
+                : null;
         this.clearPaymentInFlight(seq);
         this.payment_route = result.payment_route;
+        const outcome = this.getPaymentOutcome(result, expectedPaymentHash);
         // keys the outcome leaves unset keep their current values
-        Object.assign(this, this.getPaymentOutcome(result));
+        Object.assign(this, outcome);
 
-        const isSuccess = status === 'complete' || status === 'SUCCEEDED';
+        const isSuccess =
+            (status === 'complete' || status === 'SUCCEEDED') && !outcome.error;
 
         if (isSuccess) {
             setTimeout(() => {
@@ -1438,7 +1457,14 @@ export default class TransactionsStore {
     // writing to this store's observables, which belong to the payment the
     // user is watching. Service-initiated payments (e.g. NWC) pay via
     // sendPaymentSilently and take their outcome from here.
-    public getPaymentOutcome = (result: any): PaymentOutcome => {
+    //
+    // expectedPaymentHash (hex) is the hash the payment was sent for. When
+    // given, a returned preimage that doesn't hash to it is reported as an
+    // error rather than a success: the node's answer can't be trusted.
+    public getPaymentOutcome = (
+        result: any,
+        expectedPaymentHash?: string | null
+    ): PaymentOutcome => {
         const payment = new Payment(result);
         const outcome: PaymentOutcome = {
             noteKey: payment.getNoteKey,
@@ -1492,6 +1518,18 @@ export default class TransactionsStore {
             if (result.status) outcome.status = result.status;
         } else {
             outcome.status = result.status || 'complete';
+        }
+
+        if (
+            expectedPaymentHash &&
+            !outcome.error &&
+            !payment.isIncomplete &&
+            !preimageMatchesHash(payment.getPreimage, expectedPaymentHash)
+        ) {
+            outcome.error = true;
+            outcome.error_msg = localeString(
+                'stores.TransactionsStore.preimageMismatch'
+            );
         }
 
         return outcome;
