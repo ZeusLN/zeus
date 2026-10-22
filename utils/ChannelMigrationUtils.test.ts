@@ -72,11 +72,50 @@ jest.mock('react-native', () => ({
     Platform: { OS: 'android', select: (opts: any) => opts.android }
 }));
 
+import { Alert } from 'react-native';
+import ReactNativeBlobUtil from 'react-native-blob-util';
+
+import BackendUtils from './BackendUtils';
+import { signMessageNodePubkey } from '../lndmobile/wallet';
 import {
     graphDataExists,
     validateChannelBackupFile,
-    importChannelDb
+    importChannelDb,
+    uploadChannelBackupToOlympus,
+    restoreChannelBackupFromOlympus
 } from './ChannelMigrationUtils';
+
+const BACKUPS = 'https://backups.example.com';
+// The server issues 64 random bytes as lowercase hex
+const CHALLENGE = 'a1'.repeat(64);
+const CANONICAL_PHRASE =
+    'DO NOT EVER SIGN THIS TEXT WITH YOUR PRIVATE KEYS! IT IS ONLY USED FOR DERIVATION OF LNURL-AUTH HASHING-KEY, DISCLOSING ITS SIGNATURE WILL COMPROMISE YOUR LNURL-AUTH IDENTITY AND MAY LEAD TO LOSS OF FUNDS!';
+
+const fetchMock = ReactNativeBlobUtil.fetch as jest.Mock;
+const alertMock = Alert.alert as jest.Mock;
+const signMessageMock = (BackendUtils as any).signMessage as jest.Mock;
+const signNodePubkeyMock = signMessageNodePubkey as jest.Mock;
+
+// Answers each /api/auth call with the next challenge in the list and
+// every other path with a successful reply.
+const serveChallenges = (challenges: any[], statusBody: any = {}) => {
+    const queue = [...challenges];
+    fetchMock.mockImplementation(async (_m: string, url: string) => {
+        const path = url.replace(BACKUPS, '');
+        const body =
+            path === '/api/auth'
+                ? { success: true, verification: queue.shift() }
+                : { success: true, ...statusBody };
+        return {
+            info: () => ({ status: 200 }),
+            json: () => body,
+            text: async () => 'ZW5j'
+        };
+    });
+};
+
+const fetchedPaths = () =>
+    fetchMock.mock.calls.map(([, url]) => url.replace(BACKUPS, ''));
 
 describe('ChannelMigrationUtils', () => {
     beforeEach(() => {
@@ -294,6 +333,119 @@ describe('ChannelMigrationUtils', () => {
                 '/output.zip',
                 'my seed phrase'
             );
+        });
+    });
+
+    describe('Olympus auth challenge', () => {
+        beforeEach(() => {
+            jest.spyOn(console, 'log').mockImplementation(() => {});
+            jest.spyOn(console, 'error').mockImplementation(() => {});
+        });
+
+        afterEach(() => jest.restoreAllMocks());
+
+        describe('uploadChannelBackupToOlympus', () => {
+            it('refuses to sign a status challenge that is not hex', async () => {
+                serveChallenges([CANONICAL_PHRASE]);
+
+                await uploadChannelBackupToOlympus(
+                    'lnd',
+                    false,
+                    '03cd',
+                    'seed'
+                );
+
+                expect(signMessageMock).not.toHaveBeenCalled();
+                expect(fetchedPaths()).toEqual(['/api/auth']);
+                expect(alertMock).toHaveBeenCalledWith(
+                    'general.error',
+                    'views.Tools.migration.export.failedToUpload'
+                );
+            });
+
+            it('refuses to sign an upload challenge that is not hex', async () => {
+                serveChallenges([CHALLENGE, CANONICAL_PHRASE]);
+
+                await uploadChannelBackupToOlympus(
+                    'lnd',
+                    false,
+                    '03cd',
+                    'seed'
+                );
+
+                expect(signMessageMock).toHaveBeenCalledTimes(1);
+                expect(signMessageMock).toHaveBeenCalledWith(CHALLENGE);
+                expect(fetchedPaths()).toEqual([
+                    '/api/auth',
+                    '/api/status',
+                    '/api/auth'
+                ]);
+                expect(mockZipFolder).not.toHaveBeenCalled();
+            });
+
+            it('signs hex challenges and uploads', async () => {
+                serveChallenges([CHALLENGE, 'b2'.repeat(64)]);
+
+                await uploadChannelBackupToOlympus(
+                    'lnd',
+                    false,
+                    '03cd',
+                    'seed'
+                );
+
+                expect(signMessageMock.mock.calls).toEqual([
+                    [CHALLENGE],
+                    ['b2'.repeat(64)]
+                ]);
+                expect(fetchedPaths()).toContain('/api/channels-backup');
+            });
+        });
+
+        describe('restoreChannelBackupFromOlympus', () => {
+            it('refuses to sign a status challenge that is not hex', async () => {
+                serveChallenges([CHALLENGE.toUpperCase()]);
+
+                await expect(
+                    restoreChannelBackupFromOlympus(
+                        'lnd',
+                        false,
+                        '03cd',
+                        'seed'
+                    )
+                ).rejects.toThrow('Invalid auth response');
+
+                expect(signNodePubkeyMock).not.toHaveBeenCalled();
+                expect(fetchedPaths()).toEqual(['/api/auth']);
+            });
+
+            it('refuses to sign a restore challenge that is not hex', async () => {
+                serveChallenges([CHALLENGE, CANONICAL_PHRASE], {
+                    last_backup_at: '2026-01-01T00:00:00Z'
+                });
+                // confirm the restore dialog
+                alertMock.mockImplementation((_t, _m, buttons) =>
+                    buttons?.[1]?.onPress?.()
+                );
+
+                await expect(
+                    restoreChannelBackupFromOlympus(
+                        'lnd',
+                        false,
+                        '03cd',
+                        'seed'
+                    )
+                ).rejects.toThrow('Invalid auth response');
+
+                expect(signNodePubkeyMock).toHaveBeenCalledTimes(1);
+                expect(
+                    Buffer.from(signNodePubkeyMock.mock.calls[0][0]).toString()
+                ).toBe(CHALLENGE);
+                expect(fetchedPaths()).toEqual([
+                    '/api/auth',
+                    '/api/status',
+                    '/api/auth'
+                ]);
+            });
         });
     });
 });
