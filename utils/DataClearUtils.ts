@@ -836,6 +836,37 @@ export async function clearNodeKeychainData(
     }
 }
 
+// Wallet and contact pictures picked from the photo library
+// (photo_<timestamp>.png, SetWalletPicture and AddContact) and the
+// pictures and banners downloaded for Nostr contacts (ContactUtils). They
+// are loose files in the documents directory, and only a wallet config or
+// contact record points to them.
+const PICTURE_FILE_NAME = /^(photo_\d+|nostrContact(Photo|Banner)_.+)\.png$/;
+
+/**
+ * Deletes every wallet and contact picture in the documents directory. The
+ * sweep goes by file name rather than by the configs and contacts that
+ * point to them, so pictures nothing points to any more (a replaced
+ * picture, a deleted wallet or contact, a Nostr profile that was only
+ * opened) are removed too. Full-wipe path only.
+ */
+async function clearPictureFiles(): Promise<void> {
+    try {
+        const dir = ReactNativeBlobUtil.fs.dirs.DocumentDir;
+        const entries: string[] = await ReactNativeBlobUtil.fs.ls(dir);
+        for (const entry of entries) {
+            if (!PICTURE_FILE_NAME.test(entry)) continue;
+            try {
+                await ReactNativeBlobUtil.fs.unlink(`${dir}/${entry}`);
+            } catch (e) {
+                console.warn(`[ClearData] Error deleting picture ${entry}:`, e);
+            }
+        }
+    } catch (e) {
+        console.warn('[ClearData] Error clearing picture files:', e);
+    }
+}
+
 /**
  * Stops and deletes the on-disk node data directories (channel state, wallet
  * db) for every configured node. clearKey/clearCashuDataForNode only touch
@@ -1002,6 +1033,7 @@ export async function purgeChannelDbExports(): Promise<void> {
  * - CDK SQLite database (Cashu wallet state)
  * - LND/LDK on-disk node data directories (channel + wallet state)
  * - Channel database copies staged in app cache
+ * - Wallet and contact picture files
  * - HTTP cookies
  * - Delivered system notifications
  *
@@ -1101,7 +1133,11 @@ export async function clearAllData(): Promise<void> {
     await purgeCsvShareStaging();
     await purgeLegacyNodeConfigExports();
 
-    // 2g. Delete channel database copies that the channel import, export and
+    // 2g. Delete wallet and contact pictures. They sit in the documents
+    // directory, which is included in device backups.
+    await clearPictureFiles();
+
+    // 2h. Delete channel database copies that the channel import, export and
     // Olympus flows staged in app cache, outside the node directories
     // deleted in 2c.
     await purgeChannelDbStagingFiles();
