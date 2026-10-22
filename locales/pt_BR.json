@@ -2484,6 +2484,7 @@
     "views.Swaps.generateInvoiceFailed": "Falha ao gerar fatura",
     "views.Swaps.invalidReverseSwapInvoice": "The swap provider returned an invoice that does not match the requested swap. For your safety, this swap has been aborted and no payment was made.",
     "views.Swaps.invalidReverseSwapResponse": "The swap provider returned swap details that do not match the requested swap. For your safety, this swap has been aborted and no payment was made.",
+    "views.Swaps.tipHeightUnavailable": "Could not reach your mempool instance to check the swap timeout. Please try again.",
     "views.Swaps.generateOnchainAddress": "Gerar endereço on-chain",
     "views.Swaps.generateOnchainAddressFailed": "Falha ao gerar endereço na cadeia",
     "views.Swaps.noUpdates": "Nenhuma atualização encontrada!",
