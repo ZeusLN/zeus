@@ -1461,6 +1461,37 @@ describe('TransactionsStore payment sequence', () => {
         expect(store.pendingPaymentData).toBeNull();
     });
 
+    it('releases a held payment before hiding the prompt, so the prompt does not treat it as abandoned', () => {
+        const store = newStore();
+        deferToGraphSyncPrompt();
+        const seq = store.sendPayment({ payment_request: 'lnbc1' });
+
+        // a hideGraphSyncPrompt that reports a still-held payment as not
+        // sent when the prompt closes
+        let heldWhenHidden: any = 'not called';
+        jest.spyOn(store, 'hideGraphSyncPrompt').mockImplementation(() => {
+            heldWhenHidden = store.pendingPaymentData;
+            store.showGraphSyncPrompt = false;
+            if (store.pendingPaymentData) {
+                store.pendingPaymentData = null;
+                store.error = true;
+                store.error_msg = 'views.GraphSyncPrompt.paymentNotSent';
+            }
+        });
+
+        store.proceedWithPayment();
+
+        expect(heldWhenHidden).toBeNull();
+        expect(payLightningInvoice).toHaveBeenCalledTimes(1);
+        expect(payLightningInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ payment_request: 'lnbc1' })
+        );
+        expect(store.lastPaymentSequence).toBe(seq);
+        expect(store.error).toBe(false);
+        expect(store.error_msg).toBeNull();
+        expect(store.loading).toBe(true);
+    });
+
     it('does not give an abandoned held payment sequence to the next payment', () => {
         const store = newStore();
         deferToGraphSyncPrompt();
