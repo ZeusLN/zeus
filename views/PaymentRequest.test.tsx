@@ -438,3 +438,46 @@ describe('PaymentRequest fee limit', () => {
         expect(await pay('3')).toMatchObject({ fee_limit_sat: '3' });
     });
 });
+
+describe('PaymentRequest sending', () => {
+    it('opens SendingLightning with the id sendPayment gave its payment', async () => {
+        const ref = React.createRef<any>();
+        const sendPayment = jest.fn(() => 7);
+        const { navigation } = await renderView({
+            implementation: 'lnd',
+            TransactionsStore: { paymentInFlight: false, sendPayment },
+            ref
+        });
+
+        await act(async () =>
+            ref.current.sendPayment({ payment_request: 'lnbc1' })
+        );
+
+        expect(sendPayment).toHaveBeenCalledTimes(1);
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'SendingLightning',
+            expect.objectContaining({ paymentSequence: 7 })
+        );
+    });
+
+    it('opens SendingLightning without an id when the request was dropped', async () => {
+        const ref = React.createRef<any>();
+        const { navigation } = await renderView({
+            implementation: 'lnd',
+            TransactionsStore: {
+                paymentInFlight: false,
+                sendPayment: jest.fn(() => null)
+            },
+            ref
+        });
+
+        await act(async () =>
+            ref.current.sendPayment({ payment_request: 'lnbc1' })
+        );
+
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'SendingLightning',
+            expect.objectContaining({ paymentSequence: null })
+        );
+    });
+});

@@ -366,7 +366,7 @@ export default class PaymentRequest extends React.Component<
             );
         }
 
-        TransactionsStore.sendPayment({
+        const paymentSequence = TransactionsStore.sendPayment({
             payment_request,
             amount,
             max_parts,
@@ -380,6 +380,7 @@ export default class PaymentRequest extends React.Component<
         });
 
         navigation.navigate('SendingLightning', {
+            paymentSequence,
             enableDonations,
             ...(enableDonations &&
                 donationAmount > 0 && {
