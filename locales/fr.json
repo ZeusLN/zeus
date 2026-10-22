@@ -2484,6 +2484,7 @@
     "views.Swaps.generateInvoiceFailed": "Échec de la génération de la facture",
     "views.Swaps.invalidReverseSwapInvoice": "Le fournisseur de swaps a renvoyé une facture non conforme au swap demandé. Par mesure de sécurité, ce swap a été annulé et aucun paiement n'a été effectué.",
     "views.Swaps.invalidReverseSwapResponse": "The swap provider returned swap details that do not match the requested swap. For your safety, this swap has been aborted and no payment was made.",
+    "views.Swaps.tipHeightUnavailable": "Could not reach your mempool instance to check the swap timeout. Please try again.",
     "views.Swaps.generateOnchainAddress": "Générer une adresse sur la chaîne",
     "views.Swaps.generateOnchainAddressFailed": "Échec de la génération de l'adresse sur la chaîne",
     "views.Swaps.noUpdates": "Aucune mise à jour trouvée !",
