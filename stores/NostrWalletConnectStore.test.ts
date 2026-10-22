@@ -3639,6 +3639,58 @@ describe('NostrWalletConnectStore wallet deletion', () => {
             expect(storedClientKeys()[B_CONNECTION.pubkey]).toBe(B_KEY);
         });
 
+        it("deletes an inactive LNbits wallet's connections while another wallet on the same server and login remains", async () => {
+            const lnbitsWallet = (password: string) => ({
+                implementation: 'lndhub',
+                lndhubUrl: 'https://lnbits.example.com/lndhub/ext/',
+                username: 'admin',
+                password
+            });
+            const WALLET_X = lnbitsWallet('a'.repeat(32));
+            const WALLET_Y = lnbitsWallet('b'.repeat(32));
+            // Pair a client while wallet X is current
+            const walletX = createStore({
+                settingsStore: {
+                    ...WALLET_X,
+                    settings: { nodes: [WALLET_X, WALLET_Y] }
+                },
+                nodeInfoStore: { nodeInfo: {}, getNodeInfo: jest.fn() }
+            });
+            storedItems.set(
+                NWC_CONNECTIONS_KEY,
+                JSON.stringify([
+                    connectionData({ id: 'conn-a', pubkey: hex64('a') }),
+                    connectionData({
+                        ...B_CONNECTION,
+                        implementation: 'lndhub',
+                        nodePubkey: (
+                            walletX.store as any
+                        ).getCurrentWalletPubkey()
+                    })
+                ])
+            );
+            storedItems.set(
+                NWC_CLIENT_KEYS,
+                JSON.stringify({
+                    [hex64('a')]: hex64('3'),
+                    [B_CONNECTION.pubkey]: B_KEY
+                })
+            );
+            await walletX.store.loadConnections();
+            await jest.advanceTimersByTimeAsync(SERVICE_START_MS);
+            const { store } = createStore({
+                settingsStore: { ...WALLET_A, settings: {} }
+            });
+
+            await store.deleteWalletConfigConnections(WALLET_X, [
+                WALLET_A,
+                WALLET_Y
+            ]);
+
+            expect(persistedConnections().map((c) => c.id)).toEqual(['conn-a']);
+            expect(storedClientKeys()).toEqual({ [hex64('a')]: hex64('3') });
+        });
+
         it('leaves connections that were never loaded with a wallet config id', async () => {
             storedItems.set(
                 NWC_CONNECTIONS_KEY,

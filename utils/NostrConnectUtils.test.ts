@@ -498,6 +498,22 @@ describe('NostrConnectUtils', () => {
             );
         });
 
+        it('tells LNbits wallets on one server apart by password', () => {
+            // Every LNbits wallet logs in as admin; the password, the
+            // wallet's API key, selects the wallet
+            const wallet = {
+                implementation: 'lndhub',
+                lndhubUrl: 'https://lnbits.example.com/lndhub/ext/',
+                username: 'admin',
+                password: 'a'.repeat(32)
+            };
+            const value = id(wallet);
+
+            expect(value).not.toBe(id({ ...wallet, password: 'b'.repeat(32) }));
+            expect(value).toMatch(/^[0-9a-f]{64}$/);
+            expect(value).not.toContain(wallet.password);
+        });
+
         it('does not contain the LNC pairing phrase', () => {
             const pairingPhrase = 'alpha bravo charlie delta';
             const value = id({

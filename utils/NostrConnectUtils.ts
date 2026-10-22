@@ -134,6 +134,7 @@ export interface WalletConfigFields {
     url?: string;
     lndhubUrl?: string;
     username?: string;
+    password?: string;
     pairingPhrase?: string;
     nostrWalletConnectUrl?: string;
     lndDir?: string;
@@ -145,9 +146,10 @@ export default class NostrConnectUtils {
      * Identifies a wallet config by the fields that select its node or
      * account, so NWC connections can be matched to a config that is not
      * the current wallet (the config does not store the node pubkey).
-     * Hashed because the fields include LNC pairing phrases. Applies the
-     * same default node dirs as SettingsStore and getNodeDir. Returns
-     * undefined when the config has none of these fields.
+     * Hashed because the fields include LNC pairing phrases and LndHub
+     * passwords. Applies the same default node dirs as SettingsStore and
+     * getNodeDir. Returns undefined when the config has none of these
+     * fields.
      */
     static getWalletConfigId(node?: WalletConfigFields): string | undefined {
         if (!node) return undefined;
@@ -161,7 +163,17 @@ export default class NostrConnectUtils {
                 fields = [node.ldkNodeDir || 'ldk'];
                 break;
             case 'lndhub':
-                fields = [node.lndhubUrl, node.username];
+                // On LNbits every wallet logs in as "admin" (or "invoice")
+                // and the password, the wallet's API key, selects the
+                // wallet.
+                fields = [
+                    node.lndhubUrl,
+                    node.username && node.password
+                        ? bytesToHex(
+                              sha256(`${node.username}:${node.password}`)
+                          )
+                        : node.username
+                ];
                 break;
             case 'lightning-node-connect':
                 fields = [node.pairingPhrase];
