@@ -646,6 +646,21 @@ describe('EmbeddedLND.openChannelStream', () => {
 
         expect(second.error?.message).toEqual('peer offline');
     });
+
+    it('hands the close address to lndmobile', () => {
+        const funding_shim = { psbt_shim: { pending_chan_id: 'id' } };
+
+        lnd.openChannelStream({
+            node_pubkey_string: PUBKEY,
+            local_funding_amount: '500000',
+            close_address: 'bc1qclose',
+            funding_shim
+        } as any);
+
+        // the request id comes last
+        const args = mockOpenChannel.mock.calls[0];
+        expect(args.slice(-3, -1)).toEqual([funding_shim, 'bc1qclose']);
+    });
 });
 
 describe('EmbeddedLND message signing', () => {

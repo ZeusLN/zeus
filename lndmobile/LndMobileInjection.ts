@@ -328,6 +328,7 @@ export interface ILndMobileInjections {
             fund_max?: boolean,
             utxos?: Array<string>,
             funding_shim?: any,
+            close_address?: string,
             requestId?: string
         ) => Promise<string>;
         openChannelSync: (
