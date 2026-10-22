@@ -541,6 +541,156 @@ describe('KeychainPurgeUtils', () => {
                 ).toBe(false);
             });
 
+            it('is false for a legacy wallet with no secrets', () => {
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob({ implementation: 'lnd', host: 'h' }),
+                        blob(remote)
+                    )
+                ).toBe(false);
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob({ implementation: 'lnd', host: 'h' }),
+                        blob({ implementation: 'lnd', host: 'h' })
+                    )
+                ).toBe(false);
+            });
+
+            it('is false for the same lndhub login on another hub', () => {
+                const hub = {
+                    implementation: 'lndhub',
+                    lndhubUrl: 'https://a',
+                    username: 'u',
+                    password: 'p'
+                };
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob({ ...hub, lndhubUrl: 'https://b' }),
+                        blob(hub)
+                    )
+                ).toBe(false);
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(hub),
+                        blob({ ...hub, nickname: 'renamed' })
+                    )
+                ).toBe(true);
+            });
+
+            it('compares host and port for lnd and cln-rest', () => {
+                const lnd = { ...remote, port: '8080' };
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(lnd),
+                        blob({ ...lnd, nickname: 'renamed' })
+                    )
+                ).toBe(true);
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(lnd),
+                        blob({ ...lnd, host: 'other.example' })
+                    )
+                ).toBe(false);
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(lnd),
+                        blob({ ...lnd, port: '10009' })
+                    )
+                ).toBe(false);
+                const cln = {
+                    implementation: 'cln-rest',
+                    host: 'cln.example',
+                    port: '3010',
+                    rune: 'r'
+                };
+                expect(liveSettingsCoverLegacy(blob(cln), blob(cln))).toBe(
+                    true
+                );
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(cln),
+                        blob({ ...cln, port: '3011' })
+                    )
+                ).toBe(false);
+            });
+
+            it('requires the same implementation', () => {
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(remote),
+                        blob({ ...remote, implementation: 'cln-rest' })
+                    )
+                ).toBe(false);
+            });
+
+            it('treats a missing implementation as lnd', () => {
+                const { implementation, ...noImplementation } = remote;
+                expect(implementation).toBe('lnd');
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(noImplementation),
+                        blob(remote)
+                    )
+                ).toBe(true);
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(remote),
+                        blob(noImplementation)
+                    )
+                ).toBe(true);
+            });
+
+            it('treats a missing lndDir as lnd for embedded-lnd', () => {
+                const { lndDir, ...noDir } = first;
+                expect(lndDir).toBe('dir-1');
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(noDir),
+                        blob({ ...first, lndDir: 'lnd' })
+                    )
+                ).toBe(true);
+                expect(liveSettingsCoverLegacy(blob(noDir), blob(first))).toBe(
+                    false
+                );
+            });
+
+            it('compares ldkNodeDir for ldk-node', () => {
+                const ldk = {
+                    implementation: 'ldk-node',
+                    ldkNodeDir: 'ldk-1',
+                    ldkMnemonic: 'm'
+                };
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(ldk),
+                        blob({ ...ldk, nickname: 'renamed' })
+                    )
+                ).toBe(true);
+                expect(
+                    liveSettingsCoverLegacy(
+                        blob(ldk),
+                        blob({ ...ldk, ldkNodeDir: 'ldk-2' })
+                    )
+                ).toBe(false);
+            });
+
+            it('uses the secret as identity for LNC and NWC', () => {
+                const lnc = {
+                    implementation: 'lightning-node-connect',
+                    pairingPhrase: 'phrase'
+                };
+                const nwc = {
+                    implementation: 'nostr-wallet-connect',
+                    nostrWalletConnectUrl: 'nostr+walletconnect://x'
+                };
+                expect(liveSettingsCoverLegacy(blob(lnc), blob(lnc))).toBe(
+                    true
+                );
+                expect(liveSettingsCoverLegacy(blob(nwc), blob(nwc))).toBe(
+                    true
+                );
+            });
+
             it('is true for a legacy blob without wallets', () => {
                 expect(liveSettingsCoverLegacy('{}', blob(first))).toBe(true);
                 expect(liveSettingsCoverLegacy(blob(), blob())).toBe(true);
@@ -622,6 +772,17 @@ describe('KeychainPurgeUtils', () => {
                 expect(sync).toEqual({});
                 expect(result.deleted).toBe(2);
                 expect(result.skipped).toEqual([]);
+            });
+
+            it('keeps a legacy blob holding a wallet with no secrets', async () => {
+                const bare = { implementation: 'lnd', host: 'h' };
+                local['zeus-settings-v2'] = blob(bare);
+
+                const result = await purge();
+
+                expect(local['zeus-settings-v2']).toBe(blob(bare));
+                expect(result.deleted).toBe(0);
+                expect(result.skipped).toEqual(['zeus-settings-v2']);
             });
 
             it('keeps a legacy blob that does not parse', async () => {
