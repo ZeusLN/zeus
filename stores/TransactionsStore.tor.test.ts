@@ -28,11 +28,16 @@ jest.mock('../utils/BackendUtils', () => ({
 jest.mock('../utils/LocaleUtils');
 jest.mock('../utils/UrlUtils', () => ({
     __esModule: true,
-    default: { getMempoolApiUrl: () => 'https://mempool.test/api' }
+    default: { getMempoolApiUrl: () => mockMempoolApiUrl }
 }));
 jest.mock('../utils/RatingUtils', () => ({
     RATING_MODAL_TRIGGER_DELAY: 1000
 }));
+
+// a custom .onion mempool instance always goes over Tor, whatever the setting
+const ONION_API =
+    'http://zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion/api';
+let mockMempoolApiUrl = 'https://mempool.test/api';
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import TransactionsStore from './TransactionsStore';
@@ -73,6 +78,7 @@ const expectTransport = (enableTor: boolean) => {
 
 beforeEach(() => {
     jest.clearAllMocks();
+    mockMempoolApiUrl = 'https://mempool.test/api';
     torFetch.mockResolvedValue({ status: 200, body: 'txid' });
     blobFetch.mockResolvedValue({
         info: () => ({ status: 200 }),
@@ -101,4 +107,18 @@ describe('TransactionsStore mempool.space broadcasts over Tor', () => {
             expect(store.broadcast_txid).toBe('txid');
         }
     );
+
+    it('broadcasts to an .onion instance over Tor with Tor off', async () => {
+        mockMempoolApiUrl = ONION_API;
+        const store = newStore(false);
+
+        await store.broadcastRawTxToMempoolSpace(RAW_TX);
+
+        expect(blobFetch).not.toHaveBeenCalled();
+        expect(torFetch).toHaveBeenCalledTimes(1);
+        const [url, method, body] = torFetch.mock.calls[0];
+        expect(url).toBe(`${ONION_API}/tx`);
+        expect(method).toBe('POST');
+        expect(body).toBe(RAW_TX);
+    });
 });
