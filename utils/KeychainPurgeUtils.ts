@@ -145,6 +145,64 @@ const migratedCounterpartServers = (server: string): string[] => {
 const isXprvCache = (server: string): boolean =>
     server.endsWith('-extended-private-keys');
 
+const isSettingsBlob = (server: string): boolean =>
+    server === STORAGE_KEY || server === LEGACY_STORAGE_KEY;
+
+// The node fields that nothing else on the device can rebuild
+const WALLET_SECRET_FIELDS = [
+    'seedPhrase',
+    'walletPassword',
+    'adminMacaroon',
+    'ldkMnemonic',
+    'ldkPassphrase',
+    'macaroonHex',
+    'rune',
+    'accessKey',
+    'username',
+    'password',
+    'pairingPhrase',
+    'nostrWalletConnectUrl'
+];
+
+const parseNodes = (settingsJson: string): any[] => {
+    const settings = JSON.parse(settingsJson);
+    if (!settings || typeof settings !== 'object') {
+        throw new Error('settings blob is not an object');
+    }
+    return Array.isArray(settings.nodes) ? settings.nodes : [];
+};
+
+const hasValue = (value: any): boolean =>
+    value !== undefined &&
+    value !== null &&
+    value !== '' &&
+    !(Array.isArray(value) && value.length === 0);
+
+/**
+ * Whether the live settings blob holds every wallet of a legacy settings
+ * blob: each legacy node needs a live node with the same value for every
+ * secret field the legacy node has set (nickname, host and other settings
+ * may differ). Throws when either blob does not parse.
+ */
+export const liveSettingsCoverLegacy = (
+    legacyJson: string,
+    liveJson: string
+): boolean => {
+    const liveNodes = parseNodes(liveJson);
+    return parseNodes(legacyJson).every((node: any) => {
+        const secrets = WALLET_SECRET_FIELDS.filter((field) =>
+            hasValue(node?.[field])
+        );
+        return liveNodes.some((live: any) =>
+            secrets.every(
+                (field) =>
+                    JSON.stringify(live?.[field]) ===
+                    JSON.stringify(node[field])
+            )
+        );
+    });
+};
+
 const probeExists = async (server: string): Promise<boolean> => {
     try {
         return (await getRawItem(server, false)) !== null;
@@ -338,9 +396,29 @@ export const executePurge = async (scan: PurgeScan): Promise<PurgeResult> => {
     // xprv cache is the exception: it is derived, never migrated, and the
     // app only ever deletes it, so waiting for a counterpart would keep it
     // in iCloud forever.
-    const hasMigratedCounterpart = async (server: string): Promise<boolean> => {
+    //
+    // For a settings blob the counterpart always exists (the preflight
+    // requires the live blob), so its existence proves nothing. The live
+    // blob can also lack wallets the legacy blob has: migrateKey prefers the
+    // device-local original over the synchronizable copy, and v0.12.0 and
+    // v0.12.1 wrote only to the synchronizable copy. A legacy settings blob
+    // is therefore deletable only when the live blob holds every wallet in
+    // it; one that cannot be read or parsed is kept.
+    const hasMigratedCounterpart = async (
+        server: string,
+        read: () => Promise<string | false | null>
+    ): Promise<boolean> => {
         if (isXprvCache(server)) return true;
         try {
+            if (isSettingsBlob(server)) {
+                const live = await getRawItem(
+                    `${KEY_PREFIX}${STORAGE_KEY}`,
+                    false
+                );
+                const legacy = await read();
+                if (live === null || !legacy) return false;
+                return liveSettingsCoverLegacy(legacy, live);
+            }
             for (const counterpart of migratedCounterpartServers(server)) {
                 if ((await getRawItem(counterpart, false)) !== null) {
                     return true;
@@ -353,7 +431,11 @@ export const executePurge = async (scan: PurgeScan): Promise<PurgeResult> => {
     };
 
     for (const server of scan.legacyLocalServers) {
-        if (!(await hasMigratedCounterpart(server))) {
+        if (
+            !(await hasMigratedCounterpart(server, () =>
+                getRawItem(server, false)
+            ))
+        ) {
             skipped.push(server);
             continue;
         }
@@ -368,7 +450,11 @@ export const executePurge = async (scan: PurgeScan): Promise<PurgeResult> => {
     );
 
     for (const server of unprefixedSync) {
-        if (!(await hasMigratedCounterpart(server))) {
+        if (
+            !(await hasMigratedCounterpart(server, () =>
+                getRawItem(server, true)
+            ))
+        ) {
             skipped.push(server);
             continue;
         }
@@ -388,8 +474,16 @@ export const executePurge = async (scan: PurgeScan): Promise<PurgeResult> => {
 
     if (scan.hasLegacyEncryptedSettings) {
         try {
-            await EncryptedStorage.removeItem(LEGACY_STORAGE_KEY);
-            deleted++;
+            if (
+                await hasMigratedCounterpart(LEGACY_STORAGE_KEY, () =>
+                    EncryptedStorage.getItem(LEGACY_STORAGE_KEY)
+                )
+            ) {
+                await EncryptedStorage.removeItem(LEGACY_STORAGE_KEY);
+                deleted++;
+            } else {
+                skipped.push(LEGACY_STORAGE_KEY);
+            }
         } catch {
             failures.push(LEGACY_STORAGE_KEY);
         }
