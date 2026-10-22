@@ -24,7 +24,7 @@ const mockedCreateLdkNodeWallet = createLdkNodeWallet as jest.Mock;
 const makeSettingsStore = (settings: any = {}) => {
     const store: any = {
         settings,
-        walletJustCreated: false,
+        walletJustCreated: undefined,
         setConnectingStatus: jest.fn(),
         updateSettings: jest.fn(async (update: any) => {
             const resolved =
@@ -127,7 +127,7 @@ describe('createOnboardingWallet', () => {
         expect(settingsStore.setConnectingStatus).toHaveBeenCalledWith(true);
         expect(params.onSuccess).toHaveBeenCalledTimes(1);
         expect(params.onError).not.toHaveBeenCalled();
-        expect(settingsStore.walletJustCreated).toBe(false);
+        expect(settingsStore.walletJustCreated).toBeUndefined();
     });
 
     it('creates an LDK Node wallet and tells Wallet to skip re-init', async () => {
@@ -153,7 +153,7 @@ describe('createOnboardingWallet', () => {
                 nickname: 'general.defaultNodeNickname'
             }
         ]);
-        expect(settingsStore.walletJustCreated).toBe(true);
+        expect(settingsStore.walletJustCreated).toBe('new-dir');
         expect(settingsStore.setConnectingStatus).toHaveBeenCalledWith(true);
         expect(params.onSuccess).toHaveBeenCalledTimes(1);
     });
@@ -307,7 +307,7 @@ describe('createOnboardingWallet', () => {
 
                 expect(params.onError).toHaveBeenCalledTimes(1);
                 expect(settingsStore.updateSettings).not.toHaveBeenCalled();
-                expect(settingsStore.walletJustCreated).toBe(false);
+                expect(settingsStore.walletJustCreated).toBeUndefined();
                 expect(params.onSuccess).not.toHaveBeenCalled();
             }
         );
@@ -323,7 +323,7 @@ describe('createOnboardingWallet', () => {
 
             expect(params.onError).toHaveBeenCalledTimes(1);
             expect(params.onSuccess).not.toHaveBeenCalled();
-            expect(settingsStore.walletJustCreated).toBe(false);
+            expect(settingsStore.walletJustCreated).toBeUndefined();
         });
 
         // The embedded LND branch awaits updateSettings outside a try, so a
