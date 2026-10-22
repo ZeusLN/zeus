@@ -748,11 +748,8 @@ const handleAnything = async (
             'utils.handleAnything.lightningAddressError'
         );
 
-        // .onion addresses always go over Tor, whatever the Use Tor
-        // setting. The URL is plain http, and the system stack would resolve
-        // the name through the local DNS resolver. If Tor is unavailable the
-        // lookup fails instead of falling back to clearnet.
-        if (isOnion) {
+        // handle Tor LN addresses
+        if (settingsStore.enableTor && isOnion) {
             return doTorRequest(url, RequestMethod.GET).then(
                 (response: any) => {
                     if (!response.callback) {
