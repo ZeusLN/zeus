@@ -2484,6 +2484,7 @@
     "views.Swaps.generateInvoiceFailed": "生成发票失败",
     "views.Swaps.invalidReverseSwapInvoice": "该兑换服务提供商退回的发票与所请求的兑换不符。为了您的安全，此次兑换已被中止，且未进行任何支付。",
     "views.Swaps.invalidReverseSwapResponse": "兑换提供商返回的兑换交易详情与请求的不符。为保障您的安全，此次兑换交易已被中止，且未进行任何付款。",
+    "views.Swaps.tipHeightUnavailable": "Could not reach your mempool instance to check the swap timeout. Please try again.",
     "views.Swaps.generateOnchainAddress": "生成链上地址",
     "views.Swaps.generateOnchainAddressFailed": "生成链上地址失败",
     "views.Swaps.noUpdates": "未发现更新！",
