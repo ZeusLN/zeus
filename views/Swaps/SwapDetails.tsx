@@ -1076,6 +1076,25 @@ export default class SwapDetails extends React.Component<
         return '';
     };
 
+    // Once the chain reaches timeoutBlockHeight the refund leaf of a
+    // submarine swap needs no one but this wallet, so a refund is offered
+    // whatever the host reports (or if it reports nothing), unless the
+    // swap was claimed or has already been refunded
+    refundTimelockPassed = (): boolean => {
+        const { swapData, updates } = this.state;
+        const { currentBlockHeight } = nodeInfoStore.nodeInfo;
+        const status = updates || swapData.status;
+
+        return (
+            swapData.isSubmarineSwap &&
+            status !== SwapState.TransactionClaimed &&
+            status !== SwapState.TransactionRefunded &&
+            !!currentBlockHeight &&
+            !!swapData.timeoutBlockHeight &&
+            new BigNumber(currentBlockHeight).gte(swapData.timeoutBlockHeight)
+        );
+    };
+
     render() {
         const { navigation, SwapStore } = this.props;
 
@@ -1120,12 +1139,13 @@ export default class SwapDetails extends React.Component<
         const failure = failureReason || swapData.failureReason;
 
         const showRefundButton =
-            swapData.lockupTransaction &&
-            (updates === SwapState.InvoiceFailedToPay ||
-                updates === SwapState.TransactionLockupFailed ||
-                (swapData.isSubmarineSwap &&
-                    updates === SwapState.SwapExpired) ||
-                (failure && error));
+            (swapData.lockupTransaction &&
+                (updates === SwapState.InvoiceFailedToPay ||
+                    updates === SwapState.TransactionLockupFailed ||
+                    (swapData.isSubmarineSwap &&
+                        updates === SwapState.SwapExpired) ||
+                    (failure && error))) ||
+            this.refundTimelockPassed();
 
         return (
             <Screen>
