@@ -2484,6 +2484,7 @@
     "views.Swaps.generateInvoiceFailed": "產生帳單失敗",
     "views.Swaps.invalidReverseSwapInvoice": "The swap provider returned an invoice that does not match the requested swap. For your safety, this swap has been aborted and no payment was made.",
     "views.Swaps.invalidReverseSwapResponse": "The swap provider returned swap details that do not match the requested swap. For your safety, this swap has been aborted and no payment was made.",
+    "views.Swaps.tipHeightUnavailable": "Could not reach your mempool instance to check the swap timeout. Please try again.",
     "views.Swaps.generateOnchainAddress": "產生鏈上位址",
     "views.Swaps.generateOnchainAddressFailed": "產生鏈上位址失敗",
     "views.Swaps.noUpdates": "No updates found!",
