@@ -1397,3 +1397,102 @@ describe('TransactionsStore.sendPaymentSilently', () => {
         );
     });
 });
+
+describe('TransactionsStore payment sequence', () => {
+    const { checkGraphSyncBeforePayment } = jest.requireMock(
+        '../utils/GraphSyncUtils'
+    );
+
+    // what checkGraphSyncBeforePayment does when the graph sync prompt
+    // holds the payment back
+    const deferToGraphSyncPrompt = () =>
+        checkGraphSyncBeforePayment.mockImplementationOnce(
+            (_settings: any, _impl: any, paymentData: any, store: any) => {
+                store.pendingPaymentData = paymentData;
+                store.showGraphSyncPrompt = true;
+                return false;
+            }
+        );
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        payLightningInvoice.mockReset();
+        payLightningInvoice.mockReturnValue(deferred().promise);
+        checkGraphSyncBeforePayment.mockReset();
+        checkGraphSyncBeforePayment.mockReturnValue(true);
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('returns the sequence of a dispatched payment', () => {
+        const store = newStore();
+
+        const seq = store.sendPayment({ payment_request: 'lnbc1' });
+
+        expect(typeof seq).toBe('number');
+        expect(store.lastPaymentSequence).toBe(seq);
+    });
+
+    it('returns null for a payment dropped while another is in flight', () => {
+        const store = newStore();
+        const first = store.sendPayment({ payment_request: 'lnbc1' });
+
+        const second = store.sendPayment({ payment_request: 'lnbc2' });
+
+        expect(second).toBeNull();
+        expect(store.lastPaymentSequence).toBe(first);
+        expect(payLightningInvoice).toHaveBeenCalledTimes(1);
+    });
+
+    it('dispatches a payment held by the graph sync prompt under the sequence it reserved', () => {
+        const store = newStore();
+        deferToGraphSyncPrompt();
+
+        const seq = store.sendPayment({ payment_request: 'lnbc1' });
+        expect(typeof seq).toBe('number');
+        expect(payLightningInvoice).not.toHaveBeenCalled();
+
+        store.proceedWithPayment();
+
+        expect(payLightningInvoice).toHaveBeenCalledTimes(1);
+        expect(store.lastPaymentSequence).toBe(seq);
+        expect(store.pendingPaymentData).toBeNull();
+    });
+
+    it('does not give an abandoned held payment sequence to the next payment', () => {
+        const store = newStore();
+        deferToGraphSyncPrompt();
+        const abandoned = store.sendPayment({ payment_request: 'lnbc1' });
+
+        // the prompt is dismissed without sending
+        store.hideGraphSyncPrompt();
+        expect(store.pendingPaymentData).toBeNull();
+        store.proceedWithPayment();
+        expect(payLightningInvoice).not.toHaveBeenCalled();
+
+        const next = store.sendPayment({ payment_request: 'lnbc2' });
+
+        expect(typeof abandoned).toBe('number');
+        expect(next).not.toBe(abandoned);
+        expect(store.lastPaymentSequence).toBe(next);
+    });
+
+    it('does not dispatch a held payment that a later held payment replaced', () => {
+        const store = newStore();
+        deferToGraphSyncPrompt();
+        const replaced = store.sendPayment({ payment_request: 'lnbc1' });
+        deferToGraphSyncPrompt();
+        const held = store.sendPayment({ payment_request: 'lnbc2' });
+
+        store.proceedWithPayment();
+
+        expect(held).not.toBe(replaced);
+        expect(store.lastPaymentSequence).toBe(held);
+        expect(payLightningInvoice).toHaveBeenCalledTimes(1);
+        expect(payLightningInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ payment_request: 'lnbc2' })
+        );
+    });
+});

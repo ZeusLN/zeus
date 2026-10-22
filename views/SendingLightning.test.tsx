@@ -303,9 +303,14 @@ describe('SendingLightning recipient', () => {
 describe('SendingLightning donation', () => {
     beforeEach(() => jest.clearAllMocks());
 
-    const params = { enableDonations: true, donationAmount: '25' };
+    // the screen for payment 1
+    const params = {
+        enableDonations: true,
+        donationAmount: '25',
+        paymentSequence: 1
+    };
 
-    const donationView = (TransactionsStore: any) => (
+    const donationView = (TransactionsStore: any, routeParams = params) => (
         <SendingLightning
             {...({
                 navigation: {
@@ -316,7 +321,7 @@ describe('SendingLightning donation', () => {
                 route: {
                     key: 'SendingLightning',
                     name: 'SendingLightning',
-                    params
+                    params: routeParams
                 },
                 TransactionsStore,
                 BalanceStore: { getCombinedBalance: jest.fn() },
@@ -415,11 +420,14 @@ describe('SendingLightning donation', () => {
         // the next payment is dispatched before its screen opens
         TransactionsStore.status = null;
         TransactionsStore.lastPaymentSequence = 2;
-        const later = await render(donationView(TransactionsStore));
+        const laterParams = { ...params, paymentSequence: 2 };
+        const later = await render(
+            donationView(TransactionsStore, laterParams)
+        );
         payEarlierDonation({ status: 'SUCCEEDED', num_satoshis: 25 });
         await new Promise((r) => setImmediate(r));
         TransactionsStore.status = 'SUCCEEDED';
-        await later.rerender(donationView(TransactionsStore));
+        await later.rerender(donationView(TransactionsStore, laterParams));
 
         await waitFor(() =>
             expect(TransactionsStore.sendPaymentSilently).toHaveBeenCalledTimes(
@@ -557,7 +565,11 @@ describe('SendingLightning refreshes when the payment resolves', () => {
             route: {
                 key: 'SendingLightning',
                 name: 'SendingLightning',
-                params: { enableDonations: true, donationAmount: '25' }
+                params: {
+                    enableDonations: true,
+                    donationAmount: '25',
+                    paymentSequence: 1
+                }
             },
             TransactionsStore,
             BalanceStore: { getCombinedBalance: jest.fn() },
@@ -675,6 +687,7 @@ describe('SendingLightning donation payment sequence', () => {
     // renders the screen PaymentRequest opens for a payment with a
     // donation, then lets the store change and re-renders
     const renderDonatingView = async (
+        paymentSequence: number | null,
         transactionsState: Record<string, any>
     ) => {
         const TransactionsStore: Record<string, any> = {
@@ -701,7 +714,11 @@ describe('SendingLightning donation payment sequence', () => {
             route: {
                 key: 'SendingLightning',
                 name: 'SendingLightning',
-                params: { enableDonations: true, donationAmount: '5000' }
+                params: {
+                    enableDonations: true,
+                    donationAmount: '5000',
+                    paymentSequence
+                }
             },
             TransactionsStore,
             BalanceStore: { getCombinedBalance: jest.fn() },
@@ -725,7 +742,9 @@ describe('SendingLightning donation payment sequence', () => {
     });
 
     it('donates when its own payment succeeds', async () => {
-        const update = await renderDonatingView({ lastPaymentSequence: 1 });
+        const update = await renderDonatingView(1, {
+            lastPaymentSequence: 1
+        });
 
         await update({ loading: false, status: 'SUCCEEDED' });
 
@@ -733,7 +752,8 @@ describe('SendingLightning donation payment sequence', () => {
     });
 
     it('donates when its payment is sent after the graph sync prompt', async () => {
-        const update = await renderDonatingView({
+        // the store reserved sequence 2 for the held payment
+        const update = await renderDonatingView(2, {
             lastPaymentSequence: 1,
             pendingPaymentData: { payment_request: 'lnbc1' }
         });
@@ -749,7 +769,9 @@ describe('SendingLightning donation payment sequence', () => {
     });
 
     it('does not donate for its failed payment when a later one succeeds', async () => {
-        const update = await renderDonatingView({ lastPaymentSequence: 1 });
+        const update = await renderDonatingView(1, {
+            lastPaymentSequence: 1
+        });
         await update({
             loading: false,
             error: true,
@@ -764,6 +786,36 @@ describe('SendingLightning donation payment sequence', () => {
             loading: false,
             status: 'SUCCEEDED'
         });
+
+        expect(loadDonationLnurl).not.toHaveBeenCalled();
+    });
+
+    it('does not donate when its held payment is abandoned and a later one succeeds', async () => {
+        const update = await renderDonatingView(2, {
+            lastPaymentSequence: 1,
+            pendingPaymentData: { payment_request: 'lnbc1' }
+        });
+        // the graph sync prompt is dismissed without sending
+        await update({ pendingPaymentData: null });
+
+        // another screen's payment is dispatched under its own sequence
+        await update({
+            lastPaymentSequence: 3,
+            loading: false,
+            status: 'SUCCEEDED'
+        });
+
+        expect(loadDonationLnurl).not.toHaveBeenCalled();
+    });
+
+    it('does not donate when its payment was dropped by the in-flight guard', async () => {
+        // payment 1 was in flight, so sendPayment dropped this screen's
+        // request and returned no sequence
+        const update = await renderDonatingView(null, {
+            lastPaymentSequence: 1
+        });
+
+        await update({ loading: false, status: 'SUCCEEDED' });
 
         expect(loadDonationLnurl).not.toHaveBeenCalled();
     });
