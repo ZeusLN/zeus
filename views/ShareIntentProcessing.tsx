@@ -11,6 +11,7 @@ import Screen from '../components/Screen';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import handleAnything from '../utils/handleAnything';
+import { SENDING_SCREENS } from '../utils/LinkingUtils';
 import { ShareIntentPayload } from '../utils/ShareIntentProcessor';
 
 import { settingsStore } from '../stores/Stores';
@@ -178,7 +179,29 @@ class ShareIntentProcessing extends React.Component<
                         console.warn('Failed to clear shared intent:', error);
                     }
 
-                    navigation.replace(route, params);
+                    // Same rule as LinkingUtils.handleDeepLink. handleAnything
+                    // has put the shared invoice in InvoicesStore, so a
+                    // PaymentRequest already open shows it with the
+                    // payment-request-changed warning. Replacing this screen
+                    // with a second PaymentRequest would review the shared
+                    // invoice as if the user had opened it, so pop back to
+                    // the open one, unless a payment status screen sits
+                    // above it.
+                    const routes = navigation.getState()?.routes ?? [];
+                    const openRequest = routes
+                        .map((r) => r.name)
+                        .lastIndexOf('PaymentRequest');
+                    if (
+                        route === 'PaymentRequest' &&
+                        openRequest !== -1 &&
+                        !routes
+                            .slice(openRequest + 1)
+                            .some((r) => SENDING_SCREENS.includes(r.name))
+                    ) {
+                        navigation.popTo(route, params);
+                    } else {
+                        navigation.replace(route, params);
+                    }
                 } else {
                     try {
                         await MobileTools.clearSharedIntent();
