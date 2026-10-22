@@ -157,6 +157,13 @@ export default class LSPStore {
             this.customMessagesSubscriber = undefined;
             this.closeSubscription(channelAcceptor);
             this.closeSubscription(customMessagesSubscriber);
+            // lease data and fetch errors belong to the previous node, and a
+            // reply still in flight must not land on the next one
+            this.getExtendableChannelsNativeRequestId++;
+            this.getExtendableChannelsResponseResolver?.();
+            this.getExtendableChannelsId = '';
+            this.getExtendableChannelsData = [];
+            this.getExtendableChannelsError = false;
         }
         this.error = false;
         this.error_msg = '';

@@ -362,6 +362,71 @@ describe('LSPStore.getExtendableChannels over custom messages', () => {
     });
 });
 
+describe('LSPStore.reset and LSPS7 lease data', () => {
+    const channel = {
+        short_channel_id: '800000x1x0',
+        max_channel_extension_expiry_blocks: 0,
+        expiration_block: 852560
+    };
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        jest.clearAllMocks();
+        jest.mocked(BackendUtils.sendCustomMessage).mockResolvedValue({});
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+        jest.mocked(console.error).mockRestore();
+    });
+
+    it('clears lease data and the fetch error', () => {
+        const store = makeStore();
+        store.getExtendableChannelsData = [channel];
+        store.getExtendableChannelsError = true;
+
+        store.reset();
+
+        expect(store.getExtendableChannelsData).toEqual([]);
+        expect(store.getExtendableChannelsError).toBe(false);
+    });
+
+    it('keeps lease data when only the errors are reset', () => {
+        const store = makeStore();
+        store.getExtendableChannelsData = [channel];
+        store.getExtendableChannelsError = true;
+
+        store.reset(true);
+
+        expect(store.getExtendableChannelsData).toEqual([channel]);
+        expect(store.getExtendableChannelsError).toBe(true);
+    });
+
+    it('drops a probe reply and timeout that land after reset', async () => {
+        const store = makeStore();
+        const probe = store.getExtendableChannels();
+        const staleId = store.getExtendableChannelsId;
+
+        store.reset();
+        await probe;
+        store.handleCustomMessages({
+            peer: Buffer.from('aa', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: staleId,
+                    result: { extendable_channels: [channel] }
+                })
+            ).toString('base64')
+        });
+        await jest.advanceTimersByTimeAsync(TIMEOUT_MS);
+
+        expect(store.getExtendableChannelsData).toEqual([]);
+        expect(store.getExtendableChannelsError).toBe(false);
+    });
+});
+
 describe('LSPStore.getExtendableChannels on LDK Node', () => {
     const nativeChannel = {
         shortChannelId: '800000x1x0',
@@ -432,6 +497,22 @@ describe('LSPStore.getExtendableChannels on LDK Node', () => {
         expect(store.getExtendableChannelsError).toBe(false);
         expect(store.error).toBe(false);
         expect(store.getExtendableChannelsData).toEqual([normalized]);
+    });
+
+    it('drops a native result that lands after reset', async () => {
+        const older = deferred<any>();
+        jest.mocked(
+            BackendUtils.lsps7GetExtendableChannels
+        ).mockReturnValueOnce(older.promise);
+        const store = makeStore('ldk-node');
+
+        const call = store.getExtendableChannels();
+        store.reset();
+        older.reject(new Error('Liquidity request timed out'));
+        await call;
+
+        expect(store.getExtendableChannelsError).toBe(false);
+        expect(store.error).toBe(false);
     });
 
     it('drops a success from an older call after a newer failure', async () => {
