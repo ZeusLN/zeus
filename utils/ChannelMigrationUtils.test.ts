@@ -75,7 +75,8 @@ jest.mock('react-native', () => ({
 import {
     graphDataExists,
     validateChannelBackupFile,
-    importChannelDb
+    importChannelDb,
+    restoreChannelBackupFromOlympus
 } from './ChannelMigrationUtils';
 
 describe('ChannelMigrationUtils', () => {
@@ -84,6 +85,7 @@ describe('ChannelMigrationUtils', () => {
         mockExists.mockResolvedValue(true);
         mockStat.mockResolvedValue({ size: 1024 });
         mockReadDir.mockResolvedValue([]);
+        mockUnlink.mockResolvedValue(undefined);
     });
 
     describe('graphDataExists', () => {
@@ -328,6 +330,28 @@ describe('ChannelMigrationUtils', () => {
             }
         );
 
+        it('fails when an existing file cannot be removed', async () => {
+            mockReadDir.mockResolvedValue([
+                { path: '/graph/mainnet/channel.db', isFile: () => true }
+            ]);
+            mockUnlink.mockImplementation(async (path: string) => {
+                if (path === '/graph/mainnet/channel.db') {
+                    throw new Error('unlink failed');
+                }
+            });
+
+            await expect(
+                importChannelDb(
+                    '/path/to/backup.zip',
+                    'backup.zip',
+                    'lnd',
+                    false,
+                    false
+                )
+            ).rejects.toThrow('unlink failed');
+            expect(mockUnzipFile).not.toHaveBeenCalled();
+        });
+
         it.each([false, true])(
             'rejects a backup that unpacks to no channel database (isSqlite %p)',
             async (isSqlite) => {
@@ -348,6 +372,54 @@ describe('ChannelMigrationUtils', () => {
                 );
             }
         );
+    });
+
+    describe('restoreChannelBackupFromOlympus', () => {
+        const { Alert } = require('react-native');
+        const ReactNativeBlobUtil = require('react-native-blob-util');
+
+        beforeEach(() => {
+            ReactNativeBlobUtil.fetch.mockResolvedValue({
+                info: () => ({ status: 200 }),
+                json: () => ({
+                    success: true,
+                    verification: 'challenge',
+                    last_backup_at: 1700000000000
+                }),
+                text: async () => 'encrypted'
+            });
+            // Confirm the restore prompt
+            Alert.alert.mockImplementation(
+                (_title: string, _message: string, buttons: any[]) =>
+                    buttons[buttons.length - 1].onPress()
+            );
+        });
+
+        afterEach(() => {
+            Alert.alert.mockReset();
+        });
+
+        it('fails when an existing file cannot be removed', async () => {
+            mockReadDir.mockResolvedValue([
+                { path: '/graph/mainnet/channel.db', isFile: () => true }
+            ]);
+            mockUnlink.mockImplementation(async (path: string) => {
+                if (path === '/graph/mainnet/channel.db') {
+                    throw new Error('unlink failed');
+                }
+            });
+
+            await expect(
+                restoreChannelBackupFromOlympus(
+                    'lnd',
+                    false,
+                    'pubkey',
+                    'seed',
+                    false
+                )
+            ).rejects.toThrow('unlink failed');
+            expect(mockUnzipFile).not.toHaveBeenCalled();
+        });
     });
 
     describe('encryptFile / decryptFile integration', () => {
