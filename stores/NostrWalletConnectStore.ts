@@ -3139,11 +3139,10 @@ export default class NostrWalletConnectStore {
         );
 
         for (const activity of pending) {
-            const payment = payments.find(
-                (p) =>
-                    p.getPaymentRequest === activity.id ||
-                    (!!activity.paymentHash &&
-                        p.paymentHash === activity.paymentHash)
+            const payment = NostrConnectUtils.findPaymentForInvoice(
+                activity.id,
+                payments,
+                activity.paymentHash
             );
             if (!payment) {
                 if (this.abandonStaleUnresolvedPayInvoiceHold(activity)) {
@@ -3210,14 +3209,16 @@ export default class NostrWalletConnectStore {
             paymentStatus: activity.payment?.status
         };
 
-        if (NostrConnectUtils.isListedPaymentFailed(raw)) {
+        // In-transit first: a payment the node still lists as in flight
+        // keeps its budget hold
+        if (NostrConnectUtils.isListedPaymentInTransit(raw)) {
+            activity.status = 'pending';
+            activity.error = undefined;
+        } else if (NostrConnectUtils.isListedPaymentFailed(raw)) {
             activity.status = 'failed';
             activity.error = NostrConnectUtils.paymentFailureReasonLocaleKey(
                 listed.failure_reason
             );
-        } else if (NostrConnectUtils.isListedPaymentInTransit(raw)) {
-            activity.status = 'pending';
-            activity.error = undefined;
         } else if (!raw.isIncomplete) {
             activity.status = 'success';
             activity.error = undefined;
