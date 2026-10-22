@@ -205,6 +205,55 @@ describe('SwapStore.createSubmarineSwap for an invoice that already has a swap',
         expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
+    it('makes one swap when two requests for an invoice overlap', async () => {
+        hostWithoutTheCheck();
+        const store = newStore();
+        const navigation = newNavigation();
+
+        await Promise.all([
+            store.createSubmarineSwap(INVOICE, navigation),
+            store.createSubmarineSwap(INVOICE, navigation)
+        ]);
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(storedIds()).toEqual(['swap-1']);
+        expect(navigation.navigate).toHaveBeenCalledTimes(1);
+        expect(store.apiError).toBe('');
+        expect(store.loading).toBe(false);
+    });
+
+    it('makes one swap when overlapping requests use invoices with one payment hash', async () => {
+        hostWithoutTheCheck();
+        const store = newStore();
+        const navigation = newNavigation();
+
+        await Promise.all([
+            store.createSubmarineSwap(INVOICE, navigation),
+            store.createSubmarineSwap(INVOICE_SAME_HASH, navigation)
+        ]);
+
+        expect(fetchMock).toHaveBeenCalledTimes(1);
+        expect(storedIds()).toEqual(['swap-1']);
+        expect(navigation.navigate).toHaveBeenCalledTimes(1);
+        expect(store.apiError).toBe('');
+    });
+
+    it('takes a new request for an invoice once a request for it has failed', async () => {
+        fetchMock.mockRejectedValueOnce(new Error('host unreachable'));
+        const store = newStore();
+
+        await store.createSubmarineSwap(INVOICE, newNavigation());
+        expect(store.apiError).toBe('host unreachable');
+
+        hostWithoutTheCheck();
+        const navigation = newNavigation();
+        await store.createSubmarineSwap(INVOICE, navigation);
+
+        expect(fetchMock).toHaveBeenCalledTimes(2);
+        expect(storedIds()).toEqual(['swap-2']);
+        expect(navigation.navigate).toHaveBeenCalledTimes(1);
+    });
+
     it('makes the first swap for an invoice', async () => {
         hostWithoutTheCheck();
         const store = newStore();

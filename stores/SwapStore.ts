@@ -541,25 +541,39 @@ export default class SwapStore {
      * broadcast, not when it confirms.
      */
     private isInvoiceInUse = (swaps: any[], invoice: string): boolean => {
-        const paymentHashOf = (paymentRequest: string) => {
-            try {
-                return Bolt11Utils.decode(paymentRequest).payment_hash;
-            } catch {
-                return undefined;
-            }
-        };
-        const paymentHash = paymentHashOf(invoice);
+        const paymentHash = this.paymentHashOf(invoice);
         // an invoice we cannot decode is left to the host to refuse
         if (!paymentHash) return false;
         return swaps.some(
             (swap: any) =>
                 typeof swap?.invoice === 'string' &&
-                paymentHashOf(swap.invoice) === paymentHash
+                this.paymentHashOf(swap.invoice) === paymentHash
         );
     };
 
+    private paymentHashOf = (paymentRequest: string): string | undefined => {
+        try {
+            return Bolt11Utils.decode(paymentRequest).payment_hash;
+        } catch {
+            return undefined;
+        }
+    };
+
+    // Payment hashes of submarine swaps being created. A swap is only
+    // stored after the host has made it, so without this two overlapping
+    // requests for one invoice both pass isInvoiceInUse.
+    private submarineSwapsInFlight = new Set<string>();
+
     @action
     public createSubmarineSwap = async (invoice: any, navigation: any) => {
+        // reserved before the first await, released in finally
+        const paymentHash = this.paymentHashOf(invoice);
+        // the same user action as the request in flight, which reports
+        // the outcome, so return without touching apiError or loading
+        if (paymentHash && this.submarineSwapsInFlight.has(paymentHash)) {
+            return;
+        }
+
         runInAction(() => {
             this.loading = true;
         });
@@ -570,6 +584,7 @@ export default class SwapStore {
         const fees = this.subInfo?.fees;
         const pairHash = this.subInfo?.hash;
         const apiUrl = UrlUtils.getMempoolApiUrl(nodeInfo);
+        if (paymentHash) this.submarineSwapsInFlight.add(paymentHash);
         try {
             // before a refund key is used and the host sees the invoice
             const storedSwaps = await Storage.getItem(SWAPS_KEY);
@@ -757,6 +772,8 @@ export default class SwapStore {
                 this.loading = false;
             });
             console.error('Error creating Submarine Swap:', error);
+        } finally {
+            if (paymentHash) this.submarineSwapsInFlight.delete(paymentHash);
         }
     };
 
