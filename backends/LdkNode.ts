@@ -5,7 +5,7 @@
  */
 
 import BigNumber from 'bignumber.js';
-import Bolt11Utils from '../utils/Bolt11Utils';
+import Bolt11Utils, { DecodedBolt11 } from '../utils/Bolt11Utils';
 import { sha256Bytes } from '../utils/HashingUtils';
 
 import libraryVersions from '../fetch-libraries-versions.json';
@@ -37,6 +37,15 @@ import { settingsStore } from '../stores/Stores';
 
 // Event callback type
 type EventCallback = (event: LdkNodeEvent) => void;
+
+// The network part of a BOLT 11 prefix ('ln' + 'bc', 'tb', ...) by ldkNetwork
+const BOLT11_NETWORK_PREFIXES: { [network: string]: string } = {
+    mainnet: 'bc',
+    testnet: 'tb',
+    signet: 'tbs',
+    mutinynet: 'tbs',
+    regtest: 'bcrt'
+};
 
 export default class LdkNode {
     // Event loop state
@@ -1427,12 +1436,19 @@ export default class LdkNode {
         // without the amount too, so it can never be overpaid: ldk-node pays
         // its own amount or rejects it.
         let invoiceHasNoAmount = false;
+        let decoded: DecodedBolt11 | undefined;
         try {
-            const decoded = Bolt11Utils.decode(data.payment_request);
-            invoiceHasNoAmount =
-                decoded.satoshis == null && decoded.millisatoshis == null;
+            decoded = Bolt11Utils.decode(data.payment_request);
         } catch (e) {
             // undecodable: leave the invoice for ldk-node to validate
+        }
+        if (decoded) {
+            // Not every caller decodes the invoice through this backend
+            // first. ldk-node rejects an invoice it cannot parse, but pays
+            // one for another network up to route finding.
+            this.checkInvoiceNetwork(decoded);
+            invoiceHasNoAmount =
+                decoded.satoshis == null && decoded.millisatoshis == null;
         }
 
         if (data.amt && invoiceHasNoAmount) {
@@ -1554,7 +1570,25 @@ export default class LdkNode {
      */
     decodePaymentRequest = async (urlParams?: Array<string>): Promise<any> => {
         const paymentRequest = (urlParams && urlParams[0]) || '';
-        return Bolt11Utils.decode(paymentRequest);
+        return this.decodeInvoiceForNetwork(paymentRequest);
+    };
+
+    /**
+     * Decode a BOLT 11 invoice and reject one issued for another network.
+     * ldk-node does not check the invoice's network itself, so on a mainnet
+     * wallet a testnet invoice would otherwise go on to route finding.
+     */
+    private decodeInvoiceForNetwork = (paymentRequest: string) =>
+        this.checkInvoiceNetwork(Bolt11Utils.decode(paymentRequest));
+
+    private checkInvoiceNetwork = (decoded: DecodedBolt11) => {
+        const network = (settingsStore.ldkNetwork || 'mainnet').toLowerCase();
+        // getNetworkType also falls back to mainnet for unknown values
+        const expected = BOLT11_NETWORK_PREFIXES[network] || 'bc';
+        if (decoded.network.bech32 !== expected) {
+            throw new Error(localeString('error.ldk.invoiceWrongNetwork'));
+        }
+        return decoded;
     };
 
     // ========================================================================
