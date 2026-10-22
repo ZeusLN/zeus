@@ -105,8 +105,18 @@ export default class SendingLightning extends React.Component<
     // and TransactionsStore's status is shared with later payments.
     private donationAttempted = false;
 
+    // The payment this screen shows. PaymentRequest dispatches it before
+    // navigating here, or right after if the graph sync prompt holds it.
+    // TransactionsStore's result is for the latest payment, which can be
+    // a later one sent while this screen is still mounted underneath.
+    private readonly paymentSequence: number;
+
     constructor(props: SendingLightningProps) {
         super(props);
+        const { TransactionsStore } = props;
+        this.paymentSequence =
+            TransactionsStore.lastPaymentSequence +
+            (TransactionsStore.pendingPaymentData ? 1 : 0);
         this.state = {
             storedNotes: '',
             currentPayment: null,
@@ -176,6 +186,7 @@ export default class SendingLightning extends React.Component<
         if (
             NodeInfoStore!.nodeInfo.isMainNet &&
             wasSuccessful &&
+            TransactionsStore.lastPaymentSequence === this.paymentSequence &&
             enableDonations &&
             donationAmount &&
             !this.donationAttempted
