@@ -426,6 +426,10 @@ describe('SwapStore funded submarine swaps', () => {
         );
     });
 
+    afterEach(() => {
+        jest.restoreAllMocks();
+    });
+
     const storedSwaps = () => JSON.parse(stored.swaps);
 
     it('is not funded until this wallet has paid', () => {
@@ -441,6 +445,28 @@ describe('SwapStore funded submarine swaps', () => {
         // an open SwapDetails still holds the swap without the mark
         expect(store.isSwapFunded(SWAP)).toBe(true);
         expect(store.isSwapFunded(OTHER)).toBe(false);
+    });
+
+    it.each([
+        [
+            'throws',
+            (spy: jest.SpyInstance) =>
+                spy.mockRejectedValueOnce(new Error('disk full'))
+        ],
+        [
+            'finds nothing to write',
+            (spy: jest.SpyInstance) => spy.mockResolvedValueOnce(false)
+        ]
+    ])('tries the storage write again when it %s', async (_, failOnce) => {
+        const store = buildStore();
+        const write = failOnce(jest.spyOn(store as any, 'updateStoredSwap'));
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+        await expect(store.markSwapFunded(SWAP_ID)).resolves.toBe(true);
+
+        expect(write).toHaveBeenCalledTimes(2);
+        expect(storedSwaps()[1]).toEqual({ ...SWAP, funded: true });
     });
 
     it('keeps the mark when the host goes on reporting invoice.set', async () => {
