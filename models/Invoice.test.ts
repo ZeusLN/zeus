@@ -82,6 +82,16 @@ describe('Invoice.isExpired / isExpiredNow', () => {
         expect(invoice.isExpiredNow()).toBe(false);
     });
 
+    it('is true for an old bolt11 invoice without an expiry field (BOLT 11 default of 3600 s)', () => {
+        // BOLT 11 spec example with no x field, timestamp 1496314658
+        const noExpiryField =
+            'lnbc1pvjluezsp5zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zyg3zygspp5qqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqqqsyqcyq5rqwzqfqypqdpl2pkx2ctnv5sxxmmwwd5kgetjypeh2ursdae8g6twvus8g6rfwvs8qun0dfjkxaq9qrsgq357wnc5r2ueh7ck6q93dj32dlqnls087fxdwk8qakdyafkq3yap2r09nt4ndd0unm3z9u5t48y6ucv4r5sg7lk98c77ctvjczkspk5qprc90gx';
+        const invoice = new Invoice({ payment_request: noExpiryField });
+
+        expect(invoice.originalTimeUntilExpiryInSeconds).toBe(3600);
+        expect(invoice.isExpiredNow()).toBe(true);
+    });
+
     it('is false before the expiry timestamp and true after it', () => {
         const invoice = new Invoice({ payment_request: paymentRequest });
 
