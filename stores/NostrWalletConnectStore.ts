@@ -2621,6 +2621,31 @@ export default class NostrWalletConnectStore {
             };
         }
 
+        // The node's payment list covers the whole wallet. If it already
+        // lists this invoice as settled or in flight and this connection has
+        // no successful record of paying it, the payment was made by the
+        // user or by another connection. Refuse, as the Cashu handler does,
+        // instead of adopting that payment and returning its preimage.
+        if (existing?.status !== 'success') {
+            const listed = NostrConnectUtils.findPaymentForInvoice(
+                request.invoice,
+                await this.paymentsStore.getPayments(),
+                decodedPaymentHash
+            );
+            if (
+                listed &&
+                (NostrConnectUtils.isSettledPayment(listed) ||
+                    NostrConnectUtils.isListedPaymentInTransit(listed))
+            ) {
+                return NostrConnectUtils.createNip47Error(
+                    localeString(
+                        'stores.NostrWalletConnectStore.error.invoiceAlreadyPaid'
+                    ),
+                    Nip47ErrorCode.INVALID_INVOICE
+                );
+            }
+        }
+
         if (amountSats <= 0) {
             return NostrConnectUtils.createNip47Error(
                 localeString(

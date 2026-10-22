@@ -2610,7 +2610,15 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
             fee_sat: '10',
             payment_preimage: hex64('d')
         });
-        const { store, transactionsStore } = buildHandlerStore([settled]);
+        const { store, transactionsStore, paymentsStore } = buildHandlerStore([
+            settled
+        ]);
+        // not listed before the send, settled after it
+        paymentsStore.getPayments = jest.fn(async () =>
+            transactionsStore.sendPaymentSilently.mock.calls.length > 0
+                ? [settled]
+                : []
+        );
         transactionsStore.getPaymentOutcome.mockReturnValue({
             payment_hash: paymentHash,
             payment_error: 'views.SendingLightning.paymentTimedOut',
@@ -2630,6 +2638,140 @@ describe('NostrWalletConnectStore handleLightningPayInvoice replay guard', () =>
         expect(connection.activity[0].status).toBe('success');
         expect(connection.activity[0].isBudgetDebited).toBe(true);
         expect(connection.totalSpendSats).toBe(5010);
+    });
+
+    it('refuses an invoice the node lists as paid by someone else', async () => {
+        const settled = new Payment({
+            payment_request: invoice,
+            payment_hash: paymentHash,
+            status: 'SUCCEEDED',
+            value_sat: 5000,
+            fee_sat: '10',
+            payment_preimage: hex64('d')
+        });
+        const { store, transactionsStore } = buildHandlerStore([settled]);
+        // what LND answers when asked to pay a paid invoice
+        transactionsStore.getPaymentOutcome.mockReturnValue({
+            error: true,
+            payment_error: 'invoice is already paid'
+        });
+        const connection = addConnection(store, { maxAmountSats: 100000 });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice }
+        );
+
+        expect(transactionsStore.sendPaymentSilently).not.toHaveBeenCalled();
+        expect(response.result).toBeUndefined();
+        expect(response.error?.code).toBe(Nip47ErrorCode.INVALID_INVOICE);
+        expect(JSON.stringify(response)).not.toContain(hex64('d'));
+        expect(connection.activity).toHaveLength(0);
+        expect(connection.totalSpendSats).toBe(0);
+    });
+
+    it('refuses an invoice the node lists in flight for someone else', async () => {
+        const inFlight = new Payment({
+            payment_request: invoice,
+            payment_hash: paymentHash,
+            status: 'IN_FLIGHT',
+            value_sat: 5000,
+            htlcs: [{ status: 'IN_FLIGHT' }]
+        });
+        const { store, transactionsStore } = buildHandlerStore([inFlight]);
+        const connection = addConnection(store, { maxAmountSats: 100000 });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice }
+        );
+
+        expect(transactionsStore.sendPaymentSilently).not.toHaveBeenCalled();
+        expect(response.error?.code).toBe(Nip47ErrorCode.INVALID_INVOICE);
+        expect(connection.activity).toHaveLength(0);
+        expect(connection.pendingSpendSats).toBe(0);
+    });
+
+    it('refuses after an own failed attempt when someone else paid since', async () => {
+        const settled = new Payment({
+            payment_request: invoice,
+            payment_hash: paymentHash,
+            status: 'SUCCEEDED',
+            value_sat: 5000,
+            fee_sat: '10',
+            payment_preimage: hex64('d')
+        });
+        const { store, transactionsStore } = buildHandlerStore([settled]);
+        transactionsStore.getPaymentOutcome.mockReturnValue({
+            error: true,
+            payment_error: 'invoice is already paid'
+        });
+        const connection = addConnection(store, {
+            maxAmountSats: 100000,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'failed',
+                    error: 'no route',
+                    satAmount: 5000,
+                    paymentHash,
+                    createdAt: new Date(Date.now() - 60_000)
+                }
+            ]
+        });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice }
+        );
+
+        expect(transactionsStore.sendPaymentSilently).not.toHaveBeenCalled();
+        expect(response.error?.code).toBe(Nip47ErrorCode.INVALID_INVOICE);
+        expect(JSON.stringify(response)).not.toContain(hex64('d'));
+        expect(connection.totalSpendSats).toBe(0);
+    });
+
+    it('still answers with the preimage of an invoice this connection paid', async () => {
+        const settled = new Payment({
+            payment_request: invoice,
+            payment_hash: paymentHash,
+            status: 'SUCCEEDED',
+            value_sat: 5000,
+            fee_sat: '10',
+            payment_preimage: hex64('d')
+        });
+        const { store, transactionsStore } = buildHandlerStore([settled]);
+        transactionsStore.getPaymentOutcome.mockReturnValue({
+            error: true,
+            payment_error: 'invoice is already paid'
+        });
+        const connection = addConnection(store, {
+            maxAmountSats: 100000,
+            totalSpendSats: 5010,
+            activity: [
+                {
+                    id: invoice,
+                    type: 'pay_invoice',
+                    payment_source: 'lightning',
+                    status: 'success',
+                    satAmount: 5000,
+                    fees_paid: 10,
+                    isBudgetDebited: true,
+                    paymentHash,
+                    createdAt: new Date(Date.now() - 60_000)
+                }
+            ]
+        });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice }
+        );
+
+        expect(response.error).toBeUndefined();
+        expect(response.result?.preimage).toBe(hex64('d'));
     });
 
     it("answers with its own payment's result, not the shared store's", async () => {
@@ -3012,8 +3154,11 @@ describe('NostrWalletConnectStore handleLightningPayInvoice payments refresh fai
             },
             paymentsStore: {
                 payments: [],
+                // the lookup before the send succeeds; the refresh after it
+                // fails
                 getPayments: jest
                     .fn()
+                    .mockResolvedValueOnce([])
                     .mockRejectedValue(new Error('node unreachable'))
             }
         });
@@ -3122,7 +3267,15 @@ describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices
             fee_sat: '3',
             payment_preimage: hex64('f')
         });
-        const { store, transactionsStore } = buildHandlerStore([settled]);
+        const { store, transactionsStore, paymentsStore } = buildHandlerStore([
+            settled
+        ]);
+        // not listed before the send, settled after it
+        paymentsStore.getPayments = jest.fn(async () =>
+            transactionsStore.sendPaymentSilently.mock.calls.length > 0
+                ? [settled]
+                : []
+        );
         const connection = addConnection(store, { maxAmountSats: 100000 });
 
         const response = await (store as any).handleLightningPayInvoice(
@@ -3260,7 +3413,7 @@ describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices
         expect(connection.pendingSpendSats).toBe(8000);
     });
 
-    it('debits what was paid when the invoice was already settled by the wallet', async () => {
+    it('refuses a zero-amount invoice the wallet already paid', async () => {
         mockInvoiceAmount(0);
         const alreadyPaid = new Payment({
             payment_request: invoice,
@@ -3271,25 +3424,17 @@ describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices
             payment_preimage: hex64('f')
         });
         const { store, transactionsStore } = buildHandlerStore([alreadyPaid]);
-        // the send itself failed: the invoice had been paid already
-        transactionsStore.getPaymentOutcome.mockReturnValue({
-            payment_hash: paymentHash,
-            payment_preimage: null,
-            payment_fee: 0,
-            error: true,
-            payment_error: 'invoice is already paid',
-            status: 'FAILED',
-            isIncomplete: true
-        });
         const connection = addConnection(store, { maxAmountSats: 100000 });
 
-        await (store as any).handleLightningPayInvoice(connection, {
-            invoice,
-            amount: 7_000_000
-        });
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice, amount: 7_000_000 }
+        );
 
-        expect(connection.activity[0].satAmount).toBe(3000);
-        expect(connection.totalSpendSats).toBe(3002);
+        expect(transactionsStore.sendPaymentSilently).not.toHaveBeenCalled();
+        expect(response.error?.code).toBe(Nip47ErrorCode.INVALID_INVOICE);
+        expect(connection.activity).toHaveLength(0);
+        expect(connection.totalSpendSats).toBe(0);
     });
 });
 
