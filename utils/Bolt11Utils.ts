@@ -283,9 +283,11 @@ class Bolt11Utils {
             throw new Error('No valid payment hash found');
         }
 
-        if (result.expiry != null) {
-            result.timeExpireDate = timestamp + result.expiry;
+        // BOLT 11: an invoice without an expiry field expires after 3600 s
+        if (result.expiry == null) {
+            result.expiry = 3600;
         }
+        result.timeExpireDate = timestamp + result.expiry;
 
         // Defer the signature-recovery cost: callers reading only timestamp /
         // description / expiry / payment_hash (the Activity list path) should
