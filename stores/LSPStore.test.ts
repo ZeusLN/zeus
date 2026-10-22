@@ -1744,3 +1744,69 @@ describe('LSPStore get_extendable_channels response', () => {
         ).toEqual([extendableChannel]);
     });
 });
+
+describe('LSPStore.updateOrderInStorage', () => {
+    const Storage = require('../storage').default;
+    const storedOrder = {
+        order: {
+            result: {
+                order_id: 'order-1',
+                order_state: 'CREATED',
+                lsp_balance_sat: '1000000'
+            }
+        },
+        clientPubkey: '02'.repeat(33)
+    };
+    const flush = () => new Promise((resolve) => setImmediate(resolve));
+
+    beforeEach(() => {
+        jest.mocked(Storage.getItem).mockReset();
+        jest.mocked(Storage.setItem).mockReset();
+        jest.mocked(Storage.getItem).mockResolvedValue(
+            JSON.stringify([JSON.stringify(storedOrder)])
+        );
+    });
+
+    const storedOrders = () =>
+        jest
+            .mocked(Storage.setItem)
+            .mock.calls.map(([, value]: any) =>
+                value.map((item: string) => JSON.parse(item))
+            );
+
+    it('replaces the stored order with a well-formed reply', async () => {
+        const reply = {
+            jsonrpc: '2.0',
+            id: 'req-1',
+            result: {
+                order_id: 'order-1',
+                order_state: 'FAILED',
+                lsp_balance_sat: '1000000'
+            }
+        };
+
+        makeStore().updateOrderInStorage(reply);
+        await flush();
+
+        expect(storedOrders()).toEqual([[{ ...storedOrder, order: reply }]]);
+    });
+
+    it('keeps the stored order when the reply is malformed', async () => {
+        const store = makeStore();
+        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+
+        store.updateOrderInStorage({
+            jsonrpc: '2.0',
+            id: 'req-1',
+            result: {
+                order_id: 'order-1',
+                order_state: 'FAILED',
+                lsp_balance_sat: { toString: 0 }
+            }
+        });
+        await flush();
+
+        expect(Storage.setItem).not.toHaveBeenCalled();
+        warn.mockRestore();
+    });
+});
