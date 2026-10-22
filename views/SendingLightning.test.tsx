@@ -340,6 +340,7 @@ describe('SendingLightning donation', () => {
             loading: false,
             error: false,
             status: null,
+            lastPaymentSequence: 1,
             sendPaymentSilently: jest
                 .fn()
                 .mockResolvedValue({ status: 'FAILED' })
@@ -368,6 +369,7 @@ describe('SendingLightning donation', () => {
             loading: false,
             error: false,
             status: null,
+            lastPaymentSequence: 1,
             sendPaymentSilently: jest.fn()
         };
 
@@ -397,6 +399,7 @@ describe('SendingLightning donation', () => {
             loading: false,
             error: false,
             status: null,
+            lastPaymentSequence: 1,
             sendPaymentSilently: jest
                 .fn()
                 .mockImplementationOnce(
@@ -414,7 +417,9 @@ describe('SendingLightning donation', () => {
             )
         );
 
+        // the next payment is dispatched before its screen opens
         TransactionsStore.status = null;
+        TransactionsStore.lastPaymentSequence = 2;
         const later = await render(donationView(TransactionsStore));
         payEarlierDonation({ status: 'SUCCEEDED', num_satoshis: 25 });
         await new Promise((r) => setImmediate(r));
@@ -439,6 +444,7 @@ describe('SendingLightning donation', () => {
             loading: false,
             error: false,
             status: null,
+            lastPaymentSequence: 1,
             sendPaymentSilently
         };
         const { rerender } = await render(
@@ -596,6 +602,7 @@ describe('SendingLightning refreshes when the payment resolves', () => {
             loading: true,
             error: false,
             status: null,
+            lastPaymentSequence: 1,
             sendPaymentSilently: jest.fn()
         };
         const props: any = {
@@ -718,5 +725,103 @@ describe('SendingLightning payment lookup after success', () => {
 
     it('does not match an unsettled payment on an empty preimage', async () => {
         expect(await amountShownFor('')).toBeUndefined();
+    });
+});
+
+describe('SendingLightning donation payment sequence', () => {
+    // renders the screen PaymentRequest opens for a payment with a
+    // donation, then lets the store change and re-renders
+    const renderDonatingView = async (
+        transactionsState: Record<string, any>
+    ) => {
+        const TransactionsStore: Record<string, any> = {
+            loading: true,
+            error: false,
+            error_msg: null,
+            payment_hash: null,
+            payment_preimage: null,
+            payment_fee: null,
+            payment_error: null,
+            noteKey: null,
+            paymentDuration: null,
+            status: null,
+            pendingPaymentData: null,
+            sendPaymentSilently: jest.fn(),
+            ...transactionsState
+        };
+        const props: any = {
+            navigation: {
+                goBack: jest.fn(),
+                popTo: jest.fn(),
+                addListener: jest.fn(() => jest.fn())
+            },
+            route: {
+                key: 'SendingLightning',
+                name: 'SendingLightning',
+                params: { enableDonations: true, donationAmount: '5000' }
+            },
+            TransactionsStore,
+            BalanceStore: { getCombinedBalance: jest.fn() },
+            ChannelsStore: { getChannels: jest.fn() },
+            PaymentsStore: { getPayments: jest.fn(async () => []) },
+            ContactStore: { contacts: [] },
+            LnurlPayStore: {},
+            NodeInfoStore: { nodeInfo: { isMainNet: true } }
+        };
+        await render(<SendingLightning {...props} />);
+        return async (changes: Record<string, any>) => {
+            Object.assign(TransactionsStore, changes);
+            await screen.rerender(<SendingLightning {...props} />);
+        };
+    };
+
+    beforeEach(() => {
+        jest.mocked(loadDonationLnurl).mockReset();
+        // stop at fetching the donation invoice
+        jest.mocked(loadDonationLnurl).mockReturnValue(new Promise(() => {}));
+    });
+
+    it('donates when its own payment succeeds', async () => {
+        const update = await renderDonatingView({ lastPaymentSequence: 1 });
+
+        await update({ loading: false, status: 'SUCCEEDED' });
+
+        expect(loadDonationLnurl).toHaveBeenCalledWith('5000');
+    });
+
+    it('donates when its payment is sent after the graph sync prompt', async () => {
+        const update = await renderDonatingView({
+            lastPaymentSequence: 1,
+            pendingPaymentData: { payment_request: 'lnbc1' }
+        });
+
+        await update({
+            lastPaymentSequence: 2,
+            pendingPaymentData: null,
+            loading: false,
+            status: 'SUCCEEDED'
+        });
+
+        expect(loadDonationLnurl).toHaveBeenCalledWith('5000');
+    });
+
+    it('does not donate for its failed payment when a later one succeeds', async () => {
+        const update = await renderDonatingView({ lastPaymentSequence: 1 });
+        await update({
+            loading: false,
+            error: true,
+            error_msg: 'FAILURE_REASON_INCORRECT_PAYMENT_DETAILS'
+        });
+
+        // a new payment request opened over this screen is paid
+        await update({
+            lastPaymentSequence: 2,
+            error: false,
+            error_msg: null,
+            loading: false,
+            status: 'SUCCEEDED'
+        });
+
+        expect(loadDonationLnurl).not.toHaveBeenCalled();
     });
 });

@@ -161,6 +161,11 @@ export default class TransactionsStore {
     // backstop, the tracking ceiling or reset()) and is dropped. reset()
     // sets it to 0, which no payment has.
     private dispatchedPaymentSequence = 0;
+    // lets a send screen tell this store's result apart from its own
+    // payment's, by comparing with the id sendPayment returned for it
+    public get lastPaymentSequence(): number {
+        return this.dispatchedPaymentSequence;
+    }
     // sequence of the payment that set paymentInFlight (null when none);
     // completion callbacks and the backstop timer only clear the flag on
     // behalf of that payment, so overlapping payments (e.g. one that
