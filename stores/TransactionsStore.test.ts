@@ -1353,6 +1353,23 @@ describe('TransactionsStore payment preimage check', () => {
         expect(store.payment_preimage).toBe(PREIMAGE);
     });
 
+    it('does not check the preimage of an AMP payment', async () => {
+        // each AMP shard has its own preimage, so none hashes to the
+        // invoice's payment hash
+        payLightningInvoice.mockResolvedValue({
+            status: 'SUCCEEDED',
+            payment_hash: HASH,
+            payment_preimage: OTHER_PREIMAGE
+        });
+
+        const store = newStore('lnd');
+        store.sendPayment({ payment_request: 'lnbc1fake', amp: true });
+        await flushPromises();
+
+        expect(store.error).toBe(false);
+        expect(store.status).toBe('SUCCEEDED');
+    });
+
     it('checks a keysend preimage against the hash of the one it sent', async () => {
         payLightningInvoice.mockResolvedValue({
             status: 'SUCCEEDED',
