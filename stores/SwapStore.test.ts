@@ -23,7 +23,7 @@ jest.mock('../storage', () => ({
     default: { getItem: jest.fn(), setItem: jest.fn(), removeItem: jest.fn() }
 }));
 jest.mock('../utils/LocaleUtils');
-jest.mock('../utils/BackendUtils', () => ({}));
+jest.mock('../utils/BackendUtils', () => ({ lookupInvoice: jest.fn() }));
 jest.mock('../utils/ThemeUtils', () => ({ themeColor: () => '#000' }));
 // the real UrlUtils imports the whole store graph via Stores
 jest.mock('../utils/UrlUtils', () => ({
@@ -74,9 +74,13 @@ jest.mock('./SettingsStore', () => ({
     ]
 }));
 
+import { createHash } from 'crypto';
 import { observable, runInAction } from 'mobx';
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import { crypto } from 'bitcoinjs-lib';
 import Storage from '../storage';
+import BackendUtils from '../utils/BackendUtils';
+import { SWAPS_KEY, REVERSE_SWAPS_KEY } from '../utils/SwapUtils';
 import SwapStore from './SwapStore';
 import { SwapState, SwapType } from '../models/Swap';
 
@@ -212,6 +216,183 @@ describe('SwapStore.getLockupTransaction', () => {
                 'https://host.example/v2'
             )
         ).resolves.toEqual(LOCKUP);
+    });
+});
+
+// regtest invoice whose payment hash is SWAP_INVOICE_HASH
+const SWAP_INVOICE =
+    'lnbcrt1230n1pj429x7pp57t97q4awqj3f529snr0pa6senk83sq5pp760qf5a4jzvd7xgwcksdqqcqzzsxqrrsssp57eqtv7vxr46arupna3w4ct0lkf2mqmz9wt044cwkks0rwlnhfr5s9qyyssqragwpwav7nfwv2xyuuamxxj4pnnpzv2hlw7j473repd3sq7st698ta9kmzmygt0w7tmncl56a6mnma0w7e5dlpqd0wy6x3v35rssldspjhh8p0';
+const SWAP_INVOICE_HASH =
+    'f2cbe057ae04a29a28b098de1eea199d8f1802810fb4f0269dac84c6f8c8762d';
+const HOST = 'https://host.example/v2';
+
+const lookupInvoice = BackendUtils.lookupInvoice as jest.Mock;
+const blobFetch = ReactNativeBlobUtil.fetch as jest.Mock;
+
+const useRealSha256 = () =>
+    (crypto.sha256 as jest.Mock).mockImplementation((data: Buffer) =>
+        createHash('sha256').update(data).digest()
+    );
+
+// a preimage the host gives for the swap; none of these hash to the
+// invoice's payment hash
+const hostPreimage = (preimage?: string) =>
+    blobFetch.mockResolvedValue({ json: () => ({ preimage }) });
+
+describe('SwapStore.isSubmarineSwapInvoicePaid', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        useRealSha256();
+        lookupInvoice.mockRejectedValue(new Error('unable to locate invoice'));
+        hostPreimage(undefined);
+    });
+
+    const isPaid = () =>
+        buildStore().isSubmarineSwapInvoicePaid(SWAP_ID, SWAP_INVOICE, HOST);
+
+    it('is true when the node reports the invoice paid', async () => {
+        lookupInvoice.mockResolvedValue({ state: 'SETTLED', settled: true });
+
+        await expect(isPaid()).resolves.toBe(true);
+        expect(lookupInvoice).toHaveBeenCalledWith({
+            r_hash: SWAP_INVOICE_HASH
+        });
+        expect(blobFetch).not.toHaveBeenCalled();
+    });
+
+    it("is true when the host's preimage hashes to the payment hash", async () => {
+        // stand in for SHA256 so this preimage hashes to the invoice's
+        // payment hash
+        const preimage = '11'.repeat(32);
+        (crypto.sha256 as jest.Mock).mockImplementation((data: Buffer) =>
+            data.toString('hex') === preimage
+                ? Buffer.from(SWAP_INVOICE_HASH, 'hex')
+                : createHash('sha256').update(data).digest()
+        );
+        hostPreimage(preimage);
+
+        await expect(isPaid()).resolves.toBe(true);
+        expect(blobFetch.mock.calls[0].slice(0, 2)).toEqual([
+            'GET',
+            `${HOST}/swap/submarine/${SWAP_ID}/preimage`
+        ]);
+    });
+
+    it('is false while the node holds the invoice unpaid and the host has no preimage', async () => {
+        lookupInvoice.mockResolvedValue({ state: 'OPEN', settled: false });
+
+        await expect(isPaid()).resolves.toBe(false);
+    });
+
+    it('is false for a preimage of another payment hash', async () => {
+        hostPreimage('22'.repeat(32));
+
+        await expect(isPaid()).resolves.toBe(false);
+    });
+
+    it('is false for a malformed preimage', async () => {
+        hostPreimage('not hex');
+
+        await expect(isPaid()).resolves.toBe(false);
+    });
+
+    it('is false when the host cannot be reached', async () => {
+        blobFetch.mockRejectedValue(new Error('offline'));
+
+        await expect(isPaid()).resolves.toBe(false);
+    });
+
+    it('is false for an invoice that does not decode', async () => {
+        await expect(
+            buildStore().isSubmarineSwapInvoicePaid(SWAP_ID, 'lnbc-bad', HOST)
+        ).resolves.toBe(false);
+        expect(lookupInvoice).not.toHaveBeenCalled();
+    });
+});
+
+describe('SwapStore.fetchAndUpdateSwaps and transaction.claimed', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        useRealSha256();
+    });
+
+    const submarineSwap = {
+        id: SWAP_ID,
+        type: SwapType.Submarine,
+        status: SwapState.TransactionMempool,
+        invoice: SWAP_INVOICE,
+        endpoint: HOST
+    };
+
+    // Polls one stored swap; the host reports hostStatus and has no
+    // preimage to give. Returns the swap as stored afterwards.
+    const poll = async (swap: any, hostStatus: string) => {
+        const key =
+            swap.type === SwapType.Reverse ? REVERSE_SWAPS_KEY : SWAPS_KEY;
+        (Storage.getItem as jest.Mock).mockImplementation(async (k) =>
+            k === key ? JSON.stringify([swap]) : null
+        );
+        blobFetch.mockImplementation(async (_method: string, url: string) => ({
+            json: () =>
+                url.endsWith('/preimage') ? {} : { status: hostStatus }
+        }));
+
+        await buildStore().fetchAndUpdateSwaps();
+
+        const call = (Storage.setItem as jest.Mock).mock.calls.find(
+            ([k]) => k === key
+        );
+        return JSON.parse(call[1])[0];
+    };
+
+    it('records a claim once the node reports the invoice paid', async () => {
+        lookupInvoice.mockResolvedValue({ state: 'SETTLED', settled: true });
+
+        const swap = await poll(submarineSwap, SwapState.TransactionClaimed);
+
+        expect(swap.status).toBe(SwapState.TransactionClaimed);
+    });
+
+    it('keeps the stored status of a claim nothing confirms', async () => {
+        lookupInvoice.mockResolvedValue({ state: 'OPEN', settled: false });
+
+        const swap = await poll(submarineSwap, SwapState.TransactionClaimed);
+
+        expect(swap.status).toBe(SwapState.TransactionMempool);
+    });
+
+    it('keeps the stored status when the node did not issue the invoice', async () => {
+        lookupInvoice.mockRejectedValue(new Error('unable to locate invoice'));
+
+        const swap = await poll(submarineSwap, SwapState.TransactionClaimed);
+
+        expect(swap.status).toBe(SwapState.TransactionMempool);
+    });
+
+    it('records the claim of a swap without an invoice, as before', async () => {
+        const { invoice: _invoice, ...rescued } = submarineSwap;
+
+        const swap = await poll(rescued, SwapState.TransactionClaimed);
+
+        expect(swap.status).toBe(SwapState.TransactionClaimed);
+        expect(lookupInvoice).not.toHaveBeenCalled();
+    });
+
+    it('records other statuses without checking the invoice', async () => {
+        const swap = await poll(submarineSwap, SwapState.InvoiceFailedToPay);
+
+        expect(swap.status).toBe(SwapState.InvoiceFailedToPay);
+        expect(lookupInvoice).not.toHaveBeenCalled();
+    });
+
+    it('does not check the invoice of a reverse swap', async () => {
+        const swap = await poll(
+            { ...submarineSwap, type: SwapType.Reverse },
+            SwapState.TransactionClaimed
+        );
+
+        expect(swap.status).toBe(SwapState.TransactionClaimed);
+        expect(lookupInvoice).not.toHaveBeenCalled();
     });
 });
 
