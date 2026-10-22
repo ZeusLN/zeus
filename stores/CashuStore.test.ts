@@ -62,6 +62,7 @@ describe('CashuStore synchronizable seed recovery', () => {
         jest.clearAllMocks();
         Platform.OS = 'ios';
         (getRawItem as jest.Mock).mockReset();
+        (Storage.getItem as jest.Mock).mockReset().mockResolvedValue(false);
         (Storage.setItem as jest.Mock).mockReset().mockResolvedValue(true);
         jest.spyOn(console, 'log').mockImplementation(() => {});
         jest.spyOn(console, 'warn').mockImplementation(() => {});
@@ -170,6 +171,75 @@ describe('CashuStore synchronizable seed recovery', () => {
             mnemonic,
             'sat'
         );
+    });
+
+    // Remote nodes never run initializeWallets, so claimToken reaches
+    // initializeCDK with the stored seed still only in the keychain
+    const storedSeed = (phrase: string) =>
+        (Storage.getItem as jest.Mock).mockImplementation(
+            async (key: string) =>
+                ({
+                    'lnd-cashu-seed-phrase': phrase,
+                    'lnd-cashu-seed-version': 'v2-bip39'
+                }[key] ?? false)
+        );
+
+    it('uses the stored seed when none is loaded', async () => {
+        storedSeed(JSON.stringify(words));
+        const store = newStore();
+
+        expect(await store.initializeCDK()).toBe(true);
+        expect(store.seedPhrase).toEqual(words);
+        expect(store.seedVersion).toBe('v2-bip39');
+        expect(getRawItem).not.toHaveBeenCalled();
+        expect(Storage.setItem).not.toHaveBeenCalled();
+        expect(CashuDevKit.initializeWallet).toHaveBeenCalledWith(
+            mnemonic,
+            'sat'
+        );
+    });
+
+    it('does not replace a stored seed that is not valid BIP-39', async () => {
+        const invalid = Array(12).fill('abandon');
+        storedSeed(JSON.stringify(invalid));
+        (getRawItem as jest.Mock).mockResolvedValue(null);
+        const store = newStore();
+
+        expect(await store.initializeCDK()).toBe(false);
+        expect(store.seedPhrase).toEqual(invalid);
+        expect(Storage.setItem).not.toHaveBeenCalled();
+        expect(CashuDevKit.initializeWallet).not.toHaveBeenCalled();
+    });
+
+    it('does not generate a seed when the stored one cannot be read', async () => {
+        (Storage.getItem as jest.Mock).mockRejectedValue(
+            new Error('keychain unavailable')
+        );
+        (getRawItem as jest.Mock).mockResolvedValue(null);
+        const store = newStore();
+
+        expect(await store.initializeCDK()).toBe(false);
+        expect(store.seedPhrase).toBeUndefined();
+        expect(Storage.setItem).not.toHaveBeenCalled();
+        expect(CashuDevKit.initializeWallet).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        'invalid json',
+        'null',
+        '{}',
+        '[]',
+        JSON.stringify(mnemonic),
+        JSON.stringify(words.map((word) => [word]))
+    ])('does not replace a malformed local seed %p', async (stored) => {
+        storedSeed(stored);
+        (getRawItem as jest.Mock).mockResolvedValue(null);
+        const store = newStore();
+
+        expect(await store.initializeCDK()).toBe(false);
+        expect(store.seedPhrase).toBeUndefined();
+        expect(Storage.setItem).not.toHaveBeenCalled();
+        expect(CashuDevKit.initializeWallet).not.toHaveBeenCalled();
     });
 
     it('does not read the sync partition on Android', async () => {

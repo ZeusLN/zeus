@@ -381,8 +381,22 @@ export default class CashuStore {
         }
 
         try {
+            // initializeWallets is the only other reader of the stored seed
+            // and does not run for remote nodes, so claimToken can get here
+            // with the stored seed not loaded. Load it first so it is used
+            // rather than replaced: remote nodes share the 'lnd' namespace
+            // with embedded LND wallets created without an lndDir.
+            await this.loadStoredSeed();
+
             // Get mnemonic from seed derivation
             let mnemonic = this.getCDKMnemonic();
+            if (!mnemonic && this.seedPhrase && this.seedPhrase.length > 0) {
+                // A seed is stored for this wallet but CDK can't use it.
+                // Never write a generated seed over it.
+                throw new Error(
+                    'Stored cashu seed is not usable, not generating a new one'
+                );
+            }
             if (!mnemonic) {
                 // Remote nodes have no wallet seed to derive from, so a
                 // missing stored seed normally means a fresh wallet. But on
@@ -588,6 +602,34 @@ export default class CashuStore {
 
         console.log('CDK: Derived and stored cashu seed from wallet seed');
         return cashuSeedPhrase;
+    };
+
+    /**
+     * Loads the cashu seed from Storage when none is in memory, so that
+     * initializeCDK only generates a seed after a confirmed miss. A failed
+     * or malformed read throws, since the entry may be the wallet's only
+     * seed.
+     */
+    private loadStoredSeed = async (): Promise<void> => {
+        if (this.seedPhrase && this.seedPhrase.length > 0) return;
+        const nodeDir = this.getNodeDir();
+        const [storedSeedVersion, storedSeedPhrase] = await Promise.all([
+            Storage.getItem(`${nodeDir}-cashu-seed-version`),
+            Storage.getItem(`${nodeDir}-cashu-seed-phrase`)
+        ]);
+        if (!storedSeedPhrase) return;
+        const words = JSON.parse(storedSeedPhrase);
+        if (
+            !Array.isArray(words) ||
+            words.length === 0 ||
+            !words.every((word) => typeof word === 'string')
+        ) {
+            throw new Error('Invalid stored cashu seed');
+        }
+        runInAction(() => {
+            this.seedPhrase = words;
+            this.seedVersion = storedSeedVersion || undefined;
+        });
     };
 
     /**
