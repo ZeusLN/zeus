@@ -439,10 +439,16 @@ export default class Wallet extends React.Component<WalletProps, WalletState> {
                 try {
                     const migrationData = JSON.parse(migrationDataString);
 
+                    // lndDirs lists every locked wallet; records written by
+                    // versions that could lock only one wallet hold lndDir
+                    const lockedDirs = migrationData.lndDirs || [
+                        migrationData.lndDir
+                    ];
+
                     if (
                         implementation === 'embedded-lnd' &&
                         migrationData.migrationStatus &&
-                        migrationData.lndDir === lndDir
+                        lockedDirs.includes(lndDir)
                     ) {
                         this.setState({ isChannelMigrating: true });
                         SettingsStore.setChannelMigrating(true);
