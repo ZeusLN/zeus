@@ -1203,6 +1203,18 @@ export default class TransactionsStore {
             return;
         }
 
+        // A client-side timeout that can't be tracked (no payment lookup on
+        // the backend, e.g. CLNRest, or no payment hash, e.g. AMP): the
+        // payment may still settle, so show it as in transit with an
+        // unverified outcome, as when tracking stops without a terminal
+        // state, rather than as failed with a retry that can double-pay.
+        if (result.payment_timed_out) {
+            this.clearPaymentInFlight(seq);
+            this.status = 'IN_FLIGHT';
+            this.paymentOutcomeUnverified = true;
+            return;
+        }
+
         this.clearPaymentInFlight(seq);
         this.payment_route = result.payment_route;
         // keys the outcome leaves unset keep their current values

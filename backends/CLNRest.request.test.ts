@@ -43,6 +43,12 @@ import CLNRest from './CLNRest';
 
 const CONNECTION_ERROR = 'backends.LND.restReq.connectionError';
 const PAYMENT_TIMED_OUT = 'views.SendingLightning.paymentTimedOut';
+// payment_timed_out tells TransactionsStore the outcome is unknown, so the
+// send screen does not offer Try Again
+const TIMED_OUT_RESULT = {
+    payment_error: PAYMENT_TIMED_OUT,
+    payment_timed_out: true
+};
 
 // Shape of a react-native-blob-util FetchBlobResponse: data is the raw
 // body string, json() parses it (and throws on non-JSON).
@@ -347,7 +353,7 @@ describe('CLNRest payment timeout race', () => {
         expect(result.done).toBe(true);
         // no status: complete, so the timed-out shape is never read as
         // a success
-        expect(result.value).toEqual({ payment_error: PAYMENT_TIMED_OUT });
+        expect(result.value).toEqual(TIMED_OUT_RESULT);
     });
 
     it('gives the transport four seconds of headroom past the race', async () => {
@@ -375,7 +381,7 @@ describe('CLNRest payment timeout race', () => {
         await jest.advanceTimersByTimeAsync(60999);
         expect(result.done).toBe(false);
         await jest.advanceTimersByTimeAsync(1);
-        expect(result.value).toEqual({ payment_error: PAYMENT_TIMED_OUT });
+        expect(result.value).toEqual(TIMED_OUT_RESULT);
         expect(mockConfig).toHaveBeenCalledWith({
             trusty: true,
             timeout: 65000
@@ -429,7 +435,7 @@ describe('CLNRest payment timeout race', () => {
         );
         await jest.advanceTimersByTimeAsync(0);
 
-        expect(result.value).toEqual({ payment_error: PAYMENT_TIMED_OUT });
+        expect(result.value).toEqual(TIMED_OUT_RESULT);
     });
 
     it('rejects with the node error when the payment fails before the deadline', async () => {
@@ -455,7 +461,7 @@ describe('CLNRest payment timeout race', () => {
             cln.sendKeysend({ pubkey: '02ab', amt: 100, timeout_seconds: 5 })
         );
         await jest.advanceTimersByTimeAsync(6000);
-        expect(timedOut.value).toEqual({ payment_error: PAYMENT_TIMED_OUT });
+        expect(timedOut.value).toEqual(TIMED_OUT_RESULT);
         expect(fetchArgs()[1]).toBe(
             'https://node.example.com:3010/v1/xkeysend'
         );
@@ -474,6 +480,18 @@ describe('CLNRest payment timeout race', () => {
             status: 'complete',
             payment_hash: PREIMAGE_HASH
         });
+    });
+
+    it('races the legacy keysend call the same way', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v25.02' };
+        hangingFetch();
+
+        const timedOut = settled(
+            cln.sendKeysend({ pubkey: '02ab', amt: 100, timeout_seconds: 5 })
+        );
+        await jest.advanceTimersByTimeAsync(6000);
+        expect(timedOut.value).toEqual(TIMED_OUT_RESULT);
+        expect(fetchArgs()[1]).toBe('https://node.example.com:3010/v1/keysend');
     });
 
     it('does not add status to a legacy pay result', async () => {
