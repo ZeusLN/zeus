@@ -1445,6 +1445,21 @@ describe('CashuStore self-custody claim', () => {
             }
         );
 
+        // A capped sweep is only a successful claim if the token was
+        // received before the cap check. If the receive moves after the
+        // fee probe (#4488), the token is still unclaimed and claimable,
+        // so the cap must report a failure instead.
+        it('reports a capped sweep as a success only when the token was received', async () => {
+            const { store, result } = await claimWithReserve(3277);
+
+            expect(result.warningMessage ?? result.errorMessage).toBe(
+                'stores.CashuStore.sweepFeeTooHigh'
+            );
+            expect(result.success).toBe(
+                store.receiveTokenCDK.mock.calls.length > 0
+            );
+        });
+
         it('accepts a small fixed reserve on a small token', async () => {
             const { store, result } = await claimWithReserve(10, {
                 ...bigToken,
