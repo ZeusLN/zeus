@@ -1895,7 +1895,6 @@
     "error.channelNotFound": "Channel with funding txid {{fundingTxid}} not found",
     "error.invalidInvoiceAmountOrExpiry": "Invalid invoice amount or expiry",
     "error.serviceConnection": "Error connecting to service. Please try again later.",
-    "error.getExtendableChannels": "Failed to get extendable channels",
     "error.createOrder": "Failed to create order",
     "error.getOrderStatus": "Failed to get order status",
     "pos.views.Wallet.PosPane.noOrders": "No orders open at the moment. To send to ZEUS, mark order as 'Other Payment Type' with a note that includes 'Zeus', 'BTC', or 'Bitcoin'",

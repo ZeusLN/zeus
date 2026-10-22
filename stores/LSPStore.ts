@@ -50,7 +50,7 @@ export default class LSPStore {
     @observable public feeId: string | undefined;
     @observable public pubkey: string;
     @observable public loadingLSPS1: boolean = true;
-    @observable public loadingLSPS7: boolean = true;
+    @observable public loadingLSPS7: boolean = false;
     @observable public error: boolean = false;
     @observable public error_msg: string = '';
     @observable public flow_error: boolean = false;
@@ -906,7 +906,6 @@ export default class LSPStore {
                 this.getExtendableChannelsData =
                     data?.result?.extendable_channels;
             }
-            this.loadingLSPS7 = false;
             this.getExtendableChannelsResponseResolver?.();
             return true;
         } else if (data.id === this.createExtensionOrderId) {
@@ -1485,9 +1484,10 @@ export default class LSPStore {
     // LSPS7
 
     // Background fetch run when the channel list changes. Failures only set
-    // getExtendableChannelsError, which the channel view reads, and leave the
-    // shared error alone so a channel refresh can't replace or clear an error
-    // the LSPS1 or LSPS7 screens are showing.
+    // getExtendableChannelsError, which the channel view reads, and neither
+    // the shared error nor loadingLSPS7 is touched, so a channel refresh
+    // can't replace or clear an error or spinner the LSPS1 or LSPS7 screens
+    // are showing.
     @action
     public getExtendableChannels = async () => {
         // Use native LSPS7 method if available (LDK Node backend)
@@ -1515,7 +1515,6 @@ export default class LSPStore {
                             extension_order_ids: ch.extensionOrderIds
                         })
                     );
-                    this.loadingLSPS7 = false;
                 });
                 return;
             } catch (error: any) {
@@ -1526,15 +1525,13 @@ export default class LSPStore {
                 );
                 runInAction(() => {
                     this.getExtendableChannelsError = true;
-                    this.loadingLSPS7 = false;
                 });
                 return;
             }
         }
 
-        // Fall back to custom message for other backends. A timeout or send
-        // failure also leaves the LSPS7 spinner alone. Starting a new probe
-        // settles the previous one without marking it failed.
+        // Fall back to custom message for other backends. Starting a new
+        // probe settles the previous one without marking it failed.
         this.getExtendableChannelsResponseResolver?.();
 
         this.getExtendableChannelsId = uuidv4();

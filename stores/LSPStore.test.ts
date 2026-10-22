@@ -300,6 +300,20 @@ describe('LSPStore.getExtendableChannels over custom messages', () => {
         expect(store.error_msg).toBe('order failed');
     });
 
+    it.each([
+        ['a reply', { result: { extendable_channels: [channel] } }],
+        ['an error reply', { error: { code: -32603, message: 'x' } }]
+    ])('leaves an LSPS7 order spinner alone on %s', async (_, reply) => {
+        const store = makeStore();
+        store.loadingLSPS7 = true;
+        const probe = store.getExtendableChannels();
+
+        extendableChannelsReply(store, reply);
+        await probe;
+
+        expect(store.loadingLSPS7).toBe(true);
+    });
+
     it('does not time out once the reply arrives', async () => {
         const store = makeStore();
         const probe = store.getExtendableChannels();
@@ -396,6 +410,12 @@ describe('LSPStore.reset and LSPS7 lease data', () => {
     afterEach(() => {
         jest.useRealTimers();
         jest.mocked(console.error).mockRestore();
+    });
+
+    it('starts with no LSPS7 spinner', () => {
+        // the LSPS7 screen shows a spinner while this is true, and only an
+        // order request should set it
+        expect(makeStore().loadingLSPS7).toBe(false);
     });
 
     it('clears lease data and the fetch error', () => {
@@ -511,6 +531,30 @@ describe('LSPStore.getExtendableChannels on LDK Node', () => {
 
         expect(store.error).toBe(true);
         expect(store.error_msg).toBe('order failed');
+    });
+
+    it('leaves an LSPS7 order spinner alone on success', async () => {
+        jest.mocked(BackendUtils.lsps7GetExtendableChannels).mockResolvedValue([
+            nativeChannel
+        ]);
+        const store = makeStore('ldk-node');
+        store.loadingLSPS7 = true;
+
+        await store.getExtendableChannels();
+
+        expect(store.loadingLSPS7).toBe(true);
+    });
+
+    it('leaves an LSPS7 order spinner alone on failure', async () => {
+        jest.mocked(BackendUtils.lsps7GetExtendableChannels).mockRejectedValue(
+            new Error('Liquidity request timed out')
+        );
+        const store = makeStore('ldk-node');
+        store.loadingLSPS7 = true;
+
+        await store.getExtendableChannels();
+
+        expect(store.loadingLSPS7).toBe(true);
     });
 
     it('drops a rejection from an older call after a newer success', async () => {
