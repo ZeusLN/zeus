@@ -586,3 +586,64 @@ describe('Lockscreen with a wipe that did not finish', () => {
         expect(navigation.popTo).not.toHaveBeenCalled();
     });
 });
+
+// Deleting a PIN or password has to clear the stored verifier, since that is
+// the only thing the lock checks now. A delete that leaves it in place keeps
+// the lock on.
+describe('Lockscreen delete handlers', () => {
+    const renderForDelete = async () => {
+        const ref = React.createRef<any>();
+        const updateSettings = jest.fn(() => Promise.resolve());
+        const SettingsStore = {
+            settings: { pinVerifier },
+            posStatus: 'inactive',
+            triggerSettingsRefresh: false,
+            isBiometryConfigured: jest.fn(() => false),
+            isPosEnabled: jest.fn(() => false),
+            loginRequired: jest.fn(() => true),
+            setLoginStatus: jest.fn(),
+            setPosStatus: jest.fn(),
+            getSettings: jest.fn(),
+            disableBiometry: jest.fn(() => Promise.resolve()),
+            updateSettings
+        };
+        const navigation = {
+            pop: jest.fn(),
+            popTo: jest.fn(),
+            replace: jest.fn()
+        };
+        await render(
+            <Lockscreen
+                ref={ref}
+                SettingsStore={SettingsStore as any}
+                navigation={navigation as any}
+                route={{ params: {} } as any}
+            />
+        );
+        return { lockscreen: ref.current, updateSettings, navigation };
+    };
+
+    it.each([
+        ['deletePin', ['pinVerifier', 'duressPinVerifier']],
+        ['deleteDuressPin', ['duressPinVerifier']],
+        ['deletePassword', ['passphraseVerifier', 'duressPassphraseVerifier']],
+        ['deleteDuressPassword', ['duressPassphraseVerifier']]
+    ])('%s clears %j', async (handler, verifierKeys) => {
+        const { lockscreen, updateSettings, navigation } =
+            await renderForDelete();
+
+        await act(async () => {
+            await lockscreen[handler]();
+        });
+
+        expect(navigation.popTo).toHaveBeenCalledWith('Security');
+        const writes = updateSettings.mock.calls.map((call: any[]) => call[0]);
+        for (const key of verifierKeys) {
+            expect(
+                writes.some(
+                    (patch: any) => key in patch && patch[key] === undefined
+                )
+            ).toBe(true);
+        }
+    });
+});
