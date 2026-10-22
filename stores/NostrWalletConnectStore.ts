@@ -2776,7 +2776,7 @@ export default class NostrWalletConnectStore {
             zeroAmountInvoice &&
             payment &&
             NostrConnectUtils.isSettledPayment(payment)
-                ? Number(payment.getAmount) || amountSats
+                ? Math.ceil(Number(payment.getAmount)) || amountSats
                 : amountSats;
 
         // Debit the budget on any evidence of settlement, not only when the
@@ -3212,7 +3212,7 @@ export default class NostrWalletConnectStore {
             activity.error = undefined;
             const amountSats =
                 Math.floor(Number(activity.satAmount)) ||
-                Math.floor(Number(raw.getAmount) || 0);
+                Math.ceil(Number(raw.getAmount) || 0);
             const feeSats = Number(raw.getFee) || 0;
             activity.fees_paid = feeSats;
             const spendSats =
@@ -3513,7 +3513,7 @@ export default class NostrWalletConnectStore {
             decoded?.paymentHash ||
             undefined;
 
-        // Budget is whole sats; round fractional fees (0.026 → 0, 1.999 → 2).
+        // Budget is whole sats; round fractional fees up (0.026 → 1, 1.999 → 2).
         const budgetFeeSats = NostrConnectUtils.resolveFeeSats(feeSats);
 
         runInAction(() => {

@@ -1217,12 +1217,13 @@ export default class NostrConnectUtils {
 
     /**
      * Whole-sat budget debit for a fee that may be fractional (msat / 1000).
-     * Round to nearest sat; do not use for NIP-47 fees_paid.
+     * Rounds up so the budget never counts less than was spent; do not use
+     * for NIP-47 fees_paid.
      */
     static resolveFeeSats(fee: string | number | null | undefined): number {
         const raw = Number(fee);
         if (!Number.isFinite(raw) || raw <= 0) return 0;
-        return Math.round(raw);
+        return Math.ceil(raw);
     }
 
     static resolveLightningPaymentInTransit({
@@ -1749,9 +1750,13 @@ export default class NostrConnectUtils {
         };
     }
 
-    /** Integer sats ≥ 0 from a scalar field on a decoded payreq payload. */
+    /**
+     * Integer sats ≥ 0 from a scalar field on a decoded payreq payload.
+     * Rounds up: the budget is kept in whole sats and must not count less
+     * than the node pays.
+     */
     private static nonNegativeSats(value: unknown): number {
-        return Math.max(0, Math.floor(Number(value) || 0));
+        return Math.max(0, Math.ceil(Number(value) || 0));
     }
 
     /**
@@ -1765,17 +1770,8 @@ export default class NostrConnectUtils {
 
         const { nonNegativeSats: n } = NostrConnectUtils;
 
-        const fromNumSat = n(decodedPayReq.num_satoshis);
-        if (fromNumSat > 0) {
-            return fromNumSat;
-        }
-        if (decodedPayReq.satoshis !== undefined) {
-            const fromSat = n(decodedPayReq.satoshis);
-            if (fromSat > 0) {
-                return fromSat;
-            }
-        }
-        // a sub-sat amount is still an amount: never report it as none
+        // The msat amount comes first, rounded up: the node pays it exactly,
+        // while the sat fields are rounded down (1999 msat is num_satoshis 1).
         // num_msat: LND, millisatoshis: bolt11 decode, amount_msat: CLN
         // (a number, or "500msat" on older versions)
         for (const msats of [
@@ -1785,7 +1781,17 @@ export default class NostrConnectUtils {
         ]) {
             const ms = Number(String(msats ?? '').replace(/msat$/, '')) || 0;
             if (ms > 0) {
-                return Math.max(1, millisatsToSats(ms));
+                return Math.ceil(ms / 1000);
+            }
+        }
+        const fromNumSat = n(decodedPayReq.num_satoshis);
+        if (fromNumSat > 0) {
+            return fromNumSat;
+        }
+        if (decodedPayReq.satoshis !== undefined) {
+            const fromSat = n(decodedPayReq.satoshis);
+            if (fromSat > 0) {
+                return fromSat;
             }
         }
         return 0;
@@ -1813,7 +1819,7 @@ export default class NostrConnectUtils {
         if (sats <= 0 && invoice.millisatoshis != null) {
             const ms = Number(invoice.millisatoshis) || 0;
             if (ms > 0) {
-                sats = millisatsToSats(ms);
+                sats = Math.ceil(ms / 1000);
             }
         }
         return sats;
@@ -1868,9 +1874,14 @@ export default class NostrConnectUtils {
                         amountMsat ?? amount * 1000
                     );
                 }
-                // a sub-sat amount is still an amount
+                // the msat amount rounded up; a sub-sat amount is still an
+                // amount
                 return {
-                    amountSats: Math.max(1, amount),
+                    amountSats: Math.max(
+                        1,
+                        amount,
+                        Math.ceil((amountMsat ?? 0) / 1000)
+                    ),
                     zeroAmountInvoice: false
                 };
             }
@@ -1890,11 +1901,14 @@ export default class NostrConnectUtils {
         if (fromDecoded > 0) {
             return { amountSats: fromDecoded, zeroAmountInvoice: false };
         }
-        const { amount } = await NostrConnectUtils.decodeInvoiceTags(
-            paymentRequest
-        );
+        const { amount, amountMsat } =
+            await NostrConnectUtils.decodeInvoiceTags(paymentRequest);
         return {
-            amountSats: amount > 0 ? amount : 0,
+            amountSats: Math.max(
+                0,
+                amount,
+                Math.ceil((amountMsat ?? 0) / 1000)
+            ),
             zeroAmountInvoice: false
         };
     }

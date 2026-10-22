@@ -456,10 +456,10 @@ describe('NostrConnectUtils', () => {
 
     describe('resolveFeeSats', () => {
         it('rounds fractional sats from msat division', () => {
-            expect(NostrConnectUtils.resolveFeeSats(1.2)).toBe(1);
+            expect(NostrConnectUtils.resolveFeeSats(1.2)).toBe(2);
             expect(NostrConnectUtils.resolveFeeSats(1.999)).toBe(2);
             expect(NostrConnectUtils.resolveFeeSats('0.5')).toBe(1);
-            expect(NostrConnectUtils.resolveFeeSats(0.026)).toBe(0);
+            expect(NostrConnectUtils.resolveFeeSats(0.026)).toBe(1);
         });
 
         it('returns whole sats unchanged and zeros non-positive or invalid values', () => {
@@ -1552,6 +1552,71 @@ describe('NostrConnectUtils pay_invoice amount resolution', () => {
                 requestedAmountMsat: 7_000_000
             })
         ).resolves.toEqual({ amountSats: 1, zeroAmountInvoice: false });
+    });
+
+    it.each([
+        ['LND num_msat', { num_satoshis: '1', num_msat: '1999' }],
+        [
+            'LND num_msat just over a sat',
+            { num_satoshis: '1', num_msat: '1001' }
+        ],
+        ['bolt11 millisatoshis', { satoshis: null, millisatoshis: '1999' }],
+        ['CLN amount_msat number', { amount_msat: 1999 }],
+        ['CLN amount_msat string', { amount_msat: '1999msat' }]
+    ])(
+        'counts every started sat of a fractional %s amount',
+        async (_n, decoded) => {
+            await expect(
+                NostrConnectUtils.getPayInvoiceAmountSats({
+                    paymentRequest,
+                    lightningDecodedPayReq: decoded
+                })
+            ).resolves.toBe(2);
+        }
+    );
+
+    it('keeps a whole-sat msat amount as is', async () => {
+        await expect(
+            NostrConnectUtils.getPayInvoiceAmountSats({
+                paymentRequest,
+                lightningDecodedPayReq: { num_satoshis: '2', num_msat: '2000' }
+            })
+        ).resolves.toBe(2);
+    });
+
+    it('rounds up a fractional amount found only in the BOLT11 tags', async () => {
+        (NostrConnectUtils.decodeInvoiceTags as jest.Mock).mockResolvedValue({
+            paymentRequest,
+            amount: 1,
+            amountMsat: 1999
+        });
+        await expect(
+            NostrConnectUtils.getPayInvoiceAmountSats({
+                paymentRequest,
+                lightningDecodedPayReq: {}
+            })
+        ).resolves.toBe(2);
+        await expect(
+            NostrConnectUtils.getPayInvoiceAmountSats({
+                paymentRequest,
+                decodedInvoice: {}
+            })
+        ).resolves.toBe(2);
+    });
+
+    it('rounds up a fractional Cashu payreq amount', async () => {
+        await expect(
+            NostrConnectUtils.getPayInvoiceAmountSats({
+                paymentRequest,
+                decodedInvoice: { getRequestAmount: 1.999 }
+            })
+        ).resolves.toBe(2);
+        await expect(
+            NostrConnectUtils.getPayInvoiceAmountSats({
+                paymentRequest,
+                decodedInvoice: { millisatoshis: '1999' }
+            })
+        ).resolves.toBe(2);
     });
 
     it('ignores the requested amount when the invoice has one', async () => {
