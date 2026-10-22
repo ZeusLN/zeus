@@ -206,10 +206,23 @@ RCT_EXPORT_METHOD(unzipFile:(NSString *)zipPath
         const uint8_t *bytes = zipData.bytes;
         NSUInteger length = zipData.length;
 
-        // Find the end of central directory record (an archive comment may
-        // follow it)
+        // Find the end of central directory record. An archive comment may
+        // follow it and may contain the record's signature, so only accept a
+        // candidate whose comment length ends exactly at the end of the file
+        // and whose central directory ends exactly where the record starts.
+        // Zip64 archives, which put more records in between, are not read
+        // here anyway.
         NSUInteger eocdOffset = length - 22;
-        while (*(uint32_t *)(bytes + eocdOffset) != ZIP_END_CENTRAL_DIR_SIGNATURE) {
+        while (YES) {
+            if (*(uint32_t *)(bytes + eocdOffset) == ZIP_END_CENTRAL_DIR_SIGNATURE) {
+                uint16_t archiveCommentLen = *(uint16_t *)(bytes + eocdOffset + 20);
+                uint32_t candidateCdSize = *(uint32_t *)(bytes + eocdOffset + 12);
+                uint32_t candidateCdOffset = *(uint32_t *)(bytes + eocdOffset + 16);
+                if (eocdOffset + 22 + archiveCommentLen == length &&
+                    (uint64_t)candidateCdOffset + (uint64_t)candidateCdSize == (uint64_t)eocdOffset) {
+                    break;
+                }
+            }
             if (eocdOffset == 0 || length - eocdOffset >= 22 + UINT16_MAX) {
                 reject(@"ERR_UNZIP", @"Invalid zip file: end of central directory not found", nil);
                 return;
