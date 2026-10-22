@@ -1181,17 +1181,42 @@ export default class SwapDetails extends React.Component<
 
     // Once the chain reaches timeoutBlockHeight the refund leaf of a
     // submarine swap needs no one but this wallet, so a refund is offered
-    // whatever the host reports (or if it reports nothing), unless the
-    // swap was claimed or has already been refunded
+    // whatever the host reports (or if it reports nothing), as long as the
+    // swap was funded and the host is not claiming, has not claimed, and
+    // the swap has not already been refunded
     refundTimelockPassed = (): boolean => {
         const { swapData, updates } = this.state;
         const { currentBlockHeight } = nodeInfoStore.nodeInfo;
-        const status = updates || swapData.status;
+        const statuses = [updates, swapData.status];
+
+        // the host is paying the invoice or claiming the lockup, or is done.
+        // invoice.pending only counts while the host reports it: a stored
+        // one from a host that went away must not hide the refund for good
+        const claimStatus = [
+            SwapState.InvoicePaid,
+            SwapState.TransactionClaimPending,
+            SwapState.TransactionClaimed,
+            SwapState.TransactionRefunded
+        ];
+
+        // statuses the host only reports once the lockup was broadcast
+        const fundedStatus = [
+            SwapState.TransactionMempool,
+            SwapState.TransactionConfirmed,
+            SwapState.InvoicePending,
+            SwapState.InvoiceFailedToPay,
+            SwapState.TransactionLockupFailed
+        ];
+
+        const funded =
+            !!swapData.lockupTransaction ||
+            statuses.some((status: any) => fundedStatus.includes(status));
 
         return (
             swapData.isSubmarineSwap &&
-            status !== SwapState.TransactionClaimed &&
-            status !== SwapState.TransactionRefunded &&
+            funded &&
+            !statuses.some((status: any) => claimStatus.includes(status)) &&
+            updates !== SwapState.InvoicePending &&
             !!currentBlockHeight &&
             !!swapData.timeoutBlockHeight &&
             new BigNumber(currentBlockHeight).gte(swapData.timeoutBlockHeight)
