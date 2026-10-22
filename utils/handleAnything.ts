@@ -1,5 +1,7 @@
 import { Alert, Platform } from 'react-native';
+import { getParams as getlnurlParams } from 'js-lnurl';
 import { findlnurl, decodelnurl } from 'js-lnurl/lib/helpers';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 
 import { nodeInfoStore, invoicesStore, settingsStore } from '../stores/Stores';
 
@@ -13,8 +15,6 @@ import { localeString } from './LocaleUtils';
 import { getLnurlpUrl } from './LnurlPayUtils';
 import NodeUriUtils from './NodeUriUtils';
 import NostrUtils from './NostrUtils';
-import { getLnurlParams } from './LnurlParamsUtils';
-import { networkFetch } from './NetworkUtils';
 import { doTorRequest, RequestMethod } from './TorUtils';
 
 import CashuToken from '../models/CashuToken';
@@ -739,11 +739,8 @@ const handleAnything = async (
             'utils.handleAnything.lightningAddressError'
         );
 
-        // .onion addresses always go over Tor, whatever the Use Tor
-        // setting. The URL is plain http, and the system stack would resolve
-        // the name through the local DNS resolver. If Tor is unavailable the
-        // lookup fails instead of falling back to clearnet.
-        if (isOnion) {
+        // handle Tor LN addresses
+        if (settingsStore.enableTor && isOnion) {
             return doTorRequest(url, RequestMethod.GET).then(
                 (response: any) => {
                     if (!response.callback) {
@@ -762,13 +759,7 @@ const handleAnything = async (
                 }
             );
         } else {
-            // Clearnet domains also go over Tor when it is enabled, so the
-            // recipient's server does not learn the user's IP
-            return networkFetch({
-                method: 'get',
-                url,
-                enableTor: settingsStore.enableTor
-            })
+            return ReactNativeBlobUtil.fetch('get', url)
                 .then((response: any) => {
                     const status = response.info().status;
                     if (status == 200) {
@@ -950,16 +941,17 @@ const handleAnything = async (
         // The input is already recognized as LNURL-shaped locally (bech32
         // decode, findlnurl, or an lnurl* URL path). That is enough to show
         // the paste badge, so never fetch during a clipboard probe: defer
-        // getLnurlParams (a live HTTP GET of an attacker-controllable target)
+        // getlnurlParams (a live HTTP GET of an attacker-controllable target)
         // to when the user actually acts on the value.
         if (isClipboardValue) return true;
         const raw: string = findlnurl(value) || lnurl || value || '';
-        return getLnurlParams(raw, settingsStore.enableTor)
+        return getlnurlParams(raw)
             .then((params: any) => {
                 if (
                     params.status === 'ERROR' &&
                     params.domain.endsWith('.onion')
                 ) {
+                    // TODO handle fetching of params with internal Tor
                     throw new Error(`${params.domain} says: ${params.reason}`);
                 }
 

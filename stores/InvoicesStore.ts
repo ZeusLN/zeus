@@ -1,6 +1,7 @@
 import url from 'url';
 import { action, observable, reaction, runInAction } from 'mobx';
 import BigNumber from 'bignumber.js';
+import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Alert } from 'react-native';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import querystring from 'querystring-es3';
@@ -14,7 +15,6 @@ import BackendUtils from '../utils/BackendUtils';
 import { toWalletrpcAddressTypeName } from '../utils/LndUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
-import { networkFetch } from '../utils/NetworkUtils';
 import LdkNodeInjection from '../ldknode/LdkNodeInjection';
 import ChannelsStore from './ChannelsStore';
 import NodeInfoStore from './NodeInfoStore';
@@ -627,11 +627,7 @@ export default class InvoicesStore {
                     u.search = querystring.stringify(qs);
                     u.query = querystring.stringify(qs);
 
-                    networkFetch({
-                        method: 'get',
-                        url: url.format(u),
-                        enableTor: this.settingsStore.enableTor
-                    })
+                    ReactNativeBlobUtil.fetch('get', url.format(u))
                         .then((response: any) => {
                             try {
                                 const data = response.json();

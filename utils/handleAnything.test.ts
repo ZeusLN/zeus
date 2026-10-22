@@ -92,11 +92,9 @@ jest.mock('./AddressUtils', () => ({
     ZEUS_ECASH_GIFT_URL
 }));
 const mockDoTorRequest = jest.fn();
-const mockDoTorRequestRaw = jest.fn();
 jest.mock('./TorUtils', () => ({
     doTorRequest: (...args: any[]) => mockDoTorRequest(...args),
-    doTorRequestRaw: (...args: any[]) => mockDoTorRequestRaw(...args),
-    RequestMethod: { GET: 'GET', POST: 'POST', DELETE: 'DELETE' }
+    RequestMethod: { GET: 'GET' }
 }));
 jest.mock('./BackendUtils', () => ({
     supportsOnchainSends: () => mockSupportsOnchainSends,
@@ -151,13 +149,8 @@ jest.mock('../stores/Stores', () => ({
     invoicesStore: { getPayReq: jest.fn() },
     settingsStore: { settings: { locale: 'en' } }
 }));
-// networkFetch passes headers and body through even when they are undefined;
-// drop trailing undefined args so assertions can name only the method and URL
 jest.mock('react-native-blob-util', () => ({
-    fetch: (...args: any[]) => {
-        while (args.length && args[args.length - 1] === undefined) args.pop();
-        return mockBlobUtilFetch(...args);
-    }
+    fetch: (...args: any[]) => mockBlobUtilFetch(...args)
 }));
 jest.mock('react-native-encrypted-storage', () => ({}));
 const mockGetLnurlParamsFn = jest.fn();
@@ -589,33 +582,6 @@ describe('handleAnything', () => {
                     ecash: false
                 }
             ]);
-        });
-
-        it('passes the Tor setting to the LNURL params lookup', async () => {
-            const LnurlParamsUtils = require('./LnurlParamsUtils');
-            const spy = jest
-                .spyOn(LnurlParamsUtils, 'getLnurlParams')
-                .mockResolvedValue(mockGetLnurlParams);
-            mockProcessBIP21Uri.mockReturnValue({
-                value: 'lnurlp://demo.lnbits.com/api/v1/lnurl/abc'
-            });
-            (settingsStore as any).enableTor = true;
-
-            try {
-                const result = await handleAnything(
-                    'lightning:lnurlp://demo.lnbits.com/api/v1/lnurl/abc'
-                );
-
-                expect(spy).toHaveBeenCalledWith(
-                    'https://demo.lnbits.com/api/v1/lnurl/abc',
-                    true
-                );
-                expect(mockGetLnurlParamsFn).not.toHaveBeenCalled();
-                expect(result[0]).toBe('LnurlPay');
-            } finally {
-                (settingsStore as any).enableTor = undefined;
-                spy.mockRestore();
-            }
         });
 
         it('should handle LIGHTNING:lnurlp:// with .onion address and convert to http://', async () => {
@@ -1992,31 +1958,16 @@ describe('handleAnything', () => {
                 expect(mockDnsFetch).not.toHaveBeenCalled();
             });
 
-            it('makes no DoH request and still uses Tor with Tor disabled', async () => {
-                const lnurlParams = { callback: `http://${ONION}/callback` };
-                mockDoTorRequest.mockResolvedValue(lnurlParams);
-
+            it('makes no DoH request with Tor disabled', async () => {
                 const result = await handleAnything(ONION_ADDRESS);
 
                 expect(mockDnsFetch).not.toHaveBeenCalled();
-                expect(mockDoTorRequest).toHaveBeenCalledWith(
-                    ONION_LNURLP,
-                    'GET'
+                expect(mockDoTorRequest).not.toHaveBeenCalled();
+                expect(mockBlobUtilFetch).toHaveBeenCalledWith(
+                    'get',
+                    ONION_LNURLP
                 );
-                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
                 expect(result[0]).toBe('LnurlPay');
-            });
-
-            it('does not fall back to clearnet when Tor fails with Tor disabled', async () => {
-                mockDoTorRequest.mockRejectedValue(new Error('tor failure'));
-                (nip05.queryProfile as jest.Mock).mockClear();
-
-                await expect(handleAnything(ONION_ADDRESS)).rejects.toThrow(
-                    'tor failure'
-                );
-                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
-                expect(mockDnsFetch).not.toHaveBeenCalled();
-                expect(nip05.queryProfile).not.toHaveBeenCalled();
             });
 
             it('still looks up a clearnet domain with an .onion label', async () => {
@@ -2034,10 +1985,9 @@ describe('handleAnything', () => {
             });
         });
 
-        // With Tor enabled, clearnet lookups must not leave the device
-        // directly: the resolver and the recipient would see the user's IP
-        describe('clearnet Lightning addresses with Tor enabled', () => {
-            const LNURLP = 'https://mattcorallo.com/.well-known/lnurlp/matt';
+        // With Tor enabled, the resolver must not see the user's IP next to
+        // the recipient's name
+        describe('DoH lookup with Tor enabled', () => {
             let settingsStore: any;
 
             beforeEach(() => {
@@ -2056,13 +2006,6 @@ describe('handleAnything', () => {
                     ],
                     Answer: [txt(REAL_TXT)]
                 }));
-                mockDoTorRequestRaw.mockReset();
-                mockDoTorRequestRaw.mockResolvedValue({
-                    status: 200,
-                    body: JSON.stringify({
-                        callback: 'https://example.com/callback'
-                    })
-                });
             });
 
             afterEach(() => {
@@ -2085,42 +2028,6 @@ describe('handleAnything', () => {
                         offer: 'lno1zr5qyugqgskrk70kqmuq'
                     })
                 ]);
-            });
-
-            it('sends the LNURL lookup over Tor', async () => {
-                mockDoTorRequest.mockRejectedValue(new Error('no record'));
-
-                const result = await handleAnything(ADDRESS);
-
-                expect(mockDoTorRequestRaw).toHaveBeenCalledWith(
-                    LNURLP,
-                    'GET',
-                    undefined,
-                    undefined
-                );
-                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
-                expect(result).toEqual([
-                    'LnurlPay',
-                    {
-                        lnurlParams: {
-                            callback: 'https://example.com/callback'
-                        },
-                        satAmount: undefined,
-                        ecash: false,
-                        lightningAddress: ADDRESS
-                    }
-                ]);
-            });
-
-            it('does not retry directly when the Tor LNURL lookup fails', async () => {
-                mockDoTorRequestRaw.mockRejectedValue(new Error('tor failure'));
-
-                const result = await handleAnything(ADDRESS);
-
-                // the BOLT 12 offer from DNS is still offered
-                expect(mockBlobUtilFetch).not.toHaveBeenCalled();
-                expect(mockDnsFetch).not.toHaveBeenCalled();
-                expect(result[0]).toBe('ChoosePaymentMethod');
             });
         });
     });
