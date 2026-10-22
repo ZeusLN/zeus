@@ -3464,8 +3464,11 @@ describe('NostrWalletConnectStore wallet deletion', () => {
 describe('NostrWalletConnectStore cashu pay_invoice budget', () => {
     const invoice = 'lnbc1cashubudgettest';
 
-    // 100 sat invoice against a 103 sat budget
-    const payWithFeeReserve = async (feeEstimate: number) => {
+    // 100 sat invoice against a 103 sat budget by default
+    const payWithFeeReserve = async (
+        feeEstimate: number,
+        maxAmountSats = 103
+    ) => {
         const payLnInvoiceFromEcash = jest.fn().mockResolvedValue({
             isFailed: false,
             getPreimage: 'c'.repeat(64),
@@ -3493,7 +3496,7 @@ describe('NostrWalletConnectStore cashu pay_invoice budget', () => {
             }
         });
         store.cashuEnabled = true;
-        const connection = addConnection(store, { maxAmountSats: 103 });
+        const connection = addConnection(store, { maxAmountSats });
         const response = await (store as any).handleCashuPayInvoice(
             connection,
             { invoice }
@@ -3526,6 +3529,16 @@ describe('NostrWalletConnectStore cashu pay_invoice budget', () => {
     it('rejects before melting when the amount fits but the fee reserve does not', async () => {
         const { response, connection, payLnInvoiceFromEcash } =
             await payWithFeeReserve(4);
+
+        expect(payLnInvoiceFromEcash).not.toHaveBeenCalled();
+        expect(response.error?.code).toBe(Nip47ErrorCode.INSUFFICIENT_BALANCE);
+        expect(connection.totalSpendSats).toBe(0);
+        expect(connection.activity).toHaveLength(0);
+    });
+
+    it('does not let a negative fee reserve shrink the amount checked against the budget', async () => {
+        const { response, connection, payLnInvoiceFromEcash } =
+            await payWithFeeReserve(-2, 99);
 
         expect(payLnInvoiceFromEcash).not.toHaveBeenCalled();
         expect(response.error?.code).toBe(Nip47ErrorCode.INSUFFICIENT_BALANCE);

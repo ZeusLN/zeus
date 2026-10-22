@@ -2905,9 +2905,12 @@ export default class NostrWalletConnectStore {
 
         // The mint can spend up to the melt quote's fee reserve on top of
         // the amount, and nothing caps the fee below that, so the budget
-        // has to cover both. getPayReq above fetched the quote.
-        const feeReserveSats =
-            Math.ceil(Number(this.cashuStore.feeEstimate)) || 0;
+        // has to cover both. getPayReq above fetched the quote. A negative
+        // reserve from the mint must not shrink the amount checked.
+        const feeReserveSats = Math.max(
+            0,
+            Math.ceil(Number(this.cashuStore.feeEstimate)) || 0
+        );
         const budgetCheck = this.validateBudgetBeforePayment(
             connection,
             amountSats + feeReserveSats,
