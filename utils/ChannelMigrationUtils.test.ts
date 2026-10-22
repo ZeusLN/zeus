@@ -265,6 +265,51 @@ describe('ChannelMigrationUtils', () => {
             expect(mockMkdir).toHaveBeenCalled();
         });
 
+        it('removes the cache copy of a picked file after unzipping', async () => {
+            await importChannelDb(
+                'content://downloads/backup.zip',
+                'backup.zip',
+                'lnd',
+                false
+            );
+
+            expect(mockCopyFile).toHaveBeenCalledWith(
+                'content://downloads/backup.zip',
+                '/cache/zeus-import-temp.zip'
+            );
+            expect(mockUnlink).toHaveBeenCalledWith(
+                '/cache/zeus-import-temp.zip'
+            );
+        });
+
+        it('removes the cache copy when the unzip fails', async () => {
+            mockUnzipFile.mockRejectedValueOnce(new Error('ERR_UNZIP'));
+
+            await expect(
+                importChannelDb(
+                    'content://downloads/backup.zip',
+                    'backup.zip',
+                    'lnd',
+                    false
+                )
+            ).rejects.toThrow('ERR_UNZIP');
+
+            expect(mockUnlink).toHaveBeenCalledWith(
+                '/cache/zeus-import-temp.zip'
+            );
+        });
+
+        it('does not remove a picked file that was not copied', async () => {
+            await importChannelDb(
+                '/path/to/backup.zip',
+                'backup.zip',
+                'lnd',
+                false
+            );
+
+            expect(mockUnlink).not.toHaveBeenCalledWith('/path/to/backup.zip');
+        });
+
         it('rejects invalid file types', async () => {
             await expect(
                 importChannelDb('/path/to/backup.db', 'backup.db', 'lnd', false)
