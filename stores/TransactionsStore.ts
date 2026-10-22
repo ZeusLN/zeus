@@ -158,6 +158,11 @@ export default class TransactionsStore {
     // id of the current on-chain send; reset() and the next send change it,
     // so a late result (e.g. a timeout lookup) for an earlier send is dropped
     private sendCoinsSeq = 0;
+    // id of the latest dispatched payment, whose result this store holds;
+    // lets a send screen tell that result apart from its own payment's
+    public get lastPaymentSequence(): number {
+        return this.paymentSequence;
+    }
     // sequence of the payment that set paymentInFlight (null when none);
     // completion callbacks and the backstop timer only clear the flag on
     // behalf of that payment, so overlapping payments (e.g. one that
