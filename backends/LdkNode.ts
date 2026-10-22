@@ -36,6 +36,15 @@ import { settingsStore } from '../stores/Stores';
 // Event callback type
 type EventCallback = (event: LdkNodeEvent) => void;
 
+// The network part of a BOLT 11 prefix ('ln' + 'bc', 'tb', ...) by ldkNetwork
+const BOLT11_NETWORK_PREFIXES: { [network: string]: string } = {
+    mainnet: 'bc',
+    testnet: 'tb',
+    signet: 'tbs',
+    mutinynet: 'tbs',
+    regtest: 'bcrt'
+};
+
 export default class LdkNode {
     // Event loop state
     private eventLoopRunning: boolean = false;
@@ -1396,6 +1405,9 @@ export default class LdkNode {
      * Pay a BOLT11 invoice
      */
     payLightningInvoice = async (data: any): Promise<any> => {
+        // Not every caller decodes the invoice through this backend first
+        this.decodeInvoiceForNetwork(data.payment_request);
+
         const maxTotalRoutingFeeMsat = feeLimitSatsToMaxRoutingFeeMsat(
             data.fee_limit_sat
         );
@@ -1510,7 +1522,23 @@ export default class LdkNode {
      */
     decodePaymentRequest = async (urlParams?: Array<string>): Promise<any> => {
         const paymentRequest = (urlParams && urlParams[0]) || '';
-        return Bolt11Utils.decode(paymentRequest);
+        return this.decodeInvoiceForNetwork(paymentRequest);
+    };
+
+    /**
+     * Decode a BOLT 11 invoice and reject one issued for another network.
+     * ldk-node does not check the invoice's network itself, so on a mainnet
+     * wallet a testnet invoice would otherwise go on to route finding.
+     */
+    private decodeInvoiceForNetwork = (paymentRequest: string) => {
+        const decoded = Bolt11Utils.decode(paymentRequest);
+        const network = (settingsStore.ldkNetwork || 'mainnet').toLowerCase();
+        // getNetworkType also falls back to mainnet for unknown values
+        const expected = BOLT11_NETWORK_PREFIXES[network] || 'bc';
+        if (decoded.network.bech32 !== expected) {
+            throw new Error(localeString('error.ldk.invoiceWrongNetwork'));
+        }
+        return decoded;
     };
 
     // ========================================================================
