@@ -37,7 +37,7 @@ import DateTimeUtils from '../../utils/DateTimeUtils';
 import PrivacyUtils from '../../utils/PrivacyUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
-import { getLeaseDisplay } from '../../utils/LspUtils';
+import { getLeaseDisplay, getRenewalInfo } from '../../utils/LspUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import UrlUtils from '../../utils/UrlUtils';
 import { numberWithCommas } from '../../utils/UnitsUtils';
@@ -73,14 +73,6 @@ interface ChannelState {
     deliveryAddress: string;
     aliasToggle: boolean;
     channel: Channel;
-    renewalInfo: {
-        scid?: string;
-        expiresInBlocks?: number;
-        expiresMonths?: number;
-        expiresDays?: number;
-        maxExtensionInBlocks?: number;
-        expirationBlock?: number;
-    };
 }
 
 @inject(
@@ -98,51 +90,8 @@ export default class ChannelView extends React.Component<
 > {
     constructor(props: ChannelProps) {
         super(props);
-        const { route, ChannelsStore, LSPStore, NodeInfoStore } = props;
+        const { route, ChannelsStore } = props;
         const channel = route.params?.channel;
-
-        const currentBlockHeight = NodeInfoStore.nodeInfo.currentBlockHeight;
-
-        const renewalInfo = LSPStore.getExtendableChannelsData?.filter(
-            (extendableChannel: any) => {
-                return (
-                    extendableChannel.short_channel_id ===
-                        channel.shortChannelId ||
-                    extendableChannel.short_channel_id ===
-                        channel.peerScidAlias ||
-                    extendableChannel.short_channel_id ===
-                        channel.zeroConfConfirmedScid
-                );
-            }
-        )[0];
-
-        let scid;
-        if (renewalInfo?.short_channel_id) {
-            scid = renewalInfo.short_channel_id;
-        }
-
-        let expiresInBlocks;
-        if (currentBlockHeight && renewalInfo?.expiration_block) {
-            expiresInBlocks = new BigNumber(renewalInfo.expiration_block)
-                .minus(currentBlockHeight)
-                .toNumber();
-        }
-
-        let expiresMonths, expiresDays;
-        if (expiresInBlocks) {
-            const { months, days } =
-                DateTimeUtils.blocksToMonthsAndDays(expiresInBlocks);
-            expiresMonths = months;
-            expiresDays = days;
-        }
-
-        let maxExtensionInBlocks;
-        if (renewalInfo?.max_channel_extension_expiry_blocks) {
-            maxExtensionInBlocks =
-                renewalInfo.max_channel_extension_expiry_blocks;
-        }
-
-        const expirationBlock = renewalInfo?.expiration_block;
 
         this.state = {
             confirmCloseChannel: false,
@@ -150,15 +99,7 @@ export default class ChannelView extends React.Component<
             forceCloseChannel: false,
             deliveryAddress: '',
             aliasToggle: false,
-            channel,
-            renewalInfo: {
-                scid,
-                expiresInBlocks,
-                expiresDays,
-                expiresMonths,
-                maxExtensionInBlocks,
-                expirationBlock
-            }
+            channel
         };
 
         if (BackendUtils.isLNDBased() && channel.channelId != null) {
@@ -275,8 +216,7 @@ export default class ChannelView extends React.Component<
             satPerByte,
             forceCloseChannel,
             deliveryAddress,
-            aliasToggle,
-            renewalInfo
+            aliasToggle
         } = this.state;
         const { settings } = SettingsStore;
         const { privacy } = settings;
@@ -334,6 +274,20 @@ export default class ChannelView extends React.Component<
             blocks_til_maturity
         } = channel as ClosedChannel;
 
+        // computed per render so lease data and the block height that
+        // arrive after the view opens are shown
+        const renewalInfo = getRenewalInfo(
+            LSPStore.getExtendableChannelsData,
+            channel,
+            NodeInfoStore.nodeInfo.currentBlockHeight
+        );
+        let expiresMonths: number | undefined, expiresDays: number | undefined;
+        if (renewalInfo.expiresInBlocks) {
+            ({ months: expiresMonths, days: expiresDays } =
+                DateTimeUtils.blocksToMonthsAndDays(
+                    renewalInfo.expiresInBlocks
+                ));
+        }
         const leaseDisplay = getLeaseDisplay({
             ...renewalInfo,
             fetchError: LSPStore.getExtendableChannelsError,
@@ -510,7 +464,8 @@ export default class ChannelView extends React.Component<
                                     justify="space-between"
                                     style={{ marginTop: 10, marginBottom: 10 }}
                                 >
-                                    {renewalInfo.expiresInBlocks ? (
+                                    {renewalInfo.expiresInBlocks !==
+                                    undefined ? (
                                         <View style={{ width: '50%' }}>
                                             <Text
                                                 style={{
@@ -536,15 +491,15 @@ export default class ChannelView extends React.Component<
                                             )} ${localeString(
                                                 'general.blocks'
                                             )}\n ~${
-                                                renewalInfo.expiresMonths
+                                                expiresMonths
                                                     ? `${numberWithCommas(
                                                           Math.abs(
-                                                              renewalInfo.expiresMonths
+                                                              expiresMonths
                                                           )
                                                       )} ${localeString(
                                                           new BigNumber(
                                                               Math.abs(
-                                                                  renewalInfo.expiresMonths
+                                                                  expiresMonths
                                                               )
                                                           ).gt(1)
                                                               ? 'time.months'
@@ -552,20 +507,17 @@ export default class ChannelView extends React.Component<
                                                       ).toLowerCase()}`
                                                     : ''
                                             }${
-                                                renewalInfo.expiresMonths &&
-                                                renewalInfo.expiresDays
+                                                expiresMonths && expiresDays
                                                     ? ', '
                                                     : ''
                                             }${
-                                                renewalInfo.expiresDays
+                                                expiresDays
                                                     ? `${numberWithCommas(
-                                                          Math.abs(
-                                                              renewalInfo.expiresDays
-                                                          )
+                                                          Math.abs(expiresDays)
                                                       )} ${localeString(
                                                           new BigNumber(
                                                               Math.abs(
-                                                                  renewalInfo.expiresDays
+                                                                  expiresDays
                                                               )
                                                           ).gt(1)
                                                               ? 'time.days'
@@ -574,6 +526,9 @@ export default class ChannelView extends React.Component<
                                                     : ''
                                             }`}</Text>
                                         </View>
+                                    ) : leaseDisplay.hasLease ? (
+                                        // block height not loaded yet
+                                        <View style={{ width: '50%' }} />
                                     ) : (
                                         <TouchableOpacity
                                             style={{ width: '50%' }}
@@ -615,7 +570,7 @@ export default class ChannelView extends React.Component<
                                     {leaseDisplay.showExtendButton && (
                                         <ElementButton
                                             title={
-                                                renewalInfo.expiresInBlocks
+                                                leaseDisplay.hasLease
                                                     ? localeString(
                                                           'views.Channel.lease.extendLease'
                                                       )

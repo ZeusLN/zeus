@@ -77,6 +77,55 @@ export function verifyWrappedInvoice(
     return { valid: true };
 }
 
+export interface RenewalInfo {
+    scid?: string;
+    // blocks until the lease expires, negative once it has expired;
+    // undefined while the block height is unknown or there is no lease
+    expiresInBlocks?: number;
+    maxExtensionInBlocks?: number;
+    // 0 when the LSP keeps the channel open at its discretion
+    expirationBlock?: number;
+}
+
+// Looks up a channel's LSPS7 get_extendable_channels entry by any of its
+// short channel ids.
+export function getRenewalInfo(
+    extendableChannels: any[] | undefined,
+    channel: {
+        shortChannelId?: string;
+        peerScidAlias?: string;
+        zeroConfConfirmedScid?: string;
+    },
+    currentBlockHeight?: number
+): RenewalInfo {
+    const ids = [
+        channel.shortChannelId,
+        channel.peerScidAlias,
+        channel.zeroConfConfirmedScid
+    ].filter(Boolean);
+    const entry = extendableChannels?.find(
+        (extendableChannel: any) =>
+            !!extendableChannel?.short_channel_id &&
+            ids.includes(extendableChannel.short_channel_id)
+    );
+    if (!entry) return {};
+
+    const expirationBlock = entry.expiration_block;
+    let expiresInBlocks;
+    if (currentBlockHeight && expirationBlock) {
+        expiresInBlocks = new BigNumber(expirationBlock)
+            .minus(currentBlockHeight)
+            .toNumber();
+    }
+
+    return {
+        scid: entry.short_channel_id,
+        expiresInBlocks,
+        maxExtensionInBlocks: entry.max_channel_extension_expiry_blocks,
+        expirationBlock
+    };
+}
+
 export interface LeaseDisplay {
     // the LSP couldn't be asked about this channel's lease
     showFetchError: boolean;
@@ -84,6 +133,9 @@ export interface LeaseDisplay {
     showLease: boolean;
     // the extend or purchase lease button
     showExtendButton: boolean;
+    // the channel has a lease with an expiry, as opposed to being kept open
+    // at the LSP's discretion
+    hasLease: boolean;
 }
 
 // What the channel view shows for a channel's LSPS7 lease. scid is set when
@@ -104,9 +156,11 @@ export function getLeaseDisplay({
     isLspChannel: boolean;
 }): LeaseDisplay {
     const canExtend = Number(maxExtensionInBlocks) > 0;
+    const hasLease = Number(expirationBlock) > 0;
     return {
         showFetchError: fetchError && isLspChannel && !scid,
-        showLease: canExtend || Number(expirationBlock) > 0,
-        showExtendButton: canExtend
+        showLease: canExtend || hasLease,
+        showExtendButton: canExtend,
+        hasLease
     };
 }

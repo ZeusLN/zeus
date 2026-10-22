@@ -1,4 +1,8 @@
-import { getLeaseDisplay, verifyWrappedInvoice } from './LspUtils';
+import {
+    getLeaseDisplay,
+    getRenewalInfo,
+    verifyWrappedInvoice
+} from './LspUtils';
 
 // Deterministic fixtures signed with throwaway test keys. The scenario:
 // the user requests 100 000 sats with a quoted zero-conf fee of
@@ -142,7 +146,8 @@ describe('getLeaseDisplay', () => {
         ).toEqual({
             showFetchError: false,
             showLease: true,
-            showExtendButton: false
+            showExtendButton: false,
+            hasLease: true
         });
     });
 
@@ -157,7 +162,8 @@ describe('getLeaseDisplay', () => {
         ).toEqual({
             showFetchError: false,
             showLease: true,
-            showExtendButton: true
+            showExtendButton: true,
+            hasLease: true
         });
     });
 
@@ -172,7 +178,8 @@ describe('getLeaseDisplay', () => {
         ).toEqual({
             showFetchError: false,
             showLease: true,
-            showExtendButton: true
+            showExtendButton: true,
+            hasLease: false
         });
     });
 
@@ -187,7 +194,8 @@ describe('getLeaseDisplay', () => {
         ).toEqual({
             showFetchError: false,
             showLease: true,
-            showExtendButton: false
+            showExtendButton: false,
+            hasLease: true
         });
     });
 
@@ -195,7 +203,8 @@ describe('getLeaseDisplay', () => {
         expect(getLeaseDisplay({ ...base, fetchError: true })).toEqual({
             showFetchError: true,
             showLease: false,
-            showExtendButton: false
+            showExtendButton: false,
+            hasLease: false
         });
     });
 
@@ -222,7 +231,99 @@ describe('getLeaseDisplay', () => {
         ).toEqual({
             showFetchError: false,
             showLease: false,
-            showExtendButton: false
+            showExtendButton: false,
+            hasLease: false
         });
+    });
+});
+
+describe('getRenewalInfo', () => {
+    const entry = {
+        short_channel_id: '800000x1x0',
+        max_channel_extension_expiry_blocks: 26280,
+        expiration_block: 852560
+    };
+
+    it('matches the short channel id and counts blocks to expiry', () => {
+        expect(
+            getRenewalInfo([entry], { shortChannelId: '800000x1x0' }, 850000)
+        ).toEqual({
+            scid: '800000x1x0',
+            expiresInBlocks: 2560,
+            maxExtensionInBlocks: 26280,
+            expirationBlock: 852560
+        });
+    });
+
+    it('matches the peer scid alias', () => {
+        expect(
+            getRenewalInfo(
+                [entry],
+                { shortChannelId: '1x2x3', peerScidAlias: '800000x1x0' },
+                850000
+            ).scid
+        ).toBe('800000x1x0');
+    });
+
+    it('matches the confirmed scid of a zero-conf channel', () => {
+        expect(
+            getRenewalInfo(
+                [entry],
+                { zeroConfConfirmedScid: '800000x1x0' },
+                850000
+            ).scid
+        ).toBe('800000x1x0');
+    });
+
+    it('leaves expiresInBlocks unset until the block height loads', () => {
+        expect(
+            getRenewalInfo([entry], { shortChannelId: '800000x1x0' }, 0)
+        ).toEqual({
+            scid: '800000x1x0',
+            expiresInBlocks: undefined,
+            maxExtensionInBlocks: 26280,
+            expirationBlock: 852560
+        });
+    });
+
+    it('counts an expired lease as negative', () => {
+        expect(
+            getRenewalInfo([entry], { shortChannelId: '800000x1x0' }, 853000)
+                .expiresInBlocks
+        ).toBe(-440);
+    });
+
+    it('has no expiry for a channel kept open at the LSP discretion', () => {
+        expect(
+            getRenewalInfo(
+                [{ ...entry, expiration_block: 0 }],
+                { shortChannelId: '800000x1x0' },
+                850000
+            )
+        ).toEqual({
+            scid: '800000x1x0',
+            expiresInBlocks: undefined,
+            maxExtensionInBlocks: 26280,
+            expirationBlock: 0
+        });
+    });
+
+    it('returns nothing for a channel the LSP did not list', () => {
+        expect(
+            getRenewalInfo([entry], { shortChannelId: '1x2x3' }, 850000)
+        ).toEqual({});
+        expect(
+            getRenewalInfo(undefined, { shortChannelId: '1x2x3' }, 850000)
+        ).toEqual({});
+    });
+
+    it('does not match an entry without an scid to a channel without an alias', () => {
+        expect(
+            getRenewalInfo(
+                [{ ...entry, short_channel_id: undefined }],
+                { shortChannelId: '1x2x3' },
+                850000
+            )
+        ).toEqual({});
     });
 });
