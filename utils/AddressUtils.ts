@@ -144,8 +144,11 @@ class AddressUtils {
         // payment requests prefixed with 'lightning:'
 
         // handle BTCPay invoices with amounts embedded
-        // the scheme must start the input and is case-insensitive (RFC 3986)
-        const scheme = input.slice(0, 'bitcoin:'.length);
+        // the scheme must start the input and is case-insensitive (RFC 3986).
+        // Leading whitespace is skipped, since some QR scanners pass the raw
+        // scan without trimming it.
+        const trimmed = input.trimStart();
+        const scheme = trimmed.slice(0, 'bitcoin:'.length);
         if (scheme.toLowerCase() === 'bitcoin:') {
             const [
                 parsedValue,
@@ -153,7 +156,7 @@ class AddressUtils {
                 parsedLightning,
                 parsedOffer,
                 parsedClinkNoffer
-            ] = bitcoinQrParser(input, scheme);
+            ] = bitcoinQrParser(trimmed, scheme);
             value = parsedValue;
 
             if (parsedSatAmount) {

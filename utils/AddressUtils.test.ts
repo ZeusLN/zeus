@@ -99,6 +99,18 @@ describe('AddressUtils', () => {
     });
 
     describe('processBIP21Uri', () => {
+        it('ignores whitespace before the bitcoin: scheme', () => {
+            // the swap QR scanners pass the raw scan without trimming
+            expect(
+                AddressUtils.processBIP21Uri(
+                    '\n bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=0.00170003'
+                )
+            ).toEqual({
+                value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                satAmount: '170003'
+            });
+        });
+
         it('processes all BIP-21 URI variations', () => {
             // with fee
             expect(
