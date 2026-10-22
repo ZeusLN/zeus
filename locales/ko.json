@@ -2484,6 +2484,7 @@
     "views.Swaps.generateInvoiceFailed": "인보이스 생성 실패",
     "views.Swaps.invalidReverseSwapInvoice": "The swap provider returned an invoice that does not match the requested swap. For your safety, this swap has been aborted and no payment was made.",
     "views.Swaps.invalidReverseSwapResponse": "The swap provider returned swap details that do not match the requested swap. For your safety, this swap has been aborted and no payment was made.",
+    "views.Swaps.tipHeightUnavailable": "Could not reach your mempool instance to check the swap timeout. Please try again.",
     "views.Swaps.generateOnchainAddress": "온체인 주소 생성",
     "views.Swaps.generateOnchainAddressFailed": "온체인 주소 생성 실패",
     "views.Swaps.noUpdates": "업데이트가 없습니다!",
