@@ -728,6 +728,53 @@ describe('clearNodeKeychainData (single-wallet deletion helper)', () => {
         rememberCredentials(pairingPhrase);
     });
 
+    // On Android a keychain write runs off the JS thread and can finish
+    // after a reset that started later, so a write already in flight when
+    // the wallet is deleted must not leave its entry behind
+    it('removes a credential that an in-flight write restored after the clear', async () => {
+        const pairingPhrase = 'over hover clever trigger';
+        const hostKey = `lnc-rn:${lncHash(pairingPhrase)}:host`;
+        const stored: Record<string, any> = {};
+        const mockedSetItem = Storage.setItem as jest.Mock;
+        let release: () => void = () => {};
+        let started: () => void = () => {};
+        const entered = new Promise<void>((resolve) => (started = resolve));
+        mockedSetItem.mockImplementationOnce(
+            async (key: string, value: any) => {
+                started();
+                await new Promise<void>((resolve) => (release = resolve));
+                stored[key] = value;
+                return true;
+            }
+        );
+        mockedStorageGetItem.mockImplementation(
+            async (key: string) => stored[key] ?? null
+        );
+        mockedStorageRemoveItem.mockImplementation(async (key: string) => {
+            delete stored[key];
+            return true;
+        });
+
+        try {
+            const credentials = new LncCredentialStore(pairingPhrase);
+            credentials.serverHost = 'lnc.zeusln.app:443';
+            await entered;
+
+            await clearNodeKeychainData({
+                implementation: 'lightning-node-connect',
+                pairingPhrase
+            });
+            release();
+            await credentials.flushWrites();
+
+            expect(stored[hostKey]).toBeUndefined();
+        } finally {
+            mockedStorageGetItem.mockResolvedValue(null);
+            mockedStorageRemoveItem.mockResolvedValue(true);
+            rememberCredentials(pairingPhrase);
+        }
+    });
+
     it('is a no-op for a null node', async () => {
         await expect(clearNodeKeychainData(null)).resolves.toBeUndefined();
         expect(mockedStorageRemoveItem).not.toHaveBeenCalled();

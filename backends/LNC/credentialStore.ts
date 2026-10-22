@@ -236,6 +236,14 @@ export default class LncCredentialStore implements CredentialStore {
                 // wallet was deleted are dropped too
                 if (forgottenKeys.has(key)) return;
                 await Storage.setItem(key, value);
+                // The wallet can be deleted while the write is in flight. On
+                // Android a keychain write runs off the JS thread and can land
+                // after the clear's reset, so undo it rather than leave the
+                // deleted wallet's credentials behind.
+                if (forgottenKeys.has(key)) {
+                    await Storage.removeItem(key);
+                    return;
+                }
                 // Read back: a silently dropped keychain write is the one
                 // failure mode this store cannot recover from, so make it
                 // loud rather than discovering it on the next launch. An

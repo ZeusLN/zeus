@@ -248,6 +248,8 @@ describe('LNC credentialStore', () => {
             await credentials.flushWrites();
 
             expect(store[BASE_KEY]).toBeUndefined();
+            // the write that was in flight is undone too
+            expect(store[HOST_KEY]).toBeUndefined();
         });
 
         it('keeps writing other wallets', async () => {
