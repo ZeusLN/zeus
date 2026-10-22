@@ -93,6 +93,45 @@ describe('ContactStore', () => {
             expect(bob.name).toBe('Bob');
             expect(store.prefillContact).toBeNull();
         });
+
+        it('does not log the contact list', async () => {
+            const logSpy = jest
+                .spyOn(console, 'log')
+                .mockImplementation(() => {});
+            const existing = [
+                {
+                    contactId: 'id-a',
+                    name: 'Alice',
+                    lnAddress: ['alice@example.com']
+                },
+                {
+                    contactId: 'id-b',
+                    name: 'Bob',
+                    onchainAddress: ['bc1qbobaddress']
+                }
+            ];
+            getItemMock.mockResolvedValue(JSON.stringify(existing));
+            store.setPrefillContact({
+                contactId: 'id-a',
+                name: 'Alice'
+            } as any);
+
+            try {
+                await store.saveContact(
+                    { name: 'Alicia', lnAddress: ['alicia@example.com'] },
+                    true,
+                    false,
+                    navigation
+                );
+
+                const logged = JSON.stringify(logSpy.mock.calls);
+                expect(logged).not.toContain('alicia@example.com');
+                expect(logged).not.toContain('bc1qbobaddress');
+                expect(logged).not.toContain('Bob');
+            } finally {
+                logSpy.mockRestore();
+            }
+        });
     });
 
     describe('deleteContact', () => {
