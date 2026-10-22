@@ -394,6 +394,62 @@ describe('SwapStore.fetchAndUpdateSwaps and transaction.claimed', () => {
         expect(swap.status).toBe(SwapState.TransactionClaimed);
         expect(lookupInvoice).not.toHaveBeenCalled();
     });
+
+    describe('when the node or host does not answer', () => {
+        beforeEach(() => jest.useFakeTimers());
+        afterEach(() => jest.useRealTimers());
+
+        // Polls the stored submarine swap while the host reports it
+        // claimed; requests matching `silent` never settle. Returns the
+        // swap as stored afterwards.
+        const pollWithSilent = async (silent: (url: string) => boolean) => {
+            (Storage.getItem as jest.Mock).mockImplementation(async (k) =>
+                k === SWAPS_KEY ? JSON.stringify([submarineSwap]) : null
+            );
+            const cancel = jest.fn();
+            blobFetch.mockImplementation((_method: string, url: string) =>
+                silent(url)
+                    ? Object.assign(new Promise(() => undefined), { cancel })
+                    : Promise.resolve({
+                          json: () => ({
+                              status: SwapState.TransactionClaimed
+                          })
+                      })
+            );
+
+            const done = buildStore().fetchAndUpdateSwaps();
+            await jest.advanceTimersByTimeAsync(10000);
+            await done;
+
+            const call = (Storage.setItem as jest.Mock).mock.calls.find(
+                ([k]) => k === SWAPS_KEY
+            );
+            return { swap: JSON.parse(call[1])[0], cancel };
+        };
+
+        it('does not wait for a preimage request the host holds', async () => {
+            lookupInvoice.mockRejectedValue(
+                new Error('unable to locate invoice')
+            );
+
+            const { swap, cancel } = await pollWithSilent((url) =>
+                url.endsWith('/preimage')
+            );
+
+            expect(swap.status).toBe(SwapState.TransactionMempool);
+            expect(cancel).toHaveBeenCalledTimes(1);
+        });
+
+        it('does not wait for an invoice lookup the node holds', async () => {
+            lookupInvoice.mockReturnValue(new Promise(() => undefined));
+
+            const { swap } = await pollWithSilent((url) =>
+                url.endsWith('/preimage')
+            );
+
+            expect(swap.status).toBe(SwapState.TransactionMempool);
+        });
+    });
 });
 
 describe('SwapStore Pro referral gating', () => {

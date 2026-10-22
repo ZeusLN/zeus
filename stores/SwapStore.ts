@@ -209,6 +209,31 @@ const repairRescuedPreimage = (stored: any, rescued: any) => {
     if (!stored.keys) stored.keys = rescued.keys;
 };
 
+// Each request that confirms a claimed submarine swap's invoice is paid
+// (the node's invoice lookup, then the host's preimage) gets this long,
+// so the two together stay within the 10s the swap status poll is given.
+// A request that runs out counts as not confirmed.
+const SWAP_CLAIM_CHECK_TIMEOUT_MS = 5000;
+
+// Rejects when the request has not settled after ms, after calling
+// onTimeout (to cancel it, where it can be)
+const withTimeout = <T>(
+    request: Promise<T>,
+    ms: number,
+    onTimeout?: () => void
+): Promise<T> => {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    return Promise.race([
+        request,
+        new Promise<never>((_, reject) => {
+            timer = setTimeout(() => {
+                onTimeout?.();
+                reject(new Error('Request timeout'));
+            }, ms);
+        })
+    ]).finally(() => clearTimeout(timer));
+};
+
 export default class SwapStore {
     @observable public subInfo: SubmarineSwapInfo = {};
     @observable public reverseInfo: ReverseSwapInfo = {};
@@ -1479,7 +1504,8 @@ export default class SwapStore {
      * offered a refund again, so the host's transaction.claimed is only
      * recorded once this is true: the node reports the invoice paid, or the
      * preimage the host gives for the swap hashes to the payment hash. False
-     * when neither confirms it, also when the node or host can't be reached.
+     * when neither confirms it, also when the node or host can't be reached
+     * or does not answer within SWAP_CLAIM_CHECK_TIMEOUT_MS.
      */
     public isSubmarineSwapInvoicePaid = async (
         id: string,
@@ -1496,9 +1522,10 @@ export default class SwapStore {
         paymentHash = paymentHash.toLowerCase();
 
         try {
-            const response = await BackendUtils.lookupInvoice({
-                r_hash: paymentHash
-            });
+            const response = await withTimeout(
+                BackendUtils.lookupInvoice({ r_hash: paymentHash }),
+                SWAP_CLAIM_CHECK_TIMEOUT_MS
+            );
             if (
                 response &&
                 typeof response === 'object' &&
@@ -1511,10 +1538,15 @@ export default class SwapStore {
         }
 
         try {
-            const response = await ReactNativeBlobUtil.fetch(
+            const request = ReactNativeBlobUtil.fetch(
                 'GET',
                 `${endpoint || this.getHost}/swap/submarine/${id}/preimage`,
                 this.getHeaders
+            );
+            const response = await withTimeout(
+                request,
+                SWAP_CLAIM_CHECK_TIMEOUT_MS,
+                () => request.cancel?.()
             );
             const preimage = response.json()?.preimage;
             return (
