@@ -2674,7 +2674,18 @@ export default class NostrWalletConnectStore {
             feeLimitSats
         );
 
-        const payments: Payment[] = await this.paymentsStore.getPayments();
+        // The payment has been sent. A failed list refresh must not throw past
+        // this point, or nothing would be recorded and the spend would escape
+        // the budget; the outcome is then read from paymentState alone.
+        let payments: Payment[] = [];
+        try {
+            payments = (await this.paymentsStore.getPayments()) || [];
+        } catch (error) {
+            console.warn(
+                'NWC: payments refresh after pay_invoice failed',
+                error
+            );
+        }
         const paymentHash = paymentState.payment_hash;
         const inTransitResult =
             NostrConnectUtils.resolveLightningPaymentInTransit({

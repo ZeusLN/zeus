@@ -2892,6 +2892,92 @@ describe('NostrWalletConnectStore handleLightningPayInvoice fee cap', () => {
     });
 });
 
+describe('NostrWalletConnectStore handleLightningPayInvoice payments refresh failure', () => {
+    beforeEach(() => {
+        (BackendUtils.decodePaymentRequest as jest.Mock).mockResolvedValue({
+            timestamp: String(Math.floor(Date.now() / 1000) - 60),
+            expiry: '3600'
+        });
+        jest.spyOn(NostrConnectUtils, 'decodeInvoiceTags').mockImplementation(
+            async (invoice: string) => ({
+                paymentRequest: invoice,
+                paymentHash: '',
+                descriptionHash: '',
+                description: '',
+                amount: 5000,
+                expiryTime: 0,
+                createdAt: 0,
+                isExpired: false,
+                network: 'bitcoin'
+            })
+        );
+        jest.spyOn(
+            NostrConnectUtils,
+            'resolvePayInvoiceAmount'
+        ).mockResolvedValue({ amountSats: 5000, zeroAmountInvoice: false });
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => jest.restoreAllMocks());
+
+    function buildStore(outcome: any) {
+        return createStore({
+            transactionsStore: {
+                sendPaymentSilently: jest.fn().mockResolvedValue({}),
+                getPaymentOutcome: jest.fn().mockReturnValue(outcome)
+            },
+            balanceStore: {
+                getLightningBalance: jest
+                    .fn()
+                    .mockResolvedValue({ lightningBalance: 100000 })
+            },
+            paymentsStore: {
+                payments: [],
+                getPayments: jest
+                    .fn()
+                    .mockRejectedValue(new Error('node unreachable'))
+            }
+        });
+    }
+
+    it('debits the budget for a paid invoice when the payments refresh fails', async () => {
+        const { store } = buildStore({
+            payment_preimage: 'aa'.repeat(32),
+            payment_fee: 3
+        });
+        const connection = addConnection(store, { maxAmountSats: 10000 });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice: 'lnbc1refresh-fail-paid' }
+        );
+
+        expect(response.error).toBeUndefined();
+        expect(response.result.preimage).toBe('aa'.repeat(32));
+        expect(connection.totalSpendSats).toBe(5003);
+        expect(connection.activity[0].status).toBe('success');
+    });
+
+    it('holds the budget for a timed-out payment when the payments refresh fails', async () => {
+        const { store } = buildStore({
+            error: true,
+            payment_error: 'views.SendingLightning.paymentTimedOut'
+        });
+        jest.spyOn(
+            NostrConnectUtils,
+            'isPaymentTimedOutMessage'
+        ).mockReturnValue(true);
+        const connection = addConnection(store, { maxAmountSats: 10000 });
+
+        await (store as any).handleLightningPayInvoice(connection, {
+            invoice: 'lnbc1refresh-fail-timeout'
+        });
+
+        expect(connection.activity[0].status).toBe('pending');
+        expect(connection.pendingSpendSats).toBeGreaterThanOrEqual(5000);
+    });
+});
+
 describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices', () => {
     const invoice = 'lnbc1zero-amount';
     const paymentHash = hex64('e');
