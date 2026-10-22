@@ -208,6 +208,7 @@ describe('ChannelMigrationUtils', () => {
                 '/path/to/backup.zip',
                 'backup.zip',
                 'lnd',
+                false,
                 false
             );
 
@@ -221,7 +222,8 @@ describe('ChannelMigrationUtils', () => {
                 '/path/to/backup.zip',
                 'backup.zip',
                 'lnd',
-                true
+                true,
+                false
             );
 
             const destDir = mockUnzipFile.mock.calls[0][1];
@@ -238,6 +240,7 @@ describe('ChannelMigrationUtils', () => {
                 '/path/to/backup.zip',
                 'backup.zip',
                 'lnd',
+                false,
                 false
             );
 
@@ -251,7 +254,7 @@ describe('ChannelMigrationUtils', () => {
 
         it('creates graph directory if it does not exist', async () => {
             mockExists.mockImplementation(async (path: string) => {
-                if (path.includes('graph')) return false;
+                if (path.endsWith('graph/mainnet')) return false;
                 return true;
             });
 
@@ -259,6 +262,7 @@ describe('ChannelMigrationUtils', () => {
                 '/path/to/backup.zip',
                 'backup.zip',
                 'lnd',
+                false,
                 false
             );
 
@@ -267,9 +271,83 @@ describe('ChannelMigrationUtils', () => {
 
         it('rejects invalid file types', async () => {
             await expect(
-                importChannelDb('/path/to/backup.db', 'backup.db', 'lnd', false)
+                importChannelDb(
+                    '/path/to/backup.db',
+                    'backup.db',
+                    'lnd',
+                    false,
+                    false
+                )
             ).rejects.toThrow();
         });
+
+        it.each([
+            [false, 'channel.sqlite'],
+            [true, 'channel.db']
+        ])(
+            'rejects a backup of the other database type (isSqlite %p, backup has %s)',
+            async (isSqlite, backupFile) => {
+                mockExists.mockImplementation(
+                    async (path: string) =>
+                        !path.includes('/channel.') ||
+                        path.endsWith(`/${backupFile}`)
+                );
+
+                await expect(
+                    importChannelDb(
+                        '/path/to/backup.zip',
+                        'backup.zip',
+                        'lnd',
+                        false,
+                        isSqlite
+                    )
+                ).rejects.toThrow(
+                    'views.Tools.migration.import.databaseMismatch'
+                );
+            }
+        );
+
+        it.each([false, true])(
+            'accepts a backup with the database of the selected type (isSqlite %p)',
+            async (isSqlite) => {
+                const file = isSqlite ? 'channel.sqlite' : 'channel.db';
+                mockExists.mockImplementation(
+                    async (path: string) =>
+                        !path.includes('/channel.') || path.endsWith(`/${file}`)
+                );
+
+                await expect(
+                    importChannelDb(
+                        '/path/to/backup.zip',
+                        'backup.zip',
+                        'lnd',
+                        false,
+                        isSqlite
+                    )
+                ).resolves.toBeUndefined();
+            }
+        );
+
+        it.each([false, true])(
+            'rejects a backup that unpacks to no channel database (isSqlite %p)',
+            async (isSqlite) => {
+                mockExists.mockImplementation(
+                    async (path: string) => !path.includes('/channel.')
+                );
+
+                await expect(
+                    importChannelDb(
+                        '/path/to/backup.zip',
+                        'backup.zip',
+                        'lnd',
+                        false,
+                        isSqlite
+                    )
+                ).rejects.toThrow(
+                    'views.Tools.migration.import.databaseMissing'
+                );
+            }
+        );
     });
 
     describe('encryptFile / decryptFile integration', () => {

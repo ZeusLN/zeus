@@ -1354,7 +1354,8 @@ export async function createLndWallet({
             channelDbUri,
             channelDbFileName,
             lndDir,
-            isTestnet || false
+            isTestnet || false,
+            isSqlite
         );
 
         LndMobileEventEmitter.removeAllListeners('SubscribeState');
