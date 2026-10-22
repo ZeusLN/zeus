@@ -128,13 +128,17 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
         );
     });
 
-    it('does not use Tor for an .onion address while Tor is off', async () => {
-        await tapRow(`satoshi@${ONION}`);
+    it('routes an .onion address through Tor while Tor is off', async () => {
+        const navigation = await tapRow(`satoshi@${ONION}`);
 
-        expect(mockDoTorRequest).not.toHaveBeenCalled();
-        expect(mockBlobUtilFetch).toHaveBeenCalledWith(
-            'get',
-            `http://${ONION}/.well-known/lnurlp/satoshi`
+        expect(mockDoTorRequest).toHaveBeenCalledWith(
+            `http://${ONION}/.well-known/lnurlp/satoshi`,
+            'GET'
+        );
+        expect(mockBlobUtilFetch).not.toHaveBeenCalled();
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'LnurlPay',
+            expect.anything()
         );
     });
 

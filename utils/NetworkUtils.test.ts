@@ -21,7 +21,7 @@ jest.mock('react-native-fs', () => ({
 }));
 
 import { RnTor } from 'react-native-nitro-tor';
-import { networkFetch } from './NetworkUtils';
+import { isOnionUrl, networkFetch } from './NetworkUtils';
 
 describe('networkFetch', () => {
     beforeEach(() => {
@@ -53,6 +53,82 @@ describe('networkFetch', () => {
             expect(RnTor.httpGet).not.toHaveBeenCalled();
             expect(RnTor.httpPost).not.toHaveBeenCalled();
             expect(response).toBe(blobResponse);
+        });
+    });
+
+    describe('.onion hosts', () => {
+        const ONION =
+            'zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion';
+
+        it('go over Tor even when Tor is disabled', async () => {
+            (RnTor.httpGet as jest.Mock).mockResolvedValue({
+                status_code: 200,
+                body: '{"fastestFee":3}',
+                error: null
+            });
+
+            const response = await networkFetch({
+                method: 'GET',
+                url: `http://${ONION}/api/v1/fees/recommended`,
+                enableTor: false
+            });
+
+            expect(RnTor.httpGet).toHaveBeenCalledTimes(1);
+            expect((RnTor.httpGet as jest.Mock).mock.calls[0][0].url).toBe(
+                `http://${ONION}/api/v1/fees/recommended`
+            );
+            expect(mockFetch).not.toHaveBeenCalled();
+            expect(response.json()).toEqual({ fastestFee: 3 });
+        });
+
+        it('fail instead of falling back to clearnet when Tor cannot start', async () => {
+            // a fresh module, so no earlier test has already started Tor
+            let freshFetch: typeof networkFetch = networkFetch;
+            jest.isolateModules(() => {
+                freshFetch = require('./NetworkUtils').networkFetch;
+                require('react-native-nitro-tor').RnTor.startTorIfNotRunning.mockResolvedValue(
+                    {
+                        is_success: false,
+                        error_message: 'tor down'
+                    }
+                );
+            });
+
+            await expect(
+                freshFetch({
+                    method: 'POST',
+                    url: `http://${ONION}/api/tx`,
+                    body: 'deadbeef',
+                    enableTor: false
+                })
+            ).rejects.toThrow('tor down');
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
+
+        it('fail instead of falling back to clearnet when the Tor request fails', async () => {
+            (RnTor.httpGet as jest.Mock).mockResolvedValue({
+                error: 'connection refused'
+            });
+
+            await expect(
+                networkFetch({
+                    method: 'GET',
+                    url: `https://${ONION.toUpperCase()}/lnurlp/satoshi`
+                })
+            ).rejects.toThrow('connection refused');
+            expect(mockFetch).not.toHaveBeenCalled();
+        });
+
+        it('isOnionUrl matches only the host', () => {
+            expect(isOnionUrl(`http://${ONION}/x`)).toBe(true);
+            expect(isOnionUrl(`http://${ONION}./x`)).toBe(true);
+            expect(isOnionUrl(`https://${ONION.toUpperCase()}:8080/x`)).toBe(
+                true
+            );
+            expect(isOnionUrl('https://pay.onion.example.com/x')).toBe(false);
+            expect(isOnionUrl('https://example.com/a.onion')).toBe(false);
+            expect(isOnionUrl('https://example.com/#x.onion')).toBe(false);
+            expect(isOnionUrl('not a url')).toBe(false);
         });
     });
 

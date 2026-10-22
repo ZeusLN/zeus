@@ -188,7 +188,8 @@ export default class LightningSwipeableRow extends Component<
             'utils.handleAnything.lightningAddressError'
         );
 
-        if (settingsStore.enableTor && isOnion) {
+        // .onion addresses always go over Tor, whatever the Use Tor setting
+        if (isOnion) {
             await doTorRequest(url, RequestMethod.GET)
                 .then((response: any) => {
                     if (!response.callback) {

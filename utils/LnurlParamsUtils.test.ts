@@ -1,5 +1,15 @@
+// NetworkUtils is loaded for its real isOnionUrl; its transports are stubbed
+jest.mock('react-native-blob-util', () => ({
+    __esModule: true,
+    default: { fetch: jest.fn() }
+}));
+jest.mock('./TorUtils', () => ({
+    doTorRequestRaw: jest.fn(),
+    RequestMethod: { GET: 'GET', POST: 'POST', DELETE: 'DELETE' }
+}));
 const mockNetworkFetch = jest.fn();
 jest.mock('./NetworkUtils', () => ({
+    ...jest.requireActual('./NetworkUtils'),
     networkFetch: (...args: any[]) => mockNetworkFetch(...args)
 }));
 // js-lnurl's own transport, used to compare the Tor path against it
@@ -71,6 +81,25 @@ describe('getLnurlParams', () => {
                 url: `http://${onion}/lnurlp/satoshi`
             })
         );
+    });
+
+    it('fetches an .onion link through networkFetch when Tor is disabled', async () => {
+        const onion =
+            'zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion';
+        respond(200, JSON.stringify({ tag: 'channelRequest', k1: 'a' }));
+
+        const result = await getLnurlParams(
+            `lnurlp://${onion}/lnurlp/satoshi`,
+            false
+        );
+
+        expect(mockNetworkFetch).toHaveBeenCalledWith({
+            method: 'get',
+            url: `http://${onion}/lnurlp/satoshi`,
+            enableTor: false
+        });
+        expect(mockCrossFetch).not.toHaveBeenCalled();
+        expect(result.tag).toBe('channelRequest');
     });
 
     it('does not fetch login links', async () => {
