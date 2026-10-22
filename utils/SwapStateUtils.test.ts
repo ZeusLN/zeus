@@ -10,6 +10,7 @@ jest.mock('./SwapUtils', () => ({
 }));
 
 import { SwapState, SwapType } from '../models/Swap';
+import Storage from '../storage';
 import {
     formatSwapIdList,
     getStoredUnfinishedSwapIds,
@@ -116,14 +117,17 @@ describe('getStoredUnfinishedSwapIds', () => {
             rev('r2', SwapState.TransactionMempool)
         ]);
 
-        await expect(getStoredUnfinishedSwapIds()).resolves.toEqual([
-            'r1',
-            'r2'
-        ]);
+        await expect(getStoredUnfinishedSwapIds()).resolves.toEqual({
+            ids: ['r1', 'r2'],
+            unreadable: false
+        });
     });
 
     it('returns nothing when no swaps are stored', async () => {
-        await expect(getStoredUnfinishedSwapIds()).resolves.toEqual([]);
+        await expect(getStoredUnfinishedSwapIds()).resolves.toEqual({
+            ids: [],
+            unreadable: false
+        });
     });
 
     it('still reads the other list when one is not valid JSON', async () => {
@@ -132,7 +136,42 @@ describe('getStoredUnfinishedSwapIds', () => {
             rev('r1', SwapState.Created)
         ]);
 
-        await expect(getStoredUnfinishedSwapIds()).resolves.toEqual(['r1']);
+        await expect(getStoredUnfinishedSwapIds()).resolves.toEqual({
+            ids: ['r1'],
+            unreadable: true
+        });
+    });
+
+    it('reports a truncated list as unreadable', async () => {
+        mockStored.swaps = '{';
+
+        await expect(getStoredUnfinishedSwapIds()).resolves.toEqual({
+            ids: [],
+            unreadable: true
+        });
+    });
+
+    it('reports a failed read as unreadable', async () => {
+        (Storage.getItem as jest.Mock).mockImplementationOnce(async () => {
+            throw new Error('keychain locked');
+        });
+
+        await expect(getStoredUnfinishedSwapIds()).resolves.toEqual({
+            ids: [],
+            unreadable: true
+        });
+    });
+
+    it('reports a list that is not an array as unreadable', async () => {
+        mockStored['reverse-swaps'] = JSON.stringify({
+            id: 'r1',
+            type: SwapType.Reverse
+        });
+
+        await expect(getStoredUnfinishedSwapIds()).resolves.toEqual({
+            ids: [],
+            unreadable: true
+        });
     });
 });
 
