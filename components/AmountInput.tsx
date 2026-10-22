@@ -26,6 +26,9 @@ import NavigationService from '../NavigationService';
 
 interface AmountInputProps {
     onAmountChange: (amount: string, satAmount: string | number) => void;
+    // called before the keypad screen opens, so the parent can tell that
+    // navigation apart from the user leaving the screen
+    onNavigateAway?: () => void;
     amount?: string;
     sats?: string;
     locked?: boolean;
@@ -156,6 +159,7 @@ export default class AmountInput extends React.Component<
             }
 
             // Navigate to keypad view with callback
+            this.props.onNavigateAway?.();
             NavigationService.navigate('AmountKeypad', {
                 initialAmount: displayValue || '0',
                 hideUnitChangeButton,
