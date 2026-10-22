@@ -516,7 +516,10 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             const { LSPStore } = this.props;
             const outputSats = new BigNumber(this.state.outputSats);
             if (outputSats.isGreaterThan(0)) {
-                LSPStore.getZeroConfFee(outputSats.toNumber() * 1000);
+                // errors are surfaced through LSPStore.flow_error
+                LSPStore.getZeroConfFee(outputSats.toNumber() * 1000).catch(
+                    () => {}
+                );
             } else {
                 LSPStore.resetFee();
             }
@@ -2177,7 +2180,13 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                     settings
                                                                         ?.invoices
                                                                         ?.expirySeconds ||
-                                                                    '3600'
+                                                                    '3600',
+                                                                // only where the LSP switch and fee are shown
+                                                                useLsp:
+                                                                    !!enableLSP &&
+                                                                    BackendUtils.supportsFlowLSP() &&
+                                                                    !flowLspNotConfigured &&
+                                                                    !reverse
                                                             }
                                                         );
 

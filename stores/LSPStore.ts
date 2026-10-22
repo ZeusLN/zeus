@@ -24,6 +24,17 @@ import Storage from '../storage';
 export const LEGACY_LSPS1_ORDERS_KEY = 'orderResponses';
 export const LSPS_ORDERS_KEY = 'zeus-lsps1-orders';
 
+// One /api/v1/fee answer. The proposal has to send the id of the quote the
+// invoice was priced with, so callers keep this rather than reading the
+// shared zeroConfFee/feeId, which a newer request or a reset can replace.
+export interface ZeroConfFeeQuote {
+    feeSats: number | undefined;
+    feeId: string | undefined;
+}
+
+// The quote an invoice is priced with, with a missing fee counted as 0.
+export type PricedZeroConfFeeQuote = ZeroConfFeeQuote & { feeSats: number };
+
 const CUSTOM_MESSAGE_TYPE = 37913;
 const JSON_RPC_VERSION = '2.0';
 
@@ -87,6 +98,10 @@ export default class LSPStore {
     // Incremented on every start/stop so an in-flight poll that resumes after an
     // await can tell whether its session is still the active one.
     private freeOrderPollSessionId = 0;
+    // Incremented on every Flow fee request and fee reset, so an answer to a
+    // fee request that is no longer the latest one is dropped instead of
+    // replacing the quote an invoice was priced with.
+    private feeRequestId = 0;
 
     settingsStore: SettingsStore;
     channelsStore: ChannelsStore;
@@ -156,8 +171,19 @@ export default class LSPStore {
         }
     };
 
+    // Also drops the answer to any fee request still in flight.
     @action
     public resetFee = () => {
+        this.feeRequestId++;
+        this.clearFee();
+    };
+
+    // Clears the shown quote and error but lets a fee request in flight
+    // finish, for invoices that don't use the LSP: one created in the
+    // background (NWC, Cashu) must not stop an LSP invoice that is waiting
+    // for its quote.
+    @action
+    public clearFee = () => {
         this.zeroConfFee = undefined;
         this.feeId = undefined;
         this.flow_error = false;
@@ -456,8 +482,9 @@ export default class LSPStore {
     @action
     public getZeroConfFee = (amount_msat: number) => {
         const { settings } = this.settingsStore;
+        const requestId = ++this.feeRequestId;
 
-        return new Promise((resolve, reject) => {
+        return new Promise<ZeroConfFeeQuote>((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
                 'post',
                 `${this.getFlowHost()}/api/v1/fee`,
@@ -473,6 +500,11 @@ export default class LSPStore {
                 })
             )
                 .then((response: any) => {
+                    // superseded by a newer fee request or a reset
+                    if (requestId !== this.feeRequestId) {
+                        reject();
+                        return;
+                    }
                     const status = response.info().status;
                     let data: any;
                     try {
@@ -489,8 +521,8 @@ export default class LSPStore {
                         return;
                     }
                     if (status == 200) {
-                        runInAction(() => {
-                            this.zeroConfFee =
+                        const quote: ZeroConfFeeQuote = {
+                            feeSats:
                                 data.fee_amount_msat !== undefined
                                     ? Number.parseInt(
                                           (
@@ -498,11 +530,29 @@ export default class LSPStore {
                                               1000
                                           ).toString()
                                       )
-                                    : undefined;
-                            this.feeId = data.id;
+                                    : undefined,
+                            feeId: data.id
+                        };
+                        // not stored, so no screen shows it as the fee
+                        if (
+                            quote.feeSats !== undefined &&
+                            !(quote.feeSats >= 0)
+                        ) {
+                            runInAction(() => {
+                                this.flow_error = true;
+                                this.flow_error_msg = localeString(
+                                    'stores.LSPStore.getInfoResponseError'
+                                );
+                            });
+                            reject();
+                            return;
+                        }
+                        runInAction(() => {
+                            this.zeroConfFee = quote.feeSats;
+                            this.feeId = quote.feeId;
                             this.flow_error = false;
                         });
-                        resolve(this.zeroConfFee);
+                        resolve(quote);
                     } else {
                         runInAction(() => {
                             this.flow_error = true;
@@ -516,9 +566,11 @@ export default class LSPStore {
                     }
                 })
                 .catch(() => {
-                    runInAction(() => {
-                        this.flow_error = true;
-                    });
+                    if (requestId === this.feeRequestId) {
+                        runInAction(() => {
+                            this.flow_error = true;
+                        });
+                    }
                     reject();
                 });
         });
@@ -629,17 +681,19 @@ export default class LSPStore {
         }
     };
 
+    // quote is the one bolt11 was priced with. The caller passes it so a
+    // quote that has replaced zeroConfFee/feeId since can't change the
+    // fee_id sent or move the verification bound.
     @action
-    public getZeroConfInvoice = (bolt11: string) => {
+    public getZeroConfInvoice = (
+        bolt11: string,
+        quote: PricedZeroConfFeeQuote
+    ) => {
         this.flow_error = false;
         this.flow_error_msg = '';
         this.showLspSettings = false;
 
         const { settings } = this.settingsStore;
-        // snapshot the fee quote the proposal is priced against, so a
-        // quote overwritten while the request is in flight can't move
-        // the verification bound
-        const quotedFeeSats = this.zeroConfFee || 0;
 
         return new Promise((resolve, reject) => {
             ReactNativeBlobUtil.fetch(
@@ -653,7 +707,7 @@ export default class LSPStore {
                     : { 'Content-Type': 'application/json' },
                 JSON.stringify({
                     bolt11,
-                    fee_id: this.feeId,
+                    fee_id: quote.feeId,
                     simpleTaproot:
                         settings.requestSimpleTaproot &&
                         BackendUtils.supportsSimpleTaprootChannels(),
@@ -693,7 +747,7 @@ export default class LSPStore {
                         const check = verifyWrappedInvoice(
                             bolt11,
                             data.jit_bolt11,
-                            quotedFeeSats
+                            quote.feeSats
                         );
                         if (!check.valid) {
                             runInAction(() => {
