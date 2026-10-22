@@ -235,14 +235,25 @@ export default class LSP extends React.Component<LSPProps, LSPState> {
                                 <TextInput
                                     value={lsp}
                                     onChangeText={async (text: string) => {
+                                        // the discount code was issued for
+                                        // the previous host; don't send it
+                                        // to the new one
+                                        const clearAccessKey =
+                                            !!this.state.accessKey;
                                         this.setState({ lsp: text });
-                                        await updateSettings(
-                                            isMutinynet
+                                        if (clearAccessKey) {
+                                            this.setState({ accessKey: '' });
+                                        }
+                                        await updateSettings({
+                                            ...(isMutinynet
                                                 ? { lspMutinynet: text }
                                                 : isTestNet
                                                 ? { lspTestnet: text }
-                                                : { lspMainnet: text }
-                                        );
+                                                : { lspMainnet: text }),
+                                            ...(clearAccessKey && {
+                                                lspAccessKey: ''
+                                            })
+                                        });
                                     }}
                                     locked={!enableLSP}
                                     autoCapitalize="none"
