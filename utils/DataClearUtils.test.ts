@@ -977,6 +977,85 @@ describe('clearAllData keychain backing store deletion (Android)', () => {
     });
 });
 
+describe('clearAllData picture files', () => {
+    const mockedLs = ReactNativeBlobUtil.fs.ls as jest.Mock;
+    const mockedUnlink = ReactNativeBlobUtil.fs.unlink as jest.Mock;
+    const unlinkedPaths = () => mockedUnlink.mock.calls.map((call) => call[0]);
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+        mockedLs.mockResolvedValue([]);
+        mockedUnlink.mockResolvedValue(undefined);
+    });
+
+    afterAll(() => {
+        mockedLs.mockResolvedValue([]);
+        mockedUnlink.mockResolvedValue(undefined);
+    });
+
+    it('deletes wallet and contact pictures from the documents directory', async () => {
+        mockedLs.mockImplementation(async (dir: string) =>
+            dir === '/docs'
+                ? [
+                      'photo_1700000000000.png',
+                      'photo_1700000000001.png',
+                      'nostrContactPhoto_8b2c0f1e-1.png',
+                      'nostrContactBanner_alice.png',
+                      'ldk-node',
+                      'tor_data',
+                      'rescue_key.json',
+                      'photo.png',
+                      'photo_1700000000000.png.bak'
+                  ]
+                : []
+        );
+
+        await clearAllData();
+
+        const paths = unlinkedPaths();
+        expect(paths).toEqual(
+            expect.arrayContaining([
+                '/docs/photo_1700000000000.png',
+                '/docs/photo_1700000000001.png',
+                '/docs/nostrContactPhoto_8b2c0f1e-1.png',
+                '/docs/nostrContactBanner_alice.png'
+            ])
+        );
+        expect(paths).not.toContain('/docs/ldk-node');
+        expect(paths).not.toContain('/docs/tor_data');
+        expect(paths).not.toContain('/docs/rescue_key.json');
+        expect(paths).not.toContain('/docs/photo.png');
+        expect(paths).not.toContain('/docs/photo_1700000000000.png.bak');
+    });
+
+    it('keeps deleting pictures when one unlink fails', async () => {
+        mockedLs.mockImplementation(async (dir: string) =>
+            dir === '/docs'
+                ? ['photo_1700000000000.png', 'nostrContactPhoto_abc.png']
+                : []
+        );
+        mockedUnlink.mockImplementation(async (p: string) => {
+            if (p === '/docs/photo_1700000000000.png') {
+                throw new Error('EBUSY');
+            }
+        });
+
+        await clearAllData();
+
+        expect(unlinkedPaths()).toContain('/docs/nostrContactPhoto_abc.png');
+    });
+
+    it('finishes the wipe when the documents directory cannot be listed', async () => {
+        mockedLs.mockRejectedValue(new Error('ENOENT'));
+
+        await clearAllData();
+
+        expect(mockedStorageRemoveItem).toHaveBeenCalled();
+        expect(EncryptedStorage.clear).toHaveBeenCalled();
+    });
+});
+
 describe('clearAllData write latch (settings resurrection regression)', () => {
     beforeEach(() => {
         jest.clearAllMocks();
