@@ -313,9 +313,6 @@ export default class CashuStore {
     private addedMintsCache: Set<string> = new Set();
     // Original seed version before CDK migration (preserved for v1 P2PK derivation)
     private originalSeedVersion: string | undefined;
-    // Bumped by reset() so background work started for one wallet session
-    // can tell that the wallet changed while it ran
-    private walletSession = 0;
     // Background retry of interrupted mint restores, and the session it
     // was started for
     private pendingRestoreRetry?: Promise<void>;
@@ -330,6 +327,9 @@ export default class CashuStore {
     @observable public offlineSpentTokens: Array<CashuToken> = [];
     @observable public showOfflineSpentAlert: boolean = false;
     private isSweeping: boolean = false;
+    // Bumped by reset() so background work started for one wallet session
+    // can tell that the wallet changed while it ran
+    private walletSession = 0;
 
     settingsStore: SettingsStore;
     invoicesStore: InvoicesStore;
@@ -2139,6 +2139,7 @@ export default class CashuStore {
 
     @action
     public reset = () => {
+        this.walletSession++;
         this.cashuWallets = {};
         this.totalBalanceSats = 0;
         this.mintUrls = [];
@@ -2165,7 +2166,6 @@ export default class CashuStore {
         this.offlineSpentTokens = [];
         this.showOfflineSpentAlert = false;
         this.isSweeping = false;
-        this.walletSession++;
         this.stopConnectivityMonitoring();
     };
 
