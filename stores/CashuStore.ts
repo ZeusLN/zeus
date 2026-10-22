@@ -4442,14 +4442,9 @@ export default class CashuStore {
                 // Enrich tokens with proofs if missing (migration for old tokens)
                 await this.enrichTokensWithProofs();
 
-                // A stored empty list means the user removed every mint, so
+                // Any stored list, even an empty one, ends the restore, so
                 // keep it unset while the restore is still owed
-                if (
-                    !(
-                        this.nostrMintRestorePending &&
-                        this.mintUrls.length === 0
-                    )
-                ) {
+                if (!this.nostrMintRestorePending) {
                     await Storage.setItem(
                         `${lndDir}-cashu-mintUrls`,
                         JSON.stringify(this.mintUrls)

@@ -123,6 +123,20 @@ describe('CashuStore startup restore of the mint list from Nostr', () => {
             expect(storedMintLists()).toEqual([]);
         });
 
+        // A CDK mint missing from the list (from a token swept to
+        // self-custody) is kept out of it until its recovery removes it
+        it('does not store a mint list when CDK has a mint that is not in it', async () => {
+            (CashuDevKit.getMintUrls as jest.Mock).mockResolvedValue([
+                'https://m'
+            ]);
+
+            const store = newStore();
+            await store.initializeWallets();
+
+            expect(store.mintUrls).toEqual([]);
+            expect(storedMintLists()).toEqual([]);
+        });
+
         it('does not add the onboarding mints over the unread backup', async () => {
             const store = newStore(['https://onboarding.example']);
             const addMint = jest
