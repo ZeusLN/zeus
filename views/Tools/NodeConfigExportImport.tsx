@@ -4,7 +4,6 @@ import {
     StyleSheet,
     Alert,
     ScrollView,
-    Modal,
     TouchableOpacity,
     Platform,
     Image,
@@ -23,6 +22,7 @@ import {
 } from '@react-native-documents/picker';
 
 import Header from '../../components/Header';
+import Modal from '../../components/Modal';
 import Screen from '../../components/Screen';
 import Button from '../../components/Button';
 import TextInput from '../../components/TextInput';
