@@ -41,7 +41,8 @@ export interface ConnectionActivity {
     isExpired?: boolean;
     expiryLabel?: string;
     fees_paid?: number;
-    // routing fee cap sent with a pay_invoice; held with satAmount while pending
+    // routing fee cap sent with a pay_invoice, or the fee reserve on
+    // backends that take no fee limit; held with satAmount while pending
     feeLimitSats?: number;
     isBudgetDebited?: boolean;
 }
@@ -463,6 +464,14 @@ export default class NWCConnection extends BaseModel {
         );
     }
 
+    /**
+     * Fee reserve for a payment of amountSats on backends that take no fee
+     * limit (LndHub): 1% of the amount, rounded up, and at least 10 sats.
+     */
+    public static feeReserveSatsWithoutFeeLimit(amountSats: number): number {
+        return Math.max(Math.ceil(amountSats / 100), 10);
+    }
+
     @action
     public resetBudget(): void {
         this.totalSpendSats = 0;
@@ -568,6 +577,11 @@ export default class NWCConnection extends BaseModel {
      * Requiring amount + fee_limit up front would reject payments when the
      * remaining budget is in [amount, amount + fee_limit); those are still
      * attempted, with the smaller fee cap.
+     *
+     * Backends that take no fee limit (LndHub) cannot cap the fee, so
+     * pay_invoice there also requires the budget to cover the amount plus
+     * feeReserveSatsWithoutFeeLimit, and a pending payment holds that
+     * reserve. The fee actually paid is debited once the payment settles.
      */
     @action
     public validateBudgetBeforePayment(amountSats: number): {
