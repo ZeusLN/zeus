@@ -694,6 +694,7 @@
     "views.Lockscreen.enterLoginPin": "Enter login PIN (not your duress PIN)",
     "views.Lockscreen.incorrectPin": "PIN نادرست",
     "views.Lockscreen.authenticationAttempts": "تلاش های باقیمانده",
+    "views.Lockscreen.attemptNotSaved": "Could not save this attempt, so it was not checked. Free up storage space on this device and try again.",
     "views.NodeInfo.feeReport": "گزارش کارمزد",
     "views.NodeInfo.forwarding": "در حال پیش فرستادن",
     "views.NodeInfo.copyUri": "رونویسی URI",
