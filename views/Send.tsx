@@ -53,7 +53,7 @@ import { errorToUserFriendly } from '../utils/ErrorUtils';
 import { scanNfcTag } from '../utils/NFCUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import { getRawAmountFromSats } from '../utils/AmountUtils';
+import { getRawAmountFromSats, isWholeSatAmount } from '../utils/AmountUtils';
 import { clearPendingPaymentData } from '../utils/GraphSyncUtils';
 
 import NFC from '../assets/images/SVG/NFC-alt.svg';
@@ -381,7 +381,10 @@ export default class Send extends React.Component<SendProps, SendState> {
         return additionalOutputs.some((output) => {
             const { hasAddress, hasAmount } =
                 this.validateAdditionalOutputFields(output);
-            return (hasAddress || hasAmount) && !(hasAddress && hasAmount);
+            return (
+                ((hasAddress || hasAmount) && !(hasAddress && hasAmount)) ||
+                (hasAmount && !isWholeSatAmount(output.satAmount))
+            );
         });
     };
 
@@ -747,6 +750,10 @@ export default class Send extends React.Component<SendProps, SendState> {
             BackendUtils.supportsOnchainSendFeeRate();
         const isInvalidFee =
             supportsOnchainSendFeeRate && (fee === '0' || !fee);
+        // on-chain outputs cannot carry millisats, and VerifyOnChain shows the
+        // amount rounded, so stop here rather than fail after the slide
+        const isFractionalOnchainAmount =
+            !fundMax && !isWholeSatAmount(satAmount);
 
         const slideToPayThreshold =
             SettingsStore.settings?.payments?.slideToPayThreshold ??
@@ -1317,6 +1324,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                                 totalBlockchainBalanceAccounts ===
                                                     0 ||
                                                 isInvalidFee ||
+                                                isFractionalOnchainAmount ||
                                                 this.hasInvalidAdditionalOutputs() ||
                                                 (fundMax &&
                                                     (!satAmount ||
@@ -1353,6 +1361,7 @@ export default class Send extends React.Component<SendProps, SendState> {
                                             totalBlockchainBalanceAccounts ===
                                                 0 ||
                                             isInvalidFee ||
+                                            isFractionalOnchainAmount ||
                                             this.hasInvalidAdditionalOutputs() ||
                                             (fundMax &&
                                                 (!satAmount ||

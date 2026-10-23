@@ -18,7 +18,7 @@ jest.mock('../utils/BackendUtils', () => ({
     supportsOnchainSends: () => true,
     supportsOnchainSendMax: () => true,
     supportsOnchainSendFeeRate: () => false,
-    supportsOnchainBatching: () => false,
+    supportsOnchainBatching: jest.fn(() => false),
     supportsCoinControl: () => false,
     supportsKeysend: () => false,
     supportsAMP: () => false,
@@ -31,7 +31,10 @@ jest.mock('../utils/AddressUtils', () => ({
         value.startsWith('lno1') ? value : undefined
 }));
 jest.mock('../utils/NFCUtils', () => ({ scanNfcTag: jest.fn() }));
-jest.mock('../utils/AmountUtils', () => ({ getRawAmountFromSats: jest.fn() }));
+jest.mock('../utils/AmountUtils', () => ({
+    getRawAmountFromSats: jest.fn(),
+    isWholeSatAmount: (sats: string | number) => Number.isInteger(Number(sats))
+}));
 jest.mock('../utils/GraphSyncUtils', () => ({
     clearPendingPaymentData: jest.fn()
 }));
@@ -200,6 +203,51 @@ describe('Send send max toggle', () => {
                 fundMax: false
             })
         );
+    });
+});
+
+describe('Send on-chain fractional sats', () => {
+    afterEach(() => {
+        (BackendUtils.supportsOnchainBatching as jest.Mock).mockReturnValue(
+            false
+        );
+    });
+
+    // the sats keypad allows 3 decimals, which on-chain outputs cannot carry
+    it('disables Proceed for a fractional sat amount', async () => {
+        await renderView();
+
+        await enterAmount('1000000.5', 1000000.5);
+        expect(isProceedDisabled()).toBe(true);
+
+        await enterAmount('1000000', 1000000);
+        expect(isProceedDisabled()).toBe(false);
+    });
+
+    it('allows Proceed with send max even if the amount was fractional', async () => {
+        await renderView();
+        await enterAmount('1000000.5', 1000000.5);
+
+        await turnSendMaxOn();
+
+        expect(isProceedDisabled()).toBe(false);
+    });
+
+    it('disables Proceed for a fractional sat amount on an added output', async () => {
+        (BackendUtils.supportsOnchainBatching as jest.Mock).mockReturnValue(
+            true
+        );
+        await renderView();
+        await enterAmount('50000', 50000);
+        await fireEvent.press(button('views.Send.addOutput'));
+
+        const outputAddress = hosts('TextInput').at(-1)!;
+        await fireEvent.changeText(outputAddress, 'bcrt1qother');
+        await fireEvent(hosts('AmountInput')[1], 'amountChange', '0.5', 0.5);
+        expect(isProceedDisabled()).toBe(true);
+
+        await fireEvent(hosts('AmountInput')[1], 'amountChange', '1000', 1000);
+        expect(isProceedDisabled()).toBe(false);
     });
 });
 

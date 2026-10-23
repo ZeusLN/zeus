@@ -7,7 +7,8 @@ import {
     getFormattedAmount,
     getFeePercentage,
     getSatAmount,
-    feeLimitSatsToMaxRoutingFeeMsat
+    feeLimitSatsToMaxRoutingFeeMsat,
+    isWholeSatAmount
 } from './AmountUtils';
 import { settingsStore, fiatStore, unitsStore } from '../stores/Stores';
 import { SATS_PER_BTC } from './UnitsUtils';
@@ -1197,6 +1198,27 @@ describe('AmountUtils', () => {
             expect(getSatAmount('abc')).toBe(0);
             (unitsStore as any).units = 'BTC';
             expect(getSatAmount('\u20bf0.00012618')).toBe(0);
+        });
+    });
+
+    describe('isWholeSatAmount', () => {
+        it('accepts whole sat amounts as strings or numbers', () => {
+            expect(isWholeSatAmount('100000')).toBe(true);
+            expect(isWholeSatAmount(100000)).toBe(true);
+            expect(isWholeSatAmount('100000.000')).toBe(true);
+            expect(isWholeSatAmount('0')).toBe(true);
+        });
+
+        it('rejects fractional sat amounts', () => {
+            expect(isWholeSatAmount('1000000.5')).toBe(false);
+            expect(isWholeSatAmount('100000.001')).toBe(false);
+            expect(isWholeSatAmount(0.5)).toBe(false);
+        });
+
+        it('rejects values that are not numbers', () => {
+            expect(isWholeSatAmount('abc')).toBe(false);
+            expect(isWholeSatAmount('1,5')).toBe(false);
+            expect(isWholeSatAmount('Infinity')).toBe(false);
         });
     });
 
