@@ -212,6 +212,37 @@ describe('NodeConfigUtils', () => {
                 ]
             });
         });
+
+        it('skips on-device configs whose data an existing config uses', async () => {
+            // e.g. a keychain recovery restore of a blob that still holds
+            // a wallet on this device
+            const store = createMockSettingsStore();
+            await saveNodeConfigs(
+                [
+                    { implementation: 'embedded-lnd', lndDir: 'a' } as any,
+                    { implementation: 'embedded-lnd', lndDir: 'lnd' } as any,
+                    { implementation: 'ldk-node', ldkNodeDir: 'b' } as any,
+                    { implementation: 'lnd', host: 'x' } as any
+                ],
+                store as SettingsStore
+            );
+
+            expect(
+                appliedUpdate({
+                    nodes: [
+                        { implementation: 'embedded-lnd', lndDir: 'a' },
+                        { implementation: 'embedded-lnd' }
+                    ]
+                } as any)
+            ).toEqual({
+                nodes: [
+                    { implementation: 'embedded-lnd', lndDir: 'a' },
+                    { implementation: 'embedded-lnd' },
+                    { implementation: 'ldk-node', ldkNodeDir: 'b' },
+                    { implementation: 'lnd', host: 'x' }
+                ]
+            });
+        });
     });
 
     describe('exportNodeConfigs', () => {

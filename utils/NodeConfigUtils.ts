@@ -4,6 +4,7 @@ import * as CryptoJS from 'crypto-js';
 import moment from 'moment';
 
 import SettingsStore, { Node, Settings } from '../stores/SettingsStore';
+import { dropNodesWithTakenData } from './NodeDataUtils';
 import { encryptFile, decryptFile } from './ZipUtils';
 
 // Bump when the on-disk export format changes. v1 = legacy CryptoJS
@@ -48,10 +49,15 @@ export const saveNodeConfigs = async (
     settingsStore: SettingsStore
 ): Promise<void> => {
     // Appended inside the queued update so a write still in the queue
-    // cannot be undone by a nodes array copied before it landed
-    await settingsStore.updateSettings((current: Settings) => ({
-        nodes: [...(current?.nodes || []), ...nodes]
-    }));
+    // cannot be undone by a nodes array copied before it landed. An
+    // on-device config whose data another config already uses is skipped:
+    // two configs on one wallet's data let deleting either wipe the other.
+    await settingsStore.updateSettings((current: Settings) => {
+        const existing = current?.nodes || [];
+        return {
+            nodes: [...existing, ...dropNodesWithTakenData(nodes, existing)]
+        };
+    });
 };
 
 // Encrypts the selected node configs with the user's password using the native
