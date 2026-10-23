@@ -107,8 +107,25 @@ describe('NodeConfigExportImport', () => {
         expect(screen.getByText(RESTORE_LEGACY)).toBeTruthy();
     });
 
-    it('shows export once a wallet exists', async () => {
-        await renderView({ nodes: [{ implementation: 'embedded-lnd' }] });
+    it('hides export when every wallet is on-device', async () => {
+        await renderView({
+            nodes: [
+                { implementation: 'embedded-lnd' },
+                { implementation: 'ldk-node' }
+            ]
+        });
+
+        expect(screen.queryByText(EXPORT)).toBeNull();
+        expect(screen.getByText(IMPORT)).toBeTruthy();
+    });
+
+    it('shows export once an exportable wallet exists', async () => {
+        await renderView({
+            nodes: [
+                { implementation: 'embedded-lnd' },
+                { implementation: 'lnd' }
+            ]
+        });
 
         expect(screen.getByText(EXPORT)).toBeTruthy();
     });
