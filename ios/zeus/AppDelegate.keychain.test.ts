@@ -171,3 +171,52 @@ int main(int argc, const char *argv[]) {
         });
     }
 );
+
+// The deferred check is UIKit wiring the harness cannot run, so pin its
+// shape in the source. These need no compiler and run everywhere.
+describe('AppDelegate deferred keychain check wiring', () => {
+    const source = fs.readFileSync(APP_DELEGATE, 'utf8');
+    const method = (signature: string) => {
+        const start = source.indexOf(signature);
+        expect(start).toBeGreaterThanOrEqual(0);
+        return source.slice(start, source.indexOf('\n}\n', start));
+    };
+
+    it('passes the launch protected-data state and defers when it is missing', () => {
+        const launch = method(
+            '- (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:'
+        );
+
+        expect(launch).toContain(
+            'self.keychainCheckPending = !ClearKeychainIfNecessary(application.isProtectedDataAvailable, StandardDefaultsPath());'
+        );
+        // Retried on becoming active, not only on the protected-data callback
+        const pending = launch.slice(
+            launch.indexOf('if (self.keychainCheckPending)')
+        );
+        expect(pending).toContain('UIApplicationDidBecomeActiveNotification');
+        expect(pending).toContain('@selector(runPendingKeychainCheck)');
+    });
+
+    it('runs the pending check once, and only with protected data', () => {
+        const run = method('- (void)runPendingKeychainCheck');
+        const guard = run.indexOf('isProtectedDataAvailable');
+        const clear = run.indexOf('ClearKeychainIfNecessary(YES');
+
+        expect(run).toContain('!self.keychainCheckPending');
+        expect(guard).toBeGreaterThan(0);
+        expect(run.indexOf('self.keychainCheckPending = NO;')).toBeGreaterThan(
+            guard
+        );
+        expect(clear).toBeGreaterThan(
+            run.indexOf('self.keychainCheckPending = NO;')
+        );
+        expect(run).toContain('removeObserver:self');
+    });
+
+    it('also runs the pending check when protected data becomes available', () => {
+        expect(
+            method('- (void)applicationProtectedDataDidBecomeAvailable:')
+        ).toContain('[self runPendingKeychainCheck];');
+    });
+});
