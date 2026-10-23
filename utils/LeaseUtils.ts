@@ -34,7 +34,10 @@ export function getRenewalInfo(
         channel.peerScidAlias,
         channel.zeroConfConfirmedScid
     ].filter(Boolean);
-    const entry = extendableChannels?.find(
+    // LSPStore only stores lists, but the views read this on every render,
+    // so don't let any other value throw
+    if (!Array.isArray(extendableChannels)) return {};
+    const entry = extendableChannels.find(
         (extendableChannel: any) =>
             !!extendableChannel?.short_channel_id &&
             ids.includes(extendableChannel.short_channel_id)

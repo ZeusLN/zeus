@@ -961,13 +961,21 @@ export default class LSPStore {
                 );
                 this.getExtendableChannelsError = true;
             } else {
-                this.getExtendableChannelsError = false;
                 const extendableChannels = data?.result?.extendable_channels;
-                this.getExtendableChannelsData = Array.isArray(
-                    extendableChannels
-                )
-                    ? extendableChannels.filter(isExtendableChannel)
-                    : [];
+                if (Array.isArray(extendableChannels)) {
+                    this.getExtendableChannelsError = false;
+                    this.getExtendableChannelsData =
+                        extendableChannels.filter(isExtendableChannel);
+                } else {
+                    // an answer without a list has nothing to show, so it
+                    // counts as a failed fetch like an error reply
+                    console.error(
+                        'LSPS7 extendable channels answer is not a list:',
+                        extendableChannels
+                    );
+                    this.getExtendableChannelsError = true;
+                    this.getExtendableChannelsData = [];
+                }
             }
             this.getExtendableChannelsResponseResolver?.();
             return true;

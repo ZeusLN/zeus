@@ -1609,7 +1609,7 @@ describe('LSPStore get_extendable_channels response', () => {
         expiration_block: 901000
     };
 
-    const answer = (extendable_channels: any) => {
+    const answerStore = (extendable_channels: any) => {
         const store = makeStore();
         store.getExtendableChannels();
         store.handleCustomMessages({
@@ -1622,12 +1622,19 @@ describe('LSPStore get_extendable_channels response', () => {
                 })
             ).toString('base64')
         });
-        return store.getExtendableChannelsData;
+        return store;
     };
+    const answer = (extendable_channels: any) =>
+        answerStore(extendable_channels).getExtendableChannelsData;
 
     beforeEach(() => {
         jest.clearAllMocks();
         jest.mocked(BackendUtils.sendCustomMessage).mockResolvedValue({});
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        jest.mocked(console.error).mockRestore();
     });
 
     it('stores the list of extendable channels', () => {
@@ -1644,6 +1651,63 @@ describe('LSPStore get_extendable_channels response', () => {
             expect(answer(extendable_channels)).toEqual([]);
         }
     );
+
+    it.each([[{}], [5], ['x'], [true], [null], [undefined]])(
+        'reports a fetch error when the LSP answers with %p',
+        (extendable_channels) => {
+            const store = answerStore(extendable_channels);
+            expect(store.getExtendableChannelsError).toBe(true);
+            expect(store.error).toBe(false);
+        }
+    );
+
+    it('replaces an earlier list when the LSP answers without a list', () => {
+        const store = answerStore([extendableChannel]);
+        store.getExtendableChannels();
+        store.handleCustomMessages({
+            peer: Buffer.from('aa', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: store.getExtendableChannelsId,
+                    result: { extendable_channels: {} }
+                })
+            ).toString('base64')
+        });
+
+        expect(store.getExtendableChannelsData).toEqual([]);
+        expect(store.getExtendableChannelsError).toBe(true);
+    });
+
+    it('does not report a fetch error for a list, even with dropped entries', () => {
+        expect(
+            answerStore([null, extendableChannel]).getExtendableChannelsError
+        ).toBe(false);
+        expect(answerStore([]).getExtendableChannelsError).toBe(false);
+    });
+
+    it('keeps entries with missing or null block fields', () => {
+        const noBlocks = { short_channel_id: '900000x2x0' };
+        const nullBlocks = {
+            short_channel_id: '900000x3x0',
+            expiration_block: null,
+            max_channel_extension_expiry_blocks: null
+        };
+        expect(answer([noBlocks, nullBlocks])).toEqual([noBlocks, nullBlocks]);
+    });
+
+    it('drops entries whose block fields are numeric strings', () => {
+        expect(
+            answer([
+                { ...extendableChannel, expiration_block: '901000' },
+                {
+                    ...extendableChannel,
+                    max_channel_extension_expiry_blocks: '52560'
+                },
+                extendableChannel
+            ])
+        ).toEqual([extendableChannel]);
+    });
 
     it('drops the entries the channel views cannot draw', () => {
         expect(
