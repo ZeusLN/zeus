@@ -694,6 +694,7 @@
     "views.Lockscreen.enterLoginPin": "Enter login PIN (not your duress PIN)",
     "views.Lockscreen.incorrectPin": "गलत पिन",
     "views.Lockscreen.authenticationAttempts": "प्रयास शेष",
+    "views.Lockscreen.attemptNotSaved": "Could not save this attempt, so it was not checked. Free up storage space on this device and try again.",
     "views.NodeInfo.feeReport": "फीस रिपोर्ट",
     "views.NodeInfo.forwarding": "फॉरवर्डिंग",
     "views.NodeInfo.copyUri": "URI कॉपी करें",
