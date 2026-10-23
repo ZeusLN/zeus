@@ -694,6 +694,7 @@
     "views.Lockscreen.enterLoginPin": "Enter login PIN (not your duress PIN)",
     "views.Lockscreen.incorrectPin": "รหัส PIN ไม่ถูกต้อง",
     "views.Lockscreen.authenticationAttempts": "ใจเย็น ๆ ให้โอกาสอีก",
+    "views.Lockscreen.attemptNotSaved": "Could not save this attempt, so it was not checked. Free up storage space on this device and try again.",
     "views.NodeInfo.feeReport": "รายงานค่าธรรมเนียม",
     "views.NodeInfo.forwarding": "กำลังส่งต่อ",
     "views.NodeInfo.copyUri": "คัดลอก URI",
