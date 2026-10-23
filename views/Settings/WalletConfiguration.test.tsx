@@ -93,7 +93,11 @@ import { confirmAction } from '../../utils/ActionUtils';
 import { createLdkNodeWallet } from '../../utils/LdkNodeUtils';
 import Storage from '../../storage';
 import { CUSTODIAL_LNDHUBS } from '../../utils/AddressUtils';
-import { clearNodeKeychainData } from '../../utils/DataClearUtils';
+import {
+    clearCDKDatabaseForNode,
+    clearNodeKeychainData,
+    deleteNodeDataDirectoryWithRetry
+} from '../../utils/DataClearUtils';
 
 const LNDHUB_IMPORT = 'lndhub://alice:secret@https://lndhub.example.com';
 
@@ -362,7 +366,7 @@ describe('WalletConfiguration', () => {
         });
     });
 
-    describe('deleting an LNC wallet', () => {
+    describe('deleting one of two configs with shared data', () => {
         const LNC_NODE = {
             implementation: 'lightning-node-connect',
             nickname: 'Node at home',
@@ -370,14 +374,20 @@ describe('WalletConfiguration', () => {
                 'cherry truth mask employ box silver mass bunker fiscal vote'
         };
 
-        // Deletes the wallet at index 1 of nodes through the Delete button
-        const deleteSecondWallet = async (nodes: any[]) => {
+        // Deletes the wallet at index 1 of nodes through the Delete button.
+        // An embedded LND wallet can only be deleted while it is active.
+        const deleteSecondWallet = async (nodes: any[], active = false) => {
             const SettingsStore = {
-                settings: { privacy: { clipboard: false }, nodes },
+                settings: {
+                    privacy: { clipboard: false },
+                    nodes,
+                    selectedNode: active ? 1 : 0
+                },
                 updateSettings: jest.fn((update: any) =>
                     Promise.resolve(update({ nodes }))
                 ),
-                setConnectingStatus: jest.fn()
+                setConnectingStatus: jest.fn(),
+                invalidateConnection: jest.fn()
             };
             await render(
                 <WalletConfiguration
@@ -389,9 +399,24 @@ describe('WalletConfiguration', () => {
                             reset: jest.fn()
                         },
                         route: {
-                            params: { node: nodes[1], index: 1, saved: true }
+                            params: {
+                                node: nodes[1],
+                                index: 1,
+                                saved: true,
+                                active
+                            }
                         },
-                        SettingsStore
+                        SettingsStore,
+                        NostrWalletConnectStore: {
+                            deleteCurrentWalletConnections: jest.fn(() =>
+                                Promise.resolve()
+                            )
+                        },
+                        ChannelsStore: { channels: [], pendingChannels: [] },
+                        BalanceStore: {
+                            confirmedBlockchainBalance: 0,
+                            unconfirmedBlockchainBalance: 0
+                        }
                     } as any)}
                 />
             );
@@ -404,16 +429,20 @@ describe('WalletConfiguration', () => {
         };
 
         beforeEach(() => {
+            (confirmAction as jest.Mock).mockClear();
             (clearNodeKeychainData as jest.Mock).mockClear();
+            (clearCDKDatabaseForNode as jest.Mock).mockClear();
+            (deleteNodeDataDirectoryWithRetry as jest.Mock).mockClear();
         });
 
         it('keeps the LNC credentials while a copy uses the same pairing phrase', async () => {
             const copy = { ...LNC_NODE, nickname: 'Node at home copy' };
             await deleteSecondWallet([LNC_NODE, copy]);
 
-            expect(clearNodeKeychainData).toHaveBeenCalledWith(copy, {
-                keepLncCredentials: true
-            });
+            expect(clearNodeKeychainData).toHaveBeenCalledWith(
+                copy,
+                expect.objectContaining({ keepLncCredentials: true })
+            );
         });
 
         it('clears the LNC credentials of the last wallet with the pairing phrase', async () => {
@@ -425,9 +454,65 @@ describe('WalletConfiguration', () => {
             };
             await deleteSecondWallet([LNC_NODE, other]);
 
-            expect(clearNodeKeychainData).toHaveBeenCalledWith(other, {
-                keepLncCredentials: false
-            });
+            expect(clearNodeKeychainData).toHaveBeenCalledWith(
+                other,
+                expect.objectContaining({ keepLncCredentials: false })
+            );
+        });
+
+        // A keychain recovery restore can add a second config for a wallet
+        // already on the device; deleting it must leave the wallet's data
+        it.each([
+            [
+                'an embedded LND wallet',
+                { implementation: 'embedded-lnd', lndDir: 'a1b2' },
+                { implementation: 'embedded-lnd', lndDir: 'a1b2' }
+            ],
+            [
+                'the legacy embedded LND wallet',
+                { implementation: 'embedded-lnd', lndDir: 'lnd' },
+                { implementation: 'embedded-lnd' }
+            ],
+            [
+                'an LDK Node wallet',
+                { implementation: 'ldk-node', ldkNodeDir: 'c3d4' },
+                { implementation: 'ldk-node', ldkNodeDir: 'c3d4' }
+            ]
+        ])(
+            'keeps the Cashu data and data directory of %s another config uses',
+            async (_, kept, deleted) => {
+                await deleteSecondWallet(
+                    [
+                        { ...kept, nickname: 'kept' },
+                        { ...deleted, nickname: 'deleted' }
+                    ],
+                    true
+                );
+
+                expect(clearCDKDatabaseForNode).not.toHaveBeenCalled();
+                expect(clearNodeKeychainData).toHaveBeenCalledWith(
+                    expect.objectContaining({ nickname: 'deleted' }),
+                    expect.objectContaining({ keepCashuData: true })
+                );
+                expect(deleteNodeDataDirectoryWithRetry).not.toHaveBeenCalled();
+            }
+        );
+
+        it('deletes the Cashu data and data directory of a wallet no other config uses', async () => {
+            const deleted = { implementation: 'embedded-lnd', lndDir: 'e5f6' };
+            await deleteSecondWallet(
+                [{ implementation: 'embedded-lnd', lndDir: 'a1b2' }, deleted],
+                true
+            );
+
+            expect(clearCDKDatabaseForNode).toHaveBeenCalledWith(deleted);
+            expect(clearNodeKeychainData).toHaveBeenCalledWith(
+                deleted,
+                expect.objectContaining({ keepCashuData: false })
+            );
+            expect(deleteNodeDataDirectoryWithRetry).toHaveBeenCalledWith(
+                deleted
+            );
         });
     });
 

@@ -704,26 +704,33 @@ async function clearLncCredentials(pairingPhrase: string) {
  */
 export async function clearNodeKeychainData(
     node: any,
-    opts?: { skipXprvPurge?: boolean; keepLncCredentials?: boolean }
+    opts?: {
+        skipXprvPurge?: boolean;
+        keepLncCredentials?: boolean;
+        keepCashuData?: boolean;
+    }
 ): Promise<void> {
     if (!node) return;
-    if (node.lndDir) {
-        await clearCashuDataForNode(node.lndDir);
-    }
-    if (node.ldkNodeDir) {
-        await clearCashuDataForNode(node.ldkNodeDir);
-    }
-    // Legacy configs can predate explicit node dirs (see the `lndDir || 'lnd'`
-    // fallbacks in WalletConfiguration/getNodeDir). Mirror getNodeDir()'s
-    // defaults so those wallets' Cashu keys are cleared too. Gate on
-    // implementation: only one config can occupy a default namespace per
-    // implementation, and remote nodes must never clear the 'lnd'/'ldk'
-    // namespaces owned by embedded wallets.
-    if (node.implementation === 'embedded-lnd' && !node.lndDir) {
-        await clearCashuDataForNode('lnd');
-    }
-    if (node.implementation === 'ldk-node' && !node.ldkNodeDir) {
-        await clearCashuDataForNode('ldk');
+    // The caller sets keepCashuData while another config still uses this
+    // node's Cashu namespace (getSharedNodeData).
+    if (!opts?.keepCashuData) {
+        if (node.lndDir) {
+            await clearCashuDataForNode(node.lndDir);
+        }
+        if (node.ldkNodeDir) {
+            await clearCashuDataForNode(node.ldkNodeDir);
+        }
+        // Legacy configs can predate explicit node dirs (see the
+        // `lndDir || 'lnd'` fallbacks in WalletConfiguration/getNodeDir).
+        // Mirror getNodeDir()'s defaults so those wallets' Cashu keys are
+        // cleared too. Gate on implementation: remote nodes must never clear
+        // the 'lnd'/'ldk' namespaces owned by embedded wallets.
+        if (node.implementation === 'embedded-lnd' && !node.lndDir) {
+            await clearCashuDataForNode('lnd');
+        }
+        if (node.implementation === 'ldk-node' && !node.ldkNodeDir) {
+            await clearCashuDataForNode('ldk');
+        }
     }
     // LNC credentials are stored per pairing phrase, so configs copied by
     // Duplicate Wallet, config import or legacy restore share one entry.
