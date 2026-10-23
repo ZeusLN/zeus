@@ -118,22 +118,66 @@ describe('patch-keychain-atomic-update', () => {
         }
     });
 
-    it('matches the same items the original delete removed', () => {
+    it.each([
+        [
+            'setInternetCredentialsForServer',
+            'kSecClassInternetPassword',
+            'kSecAttrServer: server'
+        ],
+        [
+            'setGenericPasswordForOptions',
+            'kSecClassGenericPassword',
+            'kSecAttrService: service'
+        ]
+    ])(
+        '%s matches the same items the original delete removed',
+        (setter, secClass, scope) => {
+            const root = tree();
+            run(root, [ATOMIC]);
+            const body = methodBody(read(root), `RCT_EXPORT_METHOD(${setter}:`);
+            const query = body.slice(body.indexOf('NSDictionary *query'));
+            const literal = query.slice(0, query.indexOf('};'));
+
+            expect(literal).toContain(secClass);
+            expect(literal).toContain(scope);
+            expect(literal).toContain(
+                'kSecAttrSynchronizable: (__bridge id)(cloudSync)'
+            );
+            expect(literal).not.toContain('kSecAttrAccount');
+        }
+    );
+
+    it('deletes before adding, and never updates, for protected writes', () => {
         const root = tree();
         run(root, [ATOMIC]);
-        const internet = methodBody(
-            read(root),
-            'RCT_EXPORT_METHOD(setInternetCredentialsForServer:'
+        const helper = methodBody(read(root), '- (void)upsertKeychainEntry:');
+        const branch = helper.slice(
+            helper.indexOf('if (accessControlValue(options)'),
+            helper.indexOf('NSMutableDictionary *mQuery')
         );
-        const query = internet.slice(internet.indexOf('NSDictionary *query'));
 
-        expect(query).toContain('kSecClassInternetPassword');
-        expect(query).toContain('kSecAttrServer: server');
-        expect(query).toContain(
-            'kSecAttrSynchronizable: (__bridge id)(cloudSync)'
+        expect(branch.indexOf('deleteExisting();')).toBeGreaterThan(0);
+        expect(branch.indexOf('insertKeychainEntry')).toBeGreaterThan(
+            branch.indexOf('deleteExisting();')
         );
-        expect(query.slice(0, query.indexOf('};'))).not.toContain(
-            'kSecAttrAccount'
+        expect(branch).toContain('return [self insertKeychainEntry');
+        expect(helper.indexOf('SecItemUpdate(')).toBeGreaterThan(
+            helper.indexOf('NSMutableDictionary *mQuery')
+        );
+    });
+
+    it('deletes before adding on errSecDuplicateItem', () => {
+        const root = tree();
+        run(root, [ATOMIC]);
+        const helper = methodBody(read(root), '- (void)upsertKeychainEntry:');
+        const branch = helper.slice(
+            helper.indexOf('osStatus == errSecDuplicateItem'),
+            helper.indexOf('if (osStatus != noErr)')
+        );
+
+        expect(branch.indexOf('deleteExisting();')).toBeGreaterThan(0);
+        expect(branch.indexOf('insertKeychainEntry')).toBeGreaterThan(
+            branch.indexOf('deleteExisting();')
         );
     });
 
@@ -160,20 +204,34 @@ describe('patch-keychain-atomic-update', () => {
         expect(patched).toContain('[options[@"cloudSync"] boolValue]');
     });
 
-    it('fails postinstall when the source no longer matches', () => {
-        const root = tree(
-            fs
-                .readFileSync(FIXTURE, 'utf8')
-                .replace(
-                    '[self deleteCredentialsForServer:server withOptions: options];',
-                    '[self removeCredentialsForServer:server];'
-                )
-        );
+    it.each([
+        [
+            'setInternetCredentialsForServer body',
+            '[self deleteCredentialsForServer:server withOptions: options];',
+            '[self removeCredentialsForServer:server];'
+        ],
+        [
+            'setGenericPasswordForOptions body',
+            '[self deletePasswordsForOptions:options];',
+            '[self removePasswordsForOptions:options];'
+        ],
+        [
+            'hasCredentialsWithSecClass anchor',
+            '- (void)hasCredentialsWithSecClass:(CFTypeRef)secClass',
+            '- (void)hasCredentialsOfClass:(CFTypeRef)secClass'
+        ]
+    ])(
+        'fails postinstall when the %s no longer matches',
+        (name, original, changed) => {
+            const root = tree(
+                fs.readFileSync(FIXTURE, 'utf8').replace(original, changed)
+            );
 
-        expect(() => run(root, [ATOMIC])).toThrow(
-            /setInternetCredentialsForServer body does not match/
-        );
-    });
+            expect(() => run(root, [ATOMIC])).toThrow(
+                new RegExp(`${name} does not match`)
+            );
+        }
+    );
 });
 
 // Compiles the generated upsertKeychainEntry against fake Security calls and
