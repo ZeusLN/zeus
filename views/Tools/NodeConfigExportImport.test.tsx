@@ -25,7 +25,9 @@ jest.mock('../../utils/KeychainRecoveryUtils', () => ({
     default: {
         scanForRecoverableData: jest.fn(() =>
             Promise.resolve({ settingsFound: [] })
-        )
+        ),
+        getSourceDisplayName: jest.fn(() => 'iCloud Keychain'),
+        parseSettingsPreview: jest.fn(() => null)
     }
 }));
 jest.mock('../../stores/SettingsStore', () => ({
@@ -46,7 +48,10 @@ jest.mock('../../components/Screen', () => {
     const { View } = require('react-native');
     return ({ children }: any) => <View>{children}</View>;
 });
-jest.mock('../../components/Button', () => 'Button');
+jest.mock('../../components/Button', () => {
+    const { Text } = require('react-native');
+    return ({ title, onPress }: any) => <Text onPress={onPress}>{title}</Text>;
+});
 jest.mock('../../components/TextInput', () => 'TextInput');
 jest.mock('../../components/Text', () => {
     const { Text } = require('react-native');
@@ -61,16 +66,17 @@ jest.mock('../../components/NodeIdenticon', () => ({
 jest.mock('../../components/ShowHideToggle', () => 'ShowHideToggle');
 
 import * as React from 'react';
-import { Platform } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import KeychainRecoveryUtils from '../../utils/KeychainRecoveryUtils';
+import { saveNodeConfigs } from '../../utils/NodeConfigUtils';
 import NodeConfigExportImport from './NodeConfigExportImport';
 
-const renderView = (settings: any) =>
+const renderView = (settings: any, navigation = { navigate: jest.fn() }) =>
     render(
         <NodeConfigExportImport
             {...({
-                navigation: { navigate: jest.fn() },
+                navigation,
                 SettingsStore: { settings }
             } as any)}
         />
@@ -123,5 +129,50 @@ describe('NodeConfigExportImport', () => {
 
         expect(screen.queryByText(RESTORE_LEGACY)).toBeNull();
         expect(screen.getByText(IMPORT)).toBeTruthy();
+    });
+
+    it('restores the scanned wallets with no wallets present', async () => {
+        const cloudNodes = [
+            { implementation: 'lnd', host: 'node.example' },
+            { implementation: 'embedded-lnd', nickname: 'Phone' }
+        ];
+        (
+            KeychainRecoveryUtils.scanForRecoverableData as jest.Mock
+        ).mockResolvedValueOnce({
+            settingsFound: [
+                {
+                    key: 'zeus-settings-v2',
+                    source: 'prefixed-cloud',
+                    data: JSON.stringify({ nodes: cloudNodes }),
+                    description: 'Wallet Configurations'
+                }
+            ],
+            otherDataFound: [],
+            hasCurrentSettings: true
+        });
+        const alert = jest.spyOn(Alert, 'alert').mockImplementation();
+        const navigation = { navigate: jest.fn() };
+        await renderView({ nodes: [] }, navigation);
+
+        await fireEvent.press(screen.getByText(RESTORE_LEGACY));
+        await fireEvent.press(
+            await screen.findByText(
+                'views.Tools.nodeConfigExportImport.recovery.tapToRestore'
+            )
+        );
+        await fireEvent.press(
+            screen.getByText(
+                'views.Tools.nodeConfigExportImport.recovery.restoreSelected'
+            )
+        );
+
+        expect(saveNodeConfigs).toHaveBeenCalledWith(cloudNodes, {
+            settings: { nodes: [] }
+        });
+        const buttons = alert.mock.calls[0][2] as any[];
+        buttons[0].onPress();
+        expect(navigation.navigate).toHaveBeenCalledWith('Wallets');
+
+        alert.mockRestore();
     });
 });
