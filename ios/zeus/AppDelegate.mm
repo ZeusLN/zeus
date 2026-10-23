@@ -90,6 +90,16 @@ static BOOL ClearKeychainIfNecessary(BOOL protectedDataAvailable, NSString *defa
 
   [RNNotifications startMonitorNotifications];
   self.keychainCheckPending = !ClearKeychainIfNecessary(application.isProtectedDataAvailable, StandardDefaultsPath());
+  if (self.keychainCheckPending) {
+    // The protected-data callback alone is not enough: it is not documented
+    // to reach an app that was suspended when the device unlocked. Becoming
+    // active always happens before the user can create anything, so check
+    // there too. A notification keeps this working under a scene delegate.
+    [[NSNotificationCenter defaultCenter] addObserver:self
+                                             selector:@selector(runPendingKeychainCheck)
+                                                 name:UIApplicationDidBecomeActiveNotification
+                                               object:nil];
+  }
 
   if (@available(iOS 16.1, *)) {
     Class managerClass = NSClassFromString(@"NWCActivityManager");
@@ -128,11 +138,21 @@ static BOOL ClearKeychainIfNecessary(BOOL protectedDataAvailable, NSString *defa
   [RNNotifications didFailToRegisterForRemoteNotificationsWithError:error];
 }
 
-- (void)applicationProtectedDataDidBecomeAvailable:(UIApplication *)application {
-  if (self.keychainCheckPending) {
-    self.keychainCheckPending = NO;
-    ClearKeychainIfNecessary(YES, StandardDefaultsPath());
+// Runs the first-run keychain check deferred at launch, once protected data
+// is available. Safe to call repeatedly; only the first successful run acts.
+- (void)runPendingKeychainCheck {
+  if (!self.keychainCheckPending || ![UIApplication sharedApplication].isProtectedDataAvailable) {
+    return;
   }
+  self.keychainCheckPending = NO;
+  [[NSNotificationCenter defaultCenter] removeObserver:self
+                                                  name:UIApplicationDidBecomeActiveNotification
+                                                object:nil];
+  ClearKeychainIfNecessary(YES, StandardDefaultsPath());
+}
+
+- (void)applicationProtectedDataDidBecomeAvailable:(UIApplication *)application {
+  [self runPendingKeychainCheck];
 }
 
 - (void)applicationDidEnterBackground:(UIApplication *)application {
