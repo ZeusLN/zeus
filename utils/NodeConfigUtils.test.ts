@@ -2,6 +2,7 @@ import * as CryptoJS from 'crypto-js';
 
 import {
     saveNodeConfigs,
+    skippedConfigsMessage,
     exportNodeConfigs,
     decryptExportData,
     decryptExportDataV2,
@@ -96,6 +97,11 @@ jest.mock('./ZipUtils', () => {
         }
     };
 });
+
+// The real LocaleUtils loads every store; read the English strings directly
+jest.mock('./LocaleUtils', () => ({
+    localeString: (key: string) => require('../locales/en.json')[key]
+}));
 
 let capturedEnvelope: string | undefined;
 const mockSaveDocuments = jest
@@ -243,6 +249,56 @@ describe('NodeConfigUtils', () => {
                     { implementation: 'lnd', host: 'x' }
                 ]
             });
+        });
+
+        it('resolves how many configs were added', async () => {
+            // Runs the update the way the queue does, so the count reflects
+            // the nodes inside it
+            const store = createMockSettingsStore([
+                { implementation: 'embedded-lnd', lndDir: 'a' } as any
+            ]);
+            mockUpdateSettings.mockImplementationOnce(async (update: any) =>
+                update(mockStoreSettings)
+            );
+
+            const added = await saveNodeConfigs(
+                [
+                    { implementation: 'embedded-lnd', lndDir: 'a' } as any,
+                    { implementation: 'ldk-node', ldkNodeDir: 'b' } as any,
+                    { implementation: 'lnd', host: 'x' } as any
+                ],
+                store as SettingsStore
+            );
+
+            expect(added).toBe(2);
+        });
+
+        it('resolves 0 when every config is skipped', async () => {
+            const store = createMockSettingsStore([
+                { implementation: 'ldk-node', ldkNodeDir: 'b' } as any
+            ]);
+            mockUpdateSettings.mockImplementationOnce(async (update: any) =>
+                update(mockStoreSettings)
+            );
+
+            const added = await saveNodeConfigs(
+                [{ implementation: 'ldk-node', ldkNodeDir: 'b' } as any],
+                store as SettingsStore
+            );
+
+            expect(added).toBe(0);
+        });
+    });
+
+    describe('skippedConfigsMessage', () => {
+        it('is empty when nothing was skipped', () => {
+            expect(skippedConfigsMessage(0)).toBe('');
+        });
+
+        it('reports the skipped count on its own paragraph', () => {
+            expect(skippedConfigsMessage(2)).toBe(
+                '\n\nSkipped 2 wallet configuration(s) for wallets already on this device.'
+            );
         });
     });
 
