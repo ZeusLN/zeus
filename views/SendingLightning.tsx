@@ -101,6 +101,10 @@ export default class SendingLightning extends React.Component<
 
     private focusListener: (() => void) | undefined;
 
+    // One attempt per screen: a failed attempt re-runs componentDidUpdate,
+    // and TransactionsStore's status is shared with later payments.
+    private donationAttempted = false;
+
     constructor(props: SendingLightningProps) {
         super(props);
         this.state = {
@@ -154,8 +158,6 @@ export default class SendingLightning extends React.Component<
             route
         } = this.props;
 
-        const { donationIsPaid } = TransactionsStore;
-
         const wasSuccessful = this.successfullySent(TransactionsStore);
         const { donationAmount, enableDonations } = route.params || {};
 
@@ -176,10 +178,9 @@ export default class SendingLightning extends React.Component<
             wasSuccessful &&
             enableDonations &&
             donationAmount &&
-            !donationIsPaid &&
-            !this.state.payingDonation &&
-            !this.state.donationHandled
+            !this.donationAttempted
         ) {
+            this.donationAttempted = true;
             this.handleDonationPayment(donationAmount);
         }
     }
@@ -214,8 +215,6 @@ export default class SendingLightning extends React.Component<
                 });
                 return;
             }
-
-            TransactionsStore.donationIsPaid = true;
 
             const amountDonated =
                 result?.num_satoshis ||

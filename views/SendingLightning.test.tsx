@@ -42,7 +42,11 @@ jest.mock('../stores/NodeInfoStore', () => ({}));
 jest.mock('../utils/Base64Utils', () => ({}));
 jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
-    default: { isLocalWallet: () => false }
+    default: {
+        isLocalWallet: () => false,
+        isLNDBased: () => false,
+        supportsChannelManagement: () => false
+    }
 }));
 jest.mock('../utils/ContactUtils', () => ({
     __esModule: true,
@@ -59,7 +63,13 @@ jest.mock('../utils/AmountUtils', () => ({ getFeePercentage: jest.fn() }));
 
 import * as React from 'react';
 import { BackHandler } from 'react-native';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import {
+    fireEvent,
+    render,
+    screen,
+    waitFor
+} from '@testing-library/react-native';
+import { loadDonationLnurl } from '../utils/DonationUtils';
 import SendingLightning from './SendingLightning';
 
 const TRY_AGAIN = 'views.SendingLightning.tryAgain';
@@ -254,5 +264,224 @@ describe('SendingLightning recipient', () => {
         await renderView(sent('cd'.repeat(32)), lnurlPay);
 
         expect(recipient()).toBeUndefined();
+    });
+});
+
+describe('SendingLightning donation', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    const params = { enableDonations: true, donationAmount: '25' };
+
+    const donationView = (TransactionsStore: any) => (
+        <SendingLightning
+            {...({
+                navigation: {
+                    goBack: jest.fn(),
+                    popTo: jest.fn(),
+                    addListener: jest.fn(() => jest.fn())
+                },
+                route: {
+                    key: 'SendingLightning',
+                    name: 'SendingLightning',
+                    params
+                },
+                TransactionsStore,
+                BalanceStore: { getCombinedBalance: jest.fn() },
+                ChannelsStore: { getChannels: jest.fn() },
+                PaymentsStore: { getPayments: jest.fn().mockResolvedValue([]) },
+                ContactStore: { contacts: [] },
+                LnurlPayStore: {},
+                NodeInfoStore: { nodeInfo: { isMainNet: true } }
+            } as any)}
+        />
+    );
+
+    it('tries the donation once when it fails', async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+        const TransactionsStore: any = {
+            loading: false,
+            error: false,
+            status: null,
+            sendPaymentSilently: jest
+                .fn()
+                .mockResolvedValue({ status: 'FAILED' })
+        };
+
+        const { rerender } = await render(donationView(TransactionsStore));
+        TransactionsStore.status = 'SUCCEEDED';
+        await rerender(donationView(TransactionsStore));
+        await waitFor(() =>
+            expect(TransactionsStore.sendPaymentSilently).toHaveBeenCalled()
+        );
+        for (let i = 0; i < 5; i++) {
+            await new Promise((r) => setImmediate(r));
+        }
+
+        expect(loadDonationLnurl).toHaveBeenCalledTimes(1);
+        expect(TransactionsStore.sendPaymentSilently).toHaveBeenCalledTimes(1);
+    });
+
+    // The screen stays mounted under anything pushed on top of it, and the
+    // payment status lives in the shared TransactionsStore, so a later
+    // payment resets it and then sets it to SUCCEEDED again
+    it('does not send the donation again on a later payment after it failed', async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue(null);
+        const TransactionsStore: any = {
+            loading: false,
+            error: false,
+            status: null,
+            sendPaymentSilently: jest.fn()
+        };
+
+        const { rerender } = await render(donationView(TransactionsStore));
+        TransactionsStore.status = 'SUCCEEDED';
+        await rerender(donationView(TransactionsStore));
+        await waitFor(() => expect(loadDonationLnurl).toHaveBeenCalledTimes(1));
+
+        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+        TransactionsStore.status = null;
+        await rerender(donationView(TransactionsStore));
+        TransactionsStore.status = 'SUCCEEDED';
+        await rerender(donationView(TransactionsStore));
+        await new Promise((r) => setImmediate(r));
+
+        expect(loadDonationLnurl).toHaveBeenCalledTimes(1);
+        expect(TransactionsStore.sendPaymentSilently).not.toHaveBeenCalled();
+    });
+
+    // An earlier screen, still mounted underneath, finishes its donation
+    // after the next payment has started. Its outcome is not shared with
+    // the new screen, which still sends its own donation.
+    it("sends the donation when an earlier screen's donation is paid during the payment", async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+        let payEarlierDonation: (result: any) => void = () => {};
+        const TransactionsStore: any = {
+            loading: false,
+            error: false,
+            status: null,
+            sendPaymentSilently: jest
+                .fn()
+                .mockImplementationOnce(
+                    () => new Promise((r) => (payEarlierDonation = r))
+                )
+                .mockResolvedValueOnce({ status: 'FAILED' })
+        };
+
+        const earlier = await render(donationView(TransactionsStore));
+        TransactionsStore.status = 'SUCCEEDED';
+        await earlier.rerender(donationView(TransactionsStore));
+        await waitFor(() =>
+            expect(TransactionsStore.sendPaymentSilently).toHaveBeenCalledTimes(
+                1
+            )
+        );
+
+        TransactionsStore.status = null;
+        const later = await render(donationView(TransactionsStore));
+        payEarlierDonation({ status: 'SUCCEEDED', num_satoshis: 25 });
+        await new Promise((r) => setImmediate(r));
+        TransactionsStore.status = 'SUCCEEDED';
+        await later.rerender(donationView(TransactionsStore));
+
+        await waitFor(() =>
+            expect(TransactionsStore.sendPaymentSilently).toHaveBeenCalledTimes(
+                2
+            )
+        );
+        expect(loadDonationLnurl).toHaveBeenCalledTimes(2);
+    });
+
+    // Lets the payment succeed, which starts the donation, then gives a
+    // retry loop a few turns to show up as extra calls
+    const donate = async (sendPaymentSilently: jest.Mock) => {
+        const TransactionsStore: any = {
+            loading: false,
+            error: false,
+            status: null,
+            sendPaymentSilently
+        };
+        const { rerender } = await render(donationView(TransactionsStore));
+        TransactionsStore.status = 'SUCCEEDED';
+        await rerender(donationView(TransactionsStore));
+        await waitFor(() => expect(loadDonationLnurl).toHaveBeenCalled());
+        for (let i = 0; i < 5; i++) {
+            await new Promise((r) => setImmediate(r));
+        }
+    };
+
+    const hostProps = (type: string) =>
+        screen.container.queryAll((n) => n.type === type)[0]?.props;
+
+    it('pays the donation once after a successful payment', async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+        const sendPaymentSilently = jest
+            .fn()
+            .mockResolvedValue({ status: 'SUCCEEDED', num_satoshis: 25 });
+
+        await donate(sendPaymentSilently);
+
+        expect(loadDonationLnurl).toHaveBeenCalledTimes(1);
+        expect(sendPaymentSilently).toHaveBeenCalledTimes(1);
+        expect(hostProps('DonationGiftIcon').donationHandled).toBe(true);
+        expect(hostProps('DonationInfoModal').amountDonated).toBe(25);
+    });
+
+    it('tries once when the donation LNURL returns no invoice', async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue(undefined);
+        const sendPaymentSilently = jest.fn();
+
+        await donate(sendPaymentSilently);
+
+        expect(loadDonationLnurl).toHaveBeenCalledTimes(1);
+        expect(sendPaymentSilently).not.toHaveBeenCalled();
+        expect(hostProps('DonationGiftIcon').payingDonation).toBe(false);
+        expect(hostProps('DonationGiftIcon').donationHandled).toBe(false);
+    });
+
+    it('tries once when the donation payment returns a payment error', async () => {
+        (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+        const sendPaymentSilently = jest
+            .fn()
+            .mockResolvedValue({ payment_error: 'no route' });
+
+        await donate(sendPaymentSilently);
+
+        expect(loadDonationLnurl).toHaveBeenCalledTimes(1);
+        expect(sendPaymentSilently).toHaveBeenCalledTimes(1);
+        expect(hostProps('DonationGiftIcon').donationHandled).toBe(false);
+    });
+
+    describe('when a step throws', () => {
+        beforeEach(() => {
+            jest.spyOn(console, 'error').mockImplementation(() => {});
+        });
+
+        afterEach(() => jest.restoreAllMocks());
+
+        it('tries once when sending the donation throws', async () => {
+            (loadDonationLnurl as jest.Mock).mockResolvedValue('lnbc1donation');
+            const sendPaymentSilently = jest
+                .fn()
+                .mockRejectedValue(new Error('timeout'));
+
+            await donate(sendPaymentSilently);
+
+            expect(loadDonationLnurl).toHaveBeenCalledTimes(1);
+            expect(sendPaymentSilently).toHaveBeenCalledTimes(1);
+            expect(hostProps('DonationGiftIcon').payingDonation).toBe(false);
+        });
+
+        it('tries once when fetching the donation invoice throws', async () => {
+            (loadDonationLnurl as jest.Mock).mockRejectedValue(
+                new Error('offline')
+            );
+            const sendPaymentSilently = jest.fn();
+
+            await donate(sendPaymentSilently);
+
+            expect(loadDonationLnurl).toHaveBeenCalledTimes(1);
+            expect(sendPaymentSilently).not.toHaveBeenCalled();
+            expect(hostProps('DonationGiftIcon').payingDonation).toBe(false);
+        });
     });
 });
