@@ -37,6 +37,7 @@ import { themeColor, isLightTheme } from '../../utils/ThemeUtils';
 import { getPhoto } from '../../utils/PhotoUtils';
 import {
     saveNodeConfigs,
+    skippedConfigsMessage,
     exportNodeConfigs,
     decryptExportData,
     decryptExportDataV2,
@@ -935,14 +936,17 @@ export default class NodeConfigExportImport extends React.Component<
                 (index) => importNodes[index]
             );
 
-            await saveNodeConfigs(nodesToImport, this.props.SettingsStore);
+            const added = await saveNodeConfigs(
+                nodesToImport,
+                this.props.SettingsStore
+            );
             this.setState({ isLoading: false });
 
             Alert.alert(
                 localeString('general.success'),
                 localeString(
                     'views.Tools.nodeConfigExportImport.importSuccess'
-                ),
+                ) + skippedConfigsMessage(nodesToImport.length - added),
                 [
                     {
                         text: localeString('general.ok'),
@@ -1027,7 +1031,10 @@ export default class NodeConfigExportImport extends React.Component<
             );
 
             // Use saveNodeConfigs to append to existing nodes (same as import flow)
-            await saveNodeConfigs(selectedNodes, this.props.SettingsStore);
+            const added = await saveNodeConfigs(
+                selectedNodes,
+                this.props.SettingsStore
+            );
 
             this.setState({ isLoading: false });
 
@@ -1035,7 +1042,8 @@ export default class NodeConfigExportImport extends React.Component<
                 localeString('general.success'),
                 localeString(
                     'views.Tools.nodeConfigExportImport.recovery.restoreSuccess'
-                ).replace('{count}', String(selectedNodes.length)),
+                ).replace('{count}', String(added)) +
+                    skippedConfigsMessage(selectedNodes.length - added),
                 [
                     {
                         text: localeString('general.ok'),

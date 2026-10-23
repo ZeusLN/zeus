@@ -4,6 +4,7 @@ import * as CryptoJS from 'crypto-js';
 import moment from 'moment';
 
 import SettingsStore, { Node, Settings } from '../stores/SettingsStore';
+import { localeString } from './LocaleUtils';
 import { dropNodesWithTakenData } from './NodeDataUtils';
 import { encryptFile, decryptFile } from './ZipUtils';
 
@@ -70,18 +71,31 @@ const safeUnlink = async (path: string): Promise<void> => {
 export const saveNodeConfigs = async (
     nodes: Node[],
     settingsStore: SettingsStore
-): Promise<void> => {
+): Promise<number> => {
     // Appended inside the queued update so a write still in the queue
     // cannot be undone by a nodes array copied before it landed. An
     // on-device config whose data another config already uses is skipped:
     // two configs on one wallet's data let deleting either wipe the other.
+    // Resolves how many configs were added, so callers can report skips.
+    let added = 0;
     await settingsStore.updateSettings((current: Settings) => {
         const existing = current?.nodes || [];
-        return {
-            nodes: [...existing, ...dropNodesWithTakenData(nodes, existing)]
-        };
+        const kept = dropNodesWithTakenData(nodes, existing);
+        added = kept.length;
+        return { nodes: [...existing, ...kept] };
     });
+    return added;
 };
+
+// Appended to the import / restore success message when saveNodeConfigs
+// skipped configs for wallets already on this device
+export const skippedConfigsMessage = (skipped: number): string =>
+    skipped > 0
+        ? '\n\n' +
+          localeString(
+              'views.Tools.nodeConfigExportImport.skippedOnDevice'
+          ).replace('{count}', String(skipped))
+        : '';
 
 // Encrypts the selected node configs with the user's password using the native
 // AES-256-GCM primitive (ZipUtils, PBKDF2-HMAC-SHA256), then prompts the user
