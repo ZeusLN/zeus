@@ -20,6 +20,13 @@ import SettingsStore from '../../stores/SettingsStore';
 
 import UrlUtils from '../../utils/UrlUtils';
 
+export const DECOY_APP_NAMES = {
+    calculator: 'Calculator',
+    vpn: 'Edge VPN',
+    qrscanner: 'QR Scanner',
+    notepad: 'Notepad'
+};
+
 // VPN locations for unlock configuration
 const VPN_LOCATIONS: { country: string; servers: string[] }[] = [
     {
@@ -73,27 +80,22 @@ interface StealthModeState {
 
 const STEALTH_APPS: {
     key: StealthApp;
-    translateKey: string;
     icon: any;
 }[] = [
     {
         key: 'calculator',
-        translateKey: 'views.Settings.StealthMode.calculator',
         icon: CalculatorIcon
     },
     {
         key: 'vpn',
-        translateKey: 'views.Settings.StealthMode.vpn',
         icon: VPNIcon
     },
     {
         key: 'qrscanner',
-        translateKey: 'views.Settings.StealthMode.qrscanner',
         icon: QRScannerIcon
     },
     {
         key: 'notepad',
-        translateKey: 'views.Settings.StealthMode.notepad',
         icon: NotepadIcon
     }
 ];
@@ -217,20 +219,27 @@ export default class StealthMode extends React.Component<
                 return localeString(
                     'views.Settings.StealthMode.unlockVPNCustom'
                 )
+                    .replace('{appName}', DECOY_APP_NAMES.vpn)
                     .replace('{country}', stealthVpnCountry)
                     .replace('{server}', stealthVpnServer);
             case 'calculator':
                 return localeString(
                     'views.Settings.StealthMode.unlockCalculatorCustom'
-                ).replace('{count}', String(stealthPinLength));
+                )
+                    .replace('{appName}', DECOY_APP_NAMES.calculator)
+                    .replace('{count}', String(stealthPinLength));
             case 'notepad':
                 return localeString(
                     'views.Settings.StealthMode.unlockNotepadCustom'
-                ).replace('{count}', String(stealthPinLength));
+                )
+                    .replace('{appName}', DECOY_APP_NAMES.notepad)
+                    .replace('{count}', String(stealthPinLength));
             case 'qrscanner':
                 return localeString(
                     'views.Settings.StealthMode.unlockQRScannerCustom'
-                ).replace('{count}', String(stealthPinLength));
+                )
+                    .replace('{appName}', DECOY_APP_NAMES.qrscanner)
+                    .replace('{count}', String(stealthPinLength));
             default:
                 return '';
         }
@@ -397,7 +406,9 @@ export default class StealthMode extends React.Component<
                             }}
                         >
                             {selectedAppInfo
-                                ? localeString(selectedAppInfo.translateKey)
+                                ? DECOY_APP_NAMES[
+                                      selectedAppInfo.key as keyof typeof DECOY_APP_NAMES
+                                  ]
                                 : ''}
                         </Text>
 
@@ -432,7 +443,11 @@ export default class StealthMode extends React.Component<
                                             textAlign: 'center'
                                         }}
                                     >
-                                        {localeString(app.translateKey)}
+                                        {
+                                            DECOY_APP_NAMES[
+                                                app.key as keyof typeof DECOY_APP_NAMES
+                                            ]
+                                        }
                                     </Text>
                                 </TouchableOpacity>
                             ))}
