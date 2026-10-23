@@ -101,7 +101,10 @@ const LNDHUB_IMPORT = 'lndhub://alice:secret@https://lndhub.example.com';
 // reconnects (the active node is 0) nor creates a new entry
 const renderView = async (
     node: any,
-    { clipboard = false }: { clipboard?: boolean } = {}
+    {
+        clipboard = false,
+        params = {}
+    }: { clipboard?: boolean; params?: any } = {}
 ) => {
     const updateSettings = jest.fn(() => Promise.resolve());
     const SettingsStore = {
@@ -118,7 +121,7 @@ const renderView = async (
         <WalletConfiguration
             {...({
                 navigation,
-                route: { params: { node, index: 1, saved: false } },
+                route: { params: { node, index: 1, saved: false, ...params } },
                 SettingsStore
             } as any)}
         />
@@ -509,6 +512,33 @@ describe('WalletConfiguration', () => {
 
             expect(SettingsStore.invalidateConnection).not.toHaveBeenCalled();
             expect(SettingsStore.updateSettings).toHaveBeenCalled();
+        });
+    });
+
+    describe('Tor route param', () => {
+        // handleAnything opens a scanned BTCPay config with the Tor hint as
+        // a route param; the node itself carries no enableTor
+        const BTCPAY_NODE = {
+            implementation: 'lnd',
+            host: 'http://abcdefghijklmnop.onion/lnd-rest/btc/',
+            macaroonHex: 'deadbeef',
+            certVerification: true
+        };
+
+        it('saves a scanned onion config with Tor on', async () => {
+            const { updateSettings } = await renderView(BTCPAY_NODE, {
+                params: { enableTor: true }
+            });
+            await save();
+
+            expect(savedNode(updateSettings).enableTor).toBe(true);
+        });
+
+        it('keeps Tor off without the param', async () => {
+            const { updateSettings } = await renderView(LND_NODE);
+            await save();
+
+            expect(savedNode(updateSettings).enableTor).toBeFalsy();
         });
     });
 
