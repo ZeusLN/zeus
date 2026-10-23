@@ -30,6 +30,18 @@ import {
 
 // Legacy storage key used before v0.10.0
 const LEGACY_STORAGE_KEY = 'zeus-settings';
+const SETTINGS_KEYS = [STORAGE_KEY, LEGACY_STORAGE_KEY];
+
+// Whether a settings payload lists at least one wallet. Unparseable
+// payloads count as none, so they never hide another copy.
+const hasNodes = (data: string): boolean => {
+    try {
+        const nodes = JSON.parse(data)?.nodes;
+        return Array.isArray(nodes) && nodes.length > 0;
+    } catch {
+        return false;
+    }
+};
 
 export interface RecoveryResult {
     key: string;
@@ -218,10 +230,18 @@ class KeychainRecoveryUtils {
             // read misses (i.e. the desync migration never completed). After
             // a completed desync the local copy is the fresher of the two,
             // and offering the stale synchronizable copy as a restore source
-            // would invite overwriting live data with it.
+            // would invite overwriting live data with it. Current settings
+            // with no wallets do not count: ZEUS writes that blob at
+            // startup, so a user whose wallets vanished always has
+            // one, and the cloud copy may be the only place left that holds
+            // their wallets.
             if (
                 source === 'prefixed-cloud' &&
-                results.some((r) => r.source === 'current')
+                results.some(
+                    (r) =>
+                        r.source === 'current' &&
+                        !(SETTINGS_KEYS.includes(key) && !hasNodes(r.data))
+                )
             ) {
                 continue;
             }

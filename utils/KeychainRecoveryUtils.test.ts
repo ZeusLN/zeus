@@ -159,6 +159,57 @@ describe('KeychainRecoveryUtils', () => {
             );
         });
 
+        // Startup writes a wallet-less blob into current storage, so a user
+        // whose wallets vanished always has one. It must not hide the cloud
+        // copy, which may be the only one left that lists their wallets.
+        it('offers the prefixed-cloud copy when current settings have no wallets', async () => {
+            storage.getItem.mockImplementation(async (key: string) =>
+                key === STORAGE_KEY ? '{"nodes":[]}' : (false as any)
+            );
+            rawItem.mockImplementation(async (key: string) =>
+                key === `zeus:${STORAGE_KEY}` ? SETTINGS : (null as any)
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.settingsFound).toContainEqual(
+                expect.objectContaining({
+                    key: STORAGE_KEY,
+                    source: 'prefixed-cloud',
+                    data: SETTINGS
+                })
+            );
+        });
+
+        it('offers the prefixed-cloud copy when current settings are unreadable', async () => {
+            storage.getItem.mockImplementation(async (key: string) =>
+                key === STORAGE_KEY ? '{not json' : (false as any)
+            );
+            rawItem.mockImplementation(async (key: string) =>
+                key === `zeus:${STORAGE_KEY}` ? SETTINGS : (null as any)
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.settingsFound).toContainEqual(
+                expect.objectContaining({
+                    key: STORAGE_KEY,
+                    source: 'prefixed-cloud'
+                })
+            );
+        });
+
+        it('still hides the prefixed-cloud copy of a live non-settings key', async () => {
+            storage.getItem.mockImplementation(async (key: string) =>
+                key === 'contacts' ? '[]' : (false as any)
+            );
+            rawItem.mockResolvedValue('[{"name":"old"}]' as any);
+
+            await utils.scanForRecoverableData();
+
+            expect(rawItem).not.toHaveBeenCalledWith('zeus:contacts', true);
+        });
+
         it('offers the prefixed-cloud copy when current storage misses', async () => {
             rawItem.mockImplementation(async (key: string) =>
                 key === `zeus:${STORAGE_KEY}` ? SETTINGS : (null as any)
