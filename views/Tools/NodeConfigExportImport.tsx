@@ -908,9 +908,7 @@ export default class NodeConfigExportImport extends React.Component<
                           password
                       )
                     : decryptExportData(importData!.data as string, password);
-            const nodes = Array.isArray(decryptedNodes)
-                ? getImportableNodes(decryptedNodes)
-                : [];
+            const nodes = getImportableNodes(decryptedNodes);
 
             if (nodes.length === 0) {
                 this.handleError(
