@@ -216,6 +216,16 @@ export default class SendingLightning extends React.Component<
                 return;
             }
 
+            // The donation may still complete (NWC reply timeout or no
+            // preimage yet), so don't report it as donated
+            if (status === 'IN_FLIGHT') {
+                this.setState({
+                    payingDonation: false,
+                    amountDonated: parseFloat(donationAmount ?? '')
+                });
+                return;
+            }
+
             const amountDonated =
                 result?.num_satoshis ||
                 result?.value_sat ||
@@ -447,8 +457,9 @@ export default class SendingLightning extends React.Component<
                                 >
                                     <Clock
                                         color={themeColor('bitcoin')}
-                                        width={windowSize.height * 0.2}
-                                        height={windowSize.height * 0.2}
+                                        // same size as SuccessAnimation
+                                        width={windowSize.width * 0.4}
+                                        height={windowSize.width * 0.4}
                                     />
                                     <Text
                                         style={{
