@@ -694,6 +694,7 @@
     "views.Lockscreen.enterLoginPin": "Enter login PIN (not your duress PIN)",
     "views.Lockscreen.incorrectPin": "קוד לא תקין",
     "views.Lockscreen.authenticationAttempts": "מספר ניסיונות שנותרו",
+    "views.Lockscreen.attemptNotSaved": "Could not save this attempt, so it was not checked. Free up storage space on this device and try again.",
     "views.NodeInfo.feeReport": "דוח עמלות",
     "views.NodeInfo.forwarding": "העברה",
     "views.NodeInfo.copyUri": "העתקת URI",
