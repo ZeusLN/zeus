@@ -694,6 +694,7 @@
     "views.Lockscreen.enterLoginPin": "Enter login PIN (not your duress PIN)",
     "views.Lockscreen.incorrectPin": "PIN không chính xác",
     "views.Lockscreen.authenticationAttempts": "số lần còn lại",
+    "views.Lockscreen.attemptNotSaved": "Could not save this attempt, so it was not checked. Free up storage space on this device and try again.",
     "views.NodeInfo.feeReport": "Báo cáo Phí",
     "views.NodeInfo.forwarding": "Đang chuyển tiếp",
     "views.NodeInfo.copyUri": "Sao chép URI",
