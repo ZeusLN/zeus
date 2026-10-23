@@ -37,6 +37,7 @@ jest.mock('./SettingsStore', () => ({
 }));
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import { observable } from 'mobx';
 
 import LSPStore from './LSPStore';
 import BackendUtils from '../utils/BackendUtils';
@@ -1265,5 +1266,173 @@ describe('LSPStore.getZeroConfInvoice', () => {
             jest.mocked(ReactNativeBlobUtil.fetch).mock.calls[0][3] as string
         );
         expect(body.fee_id).toBe('accepted-quote');
+    });
+});
+
+// The wallet loads channels before it subscribes to custom messages, so a
+// probe sent from the channels reaction would get its reply before anything
+// listens, time out and show a fetch error the LSP didn't cause.
+describe('LSPStore lease fetch waits for the custom message subscription', () => {
+    class FakeSocket {
+        listeners: { [event: string]: Array<() => void> } = {};
+        close = jest.fn(() => this.emit('close'));
+        addEventListener(event: string, fn: () => void) {
+            (this.listeners[event] ||= []).push(fn);
+        }
+        emit(event: string) {
+            (this.listeners[event] || []).forEach((fn) => fn());
+        }
+    }
+    const lspChannel = { remotePubkey: 'lsp-pubkey' };
+    const otherChannel = { remotePubkey: 'other-pubkey' };
+
+    let sockets: FakeSocket[];
+    const makeStoreWithChannels = (implementation = 'lnd') => {
+        const channelsStore = observable({ channels: [] as any[] });
+        const store = new LSPStore(
+            { implementation, settings: {} } as any,
+            channelsStore as any,
+            { nodeInfo: {}, getNodeInfo: jest.fn() } as any
+        );
+        return { store, channelsStore };
+    };
+    const probesSent = () =>
+        jest
+            .mocked(BackendUtils.sendCustomMessage)
+            .mock.calls.map(
+                ([{ data }]: any) =>
+                    JSON.parse(Buffer.from(data, 'hex').toString()).method
+            )
+            .filter((m: string) => m === 'lsps7.get_extendable_channels')
+            .length;
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        jest.clearAllMocks();
+        sockets = [];
+        jest.mocked(BackendUtils.sendCustomMessage).mockResolvedValue({});
+        jest.mocked(BackendUtils.subscribeCustomMessages).mockImplementation(
+            (() => {
+                const ws = new FakeSocket();
+                sockets.push(ws);
+                return ws;
+            }) as any
+        );
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('sends the probe on remote LND once the socket opens', async () => {
+        const { store, channelsStore } = makeStoreWithChannels();
+        channelsStore.channels = [lspChannel];
+        expect(probesSent()).toBe(0);
+
+        await store.subscribeCustomMessages();
+        expect(probesSent()).toBe(0);
+
+        sockets[0].emit('open');
+        expect(probesSent()).toBe(1);
+    });
+
+    it('does not show a fetch error for a channel loaded before subscribing', async () => {
+        const { store, channelsStore } = makeStoreWithChannels();
+        channelsStore.channels = [lspChannel];
+
+        await jest.advanceTimersByTimeAsync(TIMEOUT_MS);
+
+        expect(store.getExtendableChannelsError).toBe(false);
+    });
+
+    it('probes on channel changes while the socket is open', async () => {
+        const { store, channelsStore } = makeStoreWithChannels();
+        await store.subscribeCustomMessages();
+        sockets[0].emit('open');
+        expect(probesSent()).toBe(0);
+
+        channelsStore.channels = [lspChannel];
+        expect(probesSent()).toBe(1);
+    });
+
+    it('stops probing after the socket closes', async () => {
+        const { store, channelsStore } = makeStoreWithChannels();
+        await store.subscribeCustomMessages();
+        sockets[0].emit('open');
+        sockets[0].emit('close');
+
+        channelsStore.channels = [lspChannel];
+        expect(probesSent()).toBe(0);
+    });
+
+    it('stops probing after reset', async () => {
+        const { store, channelsStore } = makeStoreWithChannels();
+        await store.subscribeCustomMessages();
+        sockets[0].emit('open');
+
+        store.reset();
+        channelsStore.channels = [lspChannel];
+        expect(probesSent()).toBe(0);
+    });
+
+    it('ignores an open from a socket dropped by reset', async () => {
+        const { store, channelsStore } = makeStoreWithChannels();
+        channelsStore.channels = [lspChannel];
+        await store.subscribeCustomMessages();
+
+        store.reset();
+        sockets[0].emit('open');
+        expect(probesSent()).toBe(0);
+    });
+
+    it('does not probe without a channel with the LSP', async () => {
+        const { store, channelsStore } = makeStoreWithChannels();
+        channelsStore.channels = [otherChannel];
+        await store.subscribeCustomMessages();
+        sockets[0].emit('open');
+
+        expect(probesSent()).toBe(0);
+    });
+
+    it('sends the probe on embedded LND once the stream starts', async () => {
+        const { store, channelsStore } = makeStoreWithChannels('embedded-lnd');
+        channelsStore.channels = [lspChannel];
+        expect(probesSent()).toBe(0);
+
+        await store.subscribeCustomMessages();
+        expect(probesSent()).toBe(1);
+    });
+
+    it('does not probe on embedded LND when the stream fails to start', async () => {
+        const { index } = LndMobileInjection as any;
+        index.subscribeCustomMessages.mockRejectedValueOnce(
+            new Error('rpc error')
+        );
+        const { store, channelsStore } = makeStoreWithChannels('embedded-lnd');
+        channelsStore.channels = [lspChannel];
+
+        await expect(store.subscribeCustomMessages()).rejects.toThrow(
+            'rpc error'
+        );
+        expect(probesSent()).toBe(0);
+    });
+
+    it('probes LDK Node from the channels reaction without a subscription', async () => {
+        jest.mocked(BackendUtils.supportsLSPS7native).mockReturnValue(true);
+        jest.mocked(BackendUtils.lsps7GetExtendableChannels).mockResolvedValue(
+            []
+        );
+        try {
+            const { channelsStore } = makeStoreWithChannels('ldk-node');
+            channelsStore.channels = [lspChannel];
+
+            expect(
+                BackendUtils.lsps7GetExtendableChannels
+            ).toHaveBeenCalledTimes(1);
+        } finally {
+            jest.mocked(BackendUtils.supportsLSPS7native).mockReturnValue(
+                false
+            );
+        }
     });
 });

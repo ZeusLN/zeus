@@ -104,6 +104,8 @@ export default class LSPStore {
     // Incremented on every native LSPS7 extendable channels call so a call
     // that settles after a newer one can't overwrite its result.
     private getExtendableChannelsNativeRequestId = 0;
+    // Set while the custom message subscription can deliver replies.
+    private customMessagesReady = false;
     // Incremented on every Flow fee request and fee reset, so an answer to a
     // fee request that is no longer the latest one is dropped instead of
     // replacing the quote an invoice was priced with.
@@ -124,23 +126,37 @@ export default class LSPStore {
 
         reaction(
             () => this.channelsStore.channels,
-            () => {
-                const lspPubkey = this.getLSPSPubkey();
-                if (
-                    (BackendUtils.supportsLSPScustomMessage() ||
-                        BackendUtils.supportsLSPS7native()) &&
-                    lspPubkey &&
-                    this.channelsStore.channels.some(
-                        (channel: { remotePubkey: string }) =>
-                            channel.remotePubkey === lspPubkey
-                    )
-                ) {
-                    this.getExtendableChannels();
-                    this.nodeInfoStore.getNodeInfo();
-                }
-            }
+            () => this.fetchLeasesIfLspChannel()
         );
     }
+
+    // Fetches LSPS7 lease data when there is a channel with the LSP. Over
+    // custom messages the reply only reaches the app once the subscription
+    // is open, and the wallet loads channels before it subscribes, so the
+    // fetch waits for onCustomMessagesReady instead of timing out into a
+    // fetch error.
+    private fetchLeasesIfLspChannel = () => {
+        const lspPubkey = this.getLSPSPubkey();
+        const native = BackendUtils.supportsLSPS7native();
+        if (
+            (native ||
+                (BackendUtils.supportsLSPScustomMessage() &&
+                    this.customMessagesReady)) &&
+            lspPubkey &&
+            this.channelsStore.channels.some(
+                (channel: { remotePubkey: string }) =>
+                    channel.remotePubkey === lspPubkey
+            )
+        ) {
+            this.getExtendableChannels();
+            this.nodeInfoStore.getNodeInfo();
+        }
+    };
+
+    private onCustomMessagesReady = () => {
+        this.customMessagesReady = true;
+        this.fetchLeasesIfLspChannel();
+    };
 
     @action
     public reset = (errorsOnly = false) => {
@@ -155,6 +171,7 @@ export default class LSPStore {
             const { channelAcceptor, customMessagesSubscriber } = this;
             this.channelAcceptor = undefined;
             this.customMessagesSubscriber = undefined;
+            this.customMessagesReady = false;
             this.closeSubscription(channelAcceptor);
             this.closeSubscription(customMessagesSubscriber);
             // lease data and fetch errors belong to the previous node, and a
@@ -671,7 +688,11 @@ export default class LSPStore {
         if (!ws?.addEventListener) return;
         this[key] = ws;
         const release = () => {
-            if (this[key] === ws) this[key] = null;
+            if (this[key] !== ws) return;
+            this[key] = null;
+            if (key === 'customMessagesSubscriber') {
+                this.customMessagesReady = false;
+            }
         };
         ws.addEventListener('error', release);
         ws.addEventListener('close', release);
@@ -962,10 +983,15 @@ export default class LSPStore {
                 }
             );
 
+            const listener = this.customMessagesSubscriber;
             await this.startEmbeddedStream(
                 () => index.subscribeCustomMessages(),
                 'customMessagesSubscriber'
             );
+            // reset() may have dropped this listener while the stream started
+            if (this.customMessagesSubscriber === listener) {
+                this.onCustomMessagesReady();
+            }
         } else {
             const ws = BackendUtils.subscribeCustomMessages(
                 (response: any) => {
@@ -979,6 +1005,13 @@ export default class LSPStore {
                 }
             );
             this.keepSocket(ws, 'customMessagesSubscriber');
+            if (this.customMessagesSubscriber === ws) {
+                ws.addEventListener('open', () => {
+                    if (this.customMessagesSubscriber === ws) {
+                        this.onCustomMessagesReady();
+                    }
+                });
+            }
         }
     };
 
