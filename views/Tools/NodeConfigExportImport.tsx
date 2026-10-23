@@ -1492,6 +1492,8 @@ export default class NodeConfigExportImport extends React.Component<
 
     render() {
         const { isLoading } = this.state;
+        const hasNodes =
+            (this.props.SettingsStore.settings?.nodes || []).length > 0;
 
         return (
             <Screen>
@@ -1533,31 +1535,33 @@ export default class NodeConfigExportImport extends React.Component<
                             <LoadingIndicator />
                         ) : (
                             <>
-                                <TouchableOpacity
-                                    style={[
-                                        styles.optionButton,
-                                        {
-                                            backgroundColor:
-                                                themeColor('secondary')
+                                {hasNodes && (
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.optionButton,
+                                            {
+                                                backgroundColor:
+                                                    themeColor('secondary')
+                                            }
+                                        ]}
+                                        onPress={() =>
+                                            this.setState({
+                                                activeModal: 'nodeSelection'
+                                            })
                                         }
-                                    ]}
-                                    onPress={() =>
-                                        this.setState({
-                                            activeModal: 'nodeSelection'
-                                        })
-                                    }
-                                >
-                                    <Feather
-                                        name="upload"
-                                        size={24}
-                                        color={themeColor('text')}
-                                    />
-                                    <Text style={styles.optionText}>
-                                        {localeString(
-                                            'views.Tools.nodeConfigExportImport.exportConfigs'
-                                        )}
-                                    </Text>
-                                </TouchableOpacity>
+                                    >
+                                        <Feather
+                                            name="upload"
+                                            size={24}
+                                            color={themeColor('text')}
+                                        />
+                                        <Text style={styles.optionText}>
+                                            {localeString(
+                                                'views.Tools.nodeConfigExportImport.exportConfigs'
+                                            )}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
 
                                 <TouchableOpacity
                                     style={[
