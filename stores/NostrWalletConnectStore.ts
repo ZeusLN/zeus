@@ -112,6 +112,8 @@ type AppStateSubscription = ReturnType<typeof AppState.addEventListener>;
 
 type PendingConnectionMutation = 'delete' | 'update' | 'rotate';
 
+type Nip47ErrorResponse = ReturnType<typeof NostrConnectUtils.createNip47Error>;
+
 interface ClientKeys {
     [pubkey: string]: string;
 }
@@ -1528,13 +1530,16 @@ export default class NostrWalletConnectStore {
             }
 
             if (connection.hasPermission('pay_invoice')) {
+                // Captured here so a pay request can be held to the wallet
+                // this connection was subscribed for; see payRequestRejection
+                const isCurrent = this.settingsStore.getConnectionGuard();
                 const payHandler = this.isCashuConfigured
                     ? this.handleCashuPayInvoice.bind(this, connection)
                     : this.handleLightningPayInvoice.bind(this, connection);
                 handler.payInvoice = (request: Nip47PayInvoiceRequest) =>
                     this.withGlobalHandler(connection.id, () =>
                         this.enqueuePayment(
-                            () => payHandler(request),
+                            () => payHandler(request, isCurrent),
                             () =>
                                 NostrConnectUtils.createNip47Error(
                                     localeString(
@@ -1884,6 +1889,48 @@ export default class NostrWalletConnectStore {
             ),
             Nip47ErrorCode.RATE_LIMITED
         ) as T;
+    }
+
+    // Checked when a queued pay request starts and again before each later
+    // call to the node or mint, since the request may wait up to
+    // MAX_PAYMENT_QUEUE_WAIT_MS in the queue and then on the node.
+    //
+    // Backend calls use whichever wallet is active when they are made, and a
+    // wallet switch does not stop pay handlers that are queued or awaiting
+    // the node. A handler that outlives the switch would read the balance of
+    // and pay from the newly selected wallet, which never granted the
+    // connection. `isCurrent` is the connection guard captured when the
+    // connection was subscribed; it fails after any wallet switch or
+    // reconnect, both of which also resubscribe the connections.
+    //
+    // withGlobalHandler only checks for a pending delete, rotate or update
+    // when the request is admitted. Deleting or updating a connection waits
+    // for its admitted requests to finish, so a payment that was queued
+    // when the user deleted the connection or removed its pay permission
+    // would still be sent. The connection must also still be the stored
+    // object, since that is the one whose budget is debited and saved.
+    private payRequestRejection(
+        isCurrent: () => boolean,
+        connection: NWCConnection
+    ) {
+        if (
+            !isCurrent() ||
+            !this.connectionBelongsToCurrentWallet(connection)
+        ) {
+            return NostrConnectUtils.createNip47Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.walletIdentityUnavailable'
+                ),
+                Nip47ErrorCode.INTERNAL_ERROR
+            );
+        }
+        const { connection: stored } = this.getConnection({
+            connectionId: connection.id
+        });
+        if (stored !== connection) {
+            return this.unauthorizedConnectionResponse<Nip47ErrorResponse>();
+        }
+        return this.mutationRejection<Nip47ErrorResponse>(connection.id);
     }
 
     /**
@@ -2567,8 +2614,18 @@ export default class NostrWalletConnectStore {
 
     private async handleLightningPayInvoice(
         connection: NWCConnection,
-        request: Nip47PayInvoiceRequest
+        request: Nip47PayInvoiceRequest,
+        isCurrent: () => boolean
     ): NWCWalletServiceResponsePromise<Nip47PayResponse> {
+        // Checked on entry (the request may have been queued across a
+        // switch, delete or update) and again before each later call to
+        // the node
+        const rejectedBeforeStart = this.payRequestRejection(
+            isCurrent,
+            connection
+        );
+        if (rejectedBeforeStart) return rejectedBeforeStart;
+
         const invoiceInfo = await BackendUtils.decodePaymentRequest([
             request.invoice
         ]);
@@ -2578,6 +2635,12 @@ export default class NostrWalletConnectStore {
                 lightningDecodedPayReq: invoiceInfo,
                 requestedAmountMsat: request.amount
             });
+
+        const rejectedAfterDecode = this.payRequestRejection(
+            isCurrent,
+            connection
+        );
+        if (rejectedAfterDecode) return rejectedAfterDecode;
 
         if (invoiceInfo.expiry && invoiceInfo.timestamp) {
             const expiryTime =
@@ -2639,6 +2702,12 @@ export default class NostrWalletConnectStore {
             return { result: undefined, error: budgetCheck.error };
         }
 
+        const rejectedAfterReconcile = this.payRequestRejection(
+            isCurrent,
+            connection
+        );
+        if (rejectedAfterReconcile) return rejectedAfterReconcile;
+
         const lightningBalance = await this.balanceStore.getLightningBalance(
             true
         );
@@ -2655,6 +2724,12 @@ export default class NostrWalletConnectStore {
                 Nip47ErrorCode.INSUFFICIENT_BALANCE
             );
         }
+
+        const rejectedAfterBalance = this.payRequestRejection(
+            isCurrent,
+            connection
+        );
+        if (rejectedAfterBalance) return rejectedAfterBalance;
 
         // the fee cap is limited to the budget left after the amount.
         // Backends that ignore fee_limit_sat (LndHub) keep the full cap and
@@ -2828,8 +2903,16 @@ export default class NostrWalletConnectStore {
 
     private async handleCashuPayInvoice(
         connection: NWCConnection,
-        request: Nip47PayInvoiceRequest
+        request: Nip47PayInvoiceRequest,
+        isCurrent: () => boolean
     ): NWCWalletServiceResponsePromise<Nip47PayResponse> {
+        // Checked on entry and before the melt, as in handleLightningPayInvoice
+        const rejectedBeforeStart = this.payRequestRejection(
+            isCurrent,
+            connection
+        );
+        if (rejectedBeforeStart) return rejectedBeforeStart;
+
         if (!this.isCashuConfigured) {
             const selectedMintUrl = this.cashuStore.selectedMintUrl;
             const errorMessage = !selectedMintUrl
@@ -2936,6 +3019,12 @@ export default class NostrWalletConnectStore {
                 Nip47ErrorCode.INSUFFICIENT_BALANCE
             );
         }
+
+        const rejectedAfterDecode = this.payRequestRejection(
+            isCurrent,
+            connection
+        );
+        if (rejectedAfterDecode) return rejectedAfterDecode;
 
         const cashuInvoice = await this.cashuStore.payLnInvoiceFromEcash({
             amount: amountSats.toString(),
