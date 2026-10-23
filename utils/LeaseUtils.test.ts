@@ -225,6 +225,21 @@ describe('getRenewalInfo', () => {
     });
 });
 
+describe('getRenewalInfo with a value that is not a list', () => {
+    it.each([[{}], [5], ['x'], [true], [null], [undefined]])(
+        'returns nothing for %p',
+        (extendableChannels) => {
+            expect(
+                getRenewalInfo(
+                    extendableChannels as any,
+                    { shortChannelId: '800000x1x0' },
+                    850000
+                )
+            ).toEqual({});
+        }
+    );
+});
+
 describe('getLeaseExpirationStatus', () => {
     const entry = {
         short_channel_id: '800000x1x0',

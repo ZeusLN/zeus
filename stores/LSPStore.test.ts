@@ -1601,3 +1601,146 @@ describe('LSPStore lease fetch waits for the custom message subscription', () =>
         }
     });
 });
+
+describe('LSPStore get_extendable_channels response', () => {
+    const extendableChannel = {
+        short_channel_id: '900000x1x0',
+        max_channel_extension_expiry_blocks: 52560,
+        expiration_block: 901000
+    };
+
+    const answerStore = (extendable_channels: any) => {
+        const store = makeStore();
+        store.getExtendableChannels();
+        store.handleCustomMessages({
+            peer: Buffer.from('aa', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: store.getExtendableChannelsId,
+                    result: { extendable_channels }
+                })
+            ).toString('base64')
+        });
+        return store;
+    };
+    const answer = (extendable_channels: any) =>
+        answerStore(extendable_channels).getExtendableChannelsData;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.mocked(BackendUtils.sendCustomMessage).mockResolvedValue({});
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        jest.mocked(console.error).mockRestore();
+    });
+
+    it('stores the list of extendable channels', () => {
+        const lspDiscretion = { ...extendableChannel, expiration_block: 0 };
+        expect(answer([extendableChannel, lspDiscretion])).toEqual([
+            extendableChannel,
+            lspDiscretion
+        ]);
+    });
+
+    it.each([[{}], [5], ['x'], [true], [null], [undefined]])(
+        'stores no channels when the first answer is %p',
+        (extendable_channels) => {
+            expect(answer(extendable_channels)).toEqual([]);
+        }
+    );
+
+    it.each([[{}], [5], ['x'], [true], [null], [undefined]])(
+        'reports a fetch error when the LSP answers with %p',
+        (extendable_channels) => {
+            const store = answerStore(extendable_channels);
+            expect(store.getExtendableChannelsError).toBe(true);
+            expect(store.error).toBe(false);
+        }
+    );
+
+    it('keeps the earlier list when the LSP answers without a list', () => {
+        const store = answerStore([extendableChannel]);
+        store.getExtendableChannels();
+        store.handleCustomMessages({
+            peer: Buffer.from('aa', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: store.getExtendableChannelsId,
+                    result: { extendable_channels: {} }
+                })
+            ).toString('base64')
+        });
+
+        expect(store.getExtendableChannelsData).toEqual([extendableChannel]);
+        expect(store.getExtendableChannelsError).toBe(true);
+    });
+
+    it('keeps the earlier list on a JSON-RPC error reply, like an answer without a list', () => {
+        const store = answerStore([extendableChannel]);
+        store.getExtendableChannels();
+        store.handleCustomMessages({
+            peer: Buffer.from('aa', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: store.getExtendableChannelsId,
+                    error: { code: -32603, message: 'internal error' }
+                })
+            ).toString('base64')
+        });
+
+        expect(store.getExtendableChannelsData).toEqual([extendableChannel]);
+        expect(store.getExtendableChannelsError).toBe(true);
+    });
+
+    it('does not report a fetch error for a list, even with dropped entries', () => {
+        expect(
+            answerStore([null, extendableChannel]).getExtendableChannelsError
+        ).toBe(false);
+        expect(answerStore([]).getExtendableChannelsError).toBe(false);
+    });
+
+    it('keeps entries with missing or null block fields', () => {
+        const noBlocks = { short_channel_id: '900000x2x0' };
+        const nullBlocks = {
+            short_channel_id: '900000x3x0',
+            expiration_block: null,
+            max_channel_extension_expiry_blocks: null
+        };
+        expect(answer([noBlocks, nullBlocks])).toEqual([noBlocks, nullBlocks]);
+    });
+
+    it('drops entries whose block fields are numeric strings', () => {
+        expect(
+            answer([
+                { ...extendableChannel, expiration_block: '901000' },
+                {
+                    ...extendableChannel,
+                    max_channel_extension_expiry_blocks: '52560'
+                },
+                extendableChannel
+            ])
+        ).toEqual([extendableChannel]);
+    });
+
+    it('drops the entries the channel views cannot draw', () => {
+        expect(
+            answer([
+                null,
+                5,
+                {},
+                { ...extendableChannel, short_channel_id: 5 },
+                { ...extendableChannel, expiration_block: { toString: 1 } },
+                {
+                    ...extendableChannel,
+                    max_channel_extension_expiry_blocks: [901000]
+                },
+                extendableChannel
+            ])
+        ).toEqual([extendableChannel]);
+    });
+});

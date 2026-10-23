@@ -44,6 +44,15 @@ const CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS = 7000;
 
 const FREE_ORDER_POLL_INTERVAL_MS = 5000;
 
+// The fields of an lsps7.get_extendable_channels entry that the channel views
+// read while rendering. The answer is LSP-controlled, so only keep entries the
+// views can draw.
+const isBlockCount = (value: any) => value == null || Number.isFinite(value);
+const isExtendableChannel = (extendableChannel: any) =>
+    typeof extendableChannel?.short_channel_id === 'string' &&
+    isBlockCount(extendableChannel.expiration_block) &&
+    isBlockCount(extendableChannel.max_channel_extension_expiry_blocks);
+
 export default class LSPStore {
     @observable public info: any = {};
     @observable public zeroConfFee: number | undefined;
@@ -952,9 +961,21 @@ export default class LSPStore {
                 );
                 this.getExtendableChannelsError = true;
             } else {
-                this.getExtendableChannelsError = false;
-                this.getExtendableChannelsData =
-                    data?.result?.extendable_channels;
+                const extendableChannels = data?.result?.extendable_channels;
+                if (Array.isArray(extendableChannels)) {
+                    this.getExtendableChannelsError = false;
+                    this.getExtendableChannelsData =
+                        extendableChannels.filter(isExtendableChannel);
+                } else {
+                    // an answer without a list has nothing to show, so it
+                    // counts as a failed fetch like an error reply and
+                    // keeps the previous list
+                    console.error(
+                        'LSPS7 extendable channels answer is not a list:',
+                        extendableChannels
+                    );
+                    this.getExtendableChannelsError = true;
+                }
             }
             this.getExtendableChannelsResponseResolver?.();
             return true;
