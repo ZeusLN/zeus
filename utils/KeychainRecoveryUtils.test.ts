@@ -83,6 +83,9 @@ const encrypted = EncryptedStorage as unknown as {
 const storage = Storage as jest.Mocked<typeof Storage>;
 const rawItem = getRawItem as jest.MockedFunction<typeof getRawItem>;
 
+// Internal to KeychainRecoveryUtils; must match its LEGACY_STORAGE_KEY
+const LEGACY_STORAGE_KEY = 'zeus-settings';
+
 const SETTINGS = JSON.stringify({
     // The first node carries both a nickname and a host so the
     // nickname-before-host fallback order is actually observable.
@@ -157,6 +160,71 @@ describe('KeychainRecoveryUtils', () => {
                 `zeus:${STORAGE_KEY}`,
                 true
             );
+        });
+
+        // Startup writes a wallet-less blob into current storage, so a user
+        // whose wallets vanished always has one. It must not hide the cloud
+        // copy, which may be the only one left that lists their wallets.
+        // Both settings keys follow the same rule.
+        describe.each([
+            ['current', STORAGE_KEY],
+            ['legacy', LEGACY_STORAGE_KEY]
+        ])('%s settings key', (_label, settingsKey) => {
+            const currentHolds = (data: string) => {
+                storage.getItem.mockImplementation(async (key: string) =>
+                    key === settingsKey ? data : (false as any)
+                );
+                rawItem.mockImplementation(async (key: string) =>
+                    key === `zeus:${settingsKey}` ? SETTINGS : (null as any)
+                );
+            };
+
+            it.each([
+                ['an empty node list', '{"nodes":[]}'],
+                ['no node list', '{}'],
+                ['a payload that does not parse', '{not json']
+            ])(
+                'offers the prefixed-cloud copy when current holds %s',
+                async (_case, data) => {
+                    currentHolds(data);
+
+                    const result = await utils.scanForRecoverableData();
+
+                    expect(result.settingsFound).toContainEqual(
+                        expect.objectContaining({
+                            key: settingsKey,
+                            source: 'prefixed-cloud',
+                            data: SETTINGS
+                        })
+                    );
+                }
+            );
+
+            it('hides the prefixed-cloud copy when current lists wallets', async () => {
+                currentHolds(SETTINGS);
+
+                const result = await utils.scanForRecoverableData();
+                const sources = result.settingsFound
+                    .filter((r) => r.key === settingsKey)
+                    .map((r) => r.source);
+
+                expect(sources).toEqual(['current']);
+                expect(rawItem).not.toHaveBeenCalledWith(
+                    `zeus:${settingsKey}`,
+                    true
+                );
+            });
+        });
+
+        it('still hides the prefixed-cloud copy of a live non-settings key', async () => {
+            storage.getItem.mockImplementation(async (key: string) =>
+                key === 'contacts' ? '[]' : (false as any)
+            );
+            rawItem.mockResolvedValue('[{"name":"old"}]' as any);
+
+            await utils.scanForRecoverableData();
+
+            expect(rawItem).not.toHaveBeenCalledWith('zeus:contacts', true);
         });
 
         it('offers the prefixed-cloud copy when current storage misses', async () => {

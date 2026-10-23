@@ -65,6 +65,11 @@ const getImplementationDisplayName = (
     return found ? found.key : implementation;
 };
 
+// On-device wallets (embedded LND, LDK Node) cannot be exported
+const isExportable = (node: Node): boolean =>
+    node.implementation !== 'embedded-lnd' &&
+    node.implementation !== 'ldk-node';
+
 interface NodeConfigExportImportProps {
     navigation: NativeStackNavigationProp<any, any>;
     SettingsStore: SettingsStore;
@@ -207,12 +212,7 @@ export default class NodeConfigExportImport extends React.Component<
 
         const allNodesSelected =
             nodes.length > 0 &&
-            selectedNodes.length ===
-                nodes.filter(
-                    (node) =>
-                        node.implementation !== 'embedded-lnd' &&
-                        node.implementation !== 'ldk-node'
-                ).length;
+            selectedNodes.length === nodes.filter(isExportable).length;
 
         return (
             <Modal
@@ -252,14 +252,8 @@ export default class NodeConfigExportImport extends React.Component<
                                         } else {
                                             const selectableNodes = nodes
                                                 .map((_, index) => index)
-                                                .filter(
-                                                    (index) =>
-                                                        nodes[index]
-                                                            .implementation !==
-                                                            'embedded-lnd' &&
-                                                        nodes[index]
-                                                            .implementation !==
-                                                            'ldk-node'
+                                                .filter((index) =>
+                                                    isExportable(nodes[index])
                                                 );
                                             this.setState({
                                                 selectedNodes: selectableNodes
@@ -280,9 +274,7 @@ export default class NodeConfigExportImport extends React.Component<
                             )}
 
                             {nodes.map((node: Node, index: number) => {
-                                const isEmbedded =
-                                    node.implementation === 'embedded-lnd' ||
-                                    node.implementation === 'ldk-node';
+                                const isEmbedded = !isExportable(node);
                                 const isSelected =
                                     selectedNodes.includes(index);
 
@@ -1492,6 +1484,9 @@ export default class NodeConfigExportImport extends React.Component<
 
     render() {
         const { isLoading } = this.state;
+        const hasExportableNodes = (
+            this.props.SettingsStore.settings?.nodes || []
+        ).some(isExportable);
 
         return (
             <Screen>
@@ -1533,31 +1528,33 @@ export default class NodeConfigExportImport extends React.Component<
                             <LoadingIndicator />
                         ) : (
                             <>
-                                <TouchableOpacity
-                                    style={[
-                                        styles.optionButton,
-                                        {
-                                            backgroundColor:
-                                                themeColor('secondary')
+                                {hasExportableNodes && (
+                                    <TouchableOpacity
+                                        style={[
+                                            styles.optionButton,
+                                            {
+                                                backgroundColor:
+                                                    themeColor('secondary')
+                                            }
+                                        ]}
+                                        onPress={() =>
+                                            this.setState({
+                                                activeModal: 'nodeSelection'
+                                            })
                                         }
-                                    ]}
-                                    onPress={() =>
-                                        this.setState({
-                                            activeModal: 'nodeSelection'
-                                        })
-                                    }
-                                >
-                                    <Feather
-                                        name="upload"
-                                        size={24}
-                                        color={themeColor('text')}
-                                    />
-                                    <Text style={styles.optionText}>
-                                        {localeString(
-                                            'views.Tools.nodeConfigExportImport.exportConfigs'
-                                        )}
-                                    </Text>
-                                </TouchableOpacity>
+                                    >
+                                        <Feather
+                                            name="upload"
+                                            size={24}
+                                            color={themeColor('text')}
+                                        />
+                                        <Text style={styles.optionText}>
+                                            {localeString(
+                                                'views.Tools.nodeConfigExportImport.exportConfigs'
+                                            )}
+                                        </Text>
+                                    </TouchableOpacity>
+                                )}
 
                                 <TouchableOpacity
                                     style={[
