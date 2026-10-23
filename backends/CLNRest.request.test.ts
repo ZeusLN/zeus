@@ -559,6 +559,8 @@ describe('CLNRest payment request bodies', () => {
 
         await cln.sendKeysend({ pubkey: '02ab', amt: 100, fee_limit_sat: 5 });
 
+        // toEqual also pins that exemptfee is absent: CLN rejects it
+        // together with maxfee
         expect(sentBody()).toEqual({
             url: 'https://node.example.com:3010/v1/keysend',
             body: { destination: '02ab', amount_msat: 100000, maxfee: 5000 }
@@ -570,11 +572,61 @@ describe('CLNRest payment request bodies', () => {
 
         await cln.sendKeysend({ pubkey: '02ab', amt: 200, fee_limit_sat: 5 });
         expect(sentBody().body.maxfeepercent).toBe(2.5);
+        expect(sentBody().body.exemptfee).toBe(0);
 
         cln.clearCachedCalls();
         mockFetch.mockClear();
         await cln.sendKeysend({ pubkey: '02ab', amt: 2, fee_limit_sat: 5 });
         expect(sentBody().body.maxfeepercent).toBe(100);
+        expect(sentBody().body.exemptfee).toBe(0);
+    });
+
+    // CLN truncates maxfeepercent to whole ppm and floors the budget, so
+    // 33.333...% of 3000 msat would be a 999 msat cap
+    it('rounds the converted percent up on keysend before v24.11', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.08' };
+
+        await cln.sendKeysend({ pubkey: '02ab', amt: 3, fee_limit_sat: 1 });
+        expect(sentBody().body.maxfeepercent).toBe(33.3334);
+
+        cln.clearCachedCalls();
+        mockFetch.mockClear();
+        // 1 sat of 2 BTC is 0.0000005%, which JSON would write as 5e-7
+        await cln.sendKeysend({
+            pubkey: '02ab',
+            amt: 200_000_000,
+            fee_limit_sat: 1
+        });
+        expect(sentBody().body.maxfeepercent).toBe(0.0001);
+    });
+
+    it.each(['v24.08', 'v25.02'])(
+        'sends a percent-mode cap with exemptfee 0 on keysend on %s',
+        async (version) => {
+            mockNodeInfoStore.nodeInfo = { version };
+
+            await cln.sendKeysend({
+                pubkey: '02ab',
+                amt: 200,
+                fee_limit_sat: 6,
+                max_fee_percent: '3'
+            });
+
+            expect(sentBody().body).toMatchObject({
+                maxfeepercent: '3',
+                exemptfee: 0
+            });
+            expect(sentBody().body).not.toHaveProperty('maxfee');
+        }
+    );
+
+    it('leaves the fee cap and exemption to the node on keysend with no limit', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.08' };
+
+        await cln.sendKeysend({ pubkey: '02ab', amt: 200 });
+
+        expect(sentBody().body).not.toHaveProperty('maxfeepercent');
+        expect(sentBody().body).not.toHaveProperty('exemptfee');
     });
 
     // TransactionsStore passes the fee limit as a number, so a limit of
@@ -609,6 +661,8 @@ describe('CLNRest payment request bodies', () => {
         await cln.sendKeysend({ pubkey: '02ab', amt: 200, fee_limit_sat: 0 });
 
         expect(sentBody().body.maxfeepercent).toBe(0);
+        // without this keysend still allows up to 5 sats in fees
+        expect(sentBody().body.exemptfee).toBe(0);
         expect(sentBody().body).not.toHaveProperty('maxfee');
     });
 

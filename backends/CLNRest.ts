@@ -579,7 +579,10 @@ export default class CLNRest {
             // keysend takes either a percent cap or an absolute maxfee,
             // not both, and only gained maxfee in v24.11: on older nodes
             // express the fixed cap as the equivalent percent of the
-            // keysend amount (capped at CLN's 100% param limit)
+            // keysend amount (capped at CLN's 100% param limit). CLN
+            // reads the percent to whole ppm and floors the budget, so
+            // round up to 4 decimals to keep the cap at or above the
+            // fixed limit.
             if (data.max_fee_percent) {
                 legacyRequest.maxfeepercent = data.max_fee_percent;
             } else if (maxfee !== undefined) {
@@ -589,10 +592,18 @@ export default class CLNRest {
                     legacyRequest.maxfeepercent = BigNumber.min(
                         new BigNumber(data.fee_limit_sat)
                             .times(100)
-                            .dividedBy(data.amt),
+                            .dividedBy(data.amt)
+                            .decimalPlaces(4, BigNumber.ROUND_CEIL),
                         100
                     ).toNumber();
                 }
+            }
+            // With maxfeepercent, keysend raises any budget below
+            // exemptfee (default 5000 msat) to exemptfee. Send 0 so the
+            // percent is the whole cap. Not allowed alongside maxfee,
+            // which already sets the exemption to 0.
+            if (legacyRequest.maxfeepercent !== undefined) {
+                legacyRequest.exemptfee = 0;
             }
             return this.payWithTimeout('/v1/keysend', legacyRequest, data);
         }
