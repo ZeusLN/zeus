@@ -694,6 +694,7 @@
     "views.Lockscreen.enterLoginPin": "Login-PIN eingeben (nicht deine Bedrohungs-PIN)",
     "views.Lockscreen.incorrectPin": "Falsche PIN",
     "views.Lockscreen.authenticationAttempts": "Versuche übrig",
+    "views.Lockscreen.attemptNotSaved": "Could not save this attempt, so it was not checked. Free up storage space on this device and try again.",
     "views.NodeInfo.feeReport": "Gebührenbericht",
     "views.NodeInfo.forwarding": "Weiterleitung",
     "views.NodeInfo.copyUri": "URI kopieren",
