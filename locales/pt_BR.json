@@ -694,6 +694,7 @@
     "views.Lockscreen.enterLoginPin": "Enter login PIN (not your duress PIN)",
     "views.Lockscreen.incorrectPin": "PIN Incorreto",
     "views.Lockscreen.authenticationAttempts": "Tentativas restantes",
+    "views.Lockscreen.attemptNotSaved": "Could not save this attempt, so it was not checked. Free up storage space on this device and try again.",
     "views.NodeInfo.feeReport": "Relatório de taxas",
     "views.NodeInfo.forwarding": "Roteamento",
     "views.NodeInfo.copyUri": "Copiar URI",
