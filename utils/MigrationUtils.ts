@@ -87,6 +87,11 @@ import {
 } from '../utils/SwapUtils';
 
 import {
+    purgeChannelExportStaging,
+    purgeLegacyChannelExports
+} from '../utils/ChannelExportStagingUtils';
+
+import {
     TimePeriod,
     displayFromExpirySeconds,
     expirySecondsFromInput
@@ -917,6 +922,43 @@ class MigrationsUtils {
         await purgeLegacyRescueKeyFiles();
 
         await this.writeFlag(MOD_KEY_RESCUE_FILE);
+    }
+
+    // Channel backup export file cleanup, same two-part shape as
+    // purgeRescueKeyFiles above.
+    //
+    // Staging dir: the export hands its zip to the iOS share sheet and
+    // deliberately does not unlink it afterwards, because a receiving app may
+    // still be reading. Sweeping at the next export is not enough here the
+    // way it is for CSVs: exportChannelDb force-restarts the app on every
+    // outcome and locks the wallet, so the user has usually migrated away and
+    // never exports again. This launch sweep is what that restart runs into.
+    // Latched to at most once per process for the same reason as the rescue
+    // key staging file: getSettings() also runs on every transition to the
+    // background, and the share sheet backgrounds the app while the staged
+    // zip still has to be readable.
+    //
+    // Legacy shared-storage files: older builds staged the zip in the
+    // Files-visible iOS Documents directory, where an export interrupted
+    // before the share settled left the channel backup indefinitely, swept
+    // into iCloud/iTunes backups. One-shot best-effort cleanup; the flag is
+    // set regardless of outcome because a failed unlink can never succeed on
+    // a later retry.
+    private channelExportStagingPurged = false;
+
+    public async purgeChannelExportFiles() {
+        if (!this.channelExportStagingPurged) {
+            this.channelExportStagingPurged = true;
+            await purgeChannelExportStaging();
+        }
+
+        const MOD_KEY_CHANNEL_EXPORT = 'channel-export-file-cleanup';
+        const modChannelExport = await this.readFlag(MOD_KEY_CHANNEL_EXPORT);
+        if (modChannelExport) return;
+
+        await purgeLegacyChannelExports();
+
+        await this.writeFlag(MOD_KEY_CHANNEL_EXPORT);
     }
 
     public async storageMigrationV2(settings: any) {

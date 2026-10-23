@@ -60,6 +60,10 @@ import {
     unlinkRescueKeyStagingFile
 } from '../utils/SwapUtils';
 import {
+    purgeChannelExportStaging,
+    purgeLegacyChannelExports
+} from '../utils/ChannelExportStagingUtils';
+import {
     NWC_CONNECTIONS_KEY,
     NWC_CLIENT_KEYS,
     NWC_SERVICE_KEYS,
@@ -928,6 +932,13 @@ export async function clearAllData(): Promise<void> {
     // 2e. Clear the per-order POS records while the order lists that name
     // them still exist (step 3 clears the lists)
     await clearPosOrderRecords();
+
+    // 2f. Delete any exported channel backups still in app cache, plus the
+    // zips older builds left in the Files-visible iOS Documents directory. A
+    // panic/duress wipe must not leave a channel database - which names every
+    // peer and balance - sitting on the device.
+    await purgeChannelExportStaging();
+    await purgeLegacyChannelExports();
 
     // 3. Clear all known storage keys
     console.log('[ClearData] Clearing known storage keys...');
