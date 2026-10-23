@@ -694,6 +694,7 @@
     "views.Lockscreen.enterLoginPin": "Introduzca su PIN de acceso (no su PIN de emergencia).",
     "views.Lockscreen.incorrectPin": "PIN incorrecto",
     "views.Lockscreen.authenticationAttempts": "intentos restantes",
+    "views.Lockscreen.attemptNotSaved": "Could not save this attempt, so it was not checked. Free up storage space on this device and try again.",
     "views.NodeInfo.feeReport": "Informe de comisiones",
     "views.NodeInfo.forwarding": "Reenviando",
     "views.NodeInfo.copyUri": "Copiar URI",
