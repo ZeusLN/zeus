@@ -1417,6 +1417,122 @@ describe('LSPStore lease fetch waits for the custom message subscription', () =>
         expect(probesSent()).toBe(0);
     });
 
+    it('resolves on LNC, which has no socket, and probes right away', async () => {
+        jest.mocked(BackendUtils.subscribeCustomMessages).mockReturnValue(
+            undefined as any
+        );
+        const { store, channelsStore } = makeStoreWithChannels(
+            'lightning-node-connect'
+        );
+        channelsStore.channels = [lspChannel];
+        expect(probesSent()).toBe(0);
+
+        await expect(store.subscribeCustomMessages()).resolves.toBeUndefined();
+        expect(probesSent()).toBe(1);
+    });
+
+    it('probes on LNC channel changes after subscribing', async () => {
+        jest.mocked(BackendUtils.subscribeCustomMessages).mockReturnValue(
+            undefined as any
+        );
+        const { store, channelsStore } = makeStoreWithChannels(
+            'lightning-node-connect'
+        );
+        await store.subscribeCustomMessages();
+        expect(probesSent()).toBe(0);
+
+        channelsStore.channels = [lspChannel];
+        expect(probesSent()).toBe(1);
+    });
+
+    it.each(['error', 'close'])(
+        'shows the lease error when the socket fails with %s before opening',
+        async (event) => {
+            const { store, channelsStore } = makeStoreWithChannels();
+            channelsStore.channels = [lspChannel];
+            await store.subscribeCustomMessages();
+
+            sockets[0].emit(event);
+
+            expect(store.getExtendableChannelsError).toBe(true);
+            expect(store.error).toBe(false);
+            expect(probesSent()).toBe(0);
+        }
+    );
+
+    it('clears the lease error once a new socket opens and the LSP answers', async () => {
+        const { store, channelsStore } = makeStoreWithChannels();
+        channelsStore.channels = [lspChannel];
+        await store.subscribeCustomMessages();
+        sockets[0].emit('error');
+        expect(store.getExtendableChannelsError).toBe(true);
+
+        await store.subscribeCustomMessages();
+        sockets[1].emit('open');
+        store.handleCustomMessages({
+            peer: Buffer.from('aa', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: store.getExtendableChannelsId,
+                    result: { extendable_channels: [] }
+                })
+            ).toString('base64')
+        });
+
+        expect(store.getExtendableChannelsError).toBe(false);
+    });
+
+    it('does not show the lease error for a failed socket without an LSP channel', async () => {
+        const { store, channelsStore } = makeStoreWithChannels();
+        channelsStore.channels = [otherChannel];
+        await store.subscribeCustomMessages();
+
+        sockets[0].emit('error');
+
+        expect(store.getExtendableChannelsError).toBe(false);
+    });
+
+    it('does not show the lease error when an open socket closes', async () => {
+        const { store, channelsStore } = makeStoreWithChannels();
+        await store.subscribeCustomMessages();
+        sockets[0].emit('open');
+        channelsStore.channels = [lspChannel];
+        expect(probesSent()).toBe(1);
+
+        sockets[0].emit('close');
+
+        expect(store.getExtendableChannelsError).toBe(false);
+        channelsStore.channels = [lspChannel, otherChannel];
+        expect(probesSent()).toBe(1);
+    });
+
+    it('does not show the lease error when reset closes the socket', async () => {
+        const { store, channelsStore } = makeStoreWithChannels();
+        channelsStore.channels = [lspChannel];
+        await store.subscribeCustomMessages();
+
+        store.reset();
+        sockets[0].emit('close');
+
+        expect(store.getExtendableChannelsError).toBe(false);
+    });
+
+    it('shows the lease error when the embedded stream fails to start', async () => {
+        const { index } = LndMobileInjection as any;
+        index.subscribeCustomMessages.mockRejectedValueOnce(
+            new Error('rpc error')
+        );
+        const { store, channelsStore } = makeStoreWithChannels('embedded-lnd');
+        channelsStore.channels = [lspChannel];
+
+        await expect(store.subscribeCustomMessages()).rejects.toThrow(
+            'rpc error'
+        );
+        expect(store.getExtendableChannelsError).toBe(true);
+        expect(store.error).toBe(false);
+    });
+
     it('probes LDK Node from the channels reaction without a subscription', async () => {
         jest.mocked(BackendUtils.supportsLSPS7native).mockReturnValue(true);
         jest.mocked(BackendUtils.lsps7GetExtendableChannels).mockResolvedValue(

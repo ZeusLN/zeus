@@ -136,26 +136,44 @@ export default class LSPStore {
     // fetch waits for onCustomMessagesReady instead of timing out into a
     // fetch error.
     private fetchLeasesIfLspChannel = () => {
-        const lspPubkey = this.getLSPSPubkey();
         const native = BackendUtils.supportsLSPS7native();
         if (
             (native ||
                 (BackendUtils.supportsLSPScustomMessage() &&
                     this.customMessagesReady)) &&
-            lspPubkey &&
-            this.channelsStore.channels.some(
-                (channel: { remotePubkey: string }) =>
-                    channel.remotePubkey === lspPubkey
-            )
+            this.hasLspChannel()
         ) {
             this.getExtendableChannels();
             this.nodeInfoStore.getNodeInfo();
         }
     };
 
+    private hasLspChannel = () => {
+        const lspPubkey = this.getLSPSPubkey();
+        return (
+            !!lspPubkey &&
+            this.channelsStore.channels.some(
+                (channel: { remotePubkey: string }) =>
+                    channel.remotePubkey === lspPubkey
+            )
+        );
+    };
+
     private onCustomMessagesReady = () => {
         this.customMessagesReady = true;
         this.fetchLeasesIfLspChannel();
+    };
+
+    // The subscription failed before it could deliver replies, so no lease
+    // fetch will run. Report it like a failed fetch instead of showing
+    // nothing for a channel with the LSP.
+    private onCustomMessagesFailed = () => {
+        this.customMessagesReady = false;
+        if (this.hasLspChannel()) {
+            runInAction(() => {
+                this.getExtendableChannelsError = true;
+            });
+        }
     };
 
     @action
@@ -687,11 +705,18 @@ export default class LSPStore {
     ) => {
         if (!ws?.addEventListener) return;
         this[key] = ws;
+        let opened = false;
+        ws.addEventListener('open', () => {
+            opened = true;
+        });
         const release = () => {
             if (this[key] !== ws) return;
             this[key] = null;
-            if (key === 'customMessagesSubscriber') {
+            if (key !== 'customMessagesSubscriber') return;
+            if (opened) {
                 this.customMessagesReady = false;
+            } else {
+                this.onCustomMessagesFailed();
             }
         };
         ws.addEventListener('error', release);
@@ -984,10 +1009,19 @@ export default class LSPStore {
             );
 
             const listener = this.customMessagesSubscriber;
-            await this.startEmbeddedStream(
-                () => index.subscribeCustomMessages(),
-                'customMessagesSubscriber'
-            );
+            try {
+                await this.startEmbeddedStream(
+                    () => index.subscribeCustomMessages(),
+                    'customMessagesSubscriber'
+                );
+            } catch (error) {
+                // startEmbeddedStream has already dropped the listener, so
+                // only check that reset() didn't run while it started
+                if (this.customMessagesSubscriber === null) {
+                    this.onCustomMessagesFailed();
+                }
+                throw error;
+            }
             // reset() may have dropped this listener while the stream started
             if (this.customMessagesSubscriber === listener) {
                 this.onCustomMessagesReady();
@@ -1004,6 +1038,12 @@ export default class LSPStore {
                     );
                 }
             );
+            if (!ws?.addEventListener) {
+                // LNC delivers through its own native listener; there is no
+                // socket to wait on
+                this.onCustomMessagesReady();
+                return;
+            }
             this.keepSocket(ws, 'customMessagesSubscriber');
             if (this.customMessagesSubscriber === ws) {
                 ws.addEventListener('open', () => {
