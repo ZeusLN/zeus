@@ -694,6 +694,7 @@
     "views.Lockscreen.enterLoginPin": "Εισάγετε τον κωδικό πρόσβασης σύνδεσης (όχι τον κωδικό έκτακτης ανάγκης)",
     "views.Lockscreen.incorrectPin": "Λανθασμένο PIN",
     "views.Lockscreen.authenticationAttempts": "προσπάθειες που απομένουν",
+    "views.Lockscreen.attemptNotSaved": "Could not save this attempt, so it was not checked. Free up storage space on this device and try again.",
     "views.NodeInfo.feeReport": "Αναφορά τελών",
     "views.NodeInfo.forwarding": "Προώθηση",
     "views.NodeInfo.copyUri": "Αντιγραφή URI",
