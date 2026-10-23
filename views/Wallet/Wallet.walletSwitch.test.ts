@@ -488,45 +488,95 @@ describe('session start', () => {
     });
 });
 
-it('Retry during a transient embedded LND retry connects only once', async () => {
-    jest.useFakeTimers();
-    jest.spyOn(console, 'error').mockImplementation(() => {});
-    try {
-        const { settings, view, runner, refresh, lnd } = setup(2);
+// The error screen's Retry (retryConnection) reconnects in place, so it has
+// to redo the full connect: reset the stores, restart an on-device node and
+// clear the connect error
+describe('error-screen Retry', () => {
+    it('reconnects a remote node after a failed connect', async () => {
+        const { settings, view, runner, refresh } = setup(1);
         const { NodeInfoStore } = view.props;
         NodeInfoStore.getNodeInfo
-            .mockRejectedValueOnce(
-                new Error('RPC server is in the process of starting up')
-            )
+            .mockRejectedValueOnce(new Error('request timed out'))
             .mockResolvedValue(undefined);
-        const initial = runner.run(refresh);
-        await jest.advanceTimersByTimeAsync(0);
-        expect(NodeInfoStore.getNodeInfo).toHaveBeenCalledTimes(1);
-        // the retry left connecting mode, so the error screen and its
-        // Retry show while it sleeps before redialing
+        await runner.run(refresh);
+        expect(NodeInfoStore.handleGetNodeInfoError).toHaveBeenCalledTimes(1);
         expect(settings.connecting).toBe(false);
 
         await view.retryConnection();
 
-        // Retry connected right away, without waiting out the backoff
-        expect(lnd.startLnd).toHaveBeenCalledTimes(2);
         expect(NodeInfoStore.getNodeInfo).toHaveBeenCalledTimes(2);
-        expect(settings.connecting).toBe(false);
-
-        await jest.advanceTimersByTimeAsync(2000);
-        await initial;
-
-        // the queued retry stopped instead of restarting LND again
-        expect(lnd.startLnd).toHaveBeenCalledTimes(2);
-        expect(NodeInfoStore.getNodeInfo).toHaveBeenCalledTimes(2);
+        expect(NodeInfoStore.reset).toHaveBeenCalledTimes(2);
         expect(settings.setConnectingStatus.mock.calls).toEqual([
             [false],
             [true],
             [false]
         ]);
-        expect(view.props.AlertStore.reset).toHaveBeenCalledTimes(2);
         expect(settings.connecting).toBe(false);
-    } finally {
-        jest.useRealTimers();
-    }
+    });
+
+    it('restarts LDK Node and clears the error after a VSS failure', async () => {
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const { settings, view, runner, refresh, ldk } = setup(0);
+        ldk.startLdkNodeWallet
+            .mockRejectedValueOnce(
+                Object.assign(new Error('VSS unreachable'), {
+                    code: 'vss_error'
+                })
+            )
+            .mockResolvedValue({});
+        await runner.run(refresh);
+        expect(settings.error).toBe(true);
+        expect(settings.connecting).toBe(false);
+
+        await view.retryConnection();
+
+        expect(settings.error).toBe(false);
+        expect(ldk.stopLdkNode).toHaveBeenCalledTimes(2);
+        expect(ldk.startLdkNodeWallet).toHaveBeenCalledTimes(2);
+        expect(ldk.waitForLdkNodeReady).toHaveBeenCalledTimes(1);
+        expect(settings.connecting).toBe(false);
+    });
+
+    it('connects only once during a transient embedded LND retry', async () => {
+        jest.useFakeTimers();
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+        try {
+            const { settings, view, runner, refresh, lnd } = setup(2);
+            const { NodeInfoStore } = view.props;
+            NodeInfoStore.getNodeInfo
+                .mockRejectedValueOnce(
+                    new Error('RPC server is in the process of starting up')
+                )
+                .mockResolvedValue(undefined);
+            const initial = runner.run(refresh);
+            await jest.advanceTimersByTimeAsync(0);
+            expect(NodeInfoStore.getNodeInfo).toHaveBeenCalledTimes(1);
+            // the retry left connecting mode, so the error screen and its
+            // Retry show while it sleeps before redialing
+            expect(settings.connecting).toBe(false);
+
+            await view.retryConnection();
+
+            // Retry connected right away, without waiting out the backoff
+            expect(lnd.startLnd).toHaveBeenCalledTimes(2);
+            expect(NodeInfoStore.getNodeInfo).toHaveBeenCalledTimes(2);
+            expect(settings.connecting).toBe(false);
+
+            await jest.advanceTimersByTimeAsync(2000);
+            await initial;
+
+            // the queued retry stopped instead of restarting LND again
+            expect(lnd.startLnd).toHaveBeenCalledTimes(2);
+            expect(NodeInfoStore.getNodeInfo).toHaveBeenCalledTimes(2);
+            expect(settings.setConnectingStatus.mock.calls).toEqual([
+                [false],
+                [true],
+                [false]
+            ]);
+            expect(view.props.AlertStore.reset).toHaveBeenCalledTimes(2);
+            expect(settings.connecting).toBe(false);
+        } finally {
+            jest.useRealTimers();
+        }
+    });
 });
