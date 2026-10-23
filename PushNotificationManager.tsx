@@ -4,8 +4,8 @@ import { Notifications } from 'react-native-notifications';
 import DeviceInfo from 'react-native-device-info';
 
 import { lightningAddressStore, settingsStore } from './stores/Stores';
-import NavigationService from './NavigationService';
 import { parseNwcActivityNotif } from './utils/NostrConnectUtils';
+import { openNwcActivityLink } from './utils/NwcActivityLinkUtils';
 
 export default class PushNotificationManager extends React.Component<any, any> {
     async componentDidMount() {
@@ -41,12 +41,8 @@ export default class PushNotificationManager extends React.Component<any, any> {
     ): void {
         const link = parseNwcActivityNotif(payload);
         if (!link) return;
-        NavigationService.navigateWhenReady('NWCConnectionActivity', {
-            connectionId: link.connectionId,
-            ...(link.failedActivityId && {
-                failedActivityId: link.failedActivityId
-            })
-        });
+        // waits for the login, like deep links and share intents
+        openNwcActivityLink(link);
     }
 
     registerNotificationEvents = () => {

@@ -112,6 +112,7 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
         processPendingDeepLink: jest.fn()
     };
     const isWipePending = jest.fn(async () => false);
+    const processPendingNwcActivityLink = jest.fn();
     const Wallet = sourceMethods(
         'views/Wallet/Wallet.tsx',
         'Wallet',
@@ -133,6 +134,7 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
             retryOnTransientError,
             restartNeeded: jest.fn(),
             LinkingUtils,
+            processPendingNwcActivityLink,
             Storage: { getItem: async () => false },
             CHANNEL_MIGRATION_ACTIVE: 'test-migration-flag',
             processSharedQRImageFast: async () => null,
@@ -210,7 +212,8 @@ function setup(selectedNode: number, { realLogin = false } = {}) {
         lnd,
         repairMissingChannelEdges,
         LinkingUtils,
-        isWipePending
+        isWipePending,
+        processPendingNwcActivityLink
     };
 }
 
@@ -348,7 +351,13 @@ it('a transient embedded LND retry stops once another wallet is selected', async
 // setup now runs in LSPStore.initFlowLSP without being awaited
 describe('Flow LSP startup', () => {
     it('sets up Flow LSP and still handles the initial deep link', async () => {
-        const { view, runner, refresh, LinkingUtils } = setup(1);
+        const {
+            view,
+            runner,
+            refresh,
+            LinkingUtils,
+            processPendingNwcActivityLink
+        } = setup(1);
         const { LSPStore } = view.props;
         // fails the refresh if fetchDataCore awaits it again
         LSPStore.getLSPInfo = jest.fn(() => Promise.reject());
@@ -359,6 +368,7 @@ describe('Flow LSP startup', () => {
         expect(view.state.initialLoad).toBe(false);
         expect(LinkingUtils.handleInitialUrl).toHaveBeenCalledTimes(1);
         expect(LinkingUtils.processPendingDeepLink).toHaveBeenCalledTimes(1);
+        expect(processPendingNwcActivityLink).toHaveBeenCalledTimes(1);
         expect(view.processPendingGraphSyncPayment).toHaveBeenCalledTimes(1);
     });
 });
