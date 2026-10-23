@@ -1646,7 +1646,7 @@ describe('LSPStore get_extendable_channels response', () => {
     });
 
     it.each([[{}], [5], ['x'], [true], [null], [undefined]])(
-        'stores an empty list when the LSP answers with %p',
+        'stores no channels when the first answer is %p',
         (extendable_channels) => {
             expect(answer(extendable_channels)).toEqual([]);
         }
@@ -1661,7 +1661,7 @@ describe('LSPStore get_extendable_channels response', () => {
         }
     );
 
-    it('replaces an earlier list when the LSP answers without a list', () => {
+    it('keeps the earlier list when the LSP answers without a list', () => {
         const store = answerStore([extendableChannel]);
         store.getExtendableChannels();
         store.handleCustomMessages({
@@ -1675,7 +1675,25 @@ describe('LSPStore get_extendable_channels response', () => {
             ).toString('base64')
         });
 
-        expect(store.getExtendableChannelsData).toEqual([]);
+        expect(store.getExtendableChannelsData).toEqual([extendableChannel]);
+        expect(store.getExtendableChannelsError).toBe(true);
+    });
+
+    it('keeps the earlier list on a JSON-RPC error reply, like an answer without a list', () => {
+        const store = answerStore([extendableChannel]);
+        store.getExtendableChannels();
+        store.handleCustomMessages({
+            peer: Buffer.from('aa', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: store.getExtendableChannelsId,
+                    error: { code: -32603, message: 'internal error' }
+                })
+            ).toString('base64')
+        });
+
+        expect(store.getExtendableChannelsData).toEqual([extendableChannel]);
         expect(store.getExtendableChannelsError).toBe(true);
     });
 

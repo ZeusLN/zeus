@@ -968,13 +968,13 @@ export default class LSPStore {
                         extendableChannels.filter(isExtendableChannel);
                 } else {
                     // an answer without a list has nothing to show, so it
-                    // counts as a failed fetch like an error reply
+                    // counts as a failed fetch like an error reply and
+                    // keeps the previous list
                     console.error(
                         'LSPS7 extendable channels answer is not a list:',
                         extendableChannels
                     );
                     this.getExtendableChannelsError = true;
-                    this.getExtendableChannelsData = [];
                 }
             }
             this.getExtendableChannelsResponseResolver?.();
