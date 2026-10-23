@@ -26,7 +26,8 @@ jest.mock('../utils/BackendUtils', () => ({
     initChanAcceptor: jest.fn(),
     supportsFlowLSP: jest.fn(() => true),
     supportsLSPScustomMessage: () => true,
-    supportsLSPS7native: () => false
+    supportsLSPS7native: jest.fn(() => false),
+    lsps7GetExtendableChannels: jest.fn()
 }));
 jest.mock('../utils/LocaleUtils');
 jest.mock('./SettingsStore', () => ({
@@ -36,6 +37,7 @@ jest.mock('./SettingsStore', () => ({
 }));
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
+import { observable } from 'mobx';
 
 import LSPStore from './LSPStore';
 import BackendUtils from '../utils/BackendUtils';
@@ -115,7 +117,7 @@ describe('LSPStore custom-message request timeouts', () => {
         return expect(promise).resolves.toBeUndefined();
     });
 
-    it('background get_extendable_channels probe times out silently', async () => {
+    it('background get_extendable_channels probe timeout only sets the lease error', async () => {
         const store = makeStore();
         store.loadingLSPS7 = true;
 
@@ -126,6 +128,7 @@ describe('LSPStore custom-message request timeouts', () => {
         expect(store.error).toBe(false);
         expect(store.error_msg).toBe('');
         expect(store.loadingLSPS7).toBe(true);
+        expect(store.getExtendableChannelsError).toBe(true);
     });
 
     it('probe timeout does not clear an in-flight create_order spinner', async () => {
@@ -199,7 +202,7 @@ describe('LSPStore custom-message request timeouts', () => {
         expect(store.getInfoData).toEqual({});
     });
 
-    it('background probe send failure does not surface an error', async () => {
+    it('background probe send failure only sets the lease error', async () => {
         jest.mocked(BackendUtils.sendCustomMessage).mockRejectedValue(
             'peer not connected'
         );
@@ -209,6 +212,399 @@ describe('LSPStore custom-message request timeouts', () => {
 
         expect(store.error).toBe(false);
         expect(store.error_msg).toBe('');
+        expect(store.getExtendableChannelsError).toBe(true);
+    });
+});
+
+const extendableChannelsReply = (store: LSPStore, reply: any) =>
+    store.handleCustomMessages({
+        peer: Buffer.from('aa', 'hex').toString('base64'),
+        data: Buffer.from(
+            JSON.stringify({
+                jsonrpc: '2.0',
+                id: store.getExtendableChannelsId,
+                ...reply
+            })
+        ).toString('base64')
+    });
+
+const deferred = <T>() => {
+    let resolve!: (value: T) => void;
+    let reject!: (reason: any) => void;
+    const promise = new Promise<T>((res, rej) => {
+        resolve = res;
+        reject = rej;
+    });
+    return { promise, resolve, reject };
+};
+
+describe('LSPStore.getExtendableChannels over custom messages', () => {
+    const channel = {
+        short_channel_id: '800000x1x0',
+        max_channel_extension_expiry_blocks: 0,
+        expiration_block: 852560
+    };
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        jest.clearAllMocks();
+        jest.mocked(BackendUtils.sendCustomMessage).mockResolvedValue({});
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+        jest.mocked(console.error).mockRestore();
+    });
+
+    it('stores the channels and clears the error on a reply', async () => {
+        const store = makeStore();
+        store.getExtendableChannelsError = true;
+        const probe = store.getExtendableChannels();
+
+        extendableChannelsReply(store, {
+            result: { extendable_channels: [channel] }
+        });
+        await probe;
+
+        expect(store.getExtendableChannelsData).toEqual([channel]);
+        expect(store.getExtendableChannelsError).toBe(false);
+    });
+
+    it('sets only the lease error on a JSON-RPC error reply', async () => {
+        const store = makeStore();
+        const probe = store.getExtendableChannels();
+
+        extendableChannelsReply(store, {
+            error: { code: -32603, message: 'internal error' }
+        });
+        await probe;
+
+        expect(store.getExtendableChannelsError).toBe(true);
+        expect(store.error).toBe(false);
+        expect(store.error_msg).toBe('');
+        expect(store.getExtendableChannelsData).toEqual([]);
+    });
+
+    it('keeps an error another LSP screen is showing', async () => {
+        const store = makeStore();
+        store.error = true;
+        store.error_msg = 'order failed';
+        const probe = store.getExtendableChannels();
+
+        extendableChannelsReply(store, {
+            result: { extendable_channels: [channel] }
+        });
+        await probe;
+
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe('order failed');
+    });
+
+    it.each([
+        ['a reply', { result: { extendable_channels: [channel] } }],
+        ['an error reply', { error: { code: -32603, message: 'x' } }]
+    ])('leaves an LSPS7 order spinner alone on %s', async (_, reply) => {
+        const store = makeStore();
+        store.loadingLSPS7 = true;
+        const probe = store.getExtendableChannels();
+
+        extendableChannelsReply(store, reply);
+        await probe;
+
+        expect(store.loadingLSPS7).toBe(true);
+    });
+
+    it('does not time out once the reply arrives', async () => {
+        const store = makeStore();
+        const probe = store.getExtendableChannels();
+        extendableChannelsReply(store, {
+            result: { extendable_channels: [channel] }
+        });
+        await probe;
+
+        await jest.advanceTimersByTimeAsync(TIMEOUT_MS);
+
+        expect(store.getExtendableChannelsError).toBe(false);
+    });
+
+    it('does not count a superseded probe as a timeout', async () => {
+        const store = makeStore();
+        const first = store.getExtendableChannels();
+        await jest.advanceTimersByTimeAsync(3000);
+        const second = store.getExtendableChannels();
+        await first;
+
+        // the first probe's timer would have fired here if still armed
+        await jest.advanceTimersByTimeAsync(TIMEOUT_MS - 3000);
+        expect(store.getExtendableChannelsError).toBe(false);
+
+        extendableChannelsReply(store, {
+            result: { extendable_channels: [channel] }
+        });
+        await second;
+        expect(store.getExtendableChannelsError).toBe(false);
+        expect(store.getExtendableChannelsData).toEqual([channel]);
+    });
+
+    it('ignores a reply to a superseded probe', async () => {
+        const store = makeStore();
+        store.getExtendableChannels();
+        const firstId = store.getExtendableChannelsId;
+        const second = store.getExtendableChannels();
+
+        store.handleCustomMessages({
+            peer: Buffer.from('aa', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: firstId,
+                    error: { code: -32603, message: 'stale' }
+                })
+            ).toString('base64')
+        });
+        expect(store.getExtendableChannelsError).toBe(false);
+
+        extendableChannelsReply(store, {
+            result: { extendable_channels: [channel] }
+        });
+        await second;
+        expect(store.getExtendableChannelsData).toEqual([channel]);
+    });
+
+    it('ignores a send failure from a superseded probe', async () => {
+        const send = deferred<any>();
+        jest.mocked(BackendUtils.sendCustomMessage)
+            .mockReturnValueOnce(send.promise)
+            .mockResolvedValue({});
+        const store = makeStore();
+        const first = store.getExtendableChannels();
+        const second = store.getExtendableChannels();
+        await first;
+
+        send.reject('peer not connected');
+        await jest.advanceTimersByTimeAsync(0);
+        expect(store.getExtendableChannelsError).toBe(false);
+
+        extendableChannelsReply(store, {
+            result: { extendable_channels: [channel] }
+        });
+        await second;
+        expect(store.getExtendableChannelsError).toBe(false);
+    });
+});
+
+describe('LSPStore.reset and LSPS7 lease data', () => {
+    const channel = {
+        short_channel_id: '800000x1x0',
+        max_channel_extension_expiry_blocks: 0,
+        expiration_block: 852560
+    };
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        jest.clearAllMocks();
+        jest.mocked(BackendUtils.sendCustomMessage).mockResolvedValue({});
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+        jest.mocked(console.error).mockRestore();
+    });
+
+    it('starts with no LSPS7 spinner', () => {
+        // the LSPS7 screen shows a spinner while this is true, and only an
+        // order request should set it
+        expect(makeStore().loadingLSPS7).toBe(false);
+    });
+
+    it('clears lease data and the fetch error', () => {
+        const store = makeStore();
+        store.getExtendableChannelsData = [channel];
+        store.getExtendableChannelsError = true;
+
+        store.reset();
+
+        expect(store.getExtendableChannelsData).toEqual([]);
+        expect(store.getExtendableChannelsError).toBe(false);
+    });
+
+    it('keeps lease data when only the errors are reset', () => {
+        const store = makeStore();
+        store.getExtendableChannelsData = [channel];
+        store.getExtendableChannelsError = true;
+
+        store.reset(true);
+
+        expect(store.getExtendableChannelsData).toEqual([channel]);
+        expect(store.getExtendableChannelsError).toBe(true);
+    });
+
+    it('drops a probe reply and timeout that land after reset', async () => {
+        const store = makeStore();
+        const probe = store.getExtendableChannels();
+        const staleId = store.getExtendableChannelsId;
+
+        store.reset();
+        await probe;
+        store.handleCustomMessages({
+            peer: Buffer.from('aa', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: staleId,
+                    result: { extendable_channels: [channel] }
+                })
+            ).toString('base64')
+        });
+        await jest.advanceTimersByTimeAsync(TIMEOUT_MS);
+
+        expect(store.getExtendableChannelsData).toEqual([]);
+        expect(store.getExtendableChannelsError).toBe(false);
+    });
+});
+
+describe('LSPStore.getExtendableChannels on LDK Node', () => {
+    const nativeChannel = {
+        shortChannelId: '800000x1x0',
+        maxChannelExtensionExpiryBlocks: 0,
+        expirationBlock: 852560,
+        originalOrder: { id: 'order-1' },
+        extensionOrderIds: ['ext-1']
+    };
+    const normalized = {
+        short_channel_id: '800000x1x0',
+        max_channel_extension_expiry_blocks: 0,
+        expiration_block: 852560,
+        original_order: { id: 'order-1' },
+        extension_order_ids: ['ext-1']
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        jest.mocked(BackendUtils.supportsLSPS7native).mockReturnValue(true);
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        jest.mocked(BackendUtils.supportsLSPS7native).mockReturnValue(false);
+        jest.mocked(console.error).mockRestore();
+    });
+
+    it('normalizes the channels and clears the error on success', async () => {
+        jest.mocked(BackendUtils.lsps7GetExtendableChannels).mockResolvedValue([
+            nativeChannel
+        ]);
+        const store = makeStore('ldk-node');
+        store.getExtendableChannelsError = true;
+
+        await store.getExtendableChannels();
+
+        expect(store.getExtendableChannelsData).toEqual([normalized]);
+        expect(store.getExtendableChannelsError).toBe(false);
+        expect(BackendUtils.sendCustomMessage).not.toHaveBeenCalled();
+    });
+
+    it('sets only the lease error when the native call rejects', async () => {
+        jest.mocked(BackendUtils.lsps7GetExtendableChannels).mockRejectedValue(
+            new Error('Liquidity request timed out')
+        );
+        const store = makeStore('ldk-node');
+
+        await store.getExtendableChannels();
+
+        expect(store.getExtendableChannelsError).toBe(true);
+        expect(store.error).toBe(false);
+        expect(store.error_msg).toBe('');
+        expect(store.getExtendableChannelsData).toEqual([]);
+    });
+
+    it('keeps an error another LSP screen is showing', async () => {
+        jest.mocked(BackendUtils.lsps7GetExtendableChannels).mockResolvedValue([
+            nativeChannel
+        ]);
+        const store = makeStore('ldk-node');
+        store.error = true;
+        store.error_msg = 'order failed';
+
+        await store.getExtendableChannels();
+
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe('order failed');
+    });
+
+    it('leaves an LSPS7 order spinner alone on success', async () => {
+        jest.mocked(BackendUtils.lsps7GetExtendableChannels).mockResolvedValue([
+            nativeChannel
+        ]);
+        const store = makeStore('ldk-node');
+        store.loadingLSPS7 = true;
+
+        await store.getExtendableChannels();
+
+        expect(store.loadingLSPS7).toBe(true);
+    });
+
+    it('leaves an LSPS7 order spinner alone on failure', async () => {
+        jest.mocked(BackendUtils.lsps7GetExtendableChannels).mockRejectedValue(
+            new Error('Liquidity request timed out')
+        );
+        const store = makeStore('ldk-node');
+        store.loadingLSPS7 = true;
+
+        await store.getExtendableChannels();
+
+        expect(store.loadingLSPS7).toBe(true);
+    });
+
+    it('drops a rejection from an older call after a newer success', async () => {
+        const older = deferred<any>();
+        jest.mocked(BackendUtils.lsps7GetExtendableChannels)
+            .mockReturnValueOnce(older.promise)
+            .mockResolvedValueOnce([nativeChannel]);
+        const store = makeStore('ldk-node');
+
+        const first = store.getExtendableChannels();
+        await store.getExtendableChannels();
+        older.reject(new Error('Liquidity request timed out'));
+        await first;
+
+        expect(store.getExtendableChannelsError).toBe(false);
+        expect(store.error).toBe(false);
+        expect(store.getExtendableChannelsData).toEqual([normalized]);
+    });
+
+    it('drops a native result that lands after reset', async () => {
+        const older = deferred<any>();
+        jest.mocked(
+            BackendUtils.lsps7GetExtendableChannels
+        ).mockReturnValueOnce(older.promise);
+        const store = makeStore('ldk-node');
+
+        const call = store.getExtendableChannels();
+        store.reset();
+        older.reject(new Error('Liquidity request timed out'));
+        await call;
+
+        expect(store.getExtendableChannelsError).toBe(false);
+        expect(store.error).toBe(false);
+    });
+
+    it('drops a success from an older call after a newer failure', async () => {
+        const older = deferred<any>();
+        jest.mocked(BackendUtils.lsps7GetExtendableChannels)
+            .mockReturnValueOnce(older.promise)
+            .mockRejectedValueOnce(new Error('Liquidity request timed out'));
+        const store = makeStore('ldk-node');
+
+        const first = store.getExtendableChannels();
+        await store.getExtendableChannels();
+        older.resolve([nativeChannel]);
+        await first;
+
+        expect(store.getExtendableChannelsError).toBe(true);
+        expect(store.getExtendableChannelsData).toEqual([]);
     });
 });
 
@@ -870,5 +1266,338 @@ describe('LSPStore.getZeroConfInvoice', () => {
             jest.mocked(ReactNativeBlobUtil.fetch).mock.calls[0][3] as string
         );
         expect(body.fee_id).toBe('accepted-quote');
+    });
+});
+
+// The wallet loads channels before it subscribes to custom messages, so a
+// probe sent from the channels reaction would get its reply before anything
+// listens, time out and show a fetch error the LSP didn't cause.
+describe('LSPStore lease fetch waits for the custom message subscription', () => {
+    class FakeSocket {
+        listeners: { [event: string]: Array<() => void> } = {};
+        close = jest.fn(() => this.emit('close'));
+        addEventListener(event: string, fn: () => void) {
+            (this.listeners[event] ||= []).push(fn);
+        }
+        emit(event: string) {
+            (this.listeners[event] || []).forEach((fn) => fn());
+        }
+    }
+    const lspChannel = { remotePubkey: 'lsp-pubkey' };
+    const otherChannel = { remotePubkey: 'other-pubkey' };
+
+    let sockets: FakeSocket[];
+    const makeStoreWithChannels = (implementation = 'lnd') => {
+        const channelsStore = observable({ channels: [] as any[] });
+        const store = new LSPStore(
+            { implementation, settings: {} } as any,
+            channelsStore as any,
+            { nodeInfo: {}, getNodeInfo: jest.fn() } as any
+        );
+        return { store, channelsStore };
+    };
+    const probesSent = () =>
+        jest
+            .mocked(BackendUtils.sendCustomMessage)
+            .mock.calls.map(
+                ([{ data }]: any) =>
+                    JSON.parse(Buffer.from(data, 'hex').toString()).method
+            )
+            .filter((m: string) => m === 'lsps7.get_extendable_channels')
+            .length;
+
+    beforeEach(() => {
+        jest.useFakeTimers();
+        jest.clearAllMocks();
+        sockets = [];
+        jest.mocked(BackendUtils.sendCustomMessage).mockResolvedValue({});
+        jest.mocked(BackendUtils.subscribeCustomMessages).mockImplementation(
+            (() => {
+                const ws = new FakeSocket();
+                sockets.push(ws);
+                return ws;
+            }) as any
+        );
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
+    });
+
+    it('sends the probe on remote LND once the socket opens', async () => {
+        const { store, channelsStore } = makeStoreWithChannels();
+        channelsStore.channels = [lspChannel];
+        expect(probesSent()).toBe(0);
+
+        await store.subscribeCustomMessages();
+        expect(probesSent()).toBe(0);
+
+        sockets[0].emit('open');
+        expect(probesSent()).toBe(1);
+    });
+
+    it('does not show a fetch error for a channel loaded before subscribing', async () => {
+        const { store, channelsStore } = makeStoreWithChannels();
+        channelsStore.channels = [lspChannel];
+
+        await jest.advanceTimersByTimeAsync(TIMEOUT_MS);
+
+        expect(store.getExtendableChannelsError).toBe(false);
+    });
+
+    it('probes on channel changes while the socket is open', async () => {
+        const { store, channelsStore } = makeStoreWithChannels();
+        await store.subscribeCustomMessages();
+        sockets[0].emit('open');
+        expect(probesSent()).toBe(0);
+
+        channelsStore.channels = [lspChannel];
+        expect(probesSent()).toBe(1);
+    });
+
+    it('stops probing after the socket closes', async () => {
+        const { store, channelsStore } = makeStoreWithChannels();
+        await store.subscribeCustomMessages();
+        sockets[0].emit('open');
+        sockets[0].emit('close');
+
+        channelsStore.channels = [lspChannel];
+        expect(probesSent()).toBe(0);
+    });
+
+    it('stops probing after reset', async () => {
+        const { store, channelsStore } = makeStoreWithChannels();
+        await store.subscribeCustomMessages();
+        sockets[0].emit('open');
+
+        store.reset();
+        channelsStore.channels = [lspChannel];
+        expect(probesSent()).toBe(0);
+    });
+
+    it('ignores an open from a socket dropped by reset', async () => {
+        const { store, channelsStore } = makeStoreWithChannels();
+        channelsStore.channels = [lspChannel];
+        await store.subscribeCustomMessages();
+
+        store.reset();
+        sockets[0].emit('open');
+        expect(probesSent()).toBe(0);
+    });
+
+    it('does not probe without a channel with the LSP', async () => {
+        const { store, channelsStore } = makeStoreWithChannels();
+        channelsStore.channels = [otherChannel];
+        await store.subscribeCustomMessages();
+        sockets[0].emit('open');
+
+        expect(probesSent()).toBe(0);
+    });
+
+    it('sends the probe on embedded LND once the stream starts', async () => {
+        const { store, channelsStore } = makeStoreWithChannels('embedded-lnd');
+        channelsStore.channels = [lspChannel];
+        expect(probesSent()).toBe(0);
+
+        await store.subscribeCustomMessages();
+        expect(probesSent()).toBe(1);
+    });
+
+    it('does not probe on embedded LND when the stream fails to start', async () => {
+        const { index } = LndMobileInjection as any;
+        index.subscribeCustomMessages.mockRejectedValueOnce(
+            new Error('rpc error')
+        );
+        const { store, channelsStore } = makeStoreWithChannels('embedded-lnd');
+        channelsStore.channels = [lspChannel];
+
+        await expect(store.subscribeCustomMessages()).rejects.toThrow(
+            'rpc error'
+        );
+        expect(probesSent()).toBe(0);
+    });
+
+    it('resolves on LNC, which has no socket, and probes right away', async () => {
+        jest.mocked(BackendUtils.subscribeCustomMessages).mockReturnValue(
+            undefined as any
+        );
+        const { store, channelsStore } = makeStoreWithChannels(
+            'lightning-node-connect'
+        );
+        channelsStore.channels = [lspChannel];
+        expect(probesSent()).toBe(0);
+
+        await expect(store.subscribeCustomMessages()).resolves.toBeUndefined();
+        expect(probesSent()).toBe(1);
+    });
+
+    it('probes on LNC channel changes after subscribing', async () => {
+        jest.mocked(BackendUtils.subscribeCustomMessages).mockReturnValue(
+            undefined as any
+        );
+        const { store, channelsStore } = makeStoreWithChannels(
+            'lightning-node-connect'
+        );
+        await store.subscribeCustomMessages();
+        expect(probesSent()).toBe(0);
+
+        channelsStore.channels = [lspChannel];
+        expect(probesSent()).toBe(1);
+    });
+
+    it.each(['error', 'close'])(
+        'shows the lease error when the socket fails with %s before opening',
+        async (event) => {
+            const { store, channelsStore } = makeStoreWithChannels();
+            channelsStore.channels = [lspChannel];
+            await store.subscribeCustomMessages();
+
+            sockets[0].emit(event);
+
+            expect(store.getExtendableChannelsError).toBe(true);
+            expect(store.error).toBe(false);
+            expect(probesSent()).toBe(0);
+        }
+    );
+
+    it('clears the lease error once a new socket opens and the LSP answers', async () => {
+        const { store, channelsStore } = makeStoreWithChannels();
+        channelsStore.channels = [lspChannel];
+        await store.subscribeCustomMessages();
+        sockets[0].emit('error');
+        expect(store.getExtendableChannelsError).toBe(true);
+
+        await store.subscribeCustomMessages();
+        sockets[1].emit('open');
+        store.handleCustomMessages({
+            peer: Buffer.from('aa', 'hex').toString('base64'),
+            data: Buffer.from(
+                JSON.stringify({
+                    jsonrpc: '2.0',
+                    id: store.getExtendableChannelsId,
+                    result: { extendable_channels: [] }
+                })
+            ).toString('base64')
+        });
+
+        expect(store.getExtendableChannelsError).toBe(false);
+    });
+
+    it('does not show the lease error for a failed socket without an LSP channel', async () => {
+        const { store, channelsStore } = makeStoreWithChannels();
+        channelsStore.channels = [otherChannel];
+        await store.subscribeCustomMessages();
+
+        sockets[0].emit('error');
+
+        expect(store.getExtendableChannelsError).toBe(false);
+    });
+
+    it('does not show the lease error when an open socket closes', async () => {
+        const { store, channelsStore } = makeStoreWithChannels();
+        await store.subscribeCustomMessages();
+        sockets[0].emit('open');
+        channelsStore.channels = [lspChannel];
+        expect(probesSent()).toBe(1);
+
+        sockets[0].emit('close');
+
+        expect(store.getExtendableChannelsError).toBe(false);
+        channelsStore.channels = [lspChannel, otherChannel];
+        expect(probesSent()).toBe(1);
+    });
+
+    it('does not show the lease error when reset closes the socket', async () => {
+        const { store, channelsStore } = makeStoreWithChannels();
+        channelsStore.channels = [lspChannel];
+        await store.subscribeCustomMessages();
+
+        store.reset();
+        sockets[0].emit('close');
+
+        expect(store.getExtendableChannelsError).toBe(false);
+    });
+
+    it('shows the lease error when the embedded stream fails to start', async () => {
+        const { index } = LndMobileInjection as any;
+        index.subscribeCustomMessages.mockRejectedValueOnce(
+            new Error('rpc error')
+        );
+        const { store, channelsStore } = makeStoreWithChannels('embedded-lnd');
+        channelsStore.channels = [lspChannel];
+
+        await expect(store.subscribeCustomMessages()).rejects.toThrow(
+            'rpc error'
+        );
+        expect(store.getExtendableChannelsError).toBe(true);
+        expect(store.error).toBe(false);
+    });
+
+    it('does not show the lease error when reset runs while the embedded stream starts', async () => {
+        const { index } = LndMobileInjection as any;
+        let failStart!: (error: Error) => void;
+        index.subscribeCustomMessages.mockReturnValueOnce(
+            new Promise((_, reject) => {
+                failStart = reject;
+            })
+        );
+        const { store, channelsStore } = makeStoreWithChannels('embedded-lnd');
+        channelsStore.channels = [lspChannel];
+
+        const subscribing = store.subscribeCustomMessages();
+        store.reset();
+        failStart(new Error('rpc error'));
+
+        await expect(subscribing).rejects.toThrow('rpc error');
+        expect(store.getExtendableChannelsError).toBe(false);
+    });
+
+    it('does not probe again when LNC subscribes again', async () => {
+        jest.mocked(BackendUtils.subscribeCustomMessages).mockReturnValue(
+            undefined as any
+        );
+        const { store, channelsStore } = makeStoreWithChannels(
+            'lightning-node-connect'
+        );
+        channelsStore.channels = [lspChannel];
+        await store.subscribeCustomMessages();
+        await store.subscribeCustomMessages();
+
+        expect(probesSent()).toBe(1);
+        expect(store.nodeInfoStore.getNodeInfo).toHaveBeenCalledTimes(1);
+    });
+
+    it('probes again when LNC subscribes after reset', async () => {
+        jest.mocked(BackendUtils.subscribeCustomMessages).mockReturnValue(
+            undefined as any
+        );
+        const { store, channelsStore } = makeStoreWithChannels(
+            'lightning-node-connect'
+        );
+        channelsStore.channels = [lspChannel];
+        await store.subscribeCustomMessages();
+        store.reset();
+        await store.subscribeCustomMessages();
+
+        expect(probesSent()).toBe(2);
+    });
+
+    it('probes LDK Node from the channels reaction without a subscription', async () => {
+        jest.mocked(BackendUtils.supportsLSPS7native).mockReturnValue(true);
+        jest.mocked(BackendUtils.lsps7GetExtendableChannels).mockResolvedValue(
+            []
+        );
+        try {
+            const { channelsStore } = makeStoreWithChannels('ldk-node');
+            channelsStore.channels = [lspChannel];
+
+            expect(
+                BackendUtils.lsps7GetExtendableChannels
+            ).toHaveBeenCalledTimes(1);
+        } finally {
+            jest.mocked(BackendUtils.supportsLSPS7native).mockReturnValue(
+                false
+            );
+        }
     });
 });

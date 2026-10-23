@@ -50,7 +50,7 @@ export default class LSPStore {
     @observable public feeId: string | undefined;
     @observable public pubkey: string;
     @observable public loadingLSPS1: boolean = true;
-    @observable public loadingLSPS7: boolean = true;
+    @observable public loadingLSPS7: boolean = false;
     @observable public error: boolean = false;
     @observable public error_msg: string = '';
     @observable public flow_error: boolean = false;
@@ -71,6 +71,7 @@ export default class LSPStore {
     // LSPS7
     @observable public getExtendableChannelsId: string;
     @observable public getExtendableChannelsData: any = [];
+    @observable public getExtendableChannelsError: boolean = false;
     @observable public createExtensionOrderId: string;
     @observable public createExtensionOrderResponse: any = {};
     @observable public getExtensionOrderId: string;
@@ -84,7 +85,9 @@ export default class LSPStore {
     private getInfoResponseResolver: (() => void) | null = null;
     private createOrderResponseResolver: (() => void) | null = null;
     private getOrderResponseResolver: (() => void) | null = null;
-    private getExtendableChannelsResponseResolver: (() => void) | null = null;
+    private getExtendableChannelsResponseResolver:
+        | ((failed?: boolean) => void)
+        | null = null;
     private createExtensionOrderResponseResolver: (() => void) | null = null;
     private getExtensionOrderResponseResolver: (() => void) | null = null;
 
@@ -98,6 +101,14 @@ export default class LSPStore {
     // Incremented on every start/stop so an in-flight poll that resumes after an
     // await can tell whether its session is still the active one.
     private freeOrderPollSessionId = 0;
+    // Incremented on every native LSPS7 extendable channels call so a call
+    // that settles after a newer one can't overwrite its result.
+    private getExtendableChannelsNativeRequestId = 0;
+    // Set while the custom message subscription can deliver replies.
+    private customMessagesReady = false;
+    // Incremented by reset(), so a subscription that settles afterwards can
+    // tell it belongs to the previous connection.
+    private customMessagesGeneration = 0;
     // Incremented on every Flow fee request and fee reset, so an answer to a
     // fee request that is no longer the latest one is dropped instead of
     // replacing the quote an invoice was priced with.
@@ -118,23 +129,55 @@ export default class LSPStore {
 
         reaction(
             () => this.channelsStore.channels,
-            () => {
-                const lspPubkey = this.getLSPSPubkey();
-                if (
-                    (BackendUtils.supportsLSPScustomMessage() ||
-                        BackendUtils.supportsLSPS7native()) &&
-                    lspPubkey &&
-                    this.channelsStore.channels.some(
-                        (channel: { remotePubkey: string }) =>
-                            channel.remotePubkey === lspPubkey
-                    )
-                ) {
-                    this.getExtendableChannels();
-                    this.nodeInfoStore.getNodeInfo();
-                }
-            }
+            () => this.fetchLeasesIfLspChannel()
         );
     }
+
+    // Fetches LSPS7 lease data when there is a channel with the LSP. Over
+    // custom messages the reply only reaches the app once the subscription
+    // is open, and the wallet loads channels before it subscribes, so the
+    // fetch waits for onCustomMessagesReady instead of timing out into a
+    // fetch error.
+    private fetchLeasesIfLspChannel = () => {
+        const native = BackendUtils.supportsLSPS7native();
+        if (
+            (native ||
+                (BackendUtils.supportsLSPScustomMessage() &&
+                    this.customMessagesReady)) &&
+            this.hasLspChannel()
+        ) {
+            this.getExtendableChannels();
+            this.nodeInfoStore.getNodeInfo();
+        }
+    };
+
+    private hasLspChannel = () => {
+        const lspPubkey = this.getLSPSPubkey();
+        return (
+            !!lspPubkey &&
+            this.channelsStore.channels.some(
+                (channel: { remotePubkey: string }) =>
+                    channel.remotePubkey === lspPubkey
+            )
+        );
+    };
+
+    private onCustomMessagesReady = () => {
+        this.customMessagesReady = true;
+        this.fetchLeasesIfLspChannel();
+    };
+
+    // The subscription failed before it could deliver replies, so no lease
+    // fetch will run. Report it like a failed fetch instead of showing
+    // nothing for a channel with the LSP.
+    private onCustomMessagesFailed = () => {
+        this.customMessagesReady = false;
+        if (this.hasLspChannel()) {
+            runInAction(() => {
+                this.getExtendableChannelsError = true;
+            });
+        }
+    };
 
     @action
     public reset = (errorsOnly = false) => {
@@ -149,8 +192,17 @@ export default class LSPStore {
             const { channelAcceptor, customMessagesSubscriber } = this;
             this.channelAcceptor = undefined;
             this.customMessagesSubscriber = undefined;
+            this.customMessagesReady = false;
+            this.customMessagesGeneration++;
             this.closeSubscription(channelAcceptor);
             this.closeSubscription(customMessagesSubscriber);
+            // lease data and fetch errors belong to the previous node, and a
+            // reply still in flight must not land on the next one
+            this.getExtendableChannelsNativeRequestId++;
+            this.getExtendableChannelsResponseResolver?.();
+            this.getExtendableChannelsId = '';
+            this.getExtendableChannelsData = [];
+            this.getExtendableChannelsError = false;
         }
         this.error = false;
         this.error_msg = '';
@@ -657,8 +709,19 @@ export default class LSPStore {
     ) => {
         if (!ws?.addEventListener) return;
         this[key] = ws;
+        let opened = false;
+        ws.addEventListener('open', () => {
+            opened = true;
+        });
         const release = () => {
-            if (this[key] === ws) this[key] = null;
+            if (this[key] !== ws) return;
+            this[key] = null;
+            if (key !== 'customMessagesSubscriber') return;
+            if (opened) {
+                this.customMessagesReady = false;
+            } else {
+                this.onCustomMessagesFailed();
+            }
         };
         ws.addEventListener('error', release);
         ws.addEventListener('close', release);
@@ -883,15 +946,16 @@ export default class LSPStore {
             return true;
         } else if (data.id === this.getExtendableChannelsId) {
             if (data.error) {
-                this.error = true;
-                this.error_msg = data?.error?.message
-                    ? errorToUserFriendly(data?.error?.message)
-                    : '';
+                console.error(
+                    'Error fetching LSPS7 extendable channels:',
+                    data.error
+                );
+                this.getExtendableChannelsError = true;
             } else {
+                this.getExtendableChannelsError = false;
                 this.getExtendableChannelsData =
                     data?.result?.extendable_channels;
             }
-            this.loadingLSPS7 = false;
             this.getExtendableChannelsResponseResolver?.();
             return true;
         } else if (data.id === this.createExtensionOrderId) {
@@ -948,10 +1012,24 @@ export default class LSPStore {
                 }
             );
 
-            await this.startEmbeddedStream(
-                () => index.subscribeCustomMessages(),
-                'customMessagesSubscriber'
-            );
+            const listener = this.customMessagesSubscriber;
+            const generation = this.customMessagesGeneration;
+            try {
+                await this.startEmbeddedStream(
+                    () => index.subscribeCustomMessages(),
+                    'customMessagesSubscriber'
+                );
+            } catch (error) {
+                // reset() may have run while the stream started
+                if (this.customMessagesGeneration === generation) {
+                    this.onCustomMessagesFailed();
+                }
+                throw error;
+            }
+            // reset() may have dropped this listener while the stream started
+            if (this.customMessagesSubscriber === listener) {
+                this.onCustomMessagesReady();
+            }
         } else {
             const ws = BackendUtils.subscribeCustomMessages(
                 (response: any) => {
@@ -964,7 +1042,21 @@ export default class LSPStore {
                     );
                 }
             );
+            if (!ws?.addEventListener) {
+                // LNC delivers through its own native listener; there is no
+                // socket to wait on. Each LSPS1 screen visit subscribes
+                // again, so only the first one starts a lease fetch.
+                if (!this.customMessagesReady) this.onCustomMessagesReady();
+                return;
+            }
             this.keepSocket(ws, 'customMessagesSubscriber');
+            if (this.customMessagesSubscriber === ws) {
+                ws.addEventListener('open', () => {
+                    if (this.customMessagesSubscriber === ws) {
+                        this.onCustomMessagesReady();
+                    }
+                });
+            }
         }
     };
 
@@ -1469,19 +1561,28 @@ export default class LSPStore {
 
     // LSPS7
 
+    // Background fetch run when the channel list changes. Failures only set
+    // getExtendableChannelsError, which the channel view reads, and neither
+    // the shared error nor loadingLSPS7 is touched, so a channel refresh
+    // can't replace or clear an error or spinner the LSPS1 or LSPS7 screens
+    // are showing.
     @action
     public getExtendableChannels = async () => {
-        this.error = false;
-        this.error_msg = '';
-
         // Use native LSPS7 method if available (LDK Node backend)
         if (BackendUtils.supportsLSPS7native()) {
+            // The channels reaction can start a new call before the last one
+            // settles, so only the latest call writes its result
+            const requestId = ++this.getExtendableChannelsNativeRequestId;
+            const isCurrent = () =>
+                requestId === this.getExtendableChannelsNativeRequestId;
             try {
                 const channels =
                     await BackendUtils.lsps7GetExtendableChannels();
+                if (!isCurrent()) return;
                 // Normalize camelCase keys from native module to snake_case
                 // to match the JSON-RPC custom message format
                 runInAction(() => {
+                    this.getExtendableChannelsError = false;
                     this.getExtendableChannelsData = channels.map(
                         (ch: any) => ({
                             short_channel_id: ch.shortChannelId,
@@ -1492,24 +1593,23 @@ export default class LSPStore {
                             extension_order_ids: ch.extensionOrderIds
                         })
                     );
-                    this.loadingLSPS7 = false;
                 });
                 return;
             } catch (error: any) {
+                if (!isCurrent()) return;
+                console.error(
+                    'Error fetching LSPS7 extendable channels:',
+                    error
+                );
                 runInAction(() => {
-                    this.error = true;
-                    this.error_msg =
-                        error?.message ||
-                        localeString('error.getExtendableChannels');
-                    this.loadingLSPS7 = false;
+                    this.getExtendableChannelsError = true;
                 });
                 return;
             }
         }
 
-        // Fall back to custom message for other backends. This is a background
-        // probe with no spinner, so a timeout or send failure settles silently
-        // instead of surfacing an error.
+        // Fall back to custom message for other backends. Starting a new
+        // probe settles the previous one without marking it failed.
         this.getExtendableChannelsResponseResolver?.();
 
         this.getExtendableChannelsId = uuidv4();
@@ -1517,19 +1617,24 @@ export default class LSPStore {
 
         await new Promise<void>((resolve) => {
             let settled = false;
-            const settle = () => {
+            const settle = (failed = false) => {
                 if (settled) return;
                 settled = true;
                 clearTimeout(timeoutId);
                 if (this.getExtendableChannelsResponseResolver === settle) {
                     this.getExtendableChannelsResponseResolver = null;
+                    if (failed) {
+                        runInAction(() => {
+                            this.getExtendableChannelsError = true;
+                        });
+                    }
                 }
                 resolve();
             };
-            const timeoutId = setTimeout(
-                settle,
-                CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS
-            );
+            const timeoutId = setTimeout(() => {
+                console.error(`Timed out waiting for (${method}) response`);
+                settle(true);
+            }, CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS);
             this.getExtendableChannelsResponseResolver = settle;
 
             this.sendCustomMessage({
@@ -1551,7 +1656,7 @@ export default class LSPStore {
                         `Error sending (${method}) custom message:`,
                         error
                     );
-                    settle();
+                    settle(true);
                 });
         });
     };

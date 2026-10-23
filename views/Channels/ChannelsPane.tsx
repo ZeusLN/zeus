@@ -11,7 +11,6 @@ import {
 import { inject, observer } from 'mobx-react';
 import { duration } from 'moment';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import BigNumber from 'bignumber.js';
 
 import { ChannelsHeader } from '../../components/Channels/ChannelsHeader';
 import { ChannelItem } from '../../components/Channels/ChannelItem';
@@ -38,10 +37,14 @@ import NodeInfoStore from '../../stores/NodeInfoStore';
 
 import BackendUtils from '../../utils/BackendUtils';
 import { localeString } from '../../utils/LocaleUtils';
+import {
+    getLeaseExpirationStatus,
+    getRenewalInfo
+} from '../../utils/LeaseUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
 import Channel from '../../models/Channel';
-import { Status, ExpirationStatus } from '../../models/Status';
+import { Status } from '../../models/Status';
 import ClosedChannel from '../../models/ClosedChannel';
 import { ErrorMessage } from '../../components/SuccessErrorMessage';
 import handleAnything from '../../utils/handleAnything';
@@ -173,40 +176,13 @@ export default class ChannelsPane extends React.PureComponent<
             const currentBlockHeight =
                 NodeInfoStore?.nodeInfo?.currentBlockHeight;
 
-            const renewalInfo = LSPStore?.getExtendableChannelsData?.filter(
-                (extendableChannel: any) => {
-                    return (
-                        extendableChannel.short_channel_id ===
-                            item.shortChannelId ||
-                        extendableChannel.short_channel_id ===
-                            item.peerScidAlias ||
-                        extendableChannel.short_channel_id ===
-                            item.zeroConfConfirmedScid
-                    );
-                }
-            )[0];
-
-            let expiresInBlocks;
-            if (currentBlockHeight && renewalInfo?.expiration_block) {
-                expiresInBlocks = new BigNumber(renewalInfo.expiration_block)
-                    .minus(currentBlockHeight)
-                    .toNumber();
-            }
-
-            if (expiresInBlocks && new BigNumber(expiresInBlocks).lt(0)) {
-                return ExpirationStatus.Expired;
-            } else if (
-                expiresInBlocks &&
-                new BigNumber(expiresInBlocks).lt(2016)
-            ) {
-                // less than 2 weeks
-                return ExpirationStatus.Expiring;
-            } else if (renewalInfo?.expiration_block === 0) {
-                // at LSP's discretion
-                return ExpirationStatus.LSPDiscretion;
-            }
-
-            return undefined;
+            return getLeaseExpirationStatus(
+                getRenewalInfo(
+                    LSPStore?.getExtendableChannelsData,
+                    item,
+                    currentBlockHeight
+                )
+            );
         };
 
         const forceCloseTimeLabel = (maturity: number) => {
