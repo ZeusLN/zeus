@@ -694,6 +694,7 @@
     "views.Lockscreen.enterLoginPin": "Enter login PIN (not your duress PIN)",
     "views.Lockscreen.incorrectPin": "PIN Sio Sahihi",
     "views.Lockscreen.authenticationAttempts": "jaribio zilizobaki",
+    "views.Lockscreen.attemptNotSaved": "Could not save this attempt, so it was not checked. Free up storage space on this device and try again.",
     "views.NodeInfo.feeReport": "Ripoti ya Ada",
     "views.NodeInfo.forwarding": "Kusambaza",
     "views.NodeInfo.copyUri": "Nakili URI",

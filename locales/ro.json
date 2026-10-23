@@ -694,6 +694,7 @@
     "views.Lockscreen.enterLoginPin": "Enter login PIN (not your duress PIN)",
     "views.Lockscreen.incorrectPin": "PIN incorect",
     "views.Lockscreen.authenticationAttempts": "încercări rămase",
+    "views.Lockscreen.attemptNotSaved": "Could not save this attempt, so it was not checked. Free up storage space on this device and try again.",
     "views.NodeInfo.feeReport": "Raport Comisioane",
     "views.NodeInfo.forwarding": "Trimitere",
     "views.NodeInfo.copyUri": "Copiază URI",

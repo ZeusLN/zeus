@@ -694,6 +694,7 @@
     "views.Lockscreen.enterLoginPin": "Enter login PIN (not your duress PIN)",
     "views.Lockscreen.incorrectPin": "Yanlış PIN",
     "views.Lockscreen.authenticationAttempts": "Kalan deneme hakkınız",
+    "views.Lockscreen.attemptNotSaved": "Could not save this attempt, so it was not checked. Free up storage space on this device and try again.",
     "views.NodeInfo.feeReport": "Ücret raporu",
     "views.NodeInfo.forwarding": "İletme",
     "views.NodeInfo.copyUri": "URI'i kopyala",

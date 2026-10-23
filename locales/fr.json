@@ -694,6 +694,7 @@
     "views.Lockscreen.enterLoginPin": "Saisissez votre code PIN de connexion (et non votre code PIN de sécurité).",
     "views.Lockscreen.incorrectPin": "PIN incorrect",
     "views.Lockscreen.authenticationAttempts": "tentatives restantes",
+    "views.Lockscreen.attemptNotSaved": "Could not save this attempt, so it was not checked. Free up storage space on this device and try again.",
     "views.NodeInfo.feeReport": "Rapport de frais",
     "views.NodeInfo.forwarding": "Transféré",
     "views.NodeInfo.copyUri": "Copier l'URI",

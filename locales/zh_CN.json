@@ -694,6 +694,7 @@
     "views.Lockscreen.enterLoginPin": "请输入登录 PIN 码（非胁迫 PIN 码）",
     "views.Lockscreen.incorrectPin": "PIN 码不对",
     "views.Lockscreen.authenticationAttempts": "剩余尝试次数",
+    "views.Lockscreen.attemptNotSaved": "Could not save this attempt, so it was not checked. Free up storage space on this device and try again.",
     "views.NodeInfo.feeReport": "费用报告",
     "views.NodeInfo.forwarding": "转发",
     "views.NodeInfo.copyUri": "复制 URI",
