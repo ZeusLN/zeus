@@ -694,6 +694,7 @@
     "views.Lockscreen.enterLoginPin": "Enter login PIN (not your duress PIN)",
     "views.Lockscreen.incorrectPin": "Väärä PIN-koodi",
     "views.Lockscreen.authenticationAttempts": "yritystä jäljellä",
+    "views.Lockscreen.attemptNotSaved": "Could not save this attempt, so it was not checked. Free up storage space on this device and try again.",
     "views.NodeInfo.feeReport": "Siirtomaksuraportti",
     "views.NodeInfo.forwarding": "Lähetys",
     "views.NodeInfo.copyUri": "Kopioi URI",
