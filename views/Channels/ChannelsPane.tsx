@@ -288,7 +288,8 @@ export default class ChannelsPane extends React.PureComponent<
     };
 
     render() {
-        const { ChannelsStore, navigation } = this.props;
+        const { ChannelsStore, LSPStore, NodeInfoStore, navigation } =
+            this.props;
         const {
             loading,
             getChannels,
@@ -316,11 +317,24 @@ export default class ChannelsPane extends React.PureComponent<
             }
         };
 
-        const createChannelScreen =
+        // renderItem reads the lease data and block height for each row's
+        // lease badge. Reading them here makes this observer re-render when
+        // they change, and passing them as extraData makes FlatList redraw
+        // its rows, which it otherwise skips while data is unchanged.
+        const leaseExtraData = [
+            LSPStore?.getExtendableChannelsData,
+            NodeInfoStore?.nodeInfo?.currentBlockHeight
+        ];
+
+        // Render callbacks rather than components: a component created in
+        // render() is a new type every render, so the tab would unmount and
+        // remount its list (losing the scroll position) on each re-render.
+        const channelListRenderer =
             (data: Channel[], emptyTextKey: string) => () =>
                 (
                     <FlatList
                         data={data}
+                        extraData={leaseExtraData}
                         renderItem={this.renderItem}
                         ListFooterComponent={<Spacer height={100} />}
                         onRefresh={() => {
@@ -349,15 +363,15 @@ export default class ChannelsPane extends React.PureComponent<
                     />
                 );
 
-        const OpenChannelsScreen = createChannelScreen(
+        const renderOpenChannels = channelListRenderer(
             filteredChannels,
             'views.ChannelsPane.noOpenChannels'
         );
-        const PendingChannelsScreen = createChannelScreen(
+        const renderPendingChannels = channelListRenderer(
             filteredPendingChannels,
             'views.ChannelsPane.noPendingChannels'
         );
-        const ClosedChannelsScreen = createChannelScreen(
+        const renderClosedChannels = channelListRenderer(
             filteredClosedChannels,
             'views.ChannelsPane.noClosedChannels'
         );
@@ -471,34 +485,37 @@ export default class ChannelsPane extends React.PureComponent<
                                     >
                                         <Tab.Screen
                                             name={OPEN_TAB_ROUTE}
-                                            component={OpenChannelsScreen}
                                             listeners={{
                                                 focus: () =>
                                                     setChannelsType(
                                                         ChannelsType.Open
                                                     )
                                             }}
-                                        />
+                                        >
+                                            {renderOpenChannels}
+                                        </Tab.Screen>
                                         <Tab.Screen
                                             name={PENDING_TAB_ROUTE}
-                                            component={PendingChannelsScreen}
                                             listeners={{
                                                 focus: () =>
                                                     setChannelsType(
                                                         ChannelsType.Pending
                                                     )
                                             }}
-                                        />
+                                        >
+                                            {renderPendingChannels}
+                                        </Tab.Screen>
                                         <Tab.Screen
                                             name={CLOSED_TAB_ROUTE}
-                                            component={ClosedChannelsScreen}
                                             listeners={{
                                                 focus: () =>
                                                     setChannelsType(
                                                         ChannelsType.Closed
                                                     )
                                             }}
-                                        />
+                                        >
+                                            {renderClosedChannels}
+                                        </Tab.Screen>
                                     </Tab.Navigator>
                                 </NavigationContainer>
                             </NavigationIndependentTree>
@@ -515,24 +532,26 @@ export default class ChannelsPane extends React.PureComponent<
                                     >
                                         <Tab.Screen
                                             name={OPEN_TAB_ROUTE}
-                                            component={OpenChannelsScreen}
                                             listeners={{
                                                 focus: () =>
                                                     setChannelsType(
                                                         ChannelsType.Open
                                                     )
                                             }}
-                                        />
+                                        >
+                                            {renderOpenChannels}
+                                        </Tab.Screen>
                                         <Tab.Screen
                                             name={PENDING_TAB_ROUTE}
-                                            component={PendingChannelsScreen}
                                             listeners={{
                                                 focus: () =>
                                                     setChannelsType(
                                                         ChannelsType.Pending
                                                     )
                                             }}
-                                        />
+                                        >
+                                            {renderPendingChannels}
+                                        </Tab.Screen>
                                     </Tab.Navigator>
                                 </NavigationContainer>
                             </NavigationIndependentTree>
@@ -549,30 +568,33 @@ export default class ChannelsPane extends React.PureComponent<
                                     >
                                         <Tab.Screen
                                             name={OPEN_TAB_ROUTE}
-                                            component={OpenChannelsScreen}
                                             listeners={{
                                                 focus: () =>
                                                     setChannelsType(
                                                         ChannelsType.Open
                                                     )
                                             }}
-                                        />
+                                        >
+                                            {renderOpenChannels}
+                                        </Tab.Screen>
                                         <Tab.Screen
                                             name={CLOSED_TAB_ROUTE}
-                                            component={ClosedChannelsScreen}
                                             listeners={{
                                                 focus: () =>
                                                     setChannelsType(
                                                         ChannelsType.Closed
                                                     )
                                             }}
-                                        />
+                                        >
+                                            {renderClosedChannels}
+                                        </Tab.Screen>
                                     </Tab.Navigator>
                                 </NavigationContainer>
                             </NavigationIndependentTree>
                         ) : (
                             <FlatList
                                 data={filteredChannels}
+                                extraData={leaseExtraData}
                                 renderItem={this.renderItem}
                                 ListFooterComponent={<Spacer height={100} />}
                                 onRefresh={() => {
