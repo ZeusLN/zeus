@@ -105,9 +105,13 @@ even while an older `fetchData` is still running, so a reconnect can start
 next to it. The lock's sequence number keeps the older run's late release
 from freeing the newer run's lock (`e5abe14`), and the connection guard
 (`SettingsStore.getConnectionGuard()`, `9591920`) makes the older run return
-after its next await instead of writing to stores. Early-return error paths
-no longer strand the lock: the `finally` in `fetchData` releases it on every
-exit.
+after its next await instead of writing to stores. The guard snapshots
+`connectionSeq`, which `setConnectingStatus(true)` increments, as do
+`updateNodeProperties` when the connection target changes (`a3e032c`) and
+`invalidateConnection()` when the active wallet is deleted (`e13cc50`); it
+also goes stale when `selectedNode`, `implementation`, the LNC pairing phrase
+or the mailbox server change. Early-return error paths no longer strand the
+lock: the `finally` in `fetchData` releases it on every exit.
 
 ## 2. Stores — composition root, singletons, DI order
 
