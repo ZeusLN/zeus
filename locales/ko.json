@@ -694,6 +694,7 @@
     "views.Lockscreen.enterLoginPin": "Enter login PIN (not your duress PIN)",
     "views.Lockscreen.incorrectPin": "잘못된 PIN",
     "views.Lockscreen.authenticationAttempts": "남은 시도 횟수",
+    "views.Lockscreen.attemptNotSaved": "Could not save this attempt, so it was not checked. Free up storage space on this device and try again.",
     "views.NodeInfo.feeReport": "수수료 보고서",
     "views.NodeInfo.forwarding": "전달",
     "views.NodeInfo.copyUri": "URI 복사",
