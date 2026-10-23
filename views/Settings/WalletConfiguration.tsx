@@ -80,6 +80,7 @@ import {
     clearCDKDatabaseForNode,
     deleteNodeDataDirectoryWithRetry
 } from '../../utils/DataClearUtils';
+import { getSharedNodeData } from '../../utils/NodeDataUtils';
 import {
     optimizeNeutrinoPeers,
     createLndWallet,
@@ -945,10 +946,21 @@ export default class WalletConfiguration extends React.Component<
                 await stopLdkNode();
             }
 
+            // Another config can point at this wallet's data (a keychain
+            // recovery restore, or an import from before on-device configs
+            // were blocked). Its Cashu data and data directory are kept while
+            // that config remains.
+            const shared =
+                deletedNode && index != null
+                    ? getSharedNodeData(nodes!, index)
+                    : { cashu: false, dataDir: false };
+
             // Delete this wallet's per-wallet CDK ecash database first: its
             // filename embeds a hash of the cashu seed, which
             // clearNodeKeychainData wipes below.
-            await clearCDKDatabaseForNode(deletedNode);
+            if (!shared.cashu) {
+                await clearCDKDatabaseForNode(deletedNode);
+            }
 
             // Clear this node's keychain material (Cashu seeds/keys namespaced
             // by node dir, LNC pairing credentials) so it does not outlive the
@@ -958,6 +970,7 @@ export default class WalletConfiguration extends React.Component<
             // would orphan them permanently. LNC credentials another config
             // still points to (a copy of this wallet) are kept.
             await clearNodeKeychainData(deletedNode, {
+                keepCashuData: shared.cashu,
                 keepLncCredentials:
                     !!deletedNode?.pairingPhrase &&
                     nodes!.some(
@@ -1012,9 +1025,11 @@ export default class WalletConfiguration extends React.Component<
             // Delete wallet data after settings are updated. Retried: the
             // node may still hold file handles while shutting down, which
             // clears on its own after a moment.
-            const dirDeleted = await deleteNodeDataDirectoryWithRetry(
-                deletedNode ?? { implementation, lndDir, ldkNodeDir }
-            );
+            const dirDeleted =
+                shared.dataDir ||
+                (await deleteNodeDataDirectoryWithRetry(
+                    deletedNode ?? { implementation, lndDir, ldkNodeDir }
+                ));
             if (!dirDeleted) {
                 // Surface the failure instead of navigating away as if the
                 // deletion succeeded: the directory holds wallet and channel

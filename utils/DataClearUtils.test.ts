@@ -720,6 +720,22 @@ describe('clearNodeKeychainData (single-wallet deletion helper)', () => {
         expect(removedKeys()).not.toContain(`${baseKey}:host`);
     });
 
+    it.each([
+        { implementation: 'embedded-lnd', lndDir: 'lnd-abc' },
+        { implementation: 'embedded-lnd' },
+        { implementation: 'ldk-node', ldkNodeDir: 'ldk-2' },
+        { implementation: 'ldk-node' }
+    ])(
+        'keeps the Cashu data of %j when another config uses it',
+        async (node) => {
+            await clearNodeKeychainData(node, { keepCashuData: true });
+
+            expect(
+                removedKeys().filter((k: string) => k.includes('-cashu-'))
+            ).toEqual([]);
+        }
+    );
+
     it('is a no-op for a null node', async () => {
         await expect(clearNodeKeychainData(null)).resolves.toBeUndefined();
         expect(mockedStorageRemoveItem).not.toHaveBeenCalled();

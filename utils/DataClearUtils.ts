@@ -721,19 +721,27 @@ async function clearLncCredentials(pairingPhrase: string) {
  */
 export async function clearNodeKeychainData(
     node: any,
-    opts?: { skipXprvPurge?: boolean; keepLncCredentials?: boolean }
+    opts?: {
+        skipXprvPurge?: boolean;
+        keepLncCredentials?: boolean;
+        keepCashuData?: boolean;
+    }
 ): Promise<void> {
     if (!node) return;
-    // Cashu only runs on embedded-lnd and ldk-node. Mirror getNodeDir(),
-    // including its defaults for legacy configs that predate explicit node
-    // dirs. A remote config can carry any lndDir / ldkNodeDir (an import file
-    // chooses them), so it must never clear the namespace of the embedded
-    // wallet that owns that dir.
-    if (node.implementation === 'embedded-lnd') {
-        await clearCashuDataForNode(node.lndDir || 'lnd');
-    }
-    if (node.implementation === 'ldk-node') {
-        await clearCashuDataForNode(node.ldkNodeDir || 'ldk');
+    // The caller sets keepCashuData while another config still uses this
+    // node's Cashu namespace (getSharedNodeData).
+    if (!opts?.keepCashuData) {
+        // Cashu only runs on embedded-lnd and ldk-node. Mirror getNodeDir(),
+        // including its defaults for legacy configs that predate explicit node
+        // dirs. A remote config can carry any lndDir / ldkNodeDir (an import file
+        // chooses them), so it must never clear the namespace of the embedded
+        // wallet that owns that dir.
+        if (node.implementation === 'embedded-lnd') {
+            await clearCashuDataForNode(node.lndDir || 'lnd');
+        }
+        if (node.implementation === 'ldk-node') {
+            await clearCashuDataForNode(node.ldkNodeDir || 'ldk');
+        }
     }
     // LNC credentials are stored per pairing phrase, so configs copied by
     // Duplicate Wallet, config import or legacy restore share one entry.
