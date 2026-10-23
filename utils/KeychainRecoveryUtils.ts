@@ -46,6 +46,14 @@ export interface RecoveryResult {
 export interface RecoveryScanResult {
     settingsFound: RecoveryResult[];
     otherDataFound: RecoveryResult[];
+    /**
+     * Legacy copies of a key that current storage can read, whose data differs
+     * from the live value. The app may have rewritten a key after losing it
+     * (a new swaps rescue key, an emptied swap list), leaving the only copy of
+     * the old data here. For the user to review; restoreOtherData must never
+     * be handed these automatically, since that would overwrite live data.
+     */
+    divergentDataFound: RecoveryResult[];
     hasCurrentSettings: boolean;
     error?: string;
 }
@@ -208,7 +216,8 @@ class KeychainRecoveryUtils {
      */
     private async scanKey(
         key: string,
-        description: string
+        description: string,
+        includeShadowedCloud = false
     ): Promise<RecoveryResult[]> {
         const results: RecoveryResult[] = [];
         const sources = this.getStorageSources();
@@ -219,8 +228,12 @@ class KeychainRecoveryUtils {
             // a completed desync the local copy is the fresher of the two,
             // and offering the stale synchronizable copy as a restore source
             // would invite overwriting live data with it.
+            //
+            // includeShadowedCloud reads it anyway so the caller can compare it
+            // with the live value instead of offering it as a restore source.
             if (
                 source === 'prefixed-cloud' &&
+                !includeShadowedCloud &&
                 results.some((r) => r.source === 'current')
             ) {
                 continue;
@@ -244,6 +257,7 @@ class KeychainRecoveryUtils {
         const result: RecoveryScanResult = {
             settingsFound: [],
             otherDataFound: [],
+            divergentDataFound: [],
             hasCurrentSettings: false
         };
 
@@ -261,17 +275,27 @@ class KeychainRecoveryUtils {
 
             // Scan other data keys
             for (const { key, description } of OTHER_KEYS) {
-                const keyResults = await this.scanKey(key, description);
-                // A key current storage can read is live, not orphaned.
-                // Legacy copies of it are older snapshots (the migration
-                // never deleted them), so offering them would invite
-                // overwriting live data.
-                if (keyResults.some((r) => r.source === 'current')) continue;
+                const keyResults = await this.scanKey(key, description, true);
+                // A key current storage can read is live, not orphaned, so
+                // none of its copies are restore candidates. A legacy copy
+                // that differs from the live value is still reported, for
+                // review only: the app rewrites some keys after losing them,
+                // and the old data may exist nowhere else.
+                const live = keyResults.find((r) => r.source === 'current');
+                if (live) {
+                    result.divergentDataFound.push(
+                        ...keyResults.filter(
+                            (r) =>
+                                r.source !== 'current' && r.data !== live.data
+                        )
+                    );
+                    continue;
+                }
                 result.otherDataFound.push(...keyResults);
             }
 
             console.log(
-                `[Recovery] Scan complete. Settings found: ${result.settingsFound.length}, Other data: ${result.otherDataFound.length}`
+                `[Recovery] Scan complete. Settings found: ${result.settingsFound.length}, Other data: ${result.otherDataFound.length}, Divergent: ${result.divergentDataFound.length}`
             );
         } catch (error) {
             console.error('[Recovery] Error during scan:', error);

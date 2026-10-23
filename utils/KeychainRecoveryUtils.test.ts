@@ -205,6 +205,59 @@ describe('KeychainRecoveryUtils', () => {
             expect(result.otherDataFound).toEqual([]);
         });
 
+        // #4711 part 1b. Stuck desync: the current read missed, so the Swaps
+        // screen made a new rescue key, and the old mnemonic that pending
+        // reverse swaps need survives only in the prefixed-cloud copy. It must
+        // be reported for review, but never as a restore candidate.
+        it('reports a legacy copy that differs from the live value', async () => {
+            storage.getItem.mockImplementation(async (key: string) =>
+                key === 'swaps-rescue' ? 'new mnemonic' : (false as any)
+            );
+            rawItem.mockImplementation(async (key: string) =>
+                key === 'zeus:swaps-rescue' ? 'old mnemonic' : (null as any)
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([
+                expect.objectContaining({
+                    key: 'swaps-rescue',
+                    source: 'prefixed-cloud',
+                    data: 'old mnemonic'
+                })
+            ]);
+            expect(result.otherDataFound).toEqual([]);
+        });
+
+        it('does not report a legacy copy identical to the live value', async () => {
+            storage.getItem.mockImplementation(async (key: string) =>
+                key === 'swaps' ? '[{"id":1}]' : (false as any)
+            );
+            encrypted.getItem.mockImplementation(async (key: string) =>
+                key === 'swaps' ? '[{"id":1}]' : (null as any)
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.divergentDataFound).toEqual([]);
+        });
+
+        it('keeps offering legacy copies of a key current storage cannot read', async () => {
+            encrypted.getItem.mockImplementation(async (key: string) =>
+                key === 'contacts' ? '[{"name":"bob"}]' : (null as any)
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(result.otherDataFound).toContainEqual(
+                expect.objectContaining({
+                    key: 'contacts',
+                    source: 'encrypted-storage'
+                })
+            );
+            expect(result.divergentDataFound).toEqual([]);
+        });
+
         it('does not set hasCurrentSettings from the legacy key alone', async () => {
             storage.getItem.mockImplementation(async (key: string) =>
                 key === 'zeus-settings' ? SETTINGS : (false as any)
