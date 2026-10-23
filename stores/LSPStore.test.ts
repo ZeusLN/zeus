@@ -1533,6 +1533,55 @@ describe('LSPStore lease fetch waits for the custom message subscription', () =>
         expect(store.error).toBe(false);
     });
 
+    it('does not show the lease error when reset runs while the embedded stream starts', async () => {
+        const { index } = LndMobileInjection as any;
+        let failStart!: (error: Error) => void;
+        index.subscribeCustomMessages.mockReturnValueOnce(
+            new Promise((_, reject) => {
+                failStart = reject;
+            })
+        );
+        const { store, channelsStore } = makeStoreWithChannels('embedded-lnd');
+        channelsStore.channels = [lspChannel];
+
+        const subscribing = store.subscribeCustomMessages();
+        store.reset();
+        failStart(new Error('rpc error'));
+
+        await expect(subscribing).rejects.toThrow('rpc error');
+        expect(store.getExtendableChannelsError).toBe(false);
+    });
+
+    it('does not probe again when LNC subscribes again', async () => {
+        jest.mocked(BackendUtils.subscribeCustomMessages).mockReturnValue(
+            undefined as any
+        );
+        const { store, channelsStore } = makeStoreWithChannels(
+            'lightning-node-connect'
+        );
+        channelsStore.channels = [lspChannel];
+        await store.subscribeCustomMessages();
+        await store.subscribeCustomMessages();
+
+        expect(probesSent()).toBe(1);
+        expect(store.nodeInfoStore.getNodeInfo).toHaveBeenCalledTimes(1);
+    });
+
+    it('probes again when LNC subscribes after reset', async () => {
+        jest.mocked(BackendUtils.subscribeCustomMessages).mockReturnValue(
+            undefined as any
+        );
+        const { store, channelsStore } = makeStoreWithChannels(
+            'lightning-node-connect'
+        );
+        channelsStore.channels = [lspChannel];
+        await store.subscribeCustomMessages();
+        store.reset();
+        await store.subscribeCustomMessages();
+
+        expect(probesSent()).toBe(2);
+    });
+
     it('probes LDK Node from the channels reaction without a subscription', async () => {
         jest.mocked(BackendUtils.supportsLSPS7native).mockReturnValue(true);
         jest.mocked(BackendUtils.lsps7GetExtendableChannels).mockResolvedValue(

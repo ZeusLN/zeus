@@ -106,6 +106,9 @@ export default class LSPStore {
     private getExtendableChannelsNativeRequestId = 0;
     // Set while the custom message subscription can deliver replies.
     private customMessagesReady = false;
+    // Incremented by reset(), so a subscription that settles afterwards can
+    // tell it belongs to the previous connection.
+    private customMessagesGeneration = 0;
     // Incremented on every Flow fee request and fee reset, so an answer to a
     // fee request that is no longer the latest one is dropped instead of
     // replacing the quote an invoice was priced with.
@@ -190,6 +193,7 @@ export default class LSPStore {
             this.channelAcceptor = undefined;
             this.customMessagesSubscriber = undefined;
             this.customMessagesReady = false;
+            this.customMessagesGeneration++;
             this.closeSubscription(channelAcceptor);
             this.closeSubscription(customMessagesSubscriber);
             // lease data and fetch errors belong to the previous node, and a
@@ -1009,15 +1013,15 @@ export default class LSPStore {
             );
 
             const listener = this.customMessagesSubscriber;
+            const generation = this.customMessagesGeneration;
             try {
                 await this.startEmbeddedStream(
                     () => index.subscribeCustomMessages(),
                     'customMessagesSubscriber'
                 );
             } catch (error) {
-                // startEmbeddedStream has already dropped the listener, so
-                // only check that reset() didn't run while it started
-                if (this.customMessagesSubscriber === null) {
+                // reset() may have run while the stream started
+                if (this.customMessagesGeneration === generation) {
                     this.onCustomMessagesFailed();
                 }
                 throw error;
@@ -1040,8 +1044,9 @@ export default class LSPStore {
             );
             if (!ws?.addEventListener) {
                 // LNC delivers through its own native listener; there is no
-                // socket to wait on
-                this.onCustomMessagesReady();
+                // socket to wait on. Each LSPS1 screen visit subscribes
+                // again, so only the first one starts a lease fetch.
+                if (!this.customMessagesReady) this.onCustomMessagesReady();
                 return;
             }
             this.keepSocket(ws, 'customMessagesSubscriber');
