@@ -33,6 +33,7 @@ class MainApplication : Application(), ReactApplication {
                     add(CashuDevKitPackage())
                     add(LdkNodePackage())
                     add(ZipUtilsPackage())
+                    add(TorWebSocketPackage())
                 },
         )
     }
