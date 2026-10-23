@@ -151,6 +151,48 @@ const STORAGE_KEYS = [
     'backup-complete-v2'
 ];
 
+// Durable record that a wipe has started. Storage's write latch lives in JS
+// memory only, so if the process ends mid-wipe (app killed, crash, OS kill)
+// the next launch would load whatever the wipe had not reached yet,
+// including the settings blob, which is cleared late. Kept in
+// EncryptedStorage: the write latch does not cover it, and on Android a
+// write there cannot re-create the keychain backing store deleted in step 8.
+const WIPE_PENDING_KEY = 'wipe-pending';
+
+// Set while clearAllData() runs in this JS context, so a wipe in progress
+// is not reported as an interrupted one
+let wipeRunning = false;
+
+/**
+ * Saves the pending-wipe record. clearAllData() saves it itself; the
+ * Lockscreen also saves it as soon as it decides to wipe, before anything
+ * on screen changes, so the decision is on disk before the user can see it.
+ */
+export async function markWipePending(): Promise<void> {
+    try {
+        await EncryptedStorage.setItem(WIPE_PENDING_KEY, 'true');
+    } catch (e) {
+        console.warn('[ClearData] Error recording the pending wipe:', e);
+    }
+}
+
+/**
+ * Whether a clearAllData() started by an earlier launch did not finish.
+ * Checked at startup before settings are loaded or a credential is
+ * accepted; the Lockscreen then runs clearAllData() again. Every step is
+ * idempotent, and the settings blob is cleared after the node data it
+ * lists, so a second run finishes what the first one left.
+ */
+export async function isWipePending(): Promise<boolean> {
+    if (wipeRunning) return false;
+    try {
+        return (await EncryptedStorage.getItem(WIPE_PENDING_KEY)) === 'true';
+    } catch (e) {
+        console.warn('[ClearData] Error reading the pending wipe record:', e);
+        return false;
+    }
+}
+
 /**
  * Pins the user to the current screen while a wipe runs. clearAllData()
  * takes tens of seconds on device, and both wipe surfaces sit on screens
@@ -879,6 +921,11 @@ export async function clearAllData(): Promise<void> {
     // the settings write landed ~20ms after the wipe finished.
     Storage.blockWrites();
 
+    // 0b. Record the wipe before anything is cleared, so that a launch after
+    // the process ends mid-wipe finishes it (see isWipePending)
+    wipeRunning = true;
+    await markWipePending();
+
     // 1. First, try to get settings to find node-specific data
     let settings: any = null;
     try {
@@ -899,9 +946,16 @@ export async function clearAllData(): Promise<void> {
             // wholesale, and this path runs on the duress wipe, where added
             // seconds per embedded wallet matter. iOS has no backing store
             // to delete, so it must pay for the derivation here.
-            await clearNodeKeychainData(node, {
-                skipXprvPurge: Platform.OS === 'android'
-            });
+            // Own try/catch: a stored config whose values cannot be turned
+            // into key names (e.g. an imported lndDir that is not a string)
+            // must not stop the wipe before the settings blob is cleared
+            try {
+                await clearNodeKeychainData(node, {
+                    skipXprvPurge: Platform.OS === 'android'
+                });
+            } catch (e) {
+                console.warn('[ClearData] Error clearing node keys:', e);
+            }
         }
     }
     // Also try common node-dir defaults (getNodeDir falls back to 'lnd' / 'ldk')
@@ -929,7 +983,16 @@ export async function clearAllData(): Promise<void> {
     // them still exist (step 3 clears the lists)
     await clearPosOrderRecords();
 
-    // 3. Clear all known storage keys
+    // 3. Clear all known storage keys. The legacy settings blob goes first:
+    // getSettings() loads it whenever the keychain blob is missing, and it
+    // can predate a PIN set up since the storage migration, so it must not
+    // outlive the keychain blob. Own try/catch: on iOS removeItem rejects
+    // when the key is absent.
+    try {
+        await EncryptedStorage.removeItem('zeus-settings');
+    } catch (e) {
+        console.warn('[ClearData] Error clearing legacy settings:', e);
+    }
     console.log('[ClearData] Clearing known storage keys...');
     for (const key of STORAGE_KEYS) {
         await clearKey(key);
@@ -960,9 +1023,10 @@ export async function clearAllData(): Promise<void> {
 
     // 6. Clear EncryptedStorage (migration flags, etc.)
     try {
-        // Also explicitly clear the legacy settings key
-        await EncryptedStorage.removeItem('zeus-settings');
         await EncryptedStorage.clear();
+        // clear() also removed the pending-wipe record, and steps 7 and 8
+        // are still to run
+        await markWipePending();
         MigrationUtils.clearConfirmedFlags();
         console.log('[ClearData] EncryptedStorage cleared');
     } catch (e) {
@@ -1004,6 +1068,13 @@ export async function clearAllData(): Promise<void> {
     // clearing action (see clearKeychainBackingStore).
     await clearKeychainEntries();
     await clearKeychainBackingStore();
+
+    try {
+        await EncryptedStorage.removeItem(WIPE_PENDING_KEY);
+    } catch (e) {
+        console.warn('[ClearData] Error clearing the pending wipe record:', e);
+    }
+    wipeRunning = false;
 
     console.log('[ClearData] All data cleared successfully');
 }
