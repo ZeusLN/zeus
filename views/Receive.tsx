@@ -798,20 +798,24 @@ export default class Receive extends React.Component<
 
     scanNfc = async () => {
         const str = await scanNfcTag(this.props.ModalStore);
-        if (!str) return;
+        if (!str || this.unmounted) return;
         this.setState({ nfcError: false });
         this.validateAddress(str);
     };
 
     validateAddress = (text: string) => {
-        const { navigation, InvoicesStore, route } = this.props;
-        const { lspIsActive, receiverName } = this.state;
+        const { navigation, InvoicesStore } = this.props;
+        // route.params.amount is in the display unit that was active when it
+        // was passed, and the amount under the QR code toggles that unit:
+        // use the sats it was converted to back then
+        const { lspIsActive, receiverName, satAmount } = this.state;
         const { createUnifiedInvoice } = InvoicesStore;
-        const satAmount = getSatAmount(route.params?.amount);
         const skipOnchain = this.getSkipOnchain();
 
         handleAnything(text, satAmount.toString())
             .then((response) => {
+                // the tag's LNURL server decides when this runs
+                if (this.unmounted) return;
                 try {
                     const [route, props] = response;
                     const { lnurlParams } = props;
@@ -858,6 +862,7 @@ export default class Receive extends React.Component<
                                 }
                             )
                             .catch(() => {
+                                if (this.unmounted) return;
                                 navigation.navigate(route, {
                                     satAmount,
                                     ...props
@@ -868,7 +873,9 @@ export default class Receive extends React.Component<
                     }
                 } catch (e) {}
             })
-            .catch(() => this.setState({ nfcError: true }));
+            .catch(() => {
+                if (!this.unmounted) this.setState({ nfcError: true });
+            });
     };
 
     handlePaymentReceived = (
@@ -884,7 +891,9 @@ export default class Receive extends React.Component<
         const { orderId, orderTotal, orderTip, exchangeRate, rate } =
             this.state;
 
-        InvoicesStore.setWatchedInvoicePaid(amount);
+        // a watcher callback that was in flight when the watchers were
+        // stopped must not mark the next view's invoice as paid
+        if (!this.unmounted) InvoicesStore.setWatchedInvoicePaid(amount);
         BalanceStore.getCombinedBalance();
 
         if (

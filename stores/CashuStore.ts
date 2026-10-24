@@ -192,6 +192,10 @@ type MultimintSkipReason =
 
 export default class CashuStore {
     private getPayReqRequestId = 0;
+    // Bumped by each createInvoice call and by clearInvoice, so a quote that
+    // arrives after a newer request or after the invoice was cleared does
+    // not replace the invoice on screen
+    private createInvoiceRequestId = 0;
 
     @observable public mintUrls: Array<string> = [];
     @observable public selectedMintUrl: string;
@@ -1993,6 +1997,10 @@ export default class CashuStore {
 
     @action
     public clearInvoice = () => {
+        // a pending createInvoice no longer updates the state, so it cannot
+        // end the loading state either
+        this.createInvoiceRequestId++;
+        this.creatingInvoice = false;
         this.invoice = undefined;
         this.watchedInvoicePaid = false;
         this.watchedInvoicePaidAmt = undefined;
@@ -4302,6 +4310,8 @@ export default class CashuStore {
         value: string;
         lnurl?: LNURLWithdrawParams;
     }) => {
+        const requestId = ++this.createInvoiceRequestId;
+        const isCurrent = () => requestId === this.createInvoiceRequestId;
         this.invoice = undefined;
         this.creatingInvoice = true;
         this.creatingInvoiceError = false;
@@ -4334,7 +4344,7 @@ export default class CashuStore {
 
             let invoice: any;
             if (mintQuote) {
-                this.quoteId = mintQuote.quote;
+                if (isCurrent()) this.quoteId = mintQuote.quote;
 
                 // decode bolt11 for metadata
                 let decoded;
@@ -4360,6 +4370,10 @@ export default class CashuStore {
                     this.invoices
                 );
             }
+
+            // The quote is kept in this.invoices above, but a newer request
+            // or clearInvoice owns the invoice state and any LNURL withdraw
+            if (!isCurrent()) return;
 
             runInAction(() => {
                 this.invoice = invoice?.getPaymentRequest;
@@ -4416,6 +4430,7 @@ export default class CashuStore {
             if (__DEV__) {
                 console.log('Cashu createInvoice err', e);
             }
+            if (!isCurrent()) return;
             const error_msg = cashuErrorForDisplay(e) || 'Unknown error';
             runInAction(() => {
                 this.creatingInvoiceError = true;
