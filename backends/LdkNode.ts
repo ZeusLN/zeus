@@ -285,29 +285,16 @@ export default class LdkNode {
      */
     getBlockchainBalance = async (): Promise<any> => {
         const balances = await LdkNodeInjection.node.listBalances();
-        // spendableOnchainBalanceSats excludes the anchor channel reserve,
-        // which is confirmed but held back - it must not be counted as
-        // unconfirmed or the balance shows as pending forever
-        const anchorReserve = balances.totalAnchorChannelsReserveSats || 0;
         const total = new BigNumber(balances.totalOnchainBalanceSats);
 
-        let confirmed: BigNumber;
-        if (balances.spendableOnchainBalanceSats > 0) {
-            // spendable is the trusted balance minus the reserve, so adding
-            // the reserve back recovers the confirmed balance exactly
-            confirmed = BigNumber.min(
-                new BigNumber(balances.spendableOnchainBalanceSats).plus(
-                    anchorReserve
-                ),
-                total
-            );
-        } else if (total.isZero()) {
-            confirmed = new BigNumber(0);
-        } else {
-            // spendable saturates at 0 once the trusted balance falls below
-            // the reserve (e.g. right after a fund-max channel open), which
-            // makes confirmed unrecoverable from the aggregate balances -
-            // sum confirmed UTXOs directly instead
+        // confirmed cannot be derived from spendableOnchainBalanceSats: that
+        // is the trusted balance minus the anchor channel reserve, and LDK
+        // trusts any unconfirmed output paying one of our change addresses,
+        // whoever sent it. Sum confirmed UTXOs instead. The anchor reserve
+        // sits in confirmed UTXOs, so it is not shown as pending, and an
+        // output whose confirmation height is unknown counts as unconfirmed
+        let confirmed = new BigNumber(0);
+        if (!total.isZero()) {
             const utxos = await this.listUnspentWithConfirmations();
             confirmed = BigNumber.min(
                 utxos.reduce(
