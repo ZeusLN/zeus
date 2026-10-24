@@ -1135,6 +1135,41 @@ export default class CashuStore {
         return await this.invoicesStore.isInvoicePaid(paymentHash);
     };
 
+    /**
+     * Upper bound on the NUT-02 input fees CDK pays to melt
+     * `inputsNeeded` sats (quote amount + fee reserve) from a mint. CDK
+     * either spends an exact proof set or first swaps unspent proofs
+     * into exact denominations and then melts those, so the bound is the
+     * fee on every unspent proof plus the fee on one proof per bit of
+     * `inputsNeeded`. Fees are summed in ppk and rounded up once, as CDK
+     * does.
+     */
+    public estimateMeltInputFee = async (
+        mintUrl: string,
+        inputsNeeded: number
+    ): Promise<number> => {
+        const keysets = await CashuDevKit.getMintKeysets(mintUrl);
+        const feePpkById: Record<string, number> = {};
+        let maxActivePpk = 0;
+        for (const keyset of keysets) {
+            const ppk = Number(keyset.input_fee_ppk) || 0;
+            feePpkById[keyset.id] = ppk;
+            if (keyset.active && ppk > maxActivePpk) maxActivePpk = ppk;
+        }
+        if (Object.values(feePpkById).every((ppk) => ppk === 0)) return 0;
+
+        const proofs = await CashuDevKit.getUnspentProofs(mintUrl);
+        const swapPpk = proofs.reduce(
+            (sum, proof) => sum + (feePpkById[proof.keyset_id] ?? maxActivePpk),
+            0
+        );
+        const meltProofCount = Math.max(
+            1,
+            Math.ceil(inputsNeeded).toString(2).length
+        );
+        return Math.ceil((swapPpk + maxActivePpk * meltProofCount) / 1000);
+    };
+
     public getMintName = (mintUrl: string): string => {
         const normalizedMintUrl = this.normalizeMintUrl(mintUrl);
         return (
@@ -5816,7 +5851,10 @@ export default class CashuStore {
                 : undefined;
 
             if (toSelfCustody) {
-                // For toSelfCustody, receive the token first then sweep via melt
+                // Prepare the sweep invoice and fee probe BEFORE receiving
+                // the token: receiving consumes it at the mint, so failures
+                // up to that point must leave the token unclaimed and
+                // retryable
                 const tokenAmt = decoded.getAmount;
 
                 const memo = `${localeString(
@@ -5828,11 +5866,6 @@ export default class CashuStore {
                     routeHints: true,
                     noLsp: true
                 };
-
-                // Pass signing key only when token is P2PK-locked (decoded has proofs)
-
-                await this.receiveTokenCDK(encodedToken, signingKey, mintUrl);
-                await this.syncCDKBalances();
 
                 // Create invoice for sweeping
                 let invoice = await this.invoicesStore.createInvoice({
@@ -5851,57 +5884,80 @@ export default class CashuStore {
                     };
                 }
 
-                // Create melt quote via CDK
+                // Probe the melt fee via CDK
                 const meltQuote = await this.createMeltQuoteCDK(
                     mintUrl,
                     invoice.paymentRequest
                 );
 
-                if (meltQuote.fee_reserve > 0) {
-                    const receiveAmtSat = tokenAmt - meltQuote.fee_reserve;
-                    if (receiveAmtSat <= 0) {
-                        this.loading = false;
-                        return {
-                            success: false,
-                            errorMessage: localeString(
-                                'stores.CashuStore.feeExceedsAmt'
-                            )
-                        };
-                    }
-
-                    // Recreate invoice with adjusted amount
-                    invoice = await this.invoicesStore.createInvoice({
-                        ...invoiceParams,
-                        memo: `${memo} [${localeString(
-                            'views.Cashu.CashuToken.feeAdjusted'
-                        )}]`,
-                        value: receiveAmtSat.toString()
-                    });
-
-                    if (!invoice?.paymentRequest) {
-                        this.loading = false;
-                        return {
-                            success: false,
-                            errorMessage: localeString(
-                                'stores.InvoicesStore.errorCreatingInvoice'
-                            )
-                        };
-                    }
+                if (meltQuote.fee_reserve >= tokenAmt) {
+                    this.loading = false;
+                    return {
+                        success: false,
+                        errorMessage: localeString(
+                            'stores.CashuStore.feeExceedsAmt'
+                        )
+                    };
                 }
 
-                // Melt via CDK to pay the invoice. The token has already been
-                // received at this point, so a melt that does not pay is not
-                // a failed claim: the ecash is in the wallet and the proofs
-                // are spent, so reporting failure would send the user looking
-                // for a token they already hold and cannot claim again.
+                // Pass signing key only when token is P2PK-locked (decoded has proofs)
+
+                // Point of no return: this consumes the token and credits
+                // the wallet's own balance at the mint
+                const receivedAmt = await this.receiveTokenCDK(
+                    encodedToken,
+                    signingKey,
+                    mintUrl
+                );
+                await this.syncCDKBalances();
+
                 let melted: CDKMelted | undefined;
                 try {
+                    // The mint may credit less than face value (input fees),
+                    // so size the sweep from what was actually received,
+                    // minus the input fees the melt itself will pay
+                    const inputFee = await this.estimateMeltInputFee(
+                        mintUrl,
+                        receivedAmt
+                    );
+                    const receiveAmtSat =
+                        receivedAmt - meltQuote.fee_reserve - inputFee;
+                    if (receiveAmtSat <= 0) {
+                        throw new Error(
+                            localeString('stores.CashuStore.feeExceedsAmt')
+                        );
+                    }
+
+                    if (receiveAmtSat !== tokenAmt) {
+                        // Recreate invoice with adjusted amount
+                        invoice = await this.invoicesStore.createInvoice({
+                            ...invoiceParams,
+                            memo: `${memo} [${localeString(
+                                'views.Cashu.CashuToken.feeAdjusted'
+                            )}]`,
+                            value: receiveAmtSat.toString()
+                        });
+
+                        if (!invoice?.paymentRequest) {
+                            throw new Error(
+                                localeString(
+                                    'stores.InvoicesStore.errorCreatingInvoice'
+                                )
+                            );
+                        }
+                    }
+
+                    // Melt via CDK to pay the invoice
                     melted = await this.meltCDK(
                         mintUrl,
                         invoice.paymentRequest
                     );
-                } catch (e: any) {
-                    console.error('CDK claimToken self-custody sweep:', e);
+                } catch (sweepError: any) {
+                    // The token is now spent and its value sits in the
+                    // wallet's own balance at the mint, so a failed sweep
+                    // must not read as a failed claim: a retry would only
+                    // hit "token already spent" against our own receive
+                    console.error('CDK claimToken sweep error:', sweepError);
                     await this.syncCDKBalances(true);
                     this.loading = false;
                     return {
@@ -6084,10 +6140,14 @@ export default class CashuStore {
             }
 
             // 3. Calculate actual receive amount and create final invoice
-            const receiveAmtSat = amountToSweep - feeReserve;
+            const inputFee = await this.estimateMeltInputFee(
+                mintUrl,
+                amountToSweep
+            );
+            const receiveAmtSat = amountToSweep - feeReserve - inputFee;
             if (receiveAmtSat <= 0) {
                 console.warn(
-                    `Sweep ${mintUrl}: Fee reserve (${feeReserve}) exceeds or equals amount to sweep (${amountToSweep}). Cannot sweep.`
+                    `Sweep ${mintUrl}: Fee reserve (${feeReserve}) plus input fees (${inputFee}) exceed or equal amount to sweep (${amountToSweep}). Cannot sweep.`
                 );
                 this.loading = false;
                 return false;
