@@ -242,6 +242,38 @@ describe('KeychainRecoveryUtils', () => {
             expect(result.divergentDataFound).toEqual([]);
         });
 
+        it('reports only the legacy copies of a live key that differ from it', async () => {
+            storage.getItem.mockImplementation(async (key: string) =>
+                key === 'swaps-rescue' ? 'new mnemonic' : (false as any)
+            );
+            rawItem.mockImplementation(async (key: string) =>
+                key === 'zeus:swaps-rescue' ? 'old mnemonic' : (null as any)
+            );
+            keychain.getInternetCredentials.mockImplementation(
+                async (key: string, opts?: any) => {
+                    if (key !== 'swaps-rescue') return false as any;
+                    return {
+                        password: opts?.cloudSync
+                            ? 'new mnemonic'
+                            : 'older mnemonic'
+                    } as any;
+                }
+            );
+            encrypted.getItem.mockImplementation(async (key: string) =>
+                key === 'swaps-rescue' ? 'new mnemonic' : (null as any)
+            );
+
+            const result = await utils.scanForRecoverableData();
+
+            expect(
+                result.divergentDataFound.map((r) => [r.source, r.data])
+            ).toEqual([
+                ['prefixed-cloud', 'old mnemonic'],
+                ['unprefixed-local', 'older mnemonic']
+            ]);
+            expect(result.otherDataFound).toEqual([]);
+        });
+
         it('keeps offering legacy copies of a key current storage cannot read', async () => {
             encrypted.getItem.mockImplementation(async (key: string) =>
                 key === 'contacts' ? '[{"name":"bob"}]' : (null as any)
@@ -669,6 +701,12 @@ describe('KeychainRecoveryUtils', () => {
             await utils.restoreOtherData(scan.otherDataFound);
 
             expect(store.contacts).toBe('["live"]');
+            expect(scan.divergentDataFound).toContainEqual(
+                expect.objectContaining({
+                    key: 'contacts',
+                    data: '["jan-2026"]'
+                })
+            );
         });
 
         it('restores the newer prefixed-cloud copy over the older unprefixed one', async () => {
