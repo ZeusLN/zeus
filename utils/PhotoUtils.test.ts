@@ -1,4 +1,9 @@
-import { getPhoto, getPresetImage, getPresetNames } from './PhotoUtils';
+import {
+    getPhoto,
+    getPresetImage,
+    getPresetNames,
+    isLocalPhoto
+} from './PhotoUtils';
 jest.mock('react-native-fs', () => ({
     DocumentDirectoryPath: 'docpath'
 }));
@@ -37,6 +42,27 @@ describe('PhotoUtils', () => {
             expect(getPhoto('file://zeus1.jpg')).toEqual('file://zeus1.jpg');
             expect(getPhoto('file://zeus2.jpg')).toEqual('file://zeus2.jpg');
             expect(getPhoto('file://zeus3.jpg')).toEqual('file://zeus3.jpg');
+        });
+    });
+
+    describe('isLocalPhoto', () => {
+        it('accepts the forms the app saves', () => {
+            expect(isLocalPhoto('rnfs://photo_1700000000000.png')).toBe(true);
+            expect(isLocalPhoto('preset://lnd')).toBe(true);
+            expect(isLocalPhoto('preset://assetsimageslnd')).toBe(true);
+        });
+
+        it('rejects everything else', () => {
+            expect(isLocalPhoto('https://example.com/a.png')).toBe(false);
+            expect(isLocalPhoto('https://example.com/rnfs://a.png')).toBe(
+                false
+            );
+            expect(isLocalPhoto('file:///data/local/tmp/a.png')).toBe(false);
+            expect(isLocalPhoto('rnfs://../a.png')).toBe(false);
+            expect(isLocalPhoto('rnfs://')).toBe(false);
+            expect(isLocalPhoto('')).toBe(false);
+            expect(isLocalPhoto(undefined)).toBe(false);
+            expect(isLocalPhoto({ uri: 'rnfs://a.png' })).toBe(false);
         });
     });
 
