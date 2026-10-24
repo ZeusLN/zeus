@@ -29,6 +29,8 @@ export default class OpenChannelRequest extends BaseModel {
     public simpleTaprootChannel?: boolean;
     public fundMax?: boolean;
     public close_address?: string;
+    // note-to-self lnd stores with the channel (lnd 0.17+)
+    public memo?: string;
     // external accoutn funding
     public account?: string;
     public funding_shim?: {

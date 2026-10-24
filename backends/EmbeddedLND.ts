@@ -109,7 +109,8 @@ export default class EmbeddedLND extends LND {
             data.sat_per_vbyte,
             data.spend_unconfirmed,
             data.send_all,
-            data.outpoints
+            data.outpoints,
+            data.label
         );
     sendCustomMessage = async (data: any) =>
         await sendCustomMessage(data.peer, data.type, data.data);
@@ -667,6 +668,8 @@ export default class EmbeddedLND extends LND {
     supportsCustomPreimages = () => true;
     supportsSweep = () => true;
     supportsOnchainSendMax = () => this.supports('v0.18.3');
+    // the native openChannelSync does not forward a memo
+    supportsChannelMemo = () => false;
     supportsOnchainBatching = () => true;
     supportsChannelBatching = () => true;
     supportsChannelFundMax = () => true;
