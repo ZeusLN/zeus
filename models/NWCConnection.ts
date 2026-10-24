@@ -283,12 +283,13 @@ export default class NWCConnection extends BaseModel {
     public isUnresolvedPayInvoiceActivity(
         activity: ConnectionActivity
     ): boolean {
-        if (
-            activity.type !== 'pay_invoice' ||
-            activity.payment_source === 'cashu' ||
-            activity.isBudgetDebited
-        ) {
+        if (activity.type !== 'pay_invoice' || activity.isBudgetDebited) {
             return false;
+        }
+        // Cashu holds are only recorded pending, for a melt CashuStore
+        // reports in flight. Its failures do not wait on a node timeout.
+        if (activity.payment_source === 'cashu') {
+            return activity.status === 'pending';
         }
         return (
             activity.status === 'pending' ||
