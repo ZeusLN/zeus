@@ -322,6 +322,25 @@ export default class Lockscreen extends React.Component<
         );
     }
 
+    componentDidUpdate(prevProps: LockscreenProps) {
+        // The background lock calls navigate('Lockscreen'). If a Security
+        // PIN/password prompt is in front, that reuses this instance and only
+        // replaces its params, so the prompt becomes the login screen. Follow
+        // the new params, or the screen keeps its Back arrow, treats the
+        // duress PIN as a wrong entry and finishes the abandoned flow (e.g.
+        // Delete PIN) when the correct PIN is entered.
+        if (prevProps.route.params !== this.props.route.params) {
+            const params = this.props.route.params;
+            this.setState({
+                modifySecurityScreen: params?.modifySecurityScreen ?? '',
+                deletePin: !!params?.deletePin,
+                deleteDuressPin: !!params?.deleteDuressPin,
+                deletePassword: !!params?.deletePassword,
+                deleteDuressPassword: !!params?.deleteDuressPassword
+            });
+        }
+    }
+
     componentWillUnmount() {
         this.subscription?.remove();
         this.backPressSubscription?.remove();
