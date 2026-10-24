@@ -32,12 +32,8 @@ class DateTimeUtils {
     private fullMask = () =>
         `${this.numericDateMask() || "ddd, mmm d 'yy"}, ${this.timeMask()} Z`;
 
-    private shortMask = (date: Date) => {
-        const dateMask =
-            this.numericDateMask() ||
-            (this.isCurrentYear(date) ? 'mmm d' : "mmm d, 'yy");
-        return `${dateMask}, ${this.timeMask()}`;
-    };
+    private shortMask = (date: Date) =>
+        `${this.dateOnlyMask(date)}, ${this.timeMask()}`;
 
     listDate = (timestamp: number | string | undefined) =>
         new Date(Number(timestamp) * 1000);

@@ -425,24 +425,22 @@ describe('formatDate', () => {
         expect(DateTimeUtils.formatDate(undefined)).toBe('N/A');
     });
 
-    it('uses the default format (omits year for current year)', () => {
-        const currentYear = new Date().getFullYear();
-        // Use local time to avoid timezone issues (e.g., UTC+14)
-        const date = new Date(currentYear, 2, 4, 12, 0, 0); // March 4
-        expect(DateTimeUtils.formatDate(date)).toMatch(/[A-Z][a-z]{2} \d{1,2}/);
+    it('omits the year for the current year with the default format', () => {
+        const date = new Date(new Date().getFullYear(), 2, 4, 12, 0, 0); // March 4
+        expect(DateTimeUtils.formatDate(date)).toBe('Mar 4');
     });
 
-    it('uses the default format (includes year for past year)', () => {
+    it('includes the year for a past year with the default format', () => {
         const date = new Date(2023, 2, 4, 12, 0, 0);
-        expect(DateTimeUtils.formatDate(date)).toMatch(
-            /[A-Z][a-z]{2} \d{1,2}, '23/
-        );
+        expect(DateTimeUtils.formatDate(date)).toBe("Mar 4, '23");
     });
 
-    it('respects the iso date format setting', () => {
+    it('accepts an ISO string', () => {
         setDisplay({ dateFormat: 'iso' });
-        const date = new Date(2024, 2, 4, 12, 0, 0);
-        expect(DateTimeUtils.formatDate(date)).toBe('2024-03-04');
+        // Using a local time string here so it doesn't shift to the previous day
+        expect(DateTimeUtils.formatDate('2024-03-04T12:00:00')).toBe(
+            '2024-03-04'
+        );
     });
 
     it('respects the dmy date format setting', () => {
