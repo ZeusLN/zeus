@@ -19,6 +19,16 @@ jest.mock('./handleAnything', () => ({
     default: jest.fn(() => Promise.resolve(mockHandleAnythingResult))
 }));
 
+let mockRestartReason: string | null = null;
+jest.mock('react-native-restart', () => ({
+    __esModule: true,
+    default: { getReason: () => Promise.resolve(mockRestartReason) }
+}));
+
+import { Linking, Platform } from 'react-native';
+
+import handleAnything from './handleAnything';
+import { IN_APP_RESTART } from './InAppRestartUtils';
 import LinkingUtils from './LinkingUtils';
 
 const flushPromises = () => new Promise(setImmediate);
@@ -166,5 +176,68 @@ describe('LinkingUtils.handleDeepLink', () => {
         await flushPromises();
 
         expect(navigation.popTo).toHaveBeenCalledWith('PaymentRequest', {});
+    });
+});
+
+describe('LinkingUtils.handleInitialUrl', () => {
+    const originalOS = Platform.OS;
+    // Linking.getInitialURL() keeps returning the launch URL; on iOS also
+    // across an in-app restart, which reloads JS in the same process
+    const launchUrl = (url: string) =>
+        jest.spyOn(Linking, 'getInitialURL').mockResolvedValue(url);
+    const handledUrls = () =>
+        (handleAnything as jest.Mock).mock.calls.map(([url]) => url);
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockLoginRequired = false;
+        mockRestartReason = null;
+        mockHandleAnythingResult = ['WalletConfiguration', {}];
+    });
+
+    afterEach(() => {
+        Platform.OS = originalOS;
+        jest.restoreAllMocks();
+    });
+
+    it('handles the launch URL when iOS launched the app', async () => {
+        Platform.OS = 'ios';
+        const navigation = makeNavigation(['Wallet']);
+        launchUrl('lndconnect://first.example:8080?macaroon=AgED');
+
+        await LinkingUtils.handleInitialUrl(navigation as any);
+        await flushPromises();
+
+        expect(handledUrls()).toEqual([
+            'lndconnect://first.example:8080?macaroon=AgED'
+        ]);
+    });
+
+    it('ignores the launch URL after an in-app restart on iOS', async () => {
+        Platform.OS = 'ios';
+        const navigation = makeNavigation(['Wallet']);
+        launchUrl('lndconnect://second.example:8080?macaroon=AgED');
+        mockRestartReason = IN_APP_RESTART;
+
+        await LinkingUtils.handleInitialUrl(navigation as any);
+        await flushPromises();
+
+        expect(handledUrls()).toEqual([]);
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('handles the launch URL on Android regardless of the restart reason', async () => {
+        // Android restarts the whole process, so the launch intent is new
+        Platform.OS = 'android';
+        const navigation = makeNavigation(['Wallet']);
+        launchUrl('lndconnect://third.example:8080?macaroon=AgED');
+        mockRestartReason = IN_APP_RESTART;
+
+        await LinkingUtils.handleInitialUrl(navigation as any);
+        await flushPromises();
+
+        expect(handledUrls()).toEqual([
+            'lndconnect://third.example:8080?macaroon=AgED'
+        ]);
     });
 });

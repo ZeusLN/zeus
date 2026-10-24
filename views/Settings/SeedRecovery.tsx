@@ -40,6 +40,7 @@ import LoadingIndicator from '../../components/LoadingIndicator';
 import DropdownSetting from '../../components/DropdownSetting';
 import PreventRemove from '../../components/PreventRemove';
 
+import { IN_APP_RESTART } from '../../utils/InAppRestartUtils';
 import { restartNeeded } from '../../utils/RestartUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
@@ -298,7 +299,7 @@ export default class SeedRecovery extends React.PureComponent<
                 [
                     {
                         text: localeString('views.Wallet.restart'),
-                        onPress: () => RNRestart.Restart()
+                        onPress: () => RNRestart.Restart(IN_APP_RESTART)
                     }
                 ],
                 { cancelable: false }
@@ -315,7 +316,7 @@ export default class SeedRecovery extends React.PureComponent<
                 [
                     {
                         text: localeString('views.Wallet.restart'),
-                        onPress: () => RNRestart.Restart()
+                        onPress: () => RNRestart.Restart(IN_APP_RESTART)
                     }
                 ],
                 { cancelable: false }
