@@ -1,6 +1,5 @@
 package app.zeusln.zeus;
 
-import android.app.Activity;
 import android.nfc.Tag;
 import android.nfc.NfcAdapter;
 import android.nfc.NdefMessage;
@@ -41,16 +40,13 @@ class MobileTools extends ReactContextBaseJavaModule {
   @ReactMethod
   public void getIntentNfcData(Promise promise) {
     // https://code.tutsplus.com/tutorials/reading-nfc-tags-with-android--mobile-17278
-    Activity activity = getReactApplicationContext().getCurrentActivity();
-    if (activity == null) {
-      promise.resolve(null);
-      return;
-    }
     Tag tag;
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-      tag = activity.getIntent().getParcelableExtra(NfcAdapter.EXTRA_TAG, Tag.class);
+      tag = getReactApplicationContext()
+        .getCurrentActivity().getIntent().getParcelableExtra(NfcAdapter.EXTRA_TAG, Tag.class);
     } else {
-      tag = activity.getIntent().getParcelableExtra(NfcAdapter.EXTRA_TAG);
+      tag = getReactApplicationContext()
+        .getCurrentActivity().getIntent().getParcelableExtra(NfcAdapter.EXTRA_TAG);
     }
     if (tag == null) {
       promise.resolve(null);
