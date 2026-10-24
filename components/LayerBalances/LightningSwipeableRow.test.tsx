@@ -2,7 +2,10 @@ jest.mock('mobx-react', () => ({
     inject: () => (component: any) => component,
     observer: (component: any) => component
 }));
-jest.mock('js-lnurl', () => ({ getParams: jest.fn() }));
+const mockGetParams = jest.fn();
+jest.mock('js-lnurl', () => ({
+    getParams: (...args: any[]) => mockGetParams(...args)
+}));
 const mockBlobUtilFetch = jest.fn();
 jest.mock('react-native-blob-util', () => ({
     fetch: (...args: any[]) => mockBlobUtilFetch(...args)
@@ -28,7 +31,7 @@ jest.mock('./SwipeableRowAction', () => 'SwipeableRowAction');
 jest.mock('./SwipeableRowContainer', () => 'SwipeableRowContainer');
 
 import * as React from 'react';
-import { Text } from 'react-native';
+import { Alert, Text } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { settingsStore } from '../../stores/Stores';
 import LightningSwipeableRow from './LightningSwipeableRow';
@@ -41,12 +44,15 @@ const mockSettingsStore = settingsStore as {
 const ONION = 'zeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeuspayzeus.onion';
 
 // A locked row pays its destination when tapped
-const tapRow = async (lightningAddress: string) => {
+const tapRow = async (lightningAddress: string) =>
+    tapRowWith({ lightningAddress });
+
+const tapRowWith = async (destination: any) => {
     const navigation = { navigate: jest.fn() };
     await render(
         <LightningSwipeableRow
             {...({
-                lightningAddress,
+                ...destination,
                 locked: true,
                 navigation,
                 SyncStore: { isSyncing: false }
@@ -138,14 +144,9 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
         );
     });
 
-    // fetchLnInvoice neither awaits nor catches the lookup, so a server
-    // without a callback ends up as an unhandled rejection and the user sees
-    // nothing. Jest fails a test on an unhandled rejection, so this cannot be
-    // pinned through the row until the error is handled (#5060).
-    it.todo('tells the user when the Lightning address lookup fails');
-
     describe('handler validation', () => {
-        // Until #5060 lands, call the handler on a mounted row directly
+        // The row shows these errors in an alert (see payment errors
+        // below); here the handler is called directly to check the error
         const lookUp = async (lightningAddress: string) => {
             const ref = React.createRef<any>();
             const navigation = { navigate: jest.fn() };
@@ -209,5 +210,85 @@ describe('LightningSwipeableRow Lightning Address lookup', () => {
             );
             expect(navigation.navigate).not.toHaveBeenCalled();
         });
+    });
+});
+
+describe('LightningSwipeableRow payment errors', () => {
+    let alertSpy: jest.SpyInstance;
+
+    beforeEach(() => {
+        mockGetParams.mockReset();
+        mockBlobUtilFetch.mockReset();
+        mockSettingsStore.enableTor = false;
+        alertSpy = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+    });
+
+    afterEach(() => alertSpy.mockRestore());
+
+    it('alerts instead of rejecting when the LNURL guard trips', async () => {
+        const navigation = await tapRowWith({
+            lightning: 'lnurlp://example.com/pay?a=' + '%FF'.repeat(600)
+        });
+
+        expect(mockGetParams).not.toHaveBeenCalled();
+        expect(alertSpy).toHaveBeenCalledWith(
+            'general.error',
+            'utils.handleAnything.invalidLnurlParams',
+            expect.anything(),
+            expect.anything()
+        );
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('alerts on an .onion LNURL error response', async () => {
+        const navigation = await tapRowWith({
+            lnurlParams: {
+                status: 'ERROR',
+                domain: `${ONION}`,
+                reason: 'unreachable'
+            }
+        });
+
+        expect(alertSpy).toHaveBeenCalledWith(
+            'general.error',
+            `${ONION} says: unreachable`,
+            expect.anything(),
+            expect.anything()
+        );
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    // #5060: the lookup error used to end up as an unhandled rejection
+    it('alerts when the Lightning Address lookup fails', async () => {
+        mockBlobUtilFetch.mockResolvedValue({
+            info: () => ({ status: 404 }),
+            json: () => ({})
+        });
+
+        const navigation = await tapRow('satoshi@domain.com');
+
+        expect(alertSpy).toHaveBeenCalledWith(
+            'general.error',
+            'utils.handleAnything.lightningAddressError',
+            expect.anything(),
+            expect.anything()
+        );
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('still opens LnurlPay for a valid LNURL', async () => {
+        mockGetParams.mockResolvedValue({ tag: 'payRequest' });
+        const lightning = 'lnurlp://example.com/pay';
+
+        const navigation = await tapRowWith({ lightning });
+
+        expect(mockGetParams).toHaveBeenCalledWith(lightning);
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'LnurlPay',
+            expect.objectContaining({
+                lnurlParams: expect.objectContaining({ lnurlText: lightning })
+            })
+        );
+        expect(alertSpy).not.toHaveBeenCalled();
     });
 });
