@@ -2175,6 +2175,7 @@
     "views.LspExplanationOverview.buttonText": "Learn more about wrapped invoices",
     "views.Sweep.title": "Sweep on-chain wallet",
     "views.Sweep.explainer": "Sweeping the on-chain wallet will send both the confirmed and unconfirmed balance to the destination address specified above.",
+    "views.Sweep.confirm": "Send the whole on-chain balance ({amount} sats, less the network fee) to {destination} at {fee} sat/vB?",
     "views.PSBT.qrs": "QRs",
     "views.PSBT.psbtInfo": "PSBT Info",
     "views.PSBT.singleFrame": "Single frame",

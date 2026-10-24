@@ -1,6 +1,7 @@
 import * as React from 'react';
-import { StyleSheet, Text, View, ScrollView } from 'react-native';
+import { Alert, StyleSheet, Text, View, ScrollView } from 'react-native';
 import { inject, observer } from 'mobx-react';
+import BigNumber from 'bignumber.js';
 import { Route } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
@@ -21,6 +22,7 @@ import TextInput from '../../components/TextInput';
 import AddressUtils from '../../utils/AddressUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import { numberWithCommas } from '../../utils/UnitsUtils';
 
 import TransactionRequest from '../../models/TransactionRequest';
 
@@ -72,6 +74,41 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
             });
         }
     }
+
+    // A sweep spends the whole balance at the fee rate in the input, which
+    // starts at a default the user may not have changed, so the user has to
+    // see and accept amount, destination and rate before it is broadcast
+    confirmSweep = () =>
+        new Promise<boolean>((resolve) => {
+            const { BalanceStore } = this.props;
+            const { destination, fee } = this.state;
+            const amount = new BigNumber(
+                BalanceStore.confirmedBlockchainBalance || 0
+            ).plus(BalanceStore.unconfirmedBlockchainBalance || 0);
+            Alert.alert(
+                localeString('views.Sweep.title'),
+                localeString('views.Sweep.confirm')
+                    .replace('{amount}', numberWithCommas(amount.toString()))
+                    .replace('{destination}', destination)
+                    .replace('{fee}', fee),
+                [
+                    {
+                        text: localeString('general.cancel'),
+                        style: 'cancel',
+                        onPress: () => resolve(false)
+                    },
+                    {
+                        text: localeString('general.confirm'),
+                        onPress: () => resolve(true)
+                    }
+                ],
+                { cancelable: false }
+            );
+        });
+
+    confirmAndSendCoins = async () => {
+        if (await this.confirmSweep()) this.sendCoins();
+    };
 
     sendCoins = () => {
         const { SettingsStore, TransactionsStore, navigation } = this.props;
@@ -244,7 +281,9 @@ export default class Sweep extends React.Component<SweepProps, SweepState> {
                                         size: 25
                                     }
                                 }
-                                onPress={() => this.sendCoins()}
+                                onPress={() => {
+                                    this.confirmAndSendCoins();
+                                }}
                                 disabled={disabled}
                             />
                         </View>
