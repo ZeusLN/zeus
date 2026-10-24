@@ -900,5 +900,15 @@ export const importChannelDb = async (
         }
     } catch (e) {}
 
-    await unzipFile(localPath, destFolder);
+    try {
+        await unzipFile(localPath, destFolder);
+    } finally {
+        // Remove the copy resolveToLocalPath made, whether or not the unzip
+        // worked, but never the file the user picked
+        if (
+            localPath.startsWith(`${RNFS.CachesDirectoryPath}/zeus-import-temp`)
+        ) {
+            await RNFS.unlink(localPath).catch(() => {});
+        }
+    }
 };
