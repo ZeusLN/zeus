@@ -1976,6 +1976,7 @@ export default class CashuStore {
         this.mintInfos = {};
         this.mintInfoCache.clear();
         this.originalSeedVersion = undefined;
+        this.nostrMintBackupTimestamp = undefined;
         this.offlinePendingTokens = [];
         this.offlinePendingBalance = 0;
         this.offlineSpentTokens = [];
@@ -3794,9 +3795,9 @@ export default class CashuStore {
         const storedNostrBackupTimestamp = await Storage.getItem(
             `${lndDir}-cashu-nostrMintBackupTimestamp`
         );
-        if (storedNostrBackupTimestamp) {
-            this.nostrMintBackupTimestamp = Number(storedNostrBackupTimestamp);
-        }
+        this.nostrMintBackupTimestamp = storedNostrBackupTimestamp
+            ? Number(storedNostrBackupTimestamp)
+            : undefined;
 
         // Run Cashu specific migrations before CDK init
         await MigrationsUtils.migrateCashuSeedVersion(this);
