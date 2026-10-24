@@ -64,7 +64,7 @@ import * as React from 'react';
 import { AppState } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
-import WalletHeader from './WalletHeader';
+import WalletHeader, { networkBadgeLabel } from './WalletHeader';
 import handleAnything, { isClipboardValue } from '../utils/handleAnything';
 import { protectedNavigation } from '../utils/NavigationUtils';
 
@@ -74,12 +74,14 @@ const renderHeader = async ({
     clipboard,
     connecting,
     settingsLoaded = true,
-    sessionStarted = true
+    sessionStarted = true,
+    nodeInfo = {}
 }: {
     clipboard: boolean;
     connecting?: boolean;
     settingsLoaded?: boolean;
     sessionStarted?: boolean;
+    nodeInfo?: any;
 }) => {
     const listeners: { [event: string]: () => void } = {};
     const navigation = {
@@ -105,7 +107,7 @@ const renderHeader = async ({
                 LightningAddressStore: { paid: [] },
                 SyncStore: { isSyncing: false },
                 PosStore: { getOrders: jest.fn() },
-                NodeInfoStore: { nodeInfo: {} },
+                NodeInfoStore: { nodeInfo },
                 ModalStore: {},
                 AlertStore: {},
                 ConnectivityStore: { isOffline: false }
@@ -257,5 +259,60 @@ describe('WalletHeader before the session starts', () => {
             undefined,
             { animation: 'fade' }
         );
+    });
+});
+
+describe('networkBadgeLabel', () => {
+    it('labels each test network', () => {
+        expect(networkBadgeLabel({ isTestNet: true })).toEqual(
+            'views.Wallet.MainPane.testnet'
+        );
+        expect(
+            networkBadgeLabel({ isTestNet: true, isTestNet4: true })
+        ).toEqual('network.testnet4');
+        expect(networkBadgeLabel({ isRegTest: true })).toEqual(
+            'views.Wallet.MainPane.regnet'
+        );
+        expect(networkBadgeLabel({ isSigNet: true })).toEqual(
+            'views.Wallet.MainPane.signet'
+        );
+        expect(
+            networkBadgeLabel({ isSigNet: true, isMutinynet: true })
+        ).toEqual('network.mutinynet');
+    });
+
+    it('shows no badge on mainnet or before node info loads', () => {
+        expect(
+            networkBadgeLabel({
+                isTestNet: false,
+                isTestNet4: false,
+                isRegTest: false,
+                isSigNet: false,
+                isMutinynet: false
+            })
+        ).toBeUndefined();
+        expect(networkBadgeLabel({})).toBeUndefined();
+    });
+});
+
+describe('WalletHeader network badge', () => {
+    const badges = () =>
+        screen.container
+            .queryAll((n) => n.type === 'Badge')
+            .map((n) => n.props.value);
+
+    it('shows Testnet4 for a testnet4 node', async () => {
+        await renderHeader({
+            clipboard: false,
+            nodeInfo: { isTestNet: true, isTestNet4: true }
+        });
+
+        expect(badges()).toContain('network.testnet4');
+    });
+
+    it('shows no network badge on mainnet', async () => {
+        await renderHeader({ clipboard: false, nodeInfo: {} });
+
+        expect(badges()).toEqual([]);
     });
 });
