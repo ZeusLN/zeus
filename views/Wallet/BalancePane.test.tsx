@@ -2,7 +2,7 @@ jest.mock('mobx-react', () => ({
     inject: () => (component: any) => component,
     observer: (component: any) => component
 }));
-jest.mock('react-native-restart', () => ({ Restart: jest.fn() }));
+jest.mock('../../utils/RestartUtils', () => ({ restartApp: jest.fn() }));
 jest.mock('../../storage', () => ({
     __esModule: true,
     default: { getItem: jest.fn() }
