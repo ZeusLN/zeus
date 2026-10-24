@@ -38,7 +38,7 @@ Use a sibling skill instead for:
 | Metro | React Native's JS bundler/dev server (`yarn start`). In dev, all JS `console.*` output appears in the Metro terminal. |
 | logcat | Android's system log stream, read with `adb logcat`. Native (Java/Kotlin) `Log.d/i/e` calls land here, filtered by TAG. |
 | uniffi bindings | Machine-generated Kotlin/Swift glue code for Rust libraries — huge files you must exclude from greps. |
-| Tor | Anonymity network; Zeus routes REST calls through it per-node via `react-native-nitro-tor` (0.6.0 as of 2026-07-06). |
+| Tor | Anonymity network; Zeus routes REST calls through it per-node via `react-native-nitro-tor` (0.6.1 as of 2026-10-24; see package.json). |
 
 ## 1) Log access per node type
 
@@ -70,8 +70,13 @@ subfolder is used even for `'lnd'` (unlike Android).
 
 `lndDir` per wallet: `stores/SettingsStore.ts` sets `this.lndDir =
 node.lndDir || 'lnd'`; new wallets get `uuidv4()` dirs
-(`views/Settings/WalletConfiguration.tsx`). To map uuid → wallet, use Tools →
-"Export/Import Wallet Configurations".
+(`views/Settings/WalletConfiguration.tsx`). Tools → "Export/Import Wallet
+Configurations" cannot map uuid → wallet: on-device wallets (`embedded-lnd`,
+`ldk-node`) are never exported (`isExportable` in
+`views/Tools/NodeConfigExportImport.tsx`), and since #5412 the Export button is
+hidden when no wallet is exportable. To find the active wallet's dir, open its
+in-app log viewer (below) or pick the most recently modified uuid dir
+(`ls -t`).
 
 Verbosity: `writeLndConfig` in `utils/LndMobileUtils.ts` hardcodes
 `debuglevel=info` in the generated lnd.conf. For a local debugging session you
@@ -180,18 +185,19 @@ adb logcat -s NostrConnectService:* NostrConnectModule:* ReactNativeJS:*
   Menu → Tools ("Developers" row).
 - Gating: shown when `BackendUtils.supportsDevTools()` is true, which is
   `isLNDBased() || call('supportsDevTools')` (`utils/BackendUtils.ts`).
-  Measured availability (2026-07-06):
+  Measured availability (2026-10-24, master `3dc9f83e6`):
   - **Available**: `lnd`, `embedded-lnd`, `lightning-node-connect`
     (`isLNDBased = true`), plus `cln-rest` and `lndhub` (declare
     `supportsDevTools = () => true`).
   - **Not available**: `ldk-node`, `nostr-wallet-connect`.
   - There is NO developer-mode setting; gating is purely capability-based.
-- Contents: 18 raw RPC probes in 4 accordions (General, Lightning, On-chain,
+- Contents: 19 raw RPC probes in 4 accordions (General, Lightning, On-chain,
   Channels): `getMyNodeInfo`, `getNetworkInfo`, `getLightningBalance`,
   `getInvoices`, `getPayments`, `getBlockchainBalance`, `getTransactions`,
   `getUTXOs`, `getNewAddress`, `listAccounts`, `listAddresses`,
   `getChannels`, `getPendingChannels`, `getClosedChannels`, `getChannelInfo`,
-  `getFees`, `getForwardingHistory`, `abandonChannel`. Each command carries a
+  `getFees`, `getForwardingHistory`, `abandonChannel`, `updateChannelPolicy`
+  (added in 89447a25c, with a `create_missing_edge` option). Each command carries a
   `compatibleImplementations` allowlist, so what you see varies per backend.
   Responses render as copyable JSON — this is the fastest way to see exactly
   what a backend returns without adding temporary logging.
@@ -206,14 +212,22 @@ adb logcat -s NostrConnectService:* NostrConnectModule:* ReactNativeJS:*
 - The "Recover Lost Configurations" flow scans four sources for orphaned
   data: `current`, `unprefixed-local`, `unprefixed-cloud` (old
   iCloud-synchronizable keychain entries), and `encrypted-storage` (legacy
-  `zeus-settings` blob). It exists because pre-migration keychain copies are
-  deliberately never deleted — see **zeus-storage-and-migrations** for the
+  `zeus-settings` blob). Pre-migration copies are no longer kept forever: on
+  iOS, `autoPurgeLegacyKeychain` (`utils/KeychainPurgeUtils.ts`, called from
+  `views/Wallet/Wallet.tsx`, #4385) deletes the legacy and iCloud copies once
+  the keychain desync has run. See **zeus-storage-and-migrations** for the
   whole saga and the rules before touching any of this.
 - As a *diagnostic*, a scan tells you which storage generation a user's data
-  is in — run it (read-only until the user restores) before hypothesizing
+  is in. Run it (read-only until the user restores) before hypothesizing
   about "lost wallets".
-- Same view's Export flow is also the sanctioned way to inspect a device's
-  wallet configuration set (per-wallet `lndDir`/`ldkNodeDir` uuids included).
+- Do not confuse it with Tools → "Keychain Cleanup"
+  (`views/Tools/KeychainCleanup.tsx`, backed by `utils/KeychainPurgeUtils.ts`,
+  1e7d2fca0, extended in #5183). That screen is the consent-gated DELETE path
+  for the same legacy and iCloud copies. Run the Recovery scan first; after a
+  cleanup there is nothing left for it to find.
+- Same view's Export flow lists the remote wallet configurations only;
+  on-device wallets (`embedded-lnd`, `ldk-node`) are excluded, so it does not
+  show their `lndDir`/`ldkNodeDir` uuids.
 
 ### Activity / store inspection
 
@@ -221,9 +235,10 @@ adb logcat -s NostrConnectService:* NostrConnectModule:* ReactNativeJS:*
   invoices/payments/transactions to CSV — use it to diff what the app
   *thinks* happened against node truth (Developer Tools `getPayments` etc.).
 - Sync observability is a store, not a screen: `stores/SyncStore.ts` polls
-  `getMyNodeInfo` every 2s while syncing, compares `block_height` against a
-  mempool.space tip (refetched every ~30s), and flips `isSyncing` off on
-  `synced_to_chain`. Rescans are tracked by parsing lnd.log lines matching
+  `getMyNodeInfo` every 2s while syncing, compares `block_height` against the
+  tip from the configured mempool instance (`UrlUtils.getMempoolApiUrl`,
+  default `electrs.zeusln.com`, fb569ef32; refetched every ~30s), and flips
+  `isSyncing` off on `synced_to_chain`. Rescans are tracked by parsing lnd.log lines matching
   `/Rescanned through block.*\(height (\d+)\)/` via the `lndlog` event stream.
 - MobX stores are module singletons (`stores/Stores.ts`); in a dev build you
   can inspect them from the React Native DevTools console via imports in
@@ -264,13 +279,16 @@ Facts you need before reaching for a proxy:
    only (`isOnionHttpsUrl`); clearnet-over-Tor keeps strict validation and
    `doTorRequest` treats HTTP ≥ 300 as errors. To observe Tor traffic,
    instrument at the far end (your node) instead.
-4. **The request-dedup cache can replay failures.** `backends/LND.ts` keeps
-   a module-level `calls` Map keyed by url+body. On the Tor branch the entry
-   is only deleted on success, so a rejected promise is returned again for
-   identical retries until `clearCachedCalls()` runs — which happens on
-   reconnect via `SettingsStore.setConnectingStatus(true)`. If "the same
-   error keeps coming back instantly with no network activity", suspect this
-   cache, not the network. (`backends/CLNRest.ts` has the same structure.)
+4. **The request-dedup cache can replay failures (CLN over Tor only).**
+   `backends/LND.ts` and `backends/CLNRest.ts` each keep a module-level
+   `calls` Map keyed by url+body. `LND.ts` evicts rejected Tor requests since
+   20d0fe798. `CLNRest.ts`'s Tor branch still deletes the entry only in
+   `.then`, so a rejected promise is returned again for identical retries
+   until `clearCachedCalls()` runs, which happens on reconnect via
+   `SettingsStore.setConnectingStatus(true)`. Open PR #4993 adds the same
+   eviction to CLNRest. If "the same error keeps coming back instantly with
+   no network activity" on a CLN-over-Tor wallet, suspect this cache, not the
+   network.
 5. Cheap first probe: Developer Tools → `getMyNodeInfo` exercises the whole
    REST stack with one tap; React Native DevTools' Network panel shows
    fetch-based traffic in dev (blob-util requests may not appear there —
@@ -294,21 +312,29 @@ against your Polar version):
 
 ## 4) Grep hygiene
 
-Generated and vendored files will bury your signal: the two uniffi bindings
-alone are ~31k lines, `proto/lightning.js` is ~133k lines, and `zeus_modules/`
-is vendored third-party code with its own node_modules. Canonical grep:
+Generated and vendored files will bury your signal: the two committed LDK
+uniffi bindings alone are ~31k lines, `proto/lightning.js` is ~174k lines,
+the Swift protobuf output `ios/LndMobile/*.pb.swift` is ~18k lines, and
+`zeus_modules/` is vendored third-party code with its own node_modules. The
+agent skill docs under `.claude/` mention TODO/XXX in prose, so exclude them
+too. Canonical grep:
 
 ```bash
 git grep -nIw -E 'YOUR_PATTERN' -- . \
   ':(exclude)zeus_modules' \
+  ':(exclude).claude' \
   ':(exclude)proto/lightning.js' \
   ':(exclude)proto/lightning.d.ts' \
+  ':(exclude)ios/LndMobile/*.pb.swift' \
   ':(exclude)ios/LdkNodeMobile/LDKNode.swift' \
   ':(exclude)android/app/src/main/java/org/lightningdevkit/ldknode/ldk_node.kt' \
   ':(exclude)android/app/src/main/java/uniffi/zeus_cashu_restore/zeus_cashu_restore.kt' \
   ':(exclude)ios/CashuDevKit/CashuDevKit.swift' \
   ':(exclude)ios/CashuDevKit/zeus_cashu_restore.swift'
 ```
+
+The last three Cashu paths are gitignored (generated at install time), so
+`git grep` skips them anyway; they are listed for when you add `--untracked`.
 
 Rules of thumb:
 
@@ -320,7 +346,8 @@ Rules of thumb:
   and **fails silently with zero matches** — a nasty way to conclude "no
   hits". `-w` gives whole-word matching portably.
 - Known false positive: `utils/AddressUtils.test.ts` contains `XXX` inside a
-  base64 PSBT fixture (line ~923). `-w` filters it; substring searches won't.
+  base64 PSBT fixture (search `cHNidP8BAHECAAAAAeejupRy` in that file). `-w`
+  filters it; substring searches won't.
 - `fetch-libraries.sh` defines a shell function literally named `jq()`
   (a python3 wrapper) — a misleading hit when grepping for jq usage.
 - Config blind spots: tsconfig excludes `node_modules`, `zeus_modules`,
@@ -333,7 +360,8 @@ Rules of thumb:
 ## 5) Scripts
 
 All live in `.claude/skills/zeus-diagnostics-and-tooling/scripts/`, are
-executable, safe (read-only), and were run against master `c5fd094fb`.
+executable, safe (read-only). `find-debt.sh` and `list-settings-defaults.sh`
+were fixed and re-run against master `3dc9f83e6` on 2026-10-24.
 Run them from anywhere inside the repo; they `cd` to the git root themselves.
 
 ### find-debt.sh — debt-marker census
@@ -344,33 +372,37 @@ Run them from anywhere inside the repo; they `cd` to the git root themselves.
 .claude/skills/zeus-diagnostics-and-tooling/scripts/find-debt.sh TODO       # single marker
 ```
 
-Sample output (2026-07-06, `--summary`, top of list):
+Sample output (2026-10-24 at `3dc9f83e6`, `--summary`, top of list):
 
 ```
+   7 views/Swaps/index.tsx
    5 android/app/src/main/java/com/zeus/LndMobile.java
    4 lndmobile/wallet.ts
+   3 views/Tools/CurrencyConverter.tsx
    3 proto/lightning.proto
    3 lndmobile/index.ts
+   3 components/CurrencyConverterContent.tsx
    3 android/app/src/main/java/com/zeus/LndMobileService.java
    2 views/Wallet/Wallet.tsx
-   2 views/Activity/Activity.tsx
    ...
 ---
-total markers: 63
+total markers: 94
 ```
 
 Sample detail lines:
 
 ```
 android/app/src/main/java/com/zeus/LndMobile.java:71:// TODO break this class up
-android/app/src/main/java/com/zeus/LndMobile.java:350:  // TODO unbind LndMobileService?
+views/Swaps/index.tsx:986:                // eslint-disable-next-line zeus/no-negative-layout-offset -- TODO #2794
 ```
 
-Interpretation: the debt concentrates in the Blixt-derived embedded-LND
-native layer (`com/zeus/*.java`, `lndmobile/*.ts`) — expected; see
-**zeus-failure-archaeology** for which of those TODOs have bitten before.
-Standalone `HACK`/`XXX` markers: zero in hand-written code (as of the date
-above).
+Interpretation: the Blixt-derived embedded-LND native layer
+(`com/zeus/*.java`, `lndmobile/*.ts`) still carries a large share of the
+markers; see **zeus-failure-archaeology** for which of those TODOs have
+bitten before. The top file, `views/Swaps/index.tsx`, is lint-suppression
+comments pointing at issue #2794 (negative layout offsets), not open logic
+work. Standalone `HACK`/`XXX` markers: zero in hand-written code (as of the
+date above).
 
 ### capability-matrix.sh — live supports* matrix
 
@@ -388,7 +420,7 @@ pattern), `-` not declared anywhere → `BackendUtils.call()` returns literal
 `supportsForwardingHistoryChannelFilter`) are listed in the script header,
 not the matrix.
 
-Sample output (2026-10-15 on the #4924 branch at a1caa40ed, excerpt; 62 flags total):
+Sample output (2026-10-24 at master `3dc9f83e6`, excerpt; 63 flags total):
 
 ```
 FLAG                                      LND    eLND   LNC    LDK    CLN    Hub    NWC
@@ -422,22 +454,24 @@ changed from `T` to `F` in 63758ffc3.
 .claude/skills/zeus-diagnostics-and-tooling/scripts/list-settings-defaults.sh 'Fee'      # filtered
 ```
 
-Prints the inline `@observable settings: Settings = { ... }` defaults object
-of `stores/SettingsStore.ts` with real line numbers (located by brace
-counting, not hardcoded lines — 147 lines spanning 1467–1613 as of
-2026-07-06). Sample:
+Prints the module-level `export const DEFAULT_SETTINGS: Settings = { ... }`
+defaults object of `stores/SettingsStore.ts` (moved out of the
+`@observable settings` initializer in #4788) with real line numbers, located
+by brace counting, not hardcoded lines: 153 lines spanning 1560-1712 at
+`3dc9f83e6` (2026-10-24). Sample:
 
 ```
-1467	    @observable settings: Settings = {
-1468	        privacy: {
-1469	            defaultBlockExplorer: 'mempool.space',
+1560	export const DEFAULT_SETTINGS: Settings = {
+1561	    settingsVersion: SETTINGS_VERSION,
+1562	    privacy: {
 ...
-1612	        selectNodeOnStartup: false
-1613	    };
+1711	    selectNodeOnStartup: false
+1712	};
 ```
 
 Why it matters: these literals are what FRESH installs get; existing users
-keep old values unless a migration runs. Diff this output between two
+keep old values unless a migration runs (`applyMissingSettingsGroups` only
+backfills groups that are absent entirely). Diff this output between two
 commits to catch silent default drift. The catalog of every axis lives in
 **zeus-config-and-flags**; the migration recipe in
 **zeus-storage-and-migrations**.
@@ -478,17 +512,21 @@ error-code → raw-pattern map — read it before inventing new matching):
 ### Neutrino sync
 
 `stores/SyncStore.ts` semantics: `numBlocksUntilSynced = bestBlockHeight −
-currentBlockHeight` where best comes from mempool.space and current from
-`getMyNodeInfo().block_height` (polled every 2s).
+currentBlockHeight` where best comes from the configured mempool instance
+(fb569ef32) and current from `getMyNodeInfo().block_height` (polled every
+2s).
 
 - Healthy: `currentBlockHeight` strictly increasing between polls; gap
   shrinking; ends with `synced_to_chain: true`.
 - Unhealthy: current height frozen across many polls with peers configured →
   neutrino peer trouble (check `[Neutrino]` section peers in generated
   lnd.conf, `neutrino.connect` vs `addpeer` is controlled by the
-  `dontAllowOtherPeers` setting); best height 0/erroring → the mempool.space
-  fetch failed and the store falls back to current height, which can
-  *mask* remaining sync distance.
+  `dontAllowOtherPeers` setting); mempool instance unreachable → since
+  da87cff54 the store estimates the tip with
+  `SyncUtils.estimateBestBlockHeight(currentBlockHeight,
+  best_header_timestamp)` and only `synced_to_chain` may end the sync while
+  `error` is set. The estimate can undershoot the real tip, so the progress
+  number is approximate until a later tip fetch succeeds.
 - Recovery (seed restore) is separate: `getRecoveryInfo` polled at 2s;
   healthy = `progress` monotonically rising to `recovery_finished`.
 
@@ -509,19 +547,28 @@ returns → lifecycle race; gather the logcat trace FIRST, then switch to
 - Healthy: Developer Tools `getMyNodeInfo` returns JSON quickly; Wallet
   populates.
 - Error-shaped success trap: LND REST `payLightningInvoice` timeouts
-  *resolve* with `{ payment_error: localeString('views.SendingLightning.paymentTimedOut') }`
-  (a locale-dependent "Payment timed out…" message) — a "successful"
-  response that is actually a failure. Don't classify by promise
-  resolution, and don't match the string literally.
-- Instantly repeating identical error with no traffic → stale dedup-cache
-  rejection (section 3, item 4).
+  *resolve* (`timedOutResponse` in `backends/LND.ts`) with a locale-dependent
+  `payment_error` string AND `payment_timed_out: true` (#4492; LNC sets the
+  same flag). The outcome is unknown on the node, not failed:
+  `stores/TransactionsStore.ts` branches on `payment_timed_out` and tracks the
+  payment to a terminal state. Branch on the flag. Don't classify by promise
+  resolution, and don't match the string.
+- Instantly repeating identical error with no traffic on a CLN-over-Tor
+  wallet → stale dedup-cache rejection (section 3, item 4).
 - Method returns literal `false` (and `.then` crashes with "false is not a
   function"-style errors) → the active backend simply lacks that method;
   check the capability matrix, not the network.
 
 ## Provenance and maintenance
 
-Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha) by
+Section 1 (log paths, log levels, `readLndLog` stub, uuid mapping), 2, 3
+(items 2-5; item 1 TLS was not re-checked), 4, 5 (find-debt.sh,
+list-settings-defaults.sh) and 6 (Neutrino sync, Remote backends)
+re-verified 2026-10-24 against master
+`3dc9f83e6` (v13.2.4-alpha); `capability-matrix.sh` re-run on the same commit
+(63 flags, new `supportsOffersDirectPay`: `T` on LDK, `F` on CLN, `-`
+elsewhere), sample rows unchanged. Remaining facts verified 2026-07-06 against
+master `c5fd094fb` (v13.1.3-alpha) by
 reading the cited files and running every command/script in this skill
 (scripts run to completion with the sample outputs shown; adb/simulator/
 proxy commands are standard platform tooling verified by source read of the
@@ -539,11 +586,14 @@ One-line re-verification commands for volatile facts:
 | logcat TAG list | `git grep -n 'TAG = "' android/app/src/main/java` (exception: `LdkNodeModule` uses inline literals — `git grep -n '"LdkNodeModule"' android/app/src/main/java/app/zeusln/zeus/LdkNodeModule.kt`) |
 | DevTools gating rule | `git grep -n -A2 'supportsDevTools' utils/BackendUtils.ts backends/` |
 | DevTools command list | `git grep -n "name: '" views/Tools/DeveloperTools.tsx` |
+| Export excludes on-device wallets | `git grep -n -A2 'const isExportable' views/Tools/NodeConfigExportImport.tsx` |
 | `trusty:` TLS default | `git grep -n 'trusty' backends/LND.ts` |
 | WS-bypasses-Tor | `git grep -n 'new WebSocket' backends/LND.ts` |
 | Tor onion-only bypass | `git grep -n 'isOnionHttpsUrl' utils/TorUtils.ts backends/LND.ts` |
 | nitro-tor version | `git grep -n 'react-native-nitro-tor' package.json` |
 | dedup-cache clear site | `git grep -n 'clearCachedCalls' stores/SettingsStore.ts backends/` |
+| dedup-cache Tor eviction | `git grep -n -B2 -A4 'calls.delete' backends/LND.ts backends/CLNRest.ts` |
+| timeout flag | `git grep -n 'payment_timed_out' backends/ stores/TransactionsStore.ts` |
 | WalletState machine + 60s timeout | `git grep -n 'LND_READY_TIMEOUT_MS\|WalletState\.' utils/LndMobileUtils.ts` |
 | Rescan log regex | `git grep -n 'Rescanned through block' stores/SyncStore.ts` |
 | defaults block location | `.claude/skills/zeus-diagnostics-and-tooling/scripts/list-settings-defaults.sh \| head -2` |

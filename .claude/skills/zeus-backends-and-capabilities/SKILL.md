@@ -53,7 +53,7 @@ call = (funcName: string, args?: any) => {
 
 1. `BackendUtils.someMethod().then(...)` crashes with `TypeError: ... .then is not a function` on backends that lack the method. Always gate with the matching `supports*` flag before calling.
 2. A typo'd method name (backend class says `getRcoveryInfo`, wrapper says `getRecoveryInfo`) silently no-ops as `false` forever. There is no abstract base class or interface to catch this at compile time.
-3. This same mechanism IS the capability system: `supportsX()` flags are dispatched through `call()` too, so a backend that simply omits a flag reads as `false` (e.g. `supportsLSPS1native` is only defined on `LdkNode` — every other backend returns `false` by omission; `supportsWatchtowerClient` is not defined on `CLNRest`, so CLN reads `false` by omission).
+3. This same mechanism IS the capability system: `supportsX()` flags are dispatched through `call()` too, so a backend that simply omits a flag reads as `false` (e.g. `supportsLSPS7native` is only defined on `LdkNode`, so every other backend returns `false` by omission; `supportsWatchtowerClient` is not defined on `CLNRest`, so CLN reads `false` by omission).
 
 Known dead dispatch (as of 2026-07-06): `payLightningInvoiceStreaming` is declared in `utils/BackendUtils.ts` but implemented by NO backend — it always returns `false`. Do not model new code on it.
 
@@ -83,7 +83,7 @@ Zeus is also an NWC *service* (wallet side) — that lives in `stores/NostrWalle
 
 ### How supports* works
 
-Every feature surface in views/stores must be gated by a `supports*()` call on `BackendUtils`, which dispatches to the active backend class. Flags are plain methods returning booleans (a few return Promise-shaped values; treat truthiness only). There are ~55 flags — get the authoritative current list with:
+Every feature surface in views/stores must be gated by a `supports*()` call on `BackendUtils`, which dispatches to the active backend class. Flags are plain methods returning booleans (a few return Promise-shaped values; treat truthiness only). There are ~60 flags (62 `supports*` wrappers in `utils/BackendUtils.ts` on 2026-10-24, including composites). Get the authoritative current list with:
 
 ```bash
 grep -n "supports\w*\s*=\s*()" backends/LND.ts        # implicit base
@@ -92,7 +92,7 @@ grep -n "    supports" utils/BackendUtils.ts           # dispatcher wrappers
 
 **Invariant (top historical cross-backend crash source when violated):** views never branch on `settingsStore.implementation` for *features* — only on `supports*()`. The sanctioned exceptions that DO branch on implementation:
 - connection lifecycle in `views/Wallet/Wallet.tsx` (per-backend connect flows)
-- payment function selection and result handling in `stores/TransactionsStore.ts` (`sendPayment`: keysend goes through `sendKeysend` for `cln-rest`/`embedded-lnd`/`ldk-node` but through `payLightningInvoice` for LND REST; LNC results are returned raw to the caller instead of `.then(handlePayment)`; embedded-lnd statuses decoded through `lnrpc.Payment.PaymentStatus` enums)
+- payment function selection and result handling in `stores/TransactionsStore.ts` (`sendPayment`: offers go through `payOffer`; keysend goes through `sendKeysend` for `cln-rest`/`embedded-lnd`/`ldk-node` but through `payLightningInvoice` for LND REST and LNC; every path, LNC included, ends in `handlePayment` since 5bacc7ca7; embedded-lnd statuses decoded through `lnrpc.Payment.PaymentStatus` enums in `getResultStatus`)
 - the embedded-lnd channel acceptor in `stores/LSPStore.ts initChannelAcceptor` (see section 4)
 - `BackendUtils.isLocalWallet()`
 
@@ -160,6 +160,7 @@ Verified flag-by-flag against the six backend files at c5fd094fb (2026-07-06). "
 | Sweep (`supportsSweep`) | Y | Y | Y | Y | N | N | N |
 | Dev tools (composite) | Y | Y | Y | Y | N | Y | N |
 | Set invoice expiry (`supportsSettingInvoiceExpiration`) | Y | Y | Y | Y | Y | N | N |
+| Payment lookup for in-flight tracking (`supportsPaymentLookup`, #4492) | Y | Y (inherited; `lookupPayment` overridden) | Y | N | N | N | N |
 | NWC service (`supportsNostrWalletConnectService`) | Y | Y | Y | Y | Y | Y | N |
 | `requiresVerifyPubkey` (verifyMessage needs pubkey arg) | N | N | N | N | **Y** | N (inherited) | n/a |
 
@@ -176,33 +177,33 @@ grep -n "supportsOffers" backends/*.ts
 ## 4) Per-backend quirks (each one has cost real debugging time)
 
 **LND (REST)**
-- `payLightningInvoice` races the actual `/v2/router/send` call against a forced timeout that **resolves** (not rejects) with `{ payment_error: localeString('views.SendingLightning.paymentTimedOut') }` (a locale-dependent "Payment timed out…" message — don't match the string literally) — timeout errors arrive *success-shaped*. `TransactionsStore.handlePayment` must (and does) check `result.payment_error`; new callers must too.
-- In-flight request dedup: a module-level `calls` Map keyed by `url+body` returns the same promise for identical concurrent requests. **On the Tor branch, `calls.delete(id)` only happens in `.then`** — a rejected Tor request stays cached, so identical retries replay the stale rejection until `clearCachedCalls()` runs (it is wired into `SettingsStore.setConnectingStatus(true)` on reconnect). Same pattern duplicated in `CLNRest.ts`.
+- `payLightningInvoice` races the actual `/v2/router/send` call against a forced timeout that **resolves** (not rejects) with `timedOutResponse()`: `{ payment_error, payment_timed_out: true, dispatch_deadline_ms }`. `payment_error` is a locale string, so branch on the `payment_timed_out` flag, never on the message. Since #4492 a timeout means "outcome unknown", not failure: `TransactionsStore.handlePayment` keeps the send guard and calls `trackPaymentToTerminal` (polls `lookupPayment`, gated on `supportsPaymentLookup`) until SUCCEEDED or FAILED. New callers must check the flag too.
+- In-flight request dedup: a module-level `calls` Map keyed by `url+body` returns the same promise for identical concurrent requests. On the Tor branch LND now evicts rejected requests too (20d0fe798). `CLNRest.ts` has its own copy of this code and still deletes only in `.then` (see CLNRest below).
 - TLS: cert verification is OFF unless the node's `certVerification` setting is on (`trusty: !certVerification` in blob-util). Tor requests bypass TLS validation only for HTTPS `.onion` URLs (see zeus-failure-archaeology FA-5 for the incident that set this rule). WebSocket streaming endpoints bypass Tor entirely.
 - Streaming/subscription endpoints use raw `WebSocket` with `wss://` rewritten URLs, not blob-util.
 
 **EmbeddedLND** (extends LND — inheritance hazards in section 5)
-- Subscription methods are commented out at the backend layer (`// TODO rewrite subscription logic` near the bottom of `backends/EmbeddedLND.ts`) — `subscribeInvoice`/`subscribeTransactions`/`initChanAcceptor` fall through to LND's REST/WebSocket implementations, which point at `settingsStore.host` — meaningless for an on-device node. `stores/LSPStore.ts initChannelAcceptor` works around this by branching on `implementation === 'embedded-lnd'` and calling `lndmobile` `channel.channelAcceptor()` + `LndMobileEventEmitter` directly.
+- Receive-screen watchers are overridden with lndmobile streams: `watchInvoicePaid` (`subscribeInvoices`) and `watchOnchainReceived` (`subscribeTransactions`), moved into the backend classes in a4b2e4b38. The old `// TODO rewrite subscription logic` block is gone. `subscribeInvoice`/`subscribeTransactions`/`initChanAcceptor` are still not overridden and fall through to LND's REST/WebSocket implementations against `settingsStore.host`, meaningless for an on-device node. `stores/LSPStore.ts initChannelAcceptor` works around the acceptor by branching on `implementation === 'embedded-lnd'` and calling `lndmobile` `channel.channelAcceptor()` + `LndMobileEventEmitter` directly.
 - `getFees`/`setFees`/`getForwardingHistory` also not overridden (commented "N/A") — same REST fall-through; guarded only because `supportsForwardingHistory` is false (fees screens are LND-family gated; embedded inherits `getFees` exposure — be careful surfacing anything that calls them).
 - Extra methods not in the base: `getRecoveryInfo`, `rescan`.
 - Streaming RPCs (`sendStreamCommand`) resolve as soon as the request is handed to the native service, before LND processes it; results and errors only arrive as `LndMobileEventEmitter` events named after the RPC. `closeChannel` therefore listens on `'CloseChannel'` and resolves on `close_pending` (rejects on a stream error, ignores `chan_close`, which can belong to an earlier close). LND reports `close_pending` only after publishing the closing tx (~11–12s measured on testnet) although the channel is already listed as closing, so the wait usually ends at the 6s optimistic timeout, matching `ChannelsStore`'s forced resolution. Every close stream shares the one event name, so a close started shortly after another can still receive the earlier close's late updates.
 
 **LightningNodeConnect (LNC)**
 - `checkPerms()` is **hard-coded to set all perms true** (ZEUS-3642 workaround, github.com/ZeusLN/zeus/issues/3642; the real `lnc.hasPerms` calls are commented out in `backends/LightningNodeConnect.ts`). Every perm-derived flag (`supportsLightningSends`, `supportsOnchainSends`, `supportsChannelManagement`, `supportsAccounts`, `supportsRouting`, `supportsMessageSigning`, ...) therefore reads true — read-only pairings still show send UI and fail at call time. Do not build new features assuming LNC perms are meaningful.
-- `payLightningInvoice` returns lnc-rn's streaming call object, not a settled result — `TransactionsStore.sendPayment` special-cases LNC by returning it to the caller instead of `.then(handlePayment)`.
+- `payLightningInvoice` wraps the `sendPaymentV2` stream in a Promise that resolves with this payment's terminal result (matched by expected payment hash, since the stream event is shared). If the stream dies without a terminal event it resolves with an in-transit shape, not a rejection. `TransactionsStore.sendPayment` sends LNC results through `handlePayment` like every other backend (5bacc7ca7).
 - Streaming calls report under the RPC method name (lnc-rn's `subscribe()` returns the method as the event name), so concurrent streams of one RPC share an event. `closeChannel` resolves on `close_pending`, rejects on a plain-text error, skips `chan_close` (it belongs to an earlier close) and resolves optimistically after 60s, since LND keeps the stream silent if the peer disconnects mid-negotiation. `ChannelsStore` applies no forced resolution for LNC.
 - Responses are camelCase protobuf objects converted with `snakeize()` per call; forget it and field names silently mismatch the LND-REST-shaped models.
 - lnc-rn is vendored in `zeus_modules/` and imported by relative path — never `yarn add` it (see zeus-build-and-env).
 
 **CLNRest**
-- Invoice and payment lists come from **raw SQL** POSTed to `/v1/sql` against CLN's internal `invoices`/`sendpays` tables — filtered to `status = 'paid'` (invoices). The invoices query defaults to `LIMIT 150`, but callers can override via `getInvoices({ limit })`; the payments query is hardcoded to `limit 150`. Unpaid/expired invoices don't appear, payment histories truncate at 150, and **any CLN schema change breaks Zeus silently**. Treat `/v1/sql` queries as version-coupled code.
+- Invoice and payment lists come from **raw SQL** POSTed to `/v1/sql` against CLN's internal `invoices`/`sendpays` tables. Invoices of every status are returned (73eaa8ad4 added unpaid ones); the query defaults to `LIMIT 150`, but callers can override via `getInvoices({ limit })`. Payments are grouped by `payment_hash, groupid` (an MPP retry's failed parts do not mask a completed group) and hardcoded to `limit 150`. Histories truncate at 150, and **any CLN schema change breaks Zeus silently**. Treat `/v1/sql` queries as version-coupled code.
 - Every call is a POST, including reads (`/v1/getinfo`, `/v1/listfunds`, ...). Raw responses are reshaped into LND-ish shapes by `backends/CoreLightningRequestHandler.ts` (balances, peers, closed channels) — new CLN RPCs usually need a transform there.
 - `closeChannel` force-close is expressed as `unilateraltimeout: 2` (seconds) on `/v1/close`; `urlParams[0]` is the CLN channel/peer id, NOT a funding txid.
 - Circular rebalancing uses CLN-only askrene methods (`askReneCreateLayer`/`askReneUpdateChannel`/`askReneRemoveLayer`, `sendPay`/`waitSendPay`) that exist on no other backend.
-- Shares LND's dedup-cache-retains-rejections Tor trap (module-level `calls` map, own `clearCachedCalls`).
+- Dedup-cache Tor trap still live here: on the Tor branch `calls.delete(id)` only runs in `.then`, so a rejected Tor request stays cached and identical retries replay the stale rejection until `clearCachedCalls()` runs (wired into `SettingsStore.setConnectingStatus(true)` on reconnect). LND was fixed in 20d0fe798; the CLN fix is open PR #4993, and open #5398 re-keys both caches by credential.
 
 **LdkNode**
-- No request/response protocol at all — direct uniffi FFI calls. Payment completion is **poll-based**: `awaitPaymentCompletion` polls `listPayments()` at 1 Hz for `timeout_seconds + 5` attempts, capturing failure reasons from a parallel event subscription; `payLightningInvoice`, `sendKeysend`, and `fetchInvoiceFromOffer` all block on it and then return a synthetic `{status: 'SUCCEEDED'}` LND-shaped result.
+- No request/response protocol at all: direct uniffi FFI calls. Payment completion is **poll-based**: `awaitPaymentCompletion` polls `listPayments()` at 1 Hz for `timeout_seconds + 5` attempts, capturing failure reasons from a parallel event subscription; `payLightningInvoice`, `sendKeysend`, and `payOffer` all block on it and return a synthetic LND-shaped result. On timeout they differ: BOLT11 `payLightningInvoice` throws `error.paymentTimedOut`, while keysend and BOLT12 `payOffer` pass `pendingOnTimeout` and return `status: 'IN_FLIGHT'` (fresh payment id per attempt, so a retry could double-pay).
 - `openChannelSync` waits up to 60s for a `channelPending`/`channelClosed` event, then **resolves optimistically** with just `{user_channel_id}` (no funding txid) on timeout — callers cannot assume `funding_txid_str` exists.
 - Errors are normalized by `parseLdkNodeError` **in `BackendUtils.call`**, not in the class — direct class usage yields raw FFI strings.
 - `closeChannel` takes LND-format urlParams but internally looks up the channel by funding txid to find `userChannelId`/`counterpartyNodeId`. ldk-node's close call only starts the close (during a cooperative close the channel stays in `listChannels`, not ready, so `getPendingChannels` reports it as pending *open*), so it waits up to 60s for the matching `channelClosed` event and resolves optimistically on timeout.
@@ -247,14 +248,14 @@ Checklist (do every step; the dispatch design gives you zero compile-time safety
 5. **Gate every view/store call site** with `BackendUtils.supportsMyFeature()` — never with `settingsStore.implementation`, and never call the method unguarded (remember: `false.then` crashes). Missing gates are the top historical cross-backend crash source.
 6. **Version-gate if needed**: inside LND-family flags use `this.supports('vX.Y.Z')`; remember it reads false until node info resolves.
 7. **Keep the argument contract canonical** at call sites; adapt shapes inside each backend class (section 4).
-8. **Fill in the PR-template backend matrix** (`.github/PULL_REQUEST_TEMPLATE.md` — never delete it): check each of the 7 node types you actually tested (On-device: LDK Node, Embedded LND; Remote: LND REST, LNC, CLNRest, NWC, LndHub) with node/API versions. Test at minimum every backend whose flag you set to `true`. Manual iOS+Android testing by the author is mandatory regardless of CI (see zeus-change-control).
+8. **Fill in the PR-template backend matrix** (`.github/PULL_REQUEST_TEMPLATE.md`; never delete it): check each of the 7 node types you actually tested (On-device: LDK Node, Embedded LND; Remote: LND REST, LNC, CLNRest, NWC, LndHub) with node/API versions. Test at minimum every backend whose flag you set to `true`. Manual device testing by the author is mandatory regardless of CI: Android is sufficient for most PRs, iOS is also required when the change touches iOS-native code or iOS-specific behavior (see zeus-change-control).
 9. If the feature emits errors on ldk-node, confirm they read cleanly through `parseLdkNodeError`; extend `utils/ErrorUtils.ts` mappings if a new NodeException variant appears.
 
 ### Inheritance-override checklist (EmbeddedLND / LndHub)
 
 Whenever you add a method OR flag to `backends/LND.ts`, `EmbeddedLND` and `LndHub` inherit it silently. For each addition ask:
 
-- **EmbeddedLND**: the inherited implementation is a REST/WebSocket call against `settingsStore.host` — meaningless for an on-device node. Override with an `lndmobile` implementation, or ensure the corresponding flag is `false` on EmbeddedLND so nothing reaches it. (Existing debt: `getFees`/`setFees`/subscriptions fall through today.)
+- **EmbeddedLND**: the inherited implementation is a REST/WebSocket call against `settingsStore.host`; meaningless for an on-device node. Override with an `lndmobile` implementation, or ensure the corresponding flag is `false` on EmbeddedLND so nothing reaches it. (Existing debt, 2026-10-24: `getFees`/`setFees`/`getForwardingHistory`, `subscribeInvoice`/`subscribeTransactions`, and `initChanAcceptor` fall through to REST today. Flags EmbeddedLND inherits `true` without defining: `supportsChannelOpenFeeRate`, `supportsChannelOpenMinConfs`, `supportsOnchainSendFeeRate` (intended, see matrix) and `supportsPaymentLookup` (backed by EmbeddedLND's own `lookupPayment`). Run the `comm -23` audit below against `backends/EmbeddedLND.ts` to refresh.)
 - **LndHub**: the inherited implementation would hit `lndhubUrl` with LND REST routes that don't exist there, and inherited `true` flags advertise features a custodial account lacks. Override the flag to `false` explicitly. (Past bugs of this class: `supportsChannelFundMax` and `supportsAddressMessageSigning` inherited `true` until October 2026. Add any new flag to the golden table in `backends/LndHub.test.ts`.)
 
 Quick audit command — flags defined on LND but missing from a subclass:
@@ -264,7 +265,7 @@ comm -23 <(grep -o "supports\w*" backends/LND.ts | sort -u) \
          <(grep -o "supports\w*" backends/LndHub.ts | sort -u)
 ```
 
-(The bare `supports` line in the output is LND's version-gate helper, not a flag; ignore it. Run 2026-10-08, this prints only `supportsAccountImportRescan`, which is `false` on LND, so LndHub inherits `false` and it is not a gap.)
+(The bare `supports` line in the output is LND's version-gate helper, not a flag; ignore it. Re-run 2026-10-24, this prints only `supportsAccountImportRescan`, which is `false` on LND, so LndHub inherits `false` and it is not a gap.)
 
 ## 6) Testing each backend cheaply
 
@@ -286,7 +287,7 @@ Backend-difference triage shortcut: if a feature works on `lnd` but not backend 
 
 ## Provenance and maintenance
 
-All facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha) by reading `backends/*.ts`, `utils/BackendUtils.ts`, `utils/VersionUtils.ts`, `utils/ErrorUtils.ts`, `stores/TransactionsStore.ts`, `stores/LSPStore.ts`, `stores/NodeInfoStore.ts`, `stores/SettingsStore.ts`, CONTRIBUTING.md, and `.github/PULL_REQUEST_TEMPLATE.md`. No build/run commands were executed for this skill; Polar/litd rig suggestions are verified by source/docs read, not executed.
+Sections 1, 3 (flag count, sanctioned-branch list, `supportsPaymentLookup` row), 4 (LND, EmbeddedLND, LNC, CLNRest, LdkNode payment bullets) and 5 (inheritance checklist) re-verified 2026-10-24 against master `3dc9f83e6`. All other facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha) by reading `backends/*.ts`, `utils/BackendUtils.ts`, `utils/VersionUtils.ts`, `utils/ErrorUtils.ts`, `stores/TransactionsStore.ts`, `stores/LSPStore.ts`, `stores/NodeInfoStore.ts`, `stores/SettingsStore.ts`, CONTRIBUTING.md, and `.github/PULL_REQUEST_TEMPLATE.md`. No build/run commands were executed for this skill; Polar/litd rig suggestions are verified by source/docs read, not executed.
 
 Re-verification one-liners for volatile facts:
 
@@ -299,13 +300,13 @@ Re-verification one-liners for volatile facts:
 | LND version gates table | `grep -n "this.supports('v" backends/LND.ts` |
 | Version reads 0.0.0 before node info | `grep -n "nodeInfo: NodeInfo" stores/NodeInfoStore.ts; sed -n '17,28p' utils/VersionUtils.ts` |
 | LNC perms hardcoded (ZEUS-3642) | `grep -n "ZEUS-3642" backends/LightningNodeConnect.ts` |
-| CLN raw SQL, paid-only, LIMIT 150 | `grep -n "v1/sql\|LIMIT" backends/CLNRest.ts` |
+| CLN raw SQL, all invoice statuses, LIMIT 150 | `grep -n "v1/sql\|LIMIT\|limit 150" backends/CLNRest.ts` |
 | LDK poll loop + optimistic open | `grep -n "awaitPaymentCompletion\|CHANNEL_OPEN_TIMEOUT" backends/LdkNode.ts` |
-| LND timeout resolves success-shaped | `grep -n "payment_error" backends/LND.ts` |
-| Tor dedup cache retains rejections; cleared on reconnect | `grep -n "calls.delete" backends/LND.ts backends/CLNRest.ts; grep -rn "clearCachedCalls" stores/SettingsStore.ts` |
+| LND timeout resolves with `payment_timed_out`; store tracks to terminal | `grep -n "payment_timed_out" backends/LND.ts stores/TransactionsStore.ts` |
+| Tor dedup cache retains rejections (CLNRest only); cleared on reconnect | `grep -n "calls.delete" backends/LND.ts backends/CLNRest.ts; grep -rn "clearCachedCalls" stores/SettingsStore.ts` |
 | LndHub inheritance gaps still open | the `comm -23` audit command in section 5 |
 | `payLightningInvoiceStreaming` still dead | `grep -rn "payLightningInvoiceStreaming" backends/ utils/` |
-| EmbeddedLND subscription TODO / LSPStore workaround | `grep -n "TODO rewrite subscription" backends/EmbeddedLND.ts; grep -n "channelAcceptor()" stores/LSPStore.ts` |
+| EmbeddedLND watchers / LSPStore acceptor workaround | `grep -n "watchInvoicePaid\|watchOnchainReceived" backends/EmbeddedLND.ts; grep -n "channelAcceptor()" stores/LSPStore.ts` |
 | PR template backend matrix | `grep -n "LDK Node\|LndHub" .github/PULL_REQUEST_TEMPLATE.md` |
 | LNC mailbox servers | `grep -n "LNC_MAILBOX_KEYS" -A 9 stores/SettingsStore.ts` |
 | Emulator host `10.0.2.2`, Polar recommendation | `grep -n "10.0.2.2\|polar" -i CONTRIBUTING.md` |

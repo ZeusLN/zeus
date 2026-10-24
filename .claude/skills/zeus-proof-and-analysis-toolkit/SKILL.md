@@ -240,10 +240,10 @@ Three provable claims fall out: (a) the msat↔sat conversions occur exactly at 
 | `yarn install --frozen-lockfile` inside the container | `build.sh` |
 | Parallel Gradle **disabled** ("parallel execution causes non-deterministic file ordering") | `android/gradle.properties` (`org.gradle.parallel=false`) |
 | `tasks.withType(Zip) { reproducibleFileOrder = true; preserveFileTimestamps = false }` | `android/app/build.gradle` |
-| Release APKs are **unsigned**; per-ABI `versionCodeOverride = versionCode*1000 + {armeabi-v7a:1, x86:2, arm64-v8a:3, x86_64:4}` (base `versionCode 131` at this writing) | `android/app/build.gradle` |
-| Output: 5 renamed APKs (`app-` → `zeus-`, `-release-unsigned` stripped) + `sha256sum` per file | `build.sh` |
+| Release APKs are **unsigned**; per-ABI `versionCodeOverride = versionCode*1000 + {armeabi-v7a:1, arm64-v8a:3, x86_64:4}` (32-bit x86 dropped in 25d8ff806; code 2 stays retired so no ABI gets a lower code than one already published; base `versionCode 136` on 2026-10-24) | `android/app/build.gradle` |
+| Output: 4 renamed APKs (3 ABIs + universal; `app-` → `zeus-`, `-release-unsigned` stripped) + `sha256sum` per file | `build.sh` |
 
-The only `build.sh` flag is `--no-tty`. CI never runs this on PRs — `.github/workflows/build-android.yml` is `workflow_dispatch`-only. Android only; there is no iOS reproducible build.
+`build.sh` flags (2026-10-24): `--no-tty`, `--low-memory` (smaller Gradle heap; the usage text says it does not change the APKs) and `--gradle-cache DIR`. CI never runs this on PRs; `.github/workflows/build-android.yml` is `workflow_dispatch`-only. Android only; there is no iOS reproducible build.
 
 **Steps to verify equivalence (per `docs/ReproducibleBuilds.md` — read it first):**
 
@@ -280,8 +280,8 @@ All facts verified **2026-07-06** against `master` @ `c5fd094fb` (v13.1.3-alpha)
 | Builder image digest / SOURCE_DATE_EPOCH | `grep -n "BUILDER_IMAGE\|SOURCE_DATE_EPOCH" build.sh` |
 | Gradle determinism settings | `grep -n "org.gradle.parallel" android/gradle.properties && grep -n "reproducibleFileOrder\|versionCodeOverride\|versionCode " android/app/build.gradle` |
 | build workflow still dispatch-only | `grep -n "workflow_dispatch" .github/workflows/build-android.yml` |
-| Test-coverage reality (count) | `find . -name "*.test.ts*" -not -path "./node_modules/*" -not -path "./zeus_modules/*" \| wc -l` (49 at this writing) |
+| Test-coverage reality (count) | `find . -name "*.test.ts*" -not -path "./node_modules/*" -not -path "./zeus_modules/*" \| wc -l` (49 on 2026-07-06; 199 on 2026-10-24 with `-not -path "./.claude/*"` added) |
 | BOLT11 spec vectors present | `grep -n "BOLT11_SPEC" utils/Bolt11Utils.test.ts` |
 | Regression-test rule in docs | `grep -n "would have caught the bug" CONTRIBUTING.md` |
 
-Labeled uncertainties: `versionCode 131` and the Docker digest change every release; execution of `build.sh` itself is verified by source read only.
+Recipe 7's table and flag list and the test count were re-verified 2026-10-24 against master `3dc9f83e6`. Labeled uncertainties: `versionCode` (136 on 2026-10-24) and the Docker digest change every release; execution of `build.sh` itself is verified by source read only.

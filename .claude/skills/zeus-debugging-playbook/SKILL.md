@@ -46,7 +46,7 @@ Symptom → triage for Zeus's recurring failure modes. Each row names the first 
 3. **Fresh install or upgrade?** Settings migrations in `utils/MigrationUtils.ts` run once per settings blob: `applySettingsMigrations` applies the `priorVersion < N` blocks newer than the blob's `settingsVersion` stamp and stamps it with `SETTINGS_VERSION` (PR #4477). Fresh installs start stamped at the current version and skip them all, so upgrade-only bugs never reproduce on a fresh install. Read the stored `settingsVersion` to see which blocks a device ran. Legacy-blob upgrades also run the read-only MOD_KEY flag blocks in `legacySettingsMigrations`. See zeus-storage-and-migrations.
 4. **Tor on or off?** Tor changes the request path (dedup-cache retention, TLS rules, WebSocket bypass). Toggle it as a discriminating experiment.
 
-Also remember: test coverage outside `utils/` is thin. `stores/`, `views/`, `components/` and `backends/` have test files, but most of their code is not exercised (as of 2026-10-08, 8% of `stores/TransactionsStore.ts` statements, and no test loads `utils/BackendUtils.ts`). A green `yarn test` proves little about a store bug unless a test covers that path. See zeus-validation-and-qa.
+Also remember: test coverage outside `utils/` is thin. `stores/`, `views/`, `components/` and `backends/` have test files, but most of their code is not exercised, and no test loads the real `utils/BackendUtils.ts` (suites that touch it mock it). For current per-file numbers, read the coverage comment on your PR or run `yarn test:coverage`. A green `yarn test` proves little about a store bug unless a test covers that path. See zeus-validation-and-qa.
 
 ## Triage table
 
@@ -55,17 +55,18 @@ Also remember: test coverage outside `utils/` is thin. `stores/`, `views/`, `com
 | 1 | Feature silently does nothing on some backend | `grep -n 'theMethod' backends/<ActiveBackend>.ts` | `BackendUtils.call()` returned `false` (method missing on backend), or the view lacks a `supports*` gate | Gate the view with the right `supports*()`; implement or wrap the method (zeus-backends-and-capabilities) |
 | 2 | `TypeError: ... .then is not a function` / `.then of false` | Same as #1 | Same root cause: code awaited/`.then`ed the `false` that `call()` returns for a missing method | Same as #1; log `typeof result` at the call site to confirm |
 | 3 | User settings vanished after an update | The `updateSettings({...})` call that shipped in the update | `SettingsStore.updateSettings` is a **shallow top-level merge**: passing a partial nested group replaces the whole group | Use `updateSettingsGroup('payments', { newField })`, which merges inside the write queue (zeus-config-and-flags for the axes) |
-| 4 | App stuck on "connecting" / infinite loading | `fetchLock` and `connecting` values in `views/Wallet/Wallet.tsx` | Re-entrancy guard never released, or a lifecycle refactor changed when `getSettingsAndNavigate()` runs | Ensure every exit path releases `fetchLock`; incident `fdad118ed` → fixed by `93227029e` |
+| 4 | App stuck on "connecting" / infinite loading | `SettingsStore.fetchLock` and `connecting`; `fetchData()` in `views/Wallet/Wallet.tsx` | A lifecycle refactor changed when `getSettingsAndNavigate()` runs, or `connecting` was never dropped. A leaked `fetchLock` is unlikely since e5abe147d: `fetchData()` takes it with `acquireFetchLock()` and releases it in a single `finally` around `fetchDataCore()` | Check that the exit path drops `connecting`; incident `fdad118ed` → fixed by `93227029e` |
 | 5 | CI **Lint** job fails though `eslint .` passes locally | `yarn lint` locally (not bare eslint) | `yarn lint` = `eslint .`; the local rule `zeus/no-themecolor-in-static-stylesheet` bans `themeColor()` inside a module-level `StyleSheet.create` in any `.ts`/`.tsx` | Move the themed color out of the static stylesheet (inline style or style function) |
 | 6 | Prettier check fails with a reformat that looks wrong | `npx prettier --version` → must print `2.4.1` | You formatted with a global/modern prettier; repo pins `prettier@2.4.1` (tabWidth 4, singleQuote, trailingComma none) | Re-format with the repo-local binary: `yarn prettier --write <file>` |
 | 7 | Jest: `SyntaxError: Unexpected token` on a new dependency | `transformIgnorePatterns` in `package.json` (jest block) | New ESM dep isn't in the transform whitelist, so Babel skips it | Add the package name inside the `node_modules/(?!(...))` group |
 | 8 | Crash in Animated/layout code after an RN upgrade | Was the pattern written pre-New-Architecture? | Fabric (ON since `d13ebc2cd`, RN 0.83.1) rejects patterns the old renderer tolerated | Restructure per `f08bfc7c5` (WalletHeader Animated) and `2c55e4f89` (keypad baseline layout) |
 | 9 | Hermes `RangeError` / stack overflow on string matching | Input length at the regex call site | Hermes regex backtracking overflows on long inputs | Length-cap before matching, like `MERCHANT_QR_MAX_LEN = 500` in `utils/handleAnything.ts` (`5c451839d`) |
-| 10 | Identical error repeats on every retry (Tor node) | The `calls` Map in `backends/LND.ts` / `backends/CLNRest.ts` | Tor branch of `restReq` deletes the dedup-cache entry only in `.then` — a **rejected** promise stays cached and is replayed | Retries work after reconnect: `setConnectingStatus(true)` calls `BackendUtils.clearCachedCalls()`. Real fix: delete cache entry on rejection too (`backends/*` is funds-touching — minimal diff, discuss first; see zeus-change-control) |
-| 11 | "payment timed out" but payment shows as success (or is handled as one) | `result.payment_error` on the resolved value | LND REST `payLightningInvoice` races a timer that **resolves** with `{ payment_error: localeString('views.SendingLightning.paymentTimedOut') }` (a locale-dependent "Payment timed out…" message) — errors arrive success-shaped | Always check `payment_error` on resolved LND payment results; never treat resolution as success |
+| 10 | Identical error repeats on every retry (Tor node, CLN) | The `calls` Map in `backends/CLNRest.ts` | CLNRest's Tor branch of `restReq` deletes the dedup-cache entry only in `.then`, so a **rejected** promise stays cached and is replayed. LND was fixed in 20d0fe798 | Retries work after reconnect: `setConnectingStatus(true)` calls `BackendUtils.clearCachedCalls()`. CLN fix is open PR #4993 (`backends/*` is funds-touching, see zeus-change-control) |
+| 11 | "payment timed out" but payment shows as success (or is handled as one) | `result.payment_timed_out` on the resolved value | LND REST `payLightningInvoice` races a timer that **resolves** with `timedOutResponse()`: `{ payment_error, payment_timed_out: true, dispatch_deadline_ms }`. Since #4492 the outcome is unknown, not failed: `TransactionsStore.handlePayment` holds the send guard and `trackPaymentToTerminal` polls `lookupPayment` (if `supportsPaymentLookup()`) | Branch on the `payment_timed_out` flag, never on the locale string; route new payment callers through `handlePayment` |
 | 12 | Back navigation lands on the wrong screen / stale params | Does the code call `navigation.navigate()` to go "back"? | react-navigation 7: `navigate` pushes/reuses unpredictably | Use `navigation.popTo('Screen', params)` (PR #2192, merge `7abc7a971`); type with `NativeStackNavigationProp` |
 | 13 | Embedded LND won't start / crashes on restart | Which DB backend: `isSqlite` per node → `db.backend=sqlite\|bolt` in `utils/LndMobileUtils.ts` | SQLite/Bolt DB-backend saga; restart crash fixed in `3e04e6bf2` (#4013) | Read the real logs first — see "Getting embedded-LND logs" below |
-| 14 | Keychain/settings weirdness on a new device (old wallets appear, wrong data) | Did the data come from iCloud keychain sync? | Orphaned pre-migration keychain entries are retained **by design** (`deleteFromOldKeychain` is a deliberate no-op); iCloud-synced copies caused the 2025–26 saga | Do NOT "fix" storage yourself — storage changes are gated. Go to zeus-storage-and-migrations |
+| 14 | Keychain/settings weirdness on a new device (old wallets appear, wrong data), or wallets vanish from a second iOS device | Did the data come from iCloud keychain sync? Has `autoPurgeLegacyKeychain` run on either device? | The migration's `deleteFromOldKeychain` is still a no-op, but since #4385 `autoPurgeLegacyKeychain` (`utils/KeychainPurgeUtils.ts`, iOS only, called from `views/Wallet/Wallet.tsx`) deletes legacy and iCloud-synced copies after desync. A second device that only had the synced copy loses it; iCloud-synced copies caused the 2025–26 saga | Do not "fix" storage yourself, storage changes are gated. Go to zeus-storage-and-migrations |
+| 14b | iOS: app opens on the intro screen with all wallet configs gone, node data still on disk (often after a crash or kill) | iOS build older than #5413? Crash/jetsam in the app log around a settings write? | react-native-keychain deleted `zeus-settings-v2` before re-adding it and the process died in between. Fixed by `patches/patch-keychain-atomic-update.mjs` (#5413). Open PR #5414 covers a second suspected path (`ClearKeychainIfNecessary` on a launch before first unlock) | Recovery: Menu > Tools on the intro screen (#5412): Import Wallet Configurations, or the Keychain Recovery scan for a cloud copy. Seed restore for embedded LND / LDK Node. History: zeus-failure-archaeology FA-13 |
 | 15 | gRPC stream write "succeeded" but nothing happened (embedded LND) | `LndMobileService.java:279` and `ios/LndMobile/Lnd.swift:334` | Android swallows the send exception (`catch (Throwable) { /* TODO */ }`) and reports success anyway; iOS `try write?.send(bytes)` may not throw on failure (TODO: BOOL return) | Don't trust stream-write callbacks in the Blixt-derived layer; verify the effect via a read call |
 | 16 | Crash during wallet start/stop/delete/switch (Tokio panic, native crash) | Sequence of node lifecycle calls | Node lifecycle races — the hardest live problem | Go to zeus-node-lifecycle-campaign; ref fixes `d416052cd`, `0e2b89164` |
 
@@ -123,7 +124,7 @@ Green PR = 4 checks (Test, Lint, Prettier, Typescript Check) = `yarn verify`. An
 
 ### Row 10: Tor request dedup cache retains rejections
 
-Both `backends/LND.ts` and `backends/CLNRest.ts` keep a module-level `const calls = new Map<string, Promise<any>>()` keyed by `url + JSON.stringify(body)`. The non-Tor branch deletes the entry on both success and failure (a `.catch` on the raced promise). The Tor branch deletes only in `.then`:
+Both `backends/LND.ts` and `backends/CLNRest.ts` keep a module-level `const calls = new Map<string, Promise<any>>()` keyed by `url + JSON.stringify(body)`. The non-Tor branch deletes the entry on both success and failure (a `.catch` on the raced promise). LND's Tor branch also evicts on rejection since 20d0fe798; `CLNRest.ts`'s Tor branch still deletes only in `.then` (fix in open PR #4993):
 
 ```ts
 doTorRequest(...).then((response: any) => {
@@ -167,12 +168,12 @@ grep -rn "TODO" . \
 - `ios/LdkNodeMobile/LDKNode.swift` and `android/app/src/main/java/org/lightningdevkit/ldknode/ldk_node.kt` are **uniffi-generated** bindings (18 TODO hits each as of 2026-07-06) — never "fix" them by hand.
 - `proto/lightning.js` is generated protobuf output.
 - `zeus_modules/` is vendored (lnc-rn has its own `node_modules` inside it).
-- `utils/AddressUtils.test.ts` contains `XXX` inside a base64 PSBT fixture (~line 923) — a false positive for placeholder hunts.
+- `utils/AddressUtils.test.ts` contains `XXX` inside a base64 PSBT fixture (search `cHNidP8B`), a false positive for placeholder hunts.
 - `fetch-libraries.sh` defines a shell function literally named `jq()` (it's python3) — misleading grep target.
 
 ## Provenance and maintenance
 
-Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha) by reading the cited files and running the commands below. All cited commit hashes verified as ancestors of that commit via `git merge-base --is-ancestor <hash> HEAD`.
+Triage rows 4, 10, 11, 14 and 14b, the Row 10 section, the AddressUtils grep note and the re-verify rows for them were re-verified 2026-10-24 against master `3dc9f83e6`. All other facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha) by reading the cited files and running the commands below. All cited commit hashes verified as ancestors of that commit via `git merge-base --is-ancestor <hash> HEAD`.
 
 "Before you debug" question 3 re-verified 2026-10-24 against master `3dc9f83e6`.
 
@@ -188,11 +189,12 @@ Re-verification one-liners for volatile facts:
 | Prettier pin 2.4.1 | `grep -n '"prettier"' package.json` |
 | Jest transform whitelist members | `grep -n -A2 transformIgnorePatterns package.json` |
 | Merchant-QR 500-char cap | `grep -n MERCHANT_QR_MAX_LEN utils/handleAnything.ts` |
-| Tor dedup cache deletes only in `.then` | `grep -n -A16 'useTor === true' backends/LND.ts backends/CLNRest.ts` |
+| Tor dedup cache deletes only in `.then` (CLNRest) | `grep -n -A30 'useTor === true' backends/LND.ts backends/CLNRest.ts` |
 | Cache cleared on reconnect | `grep -n clearCachedCalls stores/SettingsStore.ts` |
-| Timeout resolves with `payment_error` | `grep -n -B2 -A6 forcedTimeout backends/LND.ts` |
+| Timeout resolves with `payment_timed_out`; tracked to terminal | `grep -n payment_timed_out backends/LND.ts stores/TransactionsStore.ts` |
+| Atomic keychain patch applied | `grep -n keychain-atomic patches/index.mjs` |
 | `readLndLog` still a stub | `grep -n -A3 'export const readLndLog' lndmobile/index.ts` |
 | Android stream-write swallow | `grep -n -A3 's.send(payload)' android/app/src/main/java/com/zeus/LndMobileService.java` |
 | iOS stream-write BOOL doubt | `grep -n 'returns a BOOL' ios/LndMobile/Lnd.swift` |
 | Incident hashes still resolve | `git log --oneline -1 <hash>` for `fdad118ed 93227029e f08bfc7c5 2c55e4f89 7abc7a971 d416052cd 0e2b89164 d13ebc2cd 3e04e6bf2 5c451839d` |
-| No tests for stores/views/components/backends | `find stores views components backends -name '*.test.*'` (expect empty) |
+| Test files in stores/views/components/backends | `find stores views components backends -name '*.test.*' \| wc -l` (99 on 2026-10-24) |
