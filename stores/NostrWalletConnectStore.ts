@@ -2942,11 +2942,7 @@ export default class NostrWalletConnectStore {
             paymentRequest: request.invoice
         });
 
-        if (
-            !cashuInvoice ||
-            cashuInvoice.isFailed ||
-            this.cashuStore.paymentError
-        ) {
+        if (!cashuInvoice || cashuInvoice.isFailed) {
             const paymentErrorMsg =
                 this.cashuStore.paymentErrorMsg ||
                 localeString(
