@@ -2551,6 +2551,7 @@
     "views.SwapDetails.confirmLockupAmount.shortfall": "You paid {{paid}} sats for this swap, but the swap provider has locked up only {{amount}} sats, more than swap fees should take. Claim only if you accept that amount. Claiming reveals the secret that lets the provider collect your full payment. If you don't claim, your Lightning payment is returned when the swap times out.",
     "views.SwapDetails.confirmLockupAmount.claim": "Claim",
     "views.SwapDetails.lockupAmountDeclined": "This swap was not claimed. Open it again to claim, or your Lightning payment will be returned when the swap times out.",
+    "views.SwapDetails.claimNotVerified": "The swap provider reports this swap as claimed, but ZEUS could not confirm that the invoice was paid. If the invoice stays unpaid, refund the swap. Without the provider's cooperation, a refund is possible once the timeout block height is reached.",
     "views.SwapSettings.customHost": "Enter a custom host",
     "views.SwapSettings.failureReason": "Failure reason",
     "views.Rebalance.title": "Rebalance Channels",
