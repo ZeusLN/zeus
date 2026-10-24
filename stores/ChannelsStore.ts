@@ -1,3 +1,4 @@
+const bitcoin = require('bitcoinjs-lib');
 import { action, observable, reaction, runInAction } from 'mobx';
 import BigNumber from 'bignumber.js';
 // leave as is, do not do tree-shaking
@@ -53,6 +54,27 @@ interface aliases {
 const fixedAliases: aliases = {
     '031b301307574bbe9b9ac7b79cbe1700e31e544513eae0b5d7497483083f99e581':
         'Olympus by ZEUS'
+};
+
+// Sorted "txid:vout" keys of the outpoints a PSBT or raw transaction spends,
+// or null if it does not parse
+const outpointKeys = (
+    tx: { psbt: string } | { txHex: string }
+): Array<string> | null => {
+    try {
+        const inputs: Array<{ hash: Uint8Array; index: number }> =
+            'psbt' in tx
+                ? bitcoin.Psbt.fromBase64(tx.psbt).txInputs
+                : bitcoin.Transaction.fromHex(tx.txHex).ins;
+        return inputs
+            .map(
+                (input) =>
+                    `${Buffer.from(input.hash).toString('hex')}:${input.index}`
+            )
+            .sort();
+    } catch (e) {
+        return null;
+    }
 };
 ChannelsView;
 
@@ -120,7 +142,9 @@ export default class ChannelsStore {
     @observable public aliasMap = observable.map({});
     // external account funding
     @observable public funded_psbt: string = '';
-    @observable public pending_chan_ids: Array<string>;
+    @observable public pending_chan_ids: Array<string> = [];
+    // outpoints of the funding PSBT handed to the user for signing
+    @observable public pending_funding_outpoints: Array<string> = [];
     // pending HTLCs
     @observable public pendingHTLCs: Array<PendingHTLC> = [];
     @observable public haveAnnouncedChannels = false;
@@ -198,7 +222,35 @@ export default class ChannelsStore {
         this.channelSuccess = false;
         this.channelRequest = null;
         this.funded_psbt = '';
+    };
+
+    // Kept out of resetOpenChannel: the PSBT and TxHex screens read it to
+    // hand a signed funding transaction back to LND, so it has to survive
+    // form resets until the funding flow ends.
+    @action
+    public resetPendingChannels = () => {
         this.pending_chan_ids = [];
+        this.pending_funding_outpoints = [];
+    };
+
+    // The pending channels a signed PSBT or raw transaction funds, or none.
+    // The PSBT and TxHex screens also show unrelated transactions (a send
+    // from an external account, a scanned PSBT, a sweep), and an abandoned
+    // funding flow leaves its IDs behind. Only a transaction that spends
+    // the outpoints of the PSBT we handed out goes back to LND's funding
+    // flow; LND requires the signed transaction to be that one.
+    public pendingChanIdsFor = (
+        tx: { psbt: string } | { txHex: string }
+    ): Array<string> => {
+        if (this.pending_funding_outpoints.length === 0) return [];
+        const outpoints = outpointKeys(tx);
+        if (
+            !outpoints ||
+            outpoints.join() !== this.pending_funding_outpoints.join()
+        ) {
+            return [];
+        }
+        return this.pending_chan_ids;
     };
 
     public clearCloseChannelErr = () => {
@@ -208,6 +260,7 @@ export default class ChannelsStore {
     @action
     public reset = () => {
         this.resetOpenChannel();
+        this.resetPendingChannels();
         this.hasChannelData = false;
         this.haveAnnouncedChannels = false;
         this.nodes = {};
@@ -1049,6 +1102,7 @@ export default class ChannelsStore {
                                 this.channelRequest = null;
                                 this.peerSuccess = false;
                                 this.channelSuccess = false;
+                                this.resetPendingChannels();
                             });
                         } else {
                             const formattedPsbt = new FundedPsbt(
@@ -1068,7 +1122,7 @@ export default class ChannelsStore {
                                 .then((data: any) => {
                                     runInAction(() => {
                                         if (data.publish_error) {
-                                            this.funded_psbt = formattedPsbt;
+                                            this.setFundedPsbt(formattedPsbt);
                                             this.output_index = null;
                                             this.funding_txid_str = null;
                                             this.errorOpenChannel = true;
@@ -1083,12 +1137,13 @@ export default class ChannelsStore {
                                             this.errorMsgChannel = null;
                                             this.channelRequest = null;
                                             this.channelSuccess = true;
+                                            this.resetPendingChannels();
                                         }
                                     });
                                 })
                                 .catch(() =>
                                     runInAction(() => {
-                                        this.funded_psbt = formattedPsbt;
+                                        this.setFundedPsbt(formattedPsbt);
                                         this.output_index = null;
                                         this.funding_txid_str = null;
                                         this.errorOpenChannel = true;
@@ -1111,6 +1166,7 @@ export default class ChannelsStore {
                             this.channelRequest = null;
                             this.peerSuccess = false;
                             this.channelSuccess = false;
+                            this.resetPendingChannels();
                         });
                     });
             })
@@ -1125,8 +1181,17 @@ export default class ChannelsStore {
                     this.channelRequest = null;
                     this.peerSuccess = false;
                     this.channelSuccess = false;
+                    this.resetPendingChannels();
                 });
             });
+    };
+
+    // The PSBT goes to the user for signing: remember what it spends so the
+    // signed transaction can be matched to the pending channels
+    @action
+    private setFundedPsbt = (psbt: string) => {
+        this.funded_psbt = psbt;
+        this.pending_funding_outpoints = outpointKeys({ psbt }) || [];
     };
 
     @action
@@ -1140,6 +1205,7 @@ export default class ChannelsStore {
         this.peerSuccess = false;
         this.channelSuccess = false;
         this.connectingToPeer = false;
+        this.resetPendingChannels();
     };
 
     @action
@@ -1161,6 +1227,7 @@ export default class ChannelsStore {
         this.peerSuccess = false;
         this.channelSuccess = false;
         this.openingChannel = true;
+        this.resetPendingChannels();
 
         if (request?.account !== 'default' || multipleChans) {
             const outputs: any = {};
