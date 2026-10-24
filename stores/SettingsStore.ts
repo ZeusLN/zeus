@@ -1725,6 +1725,17 @@ const REFRESH_EXEMPT_SETTINGS: Array<keyof Settings> = [
     'recovery'
 ];
 
+export interface SettingsWriteOptions {
+    // Permits persisting a settings blob with no wallets over one that
+    // has them. Deleting the last wallet is the only caller that
+    // legitimately needs this; every other empty `nodes` is a settings
+    // load that failed or a merge onto the store's defaults.
+    allowEmptyNodes?: boolean;
+}
+
+const hasNodes = (settings: any): boolean =>
+    Array.isArray(settings?.nodes) && settings.nodes.length > 0;
+
 export default class SettingsStore {
     // Deep clone: DEFAULT_SETTINGS is a module-level object. Referencing
     // its nested groups directly would let an in-place mutation of one
@@ -1737,6 +1748,14 @@ export default class SettingsStore {
     @observable public posStatus: string = 'unselected';
     @observable public loading = false;
     @observable public isMigrating = false;
+    // Set when the persisted settings blob could not be read or parsed,
+    // as opposed to genuinely not existing. `this.settings` then still
+    // holds the defaults, which carry no `nodes`, so writes are refused
+    // until a later load succeeds. See setSettings.
+    @observable public settingsLoadFailed = false;
+    // The serialized blob last read from or written to the device-local
+    // settings item, or null when unknown. See applySettingsUpdate.
+    private persistedBlob: string | null = null;
     @observable public settingsUpdateInProgress: boolean = false;
     @observable btcPayError: string | null;
     @observable sponsorsError: string | null;
@@ -2108,11 +2127,54 @@ export default class SettingsStore {
             // data and permanently shadow the fresher iCloud-partition copy of
             // zeus:* data. Desync first guarantees the local partition is
             // populated before any legacy fallback can win.
-            await MigrationsUtils.keychainDesyncMigration();
-            await MigrationsUtils.keychainCloudSyncMigration();
-            await MigrationsUtils.purgeRescueKeyFiles();
+            //
+            // None of these may abort the load. They depend on
+            // EncryptedStorage (migration flags) and the filesystem, and
+            // EncryptedStorage rejects persistently on Android when its
+            // keystore-backed store cannot initialize. A throw escaping
+            // here would skip the keychain read entirely and leave the
+            // store on its defaults with no latch set, the exact state
+            // that then gets persisted over the user's wallet list. Each
+            // runs in its own try so one failing cannot skip the next
+            // (purgeRescueKeyFiles is security cleanup).
+            const preLoadMigrations = [
+                MigrationsUtils.keychainDesyncMigration,
+                MigrationsUtils.keychainCloudSyncMigration,
+                MigrationsUtils.purgeRescueKeyFiles
+            ];
+            for (const migration of preLoadMigrations) {
+                try {
+                    await migration.call(MigrationsUtils);
+                } catch (error) {
+                    console.error(
+                        'Could not complete pre-load migration',
+                        error
+                    );
+                }
+            }
 
-            let modernSettings: any = await Storage.getItem(STORAGE_KEY);
+            let modernSettings: any;
+            try {
+                modernSettings = await Storage.getItem(STORAGE_KEY);
+            } catch (error) {
+                // A read that FAILED is not a user with no wallets. The
+                // keychain rejects for anything other than "not found"
+                // (locked item, missing entitlement, Android decryption
+                // failure), and `this.settings` is still the default
+                // object, which has no `nodes`. Latch writes off so the
+                // caller that follows cannot merge onto those defaults
+                // and persist a wallet-less blob over the real one.
+                this.settingsLoadFailed = true;
+                this.persistedBlob = null;
+                console.error('Could not read settings', error);
+                return this.settings;
+            }
+            // The exact string in the device-local item, for the no-op
+            // write check in applySettingsUpdate. Only set when the blob
+            // came from there: a blob read from the synchronizable
+            // fallback below or the legacy store is not yet device-local,
+            // so its first write must not be skipped.
+            this.persistedBlob = modernSettings || null;
 
             if (!modernSettings && Platform.OS === 'ios') {
                 // An empty local partition is indistinguishable from a failed
@@ -2130,16 +2192,37 @@ export default class SettingsStore {
                         true
                     );
                 } catch (error) {
+                    // Unlike a failed legacy read, this one may be
+                    // hiding the user's only copy of the settings. If it
+                    // fell through to the legacy branch, the latch would
+                    // clear and the next write would put the defaults in
+                    // the local partition, which every later read
+                    // prefers, shadowing the synchronizable copy for good.
+                    this.settingsLoadFailed = true;
                     console.error(
                         'Could not read synchronizable settings fallback',
                         error
                     );
+                    return this.settings;
                 }
             }
 
             if (modernSettings) {
                 console.log('attempting to load modern settings');
-                const parsedSettings = JSON.parse(modernSettings);
+                let parsedSettings: any;
+                try {
+                    parsedSettings = JSON.parse(modernSettings);
+                } catch (error) {
+                    // Same reasoning as a failed read: a truncated or
+                    // corrupt blob is not an empty wallet list, and
+                    // overwriting it destroys the only copy of the
+                    // user's wallet configurations.
+                    this.settingsLoadFailed = true;
+                    this.persistedBlob = null;
+                    console.error('Could not parse settings', error);
+                    return this.settings;
+                }
+                this.settingsLoadFailed = false;
                 // only swap the settings reference on a real change:
                 // getSettings runs several times per boot/focus against an
                 // unchanged blob, and every swap re-runs all observers of
@@ -2165,9 +2248,23 @@ export default class SettingsStore {
                 console.log('attempting to load legacy settings');
 
                 // Retrieve the settings
-                const settings = await EncryptedStorage.getItem(
-                    LEGACY_STORAGE_KEY
-                );
+                let settings: string | null = null;
+                try {
+                    settings = await EncryptedStorage.getItem(
+                        LEGACY_STORAGE_KEY
+                    );
+                } catch (error) {
+                    // Reaching this branch means the modern read
+                    // succeeded and found nothing, so no populated blob
+                    // exists for a later write to clobber. Latching here
+                    // would refuse every settings write for as long as
+                    // the legacy read keeps failing, which on a device
+                    // whose EncryptedStorage cannot initialize is
+                    // forever - it would block onboarding on a fresh
+                    // install. Treat it as "no legacy data".
+                    console.error('Could not read legacy settings', error);
+                }
+                this.settingsLoadFailed = false;
                 if (settings) {
                     const newSettings =
                         await MigrationsUtils.legacySettingsMigrations(
@@ -2205,11 +2302,52 @@ export default class SettingsStore {
     // Does not touch `loading`: the only caller is a queued update, and
     // views that render a spinner on `loading` (Receive, ReceiveEcash)
     // would flash it for every settings write.
-    public async setSettings(settings: any): Promise<boolean> {
+    //
+    // Two further refusals protect the persisted wallet list from being
+    // replaced by state the app never actually read:
+    //
+    // 1. `settingsLoadFailed` - the last load threw, so the in-memory
+    //    settings are the defaults rather than the user's. Writing them
+    //    would persist a wallet-less blob over the real one. The latch
+    //    clears on the next successful load, and every updateSettings
+    //    re-reads first, so this self-heals as soon as the keychain
+    //    recovers.
+    // 2. Empty wallet list - a blob with no `nodes` must never overwrite
+    //    one that has them. Deleting the last wallet is the only
+    //    legitimate way to get there and opts in with `allowEmptyNodes`.
+    //    `this.settings` is the comparison base rather than a fresh read:
+    //    it tracks the last successful load or write, and refetching here
+    //    would add a keychain round trip to every write.
+    public async setSettings(
+        settings: any,
+        options?: SettingsWriteOptions
+    ): Promise<boolean> {
+        if (this.settingsLoadFailed) {
+            console.warn(
+                '[SettingsStore] refusing to persist settings: the last load failed'
+            );
+            return false;
+        }
+
+        if (
+            !options?.allowEmptyNodes &&
+            !hasNodes(settings) &&
+            hasNodes(this.settings)
+        ) {
+            console.warn(
+                '[SettingsStore] refusing to persist an empty wallet list over an existing one'
+            );
+            return false;
+        }
+
         const persisted =
             (await Storage.setItem(STORAGE_KEY, settings)) !== false;
         if (persisted) {
             this.settings = settings;
+            this.persistedBlob =
+                typeof settings === 'string'
+                    ? settings
+                    : JSON.stringify(settings);
         }
         return persisted;
     }
@@ -2222,25 +2360,27 @@ export default class SettingsStore {
     private updateSettingsQueue: Promise<unknown> = Promise.resolve();
 
     public updateSettings = (
-        newSetting: any | ((currentSettings: Settings) => any)
+        newSetting: any | ((currentSettings: Settings) => any),
+        options?: SettingsWriteOptions
     ): Promise<Settings> => {
         // Pending debounced patches were made before this call, so they
         // must land before it. Otherwise a debounced field this update
         // also sets (expirySeconds from both the expiry input and the
         // time period dropdown) would overwrite the newer value.
         this.flushPendingSettings();
-        return this.enqueueSettingsUpdate(newSetting);
+        return this.enqueueSettingsUpdate(newSetting, options);
     };
 
     // Counts updates ever enqueued; see flushPendingSettings
     private settingsUpdatesEnqueued = 0;
 
     private enqueueSettingsUpdate = (
-        newSetting: any | ((currentSettings: Settings) => any)
+        newSetting: any | ((currentSettings: Settings) => any),
+        options?: SettingsWriteOptions
     ): Promise<Settings> => {
         this.settingsUpdatesEnqueued++;
         const task = this.updateSettingsQueue.then(() =>
-            this.applySettingsUpdate(newSetting)
+            this.applySettingsUpdate(newSetting, options)
         );
         // Keep the queue alive after a rejected update; the caller still
         // sees the rejection through `task`.
@@ -2370,7 +2510,8 @@ export default class SettingsStore {
     };
 
     private applySettingsUpdate = async (
-        newSetting: any | ((currentSettings: Settings) => any)
+        newSetting: any | ((currentSettings: Settings) => any),
+        options?: SettingsWriteOptions
     ) => {
         this.settingsUpdateInProgress = true;
         try {
@@ -2391,11 +2532,36 @@ export default class SettingsStore {
                 ...resolvedSetting
             };
 
-            const persisted = await this.setSettings(newSettings);
+            // Nothing changed: skip the write. Persisting the blob is a
+            // delete-then-add of a single keychain item, so a no-op write
+            // is not free: it destroys and recreates the user's wallet
+            // list for nothing. The launch-time biometry refresh in
+            // views/Wallet/Wallet.tsx is the common case.
+            //
+            // The comparison base is the string last read from or
+            // written to the device-local item, not the loaded object.
+            // getSettings(fromQueue) folds pending migrations and
+            // backfilled groups into the loaded object in memory and
+            // relies on this write to persist them (runSettingsMigrations
+            // enqueues `updateSettings({})` for exactly that), and an
+            // updater may mutate the loaded object in place. Either way
+            // the loaded object already equals the result, while the
+            // stored blob does not. A key-order difference only costs a
+            // redundant write.
+            if (
+                this.persistedBlob !== null &&
+                JSON.stringify(newSettings) === this.persistedBlob
+            ) {
+                return existingSettings;
+            }
+
+            const persisted = await this.setSettings(newSettings, options);
             if (!persisted) {
-                // Write latch engaged (data wipe in progress): nothing was
-                // persisted or kept in memory, so skip the derived-state
-                // updates that would advertise the unsaved settings.
+                // Write refused (data wipe in progress, a failed settings
+                // load, or an empty wallet list over a populated one):
+                // nothing was persisted or kept in memory, so skip the
+                // derived-state updates that would advertise the unsaved
+                // settings.
                 return this.settings;
             }
 
