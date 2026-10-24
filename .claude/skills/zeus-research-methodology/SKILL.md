@@ -5,12 +5,12 @@ description: The discipline that turns a hunch into an accepted change in Zeus �
 
 # Zeus Research Methodology
 
-How an idea (a bug hypothesis, a feature, a protocol integration) becomes an accepted change in Zeus (a React Native Bitcoin/Lightning wallet) or gets retired with a paper trail. Zeus moves real money across 7 node backends on 2 mobile platforms with low automated test coverage outside `utils/`; the methodology below is what has actually kept quality up, reconstructed from the repo's own history. Every stage, rule, and example here is verifiable with the commands in the final section.
+How an idea (a bug hypothesis, a feature, a protocol integration) becomes an accepted change in Zeus (a React Native Bitcoin/Lightning wallet) or gets retired with a paper trail. Zeus moves real money across 7 node backends on 2 mobile platforms with low automated test coverage; the methodology below is what has actually kept quality up, reconstructed from the repo's own history. Every stage, rule, and example here is verifiable with the commands in the final section.
 
 Glossary (defined once, used throughout):
 
 - **Backend** — one of the 7 node implementations Zeus can drive: embedded LND, LDK Node (both on-device), remote LND REST, Lightning Node Connect (LNC), CLNRest, LndHub, Nostr Wallet Connect (NWC). Details: zeus-backends-and-capabilities.
-- **Settings blob** — the single keychain JSON object (key `zeus-settings-v2`) holding ALL settings and wallet secrets. **MOD_KEY migration** — Zeus's one-shot settings-migration pattern: a flag key checked in legacy storage, mutate settings, persist, set flag (see `utils/MigrationUtils.ts`; recipes live in zeus-storage-and-migrations).
+- **Settings blob** — the single keychain JSON object (key `zeus-settings-v2`) holding ALL settings and wallet secrets. **Versioned settings migration**: Zeus's one-shot settings-migration pattern since PR #4477 (merged 2026-09-17): bump `SETTINGS_VERSION` (`utils/SettingsVersion.ts`) and add a `priorVersion < N` block to `MigrationUtils.applySettingsMigrations`; the blob's `settingsVersion` stamp records that it ran. It replaced the **MOD_KEY migration** (a flag key in legacy EncryptedStorage, checked, then mutate, persist, set flag); those flags are now read-only. Recipes live in zeus-storage-and-migrations.
 - **Fresh vs migrated user** — a new install gets the inline defaults in `stores/SettingsStore.ts`; an upgrading user gets defaults *as rewritten by migrations*. The two populations can legitimately diverge (worked example in Section 2).
 - **`supports*()` capability flag** — per-backend boolean method gating features; views must branch on these, never on the backend name.
 - **LSP / LSPS1 / LSPS7** — Lightning Service Provider (sells inbound channel capacity); LSPS1/LSPS7 are the standardized channel-purchase/extension protocols.
@@ -76,7 +76,7 @@ Zeus does not have a written RFC process. The observed, repeated lifecycle is:
 
 ```
 discussion → experiment behind a setting (default OFF) → default ON (fresh installs)
-   → [bug or obsolescence] → migrate existing users' default via MOD_KEY migration
+   → [bug or obsolescence] → migrate existing users' default via a versioned settings migration
    → retire: flag marked optional + "// deprecated", RETAINED in the blob forever
 ```
 
@@ -84,11 +84,11 @@ discussion → experiment behind a setting (default OFF) → default ON (fresh i
 
 **Stage 1 — experiment behind a default-off setting.** New risky behavior lands as an opt-in boolean in the settings blob with an inline default in `stores/SettingsStore.ts`. Adding the setting correctly (shallow-merge trap, defaults): zeus-config-and-flags.
 
-**Stage 2 — promote the default.** Flip the inline default (affects fresh installs only) and, if existing users should follow, ship a MOD_KEY migration (zeus-storage-and-migrations owns the recipe; the migration MUST pass a real object to `setSettings`, never a `JSON.stringify`'d one — that corrupted MobX observables, fixed in `7ed901a10`, #4150).
+**Stage 2 — promote the default.** Flip the default in `DEFAULT_SETTINGS` (affects fresh installs only) and, if existing users should follow, ship a versioned settings migration: a `SETTINGS_VERSION` bump plus a `priorVersion < N` block in `applySettingsMigrations` (zeus-storage-and-migrations owns the recipe). The block mutates in memory only; it makes no `setSettings` call and writes no flag. Under the old MOD_KEY pattern a migration passed a `JSON.stringify`'d payload to `setSettings`, which corrupted MobX observables (fixed in `7ed901a10`, #4150).
 
-**Stage 3 — demote or retire.** When upstream bugs or product decisions kill the experiment: migrate existing users OFF via a new MOD_KEY, and/or mark the flag deprecated-but-retained (Section 3).
+**Stage 3 — demote or retire.** When upstream bugs or product decisions kill the experiment: migrate existing users OFF via a new versioned migration (`SETTINGS_VERSION` bump), and/or mark the flag deprecated-but-retained (Section 3). Retiring one option of an enumerated setting is also a versioned migration: #4768 removed five themes from the picker and added `applyRetiredThemes` in the `priorVersion < 3` block, which moves users whose `display.theme` is in `RETIRED_THEMES` to `DEFAULT_THEME`.
 
-### Worked example A: `bimodalPathfinding` (full lifecycle; all hashes reachable from master `c5fd094fb`)
+### Worked example A: `bimodalPathfinding` (full lifecycle; all hashes reachable from master `3dc9f83e6`, re-confirmed 2026-10-24)
 
 | Date | Commit | Stage |
 |---|---|---|
@@ -97,7 +97,7 @@ discussion → experiment behind a setting (default OFF) → default ON (fresh i
 | 2024-09-16 | `88dd94abe` | Demoted for existing users: "switch to apriori pathfinding for now" — MOD_KEY migration `bimodal-bug-9085` flips migrated users to `false` because of upstream bug lnd#9085 (URL in the code comment, `utils/MigrationUtils.ts`) |
 | today | — | Fresh-install default remains `true` (`grep bimodalPathfinding stores/SettingsStore.ts`) while users who ran the migration stay `false` — a **deliberate fresh-vs-migrated divergence**, not a bug |
 
-Lessons: upstream bugs demote experiments without deleting them; MOD_KEY migrations are the tool for touching existing users; fresh/migrated divergence is an accepted end state (second known case: `showMillisatoshiAmounts`).
+Lessons: upstream bugs demote experiments without deleting them; migrations are the tool for touching existing users (MOD_KEY flags then; since #4477 the `bimodal-bug-9085` flag is only read, as `mod7` in `legacySettingsMigrations`, and new changes use versioned blocks); fresh/migrated divergence is an accepted end state (second known case: `showMillisatoshiAmounts`).
 
 ### Worked example B: `lsps1ShowPurchaseButton` (introduce → retire)
 
@@ -111,7 +111,7 @@ Introduced with the LSPS1 client (`f81439ee7`, 2024-05-06), with a migration set
 
 Zeus retires ideas without destroying evidence or user data. Follow these three patterns; never invent a fourth.
 
-**3a. Deprecated flags are RETAINED, never hard-deleted.** Current deprecated-retained keys in `stores/SettingsStore.ts` (all marked `// deprecated`, verified 2026-07-06): `defaultFeeMethod`, `displayAmountOnInvoice`, `squareEnabled`, `automaticallyRequestOlympusChannels`, `lsps1ShowPurchaseButton`. Removing a key from users' `zeus-settings-v2` blobs is a storage-format change and goes through the storage gate — maintainer sign-off plus migration plan, always (rule owned by zeus-change-control; mechanics by zeus-storage-and-migrations). The minimum retirement is a `// deprecated` comment on the interface field; the inline default MAY also be deleted and the field marked optional (done for `lsps1ShowPurchaseButton` in `c89b75426`), but 4 of the 5 current deprecated keys retain their inline defaults (and `automaticallyRequestOlympusChannels` is not marked optional). Either way, the bytes stay in users' blobs.
+**3a. Deprecated flags are RETAINED, never hard-deleted.** Current deprecated-retained keys in `stores/SettingsStore.ts` (all marked `// deprecated`, verified 2026-10-24): `defaultFeeMethod`, `displayAmountOnInvoice`, `squareEnabled`, `automaticallyRequestOlympusChannels`, `lsps1ShowPurchaseButton`, and four `lightningAddress` keys marked `// deprecated (Zaplocker)` when #4933 removed the Zaplocker address code: `automaticallyAcceptAttestationLevel`, `routeHints`, `nostrPrivateKey`, `nostrRelays`. Removing a key from users' `zeus-settings-v2` blobs is a storage-format change and goes through the storage gate — maintainer sign-off plus migration plan, always (rule owned by zeus-change-control; mechanics by zeus-storage-and-migrations). The minimum retirement is a `// deprecated` comment on the interface field; the inline default MAY also be deleted and the field marked optional (done for `lsps1ShowPurchaseButton` in `c89b75426`), but 8 of the 9 current deprecated keys retain their defaults in `DEFAULT_SETTINGS` (and `automaticallyRequestOlympusChannels` and the four Zaplocker keys are not marked optional). Either way, the bytes stay in users' blobs.
 
 **3b. Dead UI is fenced in place, with a marker.** Two observed fencing styles:
 - `{false && ( ... )}` around the JSX plus a TODO comment stating the re-enable condition — e.g. the LSPS7 refund-onchain-address block in `views/LSPS7/index.tsx` ("TODO add conditions for refund onchain address").
@@ -165,9 +165,9 @@ All gates are owned by zeus-change-control; this list is the methodology-side or
 - [ ] Discussion happened first (issue opened; deps discussed before adding — CONTRIBUTING.md).
 - [ ] Evidence bar met: one mechanism, pre-registered predictions passed, adversarial refutation survived and RECORDED in the PR (Section 1).
 - [ ] Manual evidence on BOTH platforms (iOS + Android, real hands-on — maintainer non-negotiable) and on every backend the code path can reach, recorded in the PR-template backend matrix.
-- [ ] Bug fixes include a test that would have caught the bug (CONTRIBUTING.md "Test Coverage") — feasible today for `utils/` and `models/` code; see zeus-validation-and-qa for coverage reality.
+- [ ] Bug fixes include a test that would have caught the bug (CONTRIBUTING.md "Test Coverage") — feasible for `utils/` and `models/` code and, with mocks, for much of `stores/`, `backends/`, `views/` and `components/`, which all have Jest suites (e.g. `stores/SettingsStore.test.ts`); see zeus-validation-and-qa for coverage reality.
 - [ ] `yarn verify` green (= the 4 PR CI checks; anatomy in zeus-validation-and-qa).
-- [ ] Default-change for existing users ships as a MOD_KEY migration (zeus-storage-and-migrations), which triggers the storage gate: maintainer sign-off + migration plan.
+- [ ] Default-change for existing users ships as a versioned settings migration (`SETTINGS_VERSION` bump + `priorVersion < N` block; zeus-storage-and-migrations), which triggers the storage gate: maintainer sign-off + migration plan.
 - [ ] **Revert-readiness**: the change is a single squashable unit that can be reverted same-day without a data migration. If reverting your change would strand users' data in a new format, it is not ready — redesign so the format change is separable, or get the storage gate's explicit plan for both directions.
 
 ### 5c. Escalation routing
@@ -179,7 +179,7 @@ All gates are owned by zeus-change-control; this list is the methodology-side or
 
 ## 6. When to stop: the documented dead end
 
-Stop when any of these holds: (a) two full hypothesis cycles (Section 5a) ended with failed predictions and no surviving mechanism; (b) the fix would require breaking a maintainer non-negotiable (e.g. a payment-path refactor) for an unproven gain; (c) the bug is upstream and tracked there (then do what `88dd94abe` did: mitigate via settings/migration, link the upstream issue in a code comment, move on).
+Stop when any of these holds: (a) two full hypothesis cycles (Section 5a) ended with failed predictions and no surviving mechanism; (b) the fix would require breaking a maintainer non-negotiable (e.g. a payment-path refactor) for an unproven gain; (c) the bug is upstream and tracked there (then mitigate via a settings change or a versioned settings migration, as `88dd94abe` did with the MOD_KEY pattern of its time; link the upstream issue in a code comment; move on).
 
 Stopping is a deliverable. File an entry in zeus-failure-archaeology (its skill owns the chronicle format) containing at minimum:
 
@@ -197,15 +197,15 @@ A dead end without a written trail is the one outcome this methodology forbids: 
 
 ## Provenance and maintenance
 
-Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha) by direct file reads and read-only git commands. Every cited commit hash was confirmed reachable from `c5fd094fb` via `git merge-base --is-ancestor <hash> c5fd094fb` (grafted `git log --all` duplicates avoided; note a clone's local `master` ref may lag — verify against the ZeusLN/zeus master tip). Branch leads are labeled environment-dependent. `TODO(hsjoberg)`→Blixt attribution is inferred from in-repo markers, labeled as such in Section 4. Re-verify volatile facts before relying on them:
+Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha) by direct file reads and read-only git commands. Every cited commit hash was confirmed reachable from `c5fd094fb` via `git merge-base --is-ancestor <hash> c5fd094fb` (grafted `git log --all` duplicates avoided; note a clone's local `master` ref may lag — verify against the ZeusLN/zeus master tip). Branch leads are labeled environment-dependent. `TODO(hsjoberg)`→Blixt attribution is inferred from in-repo markers, labeled as such in Section 4. Re-verified 2026-10-24 against master `3dc9f83e6`: the glossary, Section 2 Stages 2 and 3 and worked example A, Section 3a, the 5b checklist, 6(c), and the bimodal and migration-inventory rows below (worked example A hashes all reachable from `3dc9f83e6`). Re-verify volatile facts before relying on them:
 
 | Fact | Re-verification command |
 |---|---|
 | HEAD / version | `git log --oneline -1 && grep '"version"' package.json` |
 | Deprecated-retained flag list | `grep -n '// deprecated' stores/SettingsStore.ts` |
 | bimodalPathfinding fresh default | `grep -n 'bimodalPathfinding' stores/SettingsStore.ts` |
-| bimodal demotion migration + lnd#9085 link | `grep -n -B2 'bimodal-bug-9085' utils/MigrationUtils.ts` |
-| MOD_KEY migration inventory | `grep -n 'MOD_KEY' utils/MigrationUtils.ts` |
+| bimodal demotion migration + lnd#9085 link | `grep -n -A4 'lnd/issues/9085' utils/MigrationUtils.ts` (the flag is read as `mod7`; `grep -n "'bimodal-bug-9085'" utils/MigrationUtils.ts` shows the read) |
+| Migration inventory (version gates; read-only legacy flags) | `grep -n 'priorVersion <' utils/MigrationUtils.ts` and `grep -n "EncryptedStorage.getItem('" utils/MigrationUtils.ts` |
 | Two settings load paths (modern/legacy) | `grep -n 'modernSettings\|LEGACY_STORAGE_KEY' stores/SettingsStore.ts` |
 | Fenced LSPS7 UI | `grep -n -B3 'false && (' views/LSPS7/index.tsx` |
 | ZEUS-3514 / ZEUS-3642 fences | `grep -rn 'ZEUS-3514' views/Wallet/Wallet.tsx; grep -n 'ZEUS-3642' backends/LightningNodeConnect.ts` |

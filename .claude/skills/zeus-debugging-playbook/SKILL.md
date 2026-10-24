@@ -43,7 +43,7 @@ Symptom → triage for Zeus's recurring failure modes. Each row names the first 
 
 1. **Which backend?** Most "bugs" are missing capability gates. Reproduce on (or at least reason about) the specific `implementation`. A feature working on `lnd` and dead on `lndhub` is a gating issue, not a logic issue.
 2. **Which platform?** The embedded-LND native layer is separate code per platform (`LndMobileService.java` vs `ios/LndMobile/Lnd.swift`); NWC background services, stealth mode, and keychain-iCloud behavior are platform-specific.
-3. **Fresh install or upgrade?** One-shot migrations (the MOD_KEY blocks in `utils/MigrationUtils.ts`) only run once per install. Upgrade-only bugs live there — a fresh install will never reproduce them. See zeus-storage-and-migrations.
+3. **Fresh install or upgrade?** Settings migrations in `utils/MigrationUtils.ts` run once per settings blob: `applySettingsMigrations` applies the `priorVersion < N` blocks newer than the blob's `settingsVersion` stamp and stamps it with `SETTINGS_VERSION` (PR #4477). Fresh installs start stamped at the current version and skip them all, so upgrade-only bugs never reproduce on a fresh install. Read the stored `settingsVersion` to see which blocks a device ran. Legacy-blob upgrades also run the read-only MOD_KEY flag blocks in `legacySettingsMigrations`. See zeus-storage-and-migrations.
 4. **Tor on or off?** Tor changes the request path (dedup-cache retention, TLS rules, WebSocket bypass). Toggle it as a discriminating experiment.
 
 Also remember: test coverage outside `utils/` is thin. `stores/`, `views/`, `components/` and `backends/` have test files, but most of their code is not exercised (as of 2026-10-08, 8% of `stores/TransactionsStore.ts` statements, and no test loads `utils/BackendUtils.ts`). A green `yarn test` proves little about a store bug unless a test covers that path. See zeus-validation-and-qa.
@@ -164,6 +164,8 @@ grep -rn "TODO" . \
 ## Provenance and maintenance
 
 Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha) by reading the cited files and running the commands below. All cited commit hashes verified as ancestors of that commit via `git merge-base --is-ancestor <hash> HEAD`.
+
+"Before you debug" question 3 re-verified 2026-10-24 against master `3dc9f83e6`.
 
 Re-verification one-liners for volatile facts:
 

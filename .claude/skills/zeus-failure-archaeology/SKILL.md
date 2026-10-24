@@ -105,15 +105,15 @@ Background terms: **React Native (RN)** is the cross-platform mobile framework; 
 
 **Dates:** 2026-05-30 → 2026-06-22. **Status: settled + policy.**
 
-Background terms: **MobX** is the state-management library; Zeus stores keep settings as MobX *observables* (proxied objects). A **MOD_KEY migration** is Zeus's one-shot pattern: check a flag key in legacy EncryptedStorage → mutate settings → `settingsStore.setSettings(...)` → set the flag (details in zeus-storage-and-migrations).
+Background terms: **MobX** is the state-management library; Zeus stores keep settings as MobX *observables* (proxied objects). A **MOD_KEY migration** was Zeus's one-shot pattern at the time: check a flag key in legacy EncryptedStorage → mutate settings → `settingsStore.setSettings(...)` → set the flag. PR #4477 (merged 2026-09-17, `dcf4f4a85`) replaced it for settings changes: a `settingsVersion` stamp in the blob (`SETTINGS_VERSION`, `utils/SettingsVersion.ts`) gates `priorVersion < N` blocks in `MigrationUtils.applySettingsMigrations`, which mutate in memory and land with the stamp in one write. The old flags are still read, never written (details in zeus-storage-and-migrations).
 
 Three related failures:
 
 1. **Stringify corruption.** Symptom: settings corrupted after a migration ran. Root cause: a migration passed a `JSON.stringify`'d string to `setSettings`, which expects a real object — corrupting the MobX observable state. Fix: `7ed901a10` "fix(migrations): pass object to setSettings to avoid MobX observable corruption (#4150)" (2026-06-09; #4150 is the issue — merged via PR #4155, merge `45e9d2095`, 2026-06-22).
 2. **Un-awaited setSettings.** Root cause: MOD_KEY blocks called `setSettings` without `await`, so the flag could be set before the write landed (or interleave with other writes). Fix: `d8e648b58` "fix(migrations): await settingsStore.setSettings in all MOD_KEY blocks" (2026-05-30).
-3. **Invoice-expiry repair had to run twice.** Symptom: invoice screen displayed "3600 hours" while invoices (BOLT11 = the standard Lightning payment-request format) actually expired in one hour. First repair `26d4215ea` (2026-05-30) fixed users whose settings *had* an `expirySeconds` field. It missed pre-Feb-2024 installs, which never stored `expirySeconds`/`timePeriod` at all — so a second pass `f7b2c30a8` (merge of `a7860aa96`, 2026-06-08, subject references #4149) derives a canonical seconds value and re-runs under a **new** flag key `invoices-expiry-display-fix-v2` (verified in `utils/MigrationUtils.ts` `migrateInvoiceExpiryDisplay`).
+3. **Invoice-expiry repair had to run twice.** Symptom: invoice screen displayed "3600 hours" while invoices (BOLT11 = the standard Lightning payment-request format) actually expired in one hour. First repair `26d4215ea` (2026-05-30) fixed users whose settings *had* an `expirySeconds` field. It missed pre-Feb-2024 installs, which never stored `expirySeconds`/`timePeriod` at all — so a second pass `f7b2c30a8` (merge of `a7860aa96`, 2026-06-08, subject references #4149) derives a canonical seconds value and re-runs under a **new** flag key `invoices-expiry-display-fix-v2`. Current state (2026-10-24): the repair is `applyInvoiceExpiryDisplay`, run once per blob in the `priorVersion < 1` block of `applySettingsMigrations` unless that flag is already set; the flag is read-only.
 
-**Lesson:** in migrations, always `await settingsStore.setSettings(realObject)` — never a stringified blob — and enumerate every historical settings shape (including fields that may have never existed) before declaring a repair complete.
+**Lesson:** never pass a stringified blob to `setSettings`, and enumerate every historical settings shape (including fields that may have never existed) before declaring a repair complete. Since #4477 a settings migration makes no `setSettings` call or flag write of its own: it mutates in memory inside a version-gated block, and a repair that missed people takes a new `SETTINGS_VERSION` bump.
 
 ---
 
@@ -242,10 +242,10 @@ Background: **Cashu** is a Chaumian ecash protocol; Zeus embeds the CDK (Cashu D
 Background: **bimodal pathfinding** is an lnd payment-routing probability model (alternative to the default "apriori" estimator).
 
 - **Root cause:** upstream bug lightningnetwork/lnd#9085 made bimodal mode unsafe for users who had it enabled; rather than change the fresh-install default, Zeus force-disabled it only for existing users.
-- **Evidence (verified in source):** `stores/SettingsStore.ts` default `bimodalPathfinding: true` (fresh installs); `utils/MigrationUtils.ts` MOD_KEY7 = `'bimodal-bug-9085'` sets `bimodalPathfinding = false` for migrated users, with the lnd issue URL in a comment.
+- **Evidence (verified in source):** `stores/SettingsStore.ts` default `bimodalPathfinding: true` (fresh installs); `utils/MigrationUtils.ts` `legacySettingsMigrations` reads the flag `'bimodal-bug-9085'` as `mod7` and, when it is unset, sets `bimodalPathfinding = false` for users upgrading from the legacy blob, with the lnd issue URL in a comment. Since #4477 the flag is never written.
 - **Consequence:** new and upgraded installs behave differently by design. Same divergence pattern exists for `showMillisatoshiAmounts` (see zeus-config-and-flags for the full new-vs-migrated list).
 
-**Lesson:** when an upstream bug forces a behavior change, decide explicitly whether fresh installs and migrated users should diverge — and record the upstream issue number in the MOD_KEY name.
+**Lesson:** when an upstream bug forces a behavior change, decide explicitly whether fresh installs and migrated users should diverge, and record the upstream issue number in the migration function's comment (MOD_KEY flag names did this before #4477).
 
 ---
 
@@ -301,7 +301,7 @@ Caveat: these are **local branches in the primary development clone** (hundreds 
 
 1. **FA-1:** Never delete keychain data in a migration — namespace and retain orphans.
 2. **FA-2:** Treat pre-2026 Animated/layout code as Fabric-suspect; never freeze the RN version for months.
-3. **FA-3:** `await settingsStore.setSettings(realObject)` — never stringified — and enumerate every historical settings shape.
+3. **FA-3:** Never stringify into `setSettings`; enumerate every historical settings shape; settings migrations go in version-gated blocks.
 4. **FA-4:** Lifecycle refactors in boot paths are behavior changes; test cold start on both platforms.
 5. **FA-5:** TLS cert bypass only for HTTPS `.onion`; treat HTTP ≥ 300 over Tor as errors.
 6. **FA-6:** Use `popTo` for back-navigation and `NativeStackNavigationProp` for types.
@@ -310,7 +310,7 @@ Caveat: these are **local branches in the primary development clone** (hundreds 
 9. **FA-9:** Length-cap inputs before regexing under Hermes.
 10. **FA-10/MP-1:** Check for `revert-<PR#>` before trusting any merged fix.
 11. **FA-11:** Namespace per-wallet data via `getNodeDir()`. Check which releases wrote the old keys before migrating; when migrating, copy, never move.
-12. **FA-12:** Record upstream issue numbers in MOD_KEY names; decide fresh-vs-migrated divergence explicitly.
+12. **FA-12:** Record upstream issue numbers in the migration comment; decide fresh-vs-migrated divergence explicitly.
 13. **MP-2:** Diff the graveyard branch before restarting stalled work.
 
 ---
@@ -318,6 +318,8 @@ Caveat: these are **local branches in the primary development clone** (hundreds 
 ## Provenance and maintenance
 
 Facts verified 2026-07-06 against master snapshot `c5fd094fb` (`git describe --tags` = `v13.1.2-3-gc5fd094fb`; package.json version `13.1.3-alpha`). Every hash above passed `git log -1 <hash>` and `git merge-base --is-ancestor <hash> c5fd094fb`. Dates are author dates from `git log --date=short`. Not independently verifiable from the repo: GitHub PR *bodies* (revert reasons confirmed absent only in commit bodies) and the maintainer's revert-first policy statement (2026-07-06, authoritative).
+
+FA-3 (background, item 3, lesson) and FA-12 (evidence, lesson) re-verified 2026-10-24 against master `3dc9f83e6`.
 
 Re-verification one-liners for volatile facts:
 
