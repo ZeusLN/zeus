@@ -10,7 +10,7 @@ import UnitsStore from './UnitsStore';
 import Order from '../models/Order';
 
 import { SATS_PER_BTC } from '../utils/UnitsUtils';
-import { calculateTaxSats } from '../utils/PosUtils';
+import { calculateTaxSats, isPayableSatsAmount } from '../utils/PosUtils';
 import { toCsvRow } from '../utils/CsvUtils';
 import BackendUtils from '../utils/BackendUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -168,6 +168,17 @@ export default class PosStore {
             .multipliedBy(rate)
             .dividedBy(SATS_PER_BTC)
             .toFixed(2);
+
+        // Without a usable fiat rate the total can't be converted, and
+        // Receive would create an invoice with no amount. Show the order
+        // instead, where paying stays disabled until a rate is available.
+        if (
+            !isPayableSatsAmount(totalSats) ||
+            (units === 'fiat' && !(Number(rate) > 0))
+        ) {
+            navigation.navigate('Order', { order: currentOrder });
+            return;
+        }
 
         const destination =
             settings?.ecash?.enableCashu && BackendUtils.supportsCashuWallet()
