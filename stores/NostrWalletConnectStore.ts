@@ -204,6 +204,15 @@ export default class NostrWalletConnectStore {
         string,
         number
     >();
+    private lastPendingMakeInvoiceCheckByKey = new Map<string, number>();
+    private pendingMakeInvoiceRefresh: Promise<void> | null = null;
+    private lastPendingMakeInvoiceRefreshAt = 0;
+    // Activity objects already looked up during the current single-flight
+    // cycle, so a queued trailing run skips them. Keyed by object identity:
+    // after loadConnections replaces the connections the entries are new
+    // objects and are checked again, which is the point of the trailing run.
+    private pendingMakeInvoiceCheckedThisCycle = new WeakSet<object>();
+    private pendingMakeInvoiceRefreshQueued = false;
     private makeInvoiceTimestampsByConnection = new Map<string, number[]>();
     // A list, not a single slot: overlapping mutations of the same kind
     // (e.g. two updates, or two rotations) on one connection must each keep
@@ -1021,6 +1030,9 @@ export default class NostrWalletConnectStore {
 
     @action
     public loadConnections = async () => {
+        // Rebuilding from storage would drop in-memory changes (e.g. a
+        // just-promoted invoice) that are still waiting on the debounce.
+        await this.flushScheduledSave();
         try {
             const connectionsData = await Storage.getItem(NWC_CONNECTIONS_KEY);
             if (connectionsData) {
@@ -1329,6 +1341,163 @@ export default class NostrWalletConnectStore {
         this.scheduleSave();
         return { name: connection.name, activity: connection.activity };
     };
+
+    /**
+     * Re-checks pending make_invoice activities across connections so list
+     * totals (received amounts) reflect invoices paid since the last visit
+     * without opening each connection's activity screen.
+     *
+     * Locally-expired invoices are still looked up before being closed: one
+     * paid while the app was away may have passed its expiry since. Each
+     * refresh checks a bounded batch, least recently checked first, so older
+     * invoices are not starved by newer ones. Cashu lookups follow the same
+     * min-age and per-connection debounce as the activity screen.
+     *
+     * Single-flight: a call made while one is running queues one trailing
+     * run, because loadConnections replaces the connection objects and a
+     * run that started before that would update stale activity entries.
+     * Calls within PENDING_PAYMENT_STATUS_REFRESH_MS of the last run are
+     * skipped unless `force` is set (pull-to-refresh).
+     */
+    public refreshPendingMakeInvoices = async (
+        options: { force?: boolean } = {}
+    ): Promise<void> => {
+        if (this.pendingMakeInvoiceRefresh) {
+            this.pendingMakeInvoiceRefreshQueued = true;
+            return this.pendingMakeInvoiceRefresh;
+        }
+
+        if (
+            !options.force &&
+            Date.now() - this.lastPendingMakeInvoiceRefreshAt <
+                PENDING_PAYMENT_STATUS_REFRESH_MS
+        ) {
+            return;
+        }
+
+        this.pendingMakeInvoiceRefresh = (async () => {
+            try {
+                this.pendingMakeInvoiceCheckedThisCycle = new WeakSet();
+                do {
+                    this.pendingMakeInvoiceRefreshQueued = false;
+                    this.lastPendingMakeInvoiceRefreshAt = Date.now();
+                    await this.runPendingMakeInvoiceRefresh();
+                } while (this.pendingMakeInvoiceRefreshQueued);
+            } finally {
+                this.pendingMakeInvoiceRefresh = null;
+            }
+        })();
+        return this.pendingMakeInvoiceRefresh;
+    };
+
+    private async runPendingMakeInvoiceRefresh(): Promise<void> {
+        if (!this.hasWalletContext()) return;
+
+        const MAX_PENDING_CHECKS = 20;
+        const candidates: {
+            key: string;
+            connectionId: string;
+            activity: ConnectionActivity;
+            createdAtMs: number;
+        }[] = [];
+        let changed = false;
+
+        for (const connection of this.connections) {
+            const pendingCashu = connection.activity.filter(
+                (activity) =>
+                    activity.type === 'make_invoice' &&
+                    activity.status === 'pending' &&
+                    !!activity.invoice &&
+                    activity.payment_source === 'cashu'
+            );
+            const cashuDue =
+                this.isCashuConfigured &&
+                pendingCashu.length > 0 &&
+                this.shouldRefreshPendingCashuInvoices(
+                    connection.id,
+                    pendingCashu
+                );
+
+            for (const activity of connection.activity) {
+                if (
+                    activity.type !== 'make_invoice' ||
+                    activity.status !== 'pending' ||
+                    !activity.invoice
+                ) {
+                    continue;
+                }
+                if (activity.payment_source === 'cashu' && !cashuDue) {
+                    continue;
+                }
+                if (this.pendingMakeInvoiceCheckedThisCycle.has(activity)) {
+                    continue;
+                }
+                const createdAtMs = activity.createdAt
+                    ? new Date(activity.createdAt).getTime()
+                    : 0;
+                candidates.push({
+                    key: `${connection.id}:${activity.id}`,
+                    connectionId: connection.id,
+                    activity,
+                    createdAtMs: Number.isFinite(createdAtMs) ? createdAtMs : 0
+                });
+            }
+        }
+
+        const candidateKeys = new Set(candidates.map((c) => c.key));
+        for (const key of this.lastPendingMakeInvoiceCheckByKey.keys()) {
+            if (!candidateKeys.has(key)) {
+                this.lastPendingMakeInvoiceCheckByKey.delete(key);
+            }
+        }
+
+        candidates.sort((x, y) => {
+            const lastX = this.lastPendingMakeInvoiceCheckByKey.get(x.key) ?? 0;
+            const lastY = this.lastPendingMakeInvoiceCheckByKey.get(y.key) ?? 0;
+            if (lastX !== lastY) return lastX - lastY;
+            return y.createdAtMs - x.createdAtMs;
+        });
+
+        const checkedAt = Date.now();
+        const batch = candidates.slice(0, MAX_PENDING_CHECKS);
+        for (const { connectionId, activity } of batch) {
+            if (activity.payment_source === 'cashu') {
+                this.lastPendingInvoiceStatusFetchByConnection.set(
+                    connectionId,
+                    checkedAt
+                );
+            }
+        }
+
+        await Promise.all(
+            batch.map(async ({ key, activity }) => {
+                this.lastPendingMakeInvoiceCheckByKey.set(key, checkedAt);
+                this.pendingMakeInvoiceCheckedThisCycle.add(activity);
+                const statusBefore = activity.status;
+                try {
+                    if (
+                        activity.payment_source === 'cashu' &&
+                        !(activity.invoice instanceof CashuInvoice)
+                    ) {
+                        runInAction(() => {
+                            activity.invoice = new CashuInvoice(
+                                activity.invoice
+                            );
+                        });
+                    }
+                    await this.reconcilePendingMakeInvoiceActivity(activity);
+                } catch (error) {
+                    console.error(
+                        'NWC: failed to refresh pending make_invoice:',
+                        error
+                    );
+                }
+                if (activity.status !== statusBefore) changed = true;
+            })
+        );
+
+        if (changed) this.scheduleSave();
+    }
 
     public refreshActivityInvoiceForNavigation = async (
         activity: ConnectionActivity
