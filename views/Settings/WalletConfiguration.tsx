@@ -278,6 +278,50 @@ export default class WalletConfiguration extends React.Component<
 
     scrollViewRef = React.createRef<ScrollView>();
 
+    // A different interface means a different server, so drop the previous
+    // server's address, credentials and input errors. Fields a form hides
+    // are still saved with the node, and a stale error flag keeps Save
+    // disabled. saved: false shows Save on an existing wallet.
+    //
+    // keepCertVerification (used by the clipboard imports) keeps the
+    // user's Certificate Verification choice instead of the dropdown's
+    // per-interface value, so an import never turns verification off. The
+    // lndhub form forces verification on and hides the switch, so a value
+    // carried to or from lndhub is not the user's and is reset.
+    resetConnection = (
+        implementation: Implementations,
+        {
+            keepCertVerification = false
+        }: { keepCertVerification?: boolean } = {}
+    ) => ({
+        implementation,
+        saved: false,
+        certVerification:
+            keepCertVerification &&
+            implementation !== 'lndhub' &&
+            this.state.implementation !== 'lndhub'
+                ? this.state.certVerification
+                : implementation === 'lndhub',
+        host: '',
+        port: '',
+        macaroonHex: '',
+        rune: '',
+        lndhubUrl: '',
+        username: '',
+        password: '',
+        pairingPhrase: '',
+        customMailboxServer: '',
+        nostrWalletConnectUrl: '',
+        hostError: false,
+        portError: false,
+        macaroonHexError: false,
+        runeError: false,
+        lndhubUrlError: false,
+        usernameError: false,
+        customMailboxServerError: false,
+        pairingPhraseError: false
+    });
+
     importClipboard = () => {
         const { suggestImport } = this.state;
 
@@ -285,10 +329,16 @@ export default class WalletConfiguration extends React.Component<
             const { host, port, macaroonHex } =
                 ConnectionFormatUtils.processLndConnectUrl(suggestImport);
 
+            // An lndconnect string describes an LND REST node. A Core
+            // Lightning rune left in the form would be sent to the
+            // imported host.
             this.setState({
+                ...this.resetConnection('lnd', {
+                    keepCertVerification: true
+                }),
                 host,
                 port,
-                macaroonHex,
+                macaroonHex: macaroonHex || '',
                 suggestImport: '',
                 importError: '',
                 enableTor: host.includes('.onion')
@@ -311,17 +361,10 @@ export default class WalletConfiguration extends React.Component<
 
                 const existingAccount = !!username;
 
-                // Clear the REST fields left over from a typed or saved
-                // config: the lndhub form hides them, but they are saved
-                // with the node.
                 const stateUpdate: any = {
+                    ...this.resetConnection('lndhub'),
                     username,
                     password,
-                    host: '',
-                    port: '',
-                    macaroonHex: '',
-                    rune: '',
-                    implementation: 'lndhub',
                     suggestImport: '',
                     importError: '',
                     existingAccount,
@@ -357,11 +400,13 @@ export default class WalletConfiguration extends React.Component<
             } = ConnectionFormatUtils.processCLNRestConnectUrl(suggestImport);
 
             this.setState({
+                ...this.resetConnection(implementation, {
+                    keepCertVerification: true
+                }),
                 host,
                 rune,
                 port,
                 enableTor,
-                implementation,
                 suggestImport: '',
                 importError: ''
             });
@@ -564,20 +609,8 @@ export default class WalletConfiguration extends React.Component<
         }
     };
 
-    // A different interface means a different server, so drop the previous
-    // server's address and credentials. The lndhub form hides host, port,
-    // macaroonHex and rune, but they would still be saved with the node.
     selectImplementation = (value: Implementations) => {
-        this.setState({
-            implementation: value,
-            saved: false,
-            certVerification: value === 'lndhub' ? true : false,
-            host: '',
-            port: '',
-            macaroonHex: '',
-            rune: '',
-            lndhubUrl: ''
-        });
+        this.setState(this.resetConnection(value));
     };
 
     saveWalletConfiguration = (
@@ -1631,7 +1664,9 @@ export default class WalletConfiguration extends React.Component<
                     }
                     navigation={navigation}
                 />
-                {!!suggestImport && (
+                {/* Same guard as the interface dropdown: an import would
+                    turn a set-up on-device wallet into a remote one */}
+                {!!suggestImport && !adminMacaroon && !ldkNodeInitialized && (
                     <View
                         style={{
                             padding: 10,

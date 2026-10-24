@@ -96,15 +96,20 @@ import { CUSTODIAL_LNDHUBS } from '../../utils/AddressUtils';
 import { clearNodeKeychainData } from '../../utils/DataClearUtils';
 
 const LNDHUB_IMPORT = 'lndhub://alice:secret@https://lndhub.example.com';
+const LNDCONNECT_IMPORT =
+    'lndconnect://new-node.example.com:8080?macaroon=AgEDbG5k';
+const CLNREST_IMPORT = 'clnrest+https://new-cln.example.com:3010?rune=newrune';
 
 // Opens the screen on an existing node at index 1, so a save neither
-// reconnects (the active node is 0) nor creates a new entry
+// reconnects (the active node is 0) nor creates a new entry. saved: true
+// is how Wallets opens a saved wallet.
 const renderView = async (
     node: any,
     {
         clipboard = false,
+        saved = false,
         params = {}
-    }: { clipboard?: boolean; params?: any } = {}
+    }: { clipboard?: boolean; saved?: boolean; params?: any } = {}
 ) => {
     const updateSettings = jest.fn(() => Promise.resolve());
     const SettingsStore = {
@@ -121,7 +126,7 @@ const renderView = async (
         <WalletConfiguration
             {...({
                 navigation,
-                route: { params: { node, index: 1, saved: false, ...params } },
+                route: { params: { node, index: 1, saved, ...params } },
                 SettingsStore
             } as any)}
         />
@@ -140,6 +145,14 @@ const pressButton = (name: string) =>
     fireEvent.press(screen.getByRole('button', { name }));
 
 const save = () => pressButton('views.Settings.WalletConfiguration.saveWallet');
+
+// Save on a config without certificate verification asks first
+const saveWithoutCertVerification = async () => {
+    await save();
+    await pressButton(
+        'views.Settings.WalletConfiguration.certificateUnderstand'
+    );
+};
 
 const interfaceDropdown = () =>
     screen.container.queryAll(
@@ -539,6 +552,223 @@ describe('WalletConfiguration', () => {
             await save();
 
             expect(savedNode(updateSettings).enableTor).toBeFalsy();
+        });
+    });
+
+    describe('lndconnect clipboard import', () => {
+        it('switches to LND and clears the credentials of a previous config', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(
+                LNDCONNECT_IMPORT
+            );
+            const { updateSettings } = await renderView(
+                {
+                    implementation: 'cln-rest',
+                    host: 'https://my-cln.example.com',
+                    port: '3010',
+                    rune: 'rune',
+                    lndhubUrl: 'https://lndhub.example.com',
+                    username: 'alice',
+                    password: 'secret',
+                    pairingPhrase: 'pairing phrase',
+                    customMailboxServer: 'mailbox.example.com:443',
+                    nostrWalletConnectUrl: 'nostr+walletconnect://abc',
+                    certVerification: true
+                },
+                { clipboard: true }
+            );
+
+            await pressButton('views.Settings.AddEditNode.import');
+            expect(interfaceDropdown().props.selectedValue).toBe('lnd');
+
+            await save();
+
+            expect(savedNode(updateSettings)).toMatchObject({
+                implementation: 'lnd',
+                host: 'https://new-node.example.com',
+                port: '8080',
+                macaroonHex: '0201036c6e64',
+                certVerification: true,
+                rune: '',
+                lndhubUrl: '',
+                username: '',
+                password: '',
+                pairingPhrase: '',
+                customMailboxServer: '',
+                nostrWalletConnectUrl: ''
+            });
+        });
+
+        it('asks about the certificate after an import over an lndhub config', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(
+                LNDCONNECT_IMPORT
+            );
+            // lndhub forces certVerification on
+            const { updateSettings } = await renderView(
+                {
+                    implementation: 'lndhub',
+                    lndhubUrl: 'https://lndhub.example.com',
+                    username: 'alice',
+                    password: 'secret',
+                    existingAccount: true,
+                    certVerification: true
+                },
+                { clipboard: true }
+            );
+
+            await pressButton('views.Settings.AddEditNode.import');
+            await save();
+
+            expect(
+                screen.getByText(
+                    'views.Settings.AddEditNode.certificateWarning1'
+                )
+            ).toBeOnTheScreen();
+            expect(updateSettings).not.toHaveBeenCalled();
+        });
+
+        // Only lndhub forces certVerification. Elsewhere it is the user's
+        // choice, and the interface dropdown is the only place that resets it.
+        it.each([
+            ['lndconnect', LNDCONNECT_IMPORT, 'lnd'],
+            ['clnrest', CLNREST_IMPORT, 'cln-rest']
+        ])(
+            'keeps certificate verification on after a %s import',
+            async (_, importString, implementation) => {
+                (Clipboard.getString as jest.Mock).mockResolvedValue(
+                    importString
+                );
+                const { updateSettings } = await renderView(
+                    {
+                        implementation: 'cln-rest',
+                        host: 'https://my-cln.example.com',
+                        port: '3010',
+                        rune: 'rune',
+                        certVerification: true
+                    },
+                    { clipboard: true }
+                );
+
+                await pressButton('views.Settings.AddEditNode.import');
+                await save();
+
+                expect(
+                    screen.queryByText(
+                        'views.Settings.AddEditNode.certificateWarning1'
+                    )
+                ).not.toBeOnTheScreen();
+                expect(savedNode(updateSettings)).toMatchObject({
+                    implementation,
+                    certVerification: true
+                });
+            }
+        );
+
+        it('can be saved on a saved wallet', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(
+                LNDCONNECT_IMPORT
+            );
+            const { updateSettings } = await renderView(LND_NODE, {
+                clipboard: true,
+                saved: true
+            });
+            expect(
+                screen.queryByRole('button', {
+                    name: 'views.Settings.WalletConfiguration.saveWallet'
+                })
+            ).not.toBeOnTheScreen();
+
+            await pressButton('views.Settings.AddEditNode.import');
+            await save();
+
+            expect(savedNode(updateSettings)).toMatchObject({
+                implementation: 'lnd',
+                host: 'https://new-node.example.com',
+                port: '8080',
+                macaroonHex: '0201036c6e64'
+            });
+        });
+
+        it('clears an input error of a previous config', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(
+                LNDCONNECT_IMPORT
+            );
+            const { updateSettings } = await renderView(
+                {
+                    implementation: 'cln-rest',
+                    host: 'https://my-cln.example.com',
+                    port: '3010',
+                    rune: ''
+                },
+                { clipboard: true }
+            );
+            // A pasted rune with invalid characters sets runeError
+            await fireEvent.changeText(
+                screen.getByPlaceholderText('Lt1c...'),
+                'not a rune!'
+            );
+
+            await pressButton('views.Settings.AddEditNode.import');
+            await saveWithoutCertVerification();
+
+            expect(savedNode(updateSettings)).toMatchObject({
+                implementation: 'lnd',
+                rune: ''
+            });
+        });
+
+        it.each([
+            [
+                'an LDK Node',
+                { implementation: 'ldk-node', ldkMnemonic: 'abandon' }
+            ],
+            [
+                'an embedded LND',
+                { implementation: 'embedded-lnd', adminMacaroon: 'beef' }
+            ]
+        ])('is not offered on %s wallet that is set up', async (_, node) => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(
+                LNDCONNECT_IMPORT
+            );
+            await renderView(node, { clipboard: true, saved: true });
+
+            expect(
+                screen.queryByRole('button', {
+                    name: 'views.Settings.AddEditNode.import'
+                })
+            ).not.toBeOnTheScreen();
+        });
+    });
+
+    describe('clnrest clipboard import', () => {
+        it('clears the macaroon and lndhub login of a previous config', async () => {
+            (Clipboard.getString as jest.Mock).mockResolvedValue(
+                CLNREST_IMPORT
+            );
+            const { updateSettings } = await renderView(
+                {
+                    ...LND_NODE,
+                    lndhubUrl: 'https://lndhub.example.com',
+                    username: 'alice',
+                    password: 'secret'
+                },
+                { clipboard: true }
+            );
+
+            await pressButton('views.Settings.AddEditNode.import');
+            expect(interfaceDropdown().props.selectedValue).toBe('cln-rest');
+
+            await save();
+
+            expect(savedNode(updateSettings)).toMatchObject({
+                implementation: 'cln-rest',
+                host: 'https://new-cln.example.com',
+                port: '3010',
+                rune: 'newrune',
+                macaroonHex: '',
+                lndhubUrl: '',
+                username: '',
+                password: ''
+            });
         });
     });
 
