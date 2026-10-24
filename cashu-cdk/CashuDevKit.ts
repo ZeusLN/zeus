@@ -11,6 +11,7 @@ import {
     CDKProofWithY,
     CDKToken,
     CDKMintInfo,
+    CDKMintContact,
     CDKKeyset,
     CDKMintQuote,
     CDKMeltQuote,
@@ -32,6 +33,87 @@ import { parseCashuDevKitError } from '../utils/ErrorUtils';
 const { CashuDevKitModule } = NativeModules as unknown as {
     CashuDevKitModule: CashuDevKitNativeModule;
 };
+
+// Upper bounds for the text a mint serves in its info. Names and short
+// identifiers are cut to the short length, free text to the long one. An
+// icon URL longer than the long length is dropped, since a cut URL is useless.
+const MINT_INFO_SHORT_TEXT_LENGTH = 256;
+const MINT_INFO_LONG_TEXT_LENGTH = 10000;
+const MINT_INFO_MAX_LIST_ENTRIES = 50;
+
+const asText = (value: unknown, maxLength: number): string | undefined =>
+    typeof value === 'string' ? value.slice(0, maxLength) : undefined;
+
+/**
+ * Parse a mint's answer to GET /v1/info. The native modules pass the body on
+ * as the mint sent it, and screens call string and array methods on these
+ * members while rendering. Keep only the members of CDKMintInfo, each only
+ * with the type declared there and with bounded length.
+ */
+export function parseMintInfo(json: string): CDKMintInfo | null {
+    const info = JSON.parse(json);
+    if (typeof info !== 'object' || info === null || Array.isArray(info)) {
+        return null;
+    }
+
+    const hasNuts =
+        typeof info.nuts === 'object' &&
+        info.nuts !== null &&
+        !Array.isArray(info.nuts);
+    const nuts: Record<string, any> = hasNuts ? { ...info.nuts } : {};
+    // NUT-15 is the only entry read by the app: a list of methods, either
+    // bare or under a `methods` key
+    const nut15 = nuts['15'];
+    if (nut15 !== undefined) {
+        const methods = Array.isArray(nut15) ? nut15 : nut15?.methods;
+        nuts['15'] = (Array.isArray(methods) ? methods : [])
+            .filter(
+                (method: any) =>
+                    typeof method?.method === 'string' &&
+                    typeof method?.unit === 'string'
+            )
+            .slice(0, MINT_INFO_MAX_LIST_ENTRIES)
+            .map((method: any) => ({
+                method: method.method.slice(0, MINT_INFO_SHORT_TEXT_LENGTH),
+                unit: method.unit.slice(0, MINT_INFO_SHORT_TEXT_LENGTH)
+            }));
+    }
+
+    const iconUrl = typeof info.icon_url === 'string' ? info.icon_url : '';
+
+    return {
+        name: asText(info.name, MINT_INFO_SHORT_TEXT_LENGTH),
+        pubkey: asText(info.pubkey, MINT_INFO_SHORT_TEXT_LENGTH),
+        version: asText(info.version, MINT_INFO_SHORT_TEXT_LENGTH),
+        description: asText(info.description, MINT_INFO_LONG_TEXT_LENGTH),
+        description_long: asText(
+            info.description_long,
+            MINT_INFO_LONG_TEXT_LENGTH
+        ),
+        contact: Array.isArray(info.contact)
+            ? info.contact
+                  .filter(
+                      (contact: any) =>
+                          typeof contact?.method === 'string' &&
+                          typeof contact?.info === 'string'
+                  )
+                  .slice(0, MINT_INFO_MAX_LIST_ENTRIES)
+                  .map((contact: CDKMintContact) => ({
+                      method: contact.method.slice(
+                          0,
+                          MINT_INFO_SHORT_TEXT_LENGTH
+                      ),
+                      info: contact.info.slice(0, MINT_INFO_LONG_TEXT_LENGTH)
+                  }))
+            : undefined,
+        motd: asText(info.motd, MINT_INFO_LONG_TEXT_LENGTH),
+        icon_url:
+            iconUrl && iconUrl.length <= MINT_INFO_LONG_TEXT_LENGTH
+                ? iconUrl
+                : undefined,
+        nuts: hasNuts ? nuts : undefined
+    };
+}
 
 /**
  * Map native error messages to CDK error types
@@ -217,7 +299,7 @@ class CashuDevKit {
     async fetchMintInfo(mintUrl: string): Promise<CDKMintInfo | null> {
         try {
             const json = await CashuDevKitModule.fetchMintInfo(mintUrl);
-            return json ? JSON.parse(json) : null;
+            return json ? parseMintInfo(json) : null;
         } catch (error) {
             throw mapCDKError(error);
         }
