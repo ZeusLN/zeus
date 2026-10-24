@@ -1680,3 +1680,47 @@ describe('CashuStore deleteCashuData', () => {
         expect(store.pendingMelts).toEqual([]);
     });
 });
+
+// An lnurl-withdraw callback the wallet must not fetch is refused before a
+// mint quote is requested, so no invoice is created that the service would
+// never pay.
+describe('CashuStore.createInvoice lnurl-withdraw callback', () => {
+    afterEach(() => jest.restoreAllMocks());
+
+    const withdrawTo = async (callback: string) => {
+        const store = newStore();
+        jest.spyOn(store, 'isProperlyConfigured').mockReturnValue(true);
+        const createMintQuote = jest
+            .spyOn(store, 'createMintQuoteCDK')
+            .mockRejectedValue(new Error('mint offline'));
+        const result = await store.createInvoice({
+            memo: 'x',
+            value: '1000',
+            lnurl: { callback, k1: 'K1', domain: 'service.example' } as any
+        });
+        return { store, result, createMintQuote };
+    };
+
+    it.each([
+        'https://192.168.1.1/cb',
+        'http://cleartext.example/cb',
+        'https://１２７.０.０.１/cb'
+    ])('refuses %s without requesting a mint quote', async (callback) => {
+        const { store, result, createMintQuote } = await withdrawTo(callback);
+
+        expect(createMintQuote).not.toHaveBeenCalled();
+        expect(result).toBeUndefined();
+        expect(store.invoice).toBeUndefined();
+        expect(store.creatingInvoice).toBe(false);
+        expect(store.creatingInvoiceError).toBe(true);
+        expect(store.error_msg).toContain('utils.lnurl.unsafeCallback');
+    });
+
+    it('requests a mint quote for a public https callback', async () => {
+        const { createMintQuote } = await withdrawTo(
+            'https://service.example/cb'
+        );
+
+        expect(createMintQuote).toHaveBeenCalled();
+    });
+});

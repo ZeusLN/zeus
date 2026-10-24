@@ -1,5 +1,10 @@
 jest.mock('../stores/Stores');
-jest.mock('react-native-blob-util', () => ({ fetch: jest.fn() }));
+// fetchLnurlUrl fetches through config({ followRedirect: false }); expose
+// the same mock both ways so tests can read its calls from either
+jest.mock('react-native-blob-util', () => {
+    const fetch = jest.fn();
+    return { fetch, config: () => ({ fetch }) };
+});
 jest.mock('../ldknode/LdkNodeInjection', () => ({}));
 jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
@@ -500,6 +505,7 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
         });
         (ReactNativeBlobUtil.fetch as jest.Mock).mockReset();
         (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValue({
+            info: () => ({ status: 200, headers: {} }),
             json: () => ({ status: 'OK' })
         });
         return { store, lspStore };
@@ -1030,5 +1036,95 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
             expect(requestedValue()).toBe('50000');
             expect(submittedInvoice()).toBe('lnbc-wrapped');
         });
+    });
+});
+
+// The withdraw callback is a URL the LNURL service chooses, and the wallet
+// fetches it from the phone's network position. Without the allowlist a
+// scanned lnurlw pointing at loopback or a LAN address turned the wallet into
+// an SSRF probe; the same guard already covered the pay flow's callback.
+describe('InvoicesStore lnurl-withdraw callback', () => {
+    const createStore = () =>
+        new InvoicesStore(
+            {} as any,
+            { resetFee: jest.fn(), clearFee: jest.fn() } as any,
+            {} as any,
+            {} as any
+        );
+
+    const withdrawTo = async (callback: string) => {
+        const store = createStore();
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            rHash: 'r1',
+            paymentRequest: 'lnbc1invoice'
+        });
+
+        const result = await store.createInvoice({
+            value: '1000',
+            memo: 'x',
+            lnurl: { callback, k1: 'K1', domain: 'service.example' },
+            unified: true,
+            noLsp: true
+        } as any);
+
+        // the callback fetch is not awaited by createInvoice
+        await new Promise((res) => setTimeout(res, 20));
+        return { store, result };
+    };
+
+    const blobFetch = ReactNativeBlobUtil.fetch as jest.Mock;
+
+    beforeEach(() => {
+        blobFetch.mockReset();
+        blobFetch.mockResolvedValue({
+            info: () => ({ status: 200, headers: {} }),
+            json: () => ({ status: 'OK' }),
+            text: () => ''
+        });
+        (BackendUtils.createInvoice as jest.Mock).mockClear();
+    });
+
+    it.each([
+        'http://127.0.0.1:8080/cb',
+        'https://192.168.1.1/cb',
+        'https://169.254.169.254/cb',
+        'http://cleartext.example/cb',
+        'https://１２７.０.０.１/cb'
+    ])('refuses a callback at %s before creating an invoice', async (cb) => {
+        const { store, result } = await withdrawTo(cb);
+
+        expect(blobFetch).not.toHaveBeenCalled();
+        expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
+        expect(result).toBeUndefined();
+        expect(store.payment_request).toBeNull();
+        expect(store.creatingInvoice).toBe(false);
+        expect(store.creatingInvoiceError).toBe(true);
+        expect(store.error_msg).toBe('utils.lnurl.unsafeCallback');
+    });
+
+    it('still fetches a public https callback', async () => {
+        await withdrawTo('https://service.example/cb');
+
+        expect(blobFetch).toHaveBeenCalled();
+        const [method, url] = blobFetch.mock.calls[0] as any;
+        expect(method).toBe('get');
+        expect(String(url)).toContain('https://service.example/cb');
+        expect(String(url)).toContain('k1=K1');
+        expect(String(url)).toContain('pr=lnbc1invoice');
+    });
+
+    it('does not follow a callback redirect to the LAN', async () => {
+        blobFetch.mockResolvedValueOnce({
+            info: () => ({
+                status: 307,
+                headers: { location: 'http://10.0.0.1/cb' }
+            }),
+            json: () => ({ status: 'OK' }),
+            text: () => ''
+        });
+
+        await withdrawTo('https://service.example/cb');
+
+        expect(blobFetch).toHaveBeenCalledTimes(1);
     });
 });

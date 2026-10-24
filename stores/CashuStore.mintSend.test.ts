@@ -11,10 +11,10 @@ jest.mock('./Stores', () => ({
 jest.mock('./SettingsStore', () => ({
     DEFAULT_NOSTR_RELAYS: ['wss://relay.one']
 }));
-jest.mock('react-native-blob-util', () => ({
-    __esModule: true,
-    default: { fetch: jest.fn() }
-}));
+jest.mock('react-native-blob-util', () => ({}));
+// The redirect-checking fetch has its own tests; here only its input and
+// result matter
+jest.mock('../utils/LnurlFetchUtils', () => ({ fetchLnurlUrl: jest.fn() }));
 jest.mock('@nostr-dev-kit/ndk', () => ({
     __esModule: true,
     default: jest.fn()
@@ -57,7 +57,7 @@ jest.mock('../storage', () => ({
 }));
 
 import { Alert } from 'react-native';
-import ReactNativeBlobUtil from 'react-native-blob-util';
+import { fetchLnurlUrl } from '../utils/LnurlFetchUtils';
 import CashuStore from './CashuStore';
 import CashuDevKit from '../cashu-cdk';
 import Storage from '../storage';
@@ -68,7 +68,7 @@ import * as LocaleUtils from '../utils/LocaleUtils';
 const cdk = CashuDevKit as unknown as Record<string, jest.Mock>;
 const storage = Storage as unknown as Record<string, jest.Mock>;
 const decode = Bolt11Utils.decode as jest.Mock;
-const blobFetch = ReactNativeBlobUtil.fetch as jest.Mock;
+const lnurlFetch = fetchLnurlUrl as jest.Mock;
 
 const A = 'https://a.mint';
 const B = 'https://b.mint';
@@ -144,7 +144,7 @@ beforeEach(() => {
     cdk.addExternalMintQuote.mockResolvedValue(undefined);
     cdk.mintExternal.mockResolvedValue(undefined);
     cdk.restore.mockResolvedValue(0);
-    blobFetch.mockResolvedValue({ json: () => ({ status: 'OK' }) });
+    lnurlFetch.mockResolvedValue({ json: () => ({ status: 'OK' }) });
     storage.setItem.mockResolvedValue(true);
     storage.getItem.mockResolvedValue(null);
     storage.removeItem.mockResolvedValue(true);
@@ -259,15 +259,14 @@ describe('CashuStore.createInvoice', () => {
 
         it('sends the invoice and k1 to the callback, keeping its query', async () => {
             const store = newStore();
-            blobFetch.mockResolvedValue({ json: () => ({ status: 'OK' }) });
+            lnurlFetch.mockResolvedValue({ json: () => ({ status: 'OK' }) });
             const alert = jest.spyOn(Alert, 'alert');
 
             await store.createInvoice({ memo: '', value: '10', lnurl });
             await new Promise((resolve) => setImmediate(resolve));
 
-            expect(blobFetch).toHaveBeenCalledTimes(1);
-            const [method, requested] = blobFetch.mock.calls[0];
-            expect(method).toBe('get');
+            expect(lnurlFetch).toHaveBeenCalledTimes(1);
+            const [requested] = lnurlFetch.mock.calls[0];
             const query = new URL(requested).searchParams;
             expect(
                 requested.startsWith('https://service.example/withdraw?')
@@ -280,7 +279,7 @@ describe('CashuStore.createInvoice', () => {
 
         it('shows the reason the service gives for an error', async () => {
             const store = newStore();
-            blobFetch.mockResolvedValue({
+            lnurlFetch.mockResolvedValue({
                 json: () => ({ status: 'ERROR', reason: 'already claimed' })
             });
             const alert = jest
@@ -300,7 +299,7 @@ describe('CashuStore.createInvoice', () => {
 
         it('shows the network error when the callback cannot be reached', async () => {
             const store = newStore();
-            blobFetch.mockRejectedValue(new Error('timeout'));
+            lnurlFetch.mockRejectedValue(new Error('timeout'));
             const alert = jest
                 .spyOn(Alert, 'alert')
                 .mockImplementation(() => {});
