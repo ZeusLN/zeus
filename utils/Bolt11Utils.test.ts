@@ -47,6 +47,24 @@ describe('decode', () => {
         expect(action).toThrowError('Not a proper lightning payment request');
     });
 
+    it('rejects a payment request longer than 7089 characters up front', () => {
+        // timestamp + empty tagged fields (3 words each) + 104-word signature;
+        // every field forces another pass over the remaining words, so an
+        // uncapped decode of this shape is quadratic in the invoice length.
+        const build = (length: number) =>
+            bech32.encode(
+                'lnbc10u',
+                new Array(length - 'lnbc10u1'.length - 6).fill(0),
+                length
+            );
+
+        expect(build(7089)).toHaveLength(7089);
+        expect(Bolt11Utils.decode(build(7089)).num_satoshis).toBe('1000');
+        expect(() => Bolt11Utils.decode(build(7090))).toThrowError(
+            'Exceeds length limit'
+        );
+    });
+
     it('parses the amount from a nano-BTC prefix (1230n = 123 sat)', () => {
         const decoded = Bolt11Utils.decode(REGTEST_FIXTURE);
 
