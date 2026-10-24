@@ -229,12 +229,10 @@ describe('CLNRest.request', () => {
     });
 });
 
-// restReq's non-2xx branch builds a message from the JSON-RPC body
-// (error.message, then message, then error) inside a try block whose own
-// catch swallows that throw. The observable message is therefore always
-// the raw body when it is a string, and the generic connection error
-// otherwise. These tests pin that behaviour, so a fix that surfaces the
-// parsed message has to update them.
+// restReq's non-2xx branch throws the JSON-RPC error message from the
+// body (error.message, then message, then a string error), falling back
+// to the raw body when it carries no message, and to the generic
+// connection error when there is no usable body.
 describe('CLNRest.request error fallback', () => {
     const rejectWith = async (status: number, data: any) => {
         mockFetch.mockResolvedValue(blobResponse(status, data));
@@ -243,25 +241,38 @@ describe('CLNRest.request error fallback', () => {
         return error.message;
     };
 
-    it('throws the raw body for a nested JSON-RPC error object', async () => {
+    it('throws the message of a nested JSON-RPC error object', async () => {
         const body = JSON.stringify({
             error: { code: 210, message: 'Destination unknown' }
         });
-        expect(await rejectWith(500, body)).toBe(body);
+        expect(await rejectWith(500, body)).toBe('Destination unknown');
     });
 
-    it('throws the raw body for a top-level message', async () => {
+    it('throws a top-level message', async () => {
         const body = JSON.stringify({ code: -32602, message: 'bad param' });
-        expect(await rejectWith(400, body)).toBe(body);
+        expect(await rejectWith(400, body)).toBe('bad param');
     });
 
-    it('throws the raw body for a string error field', async () => {
+    it('throws a string error field', async () => {
         const body = JSON.stringify({ error: 'Not authorized' });
-        expect(await rejectWith(401, body)).toBe(body);
+        expect(await rejectWith(401, body)).toBe('Not authorized');
+    });
+
+    it('prefers the nested message over a top-level one', async () => {
+        const body = JSON.stringify({
+            message: 'outer',
+            error: { message: 'inner' }
+        });
+        expect(await rejectWith(500, body)).toBe('inner');
     });
 
     it('throws the raw body for JSON with no message', async () => {
         const body = JSON.stringify({ code: 1 });
+        expect(await rejectWith(500, body)).toBe(body);
+    });
+
+    it('throws the raw body for an error object with no message', async () => {
+        const body = JSON.stringify({ error: { code: 1 } });
         expect(await rejectWith(500, body)).toBe(body);
     });
 
@@ -279,11 +290,24 @@ describe('CLNRest.request error fallback', () => {
         expect(await rejectWith(500, '')).toBe(CONNECTION_ERROR);
     });
 
-    it('falls back to the connection error for a non-string body', async () => {
+    it('throws the message of a non-string body', async () => {
         const response = {
             info: () => ({ status: 500 }),
             data: { error: { message: 'object body' } },
             json: () => ({ error: { message: 'object body' } })
+        };
+        mockFetch.mockResolvedValue(response);
+
+        await expect(cln.postRequest('/v1/pay')).rejects.toThrow(
+            new Error('object body')
+        );
+    });
+
+    it('falls back to the connection error for a non-string body with no message', async () => {
+        const response = {
+            info: () => ({ status: 500 }),
+            data: { code: 1 },
+            json: () => ({ code: 1 })
         };
         mockFetch.mockResolvedValue(response);
 
