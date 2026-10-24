@@ -154,7 +154,7 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
             getInfoData?.result ||
             getInfoData;
 
-        if (lspBalanceSat === 0 && info?.min_initial_lsp_balance_sat) {
+        if (lspBalanceSat === 0 && info?.min_initial_lsp_balance_sat > 0) {
             this.setState({
                 lspBalanceSat: parseInt(info.min_initial_lsp_balance_sat)
             });

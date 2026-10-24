@@ -92,42 +92,44 @@ const LEGACY_GET_INFO = {
 };
 
 const REFUND_ADDRESS = 'views.LSPS1.refundOnchainAddress';
+const LSP_BALANCE = 'views.LSPS1.initialLSPBalance (general.sats)';
 
 const legacyGetInfoWith = (options: any) => ({
     ...LEGACY_GET_INFO,
     options: { ...LEGACY_GET_INFO.options, ...options }
 });
 
-const renderView = (getInfoData: any) =>
-    render(
-        <LSPS1
-            LSPStore={
-                {
-                    getInfoData,
-                    createOrderResponse: {},
-                    loadingLSPS1: false,
-                    error: false,
-                    error_msg: '',
-                    resetLSPS1Data: jest.fn(),
-                    lsps1GetInfoREST: jest.fn(),
-                    isOlympus: () => false,
-                    getLSPS1Rest: () => 'https://lsps1.example.com',
-                    getLSPSPubkey: () => '',
-                    getLSPSHost: () => ''
-                } as any
-            }
-            ChannelsStore={{} as any}
-            SettingsStore={{ settings: { lsps1Token: '' } } as any}
-            NodeInfoStore={
-                {
-                    flowLspNotConfigured: () => ({
-                        flowLspNotConfigured: true
-                    })
-                } as any
-            }
-            navigation={{ addListener: jest.fn(), navigate: jest.fn() } as any}
-        />
-    );
+const lsps1 = (getInfoData: any) => (
+    <LSPS1
+        LSPStore={
+            {
+                getInfoData,
+                createOrderResponse: {},
+                loadingLSPS1: false,
+                error: false,
+                error_msg: '',
+                resetLSPS1Data: jest.fn(),
+                lsps1GetInfoREST: jest.fn(),
+                isOlympus: () => false,
+                getLSPS1Rest: () => 'https://lsps1.example.com',
+                getLSPSPubkey: () => '',
+                getLSPSHost: () => ''
+            } as any
+        }
+        ChannelsStore={{} as any}
+        SettingsStore={{ settings: { lsps1Token: '' } } as any}
+        NodeInfoStore={
+            {
+                flowLspNotConfigured: () => ({
+                    flowLspNotConfigured: true
+                })
+            } as any
+        }
+        navigation={{ addListener: jest.fn(), navigate: jest.fn() } as any}
+    />
+);
+
+const renderView = (getInfoData: any) => render(lsps1(getInfoData));
 
 describe('LSPS1 service info with zero values', () => {
     it('shows min_required_channel_confirmations 0 from the spec example', async () => {
@@ -176,4 +178,28 @@ describe('LSPS1 service info with zero values', () => {
             expect(screen.queryByPlaceholderText(REFUND_ADDRESS)).toBeNull();
         }
     );
+});
+
+// On the device get_info arrives after the screen mounts, so
+// componentDidUpdate fills the form from it
+describe('LSPS1 get_info that arrives after the screen mounts', () => {
+    it('keeps the LSP balance at 0 when min_initial_lsp_balance_sat is "0"', async () => {
+        const { rerender } = await renderView({});
+        await rerender(lsps1(SPEC_GET_INFO));
+
+        expect(screen.getByPlaceholderText(LSP_BALANCE)).toHaveDisplayValue(
+            '0'
+        );
+    });
+
+    it('fills the LSP balance from a nonzero min_initial_lsp_balance_sat', async () => {
+        const { rerender } = await renderView({});
+        await rerender(
+            lsps1({ ...SPEC_GET_INFO, min_initial_lsp_balance_sat: '100000' })
+        );
+
+        expect(screen.getByPlaceholderText(LSP_BALANCE)).toHaveDisplayValue(
+            '100000'
+        );
+    });
 });
