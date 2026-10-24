@@ -246,6 +246,71 @@ describe('ReceiveEcash after the view was left', () => {
     });
 });
 
+describe('ReceiveEcash Cancel', () => {
+    beforeEach(() => jest.clearAllMocks());
+    afterEach(() => jest.useRealTimers());
+
+    it('stops checking the invoice it clears', () => {
+        jest.useFakeTimers();
+        const { view, CashuStore, subscribeInvoice } = makeView('1000', 1000);
+
+        subscribeInvoice();
+        view.cancelInvoice();
+        jest.advanceTimersByTime(9000);
+
+        expect(CashuStore.clearInvoice).toHaveBeenCalled();
+        expect(CashuStore.checkInvoicePaid).not.toHaveBeenCalled();
+    });
+
+    it('does not show a payment to the cancelled invoice as paid', async () => {
+        jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+        let answer: (response: any) => void = () => {};
+        const { view, CashuStore, PosStore, subscribeInvoice } = makeView(
+            '1000',
+            1000,
+            {
+                checkInvoicePaid: () =>
+                    new Promise((resolve) => (answer = resolve))
+            }
+        );
+
+        subscribeInvoice();
+        jest.advanceTimersByTime(3000);
+        // the check is in flight when Cancel is tapped
+        view.cancelInvoice();
+        answer({ isPaid: true, amtSat: 1000, paymentRequest: 'lnbc1' });
+        await flush();
+
+        expect(CashuStore.setWatchedInvoicePaid).not.toHaveBeenCalled();
+        // the payment still counts for the order
+        expect(PosStore.recordPayment).toHaveBeenCalledWith(
+            expect.objectContaining({ orderId: 'order', tx: 'lnbc1' })
+        );
+    });
+
+    it('keeps checking the newer invoice when a check of the replaced one answers', async () => {
+        jest.useFakeTimers({ doNotFake: ['setImmediate'] });
+        const answers: Array<(response: any) => void> = [];
+        const checkInvoicePaid = jest.fn(
+            () => new Promise((resolve) => answers.push(resolve))
+        );
+        const { view, CashuStore, subscribeInvoice } = makeView('1000', 1000, {
+            checkInvoicePaid
+        });
+
+        subscribeInvoice();
+        jest.advanceTimersByTime(3000);
+        subscribeInvoice();
+        answers[0]({ isPaid: true, amtSat: 1000, paymentRequest: 'lnbc1' });
+        await flush();
+        jest.advanceTimersByTime(3000);
+
+        expect(CashuStore.setWatchedInvoicePaid).not.toHaveBeenCalled();
+        expect(checkInvoicePaid).toHaveBeenCalledTimes(2);
+        view.componentWillUnmount();
+    });
+});
+
 // what Pay via NFC does once the tag resolves to `response`
 const scanTag = async (
     response: any,

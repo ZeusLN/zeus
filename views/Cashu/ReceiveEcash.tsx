@@ -250,6 +250,14 @@ export default class ReceiveEcash extends React.Component<
 
     clearIntervals = () => {
         if (this.lnInterval) clearInterval(this.lnInterval);
+        this.lnInterval = undefined;
+    };
+
+    // Cancel: stop checking the invoice that is cleared, so a payment to
+    // it does not show the next invoice as paid
+    cancelInvoice = () => {
+        this.clearIntervals();
+        this.props.CashuStore.clearInvoice();
     };
 
     onBack = () => {
@@ -350,7 +358,7 @@ export default class ReceiveEcash extends React.Component<
 
         // only ever poll the latest invoice of this view
         this.clearIntervals();
-        this.lnInterval = setInterval(() => {
+        const interval = setInterval(() => {
             checkInvoicePaid(quoteId, selectedMintUrl).then(
                 (response?: {
                     isPaid: boolean;
@@ -360,9 +368,9 @@ export default class ReceiveEcash extends React.Component<
                 }) => {
                     if (response?.isPaid) {
                         // a check that was in flight when the interval
-                        // was cleared must not mark the next view's
-                        // invoice as paid
-                        if (!this.isUnmounted)
+                        // was cleared (view left, invoice cancelled or
+                        // replaced) must not mark the next invoice as paid
+                        if (!this.isUnmounted && this.lnInterval === interval)
                             setWatchedInvoicePaid(response.amtSat);
                         if (orderId)
                             PosStore.recordPayment({
@@ -375,7 +383,8 @@ export default class ReceiveEcash extends React.Component<
                                 tx: response.paymentRequest || '',
                                 preimage: 'N/A'
                             });
-                        this.clearIntervals();
+                        // a stale check must not stop the checks of a newer invoice
+                        if (this.lnInterval === interval) this.clearIntervals();
                     } else {
                         if (__DEV__) {
                             console.log(
@@ -387,6 +396,7 @@ export default class ReceiveEcash extends React.Component<
                 }
             );
         }, 3000);
+        this.lnInterval = interval;
     };
 
     updateIndex = (selectedIndex: number) => {
@@ -438,9 +448,7 @@ export default class ReceiveEcash extends React.Component<
         const ClearButton = () => (
             <Icon
                 name="cancel"
-                onPress={() => {
-                    CashuStore.clearInvoice();
-                }}
+                onPress={this.cancelInvoice}
                 color={themeColor('text')}
                 underlayColor="transparent"
                 size={30}
