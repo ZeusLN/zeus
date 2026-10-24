@@ -1298,8 +1298,14 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                 // handed in stays pending while the payment is in flight
                 val melted = wallet.prepareMelt(quote.id).useHandle { it.confirm() }
 
+                // Return the quote id so the caller can record which MPP
+                // quote this part was paid with.
+                val result = encodeMelted(melted).apply {
+                    put("quote_id", quote.id)
+                }
+
                 withContext(Dispatchers.Main) {
-                    promise.resolve(encodeMelted(melted).toString())
+                    promise.resolve(result.toString())
                 }
             } catch (e: FfiException) {
                 val (code, message) = mapFfiException(e)
