@@ -248,8 +248,8 @@ export default class CashuStore {
     // Inputs of the sufficiency check run by getPayReq(), exposed so the
     // payment views can extend it with the donation that is sent from the
     // same mints right after the invoice is paid: the balance the payment
-    // can be drawn from (the one mint, or every mint the multi-mint planner
-    // can use) and the amount quoted for the invoice. Both stay 0 when
+    // can be drawn from (the one mint, or every selected mint in multi-mint)
+    // and the amount quoted for the invoice. Both stay 0 when
     // getPayReq did not quote the invoice.
     @observable public payReqMintBalance: number = 0;
     @observable public payReqAmount: number = 0;
@@ -1162,14 +1162,12 @@ export default class CashuStore {
     };
 
     // The balance a multi-mint payment and the donation after it can be
-    // drawn from: the mints in the payment's plan, and every other funded
-    // selected mint that supports MPP. With two or more funded mints the
-    // planner splits only across MPP mints, but its regular melt fallback
-    // can put a mint without MPP into the plan.
-    private multiMintSpendableBalance = (plannedMintUrls: string[]): number => {
-        const planned = new Set(
-            plannedMintUrls.map((mintUrl) => this.normalizeMintUrl(mintUrl))
-        );
+    // drawn from: every selected mint. A mint without MPP can be left out of
+    // the payment's plan and still pay the donation, through the planner's
+    // regular melt fallback, so this is an upper bound. Whether the mints
+    // left after the payment can pay a given donation is decided by
+    // canPayDonationAfterPayReq.
+    private multiMintSpendableBalance = (): number => {
         const uniqueSelectedMints = Array.from(
             new Set(
                 this.multiMintSelectedUrls.map((mintUrl) =>
@@ -1178,15 +1176,10 @@ export default class CashuStore {
             )
         );
 
-        return uniqueSelectedMints
-            .filter(
-                (mintUrl) =>
-                    planned.has(mintUrl) || this.mintSupportsMpp(mintUrl)
-            )
-            .reduce(
-                (sum, mintUrl) => sum + Number(this.mintBalances[mintUrl] || 0),
-                0
-            );
+        return uniqueSelectedMints.reduce(
+            (sum, mintUrl) => sum + Number(this.mintBalances[mintUrl] || 0),
+            0
+        );
     };
 
     // Builds the user-facing "not enough funds" message, augmenting it
@@ -1326,14 +1319,19 @@ export default class CashuStore {
         }
     };
 
+    // Pass `balances` to plan against balances other than the wallet's
+    // current ones (keyed by normalized mint URL). Such a plan is only
+    // inspected, so it leaves multiMintPlannerSkips alone.
     private prepareMultiMintMeltQuotesCDK = async ({
         invoice,
         amountToPay,
-        mintUrls
+        mintUrls,
+        balances: simulatedBalances
     }: {
         invoice: string;
         amountToPay: number;
         mintUrls?: string[];
+        balances?: Record<string, number>;
     }): Promise<
         {
             mintUrl: string;
@@ -1357,7 +1355,8 @@ export default class CashuStore {
             this.mintSupportsMpp(mintUrl)
         );
 
-        const balances = await CashuDevKit.getBalances();
+        const recordSkips = !simulatedBalances;
+        const balances = simulatedBalances || (await CashuDevKit.getBalances());
         const normalizedBalances = Object.entries(balances).reduce(
             (acc, [mintUrl, balance]) => {
                 acc[this.normalizeMintUrl(mintUrl)] = balance;
@@ -1367,15 +1366,19 @@ export default class CashuStore {
         );
 
         if (amountToPay <= 0) {
-            this.multiMintPlannerSkips = [];
+            if (recordSkips) {
+                this.multiMintPlannerSkips = [];
+            }
             return [];
         }
 
         // Reset skip classification at the start of every pass so stale
         // entries from a prior invoice don't leak into the error message.
-        runInAction(() => {
-            this.multiMintPlannerSkips = [];
-        });
+        if (recordSkips) {
+            runInAction(() => {
+                this.multiMintPlannerSkips = [];
+            });
+        }
 
         // All selected mints with positive balance (regardless of MPP
         // support). This is what determines whether MPP is even possible.
@@ -1479,9 +1482,11 @@ export default class CashuStore {
 
         // Surface skip reasons so the error-message layer can name the
         // mint that couldn't participate (e.g. invoice destination).
-        runInAction(() => {
-            this.multiMintPlannerSkips = [...skipped];
-        });
+        if (recordSkips) {
+            runInAction(() => {
+                this.multiMintPlannerSkips = [...skipped];
+            });
+        }
 
         if (candidates.length === 0) {
             return [];
@@ -4585,6 +4590,17 @@ export default class CashuStore {
         }
     };
 
+    // The mint getPayReq quotes a single-mint payment on
+    private payReqMintUrl = (): string => {
+        const singleSelectedMintUrl =
+            !!this.settingsStore.settings?.ecash?.enableMultiMint &&
+            Array.isArray(this.multiMintSelectedUrls) &&
+            this.multiMintSelectedUrls.length === 1
+                ? this.multiMintSelectedUrls[0]
+                : undefined;
+        return singleSelectedMintUrl || this.selectedMintUrl;
+    };
+
     @action
     public getPayReq = async (
         bolt11Invoice: string,
@@ -4665,13 +4681,7 @@ export default class CashuStore {
                 !!this.settingsStore.settings?.ecash?.enableMultiMint &&
                 Array.isArray(this.multiMintSelectedUrls) &&
                 this.multiMintSelectedUrls.length > 1;
-            const singleSelectedMintUrl =
-                !!this.settingsStore.settings?.ecash?.enableMultiMint &&
-                Array.isArray(this.multiMintSelectedUrls) &&
-                this.multiMintSelectedUrls.length === 1
-                    ? this.multiMintSelectedUrls[0]
-                    : undefined;
-            const activeMintUrl = singleSelectedMintUrl || this.selectedMintUrl;
+            const activeMintUrl = this.payReqMintUrl();
 
             const normalizedMultiMintPaymentAmt =
                 this.normalizeMultimintPaymentAmount(rawPaymentAmt);
@@ -4744,9 +4754,7 @@ export default class CashuStore {
                     );
                     // The planner stops once the invoice is covered, so the
                     // plan can leave out mints that would pay the donation
-                    mintBalanceChecked = this.multiMintSpendableBalance(
-                        preparedQuotes.map(({ mintUrl }) => mintUrl)
-                    );
+                    mintBalanceChecked = this.multiMintSpendableBalance();
                     amountChecked = paymentAmt;
                 } else {
                     totalFeeEstimate = 0;
@@ -4842,6 +4850,84 @@ export default class CashuStore {
                 });
             }
         }
+    };
+
+    // Whether the selected mints can still pay `donationInvoice` once the
+    // invoice getPayReq quoted is paid and has used its whole fee reserve.
+    // The donation is quoted the way it will be paid after the invoice: a
+    // regular melt on the payment's mint, or the multi-mint planner run
+    // against the balances the payment leaves. Resolves undefined when
+    // there is no quote for the payment, or quoting the donation failed.
+    public canPayDonationAfterPayReq = async (
+        donationInvoice: string
+    ): Promise<boolean | undefined> => {
+        const paymentQuote = this.meltQuote;
+        const paymentQuotes = [...this.meltQuotes];
+
+        try {
+            if (paymentQuote) {
+                const mintUrl = this.payReqMintUrl();
+                const balance = Number(
+                    this.mintBalances[mintUrl] ||
+                        this.mintBalances[this.normalizeMintUrl(mintUrl)] ||
+                        0
+                );
+                const balanceLeft =
+                    balance -
+                    (Number(paymentQuote.amount) || 0) -
+                    (Number(paymentQuote.fee_reserve) || 0);
+                const donationQuote = await this.createMeltQuoteCDK(
+                    mintUrl,
+                    donationInvoice
+                );
+                return (
+                    balanceLeft >=
+                    (Number(donationQuote.amount) || 0) +
+                        (Number(donationQuote.fee_reserve) || 0)
+                );
+            }
+
+            if (paymentQuotes.length > 0) {
+                const donationAmount = this.normalizeMultimintPaymentAmount(
+                    new Invoice(Bolt11Utils.decode(donationInvoice))
+                        .getRequestAmount
+                );
+                if (!donationAmount) return undefined;
+
+                const balancesLeft = Object.entries(
+                    await CashuDevKit.getBalances()
+                ).reduce((acc, [mintUrl, balance]) => {
+                    acc[this.normalizeMintUrl(mintUrl)] = Number(balance) || 0;
+                    return acc;
+                }, {} as Record<string, number>);
+                for (const { mintUrl, meltQuote } of paymentQuotes) {
+                    const key = this.normalizeMintUrl(mintUrl);
+                    balancesLeft[key] = Math.max(
+                        0,
+                        (balancesLeft[key] || 0) -
+                            (Number(meltQuote.amount) || 0) -
+                            (Number(meltQuote.fee_reserve) || 0)
+                    );
+                }
+
+                const donationPlan = await this.prepareMultiMintMeltQuotesCDK({
+                    invoice: donationInvoice,
+                    amountToPay: donationAmount,
+                    balances: balancesLeft
+                });
+                const allocated = donationPlan.reduce(
+                    (sum, { meltQuote }) =>
+                        sum + (Number(meltQuote.amount) || 0),
+                    0
+                );
+                return donationPlan.length > 0 && allocated >= donationAmount;
+            }
+        } catch (e) {
+            if (__DEV__) {
+                console.log('canPayDonationAfterPayReq: quote failed', e);
+            }
+        }
+        return undefined;
     };
 
     @action

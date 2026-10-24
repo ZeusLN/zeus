@@ -9,8 +9,10 @@ import {
     calculateTotalWithDonation,
     findDonationPercentageIndex,
     getDonationToSend,
-    loadDonationLnurl
+    loadDonationLnurl,
+    prefetchDonationInvoice
 } from './DonationUtils';
+import Bolt11Utils from './Bolt11Utils';
 
 const mockFetch = ReactNativeBlobUtil.fetch as jest.Mock;
 const mockConsoleError = jest
@@ -303,6 +305,99 @@ describe('DonationUtils', () => {
             expect(await loadDonationLnurl('-21')).toBeNull();
             expect(await loadDonationLnurl('abc')).toBeNull();
             expect(mockFetch).not.toHaveBeenCalled();
+        });
+
+        describe('with a prefetched invoice', () => {
+            const { timestamp, timeExpireDate } = Bolt11Utils.decode(
+                DONATION_INVOICE_21_SATS
+            );
+            const at = (seconds: number) =>
+                jest.spyOn(Date, 'now').mockReturnValue(seconds * 1000);
+
+            const mockInvoiceFetch = () =>
+                mockFetch
+                    .mockResolvedValueOnce(mockLnurlParams())
+                    .mockResolvedValueOnce({
+                        json: () => ({ pr: DONATION_INVOICE_21_SATS })
+                    });
+
+            const prefetch = async () => {
+                mockInvoiceFetch();
+                expect(await prefetchDonationInvoice('21')).toBe(
+                    DONATION_INVOICE_21_SATS
+                );
+                mockFetch.mockClear();
+            };
+
+            afterEach(async () => {
+                // drop whatever a test left prefetched
+                mockFetch.mockResolvedValue(mockLnurlParams());
+                await loadDonationLnurl('21');
+                mockFetch.mockReset();
+                (Date.now as jest.Mock).mockRestore?.();
+            });
+
+            it('should hand out the prefetched invoice without fetching', async () => {
+                at(timestamp + 10);
+                await prefetch();
+
+                expect(await loadDonationLnurl('21')).toBe(
+                    DONATION_INVOICE_21_SATS
+                );
+                expect(mockFetch).not.toHaveBeenCalled();
+            });
+
+            it('should hand out the prefetched invoice only once', async () => {
+                at(timestamp + 10);
+                await prefetch();
+                await loadDonationLnurl('21');
+
+                mockInvoiceFetch();
+                await loadDonationLnurl('21');
+
+                expect(mockFetch).toHaveBeenCalledTimes(2);
+            });
+
+            it('should fetch a new invoice for another amount', async () => {
+                at(timestamp + 10);
+                await prefetch();
+                mockFetch
+                    .mockResolvedValueOnce(mockLnurlParams())
+                    .mockResolvedValueOnce({
+                        json: () => ({ pr: DONATION_INVOICE_21_SATS })
+                    });
+
+                // the 21 sat invoice fails verification for 500 sats
+                expect(await loadDonationLnurl('500')).toBeNull();
+                expect(mockFetch).toHaveBeenNthCalledWith(
+                    2,
+                    'GET',
+                    `${CALLBACK_URL}?amount=500000`
+                );
+            });
+
+            it('should fetch a new invoice when the prefetched one is about to expire', async () => {
+                at(timestamp + 10);
+                await prefetch();
+                at(timeExpireDate! - 60);
+                mockInvoiceFetch();
+
+                await loadDonationLnurl('21');
+
+                expect(mockFetch).toHaveBeenCalledTimes(2);
+            });
+
+            it('should keep nothing when the prefetch fails', async () => {
+                at(timestamp + 10);
+                await prefetch();
+                mockFetch.mockRejectedValueOnce(new Error('Network error'));
+                expect(await prefetchDonationInvoice('21')).toBeNull();
+
+                mockInvoiceFetch();
+                await loadDonationLnurl('21');
+
+                expect(mockFetch).toHaveBeenCalledTimes(3);
+            });
         });
     });
 });

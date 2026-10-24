@@ -1134,7 +1134,7 @@ describe('CashuStore payReqMintBalance and payReqAmount', () => {
         expect(store.payReqAmount).toBe(75);
     });
 
-    it('leaves out a funded mint without MPP that is not in the plan', async () => {
+    it('counts a funded mint without MPP that is not in the plan', async () => {
         const store = newStore({
             balances: { [A]: 600, [B]: 500, [C]: 300 },
             selected: [A, B, C],
@@ -1147,8 +1147,9 @@ describe('CashuStore payReqMintBalance and payReqAmount', () => {
 
         await store.getPayReq(INVOICE);
 
+        // C can still pay a donation through the regular melt fallback
         expect(planOf(store).map(({ mintUrl }) => mintUrl)).toEqual([A, B]);
-        expect(store.payReqMintBalance).toBe(1100);
+        expect(store.payReqMintBalance).toBe(1400);
     });
 
     it('counts a mint without MPP when the planner falls back to a regular melt on it', async () => {
@@ -1215,5 +1216,186 @@ describe('CashuStore payReqMintBalance and payReqAmount', () => {
 
         expect(store.payReqMintBalance).toBe(0);
         expect(store.payReqAmount).toBe(0);
+    });
+});
+
+describe('CashuStore canPayDonationAfterPayReq', () => {
+    const DONATION = 'lnbc1donation';
+
+    // decode returns the invoice for INVOICE and the donation for DONATION
+    const invoiceAndDonation = (invoiceSats: number, donationSats: number) =>
+        decode.mockImplementation((pr: string) => ({
+            payment_hash: PAYMENT_HASH,
+            timestamp: Math.floor(Date.now() / 1000) - 10,
+            expiry: 3600,
+            num_satoshis: String(pr === DONATION ? donationSats : invoiceSats)
+        }));
+
+    // Regular melt quotes: the invoice is quoted at 1000 + 3 as in
+    // beforeEach, the donation at its amount plus `donationFee`
+    const regularQuotes = (donationSats: number, donationFee: number) =>
+        cdk.createMeltQuote.mockImplementation(
+            async (mintUrl: string, bolt11: string) => ({
+                id: `regular-${mintUrl}-${bolt11}`,
+                amount: bolt11 === DONATION ? donationSats : 1000,
+                fee_reserve: bolt11 === DONATION ? donationFee : 3,
+                state: 'UNPAID',
+                expiry: 9999999999,
+                unit: 'sat',
+                request: bolt11
+            })
+        );
+
+    const singleMintStore = () =>
+        newStore({
+            balances: { [A]: 1200 },
+            selected: [A],
+            enableMultiMint: false
+        });
+
+    it('accepts a donation whose amount and fee reserve fit in what the invoice leaves', async () => {
+        invoiceAndDonation(1000, 190);
+        regularQuotes(190, 7);
+        const store = singleMintStore();
+        await store.getPayReq(INVOICE);
+
+        // 1200 - (1000 + 3) = 197 = 190 + 7
+        await expect(store.canPayDonationAfterPayReq(DONATION)).resolves.toBe(
+            true
+        );
+        expect(cdk.createMeltQuote).toHaveBeenLastCalledWith(
+            A,
+            DONATION,
+            undefined
+        );
+    });
+
+    it("refuses a donation that only its own fee reserve doesn't fit", async () => {
+        invoiceAndDonation(1000, 190);
+        regularQuotes(190, 8);
+        const store = singleMintStore();
+        await store.getPayReq(INVOICE);
+
+        // invoice + fee reserve + donation is 1193, within the 1200 the
+        // check in the pay screen compares with
+        expect(store.payReqMintBalance).toBe(1200);
+        await expect(store.canPayDonationAfterPayReq(DONATION)).resolves.toBe(
+            false
+        );
+    });
+
+    it('resolves undefined when the donation quote fails', async () => {
+        invoiceAndDonation(1000, 190);
+        regularQuotes(190, 7);
+        const store = singleMintStore();
+        await store.getPayReq(INVOICE);
+
+        cdk.createMeltQuote.mockRejectedValueOnce(new Error('mint offline'));
+        await expect(
+            store.canPayDonationAfterPayReq(DONATION)
+        ).resolves.toBeUndefined();
+    });
+
+    it('resolves undefined before the invoice is quoted', async () => {
+        const store = singleMintStore();
+
+        await expect(
+            store.canPayDonationAfterPayReq(DONATION)
+        ).resolves.toBeUndefined();
+        expect(cdk.createMeltQuote).not.toHaveBeenCalled();
+    });
+
+    it('accepts a donation the mints left after a split can pay', async () => {
+        invoiceAndDonation(1000, 50);
+        const store = newStore({
+            balances: { [A]: 600, [B]: 500 },
+            selected: [A, B]
+        });
+        mintApi({
+            [A]: () => ({ fee: 1 }),
+            [B]: () => ({ fee: 1 })
+        });
+        await store.getPayReq(INVOICE);
+        expect(planOf(store)).toEqual([
+            { mintUrl: A, amount: 546, fee: 1 },
+            { mintUrl: B, amount: 454, fee: 1 }
+        ]);
+
+        // A is left with 53 and covers 50 + 1 on its own
+        await expect(store.canPayDonationAfterPayReq(DONATION)).resolves.toBe(
+            true
+        );
+    });
+
+    it('refuses a donation the summed balances cover but the per-mint fee reserves do not', async () => {
+        invoiceAndDonation(1000, 98);
+        const store = newStore({
+            balances: { [A]: 600, [B]: 500 },
+            selected: [A, B]
+        });
+        mintApi({
+            [A]: () => ({ fee: 1 }),
+            [B]: () => ({ fee: 1 })
+        });
+        await store.getPayReq(INVOICE);
+
+        // 1000 + 2 + 98 = 1100, all of the balance, but A is left with 53
+        // and B with 45, which can carry 52 + 44 after their fee reserves
+        expect(store.payReqMintBalance).toBe(1100);
+        await expect(store.canPayDonationAfterPayReq(DONATION)).resolves.toBe(
+            false
+        );
+    });
+
+    it('refuses a donation when a regular melt fallback leaves too little on the paying mint', async () => {
+        invoiceAndDonation(1000, 152);
+        const store = newStore({
+            balances: { [A]: 1010, [B]: 150 },
+            selected: [A, B],
+            mpp: [B]
+        });
+        mintApi({
+            [B]: () => ({ fee: 1 })
+        });
+        await store.getPayReq(INVOICE);
+        expect(planOf(store)).toEqual([
+            { mintUrl: A, amount: 1000, fee: 3, regular: true }
+        ]);
+
+        // the balances sum to 1160 against 1000 + 3 + 152, but A is left
+        // with 7 and B can carry 149 after its fee reserve
+        expect(store.payReqMintBalance).toBe(1160);
+        await expect(store.canPayDonationAfterPayReq(DONATION)).resolves.toBe(
+            false
+        );
+    });
+
+    it('accepts a donation a mint without MPP left out of the plan pays through the fallback', async () => {
+        invoiceAndDonation(1000, 150);
+        regularQuotes(150, 2);
+        const store = newStore({
+            balances: { [A]: 1010, [C]: 200 },
+            selected: [A, C],
+            mpp: [A]
+        });
+        mintApi({
+            [A]: () => ({ fee: 3 })
+        });
+        await store.getPayReq(INVOICE);
+        expect(planOf(store)).toEqual([{ mintUrl: A, amount: 1000, fee: 3 }]);
+        const skips = store.multiMintPlannerSkips;
+
+        // A is left with 7, so C pays 150 + 2 with a regular melt
+        await expect(store.canPayDonationAfterPayReq(DONATION)).resolves.toBe(
+            true
+        );
+        expect(cdk.createMeltQuote).toHaveBeenLastCalledWith(
+            C,
+            DONATION,
+            undefined
+        );
+        // the donation's plan is only inspected
+        expect(store.multiMintPlannerSkips).toBe(skips);
+        expect(planOf(store)).toEqual([{ mintUrl: A, amount: 1000, fee: 3 }]);
     });
 });
