@@ -94,7 +94,7 @@ The `pod-install` npm package runs CocoaPods for `ios/`. On non-macOS it prints 
 
 ## 3) Vendoring rules (`zeus_modules/`)
 
-`zeus_modules/` holds vendored (checked-in) packages: `@lightninglabs/lnc-core`, `@lightninglabs/lnc-rn`, `@remobile/react-native-qrcode-local-image`, `bc-bech32`, `bc-ur`, `ur`, `noble_ecc.ts`.
+`zeus_modules/` holds vendored (checked-in) packages: `@lightninglabs/lnc-core`, `@lightninglabs/lnc-rn`, `noble_ecc.ts`.
 
 - `@lightninglabs/lnc-core` IS in `package.json` dependencies via `"file:zeus_modules/@lightninglabs/lnc-core"`.
 - `@lightninglabs/lnc-rn` is NOT in `package.json` at all. It is vendored **with its own committed `node_modules/` and `yarn.lock`** and imported by relative path (`backends/LightningNodeConnect.ts`: `import LNC from '../zeus_modules/@lightninglabs/lnc-rn'`). **Never `yarn add` lnc-rn** — you would get a second, unpatched copy and break the LNC backend.
