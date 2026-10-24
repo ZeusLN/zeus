@@ -73,7 +73,11 @@ const BUDGET = 'views.Settings.NostrWalletConnect.budget';
 const INFO_LABEL =
     'views.Settings.NostrWalletConnect.budgetInfo.accessibilityLabel';
 
-const renderScreen = async (connectionPermissions?: string[]) => {
+const renderScreen = async (
+    connectionPermissions?: string[],
+    relayUrl: string = 'wss://relay.example'
+) => {
+    const ref = React.createRef<any>();
     const ModalStore = { toggleInfoModal: jest.fn() };
     let onFocus: () => void = () => {};
     const NostrWalletConnectStore = {
@@ -85,7 +89,7 @@ const renderScreen = async (connectionPermissions?: string[]) => {
             connection: {
                 name: 'Test',
                 permissions: connectionPermissions,
-                relayUrl: 'wss://relay.example',
+                relayUrl,
                 createdAt: new Date(),
                 expiresAt: undefined
             }
@@ -93,6 +97,7 @@ const renderScreen = async (connectionPermissions?: string[]) => {
     };
     await render(
         <AddOrEditNWCConnection
+            ref={ref}
             navigation={
                 {
                     addListener: jest.fn((_: string, cb: () => void) => {
@@ -115,7 +120,7 @@ const renderScreen = async (connectionPermissions?: string[]) => {
     await act(async () => {
         onFocus();
     });
-    return { ModalStore };
+    return { ModalStore, ref };
 };
 
 describe('AddOrEditNWCConnection budget info', () => {
@@ -139,5 +144,40 @@ describe('AddOrEditNWCConnection budget info', () => {
                 'views.Settings.NostrWalletConnect.budgetInfo.limit'
             ]
         });
+    });
+});
+
+describe('AddOrEditNWCConnection custom relay validation', () => {
+    it('requires wss:// for a new custom relay', async () => {
+        const { ref } = await renderScreen();
+        const screenInstance = ref.current;
+
+        expect(screenInstance.isValidRelayUrl('wss://relay.example.com')).toBe(
+            true
+        );
+        expect(screenInstance.isValidRelayUrl('ws://relay.example.com')).toBe(
+            false
+        );
+        expect(
+            screenInstance.isValidRelayUrl(
+                'ws://2gzyxa5ihm7nsggfxnu52rck2vv4rvmdlkiu3zzui5du4xyclen53wid.onion'
+            )
+        ).toBe(true);
+    });
+
+    it('keeps an existing ws:// relay valid when editing', async () => {
+        const { ref } = await renderScreen(
+            NostrConnectUtils.getReadOnlyPermissions(),
+            'ws://relay.example.com'
+        );
+        const screenInstance = ref.current;
+
+        expect(screenInstance.state.customRelayUrl).toBe(
+            'ws://relay.example.com'
+        );
+        expect(screenInstance.isFormValid()).toBe(true);
+        expect(screenInstance.isValidRelayUrl('ws://other.example.com')).toBe(
+            false
+        );
     });
 });
