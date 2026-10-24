@@ -476,7 +476,8 @@ export default class ChannelsStore {
                     this.pendingHTLCs.push(...channel.pending_htlcs);
                 }
             }
-            this.haveAnnouncedChannels = haveAnnouncedChannels;
+            if (setPendingHtlcs)
+                this.haveAnnouncedChannels = haveAnnouncedChannels;
 
             if (this.pendingHTLCs.length > 0) {
                 console.log('Pending HTLCs', this.pendingHTLCs);

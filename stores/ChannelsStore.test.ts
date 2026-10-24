@@ -384,6 +384,74 @@ describe('ChannelsStore.closeChannel', () => {
     });
 });
 
+describe('ChannelsStore.haveAnnouncedChannels', () => {
+    const pendingChannels = (pendingOpen: any[]) => ({
+        pending_open_channels: pendingOpen,
+        pending_closing_channels: [],
+        pending_force_closing_channels: [],
+        waiting_close_channels: []
+    });
+
+    // lets the enrichment reactions of all channel lists run to completion
+    const settle = () => new Promise((resolve) => setImmediate(resolve));
+
+    beforeEach(() => {
+        jest.mocked(BackendUtils.supportsPendingChannels).mockReturnValue(true);
+        jest.mocked(BackendUtils.getPendingChannels).mockResolvedValue(
+            pendingChannels([])
+        );
+    });
+
+    afterEach(() => {
+        jest.mocked(BackendUtils.supportsPendingChannels).mockReturnValue(
+            false
+        );
+    });
+
+    it('is not cleared by a pending channel', async () => {
+        const store = makeStore();
+        jest.mocked(BackendUtils.getChannels).mockResolvedValue({
+            channels: [
+                channel(11243, 5000, true),
+                { ...channel(4000, 1000, true), private: true }
+            ]
+        } as any);
+        // an inbound channel open from another node
+        jest.mocked(BackendUtils.getPendingChannels).mockResolvedValue(
+            pendingChannels([
+                {
+                    channel: {
+                        remote_node_pub: 'stranger',
+                        channel_point: 'txid:0',
+                        capacity: '20000'
+                    }
+                }
+            ])
+        );
+
+        await store.getChannels();
+        await settle();
+
+        expect(store.pendingChannels.length).toBe(1);
+        expect(store.haveAnnouncedChannels).toBe(true);
+    });
+
+    it('ignores unannounced and inactive channels', async () => {
+        const store = makeStore();
+        jest.mocked(BackendUtils.getChannels).mockResolvedValue({
+            channels: [
+                channel(11243, 5000, false),
+                { ...channel(4000, 1000, true), private: true }
+            ]
+        } as any);
+
+        await store.getChannels();
+        await settle();
+
+        expect(store.haveAnnouncedChannels).toBe(false);
+    });
+});
+
 describe('ChannelsStore.getNodePolicy', () => {
     it('returns undefined for LND-shaped channel info missing CLNRest fields (issue #4591)', () => {
         const store = makeStore();
