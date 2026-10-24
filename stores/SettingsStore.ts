@@ -9,6 +9,7 @@ import omit from 'lodash/omit';
 import BackendUtils from '../utils/BackendUtils';
 import { getSupportedBiometryType } from '../utils/BiometricUtils';
 import { localeString } from '../utils/LocaleUtils';
+import { VerifierRecord, hasVerifier } from '../utils/LockVerifierUtils';
 import MigrationsUtils from '../utils/MigrationUtils';
 import { SETTINGS_VERSION } from '../utils/SettingsVersion';
 import { doTorRequest, RequestMethod } from '../utils/TorUtils';
@@ -205,10 +206,19 @@ export interface Settings {
     nodes?: Array<Node>;
     selectedNode?: number;
     justDeletedWallet?: boolean;
+    // Legacy plaintext lock credentials. Retained only so the
+    // lock-verifier-hash migration can read and clear them; new code must use
+    // the salted verifier records below and never write these.
     passphrase?: string;
     duressPassphrase?: string;
     pin?: string;
     duressPin?: string;
+    // Salted scrypt verifiers for the app lock (see utils/LockVerifierUtils).
+    // Presence of pinVerifier vs passphraseVerifier also selects the lock UI.
+    passphraseVerifier?: VerifierRecord;
+    duressPassphraseVerifier?: VerifierRecord;
+    pinVerifier?: VerifierRecord;
+    duressPinVerifier?: VerifierRecord;
     scramblePin?: boolean;
     loginBackground?: boolean;
     authenticationAttempts?: number;
@@ -2150,9 +2160,27 @@ export default class SettingsStore {
                 // when consolidation routes through the updateSettings
                 // queue the authoritative object is the queue's, not this
                 // call's snapshot, so adopt the return value
-                const migratedSettings =
+                let migratedSettings =
                     await MigrationsUtils.runSettingsMigrations(
                         parsedSettings,
+                        fromQueue
+                    );
+                // hash any plaintext PIN/passphrase into salted verifiers.
+                // Runs after the consolidation so it sees (and, routed
+                // through the queue, persists) the authoritative object.
+                migratedSettings =
+                    await MigrationsUtils.migrateLockCredentialsToVerifiers(
+                        migratedSettings,
+                        fromQueue
+                    );
+                // iOS one-shot: rewrite pre-existing keychain items so
+                // write-once keys pick up the non-migratable accessibility
+                // class. Modern path only: the legacy path's
+                // storageMigrationV2 freshly writes every item, which
+                // stamps them correctly already.
+                migratedSettings =
+                    await MigrationsUtils.restampKeychainAccessibility(
+                        migratedSettings,
                         fromQueue
                     );
                 // second pass picks up whatever the migrations produced,
@@ -2725,8 +2753,8 @@ export default class SettingsStore {
 
     public loginMethodConfigured = () =>
         this.settings &&
-        (this.settings.passphrase ||
-            this.settings.pin ||
+        (hasVerifier(this.settings.passphraseVerifier) ||
+            hasVerifier(this.settings.pinVerifier) ||
             this.isBiometryConfigured());
 
     public checkBiometricsStatus = async () => {
