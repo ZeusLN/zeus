@@ -2055,6 +2055,37 @@ describe('NostrWalletConnectStore make_invoice invoice isolation', () => {
         expect(invoicesStore.payment_request).toBe('lnbc-on-screen');
     });
 
+    it('never fetches an on-chain address, even when the backend can receive on-chain', async () => {
+        const { store, connection, invoicesStore } = setup();
+        (BackendUtils.supportsOnchainReceiving as jest.Mock).mockReturnValue(
+            true
+        );
+        invoicesStore.payment_request = 'lnbc-on-screen';
+        invoicesStore.onChainAddress = 'bcrt1-on-screen';
+        const getNewAddress = jest.fn().mockResolvedValue('bcrt1-nwc');
+        (invoicesStore as any).getNewAddress = getNewAddress;
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            payment_request: 'lnbc-nwc',
+            r_hash: 'dd'
+        });
+
+        try {
+            const response = await (store as any).handleMakeInvoice(
+                connection,
+                { amount: 1000_000 }
+            );
+
+            expect(response.result.invoice).toBe('lnbc-nwc');
+            expect(getNewAddress).not.toHaveBeenCalled();
+            expect(invoicesStore.onChainAddress).toBe('bcrt1-on-screen');
+            expect(invoicesStore.payment_request).toBe('lnbc-on-screen');
+        } finally {
+            (
+                BackendUtils.supportsOnchainReceiving as jest.Mock
+            ).mockReturnValue(false);
+        }
+    });
+
     it('returns the backend error when the invoice cannot be created', async () => {
         const { store, connection, invoicesStore } = setup();
         (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({

@@ -219,8 +219,12 @@ export default class InvoicesStore {
             feeSats: number,
             amountSats: string
         ) => Promise<boolean>;
-        // create the invoice without touching the fields the Receive
-        // screen shows; the caller takes it from the return value
+        // Create the invoice without touching the fields the Receive
+        // screen shows; the caller takes it from the return value and
+        // gets backend errors as a thrown error. Only safe together with
+        // noLsp and skipOnchain: the on-chain leg below, the LSP fee quote
+        // and the route-hint error path in createInvoice still write
+        // shared fields. NWC make_invoice is the only caller.
         silent?: boolean;
     }) => {
         if (!silent) this.creatingInvoice = true;
@@ -337,6 +341,9 @@ export default class InvoicesStore {
             feeSats: number,
             amountSats: string
         ) => Promise<boolean>;
+        // See createUnifiedInvoice: skips the Receive screen fields, but
+        // the LSP fee quote and the route-hint error path still write
+        // shared state, so pass noLsp and no route hints with it.
         silent?: boolean;
     }) => {
         // useLsp is the caller's own decision. Receive passes it because

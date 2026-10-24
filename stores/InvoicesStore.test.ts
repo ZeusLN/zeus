@@ -1055,6 +1055,26 @@ describe('InvoicesStore.createUnifiedInvoice', () => {
 
     const params = { memo: '', value: '1000', expirySeconds: '3600' };
 
+    // Values the Receive screen could be showing, none of them defaults, so
+    // a silent call that reset them would be caught.
+    const seedReceiveState = (store: InvoicesStore) => {
+        store.payment_request = 'lnbc-on-screen';
+        store.payment_request_amt = '500';
+        store.creatingInvoice = true;
+        store.creatingInvoiceError = true;
+        store.error_msg = 'earlier error';
+        store.loading = true;
+    };
+
+    const expectReceiveStateKept = (store: InvoicesStore) => {
+        expect(store.payment_request).toBe('lnbc-on-screen');
+        expect(store.payment_request_amt).toBe('500');
+        expect(store.creatingInvoice).toBe(true);
+        expect(store.creatingInvoiceError).toBe(true);
+        expect(store.error_msg).toBe('earlier error');
+        expect(store.loading).toBe(true);
+    };
+
     afterEach(() => {
         (BackendUtils.createInvoice as jest.Mock).mockReset();
     });
@@ -1088,8 +1108,7 @@ describe('InvoicesStore.createUnifiedInvoice', () => {
         });
 
         const store = newUnifiedStore();
-        store.payment_request = 'lnbc-on-screen';
-        store.payment_request_amt = '500';
+        seedReceiveState(store);
 
         const result: any = await store.createUnifiedInvoice({
             ...params,
@@ -1098,9 +1117,7 @@ describe('InvoicesStore.createUnifiedInvoice', () => {
         });
 
         expect(result.paymentRequest).toBe('lnbc-nwc');
-        expect(store.payment_request).toBe('lnbc-on-screen');
-        expect(store.payment_request_amt).toBe('500');
-        expect(store.creatingInvoice).toBeFalsy();
+        expectReceiveStateKept(store);
         // the fee quote and LSP error shown on the Receive screen stay too
         expect(store.lspStore.clearFee).not.toHaveBeenCalled();
         expect(store.lspStore.resetFee).not.toHaveBeenCalled();
@@ -1113,6 +1130,7 @@ describe('InvoicesStore.createUnifiedInvoice', () => {
         });
 
         const store = newUnifiedStore();
+        seedReceiveState(store);
 
         await expect(
             store.createUnifiedInvoice({
@@ -1121,8 +1139,25 @@ describe('InvoicesStore.createUnifiedInvoice', () => {
                 silent: true
             })
         ).rejects.toThrow('node offline');
-        expect(store.creatingInvoiceError).toBeFalsy();
-        expect(store.error_msg).toBeFalsy();
+        expectReceiveStateKept(store);
+    });
+
+    it('throws a rejected backend call without touching the Receive screen when silent', async () => {
+        (BackendUtils.createInvoice as jest.Mock).mockRejectedValue(
+            new Error('connection refused')
+        );
+
+        const store = newUnifiedStore();
+        seedReceiveState(store);
+
+        await expect(
+            store.createUnifiedInvoice({
+                ...params,
+                noLsp: true,
+                silent: true
+            })
+        ).rejects.toThrow('connection refused');
+        expectReceiveStateKept(store);
     });
 
     it('still updates the Receive screen fields by default', async () => {
