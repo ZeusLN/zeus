@@ -14,6 +14,7 @@ jest.mock('../utils/TorUtils', () => ({
 }));
 
 const mockCloseChannel = jest.fn();
+const mockOpenChannel = jest.fn();
 const mockSendPaymentV2Sync = jest.fn();
 const mockSendKeysendPaymentV2 = jest.fn();
 const mockListPayments = jest.fn();
@@ -30,6 +31,7 @@ jest.mock('../lndmobile/LndMobileInjection', () => ({
         },
         channel: {
             closeChannel: (...args: any[]) => mockCloseChannel(...args),
+            openChannel: (...args: any[]) => mockOpenChannel(...args),
             // test events carry the decoded update as JSON
             decodeCloseStatusUpdate: (data: string) => JSON.parse(data)
         },
@@ -279,6 +281,22 @@ describe('EmbeddedLND.closeChannel', () => {
         expect(close.settled).toBe(true);
         expect(close.error).toBeUndefined();
         expect(listening()).toBe(false);
+    });
+});
+
+describe('EmbeddedLND.openChannelStream', () => {
+    it('hands the close address to lndmobile', () => {
+        const funding_shim = { psbt_shim: { pending_chan_id: 'id' } };
+
+        new EmbeddedLND().openChannelStream({
+            node_pubkey_string: PUBKEY,
+            local_funding_amount: '500000',
+            close_address: 'bc1qclose',
+            funding_shim
+        } as any);
+
+        const args = mockOpenChannel.mock.calls[0];
+        expect(args.slice(-2)).toEqual([funding_shim, 'bc1qclose']);
     });
 });
 

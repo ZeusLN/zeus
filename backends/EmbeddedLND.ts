@@ -196,7 +196,8 @@ export default class EmbeddedLND extends LND {
                 data.simpleTaprootChannel,
                 data.fundMax,
                 data.utxos,
-                data.funding_shim
+                data.funding_shim,
+                data.close_address
             );
         });
     };
