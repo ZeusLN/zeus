@@ -145,7 +145,26 @@ export default class ReceiveEcash extends React.Component<
     // CashuStore is shared with the next ReceiveEcash view, so work that
     // completes after this view is gone must not reach it
     isUnmounted = false;
+    // Bumped for each invoice this view asks CashuStore for and by Cancel,
+    // so only the latest request's invoice is checked or handed on
+    invoiceRequestId = 0;
+    // Bumped by each NFC tag lookup, each invoice request and Cancel, so
+    // an LNURL server that answers after any of those creates, submits or
+    // shows nothing. Kept apart from invoiceRequestId so a tap that is not
+    // a withdraw does not stop the checks of the invoice on screen.
+    nfcLookupId = 0;
     hopPickerRef: HopPicker | null;
+
+    startInvoiceRequest = () => {
+        this.nfcLookupId++;
+        const id = ++this.invoiceRequestId;
+        return () => !this.isUnmounted && id === this.invoiceRequestId;
+    };
+
+    startNfcLookup = () => {
+        const id = ++this.nfcLookupId;
+        return () => !this.isUnmounted && id === this.nfcLookupId;
+    };
 
     async componentDidMount() {
         const { CashuStore, SettingsStore, LightningAddressStore, route } =
@@ -256,6 +275,10 @@ export default class ReceiveEcash extends React.Component<
     // Cancel: stop checking the invoice that is cleared, so a payment to
     // it does not show the next invoice as paid
     cancelInvoice = () => {
+        // a pending invoice request or NFC lookup must not start checks,
+        // submit an invoice or open a screen afterwards
+        this.invoiceRequestId++;
+        this.nfcLookupId++;
         this.clearIntervals();
         this.props.CashuStore.clearInvoice();
     };
@@ -271,12 +294,13 @@ export default class ReceiveEcash extends React.Component<
     autoGenerateInvoice = (amount?: string, memo?: string) => {
         const { CashuStore } = this.props;
         const { createInvoice } = CashuStore;
+        const isCurrent = this.startInvoiceRequest();
 
         createInvoice({
             memo: memo || '',
             value: amount || '0'
         }).then(() => {
-            this.subscribeInvoice();
+            if (isCurrent()) this.subscribeInvoice();
         });
     };
 
@@ -294,11 +318,14 @@ export default class ReceiveEcash extends React.Component<
         // was passed, and the amount under the QR code toggles that unit:
         // use the sats it was converted to back then
         const { satAmount } = this.state;
+        // taken before the lookup: a newer tap, invoice or Cancel while the
+        // tag's LNURL server is answering supersedes this tap
+        const lookupIsCurrent = this.startNfcLookup();
 
         handleAnything(text, satAmount.toString())
             .then((response) => {
                 // the tag's LNURL server decides when this runs
-                if (this.isUnmounted) return;
+                if (!lookupIsCurrent()) return;
                 try {
                     const [route, props] = response;
                     const { lnurlParams } = props;
@@ -314,16 +341,17 @@ export default class ReceiveEcash extends React.Component<
                     // we will automatically create an invoice and attempt to withdraw
                     // otherwise we present the user with the create invoice screen
                     if (Number(satAmount) > 0) {
+                        const isCurrent = this.startInvoiceRequest();
                         createInvoice({
                             memo,
                             value: satAmount.toString(),
                             lnurl: lnurlParams
                         })
                             .then(() => {
-                                this.subscribeInvoice();
+                                if (isCurrent()) this.subscribeInvoice();
                             })
                             .catch(() => {
-                                if (this.isUnmounted) return;
+                                if (!isCurrent()) return;
                                 navigation.navigate(route, {
                                     satAmount,
                                     ...props
@@ -335,7 +363,7 @@ export default class ReceiveEcash extends React.Component<
                 } catch (e) {}
             })
             .catch(() => {
-                if (!this.isUnmounted) this.setState({ nfcError: true });
+                if (lookupIsCurrent()) this.setState({ nfcError: true });
             });
     };
 
@@ -926,6 +954,8 @@ export default class ReceiveEcash extends React.Component<
                                                         : '')
                                                 }
                                                 onPress={() => {
+                                                    const isCurrent =
+                                                        this.startInvoiceRequest();
                                                     createInvoice({
                                                         memo,
                                                         value:
@@ -933,7 +963,8 @@ export default class ReceiveEcash extends React.Component<
                                                             '0',
                                                         lnurl
                                                     }).then(() => {
-                                                        this.subscribeInvoice();
+                                                        if (isCurrent())
+                                                            this.subscribeInvoice();
                                                     });
                                                 }}
                                                 disabled={satAmount == 0}

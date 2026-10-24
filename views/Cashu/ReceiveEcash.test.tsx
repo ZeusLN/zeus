@@ -408,3 +408,141 @@ describe('ReceiveEcash.validateAddress (Pay via NFC)', () => {
         expect(failed.navigate).not.toHaveBeenCalled();
     });
 });
+
+// The tag's LNURL server answers whenever it does: by then the staff may
+// have read another card, created another invoice or tapped Cancel
+describe('ReceiveEcash NFC lookups that were superseded', () => {
+    const deferred = () => {
+        let resolve: (value: any) => void = () => {};
+        let reject: (error: any) => void = () => {};
+        const promise = new Promise((res, rej) => {
+            resolve = res;
+            reject = rej;
+        });
+        return { promise, resolve, reject };
+    };
+
+    beforeEach(() => jest.clearAllMocks());
+
+    const setup = () => {
+        const made = makeView('1000', 1000);
+        made.view.setState = jest.fn();
+        return made;
+    };
+
+    it('creates one invoice when an older card answers after a newer one', async () => {
+        const { view, CashuStore } = setup();
+        const cardA = deferred();
+        (handleAnything as jest.Mock)
+            .mockReturnValueOnce(cardA.promise)
+            .mockResolvedValueOnce(WITHDRAW_RESPONSE);
+
+        view.validateAddress('card A');
+        view.validateAddress('card B');
+        await flush();
+        cardA.resolve(WITHDRAW_RESPONSE);
+        await flush();
+
+        expect(CashuStore.createInvoice).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not withdraw for a card that answers after a newer invoice was requested', async () => {
+        const { view, CashuStore } = setup();
+        const cardA = deferred();
+        (handleAnything as jest.Mock).mockReturnValueOnce(cardA.promise);
+
+        view.validateAddress('card A');
+        view.autoGenerateInvoice('2000');
+        await flush();
+        cardA.resolve(WITHDRAW_RESPONSE);
+        await flush();
+
+        expect(CashuStore.createInvoice).toHaveBeenCalledTimes(1);
+        expect(CashuStore.createInvoice).not.toHaveBeenCalledWith(
+            expect.objectContaining({ lnurl: withdrawParams })
+        );
+    });
+
+    it.each([
+        ['a withdraw card', () => Promise.resolve(WITHDRAW_RESPONSE)],
+        [
+            'another payment code',
+            () =>
+                Promise.resolve([
+                    'LnurlPay',
+                    { lnurlParams: { tag: 'payRequest' } }
+                ])
+        ],
+        ['an unreadable tag', () => Promise.reject(new Error('unsupported'))]
+    ])('does nothing with %s answered after Cancel', async (_, answer) => {
+        const { view, navigate, CashuStore } = setup();
+        const lookup = deferred();
+        (handleAnything as jest.Mock).mockReturnValueOnce(lookup.promise);
+
+        view.validateAddress('card A');
+        view.cancelInvoice();
+        answer().then(lookup.resolve, lookup.reject);
+        await flush();
+
+        expect(CashuStore.createInvoice).not.toHaveBeenCalled();
+        expect(navigate).not.toHaveBeenCalled();
+        expect(view.setState).not.toHaveBeenCalled();
+    });
+
+    it.each([
+        ['is created', (request: any) => request.resolve(undefined)],
+        ['fails', (request: any) => request.reject(new Error('offline'))]
+    ])(
+        'checks nothing and opens nothing when a cancelled invoice %s',
+        async (_, settle) => {
+            const { view, navigate, CashuStore } = setup();
+            const request = deferred();
+            CashuStore.createInvoice.mockReturnValueOnce(request.promise);
+            (handleAnything as jest.Mock).mockResolvedValueOnce(
+                WITHDRAW_RESPONSE
+            );
+
+            view.validateAddress('card A');
+            await flush();
+            expect(CashuStore.createInvoice).toHaveBeenCalled();
+            view.cancelInvoice();
+            settle(request);
+            await flush();
+
+            expect(view.subscribeInvoice).not.toHaveBeenCalled();
+            expect(navigate).not.toHaveBeenCalled();
+        }
+    );
+
+    it('checks nothing for an invoice created after Cancel', async () => {
+        const { view, CashuStore } = setup();
+        const request = deferred();
+        CashuStore.createInvoice.mockReturnValueOnce(request.promise);
+
+        view.autoGenerateInvoice('1000');
+        view.cancelInvoice();
+        request.resolve(undefined);
+        await flush();
+
+        expect(view.subscribeInvoice).not.toHaveBeenCalled();
+    });
+
+    it('still checks the invoice on screen after a tap that is not a withdraw', async () => {
+        const { view, CashuStore } = setup();
+        const shown = deferred();
+        CashuStore.createInvoice.mockReturnValueOnce(shown.promise);
+        (handleAnything as jest.Mock).mockResolvedValueOnce([
+            'LnurlPay',
+            { lnurlParams: { tag: 'payRequest' } }
+        ]);
+
+        view.autoGenerateInvoice('1000');
+        view.validateAddress('not a card');
+        await flush();
+        shown.resolve(undefined);
+        await flush();
+
+        expect(view.setState).toHaveBeenCalledWith({ nfcError: true });
+        expect(view.subscribeInvoice).toHaveBeenCalledTimes(1);
+    });
+});
