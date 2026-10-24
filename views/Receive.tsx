@@ -254,11 +254,23 @@ export default class Receive extends React.Component<
     // older one must not be watched, recorded for the order or handed on
     // to the withdraw screen after a failure.
     private invoiceRequestId = 0;
+    // Bumped by each NFC tag lookup, each invoice request and Cancel. The
+    // tag's LNURL server can answer after any of those, and the answer
+    // must then create, submit or show nothing. Kept apart from
+    // invoiceRequestId so a tap that turns out not to be a withdraw does
+    // not cancel the invoice request still finishing on screen.
+    private nfcLookupId = 0;
     hopPickerRef: HopPicker | null;
 
     private startInvoiceRequest = () => {
+        this.nfcLookupId++;
         const id = ++this.invoiceRequestId;
         return () => !this.unmounted && id === this.invoiceRequestId;
+    };
+
+    private startNfcLookup = () => {
+        const id = ++this.nfcLookupId;
+        return () => !this.unmounted && id === this.nfcLookupId;
     };
 
     private getDefaultIndex = (): number => {
@@ -599,6 +611,12 @@ export default class Receive extends React.Component<
     };
 
     cleanup = () => {
+        // Cancel keeps the view mounted: an invoice request or NFC lookup
+        // still pending must not start a watcher, submit an invoice or
+        // open a screen afterwards
+        this.invoiceRequestId++;
+        this.nfcLookupId++;
+
         // kill all listeners and pollers
         this.stopWatchers();
 
@@ -827,11 +845,14 @@ export default class Receive extends React.Component<
         const { lspIsActive, receiverName, satAmount } = this.state;
         const { createUnifiedInvoice } = InvoicesStore;
         const skipOnchain = this.getSkipOnchain();
+        // taken before the lookup: a newer tap, invoice or Cancel while the
+        // tag's LNURL server is answering supersedes this tap
+        const lookupIsCurrent = this.startNfcLookup();
 
         handleAnything(text, satAmount.toString())
             .then((response) => {
                 // the tag's LNURL server decides when this runs
-                if (this.unmounted) return;
+                if (!lookupIsCurrent()) return;
                 try {
                     const [route, props] = response;
                     const { lnurlParams } = props;
@@ -892,7 +913,7 @@ export default class Receive extends React.Component<
                 } catch (e) {}
             })
             .catch(() => {
-                if (!this.unmounted) this.setState({ nfcError: true });
+                if (lookupIsCurrent()) this.setState({ nfcError: true });
             });
     };
 
