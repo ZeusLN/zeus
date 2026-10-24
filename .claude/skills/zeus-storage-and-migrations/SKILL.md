@@ -43,7 +43,7 @@ Persistence contracts for the ZEUS wallet (React Native, Bitcoin/Lightning) and 
 | Embedded LND / LDK Node | The two node implementations that run INSIDE the app and keep native on-disk state (channel databases etc.), unlike remote backends. |
 | Cashu / CDK | Ecash wallet subsystem backed by the Cashu Dev Kit Rust FFI; keeps its own SQLite database (`cashu_wallet.db`) outside the keychain. |
 | VSS | Versioned Storage Service — remote server (`https://vss.zeusln.com/vss`, `utils/LdkNodeUtils.ts` `DEFAULT_VSS_SERVER`) where LDK Node persists encrypted channel state, keyed from the node mnemonic. |
-| Duress PIN | Alternate PIN that, when entered, silently wipes wallet references instead of unlocking (`views/Lockscreen.tsx`). |
+| Duress PIN | Alternate PIN or passphrase that, when entered, runs the full `clearAllData()` wipe and then `restartApp()` instead of unlocking (`views/Lockscreen.tsx` `deleteNodes`). |
 
 ## 1. The four storage layers — what belongs where
 
@@ -185,9 +185,9 @@ Current rules (verified against master 2026-07-06):
 
 | Path | What it actually clears | What SURVIVES |
 |---|---|---|
-| **Duress PIN/passphrase** (`views/Lockscreen.tsx deleteNodes`) | `updateSettings({ nodes: undefined, selectedNode: undefined, authenticationAttempts: 0 })` — only the wallet REFERENCES in the blob | Embedded LND dirs, `ldk-node/<uuid>` dirs, CDK Cashu SQLite DB, per-node keychain keys (`<nodeDir>-cashu-seed-phrase`, …), other blob keys, VSS remote state. Forensically recoverable — this is the current design; document, don't silently "harden" |
-| **Clear All Data** (`utils/DataClearUtils.clearAllData`, Tools view, then `RNRestart.Restart()`) | Registered keys (all 5 locations), notes, Cashu keys for `node.lndDir` namespaces (plus literals `'lnd'` and `''`) + CDK DB, AsyncStorage, EncryptedStorage | Any key NOT in `STORAGE_KEYS`/enumerable (Section 5); LND/LDK native dirs (deleted only via wallet deletion in `views/Settings/WalletConfiguration.tsx`); VSS remote state. Note: `<ldkNodeDir>-cashu-*` keys are not enumerated by `clearAllData` — this is **by design** (maintainer-stated 2026-07-06): the Cashu seed is deterministically re-derived from the wallet seed every time, so these entries carry no independent secret material. Do not re-flag this as a wipe gap |
-| **Wallet deletion** (`WalletConfiguration.tsx`) | Blob entry; embedded-lnd → `deleteLndWallet(lndDir)`; ldk-node → `deleteLdkNodeWallet(ldkNodeDir)` (local `RNFS.unlink` only) | **VSS remote channel state — there is NO delete path** (`utils/LdkNodeUtils.ts` has no VSS delete; open gap, maintainer-acknowledged). Cashu data unless separately cleared |
+| **Duress PIN/passphrase and max failed attempts** (`views/Lockscreen.tsx` `deleteNodes`, `authenticationFailure`; `7fa37aa9b`) | Both run the full `clearAllData()` (next row) inside `startWipe`, which calls `markWipePending()` first, then `restartApp()` in a `finally`, so a partial wipe still restarts. Errors are logged, never shown (showing one would disclose the duress mechanism). Settings are not written back: `updateSettings` would re-persist the pre-wipe in-memory blob | Same as Clear All Data. A wipe cut short (app killed) is finished on the next launch: the Lockscreen checks `isWipePending()` before loading settings or accepting a credential (#5141) |
+| **Clear All Data** (`utils/DataClearUtils.clearAllData`, called from `views/Tools/index.tsx` and the Lockscreen, which then call `restartApp()`) | In order: `Storage.blockWrites()` latch for the rest of the JS context; `markWipePending()` (`wipe-pending` in EncryptedStorage, #5141); `clearNodeKeychainData` per configured node (Cashu keys under both `lndDir` and `ldkNodeDir`, `CASHU_KEY_SUFFIXES`, LNC credentials, xprv cache; xprv re-derivation skipped on Android) plus Cashu keys for `'lnd'`, `'ldk'`, `''`; CDK DB (`clearCDKDatabase`); node data dirs of configured nodes (`deleteNodeDataDirectoryWithRetry`, 3 attempts) and orphaned LND/LDK dirs no config names (`clearOrphanedNodeDataDirectories`, #5266); legacy rescue-key files and the staging copy; POS order records; legacy `zeus-settings`, `STORAGE_KEYS` (all 5 locations), notes; AsyncStorage; EncryptedStorage; HTTP cookies; delivered notifications; step 8 keychain sweep (iOS: every internet-password item in both partitions; Android: delete the `RN_KEYCHAIN` backing store); then the `wipe-pending` record is removed | VSS remote state (no delete path). A node dir that still fails after 3 attempts is logged and skipped, never aborts the wipe |
+| **Wallet deletion** (`WalletConfiguration.tsx` `deleteNodeConfig`) | Stops the node if active; `clearCDKDatabaseForNode` (per-wallet CDK DB, before its seed is cleared); `clearNodeKeychainData` (keeps LNC credentials another config shares); removes the blob entry with a functional `updateSettings`; then `deleteNodeDataDirectoryWithRetry` (embedded-lnd → `deleteLndWallet`, ldk-node → `stopLdkNode` + `deleteLdkNodeWallet`), and on failure `promptRetryDataDirDeletion` offers Retry or Skip. Deleting the last wallet also runs `clearCDKDatabase()` to sweep every remaining CDK DB | **VSS remote channel state: there is NO delete path** (`utils/LdkNodeUtils.ts` has no VSS delete; open gap, maintainer-acknowledged). A node dir the user skipped (later removed by Clear All Data's orphan sweep) |
 
 **Per-node Cashu namespacing:** always use `CashuStore.getNodeDir()` (returns `ldkNodeDir || 'ldk'` for ldk-node, else `lndDir || 'lnd'`) — NOT `settingsStore.lndDir || 'lnd'`, which is `'lnd'` for every LDK wallet (the old `CashuStore.getLndDir()` did this and was removed with the migration). That collision mixed ecash funds across LDK wallets in feature-branch builds; fixed by `1242ce94a` (2026-03-20) and for multimint keys by `35fa31fee` (2026-04-08), both before their PRs merged, so no release wrote LDK Cashu data under `lnd` and no migration is needed. The no-op `migrateLegacyCashuKeysToNodeDir` was removed (#4912); do not reintroduce a copy from `lnd-cashu-*`, because on released installs that namespace belongs to remote and embedded LND wallets. Incident narrative: zeus-failure-archaeology FA-11. Any new per-node key must be namespaced with `getNodeDir()`.
 
@@ -220,7 +220,7 @@ PR CI never builds the app (test/lint/prettier/tsc only; the Android build workf
 | 3 | Upgrade from current v2 | Install released build, add wallets + nested settings, then install your build | Your migration runs exactly once; NO nested settings group reset (diff the blob before/after) |
 | 4 | iCloud-restored device (iOS) | Restore a device/simulator from a backup of a pre-`zeus:`-prefix install, or seed unprefixed cloud entries via `copyToLegacyLocations()` | No stale wallet resurrection; Keychain Recovery tool still lists orphans |
 | 5 | Multi-wallet | ≥2 embedded wallets incl. ≥2 LDK Node wallets with Cashu enabled | No cross-wallet data bleed; `getNodeDir()` namespacing holds; per-wallet balances distinct |
-| 6 | Duress wipe | Set duress PIN, trigger it | `nodes`/`selectedNode` nulled, app lands on IntroSplash; verify (and note in PR) what survives per Section 7 |
+| 6 | Duress wipe | Set duress PIN, trigger it | Full `clearAllData()` wipe and app restart to a fresh install state; kill the app mid-wipe once and confirm the next launch finishes it; note in the PR anything that survives per Section 7 |
 
 Also re-run the automated floor: `yarn verify` (jest + prettier + tsc + lint — anatomy in `zeus-validation-and-qa`).
 
@@ -240,7 +240,7 @@ Also re-run the automated floor: `yarn verify` (jest + prettier + tsc + lint —
 
 ## Provenance and maintenance
 
-Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha) by reading `storage/index.ts`, `stores/SettingsStore.ts`, `utils/MigrationUtils.ts`, `utils/DataClearUtils.ts`, `utils/KeychainRecoveryUtils.ts`, `utils/LdkNodeUtils.ts`, `stores/CashuStore.ts`, `views/Lockscreen.tsx`, `views/Settings/WalletConfiguration.tsx`, `views/Tools/*`; cited hashes checked with `git log`/`git show`; `npx jest utils/MigrationUtils.test.ts` executed (22/22 pass). Maintainer policy statements dated 2026-07-06.
+Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha) by reading `storage/index.ts`, `stores/SettingsStore.ts`, `utils/MigrationUtils.ts`, `utils/DataClearUtils.ts`, `utils/KeychainRecoveryUtils.ts`, `utils/LdkNodeUtils.ts`, `stores/CashuStore.ts`, `views/Lockscreen.tsx`, `views/Settings/WalletConfiguration.tsx`, `views/Tools/*`; cited hashes checked with `git log`/`git show`; `npx jest utils/MigrationUtils.test.ts` executed (22/22 pass). Maintainer policy statements dated 2026-07-06. Section 7, the Duress PIN glossary entry, Section 8 test-matrix row 6 and the duress re-verify row were re-verified 2026-10-24 against master `3dc9f83e6` (`utils/DataClearUtils.ts`, `views/Lockscreen.tsx`, `views/Tools/index.tsx`, `views/Settings/WalletConfiguration.tsx`).
 
 Re-verification one-liners for volatile facts:
 
@@ -255,7 +255,7 @@ Re-verification one-liners for volatile facts:
 | `migrationKeys` list contents | `grep -n -A22 "const migrationKeys" utils/MigrationUtils.ts` |
 | `STORAGE_KEYS` registration list | `grep -n -A45 "const STORAGE_KEYS" utils/DataClearUtils.ts` |
 | `OTHER_KEYS` recovery list | `grep -n -A22 "const OTHER_KEYS" utils/KeychainRecoveryUtils.ts` |
-| Duress wipe scope | `grep -n -A10 "deleteNodes = " views/Lockscreen.tsx` |
+| Duress wipe scope (full `clearAllData` + restart) | `grep -n -A22 "deleteNodes = " views/Lockscreen.tsx; grep -n "^    // [0-9]" utils/DataClearUtils.ts` |
 | `getNodeDir` namespacing | `grep -n -A7 "getNodeDir = " stores/CashuStore.ts` |
 | VSS default + (absence of) delete path | `grep -n "DEFAULT_VSS_SERVER\|deleteLdkNodeWallet" utils/LdkNodeUtils.ts` |
 | CDK DB path | `grep -n -A12 "clearCDKDatabase" utils/DataClearUtils.ts` |
@@ -263,4 +263,4 @@ Re-verification one-liners for volatile facts:
 | Migration tests still green | `npx jest utils/MigrationUtils.test.ts` |
 | Cited incident hashes | `git log -1 --format='%h %ci %s' 7ed901a10 d8e648b58 26d4215ea e8e5b8811 a7860aa96 f7b2c30a8 c6323fff4 318c721e7 1242ce94a 35fa31fee` |
 
-Open/unresolved (do not treat as settled): VSS remote-state deletion (no client delete path); permanent-retention-vs-eventual-deletion of orphaned keychain entries (retention is current policy, revisiting is maintainer-gated); plaintext PIN/passphrase in the blob (accepted debt).
+Open/unresolved (do not treat as settled): VSS remote-state deletion (no client delete path); plaintext PIN/passphrase in the blob (accepted debt).
