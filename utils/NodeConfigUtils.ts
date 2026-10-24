@@ -23,6 +23,15 @@ export const MIN_EXPORT_PASSWORD_LENGTH = 8;
 export const isValidExportPassword = (password: string): boolean =>
     !!password && password.trim().length >= MIN_EXPORT_PASSWORD_LENGTH;
 
+// True for files written before the v2 format: a v1 CryptoJS blob (MD5
+// key derivation, one iteration) or an unencrypted envelope. They still
+// import, but the user should export again and delete the old file.
+export const isLegacyNodeConfigExport = (importData?: {
+    version?: number;
+    encrypted?: boolean;
+}): boolean =>
+    !!importData && (!importData.encrypted || (importData.version ?? 0) < 2);
+
 interface NodeConfigExport {
     version: number;
     encrypted: boolean;

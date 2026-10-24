@@ -41,6 +41,7 @@ import {
     decryptExportData,
     decryptExportDataV2,
     isValidExportPassword,
+    isLegacyNodeConfigExport,
     EXPORT_FORMAT_VERSION,
     MIN_EXPORT_PASSWORD_LENGTH
 } from '../../utils/NodeConfigUtils';
@@ -156,7 +157,8 @@ export default class NodeConfigExportImport extends React.Component<
             importPassword: '',
             importPasswordHidden: true,
             importNodes: [],
-            selectedImportNodes: []
+            selectedImportNodes: [],
+            importData: undefined
         });
     };
 
@@ -633,6 +635,7 @@ export default class NodeConfigExportImport extends React.Component<
 
                 this.setState({
                     isLoading: false,
+                    importData,
                     importNodes: nodes,
                     selectedImportNodes: nodes.map((_, i) => i), // Select all by default
                     activeModal: 'importNodeSelection'
@@ -911,7 +914,7 @@ export default class NodeConfigExportImport extends React.Component<
     };
 
     private executeImport = async () => {
-        const { importNodes, selectedImportNodes } = this.state;
+        const { importNodes, selectedImportNodes, importData } = this.state;
 
         try {
             this.setState({ isLoading: true, activeModal: 'none' });
@@ -924,11 +927,16 @@ export default class NodeConfigExportImport extends React.Component<
             await saveNodeConfigs(nodesToImport, this.props.SettingsStore);
             this.setState({ isLoading: false });
 
+            const successMessage = localeString(
+                'views.Tools.nodeConfigExportImport.importSuccess'
+            );
             Alert.alert(
                 localeString('general.success'),
-                localeString(
-                    'views.Tools.nodeConfigExportImport.importSuccess'
-                ),
+                isLegacyNodeConfigExport(importData)
+                    ? `${successMessage}\n\n${localeString(
+                          'views.Tools.nodeConfigExportImport.legacyImportWarning'
+                      )}`
+                    : successMessage,
                 [
                     {
                         text: localeString('general.ok'),
