@@ -2021,13 +2021,9 @@ export default class CashuStore {
         this.paymentFee = undefined;
     };
 
-    getLndDir = () => {
-        return this.settingsStore.lndDir || 'lnd';
-    };
-
     // Returns a unique directory key for Cashu storage namespacing.
-    // LDK nodes don't set lndDir, so getLndDir() returns 'lnd' for all of them,
-    // causing Cashu data to collide across LDK wallets. Use ldkNodeDir instead.
+    // LDK nodes don't set lndDir, so keying on lndDir alone would put every
+    // LDK wallet under 'lnd' and mix their Cashu data. Use ldkNodeDir instead.
     getNodeDir = () => {
         const { implementation, ldkNodeDir, lndDir } = this.settingsStore;
         if (implementation === 'ldk-node') {
@@ -3685,7 +3681,6 @@ export default class CashuStore {
         this.startConnectivityMonitoring();
 
         const lndDir = this.getNodeDir();
-        await MigrationsUtils.migrateLegacyCashuKeysToNodeDir(this);
 
         // Load app-specific data from local storage (activity, preferences, seed)
         const [
