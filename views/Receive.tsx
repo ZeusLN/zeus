@@ -77,8 +77,9 @@ import BackendUtils from '../utils/BackendUtils';
 import { toWalletrpcAddressTypeName } from '../utils/LndUtils';
 import { isNfcWithdraw, scanNfcTag } from '../utils/NFCUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import { numberWithCommas, SATS_PER_BTC } from '../utils/UnitsUtils';
+import { numberWithCommas } from '../utils/UnitsUtils';
 import { getAmountFromSats } from '../utils/AmountUtils';
+import { buildBip21Uri } from '../utils/Bip21Utils';
 import {
     ExpirationPreset,
     TimePeriod,
@@ -1313,13 +1314,12 @@ export default class Receive extends React.Component<
                 ? address.toUpperCase()
                 : address;
         if (haveUnifiedInvoice) {
-            unifiedInvoice = `bitcoin:${onChainFormatted}?${`lightning=${payment_request.toUpperCase()}`}${
-                Number(satAmount) > 0
-                    ? `&amount=${new BigNumber(satAmount)
-                          .dividedBy(SATS_PER_BTC)
-                          .toFixed()}`
-                    : ''
-            }${memo ? `&message=${memo.replace(/ /g, '%20')}` : ''}`;
+            unifiedInvoice = buildBip21Uri({
+                address: onChainFormatted!,
+                lightning: payment_request.toUpperCase(),
+                satAmount,
+                message: memo
+            });
         }
 
         if (payment_request) {
@@ -1328,21 +1328,11 @@ export default class Receive extends React.Component<
         }
 
         if (address) {
-            btcAddress = `bitcoin:${onChainFormatted}${
-                (Number(satAmount) > 0 || memo) && '?'
-            }${
-                Number(satAmount) > 0
-                    ? `amount=${new BigNumber(satAmount)
-                          .dividedBy(SATS_PER_BTC)
-                          .toFixed()}`
-                    : ''
-            }${
-                memo
-                    ? Number(satAmount) > 0
-                        ? `&message=${memo.replace(/ /g, '%20')}`
-                        : `message=${memo.replace(/ /g, '%20')}`
-                    : ''
-            }`;
+            btcAddress = buildBip21Uri({
+                address: onChainFormatted!,
+                satAmount,
+                message: memo
+            });
 
             if (Number(satAmount) > 0 || memo) {
                 btcAddressCopyValue = btcAddress;
