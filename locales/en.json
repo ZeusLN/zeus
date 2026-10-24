@@ -1507,6 +1507,7 @@
     "views.GraphSyncPrompt.enableAndRestart": "Enable & Restart",
     "views.GraphSyncPrompt.ignoreOnce": "Ignore once",
     "views.GraphSyncPrompt.neverAskAgain": "Never ask again",
+    "views.GraphSyncPrompt.paymentNotSent": "Payment was not sent",
     "views.Settings.EmbeddedNode.rescan": "Rescan wallet",
     "views.Settings.EmbeddedNode.rescan.subtitle": "Rescan blockchain for your on-chain transactions. Restart the app to take effect. Will be unset upon completion.",
     "views.Settings.EmbeddedNode.compactDb": "Compact databases",

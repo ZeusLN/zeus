@@ -646,17 +646,31 @@ export default class TransactionsStore {
         );
     };
 
+    // Also runs when the prompt is dismissed without an answer (swipe,
+    // backdrop, back button). A payment still held back at that point is
+    // never dispatched, so drop it and have the sending screen say so
     @action
     public hideGraphSyncPrompt = () => {
         this.showGraphSyncPrompt = false;
+        if (this.pendingPaymentData) {
+            this.pendingPaymentData = null;
+            if (!this.paymentInFlight) {
+                this.loading = false;
+                this.error = true;
+                this.error_msg = localeString(
+                    'views.GraphSyncPrompt.paymentNotSent'
+                );
+            }
+        }
     };
 
     @action
     public proceedWithPayment = async () => {
-        if (this.pendingPaymentData) {
-            this.hideGraphSyncPrompt();
-            this.sendPaymentInternal(this.pendingPaymentData);
+        const paymentData = this.pendingPaymentData;
+        if (paymentData) {
             this.pendingPaymentData = null;
+            this.hideGraphSyncPrompt();
+            this.sendPaymentInternal(paymentData);
         }
     };
 
@@ -664,6 +678,20 @@ export default class TransactionsStore {
     public sendPayment = (paymentData: SendPaymentReq) => {
         // Check graph sync before proceeding with payment
         if (!this.checkGraphSyncBeforePayment(paymentData)) {
+            // Nothing is dispatched until the prompt is answered, but callers
+            // navigate to the sending screen regardless: don't let it show
+            // the previous payment's outcome as the result of this one
+            if (!this.paymentInFlight) {
+                this.loading = true;
+                this.error_msg = null;
+                this.error = false;
+                this.payment_route = null;
+                this.payment_preimage = null;
+                this.isIncomplete = null;
+                this.payment_hash = null;
+                this.payment_error = null;
+                this.status = null;
+            }
             return;
         }
 
