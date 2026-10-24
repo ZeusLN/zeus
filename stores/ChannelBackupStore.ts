@@ -16,6 +16,8 @@ import BackendUtils from '../utils/BackendUtils';
 import { LndMobileEventEmitter } from '../utils/LndMobileUtils';
 import Base64Utils from '../utils/Base64Utils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
+import { localeString } from '../utils/LocaleUtils';
+import { encryptString, decryptString } from '../utils/ZipUtils';
 
 import Storage from '../storage';
 
@@ -63,10 +65,23 @@ export default class ChannelBackupStore {
         const multi = backup.multi_chan_backup.multi_chan_backup;
         const multiString = Base64Utils.bytesToBase64(multi);
 
-        const encryptedBackup = CryptoJS.AES.encrypt(
-            multiString,
-            this.settingsStore.seedPhrase.toString()
-        ).toString();
+        if (!this.settingsStore.seedPhrase?.length) {
+            await this.logBackupStatus('ERROR');
+            throw new Error(
+                localeString('stores.ChannelBackupStore.seedUnavailable')
+            );
+        }
+
+        let encryptedBackup: string;
+        try {
+            encryptedBackup = await encryptString(
+                multiString,
+                this.settingsStore.seedPhrase.join(' ')
+            );
+        } catch (err) {
+            await this.logBackupStatus('ERROR');
+            throw err;
+        }
 
         try {
             const authResponse = await ReactNativeBlobUtil.fetch(
@@ -161,11 +176,33 @@ export default class ChannelBackupStore {
         this.loading = true;
 
         try {
-            const decryptedBytes = CryptoJS.AES.decrypt(
-                backup,
-                this.settingsStore.seedPhrase.toString()
-            );
-            const decryptedString = decryptedBytes.toString(CryptoJS.enc.Utf8);
+            let decryptedString: string;
+            // 12 base64 chars decode to the first 9 bytes of the blob
+            const prefix = Base64Utils.base64ToBytes(backup.substring(0, 12));
+            if (Base64Utils.bytesToUtf8(prefix.subarray(0, 8)) === 'Salted__') {
+                // Legacy CryptoJS OpenSSL format (EVP_BytesToKey, AES-CBC).
+                // The passphrase is the COMMA-joined seed
+                // (Array.prototype.toString). This path must be kept for
+                // blobs already stored on the backup server.
+                const decryptedBytes = CryptoJS.AES.decrypt(
+                    backup,
+                    this.settingsStore.seedPhrase.toString()
+                );
+                decryptedString = decryptedBytes.toString(CryptoJS.enc.Utf8);
+            } else if (prefix[0] === 0x01) {
+                // v1 native format (PBKDF2-HMAC-SHA256 100k, AES-256-GCM);
+                // the passphrase is the space-joined seed
+                decryptedString = await decryptString(
+                    backup,
+                    this.settingsStore.seedPhrase.join(' ')
+                );
+            } else {
+                throw new Error(
+                    localeString(
+                        'stores.ChannelBackupStore.unrecognizedBackupFormat'
+                    )
+                );
+            }
 
             await restoreChannelBackups(decryptedString);
 
@@ -251,7 +288,7 @@ export default class ChannelBackupStore {
             (time && this.isOlderThanThreeDays(time)) ||
             (!time && !status)
         ) {
-            this.backupChannels();
+            this.backupChannels().catch(console.error);
         }
         if (this.channelEventsSubscription?.remove)
             this.channelEventsSubscription.remove();
@@ -266,7 +303,7 @@ export default class ChannelBackupStore {
                         channelEvent.open_channel ||
                         channelEvent.closed_channel
                     ) {
-                        this.backupChannels();
+                        this.backupChannels().catch(console.error);
                     }
                 } catch (error: any) {
                     console.error(
