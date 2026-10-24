@@ -69,6 +69,7 @@ import {
 } from '../stores/NostrWalletConnectStore';
 import { PAYMENT_COUNT_KEY, RATING_DISMISSED_KEY } from '../utils/RatingUtils';
 import { deriveEmbeddedNodeId } from './AezeedUtils';
+import { deleteBiometryKey } from './BiometricUtils';
 import { deleteLndWallet } from './LndMobileUtils';
 import {
     deleteLdkNodeWallet,
@@ -982,6 +983,12 @@ export async function clearAllData(): Promise<void> {
     // 2e. Clear the per-order POS records while the order lists that name
     // them still exist (step 3 clears the lists)
     await clearPosOrderRecords();
+
+    // 2f. Delete the biometric unlock key. It lives in the iOS keychain or
+    // the Android Keystore, which the storage clears below do not reach, and
+    // on iOS it survives an uninstall. Left behind, it shows that biometrics
+    // were set up, which a duress wipe must not reveal.
+    await deleteBiometryKey();
 
     // 3. Clear all known storage keys. The legacy settings blob goes first:
     // getSettings() loads it whenever the keychain blob is missing, and it
