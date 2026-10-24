@@ -173,6 +173,11 @@ describe('retryOnTransientError', () => {
         await done;
         expect(setConnecting.mock.calls).toEqual([[false], [true]]);
         expect(onRetry).toHaveBeenCalledTimes(1);
+        // setConnecting(true) frees the fetch lock that onRetry's fetchData
+        // needs, so it has to run first
+        expect(setConnecting.mock.invocationCallOrder[1]).toBeLessThan(
+            onRetry.mock.invocationCallOrder[0]
+        );
     });
 
     it('stops without reconnecting when the wallet changed during the backoff', async () => {
