@@ -45,6 +45,12 @@ buildscript {
 }
 
 allprojects {
+    // op-sqlite's SQLCipher build depends on io.github.ronickg:openssl:3.3.2-1
+    // (OpenSSL 3.3, out of support since 2026-04). Pin the 3.6.2 build so
+    // Android matches the iOS OpenSSL-Universal 3.6.2 provider.
+    configurations.all {
+        resolutionStrategy.force 'io.github.ronickg:openssl:3.6.2-3'
+    }
     repositories {
         google()
         mavenCentral()
