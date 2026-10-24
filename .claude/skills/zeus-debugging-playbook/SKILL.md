@@ -100,8 +100,12 @@ Known dead dispatch as of 2026-07-06: `payLightningInvoiceStreaming` is declared
 ```ts
 const seq = SettingsStore.acquireFetchLock();
 if (seq === null) return;
+const isCurrent = SettingsStore.getConnectionGuard();
 try {
-    await this.fetchDataCore(transientRetryCount);
+    await this.fetchDataCore(transientRetryCount, isCurrent);
+} catch (error) {
+    if (isCurrent()) throw error;
+    console.log('[Wallet] superseded refresh failed:', error);
 } finally {
     SettingsStore.releaseFetchLock(seq);
 }
