@@ -1,10 +1,11 @@
 package app.zeusln.zeus.securestorage
 
-import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
-import android.security.keystore.StrongBoxUnavailableException
+import android.util.Log
+import java.security.GeneralSecurityException
 import java.security.KeyStore
+import java.security.ProviderException
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 
@@ -40,16 +41,11 @@ class AndroidKeystoreKeyProvider : KeyProvider {
         if (keyStore.containsAlias(alias)) keyStore.deleteEntry(alias)
     }
 
-    private fun generate(alias: String): SecretKey {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            try {
-                return generate(alias, strongBox = true)
-            } catch (e: StrongBoxUnavailableException) {
-                // fall through to a regular hardware-backed key
-            }
-        }
-        return generate(alias, strongBox = false)
-    }
+    private fun generate(alias: String): SecretKey =
+        withStrongBoxFallback(
+            { generate(alias, strongBox = true) },
+            { generate(alias, strongBox = false) }
+        )
 
     private fun generate(alias: String, strongBox: Boolean): SecretKey {
         val spec = KeyGenParameterSpec.Builder(
@@ -60,9 +56,7 @@ class AndroidKeystoreKeyProvider : KeyProvider {
             .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
             .setRandomizedEncryptionRequired(true)
             .setKeySize(256)
-        if (strongBox && Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            spec.setIsStrongBoxBacked(true)
-        }
+        if (strongBox) spec.setIsStrongBoxBacked(true)
         val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
         generator.init(spec.build())
         return generator.generateKey()
@@ -72,3 +66,20 @@ class AndroidKeystoreKeyProvider : KeyProvider {
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
     }
 }
+
+/**
+ * Tries [strongBox], then [regular]. Devices without StrongBox throw
+ * StrongBoxUnavailableException (a ProviderException), and some that report
+ * it fail with other ProviderException or GeneralSecurityException errors.
+ * react-native-keychain fell back on the same two types.
+ */
+internal fun <T> withStrongBoxFallback(strongBox: () -> T, regular: () -> T): T =
+    try {
+        strongBox()
+    } catch (e: ProviderException) {
+        Log.w("ZeusSecureStorage", "StrongBox key not created, using a regular key", e)
+        regular()
+    } catch (e: GeneralSecurityException) {
+        Log.w("ZeusSecureStorage", "StrongBox key not created, using a regular key", e)
+        regular()
+    }
