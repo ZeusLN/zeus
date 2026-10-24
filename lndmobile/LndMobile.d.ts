@@ -127,8 +127,6 @@ export interface ILndMobileTools {
     ): Promise<boolean>;
 
     // Android-specific
-    getIntentStringData(): Promise<string | null>;
-    getIntentNfcData(): Promise<string | null>;
     DEBUG_deleteWallet(network: string): Promise<boolean>;
     DEBUG_deleteDatafolder(): Promise<null>;
     DEBUG_listProcesses(): Promise<string>;
