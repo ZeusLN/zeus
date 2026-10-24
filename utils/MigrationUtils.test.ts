@@ -1729,7 +1729,6 @@ describe('MigrationUtils', () => {
             const mockCashuStore: any = {
                 seedVersion: undefined,
                 settingsStore: { implementation: 'embedded-lnd' },
-                getLndDir: jest.fn().mockReturnValue('testLndDir'),
                 getNodeDir: jest.fn().mockReturnValue('testLndDir')
             };
 
@@ -1753,7 +1752,6 @@ describe('MigrationUtils', () => {
             const mockCashuStore: any = {
                 seedVersion: 'v1',
                 settingsStore: { implementation: 'embedded-lnd' },
-                getLndDir: jest.fn().mockReturnValue('testLndDir'),
                 getNodeDir: jest.fn().mockReturnValue('testLndDir')
             };
 
@@ -1770,7 +1768,6 @@ describe('MigrationUtils', () => {
             const mockCashuStore: any = {
                 seedVersion: 'v2-bip39',
                 settingsStore: { implementation: 'embedded-lnd' },
-                getLndDir: jest.fn().mockReturnValue('testLndDir'),
                 getNodeDir: jest.fn().mockReturnValue('testLndDir')
             };
 
@@ -1787,7 +1784,6 @@ describe('MigrationUtils', () => {
             const mockCashuStore: any = {
                 seedVersion: undefined,
                 settingsStore: { implementation: 'embedded-lnd' },
-                getLndDir: jest.fn().mockReturnValue('testLndDir'),
                 getNodeDir: jest.fn().mockReturnValue('testLndDir')
             };
 
