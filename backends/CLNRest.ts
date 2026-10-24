@@ -15,6 +15,7 @@ import {
     listClosedChannels,
     listPeerChannels
 } from './CoreLightningRequestHandler';
+import { feeLimitSatsToMaxRoutingFeeMsat } from '../utils/AmountUtils';
 import { localeString } from '../utils/LocaleUtils';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import {
@@ -463,10 +464,10 @@ export default class CLNRest {
     // maxfeepercent. fee_limit_sat is the source of truth: FeeLimit
     // already emits the percent-derived sat amount as fee_limit_sat in
     // percent mode, so the cap always matches what the fee UI displays.
-    // Returning undefined leaves the cap to xpay's default of
-    // max(5000msat, 1%).
+    // A limit of 0 is a real cap of zero. Returning undefined leaves the
+    // cap to xpay's default of max(5000msat, 1%).
     private getMaxFeeMsat = (data: any) =>
-        data.fee_limit_sat ? Number(data.fee_limit_sat) * 1000 : undefined;
+        feeLimitSatsToMaxRoutingFeeMsat(data.fee_limit_sat);
 
     // xpay and xkeysend results omit status and payment_hash: synthesize
     // both so handlePayment success detection and payment note keys
@@ -527,6 +528,8 @@ export default class CLNRest {
     };
 
     payLightningInvoice = async (data: any) => {
+        const maxfee = this.getMaxFeeMsat(data);
+
         // pay is deprecated in CLN v26.06 and removed in v27.03; use xpay
         // (available since v24.11) when the node has it
         if (!this.supports('v24.11')) {
@@ -539,8 +542,8 @@ export default class CLNRest {
             // both. maxfee predates clnrest itself, so no version gate.
             // Prefer fee_limit_sat so the cap matches the fee UI, same
             // as the xpay path.
-            if (data.fee_limit_sat) {
-                legacyRequest.maxfee = Number(data.fee_limit_sat) * 1000;
+            if (maxfee !== undefined) {
+                legacyRequest.maxfee = maxfee;
             } else if (data.max_fee_percent) {
                 legacyRequest.maxfeepercent = data.max_fee_percent;
             }
@@ -552,7 +555,6 @@ export default class CLNRest {
             retry_for: data.timeout_seconds
         };
         if (data.amt) request.amount_msat = Number(data.amt) * 1000;
-        const maxfee = this.getMaxFeeMsat(data);
         if (maxfee !== undefined) request.maxfee = maxfee;
 
         return this.payWithTimeout(
@@ -563,6 +565,8 @@ export default class CLNRest {
         );
     };
     sendKeysend = async (data: any) => {
+        const maxfee = this.getMaxFeeMsat(data);
+
         // keysend is deprecated in CLN v26.06 and removed in v27.03; use
         // xkeysend (introduced alongside the deprecation in v26.06) when
         // the node has it
@@ -575,20 +579,31 @@ export default class CLNRest {
             // keysend takes either a percent cap or an absolute maxfee,
             // not both, and only gained maxfee in v24.11: on older nodes
             // express the fixed cap as the equivalent percent of the
-            // keysend amount (capped at CLN's 100% param limit)
+            // keysend amount (capped at CLN's 100% param limit). CLN
+            // reads the percent to whole ppm and floors the budget, so
+            // round up to 4 decimals to keep the cap at or above the
+            // fixed limit.
             if (data.max_fee_percent) {
                 legacyRequest.maxfeepercent = data.max_fee_percent;
-            } else if (data.fee_limit_sat) {
+            } else if (maxfee !== undefined) {
                 if (this.supports('v24.11')) {
-                    legacyRequest.maxfee = Number(data.fee_limit_sat) * 1000;
+                    legacyRequest.maxfee = maxfee;
                 } else if (data.amt) {
                     legacyRequest.maxfeepercent = BigNumber.min(
                         new BigNumber(data.fee_limit_sat)
                             .times(100)
-                            .dividedBy(data.amt),
+                            .dividedBy(data.amt)
+                            .decimalPlaces(4, BigNumber.ROUND_CEIL),
                         100
                     ).toNumber();
                 }
+            }
+            // With maxfeepercent, keysend raises any budget below
+            // exemptfee (default 5000 msat) to exemptfee. Send 0 so the
+            // percent is the whole cap. Not allowed alongside maxfee,
+            // which already sets the exemption to 0.
+            if (legacyRequest.maxfeepercent !== undefined) {
+                legacyRequest.exemptfee = 0;
             }
             return this.payWithTimeout('/v1/keysend', legacyRequest, data);
         }
@@ -598,7 +613,6 @@ export default class CLNRest {
             amount_msat: Number(data.amt && data.amt * 1000),
             retry_for: data.timeout_seconds
         };
-        const maxfee = this.getMaxFeeMsat(data);
         if (maxfee !== undefined) request.maxfee = maxfee;
 
         return this.payWithTimeout(

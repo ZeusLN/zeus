@@ -116,6 +116,77 @@ describe('LdkNode payment results', () => {
     });
 });
 
+describe('LdkNode routing fee limit', () => {
+    let ldk: LdkNode;
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        ldk = new LdkNode();
+        ldk.subscribeToEvents = () => () => {};
+        mockSendBolt11.mockResolvedValue(PAYMENT_ID);
+        mockSendSpontaneousPayment.mockResolvedValue(PAYMENT_ID);
+        mockBolt12SendUsingAmount.mockResolvedValue(PAYMENT_ID);
+        mockListPayments.mockResolvedValue([succeededPayment(0)]);
+    });
+
+    // maxTotalRoutingFeeMsat as passed to the native module
+    const sentFeeLimit = async (
+        method: 'payLightningInvoice' | 'sendKeysend' | 'payOffer',
+        fee_limit_sat: any
+    ) => {
+        await ldk[method]({
+            payment_request: 'lnbcrt1...',
+            offer: 'lno1...',
+            pubkey: '02abc',
+            // the invoice carries the amount
+            amt: method === 'payLightningInvoice' ? undefined : '5000',
+            fee_limit_sat
+        });
+        const nativeSend = {
+            payLightningInvoice: mockSendBolt11,
+            sendKeysend: mockSendSpontaneousPayment,
+            payOffer: mockBolt12SendUsingAmount
+        }[method];
+        return nativeSend.mock.calls[0][0].maxTotalRoutingFeeMsat;
+    };
+
+    describe.each(['payLightningInvoice', 'sendKeysend', 'payOffer'] as const)(
+        '%s',
+        (method) => {
+            it('passes the fee limit the user set', async () => {
+                expect(await sentFeeLimit(method, 7)).toBe(7_000);
+            });
+
+            // TransactionsStore passes the fee limit as a number, so a
+            // limit of '0' arrives here as 0
+            it('passes a fee limit of 0 as a cap of 0', async () => {
+                expect(await sentFeeLimit(method, 0)).toBe(0);
+            });
+        }
+    );
+
+    it.each([
+        ['no fee limit', undefined],
+        ['an empty fee limit', ''],
+        ['an unparsable fee limit', NaN]
+    ])(
+        "sends a keysend with LDK's default cap for %s",
+        async (_name, fee_limit_sat) => {
+            // 1% of 5,000 sats plus 50 sats
+            expect(await sentFeeLimit('sendKeysend', fee_limit_sat)).toBe(
+                100_000
+            );
+        }
+    );
+
+    it.each(['payLightningInvoice', 'payOffer'] as const)(
+        '%s leaves the cap to ldk-node when no limit is set',
+        async (method) => {
+            expect(await sentFeeLimit(method, undefined)).toBeUndefined();
+        }
+    );
+});
+
 describe('LdkNode payment timeouts', () => {
     let ldk: LdkNode;
 
