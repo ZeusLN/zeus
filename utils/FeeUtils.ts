@@ -144,5 +144,20 @@ class FeeUtils {
     };
 }
 
+export const MIN_CASHU_SWEEP_FEE_RESERVE_SATS = 10;
+
+/**
+ * Largest Lightning fee reserve a mint may quote for paying a Cashu token
+ * out to the user's own node. The reserve comes out of what the node
+ * receives, so it is held to the routing fee limit the wallet uses for its
+ * own payments (5%), with a floor that leaves room for the fixed minimum
+ * reserve mints charge on small amounts.
+ */
+export const maxCashuSweepFeeReserve = (amount: number): number =>
+    Math.max(
+        Math.floor(amount * FeeUtils.DEFAULT_ROUTING_FEE_PERCENT),
+        MIN_CASHU_SWEEP_FEE_RESERVE_SATS
+    );
+
 const feeUtils = new FeeUtils();
 export default feeUtils;
