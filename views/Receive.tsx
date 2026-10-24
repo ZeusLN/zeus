@@ -77,7 +77,7 @@ import BackendUtils from '../utils/BackendUtils';
 import { toWalletrpcAddressTypeName } from '../utils/LndUtils';
 import { isNfcWithdraw, scanNfcTag } from '../utils/NFCUtils';
 import { themeColor } from '../utils/ThemeUtils';
-import { numberWithCommas, SATS_PER_BTC } from '../utils/UnitsUtils';
+import { numberWithCommas, satsToBip21Amount } from '../utils/UnitsUtils';
 import { getAmountFromSats } from '../utils/AmountUtils';
 import {
     ExpirationPreset,
@@ -1315,9 +1315,7 @@ export default class Receive extends React.Component<
         if (haveUnifiedInvoice) {
             unifiedInvoice = `bitcoin:${onChainFormatted}?${`lightning=${payment_request.toUpperCase()}`}${
                 Number(satAmount) > 0
-                    ? `&amount=${new BigNumber(satAmount)
-                          .dividedBy(SATS_PER_BTC)
-                          .toFixed()}`
+                    ? `&amount=${satsToBip21Amount(satAmount)}`
                     : ''
             }${memo ? `&message=${memo.replace(/ /g, '%20')}` : ''}`;
         }
@@ -1332,9 +1330,7 @@ export default class Receive extends React.Component<
                 (Number(satAmount) > 0 || memo) && '?'
             }${
                 Number(satAmount) > 0
-                    ? `amount=${new BigNumber(satAmount)
-                          .dividedBy(SATS_PER_BTC)
-                          .toFixed()}`
+                    ? `amount=${satsToBip21Amount(satAmount)}`
                     : ''
             }${
                 memo

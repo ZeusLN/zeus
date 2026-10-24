@@ -1,4 +1,4 @@
-import { getDecimalPlaceholder } from './UnitsUtils';
+import { getDecimalPlaceholder, satsToBip21Amount } from './UnitsUtils';
 
 jest.mock('../stores/Stores', () => ({
     settingsStore: {
@@ -45,6 +45,29 @@ describe('UnitsUtils', () => {
                 string: '000',
                 count: 3
             });
+        });
+    });
+
+    describe('satsToBip21Amount', () => {
+        it('converts whole sats to BTC', () => {
+            expect(satsToBip21Amount(100000)).toBe('0.001');
+            expect(satsToBip21Amount('1000')).toBe('0.00001');
+            expect(satsToBip21Amount('1')).toBe('0.00000001');
+            expect(satsToBip21Amount('2100000000000000')).toBe('21000000');
+        });
+
+        it('rounds millisats up to the next whole sat', () => {
+            expect(satsToBip21Amount('1000.5')).toBe('0.00001001');
+            expect(satsToBip21Amount('1000.001')).toBe('0.00001001');
+            expect(satsToBip21Amount('0.001')).toBe('0.00000001');
+            expect(satsToBip21Amount(1000.999)).toBe('0.00001001');
+        });
+
+        it('never gives more than 8 decimals', () => {
+            for (const sats of ['1.5', '123456.789', '99999999.001']) {
+                const [, decimals = ''] = satsToBip21Amount(sats).split('.');
+                expect(decimals.length).toBeLessThanOrEqual(8);
+            }
         });
     });
 });
