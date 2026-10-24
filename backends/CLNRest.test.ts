@@ -22,6 +22,7 @@ jest.mock('./CoreLightningRequestHandler', () => ({
     listPeerChannels: jest.fn()
 }));
 
+import { nodeInfoStore } from '../stores/Stores';
 import CLNRest from './CLNRest';
 import Payment from '../models/Payment';
 
@@ -307,4 +308,81 @@ describe('CLNRest.createWithdrawalRequest', () => {
             description: 'pocket money'
         });
     });
+});
+
+// In percent mode the views send both the sat amount FeeLimit displays
+// (fee_limit_sat) and their own copy of the percent field (max_fee_percent).
+describe('CLNRest.sendKeysend legacy fee cap', () => {
+    const keysendRequest = (version: string, data: any) => {
+        nodeInfoStore.nodeInfo.version = version;
+        const cln = new CLNRest();
+        const postRequest = jest.fn((..._args: any[]) => Promise.resolve({}));
+        cln.postRequest = postRequest;
+        cln.sendKeysend({ pubkey: '02aa', amt: 100000, ...data });
+        const [route, request] = postRequest.mock.calls[0];
+        expect(route).toBe('/v1/keysend');
+        return request;
+    };
+
+    beforeEach(() => jest.useFakeTimers());
+    afterEach(() => jest.useRealTimers());
+
+    it('prefers the displayed sat amount over the percent', () => {
+        const request = keysendRequest('v25.09', {
+            fee_limit_sat: 500,
+            max_fee_percent: '5.0'
+        });
+        expect(request.maxfee).toBe(500000);
+        expect(request).not.toHaveProperty('maxfeepercent');
+    });
+
+    it('expresses the sat amount as a percent before v24.11', () => {
+        const request = keysendRequest('v24.08', {
+            fee_limit_sat: 500,
+            max_fee_percent: '5.0'
+        });
+        expect(request.maxfeepercent).toBe(0.5);
+        expect(request).not.toHaveProperty('maxfee');
+    });
+
+    it('falls back to the percent without a sat amount', () => {
+        const request = keysendRequest('v25.09', { max_fee_percent: '0.5' });
+        expect(request.maxfeepercent).toBe('0.5');
+        expect(request).not.toHaveProperty('maxfee');
+    });
+
+    // TransactionsStore passes the fee limit as a number, so a limit of
+    // '0' can arrive as 0 or '0'
+    it.each([0, '0'])('keeps a sat amount of %p as a cap of 0', (limit) => {
+        const request = keysendRequest('v25.09', {
+            fee_limit_sat: limit,
+            max_fee_percent: '5.0'
+        });
+        expect(request.maxfee).toBe(0);
+        expect(request).not.toHaveProperty('maxfeepercent');
+    });
+
+    it.each([0, '0'])(
+        'keeps a sat amount of %p as 0 percent before v24.11',
+        (limit) => {
+            const request = keysendRequest('v24.08', {
+                fee_limit_sat: limit,
+                max_fee_percent: '5.0'
+            });
+            expect(request.maxfeepercent).toBe(0);
+            expect(request).not.toHaveProperty('maxfee');
+        }
+    );
+
+    it.each([undefined, null, ''])(
+        'falls back to the percent for a sat amount of %p',
+        (limit) => {
+            const request = keysendRequest('v25.09', {
+                fee_limit_sat: limit,
+                max_fee_percent: '0.5'
+            });
+            expect(request.maxfeepercent).toBe('0.5');
+            expect(request).not.toHaveProperty('maxfee');
+        }
+    );
 });
