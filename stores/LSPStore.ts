@@ -9,7 +9,7 @@ import NodeInfoStore from './NodeInfoStore';
 import lndMobile from '../lndmobile/LndMobileInjection';
 const { index, channel } = lndMobile;
 
-import { LSPOrderState, LSPService } from '../models/LSP';
+import { isValidOrderResponse, LSPOrderState, LSPService } from '../models/LSP';
 
 import BackendUtils from '../utils/BackendUtils';
 import Base64Utils from '../utils/Base64Utils';
@@ -1944,6 +1944,12 @@ export default class LSPStore {
     };
 
     public updateOrderInStorage(order: any) {
+        // the order screens and the Activity list read the stored record;
+        // keep the previous one rather than store a reply they can't read
+        if (!isValidOrderResponse(order)) {
+            console.warn('LSPStore: not storing malformed order response');
+            return;
+        }
         Storage.getItem(LSPS_ORDERS_KEY)
             .then((responseArrayString) => {
                 if (!responseArrayString) return;
