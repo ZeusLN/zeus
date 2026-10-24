@@ -1814,6 +1814,8 @@
     "stores.LSPStore.missingWrappedInvoice": "The LSP response did not include a wrapped invoice",
     "stores.LightningAddressStore.Cashu.quoteNotPaid": "Quote not paid",
     "stores.LightningAddressStore.Cashu.quotePaymentErr": "Error checking for quote payment",
+    "stores.LightningAddressStore.Cashu.mintUnreachable": "Could not reach the mint. The payment is still claimable, try again later or with a different network connection",
+    "stores.LightningAddressStore.Cashu.redeemErr": "Error marking the payment as redeemed with ZEUS Pay",
     "stores.NostrWalletConnectStore.initializingService": "Initializing Nostr Wallet Connect service...",
     "stores.NostrWalletConnectStore.zeusWallet": "Zeus Wallet",
     "stores.NostrWalletConnectStore.error.connectionNameRequired": "Connection name is required",
