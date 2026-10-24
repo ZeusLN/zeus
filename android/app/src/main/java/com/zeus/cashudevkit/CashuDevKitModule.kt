@@ -6,6 +6,8 @@ import kotlinx.coroutines.*
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import java.io.IOException
+import java.io.InputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
@@ -47,6 +49,11 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
     companion object {
         private const val TAG = "CashuDevKitModule"
+
+        // Upper bound on the characters read from a mint HTTP response.
+        // HttpURLConnection inflates gzip bodies transparently, so the
+        // limit applies to the decoded text, not the bytes on the wire.
+        private const val MAX_MINT_RESPONSE_CHARS = 1024 * 1024
     }
 
     override fun getName(): String = "CashuDevKitModule"
@@ -260,6 +267,28 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
     }
 
     private fun normalizeMintUrl(mintUrl: String): String = mintUrl.trimEnd('/')
+
+    /**
+     * Reads a mint HTTP response body as text, up to
+     * MAX_MINT_RESPONSE_CHARS characters. Throws IOException for a longer
+     * body instead of buffering it, so an oversized or highly compressed
+     * response is rejected rather than exhausting the heap.
+     */
+    private fun readMintResponse(stream: InputStream): String {
+        stream.bufferedReader().use { reader ->
+            val body = StringBuilder()
+            val buffer = CharArray(8192)
+            while (true) {
+                val read = reader.read(buffer)
+                if (read < 0) break
+                if (body.length + read > MAX_MINT_RESPONSE_CHARS) {
+                    throw IOException("Mint response too large")
+                }
+                body.append(buffer, 0, read)
+            }
+            return body.toString()
+        }
+    }
 
     /**
      * Get (or lazily create) the per-mint Wallet for a mint URL.
@@ -808,7 +837,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     return@launch
                 }
 
-                val response = connection.inputStream.bufferedReader().use { it.readText() }
+                val response = readMintResponse(connection.inputStream)
                 connection.disconnect()
 
                 // Return the raw JSON string (already in correct format)
@@ -953,7 +982,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
 
                 val responseCode = connection.responseCode
                 if (responseCode != HttpURLConnection.HTTP_OK) {
-                    val errorStream = connection.errorStream?.bufferedReader()?.readText() ?: "Unknown error"
+                    val errorStream = connection.errorStream?.let { readMintResponse(it) } ?: "Unknown error"
                     Log.e(TAG, "checkExternalMintQuote: HTTP $responseCode - $errorStream")
                     withContext(Dispatchers.Main) {
                         promise.reject("HTTP_ERROR", "Mint returned HTTP $responseCode: $errorStream")
@@ -961,7 +990,7 @@ class CashuDevKitModule(private val reactContext: ReactApplicationContext) :
                     return@launch
                 }
 
-                val response = connection.inputStream.bufferedReader().readText()
+                val response = readMintResponse(connection.inputStream)
                 Log.d(TAG, "checkExternalMintQuote: Response: $response")
 
                 val json = JSONObject(response)
