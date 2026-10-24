@@ -750,7 +750,8 @@ describe('SettingsStore LndHub session token', () => {
     it('clears the token when no wallet is left', async () => {
         const store = await loggedIn({ selectedNode: 0, nodes: [hubA] });
 
-        await store.updateSettings({ nodes: [] });
+        // Deleting the last wallet opts in, as WalletConfiguration does
+        await store.updateSettings({ nodes: [] }, { allowEmptyNodes: true });
 
         expect(store.accessToken).toBe('');
     });
