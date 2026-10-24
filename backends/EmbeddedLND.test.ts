@@ -1,7 +1,8 @@
 // Import-time scaffolding for the native modules EmbeddedLND.ts and its LND
 // base class pull in. listPeers only touches lndMobile.index.listPeers;
 // closeChannel only uses the injected close call, the stream decoder and
-// the event emitter mocked below.
+// the event emitter mocked below; getTransactions only the injected
+// onchain call.
 jest.mock('react-native-blob-util', () => ({
     __esModule: true,
     default: { fetch: jest.fn(), config: jest.fn() }
@@ -17,6 +18,7 @@ const mockCloseChannel = jest.fn();
 const mockSendPaymentV2Sync = jest.fn();
 const mockSendKeysendPaymentV2 = jest.fn();
 const mockListPayments = jest.fn();
+const mockGetTransactions = jest.fn();
 jest.mock('../lndmobile/LndMobileInjection', () => ({
     __esModule: true,
     default: {
@@ -34,7 +36,9 @@ jest.mock('../lndmobile/LndMobileInjection', () => ({
             decodeCloseStatusUpdate: (data: string) => JSON.parse(data)
         },
         wallet: {},
-        onchain: {},
+        onchain: {
+            getTransactions: (...args: any[]) => mockGetTransactions(...args)
+        },
         wtclient: {}
     }
 }));
@@ -149,6 +153,71 @@ describe('EmbeddedLND.listPeers', () => {
 
         expect(peer.sat_sent).toBe('0');
         expect(peer.sat_recv).toBe('0');
+    });
+});
+
+describe('EmbeddedLND.getTransactions', () => {
+    const embeddedLnd = new EmbeddedLND();
+
+    // what sendCommand returns: a decoded message with snake_case fields
+    const decodedTransactions = (transactions: lnrpc.ITransaction[]) =>
+        lnrpc.TransactionDetails.decode(
+            lnrpc.TransactionDetails.encode(
+                lnrpc.TransactionDetails.create({ transactions })
+            ).finish()
+        );
+
+    afterEach(() => mockGetTransactions.mockReset());
+
+    it('requests the newest mined page, then the unconfirmed ones when it is full', async () => {
+        mockGetTransactions.mockImplementation(async (request: any) =>
+            request.end_height === 1
+                ? decodedTransactions([
+                      { tx_hash: 'tx2', num_confirmations: 1 },
+                      { tx_hash: 'tx1', num_confirmations: 2 }
+                  ])
+                : decodedTransactions([
+                      { tx_hash: 'tx2', num_confirmations: 0 },
+                      { tx_hash: 'pending0', num_confirmations: 0 }
+                  ])
+        );
+
+        const { transactions } = await embeddedLnd.getTransactions({
+            max_transactions: 2
+        });
+
+        expect(mockGetTransactions.mock.calls.map(([r]) => r)).toEqual([
+            { start_height: -1, end_height: 1, max_transactions: 2 },
+            { start_height: -1, end_height: -1, max_transactions: 0 }
+        ]);
+        expect(
+            transactions.map((tx: any) => [tx.tx_hash, tx.num_confirmations])
+        ).toEqual([
+            ['tx2', 0],
+            ['pending0', 0]
+        ]);
+    });
+
+    it('passes an explicit range through as one request', async () => {
+        mockGetTransactions.mockResolvedValue(decodedTransactions([]));
+
+        await embeddedLnd.getTransactions({ start_height: 100 });
+
+        expect(mockGetTransactions).toHaveBeenCalledTimes(1);
+        expect(mockGetTransactions).toHaveBeenCalledWith({
+            start_height: 100,
+            end_height: undefined,
+            max_transactions: 500
+        });
+    });
+
+    it('returns an empty list for a wallet with no transactions', async () => {
+        mockGetTransactions.mockResolvedValue({});
+
+        const { transactions } = await embeddedLnd.getTransactions();
+
+        expect(transactions).toEqual([]);
+        expect(mockGetTransactions).toHaveBeenCalledTimes(1);
     });
 });
 
