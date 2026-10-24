@@ -48,6 +48,11 @@ const restartApp = () => {
     }
 };
 
+const stopNodeAndRestart = async () => {
+    await stopNode();
+    restartApp();
+};
+
 const restartNeeded = (force?: boolean) => {
     const title = localeString('restart.title');
     const message = localeString('restart.msg');
@@ -64,9 +69,8 @@ const restartNeeded = (force?: boolean) => {
             text: force
                 ? localeString('views.Wallet.restart')
                 : localeString('general.yes'),
-            onPress: async () => {
-                await stopNode();
-                restartApp();
+            onPress: () => {
+                stopNodeAndRestart();
             }
         });
         Alert.alert(
@@ -79,4 +83,4 @@ const restartNeeded = (force?: boolean) => {
     }
 };
 
-export { restartApp, restartNeeded };
+export { restartApp, restartNeeded, stopNodeAndRestart };
