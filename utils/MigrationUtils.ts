@@ -85,6 +85,7 @@ import {
     purgeLegacyRescueKeyFiles,
     unlinkRescueKeyStagingFile
 } from '../utils/SwapUtils';
+import { retireWalletSeedRescueKeyCopies } from './RescueKeyRetirementUtils';
 
 import {
     TimePeriod,
@@ -917,6 +918,33 @@ class MigrationsUtils {
         await purgeLegacyRescueKeyFiles();
 
         await this.writeFlag(MOD_KEY_RESCUE_FILE);
+    }
+
+    // v13.0.0 to v13.1.3 stored an LDK Node wallet's own mnemonic as the
+    // swap rescue key, and 13.2.0 only stopped doing so for new keys. The
+    // swap host receives the rescue key's master xpub on "Restore swaps",
+    // so a rescue key that is a configured wallet's mnemonic is removed,
+    // together with its key index, and the Swaps screen asks for a new
+    // one. Saved swaps keep their own keys and preimages, so their claims
+    // and refunds do not need the rescue key. The notice flag is written
+    // first and the rescue key last, so a crash mid-way retries on the
+    // next load. Every keychain copy is removed, including the iCloud
+    // and unprefixed ones (see retireWalletSeedRescueKeyCopies).
+    public async retireWalletSeedRescueKey(settings: any) {
+        const MOD_KEY_WALLET_SEED_RESCUE_KEY =
+            'swaps-rescue-key-wallet-seed-v1';
+        const mod = await this.readFlag(MOD_KEY_WALLET_SEED_RESCUE_KEY);
+        if (mod) return;
+
+        try {
+            await retireWalletSeedRescueKeyCopies(settings?.nodes);
+        } catch (e) {
+            // flag left unset, so the next load retries
+            console.warn('Could not retire the swap rescue key', e);
+            return;
+        }
+
+        await this.writeFlag(MOD_KEY_WALLET_SEED_RESCUE_KEY);
     }
 
     public async storageMigrationV2(settings: any) {

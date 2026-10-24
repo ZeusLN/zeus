@@ -59,6 +59,7 @@ import {
     purgeLegacyRescueKeyFiles,
     unlinkRescueKeyStagingFile
 } from '../utils/SwapUtils';
+import { retireWalletSeedRescueKeyCopies } from './RescueKeyRetirementUtils';
 import {
     NWC_CONNECTIONS_KEY,
     NWC_CLIENT_KEYS,
@@ -696,6 +697,7 @@ async function clearLncCredentials(pairingPhrase: string) {
  * - Cashu keys, which are namespaced by getNodeDir() (lndDir for LND-family,
  *   ldkNodeDir for LDK) - CashuStore.getNodeDir
  * - LNC pairing credentials, namespaced by sha256(pairingPhrase)
+ * - the swap rescue key, when it is this wallet's LDK Node mnemonic
  * - the legacy '<pubkey>-extended-private-keys' xprv cache (KEY-006), and
  *   the 'undefined-extended-private-keys' it was filed under without a pubkey
  *
@@ -724,6 +726,17 @@ export async function clearNodeKeychainData(
     }
     if (node.implementation === 'ldk-node' && !node.ldkNodeDir) {
         await clearCashuDataForNode('ldk');
+    }
+    // v13.0.0 to v13.1.3 stored an LDK Node wallet's mnemonic as the
+    // app-wide swap rescue key; it must not outlive the wallet.
+    // Every keychain copy is removed, including the iCloud and unprefixed
+    // ones, and such a copy is removed even when the local key differs.
+    if (node.ldkMnemonic) {
+        try {
+            await retireWalletSeedRescueKeyCopies([node]);
+        } catch (e) {
+            console.warn('[ClearData] Error checking swap rescue key:', e);
+        }
     }
     // LNC credentials are stored per pairing phrase, so configs copied by
     // Duplicate Wallet, config import or legacy restore share one entry.

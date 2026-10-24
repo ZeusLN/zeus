@@ -2506,6 +2506,7 @@
     "views.Swaps.rescueKey.modal.text1": "Swap rescue key is a mnemonic of 12 words that will allow you to recover your swaps in case you lose access to your device.",
     "views.Swaps.rescueKey.modal.text2": "Save it in a permanent and secure location.",
     "views.Swaps.rescueKey.modal.text3": "To continue, please select if you want to generate a new rescue key or import an existing one.",
+    "views.Swaps.rescueKey.replaced": "Your previous rescue key was the seed phrase of an LDK Node wallet. It was removed because the swap provider receives the rescue key's public key when you restore swaps. Create a new rescue key for future swaps. Swaps in your history are not affected. To recover them on another device, restore swaps with that wallet's seed phrase.",
     "views.Swaps.rescueKey.text1": "The following 12 words are your swap refund rescue key. If you lose access to your swap, you can use this key to recover your funds.",
     "views.Swaps.rescueKey.text2": "Please write it down and keep it in a safe place. If you lose this key, you will not be able to recover your funds.",
     "views.Swaps.rescueKey.dangerousText": "Do you want to copy your 12 word seed to your clipboard?",
