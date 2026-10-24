@@ -658,7 +658,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                                     )}
                                                                 />
                                                             )}
-                                                            {info?.min_channel_confirmations && (
+                                                            {info?.min_channel_confirmations !=
+                                                                null && (
                                                                 <KeyValue
                                                                     keyValue={localeString(
                                                                         'views.LSPS1.minChannelConfirmations'
@@ -668,7 +669,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                                     }
                                                                 />
                                                             )}
-                                                            {info?.min_onchain_payment_confirmations && (
+                                                            {info?.min_onchain_payment_confirmations !=
+                                                                null && (
                                                                 <KeyValue
                                                                     keyValue={localeString(
                                                                         'views.LSPS1.minOnchainPaymentConfirmations'
@@ -700,7 +702,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                                     }
                                                                 />
                                                             )}
-                                                            {info?.min_required_channel_confirmations && (
+                                                            {info?.min_required_channel_confirmations !=
+                                                                null && (
                                                                 <KeyValue
                                                                     keyValue={localeString(
                                                                         'views.LSPS1.minRequiredChannelConfirmations'
@@ -1120,7 +1123,8 @@ export default class LSPS1 extends React.Component<LSPS1Props, LSPS1State> {
                                                 autoCapitalize="none"
                                             />
 
-                                            {info?.min_onchain_payment_confirmations && (
+                                            {info?.min_onchain_payment_confirmations !=
+                                                null && (
                                                 <>
                                                     <Text
                                                         style={{
