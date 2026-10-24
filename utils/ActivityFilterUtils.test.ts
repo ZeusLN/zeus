@@ -11,6 +11,7 @@ jest.mock('../stores/Stores', () => ({
 import Payment from '../models/Payment';
 import Invoice from '../models/Invoice';
 import Transaction from '../models/Transaction';
+import CashuToken from '../models/CashuToken';
 import { Filter } from '../stores/ActivityStore';
 import ActivityFilterUtils from './ActivityFilterUtils';
 
@@ -157,6 +158,38 @@ describe('ActivityFilterUtils', () => {
             ]);
         }
     );
+
+    it('supports filtering Cashu tokens by start and end date', () => {
+        const activities: any[] = [
+            new CashuToken({
+                value: 1,
+                sent: true,
+                created_at: new Date(2000, 1, 1, 3, 4, 5).getTime() / 1000
+            }),
+            new CashuToken({
+                value: 2,
+                received: true,
+                pendingClaim: true,
+                received_at: new Date(2000, 1, 2, 3, 4, 4).getTime() / 1000
+            })
+        ];
+
+        const startFilter = getDefaultFilter();
+        startFilter.startDate = new Date(2000, 1, 2, 3, 4, 5);
+        expect(
+            ActivityFilterUtils.filterActivities(activities, startFilter).map(
+                (a) => a.getAmount
+            )
+        ).toEqual([2]);
+
+        const endFilter = getDefaultFilter();
+        endFilter.endDate = new Date(2000, 1, 1, 3, 4, 5);
+        expect(
+            ActivityFilterUtils.filterActivities(activities, endFilter).map(
+                (a) => a.getAmount
+            )
+        ).toEqual([1]);
+    });
 
     it('supports filtering unconfirmed transactions', () => {
         const activities: any[] = [
