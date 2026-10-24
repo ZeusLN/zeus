@@ -334,17 +334,17 @@ export default class SwapStore {
         const isTestnet = this.nodeInfoStore?.nodeInfo?.isTestNet;
         const settings = this.settingsStore.settings;
 
-        if (
-            settings.swaps?.customHost &&
-            (settings.swaps?.hostTestnet === 'Custom' ||
-                settings.swaps?.hostMainnet === 'Custom')
-        ) {
+        const selected = isTestnet
+            ? settings.swaps?.hostTestnet || DEFAULT_SWAP_HOST_TESTNET
+            : settings.swaps?.hostMainnet || DEFAULT_SWAP_HOST_MAINNET;
+
+        // `customHost` is a single value shared across both networks, so only
+        // the active network's selection may opt into it
+        if (selected === 'Custom' && settings.swaps?.customHost) {
             return settings.swaps?.customHost;
         }
 
-        return isTestnet
-            ? settings.swaps?.hostTestnet || DEFAULT_SWAP_HOST_TESTNET
-            : settings.swaps?.hostMainnet || DEFAULT_SWAP_HOST_MAINNET;
+        return selected;
     }
 
     /** Returns the name of the swap service based on host and network */
