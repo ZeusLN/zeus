@@ -1,5 +1,4 @@
 import { Platform } from 'react-native';
-import * as Keychain from 'react-native-keychain';
 
 import { sleep } from './SleepUtils';
 import { settingsStore } from '../stores/Stores';
@@ -210,13 +209,12 @@ class MigrationsUtils {
     private async readFromOldKeychain(key: string) {
         try {
             // Try local keychain first
-            const localCreds = await Keychain.getInternetCredentials(key);
-            if (localCreds) return localCreds;
+            const local = await getRawItem(key, false);
+            if (local) return { password: local };
 
             // Fallback to cloud keychain
-            return await Keychain.getInternetCredentials(key, {
-                cloudSync: true
-            });
+            const cloud = await getRawItem(key, true);
+            return cloud ? { password: cloud } : false;
         } catch (e) {
             console.warn(`[Migration] Read error for ${key}`, e);
             return null;
