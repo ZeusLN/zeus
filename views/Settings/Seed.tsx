@@ -44,6 +44,10 @@ import { themeColor } from '../../utils/ThemeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { IS_BACKED_UP_KEY } from '../../utils/MigrationUtils';
 import {
+    formatSwapIdList,
+    getStoredUnfinishedSwapIds
+} from '../../utils/SwapStateUtils';
+import {
     graphDataExists,
     handleExportChannels
 } from '../../utils/ChannelMigrationUtils';
@@ -79,6 +83,10 @@ interface SeedState {
     understood: boolean;
     showModal: boolean;
     isDeleteModalVisible: boolean;
+    // set once the user confirmed deletion while swaps are unfinished
+    unfinishedSwapIds: string[] | null;
+    // set with unfinishedSwapIds when a stored swap list could not be read
+    swapListsUnreadable: boolean;
     isChannelExporting: boolean;
     channelExportMessage: string;
     revealResetKey: number;
@@ -136,10 +144,12 @@ const MnemonicWord = ({ index, word }: { index: any; word: any }) => {
 @inject('SettingsStore', 'NodeInfoStore', 'SyncStore', 'ChannelsStore')
 @observer
 export default class Seed extends React.PureComponent<SeedProps, SeedState> {
-    state = {
+    state: SeedState = {
         understood: this.props.route.params?.skipWarning ?? false,
         showModal: false,
         isDeleteModalVisible: false,
+        unfinishedSwapIds: null,
+        swapListsUnreadable: false,
         isChannelExporting: false,
         channelExportMessage: '',
         revealResetKey: 0,
@@ -147,6 +157,11 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
     };
 
     private appStateSubscription: NativeEventSubscription | undefined;
+
+    // Bumped whenever the delete modal closes, so a swap check that was
+    // still running when the user cancelled is dropped.
+    private deleteCheckSession = 0;
+    private checkingSwaps = false;
 
     componentDidMount() {
         // make sure we have latest settings and the seed phrase is accessible
@@ -189,12 +204,60 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
         this.setState({ graphDataOnDisk });
     };
 
-    renderDeleteModal = () => {
+    closeDeleteModal = () => {
+        this.deleteCheckSession += 1;
+        this.checkingSwaps = false;
+        this.setState({
+            isDeleteModalVisible: false,
+            unfinishedSwapIds: null,
+            swapListsUnreadable: false
+        });
+    };
+
+    // The stored swap lists and keys are the only way to claim or refund a
+    // swap from this wallet, so a first confirmation with unfinished swaps
+    // stored, or with a list that could not be read, asks again before
+    // anything is deleted.
+    confirmDelete = async () => {
         const { navigation } = this.props;
+        if (this.checkingSwaps) return;
+        if (this.state.unfinishedSwapIds === null) {
+            const session = this.deleteCheckSession;
+            this.checkingSwaps = true;
+            const { ids, unreadable } = await getStoredUnfinishedSwapIds();
+            if (session !== this.deleteCheckSession) return;
+            this.checkingSwaps = false;
+            if (ids.length > 0 || unreadable) {
+                this.setState({
+                    unfinishedSwapIds: ids,
+                    swapListsUnreadable: unreadable
+                });
+                return;
+            }
+        }
+        await Storage.removeItem(SWAPS_RESCUE_KEY);
+        await Storage.removeItem(SWAPS_KEY);
+        await Storage.removeItem(REVERSE_SWAPS_KEY);
+        await Storage.removeItem(SWAPS_LAST_USED_KEY);
+        await purgeLegacyRescueKeyFiles();
+        await unlinkRescueKeyStagingFile();
+        this.closeDeleteModal();
+        navigation.popTo('Swaps');
+    };
+
+    renderDeleteModal = () => {
+        const { unfinishedSwapIds, swapListsUnreadable } = this.state;
+        const textStyle = {
+            color: themeColor('text'),
+            fontFamily: 'PPNeueMontreal-Book',
+            fontSize: 18,
+            textAlign: 'center' as const,
+            marginBottom: 20
+        };
         return (
             <ModalBox
                 isOpen={this.state.isDeleteModalVisible}
-                onClosed={() => this.setState({ isDeleteModalVisible: false })}
+                onClosed={this.closeDeleteModal}
                 style={{
                     backgroundColor: 'transparent'
                 }}
@@ -217,40 +280,35 @@ export default class Seed extends React.PureComponent<SeedProps, SeedState> {
                             width: '90%'
                         }}
                     >
-                        <Text
-                            style={{
-                                color: themeColor('text'),
-                                fontFamily: 'PPNeueMontreal-Book',
-                                fontSize: 18,
-                                textAlign: 'center',
-                                marginBottom: 20
-                            }}
-                        >
-                            {localeString(
-                                'views.Swaps.rescueKey.deleteConfirmation'
-                            )}
+                        {swapListsUnreadable && (
+                            <Text style={textStyle}>
+                                {localeString(
+                                    'views.Swaps.rescueKey.deleteSwapsUnreadable'
+                                )}
+                            </Text>
+                        )}
+                        <Text style={textStyle}>
+                            {unfinishedSwapIds && unfinishedSwapIds.length > 0
+                                ? localeString(
+                                      'views.Swaps.rescueKey.deleteUnfinishedSwaps'
+                                  ).replace(
+                                      '{{swaps}}',
+                                      formatSwapIdList(unfinishedSwapIds)
+                                  )
+                                : localeString(
+                                      'views.Swaps.rescueKey.deleteConfirmation'
+                                  )}
                         </Text>
 
                         <Button
                             title={localeString('general.confirm')}
-                            onPress={async () => {
-                                await Storage.removeItem(SWAPS_RESCUE_KEY);
-                                await Storage.removeItem(SWAPS_KEY);
-                                await Storage.removeItem(REVERSE_SWAPS_KEY);
-                                await Storage.removeItem(SWAPS_LAST_USED_KEY);
-                                await purgeLegacyRescueKeyFiles();
-                                await unlinkRescueKeyStagingFile();
-                                this.setState({ isDeleteModalVisible: false });
-                                navigation.popTo('Swaps');
-                            }}
+                            onPress={this.confirmDelete}
                             containerStyle={{ marginBottom: 10 }}
                             warning
                         />
                         <Button
                             title={localeString('general.cancel')}
-                            onPress={() =>
-                                this.setState({ isDeleteModalVisible: false })
-                            }
+                            onPress={this.closeDeleteModal}
                             secondary
                         />
                     </View>
