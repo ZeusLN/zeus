@@ -48,6 +48,14 @@ export default class InvoicesStore {
     lspStore: LSPStore;
     channelsStore: ChannelsStore;
     nodeInfoStore: NodeInfoStore;
+    // Bumped by every createInvoice/createUnifiedInvoice call that is not
+    // silent and by reset(). The Receive screen fields, the LSP fee state
+    // and the LNURL withdraw belong to the latest of those calls: one that
+    // has been superseded still returns or throws its own result, but
+    // writes nothing shared and submits nothing. Silent calls (NWC) neither
+    // bump nor check it, so they and the Receive screen don't cancel each
+    // other.
+    private invoiceRequestSeq = 0;
 
     // lnd
     @observable loadingFeeEstimate = false;
@@ -92,6 +100,7 @@ export default class InvoicesStore {
 
     @action
     public reset = () => {
+        this.invoiceRequestSeq++;
         this.paymentRequest = '';
         this.onChainAddress = '';
         this.loading = false;
@@ -180,6 +189,14 @@ export default class InvoicesStore {
         }
     };
 
+    // Starts an invoice request and returns whether it is still the latest
+    // one; see invoiceRequestSeq
+    private beginInvoiceRequest = (silent?: boolean): (() => boolean) => {
+        if (silent) return () => true;
+        const seq = ++this.invoiceRequestSeq;
+        return () => seq === this.invoiceRequestSeq;
+    };
+
     @action
     public createUnifiedInvoice = ({
         memo,
@@ -221,13 +238,15 @@ export default class InvoicesStore {
         ) => Promise<boolean>;
         // Create the invoice without touching the fields the Receive
         // screen shows; the caller takes it from the return value and
-        // gets backend errors as a thrown error. Pair it with noLsp and
-        // no route hints: the LSP fee quote and the route-hint error path
-        // in createInvoice still write shared fields. NWC make_invoice is
+        // gets backend errors as a thrown error. Pair it with noLsp: the
+        // LSP fee quote still writes shared fields. NWC make_invoice is
         // the only caller.
         silent?: boolean;
     }) => {
-        if (!silent) this.creatingInvoice = true;
+        const isCurrent = this.beginInvoiceRequest(silent);
+        // the Receive screen fields belong to this call
+        const shared = () => !silent && isCurrent();
+        if (shared()) this.creatingInvoice = true;
         return this.createInvoice({
             memo,
             value,
@@ -243,11 +262,12 @@ export default class InvoicesStore {
             forceLsp,
             useLsp,
             confirmLspFee,
-            silent
+            silent,
+            requestIsCurrent: isCurrent
         })
             .then((result) => {
                 if (!result?.rHash || !result?.paymentRequest) {
-                    if (!silent)
+                    if (shared())
                         runInAction(() => {
                             this.loading = false;
                             this.creatingInvoice = false;
@@ -270,9 +290,9 @@ export default class InvoicesStore {
                     if (addressType) addressRequest.type = addressType;
                     if (account && account !== 'default')
                         addressRequest.account = account;
-                    return this.getNewAddress(addressRequest)
+                    return this.getNewAddress(addressRequest, shared)
                         .then((onChainAddress: string) => {
-                            if (!silent)
+                            if (shared())
                                 runInAction(() => {
                                     this.onChainAddress = onChainAddress;
                                     this.payment_request = paymentRequest;
@@ -282,14 +302,14 @@ export default class InvoicesStore {
                             return { rHash, paymentRequest, onChainAddress };
                         })
                         .catch(() => {
-                            if (!silent)
+                            if (shared())
                                 runInAction(() => {
                                     this.loading = false;
                                     this.creatingInvoice = false;
                                 });
                         });
                 } else {
-                    if (!silent)
+                    if (shared())
                         runInAction(() => {
                             this.payment_request = paymentRequest;
                             this.creatingInvoice = false;
@@ -298,7 +318,7 @@ export default class InvoicesStore {
                 }
             })
             .catch((error: any) => {
-                if (!silent)
+                if (shared())
                     runInAction(() => {
                         this.loading = false;
                     });
@@ -322,7 +342,8 @@ export default class InvoicesStore {
         forceLsp,
         useLsp,
         confirmLspFee,
-        silent
+        silent,
+        requestIsCurrent
     }: {
         memo: string;
         value: string;
@@ -344,10 +365,17 @@ export default class InvoicesStore {
             amountSats: string
         ) => Promise<boolean>;
         // See createUnifiedInvoice: skips the Receive screen fields, but
-        // the LSP fee quote and the route-hint error path still write
-        // shared state, so pass noLsp and no route hints with it.
+        // the LSP fee quote still writes shared state, so pass noLsp with
+        // it.
         silent?: boolean;
+        // Set by createUnifiedInvoice, whose request this call is part of
+        requestIsCurrent?: () => boolean;
     }) => {
+        const isCurrent = requestIsCurrent ?? this.beginInvoiceRequest(silent);
+        // the Receive screen fields, the LSP fee state and the LNURL
+        // withdraw belong to this call
+        const shared = () => !silent && isCurrent();
+
         // useLsp is the caller's own decision. Receive passes it because
         // its LSP switch writes enableLSP through the settings queue, so
         // settings.enableLSP can still hold the old value when the user
@@ -366,7 +394,7 @@ export default class InvoicesStore {
             value !== '0' &&
             !noLsp;
 
-        if (!silent) {
+        if (shared()) {
             // Only an invoice that asks for its own quote drops the answer
             // to another fee request still in flight.
             if (lspFeeRequested) {
@@ -406,15 +434,16 @@ export default class InvoicesStore {
                             );
                         } catch (error: any) {
                             const error_msg = error?.toString();
-                            runInAction(() => {
-                                this.creatingInvoiceError = true;
-                                this.creatingInvoice = false;
-                                this.error_msg =
-                                    error_msg ||
-                                    localeString(
-                                        'stores.InvoicesStore.errorCreatingInvoice'
-                                    );
-                            });
+                            if (shared())
+                                runInAction(() => {
+                                    this.creatingInvoiceError = true;
+                                    this.creatingInvoice = false;
+                                    this.error_msg =
+                                        error_msg ||
+                                        localeString(
+                                            'stores.InvoicesStore.errorCreatingInvoice'
+                                        );
+                                });
                             return;
                         }
                     }
@@ -486,12 +515,17 @@ export default class InvoicesStore {
             // A replaced request stops without an error of its own: it was
             // replaced by a newer LSP invoice or fee preview, which reports
             // its own result, or by LSPStore.reset() on a wallet switch, and
-            // the shared error fields now belong to those.
+            // the shared error fields now belong to those. The same goes
+            // for an invoice request that was superseded: it asks for no
+            // quote, since that would drop the one the latest request is
+            // waiting for, and stores no answer that arrives late.
             const fetchQuote = async () => {
+                if (!isCurrent()) return;
                 let quote: ZeroConfFeeQuote;
                 try {
                     quote = await this.lspStore.getZeroConfFee(
-                        Number(new BigNumber(value).times(1000))
+                        Number(new BigNumber(value).times(1000)),
+                        isCurrent
                     );
                 } catch (e) {
                     return;
@@ -524,18 +558,24 @@ export default class InvoicesStore {
                             .div(1000)
                             .integerValue(BigNumber.ROUND_FLOOR);
                         const feeSats = quote.feeSats;
-                        runInAction(() => {
-                            this.lspStore.flow_error = true;
-                            this.lspStore.flow_error_msg = localeString(
-                                'stores.InvoicesStore.lspFeeAboveMaxWithdrawable'
-                            )
-                                .replace(
-                                    '{fee}',
-                                    new BigNumber(feeSats).toFormat()
+                        if (shared())
+                            runInAction(() => {
+                                this.lspStore.flow_error = true;
+                                this.lspStore.flow_error_msg = localeString(
+                                    'stores.InvoicesStore.lspFeeAboveMaxWithdrawable'
                                 )
-                                .replace('{total}', total.toFormat())
-                                .replace('{max}', max.toFormat());
-                        });
+                                    .replace(
+                                        '{fee}',
+                                        new BigNumber(feeSats).toFormat()
+                                    )
+                                    .replace('{total}', total.toFormat())
+                                    .replace('{max}', max.toFormat());
+                            });
+                        quote = undefined;
+                        break;
+                    }
+                    // the screen that would ask has moved on
+                    if (!isCurrent()) {
                         quote = undefined;
                         break;
                     }
@@ -544,7 +584,7 @@ export default class InvoicesStore {
                         : false;
                     if (!accepted) {
                         quote = undefined;
-                        this.lspStore.resetFee();
+                        if (shared()) this.lspStore.resetFee();
                         break;
                     }
                     if (
@@ -570,7 +610,7 @@ export default class InvoicesStore {
             }
 
             if (!quote) {
-                if (!silent)
+                if (shared())
                     runInAction(() => {
                         this.creatingInvoice = false;
                     });
@@ -601,16 +641,17 @@ export default class InvoicesStore {
                                   'stores.InvoicesStore.errorCreatingInvoice'
                               );
                     if (silent) throw new Error(error_msg);
-                    runInAction(() => {
-                        this.creatingInvoiceError = true;
-                        if (!unified) this.creatingInvoice = false;
-                        this.error_msg = error_msg;
-                    });
+                    if (shared())
+                        runInAction(() => {
+                            this.creatingInvoiceError = true;
+                            if (!unified) this.creatingInvoice = false;
+                            this.error_msg = error_msg;
+                        });
                     return;
                 }
                 const invoice = new Invoice(data);
 
-                if (!silent)
+                if (shared())
                     runInAction(() => {
                         if (!unified)
                             this.payment_request = invoice.getPaymentRequest;
@@ -624,7 +665,8 @@ export default class InvoicesStore {
                     try {
                         const response = await this.lspStore.getZeroConfInvoice(
                             invoice.getPaymentRequest,
-                            lspQuote
+                            lspQuote,
+                            isCurrent
                         );
                         jit_bolt11 = response as string;
                     } catch (e: any) {
@@ -633,18 +675,20 @@ export default class InvoicesStore {
                         // could dead-end without the channel it needs. Clear
                         // the fee quote so it isn't shown alongside the
                         // error the LSP flow already surfaced.
-                        runInAction(() => {
-                            this.lspStore.zeroConfFee = undefined;
-                            this.lspStore.feeId = undefined;
-                            this.payment_request = null;
-                            this.payment_request_amt = null;
-                            this.creatingInvoice = false;
-                        });
+                        if (shared())
+                            runInAction(() => {
+                                this.lspStore.zeroConfFee = undefined;
+                                this.lspStore.feeId = undefined;
+                                this.payment_request = null;
+                                this.payment_request_amt = null;
+                                this.creatingInvoice = false;
+                            });
                         return;
                     }
                 }
 
-                if (lnurl) {
+                // the withdraw is for the invoice on screen
+                if (lnurl && isCurrent()) {
                     const u = url.parse(lnurl.callback);
                     const qs = querystring.parse(u.query);
                     qs.k1 = lnurl.k1;
@@ -695,15 +739,16 @@ export default class InvoicesStore {
             .catch((error: any) => {
                 if (silent) throw error;
                 const error_msg = error?.toString();
-                runInAction(() => {
-                    this.creatingInvoiceError = true;
-                    this.creatingInvoice = false;
-                    this.error_msg =
-                        error_msg ||
-                        localeString(
-                            'stores.InvoicesStore.errorCreatingInvoice'
-                        );
-                });
+                if (shared())
+                    runInAction(() => {
+                        this.creatingInvoiceError = true;
+                        this.creatingInvoice = false;
+                        this.error_msg =
+                            error_msg ||
+                            localeString(
+                                'stores.InvoicesStore.errorCreatingInvoice'
+                            );
+                    });
                 throw error;
             });
     };
@@ -790,9 +835,15 @@ export default class InvoicesStore {
         if (amount) this.watchedInvoicePaidAmt = amount;
     };
 
+    // writesShared: createUnifiedInvoice passes whether its request may
+    // still write the Receive screen fields; the address is returned
+    // either way
     @action
-    public getNewAddress = (params: any) => {
-        if (!params.unified) {
+    public getNewAddress = (
+        params: any,
+        writesShared: () => boolean = () => true
+    ) => {
+        if (!params.unified && writesShared()) {
             this.creatingInvoice = true;
             this.error_msg = null;
         }
@@ -809,7 +860,7 @@ export default class InvoicesStore {
                 : type;
         const request =
             resolvedType === undefined ? rest : { ...rest, type: resolvedType };
-        this.onChainAddress = null;
+        if (writesShared()) this.onChainAddress = null;
         return BackendUtils.getNewAddress(request)
             .then((data: any) => {
                 const address =
@@ -817,6 +868,7 @@ export default class InvoicesStore {
                     data.bech32 ||
                     data.p2tr ||
                     (data[0] && data[0].address);
+                if (!writesShared()) return address;
                 runInAction(() => {
                     if (!request.unified) this.onChainAddress = address;
                     if (!request.unified) this.creatingInvoice = false;
@@ -824,6 +876,7 @@ export default class InvoicesStore {
                 return address;
             })
             .catch((error: any) => {
+                if (!writesShared()) return;
                 const error_msg = error.toString();
                 runInAction(() => {
                     this.error_msg =
