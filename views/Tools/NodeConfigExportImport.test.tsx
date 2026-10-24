@@ -13,6 +13,7 @@ jest.mock('../../utils/BackgroundLockUtils', () => ({
 }));
 jest.mock('../../utils/NodeConfigUtils', () => ({
     saveNodeConfigs: jest.fn(),
+    skippedConfigsMessage: jest.fn(() => ''),
     exportNodeConfigs: jest.fn(),
     decryptExportData: jest.fn(),
     decryptExportDataV2: jest.fn(),
