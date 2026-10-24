@@ -1,5 +1,7 @@
 // In-memory file system for the paths Database.ts touches
 const mockFiles = new Set<string>();
+// Switches for failure cases, and a count of connections closed
+const mockFaults = { plaintext: false, transaction: false, closes: 0 };
 jest.mock('react-native-fs', () => ({
     __esModule: true,
     default: {
@@ -35,7 +37,7 @@ jest.mock('react-native', () => ({
 
 // Each database file remembers the key that created it. Opening with any
 // other key fails the way SQLCipher does.
-const mockDbs = new Map<string, { key: string; sqlite: any }>();
+const mockDbs = new Map<string, { key?: string; sqlite: any }>();
 jest.mock('@op-engineering/op-sqlite', () => ({
     open: jest.fn(
         ({
@@ -45,7 +47,7 @@ jest.mock('@op-engineering/op-sqlite', () => ({
         }: {
             name: string;
             location: string;
-            encryptionKey: string;
+            encryptionKey?: string;
         }) => {
             const path = `${location}/${name}`;
             let entry = mockDbs.get(path);
@@ -57,7 +59,10 @@ jest.mock('@op-engineering/op-sqlite', () => ({
                 mockDbs.set(path, entry);
                 mockFiles.add(path);
             }
-            const wrongKey = entry.key !== encryptionKey;
+            // An unkeyed open reads the file only if it is plaintext
+            const wrongKey = encryptionKey
+                ? entry.key !== encryptionKey
+                : !mockFaults.plaintext;
             const { sqlite } = entry;
             let closed = false;
             const guard = () => {
@@ -71,10 +76,12 @@ jest.mock('@op-engineering/op-sqlite', () => ({
                 },
                 transaction: async (fn: any) => {
                     guard();
+                    if (mockFaults.transaction) throw new Error('disk full');
                     return sqlite.transaction(fn);
                 },
                 close: jest.fn(() => {
                     closed = true;
+                    mockFaults.closes++;
                 })
             };
         }
@@ -125,6 +132,9 @@ describe('Database', () => {
         mockDbs.clear();
         mockKeychain.clear();
         mockKeychainFails.read = false;
+        mockFaults.plaintext = false;
+        mockFaults.transaction = false;
+        mockFaults.closes = 0;
         mockPlatform.OS = 'ios';
         newSession();
         jest.clearAllMocks();
@@ -275,5 +285,45 @@ describe('Database', () => {
         expect(mockKeychain.has(DB_KEY_STORAGE_KEY)).toBe(false);
         await expect(getDatabase()).resolves.toBeNull();
         expect(mockFiles.size).toBe(0);
+    });
+
+    it('refuses and deletes a database file that is not encrypted', async () => {
+        mockFaults.plaintext = true;
+
+        await expect(getDatabase()).resolves.toBeNull();
+
+        expect(mockFiles.has(DB_PATH)).toBe(false);
+        // the unkeyed probe and the database itself
+        expect(mockFaults.closes).toBe(2);
+        expect(open).toHaveBeenCalledWith(
+            expect.objectContaining({ readOnly: true })
+        );
+    });
+
+    it('closes the connection when the schema step fails', async () => {
+        mockFaults.transaction = true;
+
+        await expect(getDatabase()).resolves.toBeNull();
+        expect(mockFaults.closes).toBe(1);
+
+        newSession();
+        mockFaults.transaction = false;
+        await expect(getDatabase()).resolves.not.toBeNull();
+    });
+
+    it('closes an existing database whose schema step fails, and keeps it', async () => {
+        await getDatabase();
+        newSession();
+        mockFaults.closes = 0;
+        mockFaults.transaction = true;
+        // a database still on the previous schema version
+        const entry = mockDbs.get(DB_PATH)!;
+        await entry.sqlite.execute('PRAGMA user_version = 0');
+
+        await expect(getDatabase()).resolves.toBeNull();
+
+        expect(mockFaults.closes).toBe(1);
+        expect(mockFiles.has(DB_PATH)).toBe(true);
+        expect(mockFiles.has(`${IOS_DIR}/zeus.db.unreadable`)).toBe(false);
     });
 });
