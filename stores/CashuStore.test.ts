@@ -238,6 +238,72 @@ describe('CashuStore pending item checks before init', () => {
     });
 });
 
+describe('CashuStore markTokenSpent', () => {
+    beforeEach(() => {
+        (Storage.setItem as jest.Mock).mockReset().mockResolvedValue(true);
+    });
+
+    const sentToken = {
+        mint: 'https://mint.example.com',
+        memo: 'lunch',
+        unit: 'sat',
+        sent: true,
+        spent: false,
+        value: 21,
+        encodedToken: 'cashuBsent',
+        created_at: 1700000000
+    };
+
+    it('marks a token the wallet sent as spent', async () => {
+        const store = newStore();
+        store.sentTokens = [sentToken] as any;
+
+        const updated = await store.markTokenSpent(sentToken as any);
+
+        expect(updated).toMatchObject({ ...sentToken, spent: true });
+        expect(store.sentTokens).toEqual([updated]);
+        expect(Storage.setItem).toHaveBeenCalledWith(
+            'lnd-cashu-sent-tokens',
+            store.sentTokens
+        );
+    });
+
+    it('keeps the sent record when the same token is scanned back in', async () => {
+        const store = newStore();
+        store.sentTokens = [sentToken] as any;
+
+        // as built by handleAnything: no sent flag, no creation date
+        const updated = await store.markTokenSpent({
+            mint: sentToken.mint,
+            memo: sentToken.memo,
+            unit: 'sat',
+            value: 21,
+            encodedToken: sentToken.encodedToken
+        } as any);
+
+        expect(updated).toMatchObject({ ...sentToken, spent: true });
+        expect(store.sentTokens).toEqual([updated]);
+    });
+
+    it('does not record a scanned token as sent', async () => {
+        const store = newStore();
+        store.sentTokens = [sentToken] as any;
+
+        const updated = await store.markTokenSpent({
+            mint: sentToken.mint,
+            memo: 'made up',
+            unit: 'sat',
+            value: 2097152,
+            encodedToken: 'cashuBscanned'
+        } as any);
+
+        expect(updated.spent).toBe(true);
+        expect(updated.encodedToken).toBe('cashuBscanned');
+        expect(store.sentTokens).toEqual([sentToken]);
+        expect(Storage.setItem).not.toHaveBeenCalled();
+    });
+});
+
 describe('CashuStore checkAndSweepMints', () => {
     const storeWith = (settings: any) => {
         const store = new CashuStore(
