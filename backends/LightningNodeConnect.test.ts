@@ -51,11 +51,11 @@ jest.mock('../zeus_modules/@lightninglabs/lnc-rn', () => {
         disposed = false;
         lnd = {
             lightning: {
-                getInfo: jest.fn(() => Promise.reject(new Error('gbn exited'))),
-                // lnc-rn's subscribe returns the RPC method as event name
-                closeChannel: jest.fn(() => 'lnrpc.Lightning.CloseChannel')
+                getInfo: jest.fn(() => Promise.reject(new Error('gbn exited')))
             }
         };
+        // lnc-rn's subscribe returns the RPC method as event name
+        subscribe = jest.fn((method: string) => method);
         constructor(config: any) {
             this._namespace = config.namespace;
             this.credentials = config.credentialStore;
@@ -353,12 +353,24 @@ describe('LightningNodeConnect', () => {
             removed: boolean;
         }>;
 
+        // the request id the backend passed for its nth close
+        const requestIdOf = (n = -1) => lnc.subscribe.mock.calls.at(n)[2];
+
         // the native module reports every update as a JSON string, and
-        // errors as plain text
-        const emit = (result: string) =>
+        // errors as plain text, tagged with the stream's request id
+        const emit = (
+            result: string,
+            request_id: string | null = requestIdOf()
+        ) =>
             listeners
                 .filter((l) => l.name === EVENT && !l.removed)
-                .forEach((l) => l.handler({ result }));
+                .forEach((l) =>
+                    l.handler(
+                        request_id === null
+                            ? { result }
+                            : { result, request_id }
+                    )
+                );
         const listening = () =>
             listeners.some((l) => l.name === EVENT && !l.removed);
 
@@ -450,6 +462,30 @@ describe('LightningNodeConnect', () => {
             expect(listening()).toBe(true);
         });
 
+        it("ignores another close's updates and errors", async () => {
+            const first = track(backend.closeChannel(['txid', '1', '']));
+            const firstId = requestIdOf();
+            const second = track(backend.closeChannel(['txid', '2', '']));
+            const secondId = requestIdOf();
+            expect(secondId).not.toEqual(firstId);
+
+            emit('rpc error: code = Unknown desc = peer offline', secondId);
+            await flush();
+
+            expect(second.error?.message).toContain('peer offline');
+            expect(first.settled).toBe(false);
+
+            // untagged events come from streams started without an id
+            emit(JSON.stringify({ close_pending: { txid: 'other' } }), null);
+            await flush();
+            expect(first.settled).toBe(false);
+
+            emit(JSON.stringify({ close_pending: { txid: 'first' } }), firstId);
+            await flush();
+            expect(first.settled).toBe(true);
+            expect(first.error).toBeUndefined();
+        });
+
         it('resolves after a minute without a reply', async () => {
             const close = track(backend.closeChannel(['txid', '1', '']));
 
@@ -465,29 +501,85 @@ describe('LightningNodeConnect', () => {
         it('passes the fee rate and delivery address for a cooperative close', async () => {
             track(backend.closeChannel(['txid', '1', '', '10', 'bcrt1qdest']));
 
-            expect(lnc.lnd.lightning.closeChannel).toHaveBeenCalledWith({
-                channel_point: { funding_txid_str: 'txid', output_index: 1 },
-                force: '',
-                sat_per_vbyte: 10,
-                delivery_address: 'bcrt1qdest'
-            });
+            expect(lnc.subscribe).toHaveBeenCalledWith(
+                EVENT,
+                {
+                    channel_point: {
+                        funding_txid_str: 'txid',
+                        output_index: 1
+                    },
+                    force: '',
+                    sat_per_vbyte: 10,
+                    delivery_address: 'bcrt1qdest'
+                },
+                expect.any(String)
+            );
         });
 
         it('drops the fee rate for a force close', async () => {
             track(backend.closeChannel(['txid', '1', 'true', '10']));
 
-            expect(lnc.lnd.lightning.closeChannel).toHaveBeenCalledWith({
-                channel_point: { funding_txid_str: 'txid', output_index: 1 },
-                force: 'true'
-            });
+            expect(lnc.subscribe).toHaveBeenCalledWith(
+                EVENT,
+                {
+                    channel_point: {
+                        funding_txid_str: 'txid',
+                        output_index: 1
+                    },
+                    force: 'true'
+                },
+                expect.any(String)
+            );
         });
     });
 
-    describe('payLightningInvoice', () => {
-        const EVENT = 'routerrpc.Router.SendPaymentV2';
+    describe('openChannelStream', () => {
+        const EVENT = 'lnrpc.Lightning.OpenChannel';
+        let listeners: Array<{
+            name: string;
+            handler: (event: any) => void;
+            removed: boolean;
+        }>;
+
+        const requestIdOf = (n = -1) => lnc.subscribe.mock.calls.at(n)[2];
+        const emit = (result: string, request_id: string) =>
+            listeners
+                .filter((l) => l.name === EVENT && !l.removed)
+                .forEach((l) => l.handler({ result, request_id }));
+        const psbtFund = (funding_address: string) =>
+            JSON.stringify({
+                psbt_fund: { funding_address, funding_amount: '100000' }
+            });
+
+        const track = (open: Promise<any>) => {
+            const state: { settled: boolean; result?: any; error?: any } = {
+                settled: false
+            };
+            open.then(
+                (result) => {
+                    state.settled = true;
+                    state.result = result;
+                },
+                (error) => {
+                    state.settled = true;
+                    state.error = error;
+                }
+            );
+            return state;
+        };
+        const flush = () => jest.advanceTimersByTimeAsync(0);
+        const openRequest = (node_pubkey_string: string) =>
+            ({
+                node_pubkey_string,
+                local_funding_amount: '100000',
+                funding_shim: { psbt_shim: { base_psbt: '' } }
+            } as any);
+
         let backend: LightningNodeConnect;
+        let lnc: any;
 
         beforeEach(async () => {
+            listeners = [];
             NativeModules.LncModule = {
                 addListener: jest.fn(),
                 removeListeners: jest.fn()
@@ -495,16 +587,180 @@ describe('LightningNodeConnect', () => {
             jest.spyOn(
                 NativeEventEmitter.prototype,
                 'addListener'
-            ).mockImplementation(() => ({ remove: jest.fn() } as any));
+            ).mockImplementation((name: string, handler: any) => {
+                const listener = { name, handler, removed: false };
+                listeners.push(listener);
+                return {
+                    remove: () => {
+                        listener.removed = true;
+                    }
+                } as any;
+            });
             backend = new LightningNodeConnect();
-            const lnc = await openWallet(backend, 'phrase-a');
-            lnc.lnd.router = { sendPaymentV2: jest.fn(() => EVENT) };
+            lnc = await openWallet(backend, 'phrase-a');
             jest.useFakeTimers();
         });
 
         afterEach(() => {
             jest.useRealTimers();
             jest.restoreAllMocks();
+        });
+
+        // A batch open of 3+ channels runs the later opens concurrently.
+        // Each open must remove only its own listener, or the other open
+        // never sees its psbt_fund.
+        it('settles concurrent opens with their own psbt_fund', async () => {
+            const first = track(
+                backend.openChannelStream(openRequest('02' + 'aa'.repeat(32)))
+            );
+            const firstId = requestIdOf();
+            const second = track(
+                backend.openChannelStream(openRequest('02' + 'bb'.repeat(32)))
+            );
+            const secondId = requestIdOf();
+            expect(secondId).not.toEqual(firstId);
+
+            emit(psbtFund('first-address'), firstId);
+            await flush();
+            expect(first.result?.result.psbt_fund.funding_address).toBe(
+                'first-address'
+            );
+            expect(second.settled).toBe(false);
+
+            emit(psbtFund('second-address'), secondId);
+            await flush();
+            expect(second.result?.result.psbt_fund.funding_address).toBe(
+                'second-address'
+            );
+            expect(listeners.some((l) => l.name === EVENT && !l.removed)).toBe(
+                false
+            );
+        });
+    });
+
+    describe('payLightningInvoice', () => {
+        const EVENT = 'routerrpc.Router.SendPaymentV2';
+        const HASH_A = 'aa'.repeat(32);
+        const HASH_B = 'bb'.repeat(32);
+        let listeners: Array<{
+            name: string;
+            handler: (event: any) => void;
+            removed: boolean;
+        }>;
+
+        const requestIdOf = (n = -1) => lnc.subscribe.mock.calls.at(n)[2];
+        // null sends an untagged event, as from a stream started without an id
+        const emit = (result: string, request_id: string | null) =>
+            listeners
+                .filter((l) => l.name === EVENT && !l.removed)
+                .forEach((l) =>
+                    l.handler(
+                        request_id === null
+                            ? { result }
+                            : { result, request_id }
+                    )
+                );
+
+        const track = (payment: Promise<any>) => {
+            const state: { settled: boolean; result?: any; error?: any } = {
+                settled: false
+            };
+            payment.then(
+                (result) => {
+                    state.settled = true;
+                    state.result = result;
+                },
+                (error) => {
+                    state.settled = true;
+                    state.error = error;
+                }
+            );
+            return state;
+        };
+        const flush = () => jest.advanceTimersByTimeAsync(0);
+
+        let backend: LightningNodeConnect;
+        let lnc: any;
+
+        beforeEach(async () => {
+            listeners = [];
+            NativeModules.LncModule = {
+                addListener: jest.fn(),
+                removeListeners: jest.fn()
+            };
+            jest.spyOn(
+                NativeEventEmitter.prototype,
+                'addListener'
+            ).mockImplementation((name: string, handler: any) => {
+                const listener = { name, handler, removed: false };
+                listeners.push(listener);
+                return {
+                    remove: () => {
+                        listener.removed = true;
+                    }
+                } as any;
+            });
+            backend = new LightningNodeConnect();
+            lnc = await openWallet(backend, 'phrase-a');
+            jest.useFakeTimers();
+        });
+
+        afterEach(() => {
+            jest.useRealTimers();
+            jest.restoreAllMocks();
+        });
+
+        it('starts the stream with a request id', () => {
+            track(backend.payLightningInvoice({ payment_hash: HASH_A }));
+
+            expect(lnc.subscribe).toHaveBeenCalledWith(
+                EVENT,
+                { payment_hash: HASH_A, allow_self_payment: true },
+                expect.any(String)
+            );
+        });
+
+        it("does not reject on another payment's stream error", async () => {
+            const a = track(
+                backend.payLightningInvoice({ payment_hash: HASH_A })
+            );
+            const aId = requestIdOf();
+            const b = track(
+                backend.payLightningInvoice({ payment_hash: HASH_B })
+            );
+            const bId = requestIdOf();
+
+            emit('rpc error: code = Unknown desc = no route', bId);
+            await flush();
+
+            expect(b.error?.message).toContain('no route');
+            expect(a.settled).toBe(false);
+
+            emit(
+                JSON.stringify({ status: 'SUCCEEDED', payment_hash: HASH_A }),
+                aId
+            );
+            await flush();
+
+            expect(a.result).toEqual({
+                status: 'SUCCEEDED',
+                payment_hash: HASH_A
+            });
+        });
+
+        it('ignores untagged events', async () => {
+            const a = track(
+                backend.payLightningInvoice({ payment_hash: HASH_A })
+            );
+
+            emit('rpc error: code = Unknown desc = no route', null);
+            emit(
+                JSON.stringify({ status: 'FAILED', payment_hash: HASH_A }),
+                null
+            );
+            await flush();
+
+            expect(a.settled).toBe(false);
         });
 
         it('resolves an outcome-unknown result when the stream goes quiet', async () => {
