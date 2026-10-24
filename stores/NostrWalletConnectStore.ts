@@ -360,9 +360,7 @@ export default class NostrWalletConnectStore {
             try {
                 this.nwcWalletServices.set(
                     relayUrl,
-                    new NWCWalletService({
-                        relayUrls: [relayUrl]
-                    })
+                    this.createWalletService(relayUrl)
                 );
                 successfulRelays++;
             } catch (relayError) {
@@ -381,6 +379,88 @@ export default class NostrWalletConnectStore {
             );
         }
     };
+
+    private createWalletService(relayUrl: string): NWCWalletService {
+        const service = new NWCWalletService({ relayUrls: [relayUrl] });
+        this.gateRequestEvents(service);
+        return service;
+    }
+
+    /**
+     * The SDK passes handlers only the decrypted params, so a request
+     * event's created_at and NIP-40 expiration tag are checked here, on the
+     * service's relay pool, before the SDK decrypts and dispatches it.
+     */
+    private gateRequestEvents(service: NWCWalletService): void {
+        const pool: any = (service as any)?.pool;
+        if (typeof pool?.subscribe !== 'function') return;
+        const subscribe = pool.subscribe.bind(pool);
+        pool.subscribe = (relays: string[], filter: any, params: any) => {
+            const onevent = params?.onevent;
+            if (typeof onevent !== 'function') {
+                return subscribe(relays, filter, params);
+            }
+            return subscribe(relays, filter, {
+                ...params,
+                onevent: async (event: any) => {
+                    if (await this.acceptRequestEvent(service, event)) {
+                        return onevent(event);
+                    }
+                }
+            });
+        };
+    }
+
+    /**
+     * Refuses a request whose expiration tag has passed, and a pay request
+     * whose created_at is not within
+     * PAY_REQUEST_MAX_CLOCK_DIFFERENCE_SECONDS of now: its client has
+     * stopped waiting, and paying it late would pay an invoice the client
+     * may have settled another way. Other requests are not limited by age.
+     */
+    private async acceptRequestEvent(
+        service: NWCWalletService,
+        event: any
+    ): Promise<boolean> {
+        const nowSeconds = Math.floor(Date.now() / 1000);
+        if (NostrConnectUtils.isRequestEventExpired(event, nowSeconds)) {
+            console.warn('NWC: ignoring expired request', event?.id);
+            return false;
+        }
+        if (NostrConnectUtils.isRequestEventRecent(event, nowSeconds)) {
+            return true;
+        }
+
+        let method: string | undefined;
+        try {
+            const keypair = new NWCWalletServiceKeyPair(
+                this.walletServiceKeys!.privateKey,
+                event.pubkey
+            );
+            const encryptionType =
+                event.tags?.find(
+                    (t: string[]) => t?.[0] === 'encryption'
+                )?.[1] || 'nip04';
+            method = JSON.parse(
+                await service.decrypt(keypair, event.content, encryptionType)
+            )?.method;
+        } catch {
+            // undecryptable: the SDK would drop it as well
+            return false;
+        }
+        if (
+            method === undefined ||
+            NostrConnectUtils.PAY_REQUEST_METHODS.includes(method)
+        ) {
+            console.warn(
+                'NWC: ignoring pay request outside the accepted time window',
+                event?.id
+            );
+            return false;
+        }
+        return true;
+    }
+
     @action
     private startService = async (hasActiveConnections = false) => {
         try {
@@ -574,9 +654,7 @@ export default class NostrWalletConnectStore {
             if (!this.nwcWalletServices.has(params.relayUrl)) {
                 this.nwcWalletServices.set(
                     params.relayUrl,
-                    new NWCWalletService({
-                        relayUrls: [params.relayUrl]
-                    })
+                    this.createWalletService(params.relayUrl)
                 );
             }
             if (!this.publishedRelays.has(params.relayUrl)) {
@@ -877,9 +955,7 @@ export default class NostrWalletConnectStore {
                     if (!this.nwcWalletServices.has(newRelayUrl!)) {
                         this.nwcWalletServices.set(
                             newRelayUrl!,
-                            new NWCWalletService({
-                                relayUrls: [newRelayUrl!]
-                            })
+                            this.createWalletService(newRelayUrl!)
                         );
                     }
                     if (!this.publishedRelays.has(newRelayUrl!)) {
