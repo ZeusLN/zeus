@@ -50,7 +50,7 @@ Persistence contracts for the ZEUS wallet (React Native, Bitcoin/Lightning) and 
 | Layer | Access via | What belongs there | Examples |
 |---|---|---|---|
 | **Keychain (canonical)** | `storage/index.ts` ONLY | Everything persisted by app code: the settings blob, all secrets, per-store data | `zeus-settings-v2`, `zeus-contacts-v2`, `zeus-notes-v2`, `swaps-rescue-key`, `<nodeDir>-cashu-seed-phrase` |
-| **Legacy EncryptedStorage** | `react-native-encrypted-storage` | ONLY two things: (a) the old `zeus-settings` blob read during legacy upgrade, (b) one-shot migration flag keys (`MOD_KEY*`, `ios-keychain-cloud-sync-migration-v1`, …). **Never add new data here.** | `lsp-taproot-mod`, `invoices-expiry-display-fix-v2` |
+| **Legacy EncryptedStorage** | `react-native-encrypted-storage` | ONLY two things: (a) the old `zeus-settings` blob read during legacy upgrade, (b) one-shot migration flag keys (`MOD_KEY*`, `ios-keychain-cloud-sync-migration-v1`, …). **Never add new data here.** | `lsp-taproot-mod`, `invoices-expiry-display-fix-v2` (both read-only legacy flags since PR #4477: still read, never written) |
 | **AsyncStorage** | `@react-native-async-storage/async-storage` | Non-sensitive UI/service flags only | persistent-service flags (`views/Settings/EmbeddedNode/`), Stealth Mode app data (`views/Stealth/`), NWC service flags |
 | **Native disk + remote** | native modules / FFI | Node and ecash state that app-level storage never sees | LND dirs (deleted via `deleteLndWallet` → `LndMobileTools.deleteLndDirectory`), `Documents/ldk-node/<uuid>/` (`utils/LdkNodeUtils.ts getLdkNodeStoragePath`), CDK SQLite `cashu_wallet.db`, remote VSS channel state |
 
@@ -109,52 +109,73 @@ This is the single most likely way to silently destroy user data in this codebas
 
 Also note: `updateSettings` internally calls `getSettings(true, true)` first (silent, so `loading` is not set; it can trigger migrations, whose one-shot flags `MigrationUtils` caches once they read `'true'`) and sets `settingsUpdateInProgress` / `triggerSettingsRefresh` flags (the latter only when the persisted settings actually change outside `REFRESH_EXEMPT_SETTINGS`). Each write still costs a keychain read and write; do not call it in tight loops or during boot races.
 
-## 4. Migrations: load paths and the MOD_KEY recipe
+## 4. Migrations: load paths and versioned settings migrations
 
 ### The two load paths (`SettingsStore.getSettings`)
 
 ```
-getSettings()
+getSettings(silentUpdate, fromQueue)
 ├── await MigrationsUtils.keychainDesyncMigration()      // ALWAYS first: copies synchronizable zeus:* items
 │                                                        // into the device-local partition (cloudSync bug repair).
 │                                                        // MUST precede keychainCloudSyncMigration, or migrateKey's
 │                                                        // Storage.getItem guard misses on the empty local partition
 │                                                        // and stale unprefixed legacy data shadows the fresher copy
 ├── await MigrationsUtils.keychainCloudSyncMigration()   // before any settings read
-├── Storage.getItem('zeus-settings-v2') exists?
-│   ├── YES (modern path): parse → migrateRgsDefaultToZeus() → migrateInvoiceExpiryDisplay()
+├── await MigrationsUtils.purgeRescueKeyFiles()          // rescue-key staging file (once per process) and legacy
+│                                                        // export files ('rescue-key-file-cleanup' flag)
+├── Storage.getItem('zeus-settings-v2')
+│   └── empty on iOS → getRawItem('zeus:zeus-settings-v2', true)   // read-only fallback to the synchronizable
+│                                                                  // partition; never written back there
+├── blob found?
+│   ├── YES (modern path): parse → runSettingsMigrations(parsed, fromQueue)
+│   │     ├── settingsVersion >= SETTINGS_VERSION and no missing group → return as is (no keystore reads)
+│   │     ├── called outside the updateSettings queue → settingsStore.updateSettings({}), which re-enters below
+│   │     └── called inside the queue → applySettingsMigrations() if stale, then applyMissingSettingsGroups();
+│   │           applySettingsUpdate's setSettings persists the result
 │   └── NO  (legacy path): EncryptedStorage.getItem('zeus-settings')
-│         → legacySettingsMigrations()   // all MOD_KEY blocks + migrateInvoiceExpiryDisplay + migrateRgsDefaultToZeus
-│         → storageMigrationV2()         // copies every legacy key into the zeus: keychain namespace
+│         → legacySettingsMigrations()   // legacy repairs, read-only legacy flags, applySettingsMigrations(),
+│                                        // applyMissingSettingsGroups()
+│         → storageMigrationV2()         // writes the stamped blob once; copies every legacy key into the zeus: namespace
 └── updateNodeProperties(settings)
 ```
 
-**Every settings migration must run on BOTH paths** if it can affect users who already migrated to v2. Incident: the invoice-expiry display repair (`26d4215ea`, 2026-05-30) initially ran only on the legacy path; users already on v2 kept the corrupted "3600 hours" display, and the migration had to be re-shipped two days later on the v2 path — under the ORIGINAL flag key (`e8e5b8811`, 2026-06-01). When a further miss (pre-Feb-2024 installs) then forced a re-run, the flag key was bumped to `invoices-expiry-display-fix-v2` (`a7860aa96`, merged `f7b2c30a8`, PR #4149, 2026-06-08) — full narrative: zeus-failure-archaeology FA-3. If your migration missed people, you cannot "re-arm" the old flag — bump the key with a `-v2`/`-v3` suffix and make the migration idempotent.
+**Every settings migration must run on BOTH paths** if it can affect users who already migrated to v2. Incident: the invoice-expiry display repair (`26d4215ea`, 2026-05-30) initially ran only on the legacy path; users already on v2 kept the corrupted "3600 hours" display, and the migration had to be re-shipped two days later on the v2 path — under the ORIGINAL flag key (`e8e5b8811`, 2026-06-01). When a further miss (pre-Feb-2024 installs) then forced a re-run, the flag key was bumped to `invoices-expiry-display-fix-v2` (`a7860aa96`, merged `f7b2c30a8`, PR #4149, 2026-06-08) — full narrative: zeus-failure-archaeology FA-3. Since PR #4477 (merged 2026-09-17, `dcf4f4a85`) both paths call the same `applySettingsMigrations`, so a settings migration added there covers both by construction. If a migration missed people, you cannot re-run a shipped version gate: add a new block under a fresh `SETTINGS_VERSION` bump and make it value-conditional.
 
-### The MOD_KEY recipe (copy this shape)
+### The versioned migration recipe (copy this shape)
 
-One-shot migrations live in `utils/MigrationUtils.ts`. Pattern (see `MOD_KEY7 = 'bimodal-bug-9085'` or `migrateRgsDefaultToZeus` for live examples):
+Settings migrations are gated by a `settingsVersion` stamp stored in the blob, not by per-migration flags (PR #4477; commits `76995a28b`, `1baa3de99`). `SETTINGS_VERSION` lives in `utils/SettingsVersion.ts`. Follow the "Adding a future migration" comment above `runSettingsMigrations` in `utils/MigrationUtils.ts`; the `priorVersion < 3` block calling `applyRetiredThemes` (#4768) is a live example:
 
 ```ts
-const MOD_KEY_MY_FIX = 'my-fix-v1';                          // flag key, EncryptedStorage
-const mod = await EncryptedStorage.getItem(MOD_KEY_MY_FIX);
-if (!mod) {
-    // ... mutate newSettings in place (idempotently!) ...
-    await settingsStore.setSettings(newSettings);            // (a) AWAIT it  (b) pass the OBJECT
-    await EncryptedStorage.setItem(MOD_KEY_MY_FIX, 'true');  // set flag ONLY after write succeeds
+// utils/SettingsVersion.ts
+export const SETTINGS_VERSION = 4;                  // current value + 1
+
+// utils/MigrationUtils.ts: pure mutation, no I/O, returns whether it changed anything
+public applyMyFix(settings: any): boolean {
+    if (/* value still equals the old default */) {
+        // ... mutate settings in place ...
+        return true;
+    }
+    return false;
+}
+
+// in applySettingsMigrations, after the existing blocks
+if (priorVersion < 4) {
+    changed = this.applyMyFix(settings) || changed;
 }
 ```
 
-Hard rules, each backed by a shipped incident:
+Hard rules:
 
-1. **Pass a real object to `setSettings`, never `JSON.stringify(settings)`.** A stringified payload briefly turns the MobX `settings` observable into a string and crashes observers reading nested keys. Incident fixed in `7ed901a10` (issue #4150, merged via PR #4155, 2026-06-09); a regression test now pins this (`utils/MigrationUtils.test.ts`, "persists the settings object rather than a JSON string"). (`Storage.setItem` stringifies internally — that is fine; the observable assignment is what breaks.)
-2. **`await` the `setSettings` call.** Un-awaited writes let the flag get set before the data lands (or after the app moves on), producing migrations that "ran" but persisted nothing. Fixed across all MOD_KEY blocks in `d8e648b58` (2026-05-30).
-3. **Set the flag AFTER the mutation is persisted**, so a crash mid-migration retries next boot instead of skipping forever.
-4. **Make the mutation idempotent** (safe to run twice) — flags can be lost (EncryptedStorage cleared) while keychain data survives.
-5. **Cover both load paths** (see above). For settings-shape migrations that must also hit v2 users, call your function from the modern branch of `getSettings` too, like `migrateInvoiceExpiryDisplay`.
-6. **New defaults need no migration; CHANGED defaults do.** Inline defaults in `SettingsStore` only apply to keys the user has never persisted. To change behavior for existing users you must ship a MOD_KEY migration (details of the settings axes: `zeus-config-and-flags`).
+1. **No `setSettings` call and no flag inside a settings migration.** `applySettingsMigrations` mutates in memory and stamps `settingsVersion = SETTINGS_VERSION`. The one write belongs to `applySettingsUpdate` (modern path, through `runSettingsMigrations`) or `storageMigrationV2` (legacy path), so migrated values and the stamp land together. Wherever you do call `setSettings`, pass the object, never `JSON.stringify(settings)`: a string briefly replaces the MobX `settings` observable and crashes observers reading nested keys (incident `7ed901a10`, issue #4150, PR #4155).
+2. **Leave existing `priorVersion < N` blocks untouched** and gate the new block on exactly the bumped version. The test 'keeps the highest version gate equal to SETTINGS_VERSION' in `utils/MigrationUtils.test.ts` scans the source and fails when the highest gate and `SETTINGS_VERSION` differ in either direction.
+3. **A shipped version number is frozen.** Once any public build (alphas and TestFlight included) stamps N, blobs at N skip every `< N` block forever, so a migration added later needs its own bump. This replaces the old rule of bumping a flag key's `-v2` suffix.
+4. **Make the mutation value-conditional** (touch only values still equal to an old default, or still inconsistent), like `applyOlympusHostsToZeusLsp` and `applyInvoiceExpiryDisplay`. The stamp makes a block run exactly once per blob, but an unstamped blob (any install predating #4477) runs every block once, including blocks added long after that install last launched.
+5. **Do not add settings-shape migrations to `legacySettingsMigrations` or to `getSettings`.** `applySettingsMigrations` already runs on both load paths. The flags read there are read-only and never written again: the eight legacy MOD_KEY flags in `legacySettingsMigrations` (`lsp-taproot-mod` through `nostr-relays-2024`, including `'bimodal-bug-9085'` read as `mod7`) and the five v1 flags in the `priorVersion < 1` block (`rgs-defaults-v2`, `zeuslsp-hosts-2026`, `swap-hosts-boltz`, `swap-hosts-retired-eldamar`, `invoices-expiry-display-fix-v2`).
+6. **New defaults need no migration; CHANGED defaults need a `SETTINGS_VERSION` bump.** A stored blob replaces `DEFAULT_SETTINGS` wholesale; the only backfill is `applyMissingSettingsGroups` (PR #4788, issue #4776), which fills top-level groups absent from the blob from `DEFAULT_SETTINGS` plus `BACKFILL_OVERRIDES` on every load, independent of the version. Keys the user already persisted, and new fields inside an existing group, are not touched. To change behavior for existing users, ship a versioned migration as above (settings axes: `zeus-config-and-flags`).
 
-Add a test in `utils/MigrationUtils.test.ts` (22 tests passing as of 2026-07-06; run `npx jest utils/MigrationUtils.test.ts`).
+Keychain and file one-shots that are not settings-shape changes still use flags, through the private `readFlag`/`writeFlag` helpers (cached in `confirmedFlags`, cleared by Clear All Data via `clearConfirmedFlags`): `keychainDesyncMigration` (`keychain-desync-v1`), `keychainCloudSyncMigration` (`ios-keychain-cloud-sync-migration-v1`, `ios-keychain-cashu-fix-v1`), `purgeRescueKeyFiles` (`rescue-key-file-cleanup`). Write the flag only after the work succeeds (`keychainDesyncMigration` leaves it unset when any copy fails), and bump the key suffix to re-run one.
+
+Add tests in `utils/MigrationUtils.test.ts` (87 `it` blocks as of 2026-10-24; storage-layer cases are in `utils/MigrationUtils.storage.test.ts`). Run `npx jest utils/MigrationUtils` (113 passing, 5 todo, on `3dc9f83e6`).
 
 ## 5. Checklist: adding a NEW persisted key
 
@@ -201,12 +222,12 @@ This executes within the gate defined in `zeus-change-control` (maintainer sign-
 
 - [ ] Written migration plan: what data moves/changes, for which cohorts (legacy-blob users, v2 users, fresh installs), and what happens on crash mid-migration
 - [ ] Idempotency argument: running the migration twice is harmless
-- [ ] Both load paths covered (Section 4) — state explicitly which of `legacySettingsMigrations` / modern `getSettings` branch calls your code
-- [ ] Flag key named and versioned (`<thing>-<fix>-v1`), stored in EncryptedStorage
+- [ ] Both load paths covered (Section 4): a settings migration lives in a `priorVersion < N` block of `applySettingsMigrations`, which both `runSettingsMigrations` (modern) and `legacySettingsMigrations` (legacy) call; state that it is not called from anywhere else
+- [ ] Settings migration: `SETTINGS_VERSION` bumped to a number no public build has shipped, new block gated on `priorVersion < N` (Section 4). Keychain/file one-shot: flag key named and versioned (`<thing>-<fix>-v1`), read and written with `readFlag`/`writeFlag`
 - [ ] New keys registered per Section 5 (all applicable locations)
-- [ ] No `JSON.stringify` into `setSettings`; every `setSettings` awaited; every `updateSettings` nested group spread
+- [ ] No `setSettings` call inside a settings migration (the stamped blob is written once by `applySettingsUpdate` or `storageMigrationV2`); anywhere else, no `JSON.stringify` into `setSettings` and every `setSettings` awaited; every `updateSettings` nested group spread
 - [ ] No deletion of orphaned/unprefixed/iCloud keychain entries (Section 6 rule 2)
-- [ ] Jest coverage added in `utils/MigrationUtils.test.ts` for the new migration logic
+- [ ] Jest coverage added in `utils/MigrationUtils.test.ts` for the new migration: the mutation function, an unstamped blob running the block, a blob stamped at N skipping it; the gate-consistency test still passes
 - [ ] Rollback story written (below)
 
 ### Mandatory manual test matrix
@@ -215,7 +236,7 @@ PR CI never builds the app (test/lint/prettier/tsc only; the Android build workf
 
 | # | Scenario | How to set up | Pass condition |
 |---|---|---|---|
-| 1 | Fresh install | Wipe app / new simulator | Defaults correct; migration flags set without touching anything; no migration UI flash |
+| 1 | Fresh install | Wipe app / new simulator | Defaults correct; the first settings write stores `settingsVersion` equal to `SETTINGS_VERSION` (from `DEFAULT_SETTINGS`) so no settings migration runs; no migration UI flash |
 | 2 | Upgrade from legacy blob | Seed `zeus-settings` in EncryptedStorage (dev helper: `KeychainRecoveryUtils.copyToLegacyLocations()` writes current settings to all legacy locations) | Full `storageMigrationV2` runs once; all wallets, contacts, notes intact |
 | 3 | Upgrade from current v2 | Install released build, add wallets + nested settings, then install your build | Your migration runs exactly once; NO nested settings group reset (diff the blob before/after) |
 | 4 | iCloud-restored device (iOS) | Restore a device/simulator from a backup of a pre-`zeus:`-prefix install, or seed unprefixed cloud entries via `copyToLegacyLocations()` | No stale wallet resurrection; Keychain Recovery tool still lists orphans |
@@ -228,7 +249,7 @@ Also re-run the automated floor: `yarn verify` (jest + prettier + tsc + lint —
 
 - Regressions found in release testing get **reverted same-day, never forward-fixed under pressure** (maintainer rule; observed repeatedly for storage/keychain changes — e.g. #3307 merged and reverted within hours on 2025-11-10).
 - Design so a revert is safe: a migration that only ADDS/repairs fields can be reverted without a counter-migration; one that deletes or re-keys data cannot. If your change is not revert-safe, say so in the PR and provide the counter-migration.
-- Never reuse a burned flag key after a botched migration — bump the suffix (`-v2`) so already-flagged users are re-processed by the fixed logic.
+- Never reuse a shipped `SETTINGS_VERSION` after a botched migration. Once a public build (alphas and TestFlight included) has stamped N, blobs at N skip every `priorVersion < N` block, so the fixed logic goes in a new block under a fresh bump. For keychain/file one-shots, bump the flag key suffix (`-v2`) instead.
 
 ### Evidence the maintainer expects in the PR
 
@@ -242,6 +263,8 @@ Also re-run the automated floor: `yarn verify` (jest + prettier + tsc + lint —
 
 Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha) by reading `storage/index.ts`, `stores/SettingsStore.ts`, `utils/MigrationUtils.ts`, `utils/DataClearUtils.ts`, `utils/KeychainRecoveryUtils.ts`, `utils/LdkNodeUtils.ts`, `stores/CashuStore.ts`, `views/Lockscreen.tsx`, `views/Settings/WalletConfiguration.tsx`, `views/Tools/*`; cited hashes checked with `git log`/`git show`; `npx jest utils/MigrationUtils.test.ts` executed (22/22 pass). Maintainer policy statements dated 2026-07-06. Section 7, the Duress PIN glossary entry, Section 8 test-matrix row 6 and the duress re-verify row were re-verified 2026-10-24 against master `3dc9f83e6` (`utils/DataClearUtils.ts`, `views/Lockscreen.tsx`, `views/Tools/index.tsx`, `views/Settings/WalletConfiguration.tsx`).
 
+Section 4, the §1 legacy EncryptedStorage example, the Section 8 checklist lines on load paths, `setSettings`, version bumps and Jest coverage, test matrix row 1, the rollback bullet on version numbers, and the re-verify rows for `getSettings` order and flag names re-verified 2026-10-24 against master `3dc9f83e6` (`utils/SettingsVersion.ts`, `utils/MigrationUtils.ts`, `stores/SettingsStore.ts` `getSettings`; `npx jest utils/MigrationUtils`: 113 pass, 5 todo).
+
 Re-verification one-liners for volatile facts:
 
 | Fact | Re-verify with |
@@ -249,9 +272,9 @@ Re-verification one-liners for volatile facts:
 | Storage contract (`zeus:` prefix, `cloudSync:false`, `false` on miss, empty→delete) | `cat storage/index.ts` |
 | Blob keys `zeus-settings-v2` / legacy `zeus-settings` | `grep -n "STORAGE_KEY" stores/SettingsStore.ts \| head -3` |
 | `updateSettings` still shallow-merges | `grep -n -A8 "updateSettings = async" stores/SettingsStore.ts` |
-| `getSettings` migration order (cloud-sync migration first, both load paths) | `grep -n -A35 "public getSettings" stores/SettingsStore.ts` |
+| `getSettings` migration order (desync, cloud sync, rescue-file purge, then the modern or legacy path) | `grep -n "keychainDesyncMigration\|keychainCloudSyncMigration\|purgeRescueKeyFiles\|getRawItem\|runSettingsMigrations\|legacySettingsMigrations\|storageMigrationV2" stores/SettingsStore.ts` |
 | `deleteFromOldKeychain` still a no-op | `grep -n -A6 "deleteFromOldKeychain" utils/MigrationUtils.ts` |
-| Current MOD_KEY flag names | `grep -n "MOD_KEY\|MIGRATION_KEY" utils/MigrationUtils.ts` |
+| Version gates and flag names (read-only legacy/v1 flags; keychain/file one-shot flags) | `grep -n "EncryptedStorage.getItem('\|MIGRATION_KEY = '\|DESYNC_KEY = '\|MOD_KEY_RESCUE_FILE = '\|priorVersion <" utils/MigrationUtils.ts` |
 | `migrationKeys` list contents | `grep -n -A22 "const migrationKeys" utils/MigrationUtils.ts` |
 | `STORAGE_KEYS` registration list | `grep -n -A45 "const STORAGE_KEYS" utils/DataClearUtils.ts` |
 | `OTHER_KEYS` recovery list | `grep -n -A22 "const OTHER_KEYS" utils/KeychainRecoveryUtils.ts` |

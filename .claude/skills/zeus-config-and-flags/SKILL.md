@@ -43,7 +43,8 @@ Do NOT use this skill for:
 | Cashu / ecash | Chaumian ecash tokens issued by "mints"; Zeus embeds a Cashu wallet on embedded backends |
 | POS | Point of Sale mode (merchant checkout UI), standalone or Square-integrated |
 | zero-conf | Accepting a channel/payment before on-chain confirmation |
-| MOD_KEY migration | One-shot settings mutation flagged by a key in legacy EncryptedStorage so it runs exactly once per install (recipe owned by zeus-storage-and-migrations) |
+| MOD_KEY migration | Retired one-shot settings mutation flagged by a key in legacy EncryptedStorage. Since PR #4477 the flags are only read (e.g. `'bimodal-bug-9085'`, read as `mod7` in `legacySettingsMigrations`), never written |
+| Versioned settings migration | A `priorVersion < N` block in `MigrationUtils.applySettingsMigrations`, run once per blob and recorded by the blob's `settingsVersion` stamp (`SETTINGS_VERSION` in `utils/SettingsVersion.ts`). Replaced MOD_KEY flags for settings changes (recipe owned by zeus-storage-and-migrations) |
 
 ## 1) Where config lives
 
@@ -62,7 +63,7 @@ Rules of thumb:
 - Secrets and anything financial → the blob (keychain). Non-sensitive UI-only flags → AsyncStorage. Never put new data in legacy `react-native-encrypted-storage` (migration flags only).
 - Any NEW persisted keychain key must be registered in three registries (`utils/DataClearUtils.ts` STORAGE_KEYS, `utils/KeychainRecoveryUtils.ts` OTHER_KEYS, `MigrationUtils.keychainCloudSyncMigration` migrationKeys) or it leaks on wallet clear/recovery — full recipe in **zeus-storage-and-migrations**.
 
-Critical load semantics (verified in `SettingsStore.getSettings`): when a stored blob exists, `this.settings = parsedSettings` REPLACES the entire inline-default object. There is NO deep merge of defaults into stored blobs. Consequence: a newly added field is `undefined` for every existing user until they touch its UI control — every consumer must tolerate that (`settings?.group?.field ?? fallback`, or `||` fallbacks like `getLspConfigForNetwork` uses).
+Critical load semantics (verified in `SettingsStore.getSettings`, 2026-10-24): defaults live in `DEFAULT_SETTINGS` (`stores/SettingsStore.ts`, search `export const DEFAULT_SETTINGS`), and the `@observable settings` initializer is a deep copy of it. When a stored blob exists it REPLACES that object wholesale. The one exception is `MigrationUtils.applyMissingSettingsGroups` (PR #4788, issue #4776): on every load it backfills any top-level group entirely absent from the blob from `DEFAULT_SETTINGS`, with `BACKFILL_OVERRIDES` applied (currently `privacy: { clipboard: false, enableMempoolRates: false }`). A group that exists, even partially, is left alone, and there is no deep merge. Consequence: a new field inside an existing group, or a new flat top-level key, is `undefined` for every existing user until they touch its UI control. Every consumer must tolerate that (`settings?.group?.field ?? fallback`, or `||` fallbacks like `getLspConfigForNetwork` uses).
 
 ## 2) Per-node axes — `settings.nodes[]` + `settings.selectedNode`
 
@@ -98,7 +99,7 @@ Quirks:
 
 ## 3) Global settings catalog
 
-All defaults below are the inline initializer of `@observable settings: Settings` in `stores/SettingsStore.ts` (currently starting near line 1467 — search `@observable settings: Settings =`). "Nested" groups are replaced wholesale by `updateSettings` (see checklist); "flat" keys sit at the blob top level.
+All defaults below are `DEFAULT_SETTINGS` in `stores/SettingsStore.ts` (search `export const DEFAULT_SETTINGS`); `@observable settings` starts as a deep copy of it, and a stored blob replaces it except for the absent-group backfill described in §1. "Nested" groups are replaced wholesale by `updateSettings` (see checklist); "flat" keys sit at the blob top level.
 
 ### Top-level scalars (flat)
 
@@ -140,7 +141,7 @@ All defaults below are the inline initializer of `@observable settings: Settings
 | `bigKeypadButtons` | bool | `false` |
 | `showAllDecimalPlaces` | bool | `false` |
 | `removeDecimalSpaces` | bool | `false` |
-| `showMillisatoshiAmounts` | bool | `false` fresh — but `true` for legacy-migrated users (MOD_KEY `millisat_amounts`); see §5 |
+| `showMillisatoshiAmounts` | bool | `false` fresh — but `true` for legacy-migrated users (read-only legacy flag `millisat_amounts`, read as `mod5` in `legacySettingsMigrations`); see §5 |
 
 ### `payments` (nested) — UI: `views/Settings/PaymentsSettings.tsx`
 
@@ -160,7 +161,7 @@ All defaults below are the inline initializer of `@observable settings: Settings
 |---|---|---|
 | `addressType` | on-chain address type code | `'0'` |
 | `memo`, `receiverName` | strings | `''` |
-| `expiry` + `timePeriod` + `expirySeconds` | display value + `TIME_PERIOD_KEYS` unit + canonical seconds | `'1'` / `'Hours'` / `'3600'`. This TRIPLET must stay mutually consistent — `MigrationUtils.migrateInvoiceExpiryDisplay` repairs drift on both load paths ("3600 hours" bug, #4149). Never update one field alone |
+| `expiry` + `timePeriod` + `expirySeconds` | display value + `TIME_PERIOD_KEYS` unit + canonical seconds | `'1'` / `'Hours'` / `'3600'`. This TRIPLET must stay mutually consistent. `MigrationUtils.applyInvoiceExpiryDisplay` repaired drift once per blob in the `priorVersion < 1` block of `applySettingsMigrations`, which runs on both load paths ("3600 hours" bug, #4149); it does not re-run on later loads. Never update one field alone |
 | `routeHints` | bool | `false` |
 | `ampInvoice` | bool (AMP = LND's Atomic Multi-Path invoices) | `false` |
 | `blindedPaths` | bool (receiver-privacy routes) | `false` |
@@ -193,7 +194,7 @@ The three toggles are also read with `??` and their defaults (`privateChannel ??
 | `automaticDisasterRecoveryBackup` | bool (channel-backup upload) | `true` |
 | `expressGraphSync` | bool (EGS download) | `false` |
 | `resetExpressGraphSyncOnStartup` | bool | `false` |
-| `bimodalPathfinding` | bool (LND bimodal payment-probability model) | `true` fresh — but forced `false` for legacy-migrated users (MOD_KEY `bimodal-bug-9085`, lnd issue #9085); see §5 |
+| `bimodalPathfinding` | bool (LND bimodal payment-probability model) | `true` fresh — but forced `false` for legacy-migrated users (read-only legacy flag `bimodal-bug-9085`, read as `mod7` in `legacySettingsMigrations`, lnd issue #9085); see §5 |
 | `graphSyncPromptNeverAsk` / `graphSyncPromptIgnoreOnce` | bool | `false` / `false` |
 | `dontAllowOtherPeers` | bool (restrict neutrino to listed peers) | `false` |
 | `neutrinoPeersMainnet` | string[] | `DEFAULT_NEUTRINO_PEERS_MAINNET` (5 peers: `btcd1.lnolymp.us`, `btcd2.lnolymp.us`, `btcd-mainnet.lightning.computer`, `node.eldamar.icu`, `noad.sathoarder.com`); regional alternates in `SECONDARY_NEUTRINO_PEERS_MAINNET` |
@@ -313,7 +314,7 @@ General rule: removing a persisted field is a storage-format change. Old blobs k
 
 ## 5) New-vs-migrated divergences (document yours if you create one)
 
-Because MOD_KEY migrations in `MigrationUtils.legacySettingsMigrations` run only for users upgrading from the legacy `zeus-settings` blob, some settings intentionally differ between fresh installs and migrated installs:
+Because the MOD_KEY blocks in `MigrationUtils.legacySettingsMigrations` run only for users upgrading from the legacy `zeus-settings` blob, some settings intentionally differ between fresh installs and migrated installs. Since PR #4477 those flags are read but never written; versioned migrations in `applySettingsMigrations` run on both load paths, and fresh installs start stamped at `SETTINGS_VERSION` (`DEFAULT_SETTINGS.settingsVersion`) so they skip them:
 
 | Setting | Fresh install | Legacy-migrated | Cause |
 |---|---|---|---|
@@ -332,7 +333,7 @@ Follow every step; skipping any one has caused real bugs (data loss via shallow 
    - Global, embedded-node/LSP-style → flat top-level key on `Settings`.
    - Non-sensitive UI-only flag that shouldn't live in the secrets blob → AsyncStorage (see §1 examples).
 2. **Type it** in `stores/SettingsStore.ts`. Prefer optional (`field?:`) — existing blobs won't have it (see §1 load semantics).
-3. **Add the inline default** in the `@observable settings: Settings = {...}` initializer (search for it; near line 1467 as of 2026-07-06). Remember this default only applies before a stored blob loads — every reader still needs a fallback for `undefined`.
+3. **Add the default** in `DEFAULT_SETTINGS` (search `export const DEFAULT_SETTINGS` in `stores/SettingsStore.ts`). Existing users get it only if its whole top-level group is absent from their blob (`applyMissingSettingsGroups`); a field added to an existing group, or a new flat key, stays `undefined` for them, so every reader still needs a fallback.
 4. **If it's an enumerated axis**, add an exported `*_KEYS` array (key/value/translateKey objects) next to the other pickers so DropdownSetting UIs and tests can consume it.
 5. **Build the UI** in the matching `views/Settings/*.tsx` (or per-node in `WalletConfiguration.tsx`). When persisting, use the shallow-merge-safe pattern — `SettingsStore.updateSettings` merges ONLY the top level, so nested groups are replaced wholesale:
    ```ts
@@ -343,18 +344,18 @@ Follow every step; skipping any one has caused real bugs (data loss via shallow 
    ```
    `updateSettingsGroup` merges into the group inside the write queue. Spreading a snapshot taken at render time (`...settings.payments`) reverts a sibling field written by an earlier queued call (#4841, #4903), and `check-settings-writes.test.ts` fails on it. Do not disable the control with `settingsUpdateInProgress`. Flat top-level keys (`updateSettings({ enableLSP: false })`) are safe as they are.
 6. **Locale strings**: add English copy to `locales/en.json` ONLY (the other 33 locale files are Transifex-managed — rule owned by **zeus-change-control**). Reference via `localeString('views.Settings.<...>')`.
-7. **Changing an existing default for existing users?** That is a storage-format change: write a one-shot MOD_KEY migration (recipe, ordering, and `setSettings`-with-a-real-object rules in **zeus-storage-and-migrations**) and note that it must run on the modern `zeus-settings-v2` load path (like `migrateRgsDefaultToZeus`), not only inside `legacySettingsMigrations`. Maintainer sign-off required.
+7. **Changing an existing default for existing users?** That is a storage-format change: bump `SETTINGS_VERSION` (`utils/SettingsVersion.ts`) and add a value-conditional mutation in a new `priorVersion < N` block of `MigrationUtils.applySettingsMigrations`, like `applyRgsDefaultsToV2` or `applyRetiredThemes`. That function runs on both load paths, so no flag, no `setSettings` call, and no edit to `legacySettingsMigrations` is needed. Recipe and rules in **zeus-storage-and-migrations**. Maintainer sign-off required.
 8. **Creating a fresh-vs-migrated divergence?** Document it (§5).
 9. **New separate keychain key** (not in the blob)? Register it in the three registries (§1) — recipe in **zeus-storage-and-migrations**.
 10. **Verify**: `yarn verify` (test + prettier + tsc + lint) and fill in the PR template's backend-testing matrix — details in **zeus-validation-and-qa** / **zeus-change-control**.
 
 ## Provenance and maintenance
 
-Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha) by reading `stores/SettingsStore.ts`, `utils/MigrationUtils.ts`, `utils/LdkNodeUtils.ts`, `utils/FeeUtils.ts`, `utils/BackendUtils.ts`, `backends/LND.ts`, `stores/UnitsStore.ts`, `stores/ActivityStore.ts`, `stores/NostrWalletConnectStore.ts`, and `views/Settings/*`. Defaults are volatile — re-verify before citing:
+Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha) by reading `stores/SettingsStore.ts`, `utils/MigrationUtils.ts`, `utils/LdkNodeUtils.ts`, `utils/FeeUtils.ts`, `utils/BackendUtils.ts`, `backends/LND.ts`, `stores/UnitsStore.ts`, `stores/ActivityStore.ts`, `stores/NostrWalletConnectStore.ts`, and `views/Settings/*`. The glossary migration rows, §1 load semantics, §3 intro and invoices expiry row, §5 intro, checklist steps 3 and 7, the migration wording in the §3 `showMillisatoshiAmounts` and `bimodalPathfinding` rows, and the two re-verification rows on defaults location and MOD_KEY list re-verified 2026-10-24 against master `3dc9f83e6`. Defaults are volatile — re-verify before citing:
 
 | Volatile fact | Re-verification command |
 |---|---|
-| Inline defaults block location + every default value | `grep -n '@observable settings: Settings' stores/SettingsStore.ts` then read the initializer |
+| Defaults block location + every default value | `grep -n 'export const DEFAULT_SETTINGS' stores/SettingsStore.ts` then read the object |
 | Blob key / out-of-blob keys | `grep -rn "STORAGE_KEY\|UNIT_KEY\|FAVORITE_CURRENCIES_KEY\|CURRENCY_CODES_KEY\|ACTIVITY_FILTERS_KEY = " stores/` |
 | AsyncStorage flag names | `grep -rn "persistentServicesEnabled\|persistentLdkNodeServicesEnabled\|persistentNWCServicesEnabled" stores views` |
 | 7 implementations + picker labels | `grep -n "Implementations =" -A 8 stores/SettingsStore.ts && grep -n "INTERFACE_KEYS" -A 12 stores/SettingsStore.ts` |
@@ -367,7 +368,7 @@ Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha) by reading 
 | LDK server defaults + mutinynet→signet | `grep -n "DEFAULT_VSS_SERVER\|DEFAULT_SCORER_URL\|rgs.zeusln\|electrs.zeusln\|case 'mutinynet'" utils/LdkNodeUtils.ts` |
 | Neutrino peer lists | `grep -n "DEFAULT_NEUTRINO_PEERS" -A 8 stores/SettingsStore.ts` |
 | Deprecated flags still present | `grep -n "deprecated" stores/SettingsStore.ts` |
-| MOD_KEY list (divergences) | `grep -n "MOD_KEY" utils/MigrationUtils.ts` |
+| MOD_KEY list (divergences) and version gates | `grep -n "EncryptedStorage.getItem('" utils/MigrationUtils.ts` (read-only legacy and v1 flags) and `grep -n 'priorVersion <' utils/MigrationUtils.ts` |
 | Mutinynet filtered from embedded-lnd picker | `grep -n "mutinynet" views/Settings/WalletConfiguration.tsx` |
 | embeddedLndNetwork capitalization | `grep -rn "embeddedLndNetwork === 'Mainnet'" views/ \| head -3` |
 | No dev-mode toggle | `grep -n "supportsDevTools" utils/BackendUtils.ts` |
