@@ -93,6 +93,34 @@ const resolveToLocalPath = async (uri: string): Promise<string> => {
 };
 
 /**
+ * lnd opens only the channel database of its configured backend
+ * (channel.db for bolt, channel.sqlite for SQLite) and creates an empty
+ * one when that file is missing. Check that the unzipped backup provided
+ * it, so a backup of the other type, or one with no database, is reported
+ * as an error instead of a restore with no channels.
+ */
+const assertChannelDbRestored = async (
+    graphDir: string,
+    isSqlite: boolean
+): Promise<void> => {
+    const file = isSqlite ? 'channel.sqlite' : 'channel.db';
+    if (await RNFS.exists(`${graphDir}/${file}`)) return;
+
+    const otherFile = isSqlite ? 'channel.db' : 'channel.sqlite';
+    if (await RNFS.exists(`${graphDir}/${otherFile}`)) {
+        throw new Error(
+            localeString('views.Tools.migration.import.databaseMismatch', {
+                backupType: isSqlite ? 'Bolt' : 'SQLite',
+                selectedType: isSqlite ? 'SQLite' : 'Bolt'
+            })
+        );
+    }
+    throw new Error(
+        localeString('views.Tools.migration.import.databaseMissing', { file })
+    );
+};
+
+/**
  * Validates a channel backup file before import
  * Checks extension, file existence, and non-empty size
  */
@@ -415,7 +443,8 @@ export const restoreChannelBackupFromOlympus = async (
     lndDir: string,
     isTestnet: boolean,
     pubkey: string,
-    seedArray: string
+    seedArray: string,
+    isSqlite: boolean
 ): Promise<boolean> => {
     try {
         // 1. Authentication for status to check for existing backup
@@ -612,15 +641,16 @@ export const restoreChannelBackupFromOlympus = async (
             await RNFS.mkdir(destFolder);
         }
 
-        try {
-            const existing = await RNFS.readDir(destFolder);
-            for (const item of existing) {
-                if (item.isFile()) await RNFS.unlink(item.path);
-            }
-        } catch (e) {}
+        // A file left behind here could pass assertChannelDbRestored in
+        // place of the backup's database, so a failed clear fails the restore
+        const existing = await RNFS.readDir(destFolder);
+        for (const item of existing) {
+            if (item.isFile()) await RNFS.unlink(item.path);
+        }
 
         await unzipFile(tempZipPath, destFolder);
         await RNFS.unlink(tempZipPath);
+        await assertChannelDbRestored(destFolder, isSqlite);
 
         return true;
     } catch (error: any) {
@@ -871,13 +901,15 @@ export const handleExportChannels = ({
 
 /**
  * Imports a channel backup zip file (works for both SQLite and bolt DB).
- * Clears existing files in the graph directory and unzips the backup.
+ * Clears existing files in the graph directory and unzips the backup,
+ * which must contain the channel database of the wallet's DB backend.
  */
 export const importChannelDb = async (
     sourceUri: string,
     fileName: string,
     lndDir: string,
-    isTestnet: boolean
+    isTestnet: boolean,
+    isSqlite: boolean
 ) => {
     const validation = await validateChannelBackupFile(sourceUri, fileName);
     if (!validation.valid) {
@@ -891,14 +923,15 @@ export const importChannelDb = async (
         await RNFS.mkdir(destFolder);
     }
 
-    try {
-        const existing = await RNFS.readDir(destFolder);
-        for (const item of existing) {
-            if (item.isFile()) {
-                await RNFS.unlink(item.path);
-            }
+    // A file left behind here could pass assertChannelDbRestored in place of
+    // the backup's database, so a failed clear fails the import
+    const existing = await RNFS.readDir(destFolder);
+    for (const item of existing) {
+        if (item.isFile()) {
+            await RNFS.unlink(item.path);
         }
-    } catch (e) {}
+    }
 
     await unzipFile(localPath, destFolder);
+    await assertChannelDbRestored(destFolder, isSqlite);
 };
