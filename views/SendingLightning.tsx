@@ -59,6 +59,7 @@ interface SendingLightningProps {
         'SendingLightning',
         {
             donationAmount?: string;
+            donationFeeLimitSat?: string;
             enableDonations: boolean;
         }
     >;
@@ -186,7 +187,7 @@ export default class SendingLightning extends React.Component<
     }
 
     handleDonationPayment = async (donationAmount: string) => {
-        const { TransactionsStore, PaymentsStore } = this.props;
+        const { TransactionsStore, PaymentsStore, route } = this.props;
 
         this.setState({ payingDonation: true, paymentType: 'donation' });
 
@@ -200,13 +201,23 @@ export default class SendingLightning extends React.Component<
                 return;
             }
 
+            // The donation has no confirmation screen of its own, so it gets
+            // the fee limit approved for the payment, at most 100 sats
+            const approvedFeeLimit = route.params?.donationFeeLimitSat;
+            const feeLimitSat = approvedFeeLimit
+                ? Number(approvedFeeLimit)
+                : NaN;
             const result = await TransactionsStore.sendPaymentSilently({
-                payment_request: paymentRequest
+                payment_request: paymentRequest,
+                fee_limit_sat:
+                    feeLimitSat >= 0 ? Math.min(feeLimitSat, 100) : 100
             });
             const { payment_error, status } = result || {};
 
             if (
-                (typeof status === 'string' && status === 'FAILED') ||
+                status === 'FAILED' ||
+                // embedded LND reports the lnrpc.Payment.PaymentStatus number
+                status === 3 ||
                 (typeof payment_error === 'string' && payment_error !== '')
             ) {
                 this.setState({
