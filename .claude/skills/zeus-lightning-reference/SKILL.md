@@ -95,6 +95,12 @@ light-bolt11-decoder) with two load-bearing performance features:
   `AddressUtils.isValidLightningPaymentRequest` first (see `utils/handleAnything.ts`).
 - Amount fields: `satoshis` (number|null), `millisatoshis` (string|null), plus
   Zeus-convention `num_satoshis` / `num_msat` (strings, `'0'` when absent).
+- **Duplicate singleton tags follow lnd's zpay32** (#4631, `bdfaee04f`): more than one
+  `p` (payment hash) field throws, counted by presence regardless of length; an invoice
+  with no valid payment hash throws (`'No valid payment hash found'`); for the other
+  singletons (`s`, `d`, `h`, `n`, `x`, `c`, `m`) the first well-formed occurrence wins,
+  and fixed-size fields of the wrong length (`HASH_TAG_WORDS = 52`,
+  `PAYEE_TAG_WORDS = 53`) are skipped. `sections` still records every occurrence.
 
 The interface is `DecodedBolt11` in the same file. Tests: `utils/Bolt11Utils.test.ts`.
 
@@ -156,9 +162,18 @@ no dedicated keysend endpoint — goes through `BackendUtils.payLightningInvoice
 - amount ≤ 1000 sats → fee cap = the amount itself (i.e. 100%; tiny payments routinely
   need proportionally huge fees).
 
-`views/PaymentRequest.tsx` passes `max_fee_percent` (default `'5.0'`) for cln-rest, which
-takes a percent instead of a sat limit; the store only forwards `max_fee_percent` when
-`implementation === 'cln-rest'`.
+`views/PaymentRequest.tsx` always passes `fee_limit_sat`. It adds `max_fee_percent` only
+when the backend is cln-rest and the percent fee option is selected (`feeOption ===
+'percent'`); the percent defaults to `settings.payments.defaultFeePercentage || '5.0'`.
+The store also only forwards `max_fee_percent` when `implementation === 'cln-rest'`.
+
+`sendPayment` holds a send guard, `paymentInFlight`, that blocks a second send while one
+is in flight (#4492). If no completion callback arrives within `timeout_seconds` (300
+when unset) plus 60 seconds, `backstopPaymentInFlight` does not release the guard
+blindly: where `lookupPayment` is supported it polls the payment
+(`PAYMENT_TRACK_POLL_MS`) until SUCCEEDED or FAILED, giving up after
+`PAYMENT_TRACK_MAX_FAILURES` failed lookups or the `PAYMENT_TRACK_MAX_MS` (10 min)
+ceiling. AMP payments have no single hash to track and stay on the timer.
 
 ## 4. LNURL family and lightning addresses
 
@@ -169,18 +184,36 @@ the input router (section 11) to one of four screens based on `params.tag`:
 | tag | Meaning | Zeus screen |
 | --- | --- | --- |
 | `payRequest` (LNURL-pay / LUD-06) | server gives min/max, you request an invoice from its callback | `views/LnurlPay/` (or `ChoosePaymentMethod` when ecash is enabled) |
-| `withdrawRequest` (LNURL-withdraw) | server offers sats; you submit YOUR invoice to its callback | `views/Receive.tsx` with `lnurlParams` |
+| `withdrawRequest` (LNURL-withdraw) | server offers sats; you submit YOUR invoice to its callback | `views/Receive.tsx` with `lnurlParams` (or `ChoosePaymentMethod` when ecash is enabled) |
 | `channelRequest` (LNURL-channel) | server opens a channel to you | `views/LnurlChannel.tsx`, gated by `supportsPeers()` (only `connectPeer` + own pubkey needed) |
 | `login` (LNURL-auth) | key-based login challenge | `views/LnurlAuth.tsx`, gated by `supportsLnurlAuth()` |
 
-**Lightning address (LUD-16)** resolution is inline in `handleAnything.ts`: split
-`user@domain`, fetch `https://<domain>/.well-known/lnurlp/<user>` (plain `http://` for
-`.onion`). Per LUD-16 the domain is always lowercased and the username normally is too —
-**except for `cryptoqr.net` addresses**, whose usernames are URL-encoded merchant payloads
-where hex-digit casing matters server-side (`isCryptoQR` check; covered by
-`utils/handleAnything.test.ts`). Before the LNURL-pay lookup, Zeus also tries a **BOLT12
-DNS lookup** (BIP-353 style: TXT record at `<user>.user._bitcoin-payment.<domain>` via
-`cloudflare-dns.com/dns-query`) and offers a payment-method choice if both exist.
+**Lightning address (LUD-16)** resolution is in `handleAnything.ts`, but the lnurlp URL
+is built by `getLnurlpUrl` in `utils/LnurlPayUtils.ts` (#4762, shared with
+`utils/DonationUtils.ts`): `https://<domain>/.well-known/lnurlp/<user>` (plain `http://`
+for `.onion`). Per LUD-16 the domain is always lowercased; the username is lowercased
+and percent-encoded with `encodeURIComponent` so it stays one path segment (#5187),
+**except for `cryptoqr.net` addresses**, whose usernames are already URL-encoded
+merchant payloads where hex-digit casing matters server-side (`isCryptoQR` check; only
+`/`, `\`, `?`, `#` and `%2e` are encoded; covered by `utils/handleAnything.test.ts` and
+`utils/LnurlPayUtils.test.ts`). Before the LNURL-pay lookup, Zeus also tries a
+**BOLT12 DNS lookup** (BIP-353: TXT record at `<user>.user._bitcoin-payment.<domain>` via
+`cloudflare-dns.com/dns-query`, query name encoded). The answer is used only when
+Cloudflare reports it DNSSEC-validated (`Status === 0 && AD === true`), the echoed
+question name matches the name asked, and exactly one TXT record starts with `bitcoin:`
+(#4361). The lookup is skipped for `.onion` domains (#4729). If both exist Zeus offers a
+payment-method choice; if the lnurlp fetch fails and there is no offer, it falls back to
+a NIP-05 lookup (`attemptNip05Lookup`).
+
+**Verification before paying or signing** (`utils/LnurlPayUtils.ts`):
+`isLnurlCallbackAllowed` rejects callbacks that are not https (http only for `.onion`)
+or that target loopback/private/link-local IP literals; `verifyLnurlPayInvoice` checks
+the returned invoice's amount equals the requested msat and that its `description_hash`,
+when present, matches the sha256 of the shown metadata (#4374, #5200);
+`verifyLnurlAuthCallback` requires the callback host to equal the signing domain and
+rejects backslashes and userinfo (#4576). Callers: `views/LnurlPay/LnurlPay.tsx`
+(`isLnurlCallbackAllowed`, `verifyLnurlPayInvoice`) and `views/LnurlAuth.tsx`
+(`verifyLnurlAuthCallback`).
 
 **Onion gap:** direct `.onion` lightning-address lookups go through `doTorRequest` when
 Tor is enabled, but generic LNURL parameter fetches via `js-lnurl`'s `getParams` do NOT
@@ -215,28 +248,51 @@ marked deprecated but still in the settings type and defaults.
 
 ## 6. LSP integration — three generations, all in `stores/LSPStore.ts`
 
-Default endpoints (Olympus, per network) are exported from `stores/SettingsStore.ts`
-(`DEFAULT_LSP_MAINNET = 'https://0conf.lnolymp.us'`, LSPS1 REST
-`https://lsps1.lnolymp.us`, etc.); resolution via `getLspConfig` — endpoint/default
-details belong to `zeus-config-and-flags`.
+Default endpoints (per network) are exported from `stores/SettingsStore.ts`
+(`DEFAULT_LSP_MAINNET = 'https://flow.zeuslsp.com'`, LSPS1 REST
+`DEFAULT_LSPS1_REST_MAINNET = 'https://lsps1.zeuslsp.com'`, etc.; moved to zeuslsp.com
+in `d6ea24009`). Resolution is `getLspConfigForNetwork`, exported from the same file;
+`LSPStore`'s private `getLspConfig` wraps it. Endpoint/default details belong to
+`zeus-config-and-flags`.
 
 ### Generation 1: Olympus "Flow 2.0" REST (JIT channels on receive)
 
 - `getZeroConfFee` POSTs the msat amount to `<flowHost>/api/v1/fee`;
-  `getZeroConfInvoice(bolt11)` POSTs to `/api/v1/proposal` and resolves `data.jit_bolt11`
+  `getZeroConfInvoice(bolt11, quote)` POSTs to `/api/v1/proposal` and resolves `data.jit_bolt11`
   — a **wrapped invoice** routing through the LSP, which opens a 0-conf channel just in
   time and deducts its fee.
 - **The wrapping MUTATES the requested amount** (`stores/InvoicesStore.ts`,
-  `createInvoice`): when Flow LSP is active and `value > zeroConfFee`, Zeus creates the
-  local invoice for `req.value = requested − zeroConfFee`, then swaps the displayed
-  payment request for `jit_bolt11` (which asks the payer for the full amount). The payer
-  sees the full amount; your node's invoice is smaller by the fee.
-- **Silent degradation**: if `getZeroConfInvoice` rejects, Zeus clears the error state and
-  shows the UNWRAPPED invoice — receiving still works if a channel already exists, but no
-  JIT channel will be opened. Don't "fix" the swallowed error without understanding this.
-- **LNURL-withdraw interaction**: the withdraw callback must receive the wrapped invoice —
+  `createInvoice`): when Flow LSP is active and the requested value is greater than the
+  quoted fee, Zeus creates the local invoice for `req.value = requested − fee`, then swaps
+  the displayed payment request for `jit_bolt11` (which asks the payer for the full
+  amount). The payer sees the full amount; your node's invoice is smaller by the fee. A
+  fee at or above the requested value is added on top instead.
+- **Each invoice is priced with its own quote** (#5142, `3ef7361ab`): `createInvoice`
+  keeps the quote returned by its own `getZeroConfFee` call in a local `lspQuote` and
+  passes it to `getZeroConfInvoice(bolt11, lspQuote)`, which sends that quote's `fee_id`.
+  The shared `lspStore.zeroConfFee`/`feeId` are not re-read, since another request may
+  have replaced them. `getZeroConfFee` tags each call with `feeRequestId`; a call
+  replaced by a newer one (or by `reset()`) rejects, and `createInvoice` stops without
+  an invoice.
+- **The wrapped invoice is verified** (#4673): `getZeroConfInvoice` checks `jit_bolt11`
+  with `verifyWrappedInvoice` in `utils/LspUtils.ts`: same network, same payment hash,
+  both amounts present, and wrapped amount between the inner amount and inner amount
+  plus the quoted fee (plus 999 msat rounding when a fee was quoted). A failed check
+  rejects with `flow_error` set.
+- **LSP rejection is a hard fail** (`a9d62a063`): if `getZeroConfInvoice` rejects,
+  `createInvoice` clears `lspStore.zeroConfFee`, `lspStore.feeId`, `payment_request` and
+  `payment_request_amt` and returns without an invoice. There is no fallback to the
+  unwrapped invoice, which could dead-end without the channel it needs.
+- **LNURL-withdraw interaction**: the withdraw callback must receive the wrapped invoice:
   `qs.pr = jit_bolt11 || invoice.getPaymentRequest` in `InvoicesStore`. Passing the
   unwrapped one would make the withdrawing service pay an invoice the LSP never sees.
+  The invoice is submitted as soon as it is wrapped, so with a non-zero fee
+  `createInvoice` requires the caller's `confirmLspFee(feeSats, value)` to accept the fee
+  first (no callback means no invoice). A quote older than `LSP_FEE_QUOTE_MAX_AGE_MS`
+  (3 min) by the time the user accepts is re-fetched, and the user is asked again unless
+  the new fee is the same or zero. A fee at or above the amount is added on top, and is
+  refused with `lspFeeAboveMaxWithdrawable` when amount plus fee exceeds the service's
+  `maxWithdrawable`.
 
 ### Generation 2/3: LSPS0 transport + LSPS1 (buy channel) / LSPS7 (extend lease)
 
@@ -245,12 +301,21 @@ details belong to `zeus-config-and-flags`.
   (`this.getInfoId = uuidv4()`; responses matched by `data.id` in
   `handleCustomMessages`) with a **7-second timeout**
   (`CUSTOM_MESSAGE_RESPONSE_TIMEOUT_MS = 7000`).
-- Three transports, chosen by backend capability flags: **native** (embedded-lnd goes
-  straight to `lndmobile` custom-message APIs), **custom message** via
-  `BackendUtils.sendCustomMessage`/`subscribeCustomMessages` (other LND-family), and
-  **REST** (`<lsps1Rest>/api/v1/get_info`, `/api/v1/create_order`) for backends that can't
-  send peer messages. Methods: `lsps1.get_info`, `lsps1.create_order`, `lsps1.get_order`,
-  and the LSPS7 equivalents for channel-lease extension.
+- Three transports, chosen by backend capability flags:
+  - **native** = `supportsLSPS7native()`: ldk-node only, and only for LSPS7
+    (`BackendUtils.lsps7*` → `LdkNodeInjection.lsps7.*`). `supportsLSPS1native()` is false on ldk-node
+    ("Olympus doesn't support native LSPS1"), so native LSPS1 is unused.
+  - **custom message** = `supportsLSPScustomMessage()`: lnd, embedded-lnd and LNC.
+    Sends go through `LSPStore.sendCustomMessage` → `BackendUtils.sendCustomMessage`;
+    the subscription on embedded-lnd uses the `lndmobile` `SubscribeCustomMessages`
+    event stream, other backends use `BackendUtils.subscribeCustomMessages`.
+  - **REST** = `supportsLSPS1rest()`: lnd, LNC, cln-rest and ldk-node, LSPS1 only
+    (`<lsps1Rest>/api/v1/get_info`, `/api/v1/create_order`).
+
+  LSPS1 prefers native, then REST, then custom message (`isOlympus` and the transport
+  choice in `stores/LSPStore.ts`); LSPS7 runs over native or custom message only.
+  Methods: `lsps1.get_info`, `lsps1.create_order`, `lsps1.get_order`, and the LSPS7
+  equivalents for channel-lease extension.
 - **0-conf acceptance policy** (`handleChannelAcceptorEvent`): a channel-acceptor hook
   rejects any **0-conf** channel unless the opener is the LSP pubkey or listed in
   `settings.zeroConfPeers`; normal (confirmed) channels are accepted regardless. On
@@ -284,6 +349,14 @@ proofs); paying Lightning from proofs = **melt quote**. Tokens serialize as
   (mints refuse MPP toward their own invoices; the planner falls back to a single-mint
   regular quote via `prepareSingleMintRegularQuote`, executed with `CashuDevKit.melt`
   instead of `meltPartial`).
+- **Melt success rules**: a melt counts as paid only when its normalized state is
+  `PAID` (#4696); anything else throws `errorPayingInvoice`. When the invoice was created
+  on our own node (self-custody), `isOwnInvoicePaid` also requires the returned preimage
+  to hash to the invoice's payment hash, or asks the node whether the invoice is settled
+  when the mint omits the preimage (#5140). `payLnInvoiceFromEcash` takes the
+  `paymentRequest` the caller reviewed and pays nothing if it differs from the invoice
+  whose quotes `getPayReq` loaded; `getPayReq` clears the previous invoice's quotes
+  first (#5137).
 - **Token extraction from URL wrappers** (`CashuUtils.extractTokenString`): a greedy regex
   `cashu[AB][0-9A-Za-z+/_=-]+` pulls a token out of any wrapper (zeusln.com/e/,
   wallet.cashu.me, nutstash, etc.) and stops at URL noise like `&memo=`; failing that it
@@ -318,8 +391,14 @@ proofs); paying Lightning from proofs = **melt quote**. Tokens serialize as
 Zeus speaks the Boltz v2 REST API, but no longer against Boltz itself: the default
 provider is SATS Routing (`DEFAULT_SWAP_HOST_MAINNET = 'https://satsrouting.exchange/v2'`
 in `stores/SettingsStore.ts`), with Coinos (`https://swap.coinos.io/v2`) and Custom
-selectable. Both run `boltz-backend`, so the wire protocol is unchanged. Endpoints used:
-`/swap/submarine`, `/swap/reverse`, `/swap/restore`.
+selectable. Both run `boltz-backend`, so the wire protocol is unchanged. Endpoints used
+(relative to the `/v2` host): `GET /swap/submarine` and `GET /swap/reverse` (pairs and
+fees), `POST /swap/submarine` and `POST /swap/reverse` (create), `GET /swap/<id>`
+(status), `GET /swap/submarine/<id>/transaction`, `GET /swap/reverse/<id>/transaction`
+(lockup), `GET /swap/submarine/<id>/claim` (cooperative claim, `views/Swaps/SwapDetails.tsx`),
+`POST /chain/BTC/transaction` (broadcast fallback after the mempool API's `/tx`),
+`POST /swap/restore`, and the `/ws` websocket (`swapWebSocketUrl`). Native claim and
+refund code (boltz-client) gets the host with `/v2` stripped (`nativeSwapEndpoint`).
 
 Retired hosts are moved to the current default by `MigrationUtils`, and each generation
 has its own mechanism:
@@ -339,8 +418,10 @@ these, so a finished version's migration never re-runs.
 in-flight swap:
 
 - The rescue key is a BIP-39 mnemonic stored under `swaps-rescue-key`
-  (`SWAPS_RESCUE_KEY` in `utils/SwapUtils.ts`). On ldk-node it **reuses the node's own
-  mnemonic** instead of generating a new one (`generateRescueKey`).
+  (`SWAPS_RESCUE_KEY` in `utils/SwapUtils.ts`). `generateRescueKey` **always generates
+  a fresh, independent mnemonic**, on every backend including ldk-node (`03979d766`). It
+  never reuses the wallet seed, because restore sends the swap master xpub to the
+  provider, and an xpub from the wallet seed would expose the wallet's own key tree.
 - Per-swap keys derive at **`m/44/0/0/0/<index>`** (`DERIVATION_PATH = 'm/44/0/0/0'`,
   `getPath(index)` appends the index; last used index persisted under
   `swaps-last-used-key`).
@@ -348,6 +429,30 @@ in-flight swap:
   so preimages never need separate backup; the mnemonic regenerates them.
 - **Restore**: `getRescuableSwaps` derives an xpub from the mnemonic and POSTs it to
   `<host>/swap/restore`; the server returns swaps whose keys belong to that xpub.
+
+**Provider responses are verified before funds move** (`utils/SwapUtils.ts`,
+`stores/SwapStore.ts`):
+
+- `verifySubmarineSwapResponse` (#5125): the claim leaf pays the server key against our
+  invoice's payment hash, the refund leaf pays our key after the stated timeout (at most
+  `MAX_SUBMARINE_SWAP_TIMEOUT_BLOCKS = 4320`), the address is the taproot output of
+  exactly that tree, and `expectedAmount` is not above what the Swaps screen showed.
+- `verifyReverseSwapInvoice`: the provider's invoice has our preimage hash and the
+  expected amount.
+- `verifyReverseSwapResponse` (#5139): the claim leaf pays our key against our preimage
+  hash, the refund leaf pays the server key, the lockup address matches the tree, and
+  `onchainAmount` is a whole positive number at least the amount shown plus the claim
+  fee. At creation SwapStore also refuses an `onchainAmount` not above the claim fee
+  (`lockup-below-claim-fee`) and a refund deadline fewer than
+  `MIN_REVERSE_SWAP_CLAIM_BLOCKS = 6` blocks away (`verifyReverseSwapDeadline`). The
+  claim fee rate is decided at creation and stored (`claimFeeRate`, #5126).
+- Before the claim reveals the preimage, `verifyReverseLockup` re-checks the tree and
+  looks up the lockup transaction on the user's mempool instance: it must be confirmed,
+  pay the swap's output script at least the expected amount, be unspent, and be at least
+  6 blocks from the refund deadline. For rescued swaps and swaps created before the
+  amount check (v13.2.2, v13.2.3), the floor comes from what this wallet paid: the
+  invoice amount (#5010) and `rescuedLockupFloor` (`RESCUED_SWAP_MIN_LOCKUP_PERCENT = 90`
+  percent of the payment); a shortfall needs the user to confirm the amount.
 
 ## 10. On-chain: address types, PSBT/coin control, CPFP, fees
 
@@ -371,9 +476,14 @@ in-flight swap:
   output isn't. Comment in code: only works for single-party-funded channels. Force-close
   bumps go through `bumpForceCloseFee` (no flip retry).
 - **Fee estimation**: `FeeStore.getOnchainFeesviaMempool` fetches
-  `https://mempool.space/<testnet/>api/v1/fees/recommended` (fastest/halfHour/hour/
-  economy); backend-native estimators exist per backend but the fee picker UI is
-  mempool.space-driven.
+  `<UrlUtils.getMempoolApiUrl()>/v1/fees/recommended` (fastest/halfHour/hour/economy).
+  The instance is `settings.privacy.mempoolInstance`: default `DEFAULT_MEMPOOL_INSTANCE
+  = 'electrs.zeusln.com'` (also used when unset), or `mempool.space`, or `Custom`
+  (`customMempoolInstance`, used on every network). Without Custom, testnet uses
+  `https://mempool.space/testnet/api` and mutinynet `https://mutinynet.com/api`. The
+  response passes through `sanitizeRecommendedFees` (`utils/FeeUtils.ts`); an
+  implausible one is rejected and the store sets `error`. Backend-native estimators
+  exist per backend but the fee picker UI is driven by this endpoint.
 
 ## 11. `utils/handleAnything.ts` — the universal input router
 
@@ -382,8 +492,8 @@ Every scanned QR, pasted string, deep link, and NFC payload goes through
 `[screenName, params]` navigation tuple — or, in **clipboard mode**
 (`isClipboardValue = true`, used to decide whether to show the "paste detected" prompt),
 **plain booleans** (`true` = recognized, `false` = not) from most detectors. Caveat:
-several late-chain detectors (npub, `zeuscontact:`, PSBT, TxHex, account imports, bare
-Cashu tokens, BOLT12 withdrawal requests) have no `isClipboardValue` check and return the
+several detectors (PSBT, `zeuscontact:`, TxHex, account imports, bare Cashu tokens,
+BOLT12 withdrawal requests) have no `isClipboardValue` check and return the
 navigation tuple even in clipboard mode — callers must treat any truthy return as
 "recognized". New detectors should add the boolean guard. Don't mix up
 the two return shapes.
@@ -395,31 +505,35 @@ shadow later ones. Current order (verified):
 2. CLINK noffer → `ClinkPay`; BOLT12 offer → `Send`
 3. On-chain address (+ optional embedded lightning param) → `Send`/`Accounts`
 4. Lightning pubkey → keysend `Send`; BOLT11 → `PaymentRequest` (or
-   `ChoosePaymentMethod` when ecash enabled); BOLT12 offer string → `Send`
-5. Node-connection strings (clnrest://, nostr+walletconnect://, LNC pairing, lndconnect,
+   `ChoosePaymentMethod` when ecash enabled); BOLT12 offer string → `Send`; bare
+   `noffer1...` → `ClinkPay`
+5. **PSBT** → `PSBT` (#5175, `48cc9b496`). A PSBT's base64 text can contain any
+   substring, so it is checked before the detectors below that search the text
+   (`clnrest+`, `lndconnect`, `findlnurl`).
+6. Node-connection strings (clnrest://, nostr+walletconnect://, LNC pairing, lndconnect,
    LNDHub) → `WalletConfiguration`
-6. Node URI (`pubkey@host`) → `OpenChannel` (without `supportsChannelManagement()`:
+7. Node URI (`pubkey@host`) → `OpenChannel` (without `supportsChannelManagement()`:
    error, and no clipboard suggestion); lightning address (LUD-16, with BOLT12 DNS
    probe and the cryptoqr.net casing exception, section 4)
-7. BTCPay pairing config
-8. **Web-wrapped Cashu tokens BEFORE the LNURL detector** — an https URL containing a
+8. BTCPay pairing config
+9. **Web-wrapped Cashu tokens BEFORE the LNURL detector**: an https URL containing a
    `cashu[AB]...` base64 body. The comment in the file is explicit: `findlnurl` can match
    bech32-like substrings INSIDE cashu tokens and misroute them; the base64 shape gate
    avoids swallowing URLs that merely contain the literal "cashuA" (e.g. `?ref=cashuAfrica`).
-9. LNURL (findlnurl / decoded lnurl / `/lnurl|lnurlp|...` path regex) → tag dispatch
-   (section 4)
-10. npub / `zeuscontact:` → contacts; PSBT; TxHex; account imports (xpub, descriptors,
+10. LNURL (findlnurl / decoded lnurl / `/lnurl|lnurlp|...` path regex) → tag dispatch
+    (section 4)
+11. npub / `zeuscontact:` → contacts; TxHex; account imports (xpub, descriptors,
     keystore JSON) gated by `supportsAccounts()`
-11. Bare Cashu token (`isValidCashuTokenAsync`) → `CashuToken`
-12. BOLT12 withdrawal requests (gated `supportsWithdrawalRequests()`)
-13. **Merchant QR near-LAST** (`isMerchantQR`): South-African merchant payloads
+12. Bare Cashu token (`isValidCashuTokenAsync`) → `CashuToken`
+13. BOLT12 withdrawal requests (gated `supportsWithdrawalRequests()`)
+14. **Merchant QR near-LAST** (`isMerchantQR`): South-African merchant payloads
     (Pick n Pay, Ecentric, SnapScan, Zapper...) are converted to `...@cryptoqr.net`
     lightning addresses and **recursively re-fed** into `handleAnything`. Guard:
     `MERCHANT_QR_MAX_LEN = 500` — the alternation-heavy regexes catastrophically
     backtrack and **overflow Hermes' regex stack** on long inputs (Hermes = React
     Native's JS engine), so anything longer is skipped. Keep this near the end: its
     regexes are greedy enough to steal inputs that earlier detectors parse precisely.
-14. Fallback: WIF private-key sweep → `WIFSweeper`, else "not valid" error.
+15. Fallback: WIF private-key sweep → `WIFSweeper`, else "not valid" error.
 
 **When adding a detector**: place it as late as correctness allows, add clipboard-mode
 boolean returns, cap regex input length if patterns use nested alternation, and add cases
@@ -440,7 +554,10 @@ to `utils/handleAnything.test.ts`.
 ## Provenance and maintenance
 
 Facts verified **2026-07-06** against master `c5fd094fb` (v13.1.3-alpha) by reading the
-implementing files directly. No commands below mutate anything.
+implementing files directly. Sections 2 (duplicate tags), 3 (fee limits, send guard),
+4, 6, 7 (melt success rules), 9 (endpoints, rescue key, response verification), 10 (fee
+estimation) and 11 were re-verified
+**2026-10-24** against master `3dc9f83e6`. No commands below mutate anything.
 
 | Volatile fact | Re-verify with |
 | --- | --- |
@@ -454,12 +571,20 @@ implementing files directly. No commands below mutate anything.
 | ZEUS Pay host, address types | `grep -n "LNURL_HOST\|address_type" stores/LightningAddressStore.ts` |
 | LSPS0 message type 37913 / 7 s timeout | `grep -n "CUSTOM_MESSAGE_TYPE\|TIMEOUT_MS" stores/LSPStore.ts` |
 | Flow amount mutation + jit_bolt11 swap | `grep -n "zeroConfFee\|jit_bolt11" stores/InvoicesStore.ts` |
-| Flow/LSPS1 default hosts | `grep -n "DEFAULT_LSP" stores/SettingsStore.ts` |
+| Flow/LSPS1 default hosts, resolver | `grep -n "DEFAULT_LSP\|getLspConfigForNetwork" stores/SettingsStore.ts` |
+| LSP own-quote pricing, hard fail, LNURL-withdraw fee confirm | `grep -n "lspQuote\|confirmLspFee\|LSP_FEE_QUOTE_MAX_AGE_MS\|hard-fail" stores/InvoicesStore.ts` |
+| Wrapped invoice checks | `grep -n "fail('" utils/LspUtils.ts` |
+| LSPS transport flags per backend | `grep -rn "supportsLSPS" backends/*.ts \| grep -v test` |
 | Cashu raw MPP melt endpoint | `grep -n "melt/quote/bolt11" stores/CashuStore.ts` |
 | Cashu token prefixes / P2PK limits | `grep -n "cashuTokenPrefixes\|MAX_P2PK" utils/CashuUtils.ts` |
 | Cashu seed versions | `grep -n "v2-bip39\|originalSeedVersion" stores/CashuStore.ts` |
 | NWC client SDK | `head -20 backends/NostrWalletConnect.ts` |
+| Swap rescue key is always fresh | `grep -n -A10 "generateRescueKey = " stores/SwapStore.ts` |
+| Swap response verification | `grep -n "export const verify\|MIN_REVERSE_SWAP_CLAIM_BLOCKS\|RESCUED_SWAP_MIN_LOCKUP_PERCENT" utils/SwapUtils.ts` |
 | Swap hosts / path / preimage derivation | `grep -n "DEFAULT_SWAP_HOST" stores/SettingsStore.ts; grep -n "DERIVATION_PATH\|derivePreimageFromRescueKey\|swap/restore" stores/SwapStore.ts` |
+| Mempool fee instance, sanitizer | `grep -n "DEFAULT_MEMPOOL_INSTANCE" stores/SettingsStore.ts; grep -n "sanitizeRecommendedFees" utils/FeeUtils.ts stores/FeeStore.ts` |
+| BOLT11 duplicate-tag rules | `grep -n "paymentHashSeen\|HASH_TAG_WORDS\|No valid payment hash" utils/Bolt11Utils.ts` |
+| LNURL verification helpers | `grep -n "^export const" utils/LnurlPayUtils.ts` |
 | CPFP output-index flip | `grep -n "does not belong" stores/FeeStore.ts` |
 | Address type values 0/1/4 | `grep -n "value: '0'\|value: '1'\|value: '4'" views/Receive.tsx` |
 | CLINK kind / timeout | `grep -n "CLINK_KIND\|DEFAULT_TIMEOUT_MS" utils/ClinkUtils.ts` |
@@ -467,5 +592,5 @@ implementing files directly. No commands below mutate anything.
 | Detector chain order | read the if/else chain in `utils/handleAnything.ts` top to bottom |
 
 Labeled uncertainties: none of the facts above are speculative; server-side behavior of
-zeuspay.com / swaps.zeuslsp.com / lnolymp.us is described only as far as the client code
+zeuspay.com / the swap providers / flow.zeuslsp.com and lsps1.zeuslsp.com is described only as far as the client code
 shows (request/response shapes) — API contracts are not versioned in this repo.

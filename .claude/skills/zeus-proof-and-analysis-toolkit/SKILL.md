@@ -160,19 +160,19 @@ Second pattern worth grepping for — **dead dispatch**: `payLightningInvoiceStr
 4. **Know the fee rule (verified in `utils/FeeUtils.ts`):** `calculateDefaultRoutingFee(amount)` returns `amount * 0.05` rounded (`DEFAULT_ROUTING_FEE_PERCENT = 0.05`) when `amount > 1000` sats, but returns **the full amount** (i.e. a 100% fee limit) when `amount <= 1000` — tiny payments may cost up to themselves in routing fees. `views/PaymentRequest.tsx` mirrors the same boundary: `requestAmount > 1000` selects the percent fee option, otherwise fixed. Tests pinning this: `utils/FeeUtils.test.ts` (`1000 → '1000'`, `10000 → '500'`).
 5. **Check error-shape traps on the same path** — e.g. LND REST payment timeouts *resolve* success-shaped with `{payment_error: …}` (see zeus-backends-and-capabilities); an amount proof that ends at "the call resolved" has not proven payment.
 
-**Worked example — the Flow LSP wrapped-invoice amount mutation (`stores/InvoicesStore.ts` + `stores/LSPStore.ts`, verified on master).** Unit trace for "user requests an invoice for `value` sats with LSP enabled":
+**Worked example: the Flow LSP wrapped-invoice amount mutation (`stores/InvoicesStore.ts` + `stores/LSPStore.ts`, re-verified 2026-10-24 against master `3dc9f83e6`).** Unit trace for "user requests an invoice for `value` sats with LSP enabled":
 
 | Step | Code | Unit |
 |---|---|---|
 | 1 | user input `value` | sats (string) |
 | 2 | `lspStore.getZeroConfFee(Number(new BigNumber(value).times(1000)))` | **msat** over the wire (`amount_msat` in the POST body) |
-| 3 | LSPStore stores `zeroConfFee = parseInt(fee_amount_msat / 1000)` | back to **sats** |
-| 4 | if `value > zeroConfFee`: `req.value = new BigNumber(value).minus(zeroConfFee)` | sats — **the created invoice is for less than the user asked** |
+| 3 | `getZeroConfFee` resolves a quote `{ feeSats: parseInt(fee_amount_msat / 1000), feeId }`; `createInvoice` keeps it in the local `lspQuote` (#5142), not the shared `lspStore.zeroConfFee`, which another request can overwrite. A replaced request rejects and no invoice is made | back to **sats** |
+| 4 | if `value > lspQuote.feeSats`: `req.value = new BigNumber(value).minus(lspQuote.feeSats)`, else the fee goes on top. For LNURL-withdraw with a non-zero fee, the caller's `confirmLspFee(feeSats, value)` must accept first, and a quote older than `LSP_FEE_QUOTE_MAX_AGE_MS` (3 min) is re-fetched | sats; **the created invoice is for less than the user asked** |
 | 5 | `getZeroConfInvoice(...)` wraps it; `jit_bolt11` replaces the payment request | — |
-| 6 | on wrap failure: silently fall back to the **unwrapped** invoice (error state cleared) | — |
+| 6 | on wrap failure (LSP error or `verifyWrappedInvoice` mismatch): hard fail (`a9d62a063`). `zeroConfFee`, `feeId`, `payment_request` and `payment_request_amt` are cleared and no invoice is returned | n/a |
 | 7 | lnurl-withdraw callback uses `qs.pr = jit_bolt11 || invoice.getPaymentRequest` | must be the wrapped one when it exists |
 
-Three provable claims fall out: (a) the msat↔sat conversions occur exactly at steps 2–3; (b) the amount the payer pays ≠ the amount the node receives, by design — any display or bookkeeping code comparing them must add `zeroConfFee` back; (c) step 6 means "invoice created" does not imply "channel will be opened" — degradation is silent. If your change touches this path, your proof must state which of the three it preserves.
+Three provable claims fall out: (a) the msat↔sat conversions occur exactly at steps 2–3; (b) the amount the payer pays ≠ the amount the node receives, by design: they differ by the invoice's own quote (`lspQuote.feeSats`), deducted when the amount exceeds it and added on top otherwise, so code comparing them must use that quote. `views/Receive.tsx` still displays the shared `LSPStore.zeroConfFee` (`feeOnTop`, `displaySatAmount`), which equals `lspQuote.feeSats` only until another fee request replaces it; (c) step 6 means "invoice created on the node" does not imply "invoice returned": when the LSP path was requested and the proposal is rejected or fails verification, nothing is returned and `payment_request` ends null. There is no unwrapped fallback. If your change touches this path, your proof must state which of the three it preserves.
 
 **What counts as done:** a unit-annotated trace table like the above in the PR; BigNumber (or integer msat) for every operation; a colocated jest test exercising the boundary set from step 3; no float appears between user input and wire encoding.
 
