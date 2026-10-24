@@ -57,6 +57,7 @@ jest.mock('../storage', () => ({
     }
 }));
 
+import { AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { autorun } from 'mobx';
 import {
@@ -3623,5 +3624,113 @@ describe('NostrWalletConnectStore wallet deletion', () => {
         expect(storedItems.has(NWC_CONNECTIONS_KEY)).toBe(false);
         expect(storedItems.has(NWC_CLIENT_KEYS)).toBe(false);
         expect(storedItems.has(NWC_SERVICE_KEYS)).toBe(false);
+    });
+});
+
+describe('NostrWalletConnectStore scheduled save', () => {
+    // one connection that has been used before, as it sits in storage
+    async function buildStore() {
+        const harness = createStore();
+        addConnection(harness.store, {
+            permissions: ['get_info', 'pay_invoice'],
+            lastUsed: new Date('2024-01-01T00:00:00Z'),
+            maxAmountSats: 10_000
+        });
+        await harness.store.saveConnections();
+        return harness;
+    }
+
+    function debit(store: NostrWalletConnectStore, amountSats: number) {
+        const connection = store.connections[0];
+        connection.trackSpending(amountSats);
+        (store as any).findAndUpdateConnection(connection);
+    }
+
+    const storedConnection = () =>
+        JSON.parse(storedItems.get(NWC_CONNECTIONS_KEY)!)[0];
+
+    beforeEach(() => {
+        jest.spyOn(NostrConnectUtils, 'decodeInvoiceTags').mockResolvedValue({
+            paymentRequest: 'lnbc1scheduledsave',
+            paymentHash: hex64('d'),
+            descriptionHash: '',
+            description: '',
+            amount: 10_000,
+            expiryTime: 0,
+            createdAt: 0,
+            isExpired: false,
+            network: 'bitcoin'
+        });
+        jest.spyOn(
+            NostrConnectUtils,
+            'notifyOutgoingNwcPayment'
+        ).mockImplementation(() => undefined);
+    });
+
+    it('stores a debit while requests keep arriving less than 500 ms apart', async () => {
+        const { store } = await buildStore();
+        debit(store, 10_000);
+
+        for (let i = 0; i < 10; i++) {
+            await jest.advanceTimersByTimeAsync(300);
+            await (store as any).markConnectionUsed('conn-1');
+        }
+
+        expect(storedConnection().totalSpendSats).toBe(10_000);
+    });
+
+    it('writes a settled payment to storage before finalizePayment returns', async () => {
+        const { store } = await buildStore();
+
+        await (store as any).finalizePayment({
+            rawInvoice: 'lnbc1scheduledsave',
+            type: 'pay_invoice',
+            payment_source: 'lightning',
+            decoded: null,
+            connection: store.connections[0],
+            amountSats: 10_000
+        });
+
+        expect(storedConnection().totalSpendSats).toBe(10_000);
+        expect(storedConnection().activity[0].status).toBe('success');
+    });
+
+    it('writes a pending hold to storage before recordPendingPayment returns', async () => {
+        const { store } = await buildStore();
+
+        await (store as any).recordPendingPayment({
+            rawInvoice: 'lnbc1scheduledsave',
+            connection: store.connections[0],
+            amountSats: 10_000,
+            payment_source: 'lightning'
+        });
+
+        expect(storedConnection().activity[0].status).toBe('pending');
+        expect(storedConnection().activity[0].satAmount).toBe(10_000);
+    });
+
+    it('does not lose a debit to a reload while the save is scheduled', async () => {
+        const { store } = await buildStore();
+        debit(store, 10_000);
+
+        await store.loadConnections();
+
+        expect(store.connections[0].totalSpendSats).toBe(10_000);
+        expect(storedConnection().totalSpendSats).toBe(10_000);
+    });
+
+    it('saves on background without the persistent service', async () => {
+        const addEventListener = jest
+            .spyOn(AppState, 'addEventListener')
+            .mockReturnValue({ remove: jest.fn() } as any);
+        const { store } = await buildStore();
+        store.persistentNWCServiceEnabled = false;
+        (store as any).setupAppStateMonitoring();
+        debit(store, 10_000);
+
+        await (addEventListener.mock.calls[0][1] as any)('background');
+        await jest.advanceTimersByTimeAsync(0);
+
+        expect(storedConnection().totalSpendSats).toBe(10_000);
     });
 });
