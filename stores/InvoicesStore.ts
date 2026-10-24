@@ -938,7 +938,11 @@ export default class InvoicesStore {
 
     public clearAddress = () => (this.onChainAddress = null);
 
-    private clearPaymentRequest = () => (this.payment_request = null);
+    // the fee belongs to the invoice it was priced with
+    private clearPaymentRequest = () => {
+        this.payment_request = null;
+        this.payment_request_lsp_fee = null;
+    };
 
     @action
     public clearPayReq = () => {

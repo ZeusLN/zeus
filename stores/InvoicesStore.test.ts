@@ -701,6 +701,17 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
 
             expect(store.payment_request_lsp_fee).toBeNull();
         });
+
+        it('is cleared with the invoice by clearUnified', async () => {
+            const { store } = setup();
+            await createShown(store);
+            expect(store.payment_request_lsp_fee).toBe(2000);
+
+            store.clearUnified();
+
+            expect(store.payment_request).toBeNull();
+            expect(store.payment_request_lsp_fee).toBeNull();
+        });
     });
 
     describe('LNURL-withdraw', () => {
