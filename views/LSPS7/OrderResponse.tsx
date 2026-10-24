@@ -11,6 +11,7 @@ import {
 
 import {
     buildPaymentAwaitParams,
+    getOnchainPaymentAmount,
     isOrderFree,
     LSPOrderState,
     LSPService
@@ -338,7 +339,7 @@ export default class LSPS7OrderResponse extends React.Component<
                                 </>
                             )}
                             {payment.onchain?.address &&
-                                payment.onchain?.fee_total_sat && (
+                                getOnchainPaymentAmount(payment) && (
                                     <>
                                         <Button
                                             title={
@@ -359,8 +360,9 @@ export default class LSPS7OrderResponse extends React.Component<
                                                         payment.onchain
                                                             ?.address,
                                                     satAmount:
-                                                        payment.onchain
-                                                            ?.fee_total_sat,
+                                                        getOnchainPaymentAmount(
+                                                            payment
+                                                        ),
                                                     transactionType: 'On-chain'
                                                 });
                                             }}
