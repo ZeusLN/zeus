@@ -36,7 +36,8 @@ import { localeString } from '../utils/LocaleUtils';
 import { errorToUserFriendly } from '../utils/ErrorUtils';
 import NostrConnectUtils, {
     DEFAULT_INVOICE_EXPIRY_SECONDS,
-    Nip47ErrorCode
+    Nip47ErrorCode,
+    WalletConfigFields
 } from '../utils/NostrConnectUtils';
 import IOSAudioKeepAliveUtils from '../utils/IOSAudioKeepAliveUtils';
 import { satsToMillisats, millisatsToSats } from '../utils/AmountUtils';
@@ -195,6 +196,9 @@ export default class NostrWalletConnectStore {
     private appStateListener: AppStateSubscription | null = null;
     private androidLogListener: EmitterSubscription | null = null;
     private _scheduledSave: ReturnType<typeof setTimeout> | null = null;
+    // Tail of the queue that serializes read-modify-write cycles on the
+    // stored connections (see withConnectionsWrite)
+    private _connectionsWrite: Promise<void> = Promise.resolve();
     private resetInFlight: Promise<void> | null = null;
     private lastPendingPaymentStatusFetchByConnection = new Map<
         string,
@@ -645,6 +649,9 @@ export default class NostrWalletConnectStore {
                 customExpiryUnit,
                 nodePubkey,
                 implementation,
+                walletConfigId: NostrConnectUtils.getWalletConfigId(
+                    this.settingsStore
+                ),
                 activity: params.activity || []
             };
 
@@ -763,17 +770,121 @@ export default class NostrWalletConnectStore {
     };
 
     /**
+     * Deletes the stored connections and client keys of a wallet config
+     * that is not the current wallet, when that config is deleted. They are
+     * matched by the wallet config id stamped on them when the wallet last
+     * loaded them (loadConnections); connections not loaded since carry no
+     * id and stay until the last wallet is deleted. Skipped when a
+     * remaining config has the same id (a duplicated wallet), since the
+     * connections are that wallet's too.
+     */
+    public deleteWalletConfigConnections = async (
+        node: WalletConfigFields | undefined,
+        remainingNodes: WalletConfigFields[]
+    ): Promise<void> => {
+        const walletConfigId = NostrConnectUtils.getWalletConfigId(node);
+        if (
+            !walletConfigId ||
+            remainingNodes.some(
+                (other) =>
+                    NostrConnectUtils.getWalletConfigId(other) ===
+                    walletConfigId
+            )
+        ) {
+            return;
+        }
+        const deleted = await this.withConnectionsWrite(async () => {
+            const connectionsData = await Storage.getItem(NWC_CONNECTIONS_KEY);
+            if (!connectionsData) return [];
+            const stored: NWCConnectionData[] = JSON.parse(connectionsData);
+            const matched = stored.filter(
+                (c) =>
+                    c.walletConfigId === walletConfigId &&
+                    !this.connectionBelongsToCurrentWallet(c)
+            );
+            if (matched.length > 0) {
+                await Storage.setItem(
+                    NWC_CONNECTIONS_KEY,
+                    JSON.stringify(stored.filter((c) => !matched.includes(c)))
+                );
+            }
+            return matched;
+        });
+        if (deleted.length === 0) return;
+        const storedKeys = await Storage.getItem(NWC_CLIENT_KEYS);
+        if (storedKeys) {
+            const keys: ClientKeys = JSON.parse(storedKeys);
+            for (const { pubkey } of deleted) {
+                delete keys[pubkey];
+            }
+            await Storage.setItem(NWC_CLIENT_KEYS, JSON.stringify(keys));
+        }
+    };
+
+    /**
+     * Moves connections to a wallet config's new id when the config is
+     * edited, so deleteWalletConfigConnections still finds them after a
+     * change of host, port or account while the wallet is not current.
+     * Skipped when a remaining config still has the old id (a duplicated
+     * wallet), since the connections are that wallet's too.
+     */
+    public rekeyWalletConfigConnections = async (
+        oldNode: WalletConfigFields | undefined,
+        newNode: WalletConfigFields,
+        remainingNodes: WalletConfigFields[]
+    ): Promise<void> => {
+        const oldId = NostrConnectUtils.getWalletConfigId(oldNode);
+        const newId = NostrConnectUtils.getWalletConfigId(newNode);
+        if (
+            !oldId ||
+            oldId === newId ||
+            remainingNodes.some(
+                (other) => NostrConnectUtils.getWalletConfigId(other) === oldId
+            )
+        ) {
+            return;
+        }
+        // In-memory connections of the current wallet are written back by
+        // saveConnections, so they have to carry the new id too
+        runInAction(() => {
+            for (const connection of this.connections) {
+                if (connection.walletConfigId === oldId) {
+                    connection.walletConfigId = newId;
+                }
+            }
+        });
+        await this.withConnectionsWrite(async () => {
+            const connectionsData = await Storage.getItem(NWC_CONNECTIONS_KEY);
+            if (!connectionsData) return;
+            const stored: NWCConnectionData[] = JSON.parse(connectionsData);
+            if (!stored.some((c) => c.walletConfigId === oldId)) return;
+            await Storage.setItem(
+                NWC_CONNECTIONS_KEY,
+                JSON.stringify(
+                    stored.map((c) =>
+                        c.walletConfigId === oldId
+                            ? { ...c, walletConfigId: newId }
+                            : c
+                    )
+                )
+            );
+        });
+    };
+
+    /**
      * Stops the service and removes all stored NWC connections, client keys
      * and service keys. Called when the last wallet config is deleted, so
-     * connections of wallets that could not be matched above (for example
-     * a wallet deleted while another one was active) do not remain.
+     * connections that could not be matched to their wallet when it was
+     * deleted (no wallet config id yet) do not remain.
      */
     public deleteAllConnectionData = async (): Promise<void> => {
         await this.reset(true);
         runInAction(() => {
             this.connections = [];
         });
-        await Storage.removeItem(NWC_CONNECTIONS_KEY);
+        await this.withConnectionsWrite(() =>
+            Storage.removeItem(NWC_CONNECTIONS_KEY)
+        );
         await Storage.removeItem(NWC_CLIENT_KEYS);
         await Storage.removeItem(NWC_SERVICE_KEYS);
     };
@@ -1025,6 +1136,13 @@ export default class NostrWalletConnectStore {
             const connectionsData = await Storage.getItem(NWC_CONNECTIONS_KEY);
             if (connectionsData) {
                 const connections = JSON.parse(connectionsData);
+                // Stamp the current wallet config on its connections, so
+                // they can be deleted with that config while another
+                // wallet is current (deleteWalletConfigConnections)
+                const walletConfigId = NostrConnectUtils.getWalletConfigId(
+                    this.settingsStore
+                );
+                let stamped = false;
                 runInAction(() => {
                     const filtered = this.hasWalletContext()
                         ? connections.filter((c: NWCConnectionData) =>
@@ -1033,9 +1151,22 @@ export default class NostrWalletConnectStore {
                         : [];
 
                     this.connections = filtered.map(
-                        (data: NWCConnectionData) => new NWCConnection(data)
+                        (data: NWCConnectionData) => {
+                            if (
+                                !walletConfigId ||
+                                data.walletConfigId === walletConfigId
+                            ) {
+                                return new NWCConnection(data);
+                            }
+                            stamped = true;
+                            return new NWCConnection({
+                                ...data,
+                                walletConfigId
+                            });
+                        }
                     );
                 });
+                if (stamped) this.scheduleSave();
                 await this.checkAndResetAllBudgets();
             } else {
                 runInAction(() => {
@@ -1083,32 +1214,48 @@ export default class NostrWalletConnectStore {
         }
     }
 
+    /**
+     * Runs a read-modify-write of the stored connections after the ones
+     * already queued. Without it, a save that read the records before a
+     * wallet's connections were deleted writes them back after.
+     */
+    private withConnectionsWrite<T>(write: () => Promise<T>): Promise<T> {
+        const run = this._connectionsWrite.then(write);
+        this._connectionsWrite = run.then(
+            () => undefined,
+            () => undefined
+        );
+        return run;
+    }
+
     @action
     public saveConnections = async () => {
         this.cancelScheduledSave();
         try {
-            const existingData = await Storage.getItem(NWC_CONNECTIONS_KEY);
-            const allConnections: any[] = existingData
-                ? JSON.parse(existingData)
-                : [];
-            const filteredExisting = allConnections.filter(
-                (c: NWCConnectionData) =>
-                    !this.connectionBelongsToCurrentWallet(c)
-            );
-            const mergedConnections = [
-                ...filteredExisting,
-                ...this.connections
-            ];
-            const dedupedById = new Map<string, any>();
-            for (const conn of mergedConnections) {
-                if (conn && conn.id) {
-                    dedupedById.set(conn.id, conn);
+            await this.withConnectionsWrite(async () => {
+                const existingData = await Storage.getItem(NWC_CONNECTIONS_KEY);
+                const allConnections: any[] = existingData
+                    ? JSON.parse(existingData)
+                    : [];
+                const filteredExisting = allConnections.filter(
+                    (c: NWCConnectionData) =>
+                        !this.connectionBelongsToCurrentWallet(c)
+                );
+                const mergedConnections = [
+                    ...filteredExisting,
+                    ...this.connections
+                ];
+                const dedupedById = new Map<string, any>();
+                for (const conn of mergedConnections) {
+                    if (conn && conn.id) {
+                        dedupedById.set(conn.id, conn);
+                    }
                 }
-            }
-            await Storage.setItem(
-                NWC_CONNECTIONS_KEY,
-                JSON.stringify(Array.from(dedupedById.values()))
-            );
+                await Storage.setItem(
+                    NWC_CONNECTIONS_KEY,
+                    JSON.stringify(Array.from(dedupedById.values()))
+                );
+            });
         } catch (error: any) {
             console.error('Failed to save NWC connections:', error);
             runInAction(() => {
