@@ -157,6 +157,10 @@ jest.mock('../utils/RatingUtils', () => ({
     PAYMENT_COUNT_KEY: 'successfulPaymentCount',
     RATING_DISMISSED_KEY: 'ratingDismissedPermanently'
 }));
+jest.mock('../storage/Database', () => ({
+    DB_KEY_STORAGE_KEY: 'zeus-db-key-v1',
+    wipeDatabase: jest.fn().mockResolvedValue(undefined)
+}));
 
 import hashjs from 'hash.js';
 // @ts-ignore: Networking is exported at runtime but missing from the legacy typings
@@ -170,6 +174,7 @@ import path from 'path';
 
 import CashuDevKit from '../cashu-cdk';
 import Storage from '../storage';
+import { wipeDatabase } from '../storage/Database';
 import { deriveEmbeddedNodeId } from './AezeedUtils';
 import {
     blockNavigationDuringWipe,
@@ -1645,5 +1650,28 @@ describe('blockNavigationDuringWipe (mid-wipe navigation guard)', () => {
 
         expect(backSubscription.remove).toHaveBeenCalled();
         expect(removeBeforeRemove).toHaveBeenCalled();
+    });
+});
+
+describe('clearAllData app database', () => {
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockedStorageGetItem.mockResolvedValue(null);
+    });
+
+    it('deletes the encrypted app database and its key', async () => {
+        await clearAllData();
+
+        expect(wipeDatabase).toHaveBeenCalledTimes(1);
+        expect(removedKeys()).toContain('zeus-db-key-v1');
+    });
+
+    it('finishes the wipe when deleting the database fails', async () => {
+        (wipeDatabase as jest.Mock).mockRejectedValueOnce(new Error('busy'));
+
+        await clearAllData();
+
+        expect(removedKeys()).toContain('zeus-settings-v2');
+        expect(removedKeys()).toContain('zeus-db-key-v1');
     });
 });
