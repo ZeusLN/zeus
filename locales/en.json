@@ -1789,6 +1789,7 @@
     "utils.handleAnything.nostrProfileError": "Error fetching Nostr profile",
     "utils.handleAnything.addressError": "Error fetching address",
     "utils.handleAnything.invalidNoffer": "Could not decode CLINK noffer",
+    "stores.TransactionsStore.wholeSats": "Amount must be a whole number of sats",
     "stores.InvoicesStore.errorCreatingInvoice": "Error creating invoice",
     "stores.InvoicesStore.errorGeneratingAddress": "Error generating new address",
     "stores.InvoicesStore.zeroAmountLndhub": "LNDHub instance might not support zero-amount invoices",
