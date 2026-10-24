@@ -1535,6 +1535,31 @@ describe('handleAnything', () => {
 
             expect(result).toBeUndefined();
         });
+
+        it('drops fields of the wrong type', async () => {
+            const result = await openCard({
+                contactId: 'a1b2',
+                name: [['Mallory']],
+                description: 5,
+                lnAddress: [['mallory@example.com'], 'm@example.com', 7],
+                onchainAddress: null,
+                pubkey: 'not a list',
+                unknown: 'field'
+            });
+
+            expect(result[1].nostrContact).toEqual({
+                ...CARD_DEFAULTS,
+                contactId: 'a1b2',
+                name: '',
+                lnAddress: ['m@example.com']
+            });
+        });
+
+        it('falls through when the contactId is not a string', async () => {
+            const result = await openCard({ contactId: 5, name: 'Mallory' });
+
+            expect(result).toBeUndefined();
+        });
     });
 
     describe('npub', () => {
