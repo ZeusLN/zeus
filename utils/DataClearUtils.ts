@@ -4,7 +4,7 @@ import EncryptedStorage from 'react-native-encrypted-storage';
 import ReactNativeBlobUtil from 'react-native-blob-util';
 import { Notifications } from 'react-native-notifications';
 // @ts-ignore: Networking is exported at runtime but missing from the legacy typings
-import { BackHandler, Networking, Platform } from 'react-native';
+import { BackHandler, NativeModules, Networking, Platform } from 'react-native';
 import CashuDevKit from '../cashu-cdk';
 import Storage, { getInternetPasswordServers, removeRawItem } from '../storage';
 
@@ -315,6 +315,47 @@ async function clearKeychainBackingStore(): Promise<void> {
                 e
             );
         }
+    }
+}
+
+/**
+ * Removes the value last shared with the NFC button. react-native-hce keeps
+ * it in plaintext in shared_prefs/<package>.HCE_DATA.xml, and stopping the
+ * broadcast only switches the card service off. Android-only, like the
+ * library. The native module has no call that deletes the value, so switch
+ * the service off and overwrite the value in the module's in-memory prefs,
+ * then delete the file: the restart that follows a wipe kills the process
+ * and can drop a queued prefs write, and a write that does land after the
+ * delete only holds the blank value.
+ */
+export async function clearNfcTagData(): Promise<void> {
+    if (Platform.OS !== 'android') return;
+    const { Hce } = NativeModules;
+    if (Hce) {
+        try {
+            if (await Hce.getContent()) {
+                await Hce.setEnabled(false);
+                await Hce.setContent({
+                    type: 'text',
+                    content: '',
+                    writable: false
+                });
+            }
+        } catch (e) {
+            console.warn('[ClearData] Error clearing NFC tag content:', e);
+        }
+    }
+    try {
+        const prefsDir = `${ReactNativeBlobUtil.fs.dirs.DocumentDir}/../shared_prefs`;
+        const files: string[] = await ReactNativeBlobUtil.fs.ls(prefsDir);
+        for (const file of files) {
+            if (file.endsWith('.HCE_DATA.xml')) {
+                await ReactNativeBlobUtil.fs.unlink(`${prefsDir}/${file}`);
+                console.log('[ClearData] NFC tag data deleted:', file);
+            }
+        }
+    } catch (e) {
+        console.warn('[ClearData] Error deleting NFC tag data:', e);
     }
 }
 
@@ -1050,6 +1091,9 @@ export async function clearAllData(): Promise<void> {
     } catch (e) {
         console.warn('[ClearData] Error removing notifications:', e);
     }
+
+    // 6d. Remove the value last shared over NFC (Android)
+    await clearNfcTagData();
 
     // 7. Clear any remaining keychain items with common prefixes
     const additionalKeys = [
