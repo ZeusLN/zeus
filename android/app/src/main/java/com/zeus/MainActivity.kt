@@ -33,6 +33,17 @@ class MainActivity : ReactActivity() {
         DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        // A re-created activity gets the intent that first started it, both
+        // after the process was killed in the background (savedInstanceState
+        // is set) and when a finished task is reopened from the recent apps.
+        // Its deep link, NFC tag or shared image was already handled, and a
+        // new JS runtime would handle it again, so use a launcher intent.
+        if (savedInstanceState != null ||
+            ((intent?.flags ?: 0) and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0
+        ) {
+            setIntent(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER))
+        }
+
         super.onCreate(null)
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
