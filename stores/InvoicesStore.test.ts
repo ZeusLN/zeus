@@ -9,6 +9,7 @@ jest.mock('../utils/BackendUtils', () => ({
         getNewChangeAddress: jest.fn(),
         isLNDBased: jest.fn(() => false),
         supportsFlowLSP: jest.fn(() => false),
+        supportsOnchainReceiving: jest.fn(() => false),
         createInvoice: jest.fn(),
         lookupInvoice: jest.fn()
     }
@@ -1030,5 +1031,183 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
             expect(requestedValue()).toBe('50000');
             expect(submittedInvoice()).toBe('lnbc-wrapped');
         });
+    });
+});
+
+describe('InvoicesStore.createUnifiedInvoice', () => {
+    const deferred = () => {
+        let resolve: (value: any) => void = () => {};
+        const promise = new Promise((r) => (resolve = r));
+        return { promise, resolve };
+    };
+
+    const newUnifiedStore = () =>
+        new InvoicesStore(
+            { settings: {} } as any,
+            {
+                resetFee: jest.fn(),
+                clearFee: jest.fn(),
+                flow_error: false
+            } as any,
+            {} as any,
+            {} as any
+        );
+
+    const params = { memo: '', value: '1000', expirySeconds: '3600' };
+
+    // Values the Receive screen could be showing, none of them defaults, so
+    // a silent call that reset them would be caught.
+    const seedReceiveState = (store: InvoicesStore) => {
+        store.payment_request = 'lnbc-on-screen';
+        store.payment_request_amt = '500';
+        store.creatingInvoice = true;
+        store.creatingInvoiceError = true;
+        store.error_msg = 'earlier error';
+        store.loading = true;
+    };
+
+    const expectReceiveStateKept = (store: InvoicesStore) => {
+        expect(store.payment_request).toBe('lnbc-on-screen');
+        expect(store.payment_request_amt).toBe('500');
+        expect(store.creatingInvoice).toBe(true);
+        expect(store.creatingInvoiceError).toBe(true);
+        expect(store.error_msg).toBe('earlier error');
+        expect(store.loading).toBe(true);
+    };
+
+    afterEach(() => {
+        (BackendUtils.createInvoice as jest.Mock).mockReset();
+    });
+
+    it('returns each overlapping call its own payment request', async () => {
+        const first = deferred();
+        const second = deferred();
+        (BackendUtils.createInvoice as jest.Mock)
+            .mockReturnValueOnce(first.promise)
+            .mockReturnValueOnce(second.promise);
+
+        const store = newUnifiedStore();
+        const a = store.createUnifiedInvoice(params);
+        const b = store.createUnifiedInvoice(params);
+        // both backend calls finish in the same tick
+        first.resolve({ payment_request: 'lnbc-first', r_hash: 'aa' });
+        second.resolve({ payment_request: 'lnbc-second', r_hash: 'bb' });
+
+        const [resultA, resultB]: any[] = await Promise.all([a, b]);
+        expect(resultA).toEqual({ rHash: 'aa', paymentRequest: 'lnbc-first' });
+        expect(resultB).toEqual({
+            rHash: 'bb',
+            paymentRequest: 'lnbc-second'
+        });
+    });
+
+    it('leaves the invoice shown on the Receive screen alone when silent', async () => {
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            payment_request: 'lnbc-nwc',
+            r_hash: 'cc'
+        });
+
+        const store = newUnifiedStore();
+        seedReceiveState(store);
+
+        const result: any = await store.createUnifiedInvoice({
+            ...params,
+            noLsp: true,
+            silent: true
+        });
+
+        expect(result.paymentRequest).toBe('lnbc-nwc');
+        expectReceiveStateKept(store);
+        // the fee quote and LSP error shown on the Receive screen stay too
+        expect(store.lspStore.clearFee).not.toHaveBeenCalled();
+        expect(store.lspStore.resetFee).not.toHaveBeenCalled();
+    });
+
+    it('throws the backend error instead of setting error_msg when silent', async () => {
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            error: true,
+            message: 'node offline'
+        });
+
+        const store = newUnifiedStore();
+        seedReceiveState(store);
+
+        await expect(
+            store.createUnifiedInvoice({
+                ...params,
+                noLsp: true,
+                silent: true
+            })
+        ).rejects.toThrow('node offline');
+        expectReceiveStateKept(store);
+    });
+
+    it('throws a rejected backend call without touching the Receive screen when silent', async () => {
+        (BackendUtils.createInvoice as jest.Mock).mockRejectedValue(
+            new Error('connection refused')
+        );
+
+        const store = newUnifiedStore();
+        seedReceiveState(store);
+
+        await expect(
+            store.createUnifiedInvoice({
+                ...params,
+                noLsp: true,
+                silent: true
+            })
+        ).rejects.toThrow('connection refused');
+        expectReceiveStateKept(store);
+    });
+
+    it('keeps the Receive screen fields when silent and the backend can receive on-chain', async () => {
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            payment_request: 'lnbc-nwc',
+            r_hash: 'ee'
+        });
+        (BackendUtils.supportsOnchainReceiving as jest.Mock).mockReturnValue(
+            true
+        );
+
+        const store = newUnifiedStore();
+        seedReceiveState(store);
+        store.onChainAddress = 'bcrt1-on-screen';
+        (store as any).getNewAddress = jest
+            .fn()
+            .mockResolvedValue('bcrt1-silent');
+
+        try {
+            const result: any = await store.createUnifiedInvoice({
+                ...params,
+                noLsp: true,
+                silent: true
+            });
+
+            expect(result).toEqual({
+                rHash: 'ee',
+                paymentRequest: 'lnbc-nwc',
+                onChainAddress: 'bcrt1-silent'
+            });
+            expectReceiveStateKept(store);
+            expect(store.onChainAddress).toBe('bcrt1-on-screen');
+        } finally {
+            (
+                BackendUtils.supportsOnchainReceiving as jest.Mock
+            ).mockReturnValue(false);
+        }
+    });
+
+    it('still updates the Receive screen fields by default', async () => {
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            payment_request: 'lnbc-receive',
+            r_hash: 'dd'
+        });
+
+        const store = newUnifiedStore();
+        await store.createUnifiedInvoice(params);
+
+        expect(store.payment_request).toBe('lnbc-receive');
+        expect(store.payment_request_amt).toBe('1000');
+        expect(store.creatingInvoice).toBe(false);
     });
 });
