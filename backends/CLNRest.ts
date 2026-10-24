@@ -532,9 +532,9 @@ export default class CLNRest {
         if (!this.supports('v24.11')) {
             const legacyRequest: any = {
                 bolt11: data.payment_request,
-                amount_msat: Number(data.amt && data.amt * 1000),
                 retry_for: data.timeout_seconds
             };
+            if (data.amt) legacyRequest.amount_msat = Number(data.amt) * 1000;
             // pay takes either a percent cap or an absolute maxfee, not
             // both. maxfee predates clnrest itself, so no version gate.
             // Prefer fee_limit_sat so the cap matches the fee UI, same
@@ -569,9 +569,9 @@ export default class CLNRest {
         if (!this.supports('v26.06')) {
             const legacyRequest: any = {
                 destination: data.pubkey,
-                amount_msat: Number(data.amt && data.amt * 1000),
                 retry_for: data.timeout_seconds
             };
+            if (data.amt) legacyRequest.amount_msat = Number(data.amt) * 1000;
             // keysend takes either a percent cap or an absolute maxfee,
             // not both, and only gained maxfee in v24.11: on older nodes
             // express the fixed cap as the equivalent percent of the
@@ -595,9 +595,9 @@ export default class CLNRest {
 
         const request: any = {
             destination: data.pubkey,
-            amount_msat: Number(data.amt && data.amt * 1000),
             retry_for: data.timeout_seconds
         };
+        if (data.amt) request.amount_msat = Number(data.amt) * 1000;
         const maxfee = this.getMaxFeeMsat(data);
         if (maxfee !== undefined) request.maxfee = maxfee;
 
