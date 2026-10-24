@@ -249,7 +249,17 @@ export default class Receive extends React.Component<
     // set on unmount so address and invoice requests that resolve later
     // don't start watchers that nothing will stop
     private unmounted = false;
+    // Bumped for each invoice this view asks InvoicesStore for. The store
+    // only shows the invoice of its latest request, so the result of an
+    // older one must not be watched, recorded for the order or handed on
+    // to the withdraw screen after a failure.
+    private invoiceRequestId = 0;
     hopPickerRef: HopPicker | null;
+
+    private startInvoiceRequest = () => {
+        const id = ++this.invoiceRequestId;
+        return () => !this.unmounted && id === this.invoiceRequestId;
+    };
 
     private getDefaultIndex = (): number => {
         const { settings } = this.props.SettingsStore;
@@ -619,6 +629,7 @@ export default class Receive extends React.Component<
         const effectiveLspIsActive = lspIsActive ?? this.state.lspIsActive;
         const { createUnifiedInvoice } = InvoicesStore;
         const skipOnchain = this.getSkipOnchain();
+        const isCurrent = this.startInvoiceRequest();
 
         // Set synchronously so componentDidMount's initialLoad flip sees
         // creatingInvoice=true before the checkExistingInvoice microtask runs.
@@ -631,6 +642,7 @@ export default class Receive extends React.Component<
                     const existingInvoice = await PosStore.getOrderInvoiceById(
                         orderId
                     );
+                    if (!isCurrent()) return false;
                     if (
                         existingInvoice &&
                         PosStore.canReuseInvoice(
@@ -654,6 +666,7 @@ export default class Receive extends React.Component<
         };
 
         checkExistingInvoice().then((canReuseInvoice) => {
+            if (!isCurrent()) return;
             if (canReuseInvoice) {
                 InvoicesStore.creatingInvoice = false;
                 return;
@@ -686,16 +699,19 @@ export default class Receive extends React.Component<
                 .then(
                     ({
                         rHash,
+                        paymentRequest,
                         onChainAddress
                     }: {
                         rHash: string;
+                        paymentRequest: string;
                         onChainAddress?: string;
                     }) => {
+                        if (!isCurrent()) return;
                         // Store invoice for POS orders
-                        if (orderId && InvoicesStore.payment_request) {
+                        if (orderId && paymentRequest) {
                             PosStore.recordInvoice({
                                 orderId,
-                                payment_request: InvoicesStore.payment_request,
+                                payment_request: paymentRequest,
                                 rHash,
                                 exchangeRate,
                                 amount: amount || '0',
@@ -831,6 +847,7 @@ export default class Receive extends React.Component<
                     // we will automatically create an invoice and attempt to withdraw
                     // otherwise we present the user with the create invoice screen
                     if (Number(satAmount) > 0) {
+                        const isCurrent = this.startInvoiceRequest();
                         createUnifiedInvoice({
                             memo: lspIsActive
                                 ? ''
@@ -855,6 +872,7 @@ export default class Receive extends React.Component<
                                     rHash: string;
                                     onChainAddress?: string;
                                 }) => {
+                                    if (!isCurrent()) return;
                                     this.subscribeInvoice(
                                         rHash,
                                         onChainAddress
@@ -862,7 +880,7 @@ export default class Receive extends React.Component<
                                 }
                             )
                             .catch(() => {
-                                if (this.unmounted) return;
+                                if (!isCurrent()) return;
                                 navigation.navigate(route, {
                                     satAmount,
                                     ...props
@@ -3042,6 +3060,8 @@ export default class Receive extends React.Component<
                                                                 selectedIndex: 1
                                                             });
                                                         }
+                                                        const isCurrent =
+                                                            this.startInvoiceRequest();
                                                         createUnifiedInvoice({
                                                             memo: lspIsActive
                                                                 ? ''
@@ -3101,6 +3121,10 @@ export default class Receive extends React.Component<
                                                                     rHash: string;
                                                                     onChainAddress?: string;
                                                                 }) => {
+                                                                    if (
+                                                                        !isCurrent()
+                                                                    )
+                                                                        return;
                                                                     this.subscribeInvoice(
                                                                         rHash,
                                                                         onChainAddress

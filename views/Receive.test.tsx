@@ -10,6 +10,7 @@ jest.mock('react-native-nfc-manager', () => ({ isSupported: jest.fn() }));
 jest.mock('../utils/handleAnything', () => jest.fn());
 jest.mock('../utils/BackendUtils', () => ({
     supportsOnchainReceiving: () => true,
+    supportsAddressTypeSelection: () => false,
     watchInvoicePaid: jest.fn(() => jest.fn()),
     watchOnchainReceived: jest.fn(() => jest.fn())
 }));
@@ -631,5 +632,191 @@ describe('Receive.validateAddress (Pay via NFC)', () => {
         );
         expect(view.subscribeInvoice).toHaveBeenCalledWith('rhash', undefined);
         expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+});
+
+// InvoicesStore only shows the invoice of its latest request, so when a
+// new amount, NFC tap or Create press starts another one, the older
+// request's answer must not be watched, recorded or handed on
+describe('Receive invoice requests that were superseded', () => {
+    const deferred = () => {
+        let resolve: (value: any) => void = () => {};
+        let reject: (error: any) => void = () => {};
+        const promise = new Promise((res, rej) => {
+            resolve = res;
+            reject = rej;
+        });
+        return { promise, resolve, reject };
+    };
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (getSatAmount as jest.Mock).mockImplementation((amount) =>
+            Number(amount || 0)
+        );
+    });
+
+    const makeAutoView = (requests: Array<Promise<any>>) => {
+        const createUnifiedInvoice = jest.fn();
+        requests.forEach((request) =>
+            createUnifiedInvoice.mockReturnValueOnce(request)
+        );
+        const PosStore = {
+            getOrderInvoiceById: jest.fn(async (): Promise<any> => undefined),
+            canReuseInvoice: jest.fn(() => false),
+            recordInvoice: jest.fn()
+        };
+        const InvoicesStore: any = {
+            createUnifiedInvoice,
+            // what the store shows: the newer request's invoice
+            payment_request: 'lnbc-new',
+            reset: jest.fn()
+        };
+        const view = new Receive({
+            navigation: { navigate: jest.fn() },
+            route: { params: {} },
+            InvoicesStore,
+            LSPStore: { reset: jest.fn() },
+            PosStore,
+            SettingsStore: { settings: {} },
+            NodeInfoStore: { nodeInfo: { block_height: 900000 } }
+        } as unknown as React.ComponentProps<typeof Receive>);
+        view.state = { ...view.state, orderId: 'order' };
+        view.subscribeInvoice = jest.fn();
+        return { view, PosStore, InvoicesStore };
+    };
+
+    it('watches and records only the newer invoice when an older one finishes last', async () => {
+        const older = deferred();
+        const newer = deferred();
+        const { view, PosStore } = makeAutoView([older.promise, newer.promise]);
+
+        view.autoGenerateInvoice('1000');
+        await flush();
+        view.autoGenerateInvoice('2000');
+        await flush();
+        newer.resolve({ rHash: 'hash-new', paymentRequest: 'lnbc-new' });
+        await flush();
+        older.resolve({ rHash: 'hash-old', paymentRequest: 'lnbc-old' });
+        await flush();
+
+        expect(view.subscribeInvoice).toHaveBeenCalledTimes(1);
+        expect(view.subscribeInvoice).toHaveBeenCalledWith(
+            'hash-new',
+            undefined
+        );
+        expect(PosStore.recordInvoice).toHaveBeenCalledTimes(1);
+        expect(PosStore.recordInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({
+                payment_request: 'lnbc-new',
+                rHash: 'hash-new',
+                amount: '2000'
+            })
+        );
+    });
+
+    it('records nothing for an invoice that arrives after the view was left', async () => {
+        const request = deferred();
+        const { view, PosStore } = makeAutoView([request.promise]);
+
+        view.autoGenerateInvoice('1000');
+        await flush();
+        view.componentWillUnmount();
+        // the next sale's invoice is on screen by now
+        request.resolve({ rHash: 'hash-old', paymentRequest: 'lnbc-old' });
+        await flush();
+
+        expect(PosStore.recordInvoice).not.toHaveBeenCalled();
+        expect(view.subscribeInvoice).not.toHaveBeenCalled();
+    });
+
+    it('does not create an invoice when the order lookup returns after a newer request', async () => {
+        const lookup = deferred();
+        const { view, PosStore, InvoicesStore } = makeAutoView([
+            new Promise(() => {})
+        ]);
+        PosStore.getOrderInvoiceById.mockReturnValueOnce(lookup.promise);
+
+        view.autoGenerateInvoice('1000');
+        view.autoGenerateInvoice('2000');
+        lookup.resolve(undefined);
+        await flush();
+
+        expect(InvoicesStore.createUnifiedInvoice).toHaveBeenCalledTimes(1);
+        expect(InvoicesStore.createUnifiedInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ value: '2000' })
+        );
+    });
+
+    it('does not show a reusable order invoice found after a newer request', async () => {
+        const lookup = deferred();
+        const { view, PosStore, InvoicesStore } = makeAutoView([
+            new Promise(() => {})
+        ]);
+        PosStore.getOrderInvoiceById.mockReturnValueOnce(lookup.promise);
+        PosStore.canReuseInvoice.mockReturnValue(true);
+
+        view.autoGenerateInvoice('1000');
+        PosStore.getOrderInvoiceById.mockReturnValueOnce(new Promise(() => {}));
+        view.autoGenerateInvoice('2000');
+        lookup.resolve({ payment_request: 'lnbc-order', rHash: 'hash-order' });
+        await flush();
+
+        expect(InvoicesStore.payment_request).toBe('lnbc-new');
+        expect(view.subscribeInvoice).not.toHaveBeenCalled();
+    });
+
+    describe('Pay via NFC', () => {
+        const makeTapView = (requests: Array<Promise<any>>) => {
+            const { view, navigate, InvoicesStore } = makeNfcView('1000', 1000);
+            requests.forEach((request) =>
+                (
+                    InvoicesStore.createUnifiedInvoice as jest.Mock
+                ).mockReturnValueOnce(request)
+            );
+            view.subscribeInvoice = jest.fn();
+            (handleAnything as unknown as jest.Mock).mockResolvedValue(
+                WITHDRAW_RESPONSE
+            );
+            return { view, navigate };
+        };
+
+        it('watches only the invoice of the latest tap', async () => {
+            const first = deferred();
+            const second = deferred();
+            const { view } = makeTapView([first.promise, second.promise]);
+
+            view.validateAddress('tag one');
+            await flush();
+            view.validateAddress('tag two');
+            await flush();
+            second.resolve({ rHash: 'hash-two', paymentRequest: 'lnbc-two' });
+            await flush();
+            first.resolve({ rHash: 'hash-one', paymentRequest: 'lnbc-one' });
+            await flush();
+
+            expect(view.subscribeInvoice).toHaveBeenCalledTimes(1);
+            expect(view.subscribeInvoice).toHaveBeenCalledWith(
+                'hash-two',
+                undefined
+            );
+        });
+
+        it('does not open the withdraw screen when a superseded tap fails', async () => {
+            const first = deferred();
+            const { view, navigate } = makeTapView([
+                first.promise,
+                new Promise(() => {})
+            ]);
+
+            view.validateAddress('tag one');
+            await flush();
+            view.validateAddress('tag two');
+            await flush();
+            first.reject(new Error('superseded'));
+            await flush();
+
+            expect(navigate).not.toHaveBeenCalled();
+        });
     });
 });
