@@ -1971,8 +1971,6 @@ describe('handleAnything', () => {
             });
 
             it('still looks up a clearnet domain with an .onion label', async () => {
-                settingsStore.enableTor = true;
-
                 const result = await handleAnything(
                     'satoshi@pay.onion.example.com'
                 );
@@ -1984,6 +1982,52 @@ describe('handleAnything', () => {
                     'https://pay.onion.example.com/.well-known/lnurlp/satoshi'
                 );
                 expect(result[0]).toBe('ChoosePaymentMethod');
+            });
+        });
+
+        // With Tor enabled, the resolver must not see the user's IP next to
+        // the recipient's name
+        describe('DoH lookup with Tor enabled', () => {
+            let settingsStore: any;
+
+            beforeEach(() => {
+                settingsStore = require('../stores/Stores').settingsStore;
+                settingsStore.enableTor = true;
+                mockDoHResponse({});
+                mockDoTorRequest.mockReset();
+                mockDoTorRequest.mockImplementation(async (url: string) => ({
+                    Status: 0,
+                    AD: true,
+                    Question: [
+                        {
+                            name: new URL(url).searchParams.get('name'),
+                            type: 16
+                        }
+                    ],
+                    Answer: [txt(REAL_TXT)]
+                }));
+            });
+
+            afterEach(() => {
+                delete settingsStore.enableTor;
+            });
+
+            it('sends the DoH lookup over Tor', async () => {
+                const result = await handleAnything(ADDRESS);
+
+                expect(mockDnsFetch).not.toHaveBeenCalled();
+                expect(mockDoTorRequest).toHaveBeenCalledWith(
+                    'https://cloudflare-dns.com/dns-query?name=matt.user._bitcoin-payment.mattcorallo.com&type=TXT',
+                    'GET',
+                    undefined,
+                    { accept: 'application/dns-json' }
+                );
+                expect(result).toEqual([
+                    'ChoosePaymentMethod',
+                    expect.objectContaining({
+                        offer: 'lno1zr5qyugqgskrk70kqmuq'
+                    })
+                ]);
             });
         });
     });
