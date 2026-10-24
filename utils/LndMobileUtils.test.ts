@@ -34,6 +34,7 @@ jest.mock('../lndmobile/LndMobileInjection', () => ({
         writeConfig: jest.fn().mockResolvedValue(undefined),
         initialize: jest.fn().mockResolvedValue(undefined),
         startLnd: jest.fn().mockResolvedValue(undefined),
+        checkStatus: jest.fn().mockResolvedValue(0),
         subscribeState: jest.fn(),
         decodeState: jest.fn()
     },
@@ -65,12 +66,14 @@ jest.mock('./SleepUtils', () => ({
     sleep: jest.fn().mockResolvedValue(undefined)
 }));
 
+import { NativeModules } from 'react-native';
 import lndMobile from '../lndmobile/LndMobileInjection';
 import { lnrpc } from '../proto/lightning';
 import { settingsStore } from '../stores/Stores';
 import {
     checkLndStreamErrorResponse,
     createLndWallet,
+    deleteLndWallet,
     LndMobileEventEmitter
 } from './LndMobileUtils';
 
@@ -243,5 +246,45 @@ describe('checkLndStreamErrorResponse', () => {
         expect(
             checkLndStreamErrorResponse('RouterSendPaymentV2', { data: 'AA==' })
         ).toBeNull();
+    });
+});
+
+describe('deleteLndWallet', () => {
+    const deleteLndDirectory = jest.fn();
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        deleteLndDirectory.mockReset().mockResolvedValue(null);
+        (NativeModules as any).LndMobileTools = { deleteLndDirectory };
+    });
+
+    afterEach(() => {
+        delete (NativeModules as any).LndMobileTools;
+    });
+
+    it.each(['lnd', '0b7d5a8e-3c1f-4f2a-9e6d-2a1b3c4d5e6f'])(
+        'stops LND and deletes %j',
+        async (lndDir) => {
+            await expect(deleteLndWallet(lndDir)).resolves.toBe(true);
+
+            expect(lndMobile.index.checkStatus).toHaveBeenCalledTimes(1);
+            expect(deleteLndDirectory).toHaveBeenCalledWith(lndDir);
+        }
+    );
+
+    it.each(['', '..', '../victim', 'lnd/..', '/data'])(
+        'refuses %j without stopping LND or deleting anything',
+        async (lndDir) => {
+            await expect(deleteLndWallet(lndDir)).resolves.toBe(false);
+
+            expect(lndMobile.index.checkStatus).not.toHaveBeenCalled();
+            expect(deleteLndDirectory).not.toHaveBeenCalled();
+        }
+    );
+
+    it('returns false when the native delete rejects', async () => {
+        deleteLndDirectory.mockRejectedValue(new Error('io error'));
+
+        await expect(deleteLndWallet('lnd')).resolves.toBe(false);
     });
 });

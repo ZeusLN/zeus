@@ -829,10 +829,13 @@ describe('clearAllData: POS order records and the iOS keychain sweep', () => {
 // the wipe before the settings blob and everything after it
 describe('clearAllData with a malformed node config', () => {
     it.each([
-        ['an lndDir', { implementation: 'lnd', lndDir: { toString: null } }],
+        [
+            'an lndDir',
+            { implementation: 'embedded-lnd', lndDir: { toString: null } }
+        ],
         [
             'an ldkNodeDir',
-            { implementation: 'lnd', ldkNodeDir: { toString: null } }
+            { implementation: 'ldk-node', ldkNodeDir: { toString: null } }
         ],
         [
             'a pairingPhrase',

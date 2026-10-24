@@ -75,6 +75,7 @@ import {
     getLdkNodeBaseDirectory,
     stopLdkNode
 } from './LdkNodeUtils';
+import { isValidNodeDir } from './NodeDirUtils';
 import { sleep } from './SleepUtils';
 import hashjs from 'hash.js';
 
@@ -638,6 +639,22 @@ const NODE_DIR_RETRY_DELAY_MS = 500;
  * whether the directory was removed so the caller can retry.
  */
 async function deleteNodeDataDirectory(node: any): Promise<boolean> {
+    const nodeDir =
+        node.implementation === 'embedded-lnd'
+            ? node.lndDir || 'lnd'
+            : node.implementation === 'ldk-node'
+            ? node.ldkNodeDir
+            : undefined;
+    if (nodeDir && !isValidNodeDir(nodeDir)) {
+        // ZEUS never generates such a directory, so there is nothing of
+        // this wallet's to delete. Report success: a retry cannot fix the
+        // value, and deleting the path would reach outside the wallet.
+        console.warn(
+            '[ClearData] Skipping node data directory with invalid name:',
+            nodeDir
+        );
+        return true;
+    }
     try {
         if (node.implementation === 'embedded-lnd') {
             // deleteLndWallet stops LND before unlinking the directory
@@ -693,8 +710,8 @@ async function clearLncCredentials(pairingPhrase: string) {
 
 /**
  * Clears all node-namespaced keychain material for a single node config:
- * - Cashu keys, which are namespaced by getNodeDir() (lndDir for LND-family,
- *   ldkNodeDir for LDK) - CashuStore.getNodeDir
+ * - Cashu keys, which are namespaced by getNodeDir() (lndDir for embedded
+ *   LND, ldkNodeDir for LDK Node) - CashuStore.getNodeDir
  * - LNC pairing credentials, namespaced by sha256(pairingPhrase)
  * - the legacy '<pubkey>-extended-private-keys' xprv cache (KEY-006), and
  *   the 'undefined-extended-private-keys' it was filed under without a pubkey
@@ -707,23 +724,16 @@ export async function clearNodeKeychainData(
     opts?: { skipXprvPurge?: boolean; keepLncCredentials?: boolean }
 ): Promise<void> {
     if (!node) return;
-    if (node.lndDir) {
-        await clearCashuDataForNode(node.lndDir);
+    // Cashu only runs on embedded-lnd and ldk-node. Mirror getNodeDir(),
+    // including its defaults for legacy configs that predate explicit node
+    // dirs. A remote config can carry any lndDir / ldkNodeDir (an import file
+    // chooses them), so it must never clear the namespace of the embedded
+    // wallet that owns that dir.
+    if (node.implementation === 'embedded-lnd') {
+        await clearCashuDataForNode(node.lndDir || 'lnd');
     }
-    if (node.ldkNodeDir) {
-        await clearCashuDataForNode(node.ldkNodeDir);
-    }
-    // Legacy configs can predate explicit node dirs (see the `lndDir || 'lnd'`
-    // fallbacks in WalletConfiguration/getNodeDir). Mirror getNodeDir()'s
-    // defaults so those wallets' Cashu keys are cleared too. Gate on
-    // implementation: only one config can occupy a default namespace per
-    // implementation, and remote nodes must never clear the 'lnd'/'ldk'
-    // namespaces owned by embedded wallets.
-    if (node.implementation === 'embedded-lnd' && !node.lndDir) {
-        await clearCashuDataForNode('lnd');
-    }
-    if (node.implementation === 'ldk-node' && !node.ldkNodeDir) {
-        await clearCashuDataForNode('ldk');
+    if (node.implementation === 'ldk-node') {
+        await clearCashuDataForNode(node.ldkNodeDir || 'ldk');
     }
     // LNC credentials are stored per pairing phrase, so configs copied by
     // Duplicate Wallet, config import or legacy restore share one entry.

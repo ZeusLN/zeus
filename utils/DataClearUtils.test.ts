@@ -678,6 +678,24 @@ describe('clearNodeKeychainData (single-wallet deletion helper)', () => {
         expect(removedKeys()).not.toContain('ldk-cashu-seed-phrase');
     });
 
+    // An imported remote config can carry any lndDir / ldkNodeDir. Deleting
+    // it must not clear the Cashu wallet of the embedded wallet that owns
+    // that namespace.
+    it('never clears Cashu data for node dirs on a remote node', async () => {
+        await clearNodeKeychainData({
+            implementation: 'lnd',
+            host: 'x',
+            lndDir: 'lnd',
+            ldkNodeDir: 'ldk-2'
+        });
+
+        expect(removedKeys()).not.toContain('lnd-cashu-seed-phrase');
+        expect(removedKeys()).not.toContain('ldk-2-cashu-seed-phrase');
+        expect(
+            removedKeys().filter((key: string) => key.includes('-cashu-'))
+        ).toEqual([]);
+    });
+
     it('clears hashed LNC credentials from the pairing phrase', async () => {
         const pairingPhrase = 'over hover clever trigger';
         await clearNodeKeychainData({
@@ -1143,6 +1161,33 @@ describe('deleteNodeDataDirectoryWithRetry (single-wallet deletion path)', () =>
         expect(mockedStopLdkNode).toHaveBeenCalled();
         expect(mockedDeleteLdkNodeWallet).toHaveBeenCalledWith('ldk-2');
     });
+
+    it.each(['..', '../victim', '../../files', 'a/b'])(
+        'never deletes an ldk-node directory named %j',
+        async (ldkNodeDir) => {
+            const result = await deleteNodeDataDirectoryWithRetry({
+                implementation: 'ldk-node',
+                ldkNodeDir
+            });
+
+            expect(result).toBe(true);
+            expect(mockedStopLdkNode).not.toHaveBeenCalled();
+            expect(mockedDeleteLdkNodeWallet).not.toHaveBeenCalled();
+        }
+    );
+
+    it.each(['..', '../victim', 'a/b'])(
+        'never deletes an embedded-lnd directory named %j',
+        async (lndDir) => {
+            const result = await deleteNodeDataDirectoryWithRetry({
+                implementation: 'embedded-lnd',
+                lndDir
+            });
+
+            expect(result).toBe(true);
+            expect(mockedDeleteLndWallet).not.toHaveBeenCalled();
+        }
+    );
 });
 
 describe('CDK database deletion', () => {
