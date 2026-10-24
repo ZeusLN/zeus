@@ -97,6 +97,29 @@ export function getLdkNodeStoragePath(nodeDir: string): string {
 }
 
 /**
+ * Path of the marker file recording that a restore from VSS into this
+ * wallet's directory has begun and not yet completed. It lives next to the
+ * wallet directory rather than inside it because the native module deletes
+ * that directory when a hard-fail build fails.
+ */
+function getLdkNodeRestoreMarkerPath(nodeDir: string): string {
+    return `${getLdkNodeStoragePath(nodeDir)}.restoring`;
+}
+
+async function removeLdkNodeRestoreMarker(nodeDir: string): Promise<void> {
+    const restoreMarker = getLdkNodeRestoreMarkerPath(nodeDir);
+    if (await RNFS.exists(restoreMarker)) {
+        await RNFS.unlink(restoreMarker);
+    }
+}
+
+// Wallets whose restore from VSS was begun by this JS context. While the
+// process lives, the native module owns the cleanup of a restore that
+// failed or timed out (see createLdkNodeWallet); only a marker left by a
+// previous process means the partial DB is orphaned.
+const restoresBegun = new Set<string>();
+
+/**
  * Exclude the shared ldk-node base directory, and thereby every wallet's
  * subdirectory, from iOS iCloud/iTunes backups. RNFS.mkdir with
  * NSURLIsExcludedFromBackupKey creates intermediate directories and
@@ -427,9 +450,26 @@ export async function startLdkNodeWallet({
         // device via cloud keychain sync), this start is effectively a
         // restore-from-seed: building a fresh local node on VSS failure
         // would look like an empty wallet and shadow the VSS backup.
-        const hasLocalDb = await RNFS.exists(
+        let hasLocalDb = await RNFS.exists(
             `${storagePath}/ldk_node_data.sqlite`
         );
+        // A restore fills the local DB key by key. If the process died
+        // mid-restore (app closed while waiting on VSS) the file exists
+        // but holds only part of the wallet, and ldk-node would read it
+        // instead of VSS and come up with no channels. The marker written
+        // below outlives the process, so start the restore over.
+        const restoreMarker = getLdkNodeRestoreMarkerPath(nodeDir);
+        if (hasLocalDb && (await RNFS.exists(restoreMarker))) {
+            if (!restoresBegun.has(nodeDir)) {
+                await RNFS.unlink(storagePath);
+            }
+            hasLocalDb = false;
+        }
+        if (!hasLocalDb) {
+            restoresBegun.add(nodeDir);
+            await RNFS.mkdir(getLdkNodeBaseDirectory());
+            await RNFS.writeFile(restoreMarker, '', 'utf8');
+        }
         const result = await initNode({
             storagePath,
             mnemonic: seedMnemonic,
@@ -445,6 +485,14 @@ export async function startLdkNodeWallet({
             failOnVssError: !hasLocalDb
         });
         vssError = result.vssError;
+        // A hard-fail build only resolves once the local DB holds the
+        // whole VSS backup, so the wallet can be trusted from here on. If
+        // the marker cannot be removed this throws before the node starts,
+        // so a DB with a marker never holds state newer than VSS and the
+        // next start can safely discard it
+        if (!hasLocalDb) {
+            await removeLdkNodeRestoreMarker(nodeDir);
+        }
     }
 
     // Start the node — start() kicks off background tasks (including fee estimation)
@@ -575,6 +623,7 @@ export async function deleteLdkNodeWallet(nodeDir: string): Promise<void> {
     if (exists) {
         await RNFS.unlink(storagePath);
     }
+    await removeLdkNodeRestoreMarker(nodeDir);
 }
 
 export default {
