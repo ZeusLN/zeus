@@ -29,7 +29,9 @@ class ZeusSecureStorageModule(context: ReactApplicationContext) :
         executor.execute {
             try {
                 promise.resolve(block())
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
+                // Throwable, not Exception: an Error must still settle the
+                // promise, or the JS caller waits forever
                 promise.reject(ERROR_CODE, e.message ?: e.javaClass.simpleName, e)
             }
         }
