@@ -149,6 +149,56 @@ const openWithKey = async (dir: string, key: string): Promise<DB> => {
     }
 };
 
+const deleteDatabaseFiles = async (dir: string) => {
+    for (const suffix of SIDECARS) {
+        await unlinkIfExists(`${dir}/${DB_NAME}${suffix}`);
+    }
+};
+
+/**
+ * Whether the file is unreadable without its key. Opens it a second time,
+ * read-only and with no key: SQLCipher encrypts every page, so the query
+ * fails ("file is not a database") unless the key was never applied.
+ * Nothing in op-sqlite 18.2.5 skips the key, but a later version that did
+ * would otherwise store payment data unencrypted. (RNFS.read cannot do this
+ * check: it fails on iOS under the New Architecture.)
+ */
+const isEncrypted = async (dir: string): Promise<boolean> => {
+    let probe: DB;
+    try {
+        probe = open({ name: DB_NAME, location: dir, readOnly: true });
+    } catch (e) {
+        return isWrongKeyError(e);
+    }
+    try {
+        await probe.execute('SELECT count(*) FROM sqlite_master');
+        return false;
+    } catch (e) {
+        return isWrongKeyError(e);
+    } finally {
+        probe.close();
+    }
+};
+
+/**
+ * Bring an open database up to date and confirm it is encrypted. On any
+ * failure the connection is closed; a plaintext file is also deleted.
+ */
+const prepare = async (dir: string, database: DB): Promise<DB> => {
+    try {
+        await migrate(database);
+    } catch (e) {
+        database.close();
+        throw e;
+    }
+    if (!(await isEncrypted(dir))) {
+        database.close();
+        await deleteDatabaseFiles(dir);
+        throw new Error('Database file is not encrypted');
+    }
+    return database;
+};
+
 const openDatabase = async (): Promise<DB | null> => {
     const dir = getDatabaseDirectory();
     await ensureDirectory(dir);
@@ -164,9 +214,7 @@ const openDatabase = async (): Promise<DB | null> => {
 
     if (exists && key) {
         try {
-            const database = await openWithKey(dir, key);
-            await migrate(database);
-            return database;
+            return await prepare(dir, await openWithKey(dir, key));
         } catch (e) {
             // Only a key that does not decrypt the file justifies replacing
             // it. Any other failure (I/O, a busy file) leaves the database
@@ -182,9 +230,7 @@ const openDatabase = async (): Promise<DB | null> => {
     // No database yet, its key is gone, or the key does not open it
     if (exists) await moveAside(dir);
     const freshKey = await createKey();
-    const database = await openWithKey(dir, freshKey);
-    await migrate(database);
-    return database;
+    return prepare(dir, await openWithKey(dir, freshKey));
 };
 
 /**
