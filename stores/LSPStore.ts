@@ -911,6 +911,8 @@ export default class LSPStore {
             );
             return false;
         }
+        // request ids are reset to '' and start out undefined
+        if (!data?.id) return false;
         const peer = Base64Utils.base64ToHex(decoded.peer);
 
         console.log('Received custom message', { peer, data });
