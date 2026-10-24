@@ -33,6 +33,7 @@ import PaymentsStore from '../../stores/PaymentsStore';
 
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
+import DateTimeUtils from '../../utils/DateTimeUtils';
 import BackendUtils from '../../utils/BackendUtils';
 import Storage from '../../storage';
 import Channel from '../../models/Channel';
@@ -567,7 +568,7 @@ export default class RebalancingChannels extends React.Component<
             inChannelId: sourceChannel.chan_id || sourceChannel.channel_id,
             outChannelId:
                 destinationChannel.chan_id || destinationChannel.channel_id,
-            getTime: new Date().toLocaleString(),
+            getTime: DateTimeUtils.formatDateTime(new Date()),
             isRebalance: true,
             sourceChannel,
             destinationChannel

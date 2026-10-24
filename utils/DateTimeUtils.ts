@@ -106,14 +106,12 @@ class DateTimeUtils {
         return dateFormat(parsed, mask(parsed));
     };
 
-    formatDate = (date: Date) => {
-        const dateOptions: Intl.DateTimeFormatOptions = {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        };
-        return date.toLocaleDateString('en-US', dateOptions);
-    };
+    private dateOnlyMask = (date: Date): string =>
+        this.numericDateMask() ||
+        (this.isCurrentYear(date) ? 'mmm d' : "mmm d, 'yy");
+
+    formatDate = (date: Date | string | number | undefined) =>
+        this.formatDateObject(date, (d) => this.dateOnlyMask(d));
 
     blocksToMonthsAndDays = (blocks: number) => {
         const blocksPerDay = 144;

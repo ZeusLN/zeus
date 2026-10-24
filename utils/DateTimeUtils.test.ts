@@ -418,3 +418,42 @@ describe('blocksToMonthsAndDays', () => {
         });
     });
 });
+
+describe('formatDate', () => {
+    it('returns N/A for invalid dates', () => {
+        expect(DateTimeUtils.formatDate(new Date('invalid'))).toBe('N/A');
+        expect(DateTimeUtils.formatDate(undefined)).toBe('N/A');
+    });
+
+    it('uses the default format (omits year for current year)', () => {
+        const currentYear = new Date().getFullYear();
+        // Use local time to avoid timezone issues (e.g., UTC+14)
+        const date = new Date(currentYear, 2, 4, 12, 0, 0); // March 4
+        expect(DateTimeUtils.formatDate(date)).toMatch(/[A-Z][a-z]{2} \d{1,2}/);
+    });
+
+    it('uses the default format (includes year for past year)', () => {
+        const date = new Date(2023, 2, 4, 12, 0, 0);
+        expect(DateTimeUtils.formatDate(date)).toMatch(
+            /[A-Z][a-z]{2} \d{1,2}, '23/
+        );
+    });
+
+    it('respects the iso date format setting', () => {
+        setDisplay({ dateFormat: 'iso' });
+        const date = new Date(2024, 2, 4, 12, 0, 0);
+        expect(DateTimeUtils.formatDate(date)).toBe('2024-03-04');
+    });
+
+    it('respects the dmy date format setting', () => {
+        setDisplay({ dateFormat: 'dmy' });
+        const date = new Date(2024, 2, 4, 12, 0, 0);
+        expect(DateTimeUtils.formatDate(date)).toBe('04/03/2024');
+    });
+
+    it('respects the mdy date format setting', () => {
+        setDisplay({ dateFormat: 'mdy' });
+        const date = new Date(2024, 2, 4, 12, 0, 0);
+        expect(DateTimeUtils.formatDate(date)).toBe('03/04/2024');
+    });
+});

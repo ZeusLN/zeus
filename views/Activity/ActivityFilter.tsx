@@ -15,6 +15,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import BackendUtils from '../../utils/BackendUtils';
+import DateTimeUtils from '../../utils/DateTimeUtils';
 import { localeString } from '../../utils/LocaleUtils';
 import { themeColor } from '../../utils/ThemeUtils';
 
@@ -309,7 +310,6 @@ export default class ActivityFilter extends React.Component<
             workingEndDate,
             expandedSections
         } = this.state;
-        const locale = SettingsStore?.settings?.locale;
         const {
             filters,
             setAmountFilter,
@@ -383,10 +383,11 @@ export default class ActivityFilter extends React.Component<
                         marginRight: 15
                     }}
                 >
-                    {(props.type === 'startDate'
-                        ? startDate
-                        : endDate
-                    )?.toLocaleDateString(locale)}
+                    {(() => {
+                        const date =
+                            props.type === 'startDate' ? startDate : endDate;
+                        return date ? DateTimeUtils.formatDate(date) : '';
+                    })()}
                 </Text>
                 <Button
                     onPress={() => {
