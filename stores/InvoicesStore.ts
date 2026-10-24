@@ -52,9 +52,9 @@ export default class InvoicesStore {
     // silent and by reset(). The Receive screen fields, the LSP fee state
     // and the LNURL withdraw belong to the latest of those calls: one that
     // has been superseded still returns or throws its own result, but
-    // writes nothing shared and submits nothing. Silent calls (NWC) neither
-    // bump nor check it, so they and the Receive screen don't cancel each
-    // other.
+    // writes nothing shared and submits nothing. Silent calls (NWC
+    // make_invoice, the Cashu sweeps) neither bump nor check it, so they
+    // and the screens don't cancel each other.
     private invoiceRequestSeq = 0;
 
     // lnd

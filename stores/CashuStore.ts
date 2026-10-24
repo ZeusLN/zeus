@@ -5837,10 +5837,20 @@ export default class CashuStore {
                     'views.Cashu.CashuToken.tokenSweep'
                 )}${decoded.memo ? `: ${decoded.memo}` : ''}`;
 
+                // silent: this sweep must not supersede an invoice request
+                // a screen is waiting on (Receive, Swaps, WIF sweep), nor
+                // write the fields those screens show. Backend errors are
+                // thrown instead; keep their text for the result.
                 const invoiceParams = {
                     expirySeconds: '3600',
                     routeHints: true,
-                    noLsp: true
+                    noLsp: true,
+                    silent: true
+                };
+                let createInvoiceError: string | undefined;
+                const onCreateInvoiceError = (e: any) => {
+                    createInvoiceError = e?.message;
+                    return undefined;
                 };
 
                 // Pass signing key only when token is P2PK-locked (decoded has proofs)
@@ -5849,19 +5859,23 @@ export default class CashuStore {
                 await this.syncCDKBalances();
 
                 // Create invoice for sweeping
-                let invoice = await this.invoicesStore.createInvoice({
-                    ...invoiceParams,
-                    memo,
-                    value: String(tokenAmt)
-                });
+                let invoice = await this.invoicesStore
+                    .createInvoice({
+                        ...invoiceParams,
+                        memo,
+                        value: String(tokenAmt)
+                    })
+                    .catch(onCreateInvoiceError);
 
                 if (!invoice?.paymentRequest) {
                     this.loading = false;
                     return {
                         success: false,
-                        errorMessage: localeString(
-                            'stores.InvoicesStore.errorCreatingInvoice'
-                        )
+                        errorMessage:
+                            createInvoiceError ||
+                            localeString(
+                                'stores.InvoicesStore.errorCreatingInvoice'
+                            )
                     };
                 }
 
@@ -5884,21 +5898,25 @@ export default class CashuStore {
                     }
 
                     // Recreate invoice with adjusted amount
-                    invoice = await this.invoicesStore.createInvoice({
-                        ...invoiceParams,
-                        memo: `${memo} [${localeString(
-                            'views.Cashu.CashuToken.feeAdjusted'
-                        )}]`,
-                        value: receiveAmtSat.toString()
-                    });
+                    invoice = await this.invoicesStore
+                        .createInvoice({
+                            ...invoiceParams,
+                            memo: `${memo} [${localeString(
+                                'views.Cashu.CashuToken.feeAdjusted'
+                            )}]`,
+                            value: receiveAmtSat.toString()
+                        })
+                        .catch(onCreateInvoiceError);
 
                     if (!invoice?.paymentRequest) {
                         this.loading = false;
                         return {
                             success: false,
-                            errorMessage: localeString(
-                                'stores.InvoicesStore.errorCreatingInvoice'
-                            )
+                            errorMessage:
+                                createInvoiceError ||
+                                localeString(
+                                    'stores.InvoicesStore.errorCreatingInvoice'
+                                )
                         };
                     }
                 }
@@ -6058,10 +6076,15 @@ export default class CashuStore {
             const memo = `${localeString(
                 'stores.CashuStore.autoSweep'
             )} ${mintUrl}`;
+            // silent: an auto-sweep must not supersede an invoice request a
+            // screen is waiting on (Receive, Swaps, WIF sweep), nor write
+            // the fields those screens show. A backend error is thrown and
+            // reported by the catch below with its own text.
             const invoiceParams = {
                 expirySeconds: '3600',
                 routeHints: true,
-                noLsp: true
+                noLsp: true,
+                silent: true
             };
 
             // 1. Create initial invoice for full amount to estimate fee

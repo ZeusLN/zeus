@@ -6,6 +6,18 @@ jest.mock('./SettingsStore', () => ({
     DEFAULT_NOSTR_RELAYS: ['wss://relay.one', 'wss://relay.two']
 }));
 jest.mock('react-native-blob-util', () => ({}));
+// a real InvoicesStore backs the sweep isolation tests
+jest.mock('../utils/BackendUtils', () => ({
+    __esModule: true,
+    default: {
+        createInvoice: jest.fn(),
+        getNewAddress: jest.fn(),
+        isLNDBased: jest.fn(() => false),
+        supportsFlowLSP: jest.fn(() => false),
+        supportsOnchainReceiving: jest.fn(() => false)
+    }
+}));
+jest.mock('../ldknode/LdkNodeInjection', () => ({}));
 jest.mock('@nostr-dev-kit/ndk', () => ({
     __esModule: true,
     default: jest.fn()
@@ -39,6 +51,8 @@ import { Platform } from 'react-native';
 import { validateMnemonic } from '@scure/bip39';
 import NDK from '@nostr-dev-kit/ndk';
 import CashuStore from './CashuStore';
+import InvoicesStore from './InvoicesStore';
+import BackendUtils from '../utils/BackendUtils';
 import CashuPayment from '../models/CashuPayment';
 import Storage, { getRawItem } from '../storage';
 import CashuDevKit from '../cashu-cdk';
@@ -1352,6 +1366,154 @@ describe('CashuStore self-custody claim', () => {
 
         expect(result.success).toBe(true);
         expect(result.warningMessage).toBeUndefined();
+    });
+});
+
+// The sweeps run in the background (after a claim, a paid ecash invoice or
+// on wallet load) while a screen can be waiting on InvoicesStore: Receive,
+// Swaps, Refund or the WIF sweeper read onChainAddress and payment_request
+// once their createUnifiedInvoice resolves.
+describe('CashuStore sweeps and the invoice a screen is waiting for', () => {
+    const mintUrl = 'https://mint.example.com';
+    const token = { mint: mintUrl, getAmount: 1000, proofs: [] } as any;
+
+    const deferred = () => {
+        let resolve: (value: any) => void = () => {};
+        const promise = new Promise((res) => (resolve = res));
+        return { promise, resolve };
+    };
+
+    const setup = () => {
+        const invoicesStore = new InvoicesStore(
+            { settings: {} } as any,
+            { resetFee: jest.fn(), clearFee: jest.fn() } as any,
+            {} as any,
+            {} as any
+        );
+        const store: any = new CashuStore(
+            { implementation: 'lnd', settings: {}, lndDir: 'lnd' } as any,
+            invoicesStore,
+            {} as any,
+            {} as any
+        );
+        store.cdkInitialized = true;
+        store.mintUrls = [mintUrl];
+        store.ensureMintAdded = jest.fn().mockResolvedValue(undefined);
+        store.receiveTokenCDK = jest.fn().mockResolvedValue(undefined);
+        store.createMeltQuoteCDK = jest.fn().mockResolvedValue({
+            id: 'quote-1',
+            amount: 1000,
+            fee_reserve: 0,
+            expiry: 9999999999
+        });
+        store.meltCDK = jest.fn().mockResolvedValue({ state: 'Paid' });
+        store.syncCDKBalances = jest.fn().mockResolvedValue(undefined);
+        store.isOwnInvoicePaid = jest.fn().mockResolvedValue(true);
+        return { store, invoicesStore };
+    };
+
+    const sweeps: Array<[string, (store: any) => Promise<any>]> = [
+        ['a self-custody claim', (store) => store.claimToken('t', token, true)],
+        ['an auto-sweep', (store) => store.sweepMint(mintUrl)]
+    ];
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        (BackendUtils.createInvoice as jest.Mock).mockReset();
+        (BackendUtils.getNewAddress as jest.Mock).mockReset();
+        (CashuDevKit.isValidToken as jest.Mock).mockResolvedValue(true);
+        (CashuDevKit.getMintBalance as jest.Mock).mockResolvedValue(1000);
+        (CashuDevKit.createMeltQuote as jest.Mock).mockResolvedValue({
+            id: 'quote-1',
+            amount: 1000,
+            fee_reserve: 0,
+            expiry: 9999999999
+        });
+        (CashuDevKit.melt as jest.Mock).mockResolvedValue({
+            state: 'Paid',
+            amount: 1000
+        });
+        (Storage.setItem as jest.Mock).mockReset().mockResolvedValue(true);
+        jest.spyOn(console, 'log').mockImplementation(() => {});
+        jest.spyOn(console, 'warn').mockImplementation(() => {});
+        jest.spyOn(console, 'error').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+        (BackendUtils.supportsOnchainReceiving as jest.Mock).mockReturnValue(
+            false
+        );
+        jest.restoreAllMocks();
+    });
+
+    it.each(sweeps)(
+        'does not take over the invoice a screen awaits during %s',
+        async (_, sweep) => {
+            const { store, invoicesStore } = setup();
+            (
+                BackendUtils.supportsOnchainReceiving as jest.Mock
+            ).mockReturnValue(true);
+            const shown = deferred();
+            (BackendUtils.createInvoice as jest.Mock)
+                .mockReturnValueOnce(shown.promise)
+                .mockResolvedValue({
+                    payment_request: 'lnbc-sweep',
+                    r_hash: 'ss'
+                });
+            (BackendUtils.getNewAddress as jest.Mock).mockResolvedValue({
+                address: 'bc1-screen'
+            });
+
+            // e.g. Swaps asking for a refund address
+            const screen = invoicesStore.createUnifiedInvoice({
+                memo: '',
+                value: '0',
+                expirySeconds: '3600'
+            });
+            await sweep(store);
+            expect(invoicesStore.payment_request).toBeNull();
+            shown.resolve({ payment_request: 'lnbc-screen', r_hash: 'aa' });
+            await screen;
+
+            expect(invoicesStore.onChainAddress).toBe('bc1-screen');
+            expect(invoicesStore.payment_request).toBe('lnbc-screen');
+            expect(invoicesStore.creatingInvoice).toBe(false);
+        }
+    );
+
+    it('reports the backend error of a self-custody claim', async () => {
+        const { store, invoicesStore } = setup();
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            error: true,
+            message: 'node offline'
+        });
+
+        const result = await store.claimToken('t', token, true);
+
+        expect(result).toEqual({
+            success: false,
+            errorMessage: 'node offline'
+        });
+        expect(store.loading).toBe(false);
+        // nothing for the Receive screen to show
+        expect(invoicesStore.error_msg).toBeFalsy();
+    });
+
+    it('reports the backend error of an auto-sweep', async () => {
+        const { store, invoicesStore } = setup();
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            error: true,
+            message: 'node offline'
+        });
+
+        await expect(store.sweepMint(mintUrl)).resolves.toBe(false);
+
+        expect(store.error).toBe(true);
+        expect(store.error_msg).toBe(
+            `stores.CashuStore.sweepError (${mintUrl}): node offline`
+        );
+        expect(store.loading).toBe(false);
+        expect(invoicesStore.error_msg).toBeFalsy();
     });
 });
 
