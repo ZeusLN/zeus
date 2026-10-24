@@ -1,5 +1,6 @@
 package app.zeusln.zeus.securestorage
 
+import android.content.Context
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -20,13 +21,7 @@ class ZeusSecureStorageModule(context: ReactApplicationContext) :
     // One thread, so reads and writes of an entry never interleave
     private val executor = Executors.newSingleThreadExecutor()
 
-    private val storage: SecureStorage by lazy {
-        val keys = AndroidKeystoreKeyProvider()
-        SecureStorage(
-            SecureFileStore(File(context.filesDir, STORE_DIR), keys),
-            LegacyKeychainStore(DataStorePrefsBackend(context), keys)
-        )
-    }
+    private val storage: SecureStorage by lazy { open(context) }
 
     override fun getName() = NAME
 
@@ -64,5 +59,15 @@ class ZeusSecureStorageModule(context: ReactApplicationContext) :
         const val NAME = "ZeusSecureStorage"
         const val STORE_DIR = "zeus-secure"
         private const val ERROR_CODE = "E_SECURE_STORAGE"
+
+        /** The app's store, for native code outside this module. Blocks on I/O. */
+        @JvmStatic
+        fun open(context: Context): SecureStorage {
+            val keys = AndroidKeystoreKeyProvider()
+            return SecureStorage(
+                SecureFileStore(File(context.filesDir, STORE_DIR), keys),
+                LegacyKeychainStore(DataStorePrefsBackend(context), keys)
+            )
+        }
     }
 }
