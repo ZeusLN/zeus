@@ -1,5 +1,6 @@
 package app.zeusln.zeus;
 
+import android.app.Activity;
 import android.nfc.Tag;
 import android.nfc.NfcAdapter;
 import android.nfc.NdefMessage;
@@ -40,25 +41,47 @@ class MobileTools extends ReactContextBaseJavaModule {
   @ReactMethod
   public void getIntentNfcData(Promise promise) {
     // https://code.tutsplus.com/tutorials/reading-nfc-tags-with-android--mobile-17278
+    // Read and clear the same intent: MainActivity.onNewIntent can replace
+    // the activity's intent on the UI thread while this runs, and a second
+    // getIntent() could clear a newer tag than the one read here.
+    Activity activity = getReactApplicationContext().getCurrentActivity();
+    if (activity == null) {
+      promise.resolve(null);
+      return;
+    }
+    Intent intent = activity.getIntent();
+    if (intent == null) {
+      promise.resolve(null);
+      return;
+    }
+
     Tag tag;
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-      tag = getReactApplicationContext()
-        .getCurrentActivity().getIntent().getParcelableExtra(NfcAdapter.EXTRA_TAG, Tag.class);
+      tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG, Tag.class);
     } else {
-      tag = getReactApplicationContext()
-        .getCurrentActivity().getIntent().getParcelableExtra(NfcAdapter.EXTRA_TAG);
+      tag = intent.getParcelableExtra(NfcAdapter.EXTRA_TAG);
     }
     if (tag == null) {
       promise.resolve(null);
       return;
     }
 
+    // Consume the tag. The activity keeps its intent until Android delivers
+    // another one, and this is called again on every resume.
+    intent.removeExtra(NfcAdapter.EXTRA_TAG);
+    intent.removeExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
+
     Ndef ndef = Ndef.get(tag);
     if (ndef == null) {
       promise.resolve(null);
+      return;
     }
 
     NdefMessage ndefMessage = ndef.getCachedNdefMessage();
+    if (ndefMessage == null) {
+      promise.resolve(null);
+      return;
+    }
 
     NdefRecord[] records = ndefMessage.getRecords();
     if (records.length > 0) {
