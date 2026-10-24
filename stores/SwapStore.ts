@@ -595,7 +595,6 @@ export default class SwapStore {
             );
 
             const responseData = JSON.parse(response.data);
-            console.log('Parsed Response Data:', responseData);
 
             // Check for errors in the response
             if (responseData?.error) {
@@ -826,8 +825,6 @@ export default class SwapStore {
                 ...(typeof pairHash === 'string' && { pairHash })
             });
 
-            console.log('Data before sending to API:', data);
-
             const response = await ReactNativeBlobUtil.fetch(
                 'POST',
                 `${this.getHost}/swap/reverse`,
@@ -838,7 +835,7 @@ export default class SwapStore {
             );
 
             const responseData = JSON.parse(response.data);
-            console.log('Created reverse swap:', responseData);
+            console.log('Created reverse swap');
 
             // The provider's fees changed since the quote: fetch the new
             // quote and ask the user to retry. The caller must recompute
