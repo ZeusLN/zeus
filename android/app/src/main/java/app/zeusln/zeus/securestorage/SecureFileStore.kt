@@ -21,6 +21,13 @@ class SecureFileStore(private val dir: File, private val keys: KeyProvider) {
     fun exists(name: String): Boolean = fileFor(name).exists()
 
     /**
+     * Whether a later release has made this store the source of truth.
+     * Release K never creates the marker; it only honors it, so a downgrade
+     * from that release still reads current values.
+     */
+    fun isAuthoritative(): Boolean = File(dir, AUTHORITATIVE_MARKER).exists()
+
+    /**
      * The stored value, or null when there is no entry. An entry that exists
      * but cannot be decrypted throws: it is an error, not a missing value.
      */
@@ -86,6 +93,7 @@ class SecureFileStore(private val dir: File, private val keys: KeyProvider) {
 
     companion object {
         const val KEY_ALIAS = "zeus_secure_storage_v1"
+        const val AUTHORITATIVE_MARKER = "authoritative"
         private const val VERSION: Byte = 1
         private const val TEMP_SUFFIX = ".tmp"
     }
