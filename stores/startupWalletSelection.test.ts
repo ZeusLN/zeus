@@ -19,7 +19,6 @@ const mockDeep = (): any =>
     });
 
 [
-    'react-native-keychain',
     '@react-native-async-storage/async-storage',
     'ecpair',
     '@react-native-community/netinfo',
