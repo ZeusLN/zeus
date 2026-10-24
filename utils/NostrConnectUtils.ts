@@ -983,11 +983,38 @@ export default class NostrConnectUtils {
         };
     }
 
+    // the node refused the send because the invoice is already paid
+    // (LND: "invoice is already paid")
+    static isAlreadyPaidError(error?: string | null): boolean {
+        if (!error) return false;
+        const msg = error.toLowerCase();
+        return (
+            msg.includes('already paid') || msg.includes('already been settled')
+        );
+    }
+
+    // the node refused the send because it already has a payment for the
+    // hash that is not failed (LDK Node: DuplicatePayment)
+    static isDuplicatePaymentError(error?: string | null): boolean {
+        if (!error) return false;
+        const msg = error.toLowerCase();
+        return (
+            msg.includes('already been initiated') ||
+            msg.includes('duplicatepayment')
+        );
+    }
+
+    // the node refused the send because another payment for the hash is in
+    // flight (LND: "payment is in transition")
+    static isPaymentInTransitionError(error?: string | null): boolean {
+        if (!error) return false;
+        return error.toLowerCase().includes('payment is in transition');
+    }
+
     static isIgnorableError(error: string): boolean {
         const msg = error.toLowerCase();
         return (
-            msg.includes('already paid') ||
-            msg.includes('already been settled') ||
+            NostrConnectUtils.isAlreadyPaidError(error) ||
             msg.includes('invoice expired') ||
             msg.includes('has expired') ||
             msg.includes('not payable') ||
