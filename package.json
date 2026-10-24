@@ -201,7 +201,7 @@
     "eslint-plugin-prettier": "5.5.6",
     "graceful-fs": "4.2.11",
     "jest": "29.7.0",
-    "pod-install": "1.2.1",
+    "pod-install": "0.1.38",
     "prettier": "2.4.1",
     "protobufjs-cli": "2.7.1",
     "react-native-url-polyfill": "4.0.0",

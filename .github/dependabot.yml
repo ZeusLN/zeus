@@ -17,6 +17,14 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      # pod-install 1.x switches to `bundle exec pod` whenever the Gemfile
+      # lists cocoapods. When `bundle` is macOS's Ruby 2.6 and `pod` comes
+      # from Homebrew (Xcode Cloud, most dev Macs), its first probe writes a
+      # Gemfile.lock stamped with Homebrew Ruby's Bundler and the next
+      # `bundle` call fails on it, breaking `yarn install`.
+      - dependency-name: "pod-install"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions used by the CI workflows
   - package-ecosystem: "github-actions"
