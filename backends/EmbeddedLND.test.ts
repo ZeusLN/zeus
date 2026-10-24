@@ -2,6 +2,8 @@
 // base class pull in. listPeers only touches lndMobile.index.listPeers;
 // closeChannel only uses the injected close call, the stream decoder and
 // the event emitter mocked below.
+const mockTrackPaymentV2 = jest.fn();
+
 jest.mock('react-native-blob-util', () => ({
     __esModule: true,
     default: { fetch: jest.fn(), config: jest.fn() }
@@ -23,6 +25,7 @@ jest.mock('../lndmobile/LndMobileInjection', () => ({
         index: {
             listPeers: jest.fn(),
             listPayments: (...args: any[]) => mockListPayments(...args),
+            trackPaymentV2: (...args: any[]) => mockTrackPaymentV2(...args),
             sendPaymentV2Sync: (...args: any[]) =>
                 mockSendPaymentV2Sync(...args),
             sendKeysendPaymentV2: (...args: any[]) =>
@@ -340,13 +343,90 @@ describe('EmbeddedLND payment rejections', () => {
 
 describe('EmbeddedLND.lookupPayment', () => {
     const HASH = 'ab'.repeat(32);
+    const NOT_FOUND = new Error("payment isn't initiated");
+
+    const fullPage = {
+        payments: Array.from({ length: 50 }, (_, i) => ({
+            payment_hash: i.toString(16).padStart(64, '0')
+        }))
+    };
 
     beforeEach(() => {
+        mockTrackPaymentV2.mockReset();
         mockListPayments.mockReset();
     });
 
-    it('scans ascending from creation_date_start', async () => {
+    it('resolves the tracked payment without scanning', async () => {
+        const payment = { payment_hash: HASH, status: 'IN_FLIGHT' };
+        mockTrackPaymentV2.mockResolvedValue(payment);
+
+        await expect(
+            new EmbeddedLND().lookupPayment({ payment_hash: HASH })
+        ).resolves.toBe(payment);
+        expect(mockListPayments).not.toHaveBeenCalled();
+    });
+
+    it('answers null when NOT_FOUND and the scan agrees', async () => {
+        mockTrackPaymentV2.mockRejectedValue(NOT_FOUND);
+        mockListPayments.mockResolvedValue({ payments: [] });
+
+        await expect(
+            new EmbeddedLND().lookupPayment({
+                payment_hash: HASH,
+                creation_date_start: 1700000000
+            })
+        ).resolves.toBeNull();
+    });
+
+    // the NOT_FOUND event carries no hash and may belong to another lookup
+    it('returns the scanned payment when NOT_FOUND was another stream', async () => {
+        const payment = { payment_hash: HASH, status: 'SUCCEEDED' };
+        mockTrackPaymentV2.mockRejectedValue(NOT_FOUND);
+        mockListPayments.mockResolvedValue({ payments: [payment] });
+
+        await expect(
+            new EmbeddedLND().lookupPayment({ payment_hash: HASH })
+        ).resolves.toBe(payment);
+    });
+
+    it('keeps NOT_FOUND as the answer when the confirming scan fails', async () => {
+        mockTrackPaymentV2.mockRejectedValue(NOT_FOUND);
+        mockListPayments.mockRejectedValue(new Error('rpc error'));
+
+        await expect(
+            new EmbeddedLND().lookupPayment({ payment_hash: HASH })
+        ).resolves.toBeNull();
+    });
+
+    it('does not answer null when NOT_FOUND meets a full page that missed', async () => {
+        mockTrackPaymentV2.mockRejectedValue(NOT_FOUND);
+        mockListPayments
+            .mockResolvedValueOnce(fullPage)
+            .mockResolvedValueOnce({ payments: [] });
+
+        await expect(
+            new EmbeddedLND().lookupPayment({
+                payment_hash: HASH,
+                creation_date_start: 1700000000
+            })
+        ).rejects.toMatchObject({ name: 'PaymentLookupInconclusive' });
+    });
+
+    it('falls back to the scan when the stream times out', async () => {
+        const payment = { payment_hash: HASH, status: 'IN_FLIGHT' };
+        mockTrackPaymentV2.mockRejectedValue(new Error('Request timeout'));
+        mockListPayments.mockResolvedValue({ payments: [payment] });
+
+        await expect(
+            new EmbeddedLND().lookupPayment({ payment_hash: HASH })
+        ).resolves.toBe(payment);
+    });
+
+    // the track stream times out while the payment is in flight; the
+    // fallback scan keeps the dispatch-time bound
+    it('scans ascending from creation_date_start when the stream times out', async () => {
         const target = { payment_hash: HASH, status: 'IN_FLIGHT' };
+        mockTrackPaymentV2.mockRejectedValue(new Error('Request timeout'));
         mockListPayments.mockResolvedValue({ payments: [target] });
 
         await expect(
@@ -364,7 +444,8 @@ describe('EmbeddedLND.lookupPayment', () => {
         });
     });
 
-    it('scans the newest page without a bound', async () => {
+    it('scans the newest page without a bound when the stream times out', async () => {
+        mockTrackPaymentV2.mockRejectedValue(new Error('Request timeout'));
         mockListPayments.mockResolvedValue({ payments: [] });
 
         await expect(
