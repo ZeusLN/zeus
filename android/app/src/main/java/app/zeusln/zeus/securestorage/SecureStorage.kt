@@ -27,7 +27,9 @@ class SecureStorage(
     private val store: SecureFileStore,
     private val legacy: LegacyKeychainStore
 ) {
-    fun get(name: String): String? {
+    fun get(name: String): String? = synchronized(LOCK) { getLocked(name) }
+
+    private fun getLocked(name: String): String? {
         if (store.isAuthoritative()) return getFromNewStore(name)
 
         val value = try {
@@ -41,7 +43,9 @@ class SecureStorage(
         return value
     }
 
-    fun set(name: String, value: String) {
+    fun set(name: String, value: String) = synchronized(LOCK) { setLocked(name, value) }
+
+    private fun setLocked(name: String, value: String) {
         if (store.isAuthoritative()) {
             store.write(name, value)
             writeLegacyCopy(name, value)
@@ -55,12 +59,12 @@ class SecureStorage(
         }
     }
 
-    fun remove(name: String) {
+    fun remove(name: String) = synchronized(LOCK) {
         store.delete(name)
         legacy.delete(name)
     }
 
-    fun wipe() {
+    fun wipe() = synchronized(LOCK) {
         store.wipe()
         legacy.wipe()
     }
@@ -108,5 +112,10 @@ class SecureStorage(
 
     companion object {
         private const val TAG = "ZeusSecureStorage"
+
+        // Shared by every instance: ZeusSecureStorageModule.open gives native
+        // callers their own instance over the same files, and a read can
+        // write (the mirror copy), so all calls in the process take turns.
+        private val LOCK = Any()
     }
 }
