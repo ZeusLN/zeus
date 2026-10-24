@@ -1160,6 +1160,43 @@ describe('InvoicesStore.createUnifiedInvoice', () => {
         expectReceiveStateKept(store);
     });
 
+    it('keeps the Receive screen fields when silent and the backend can receive on-chain', async () => {
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            payment_request: 'lnbc-nwc',
+            r_hash: 'ee'
+        });
+        (BackendUtils.supportsOnchainReceiving as jest.Mock).mockReturnValue(
+            true
+        );
+
+        const store = newUnifiedStore();
+        seedReceiveState(store);
+        store.onChainAddress = 'bcrt1-on-screen';
+        (store as any).getNewAddress = jest
+            .fn()
+            .mockResolvedValue('bcrt1-silent');
+
+        try {
+            const result: any = await store.createUnifiedInvoice({
+                ...params,
+                noLsp: true,
+                silent: true
+            });
+
+            expect(result).toEqual({
+                rHash: 'ee',
+                paymentRequest: 'lnbc-nwc',
+                onChainAddress: 'bcrt1-silent'
+            });
+            expectReceiveStateKept(store);
+            expect(store.onChainAddress).toBe('bcrt1-on-screen');
+        } finally {
+            (
+                BackendUtils.supportsOnchainReceiving as jest.Mock
+            ).mockReturnValue(false);
+        }
+    });
+
     it('still updates the Receive screen fields by default', async () => {
         (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
             payment_request: 'lnbc-receive',

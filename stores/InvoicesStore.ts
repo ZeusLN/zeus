@@ -221,10 +221,10 @@ export default class InvoicesStore {
         ) => Promise<boolean>;
         // Create the invoice without touching the fields the Receive
         // screen shows; the caller takes it from the return value and
-        // gets backend errors as a thrown error. Only safe together with
-        // noLsp and skipOnchain: the on-chain leg below, the LSP fee quote
-        // and the route-hint error path in createInvoice still write
-        // shared fields. NWC make_invoice is the only caller.
+        // gets backend errors as a thrown error. Pair it with noLsp and
+        // no route hints: the LSP fee quote and the route-hint error path
+        // in createInvoice still write shared fields. NWC make_invoice is
+        // the only caller.
         silent?: boolean;
     }) => {
         if (!silent) this.creatingInvoice = true;
@@ -272,19 +272,21 @@ export default class InvoicesStore {
                         addressRequest.account = account;
                     return this.getNewAddress(addressRequest)
                         .then((onChainAddress: string) => {
-                            runInAction(() => {
-                                this.onChainAddress = onChainAddress;
-                                this.payment_request = paymentRequest;
-                                this.loading = false;
-                                this.creatingInvoice = false;
-                            });
+                            if (!silent)
+                                runInAction(() => {
+                                    this.onChainAddress = onChainAddress;
+                                    this.payment_request = paymentRequest;
+                                    this.loading = false;
+                                    this.creatingInvoice = false;
+                                });
                             return { rHash, paymentRequest, onChainAddress };
                         })
                         .catch(() => {
-                            runInAction(() => {
-                                this.loading = false;
-                                this.creatingInvoice = false;
-                            });
+                            if (!silent)
+                                runInAction(() => {
+                                    this.loading = false;
+                                    this.creatingInvoice = false;
+                                });
                         });
                 } else {
                     if (!silent)
