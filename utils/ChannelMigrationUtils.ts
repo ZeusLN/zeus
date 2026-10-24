@@ -18,6 +18,57 @@ import Storage from '../storage';
 
 export const CHANNEL_MIGRATION_ACTIVE = 'channel_migration_active';
 
+/**
+ * The lndDirs of all wallets that are locked after a channel export. Records
+ * written by versions that could lock only one wallet hold a single lndDir.
+ */
+const getMigrationLockedDirs = async (): Promise<string[]> => {
+    const stored = await Storage.getItem(CHANNEL_MIGRATION_ACTIVE);
+    if (!stored) return [];
+    try {
+        const migrationData = JSON.parse(stored);
+        if (!migrationData?.migrationStatus) return [];
+        if (Array.isArray(migrationData.lndDirs)) return migrationData.lndDirs;
+        return migrationData.lndDir ? [migrationData.lndDir] : [];
+    } catch (e) {
+        console.error('Failed to parse migration data:', e);
+        return [];
+    }
+};
+
+// lndDir repeats the last entry of lndDirs so that older app versions, which
+// only read lndDir, still lock the most recently exported wallet
+const setMigrationLockedDirs = async (lndDirs: string[]): Promise<void> => {
+    if (lndDirs.length === 0) {
+        await Storage.removeItem(CHANNEL_MIGRATION_ACTIVE);
+        return;
+    }
+    await Storage.setItem(
+        CHANNEL_MIGRATION_ACTIVE,
+        JSON.stringify({
+            migrationStatus: true,
+            lndDir: lndDirs[lndDirs.length - 1],
+            lndDirs
+        })
+    );
+};
+
+const lockWalletForMigration = async (lndDir: string): Promise<void> => {
+    const otherDirs = (await getMigrationLockedDirs()).filter(
+        (dir) => dir !== lndDir
+    );
+    await setMigrationLockedDirs([...otherDirs, lndDir]);
+};
+
+export const unlockWalletFromMigration = async (
+    lndDir: string
+): Promise<void> => {
+    const otherDirs = (await getMigrationLockedDirs()).filter(
+        (dir) => dir !== lndDir
+    );
+    await setMigrationLockedDirs(otherDirs);
+};
+
 const VALID_CHANNEL_DB_EXTENSIONS = ['.zip'];
 
 const getGraphDir = (lndDir: string, isTestnet: boolean): string => {
@@ -317,10 +368,7 @@ export const uploadChannelBackupToOlympus = async (
                 if (setStatus) setStatus(null);
 
                 if (status === 200 && json.success) {
-                    await Storage.setItem(
-                        CHANNEL_MIGRATION_ACTIVE,
-                        JSON.stringify({ migrationStatus: true, lndDir })
-                    );
+                    await lockWalletForMigration(lndDir);
 
                     Alert.alert(
                         localeString('views.Tools.migration.export.success'),
@@ -688,10 +736,7 @@ export const exportChannelDb = async (
 
         const finishExport = async () => {
             if (setStatus) setStatus(null);
-            await Storage.setItem(
-                CHANNEL_MIGRATION_ACTIVE,
-                JSON.stringify({ migrationStatus: true, lndDir })
-            );
+            await lockWalletForMigration(lndDir);
             Alert.alert(
                 localeString('views.Tools.migration.export.success'),
                 localeString(

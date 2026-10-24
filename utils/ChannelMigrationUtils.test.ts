@@ -64,7 +64,8 @@ jest.mock('../stores/ChannelBackupStore', () => ({
 }));
 jest.mock('../storage', () => ({
     setItem: jest.fn().mockResolvedValue(undefined),
-    getItem: jest.fn().mockResolvedValue(null)
+    getItem: jest.fn().mockResolvedValue(null),
+    removeItem: jest.fn().mockResolvedValue(undefined)
 }));
 
 jest.mock('react-native', () => ({
@@ -73,10 +74,14 @@ jest.mock('react-native', () => ({
 }));
 
 import {
+    CHANNEL_MIGRATION_ACTIVE,
     graphDataExists,
     validateChannelBackupFile,
-    importChannelDb
+    importChannelDb,
+    exportChannelDb,
+    unlockWalletFromMigration
 } from './ChannelMigrationUtils';
+import Storage from '../storage';
 
 describe('ChannelMigrationUtils', () => {
     beforeEach(() => {
@@ -269,6 +274,92 @@ describe('ChannelMigrationUtils', () => {
             await expect(
                 importChannelDb('/path/to/backup.db', 'backup.db', 'lnd', false)
             ).rejects.toThrow();
+        });
+    });
+
+    describe('migration lock', () => {
+        let stored: string | null;
+        const lockedDirs = () => stored && JSON.parse(stored).lndDirs;
+
+        beforeEach(() => {
+            stored = null;
+            (Storage.getItem as jest.Mock).mockImplementation(
+                async () => stored
+            );
+            (Storage.setItem as jest.Mock).mockImplementation(
+                async (_key: string, value: string) => {
+                    stored = value;
+                }
+            );
+            (Storage.removeItem as jest.Mock).mockImplementation(async () => {
+                stored = null;
+            });
+        });
+
+        it('keeps the first wallet locked when a second one is exported', async () => {
+            await exportChannelDb('wallet-a', false);
+            await exportChannelDb('wallet-b', false);
+
+            expect(Storage.setItem).toHaveBeenLastCalledWith(
+                CHANNEL_MIGRATION_ACTIVE,
+                expect.any(String)
+            );
+            expect(JSON.parse(stored!).migrationStatus).toBe(true);
+            expect(lockedDirs()).toEqual(['wallet-a', 'wallet-b']);
+            // older versions read only lndDir: the latest export stays locked
+            expect(JSON.parse(stored!).lndDir).toBe('wallet-b');
+        });
+
+        it('does not list a wallet twice when it is exported again', async () => {
+            await exportChannelDb('wallet-a', false);
+            await exportChannelDb('wallet-a', false);
+
+            expect(lockedDirs()).toEqual(['wallet-a']);
+        });
+
+        it('unlocks the wallet of a record that holds a single lndDir', async () => {
+            stored = JSON.stringify({
+                migrationStatus: true,
+                lndDir: 'wallet-a'
+            });
+            await unlockWalletFromMigration('wallet-b');
+            expect(lockedDirs()).toEqual(['wallet-a']);
+
+            await unlockWalletFromMigration('wallet-a');
+            expect(stored).toBeNull();
+        });
+
+        it('keeps the wallet of a record that holds a single lndDir', async () => {
+            stored = JSON.stringify({
+                migrationStatus: true,
+                lndDir: 'wallet-a'
+            });
+            await exportChannelDb('wallet-b', false);
+
+            expect(lockedDirs()).toEqual(['wallet-a', 'wallet-b']);
+        });
+
+        it('still locks the exported wallet when the record is unreadable', async () => {
+            jest.spyOn(console, 'error').mockImplementationOnce(() => {});
+            stored = 'not json';
+            await exportChannelDb('wallet-a', false);
+
+            expect(lockedDirs()).toEqual(['wallet-a']);
+        });
+
+        it('unlocks only the wallet whose migration is cancelled', async () => {
+            await exportChannelDb('wallet-a', false);
+            await exportChannelDb('wallet-b', false);
+
+            await unlockWalletFromMigration('wallet-b');
+            expect(lockedDirs()).toEqual(['wallet-a']);
+            expect(JSON.parse(stored!).lndDir).toBe('wallet-a');
+
+            await unlockWalletFromMigration('wallet-a');
+            expect(Storage.removeItem).toHaveBeenCalledWith(
+                CHANNEL_MIGRATION_ACTIVE
+            );
+            expect(stored).toBeNull();
         });
     });
 
