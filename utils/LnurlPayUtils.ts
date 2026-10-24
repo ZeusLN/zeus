@@ -243,6 +243,24 @@ const isPrivateOrReservedHost = (hostnameRaw: string): boolean => {
 };
 
 /**
+ * The host an LNURL request goes to, for everything that names the service
+ * to the user (payee line, "submit to", "<domain> says:", the stored
+ * receipt). It is read with url.parse, the parser that builds the request,
+ * instead of taken from the params' `domain`: js-lnurl's getDomain splits on
+ * the last '@' but not on '\' or '#' (see verifyLnurlAuthCallback), so
+ * "https://a.example\@b.example/cb" would be shown as b.example and fetched
+ * from a.example. On the Lightning address paths `domain` is whatever the
+ * server put in its JSON.
+ */
+export const getLnurlHost = (lnurlUrl: string): string => {
+    try {
+        return url.parse(lnurlUrl).hostname || '';
+    } catch (err: any) {
+        return '';
+    }
+};
+
+/**
  * Reject a service-supplied LNURL callback that the wallet must not fetch:
  *  - cleartext http to a non-onion host (leaks the amount/comment and lets a
  *    network attacker substitute the invoice), and
