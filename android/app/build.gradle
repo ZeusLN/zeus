@@ -93,6 +93,10 @@ def enableSeparateBuildPerCPUArchitecture = true
 def nativeArchitectures = project.getProperties().get("reactNativeDebugArchitectures")
 
 android {
+    testOptions {
+        // android.util.Log in the storage classes returns defaults in JVM tests
+        unitTests.returnDefaultValues = true
+    }
     namespace "app.zeusln.zeus"
     defaultConfig {
         compileSdk rootProject.ext.compileSdkVersion
@@ -213,6 +217,9 @@ dependencies {
     implementation "net.java.dev.jna:jna:5.18.1@aar"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3"
     implementation "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3"
+    // ZeusSecureStorage reads react-native-keychain's RN_KEYCHAIN DataStore
+    implementation "androidx.datastore:datastore-preferences:1.1.1"
+    testImplementation "junit:junit:4.13.2"
 
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation project(':react-native-randombytes')

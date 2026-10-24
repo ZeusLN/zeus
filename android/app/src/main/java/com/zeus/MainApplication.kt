@@ -11,6 +11,7 @@ import java.security.cert.X509Certificate
 import javax.net.ssl.X509TrustManager
 
 import app.zeusln.zeus.cashudevkit.CashuDevKitPackage
+import app.zeusln.zeus.securestorage.ZeusSecureStoragePackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -34,6 +35,7 @@ class MainApplication : Application(), ReactApplication {
                     add(LdkNodePackage())
                     add(ZipUtilsPackage())
                     add(LockKdfPackage())
+                    add(ZeusSecureStoragePackage())
                 },
         )
     }
