@@ -62,7 +62,8 @@ import CashuUtils, {
     MultimintProgressCallback,
     MultinutPaymentStep,
     normalizeMeltState,
-    PendingMelt
+    PendingMelt,
+    selectUntrackedCdkMelts
 } from '../utils/CashuUtils';
 import { cashuErrorForDisplay, errorToUserFriendly } from '../utils/ErrorUtils';
 import { localeString } from '../utils/LocaleUtils';
@@ -215,6 +216,8 @@ export default class CashuStore {
     private meltsInProgress = new Set<string>();
     // CDK transactions loaded from history (CashuInvoice for incoming, CashuPayment for outgoing)
     @observable public cdkInvoices: Array<CashuInvoice> = [];
+    // CDK melts, settled or in flight, not in locally persisted payments
+    @observable public cdkPayments: Array<CashuPayment> = [];
     @observable public seedVersion?: string;
     @observable public seedPhrase?: Array<string>;
     @observable public seed?: Uint8Array;
@@ -732,6 +735,10 @@ export default class CashuStore {
                 this.cdkInvoices = cdkTransactions
                     .filter((tx) => tx.direction === 'incoming')
                     .map((tx) => CashuInvoice.fromCDKTransaction(tx));
+                this.cdkPayments = selectUntrackedCdkMelts(
+                    cdkTransactions,
+                    this.payments || []
+                ).map((tx) => CashuPayment.fromCDKTransaction(tx));
             });
         } catch (e) {
             console.error('CDK: Failed to load transactions:', e);
