@@ -3238,6 +3238,44 @@ describe('NostrWalletConnectStore handleLightningPayInvoice zero-amount invoices
         expect(call.amount).toBeUndefined();
     });
 
+    it('debits a fractional amount and fee rounded up', async () => {
+        // 1999 msat invoice paid with a 500 msat fee: 2499 msat spent
+        mockInvoiceAmount(1, '1999');
+        const settled = new Payment({
+            payment_request: invoice,
+            payment_hash: paymentHash,
+            status: 'SUCCEEDED',
+            value_msat: '1999',
+            fee_msat: '500',
+            payment_preimage: hex64('f')
+        });
+        const { store } = buildHandlerStore([settled]);
+        const connection = addConnection(store, { maxAmountSats: 100000 });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice }
+        );
+
+        expect(response.error).toBeUndefined();
+        expect(connection.activity[0].satAmount).toBe(2);
+        expect(connection.totalSpendSats).toBe(3);
+    });
+
+    it('refuses a fractional amount the budget can only cover rounded down', async () => {
+        mockInvoiceAmount(1, '1999');
+        const { store, transactionsStore } = buildHandlerStore();
+        const connection = addConnection(store, { maxAmountSats: 1 });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice }
+        );
+
+        expect(transactionsStore.sendPaymentSilently).not.toHaveBeenCalled();
+        expect(response.error?.code).toBe(Nip47ErrorCode.INSUFFICIENT_BALANCE);
+    });
+
     it('records the requested amount when the payment is still in transit', async () => {
         mockInvoiceAmount(0);
         jest.spyOn(
