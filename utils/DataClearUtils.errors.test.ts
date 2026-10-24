@@ -6,35 +6,6 @@
 // EncryptedStorage, AsyncStorage and the filesystem, make one step reject at
 // a time, and assert what is actually left behind afterward.
 
-jest.mock('react-native-keychain', () => ({
-    resetInternetCredentials: jest.fn(
-        async (opts: { server: string; cloudSync?: boolean }) => {
-            const cloud = !!opts.cloudSync;
-            if (mockKeychain.failReset(opts.server, cloud)) {
-                throw new Error(`reset failed: ${opts.server}`);
-            }
-            (cloud ? mockKeychain.cloud : mockKeychain.local).delete(
-                opts.server
-            );
-            return true;
-        }
-    ),
-    getInternetCredentials: jest.fn(
-        async (server: string, opts?: { cloudSync?: boolean }) => {
-            const cloud = !!opts?.cloudSync;
-            if (mockKeychain.failGet(server, cloud)) {
-                throw new Error(`get failed: ${server}`);
-            }
-            const value = (cloud ? mockKeychain.cloud : mockKeychain.local).get(
-                server
-            );
-            return value === undefined
-                ? false
-                : { username: server, password: value };
-        }
-    ),
-    setInternetCredentials: jest.fn(async () => true)
-}));
 jest.mock('@react-native-async-storage/async-storage', () => ({
     clear: jest.fn(async () => {
         if (mockAsyncStorage.failClear) throw new Error('clear failed');
@@ -211,6 +182,31 @@ const mockKeychain = {
     failReset: never as FailFn,
     failGet: never as FailFn
 };
+// ZeusSecureStorage over the fake keychain partitions. Writes are not
+// recorded: every write here happens after Storage blocks writes for the wipe.
+const mockSecureStorage = {
+    get: jest.fn(async (server: string, cloud: boolean) => {
+        if (mockKeychain.failGet(server, cloud)) {
+            throw new Error(`get failed: ${server}`);
+        }
+        const value = (cloud ? mockKeychain.cloud : mockKeychain.local).get(
+            server
+        );
+        return value === undefined ? null : value;
+    }),
+    set: jest.fn(async () => true),
+    remove: jest.fn(async (server: string, cloud: boolean) => {
+        if (mockKeychain.failReset(server, cloud)) {
+            throw new Error(`reset failed: ${server}`);
+        }
+        (cloud ? mockKeychain.cloud : mockKeychain.local).delete(server);
+        return true;
+    }),
+    listServers: jest.fn(async (_cloudSync: boolean): Promise<string[]> => []),
+    wipe: jest.fn(async () => true)
+};
+NativeModules.ZeusSecureStorage = mockSecureStorage;
+
 const mockEncryptedStorage = {
     items: new Map<string, string>(),
     failGet: false,
@@ -731,7 +727,7 @@ describe('deleteNodeDataDirectoryWithRetry rejections', () => {
 });
 
 describe('clearAllData: POS order records and the iOS keychain sweep', () => {
-    // KeychainAudit lists the servers in one partition of the fake keychain
+    // listServers returns the servers in one partition of the fake keychain
     const enableKeychainAudit = (failLocal = false) => {
         const getInternetPasswordServers = jest.fn(
             async (synchronizable: boolean) => {
@@ -746,12 +742,16 @@ describe('clearAllData: POS order records and the iOS keychain sweep', () => {
                 ];
             }
         );
-        NativeModules.KeychainAudit = { getInternetPasswordServers };
+        mockSecureStorage.listServers.mockImplementation(
+            getInternetPasswordServers
+        );
         return getInternetPasswordServers;
     };
 
     afterEach(() => {
-        delete NativeModules.KeychainAudit;
+        mockSecureStorage.listServers.mockImplementation(
+            async (_cloudSync: boolean) => []
+        );
     });
 
     it('clears pos-<id> and pos-invoice-<id> for standalone and hidden orders on iOS', async () => {

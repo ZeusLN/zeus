@@ -1,7 +1,11 @@
 import { Platform } from 'react-native';
-import * as Keychain from 'react-native-keychain';
 import EncryptedStorage from 'react-native-encrypted-storage';
-import Storage, { KEY_PREFIX, getRawItem } from '../storage';
+import Storage, {
+    KEY_PREFIX,
+    getRawItem,
+    removeRawItem,
+    setRawItemForDevelopment
+} from '../storage';
 
 import { CURRENCY_CODES_KEY, STORAGE_KEY, Node } from '../stores/SettingsStore';
 import { CONTACTS_KEY } from '../stores/ContactStore';
@@ -129,11 +133,7 @@ class KeychainRecoveryUtils {
      */
     private async readFromUnprefixedLocal(key: string): Promise<string | null> {
         try {
-            const creds = await Keychain.getInternetCredentials(key);
-            if (creds && creds.password) {
-                return creds.password;
-            }
-            return null;
+            return (await getRawItem(key, false)) || null;
         } catch (e) {
             console.warn(
                 `[Recovery] Error reading unprefixed local ${key}:`,
@@ -150,13 +150,7 @@ class KeychainRecoveryUtils {
         if (Platform.OS !== 'ios') return null;
 
         try {
-            const creds = await Keychain.getInternetCredentials(key, {
-                cloudSync: true
-            });
-            if (creds && creds.password) {
-                return creds.password;
-            }
-            return null;
+            return (await getRawItem(key, true)) || null;
         } catch (e) {
             console.warn(
                 `[Recovery] Error reading unprefixed cloud ${key}:`,
@@ -593,11 +587,7 @@ class KeychainRecoveryUtils {
 
             // Copy to unprefixed local keychain
             try {
-                await Keychain.setInternetCredentials(
-                    STORAGE_KEY,
-                    STORAGE_KEY,
-                    currentData
-                );
+                await setRawItemForDevelopment(STORAGE_KEY, currentData, false);
                 locations.push('unprefixed-local');
                 console.log(
                     '[Recovery DEV] Copied to unprefixed local keychain'
@@ -612,11 +602,10 @@ class KeychainRecoveryUtils {
             // Copy to unprefixed cloud keychain (iOS only)
             if (Platform.OS === 'ios') {
                 try {
-                    await Keychain.setInternetCredentials(
-                        STORAGE_KEY,
+                    await setRawItemForDevelopment(
                         STORAGE_KEY,
                         currentData,
-                        { cloudSync: true }
+                        true
                     );
                     locations.push('unprefixed-cloud');
                     console.log(
@@ -701,9 +690,7 @@ class KeychainRecoveryUtils {
 
             // Clear unprefixed local keychain
             try {
-                await Keychain.resetInternetCredentials({
-                    server: STORAGE_KEY
-                });
+                await removeRawItem(STORAGE_KEY, false);
                 cleared.push('unprefixed-local');
                 console.log('[Recovery DEV] Cleared unprefixed local keychain');
             } catch (e) {
@@ -716,10 +703,7 @@ class KeychainRecoveryUtils {
             // Clear unprefixed cloud keychain (iOS only)
             if (Platform.OS === 'ios') {
                 try {
-                    await Keychain.resetInternetCredentials({
-                        server: STORAGE_KEY,
-                        cloudSync: true
-                    });
+                    await removeRawItem(STORAGE_KEY, true);
                     cleared.push('unprefixed-cloud');
                     console.log(
                         '[Recovery DEV] Cleared unprefixed cloud keychain'

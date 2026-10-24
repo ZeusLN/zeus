@@ -1,4 +1,3 @@
-import * as Keychain from 'react-native-keychain';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import EncryptedStorage from 'react-native-encrypted-storage';
 import ReactNativeBlobUtil from 'react-native-blob-util';
@@ -6,7 +5,11 @@ import { Notifications } from 'react-native-notifications';
 // @ts-ignore: Networking is exported at runtime but missing from the legacy typings
 import { BackHandler, Networking, Platform } from 'react-native';
 import CashuDevKit from '../cashu-cdk';
-import Storage, { getInternetPasswordServers, removeRawItem } from '../storage';
+import Storage, {
+    getInternetPasswordServers,
+    removeRawItem,
+    wipeSecureStorage
+} from '../storage';
 
 import {
     STORAGE_KEY,
@@ -239,7 +242,7 @@ async function clearKey(key: string) {
 
     // Clear zeus: prefixed key directly from keychain (local)
     try {
-        await Keychain.resetInternetCredentials({ server: prefixedKey });
+        await removeRawItem(prefixedKey, false);
     } catch (e) {
         console.warn(
             `[ClearData] Error clearing prefixed keychain ${prefixedKey}:`,
@@ -249,10 +252,7 @@ async function clearKey(key: string) {
 
     // Clear zeus: prefixed key directly from keychain (cloud)
     try {
-        await Keychain.resetInternetCredentials({
-            server: prefixedKey,
-            cloudSync: true
-        });
+        await removeRawItem(prefixedKey, true);
     } catch (e) {
         console.warn(
             `[ClearData] Error clearing prefixed cloud keychain ${prefixedKey}:`,
@@ -262,17 +262,14 @@ async function clearKey(key: string) {
 
     // Clear from old keychain (no prefix, local)
     try {
-        await Keychain.resetInternetCredentials({ server: key });
+        await removeRawItem(key, false);
     } catch (e) {
         console.warn(`[ClearData] Error clearing local keychain ${key}:`, e);
     }
 
     // Clear from old keychain (no prefix, cloud)
     try {
-        await Keychain.resetInternetCredentials({
-            server: key,
-            cloudSync: true
-        });
+        await removeRawItem(key, true);
     } catch (e) {
         console.warn(`[ClearData] Error clearing cloud keychain ${key}:`, e);
     }
@@ -294,11 +291,20 @@ async function clearKey(key: string) {
  */
 async function clearKeychainBackingStore(): Promise<void> {
     if (Platform.OS !== 'android') return;
+    // ZeusSecureStorage's own files and key, and every entry and Keystore
+    // key react-native-keychain left in RN_KEYCHAIN. The file deletions
+    // below then catch anything the DataStore could not remove.
+    try {
+        await wipeSecureStorage();
+    } catch (e) {
+        console.warn('[ClearData] Error wiping secure storage:', e);
+    }
     const dirs = ReactNativeBlobUtil.fs.dirs;
     const appRoot = `${dirs.DocumentDir}/..`;
     const targets = [
         `${appRoot}/files/datastore/RN_KEYCHAIN.preferences_pb`,
-        `${appRoot}/shared_prefs/RN_KEYCHAIN.xml`
+        `${appRoot}/shared_prefs/RN_KEYCHAIN.xml`,
+        `${appRoot}/files/zeus-secure`
     ];
     for (const path of targets) {
         try {

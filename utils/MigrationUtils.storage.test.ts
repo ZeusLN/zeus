@@ -34,44 +34,6 @@ const mockEncrypted = {
     failGet: null as ((key: string) => boolean) | null
 };
 
-jest.mock('react-native-keychain', () => {
-    const partitionOf = (opts: any): Partition =>
-        opts && opts.cloudSync === true ? 'sync' : 'local';
-    const applyFault = (op: KeychainOp, server: string, p: Partition) =>
-        mockKeychain.fault ? mockKeychain.fault(op, server, p) : undefined;
-    return {
-        getInternetCredentials: jest.fn(async (server: string, opts?: any) => {
-            const p = partitionOf(opts);
-            const injected = applyFault('get', server, p);
-            if (injected) return injected.value;
-            const password = mockKeychain[p].get(server);
-            return password === undefined
-                ? false
-                : { server, username: server, password };
-        }),
-        setInternetCredentials: jest.fn(
-            async (
-                server: string,
-                _username: string,
-                password: string,
-                opts?: any
-            ) => {
-                const p = partitionOf(opts);
-                const injected = applyFault('set', server, p);
-                if (injected) return injected.value;
-                mockKeychain[p].set(server, password);
-                return { service: server, storage: 'fake' };
-            }
-        ),
-        resetInternetCredentials: jest.fn(async (opts: any) => {
-            const p = partitionOf(opts);
-            const injected = applyFault('reset', opts.server, p);
-            if (injected) return injected.value;
-            mockKeychain[p].delete(opts.server);
-        })
-    };
-});
-
 jest.mock('react-native-encrypted-storage', () => ({
     getItem: jest.fn(async (key: string) => {
         if (mockEncrypted.failGet && mockEncrypted.failGet(key)) {
@@ -132,7 +94,49 @@ jest.mock('../stores/SettingsStore', () => ({
     }
 }));
 
-import * as Keychain from 'react-native-keychain';
+import { NativeModules } from 'react-native';
+
+// ZeusSecureStorage over the in-memory partitions. A fault may throw, or
+// return { value } to override the result (for get, false means a miss).
+const partitionOf = (cloudSync: boolean): Partition =>
+    cloudSync ? 'sync' : 'local';
+const applyFault = (op: KeychainOp, server: string, p: Partition) =>
+    mockKeychain.fault ? mockKeychain.fault(op, server, p) : undefined;
+const mockSecureStorage = {
+    get: jest.fn(async (server: string, cloudSync: boolean) => {
+        const p = partitionOf(cloudSync);
+        const injected = applyFault('get', server, p);
+        if (injected) {
+            const v = injected.value;
+            return v === false || v == null
+                ? null
+                : typeof v === 'string'
+                ? v
+                : v.password;
+        }
+        const value = mockKeychain[p].get(server);
+        return value === undefined ? null : value;
+    }),
+    set: jest.fn(async (server: string, value: string, cloudSync: boolean) => {
+        const p = partitionOf(cloudSync);
+        const injected = applyFault('set', server, p);
+        if (injected) return injected.value !== false;
+        mockKeychain[p].set(server, value);
+        return true;
+    }),
+    remove: jest.fn(async (server: string, cloudSync: boolean) => {
+        const p = partitionOf(cloudSync);
+        const injected = applyFault('reset', server, p);
+        if (injected) return true;
+        mockKeychain[p].delete(server);
+        return true;
+    }),
+    listServers: jest.fn(async (cloudSync: boolean) => [
+        ...mockKeychain[partitionOf(cloudSync)].keys()
+    ]),
+    wipe: jest.fn(async () => true)
+};
+NativeModules.ZeusSecureStorage = mockSecureStorage;
 
 import MigrationUtils from './MigrationUtils';
 import { hash } from '../backends/LNC/credentialStore';
@@ -290,7 +294,7 @@ describe('storageMigrationV2', () => {
         for (const server of mockKeychain.local.keys()) {
             expect(server.startsWith('zeus:')).toBe(true);
         }
-        expect(Keychain.resetInternetCredentials).not.toHaveBeenCalled();
+        expect(mockSecureStorage.remove).not.toHaveBeenCalled();
     });
 
     it('keeps the legacy value when a write throws', async () => {
@@ -500,7 +504,7 @@ describe('keychainCloudSyncMigration', () => {
             expect(server.startsWith('zeus:')).toBe(false);
         }
         // The delete step is disabled: nothing is ever reset
-        expect(Keychain.resetInternetCredentials).not.toHaveBeenCalled();
+        expect(mockSecureStorage.remove).not.toHaveBeenCalled();
     });
 
     it('does nothing once the flags are set', async () => {
@@ -510,8 +514,8 @@ describe('keychainCloudSyncMigration', () => {
 
         await MigrationUtils.keychainCloudSyncMigration();
 
-        expect(Keychain.getInternetCredentials).not.toHaveBeenCalled();
-        expect(Keychain.setInternetCredentials).not.toHaveBeenCalled();
+        expect(mockSecureStorage.get).not.toHaveBeenCalled();
+        expect(mockSecureStorage.set).not.toHaveBeenCalled();
         expect(local(SETTINGS_KEY)).toBeUndefined();
         expectSourcesIntact();
     });

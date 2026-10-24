@@ -5,9 +5,6 @@
 // route through clearAllData(), so this guards that the seed-bearing node
 // directories are actually removed by a wipe.
 
-jest.mock('react-native-keychain', () => ({
-    resetInternetCredentials: jest.fn().mockResolvedValue(true)
-}));
 jest.mock('@react-native-async-storage/async-storage', () => ({
     clear: jest.fn().mockResolvedValue(undefined)
 }));
@@ -33,7 +30,8 @@ jest.mock('../storage', () => ({
     setItem: jest.fn().mockResolvedValue(true),
     blockWrites: jest.fn(),
     getInternetPasswordServers: jest.fn().mockResolvedValue([]),
-    removeRawItem: jest.fn().mockResolvedValue(undefined)
+    removeRawItem: jest.fn().mockResolvedValue(undefined),
+    wipeSecureStorage: jest.fn().mockResolvedValue(undefined)
 }));
 
 // Native CDK bridge. Both wipe paths must drop the SQLite handles before
@@ -169,7 +167,7 @@ import fs from 'fs';
 import path from 'path';
 
 import CashuDevKit from '../cashu-cdk';
-import Storage from '../storage';
+import Storage, { wipeSecureStorage } from '../storage';
 import { deriveEmbeddedNodeId } from './AezeedUtils';
 import {
     blockNavigationDuringWipe,
@@ -920,6 +918,24 @@ describe('clearAllData keychain backing store deletion (Android)', () => {
             ...mockedStorageRemoveItem.mock.invocationCallOrder
         );
         expect(pbCallOrder).toBeGreaterThan(lastRemoveItemOrder);
+    });
+
+    it('wipes ZeusSecureStorage before deleting its files on Android', async () => {
+        setPlatformOS('android');
+
+        await clearAllData();
+
+        const unlinked = mockedUnlink.mock.calls.map((call) => call[0]);
+        const secureDir = unlinked.find((p: string) =>
+            p.endsWith('files/zeus-secure')
+        );
+        expect(secureDir).toBeDefined();
+        expect(wipeSecureStorage).toHaveBeenCalledTimes(1);
+        expect(
+            (wipeSecureStorage as jest.Mock).mock.invocationCallOrder[0]
+        ).toBeLessThan(
+            mockedUnlink.mock.invocationCallOrder[unlinked.indexOf(secureDir)]
+        );
     });
 
     it('does not touch keychain files on iOS', async () => {
