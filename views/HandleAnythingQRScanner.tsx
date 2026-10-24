@@ -1,12 +1,10 @@
 import * as React from 'react';
-// @ts-ignore:next-line
-import b58 from 'bs58check';
 import { Alert, View } from 'react-native';
 import { Header } from '@rneui/themed';
 import { observer } from 'mobx-react';
 import { URDecoder } from '@ngraveio/bc-ur';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { Bytes, CryptoAccount, CryptoPSBT } from '@keystonehq/bc-ur-registry';
+import { Bytes, CryptoPSBT } from '@keystonehq/bc-ur-registry';
 
 import LoadingIndicator from '../components/LoadingIndicator';
 import QRCodeScanner from '../components/QRCodeScanner';
@@ -14,6 +12,7 @@ import QRCodeScanner from '../components/QRCodeScanner';
 import handleAnything from '../utils/handleAnything';
 import Base64Utils from '../utils/Base64Utils';
 import { joinQRs } from '../utils/BbqrUtils';
+import { cryptoAccountToWalletExport } from '../utils/CryptoAccountUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
 
@@ -98,7 +97,13 @@ export default class HandleAnythingQRScanner extends React.Component<
 
             // Create a new array instead of mutating state
             const parts = [...this.state.parts, data];
-            this.decoder.receivePart(data);
+            try {
+                this.decoder.receivePart(data);
+            } catch (e) {
+                console.log('Error found while decoding BC-UR part', e);
+                this.resetDecoderState();
+                return;
+            }
 
             this.setState({
                 parts,
@@ -113,44 +118,20 @@ export default class HandleAnythingQRScanner extends React.Component<
 
                         if (ur._type === 'crypto-account') {
                             try {
-                                const cryptoAccount: any =
-                                    CryptoAccount.fromCBOR(ur._cborPayload);
-                                const hdKey: any =
-                                    cryptoAccount.outputDescriptors[0].getCryptoKey();
-                                const version = Buffer.from('04b24746', 'hex');
-                                const parentFingerprint =
-                                    hdKey.getParentFingerprint();
-                                const depth = hdKey.getOrigin().getDepth();
-                                const depthBuf = Buffer.alloc(1);
-                                depthBuf.writeUInt8(depth);
-                                const components = hdKey
-                                    .getOrigin()
-                                    .getComponents();
-                                const lastComponents =
-                                    components[components.length - 1];
-                                const index = lastComponents.isHardened()
-                                    ? lastComponents.getIndex() + 0x80000000
-                                    : lastComponents.getIndex();
-                                const indexBuf = Buffer.alloc(4);
-                                indexBuf.writeUInt32BE(index);
-                                const chainCode = hdKey.getChainCode();
-                                const key = hdKey.getKey();
-                                const data = Buffer.concat([
-                                    version,
-                                    depthBuf,
-                                    parentFingerprint,
-                                    indexBuf,
-                                    chainCode,
-                                    key
-                                ]);
-
-                                const zpub = b58.encode(data);
-                                const xfp = cryptoAccount
-                                    .getMasterFingerprint()
-                                    .toString('hex')
-                                    .toUpperCase();
-
-                                handleData = `{"MasterFingerprint": "${xfp}", "ExtPubKey": "${zpub}"}`;
+                                const walletExport =
+                                    cryptoAccountToWalletExport(
+                                        ur._cborPayload
+                                    );
+                                if (!walletExport) {
+                                    Alert.alert(
+                                        localeString('general.error'),
+                                        localeString(
+                                            'views.HandleAnythingQRScanner.unsupportedCryptoAccount'
+                                        )
+                                    );
+                                    return;
+                                }
+                                handleData = JSON.stringify(walletExport);
                             } catch (e) {
                                 console.log(
                                     'Error found while decoding BC-UR crypto-account',

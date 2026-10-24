@@ -56,6 +56,7 @@ let mockSupportsLnurlAuth = false;
 let mockIsPsbt = false;
 let mockIsValidTxHex = false;
 let mockIsValidXpub = false;
+let mockIsJsonWalletExport = false;
 let mockIsValidWithdrawalRequest = false;
 let mockGetLnurlParams = {};
 let mockBlobUtilFetch = jest.fn();
@@ -83,7 +84,7 @@ jest.mock('./AddressUtils', () => ({
     isPsbt: () => mockIsPsbt,
     isValidTxHex: () => mockIsValidTxHex,
     isKeystoreWalletExport: () => false,
-    isJsonWalletExport: () => false,
+    isJsonWalletExport: () => mockIsJsonWalletExport,
     isStringWalletExport: () => false,
     isWpkhDescriptor: () => false,
     isNestedWpkhDescriptor: () => false,
@@ -212,6 +213,7 @@ describe('handleAnything', () => {
         mockIsPsbt = false;
         mockIsValidTxHex = false;
         mockIsValidXpub = false;
+        mockIsJsonWalletExport = false;
         mockIsValidWithdrawalRequest = false;
         mockNodeNetwork = 'regtest';
     });
@@ -3224,6 +3226,80 @@ describe('handleAnything', () => {
                 { extended_public_key: xpub }
             ]);
         });
+
+        it('should route a JSON wallet export to ImportAccount without an address type', async () => {
+            mockSupportsAccounts = true;
+            mockIsJsonWalletExport = true;
+            const value = JSON.stringify({
+                MasterFingerprint: '73C5DA0A',
+                ExtPubKey:
+                    'zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDGf31mGDtKsAYz2oz2AGutZYs'
+            });
+            mockProcessBIP21Uri.mockReturnValue({ value });
+
+            const result = await handleAnything(value);
+
+            expect(result).toStrictEqual([
+                'ImportAccount',
+                {
+                    extended_public_key:
+                        'zpub6rFR7y4Q2AijBEqTUquhVz398htDFrtymD9xYYfG1m4wAcvPhXNfE3EfH1r1ADqtfSdVCToUG868RvUUkgDGf31mGDtKsAYz2oz2AGutZYs',
+                    master_key_fingerprint: '73C5DA0A'
+                }
+            ]);
+        });
+
+        it.each([
+            ['nested SegWit', 2],
+            ['Taproot', 4]
+        ])(
+            'should pass a %s address type from a JSON wallet export to ImportAccount',
+            async (_name, addressType) => {
+                mockSupportsAccounts = true;
+                mockIsJsonWalletExport = true;
+                const value = JSON.stringify({
+                    MasterFingerprint: '73C5DA0A',
+                    ExtPubKey: 'xpubtest',
+                    AddressType: addressType
+                });
+                mockProcessBIP21Uri.mockReturnValue({ value });
+
+                const result = await handleAnything(value);
+
+                expect(result).toStrictEqual([
+                    'ImportAccount',
+                    {
+                        extended_public_key: 'xpubtest',
+                        master_key_fingerprint: '73C5DA0A',
+                        address_type: addressType
+                    }
+                ]);
+            }
+        );
+
+        it.each([0, 3, 99, '2'])(
+            'should ignore an unsupported address type %p in a JSON wallet export',
+            async (addressType) => {
+                mockSupportsAccounts = true;
+                mockIsJsonWalletExport = true;
+                const value = JSON.stringify({
+                    MasterFingerprint: '73C5DA0A',
+                    ExtPubKey: 'xpubtest',
+                    AddressType: addressType
+                });
+                mockProcessBIP21Uri.mockReturnValue({ value });
+
+                const result = await handleAnything(value);
+
+                expect(result).toStrictEqual([
+                    'ImportAccount',
+                    {
+                        extended_public_key: 'xpubtest',
+                        master_key_fingerprint: '73C5DA0A'
+                    }
+                ]);
+            }
+        );
 
         it('should route a BOLT 12 withdrawal request to WithdrawalRequestInfo when supported', async () => {
             mockSupportsWithdrawalRequests = true;
