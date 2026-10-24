@@ -1231,6 +1231,24 @@ describe('LSPStore.getZeroConfFee superseded requests', () => {
         );
     });
 
+    it('ignores a quote or error that arrives after its invoice request was superseded', async () => {
+        const store = makeStore();
+        store.zeroConfFee = 500;
+        let current = true;
+        const answered = store.getZeroConfFee(100000000, () => current);
+        current = false;
+        answers[0].resolve(quote(1000000, 'late'));
+
+        await expect(answered).rejects.toBeUndefined();
+        expect(store.zeroConfFee).toBe(500);
+        expect(store.feeId).toBeUndefined();
+
+        const failed = store.getZeroConfFee(100000000, () => false);
+        answers[1].reject(new Error('timeout'));
+        await expect(failed).rejects.toBeUndefined();
+        expect(store.flow_error).toBe(false);
+    });
+
     it('still records the quote of the latest request', async () => {
         const store = makeStore();
         const request = store.getZeroConfFee(50000000);
@@ -1266,6 +1284,28 @@ describe('LSPStore.getZeroConfInvoice', () => {
             jest.mocked(ReactNativeBlobUtil.fetch).mock.calls[0][3] as string
         );
         expect(body.fee_id).toBe('accepted-quote');
+    });
+
+    it('leaves the flow error fields alone once its invoice request was superseded', async () => {
+        const store = makeStore();
+        store.flow_error = true;
+        store.flow_error_msg = 'error of the request on screen';
+        jest.mocked(ReactNativeBlobUtil.fetch).mockReset();
+        jest.mocked(ReactNativeBlobUtil.fetch).mockResolvedValue({
+            info: () => ({ status: 400 }),
+            json: () => ({ message: 'rejected' })
+        } as any);
+
+        await expect(
+            store.getZeroConfInvoice(
+                'lnbc-inner',
+                { feeSats: 2000, feeId: 'old-quote' },
+                () => false
+            )
+        ).rejects.toBeUndefined();
+
+        expect(store.flow_error).toBe(true);
+        expect(store.flow_error_msg).toBe('error of the request on screen');
     });
 });
 

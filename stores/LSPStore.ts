@@ -540,8 +540,14 @@ export default class LSPStore {
         );
     };
 
+    // isCurrent: an invoice request passes whether it is still the
+    // latest one, so a quote or error that arrives after it was superseded
+    // is not stored
     @action
-    public getZeroConfFee = (amount_msat: number) => {
+    public getZeroConfFee = (
+        amount_msat: number,
+        isCurrent: () => boolean = () => true
+    ) => {
         const { settings } = this.settingsStore;
         const requestId = ++this.feeRequestId;
 
@@ -561,8 +567,9 @@ export default class LSPStore {
                 })
             )
                 .then((response: any) => {
-                    // superseded by a newer fee request or a reset
-                    if (requestId !== this.feeRequestId) {
+                    // superseded by a newer fee request, a reset or a newer
+                    // invoice request
+                    if (requestId !== this.feeRequestId || !isCurrent()) {
                         reject();
                         return;
                     }
@@ -627,7 +634,7 @@ export default class LSPStore {
                     }
                 })
                 .catch(() => {
-                    if (requestId === this.feeRequestId) {
+                    if (requestId === this.feeRequestId && isCurrent()) {
                         runInAction(() => {
                             this.flow_error = true;
                         });
@@ -755,15 +762,23 @@ export default class LSPStore {
 
     // quote is the one bolt11 was priced with. The caller passes it so a
     // quote that has replaced zeroConfFee/feeId since can't change the
-    // fee_id sent or move the verification bound.
+    // fee_id sent or move the verification bound. isCurrent: whether the
+    // invoice request is still the latest one; the flow error fields are
+    // only written while it is.
     @action
     public getZeroConfInvoice = (
         bolt11: string,
-        quote: PricedZeroConfFeeQuote
+        quote: PricedZeroConfFeeQuote,
+        isCurrent: () => boolean = () => true
     ) => {
-        this.flow_error = false;
-        this.flow_error_msg = '';
-        this.showLspSettings = false;
+        if (isCurrent()) {
+            this.flow_error = false;
+            this.flow_error_msg = '';
+            this.showLspSettings = false;
+        }
+        const setError = (update: () => void) => {
+            if (isCurrent()) runInAction(update);
+        };
 
         const { settings } = this.settingsStore;
 
@@ -792,7 +807,7 @@ export default class LSPStore {
                     try {
                         data = response.json();
                     } catch (jsonErr) {
-                        runInAction(() => {
+                        setError(() => {
                             this.flow_error = true;
                             this.flow_error_msg = this.formatFlowError(
                                 response,
@@ -807,7 +822,7 @@ export default class LSPStore {
                             !data.jit_bolt11 ||
                             typeof data.jit_bolt11 !== 'string'
                         ) {
-                            runInAction(() => {
+                            setError(() => {
                                 this.flow_error = true;
                                 this.flow_error_msg = localeString(
                                     'stores.LSPStore.missingWrappedInvoice'
@@ -822,7 +837,7 @@ export default class LSPStore {
                             quote.feeSats
                         );
                         if (!check.valid) {
-                            runInAction(() => {
+                            setError(() => {
                                 this.flow_error = true;
                                 this.flow_error_msg = `${localeString(
                                     'stores.LSPStore.wrappedInvoiceVerificationFailed'
@@ -833,7 +848,7 @@ export default class LSPStore {
                         }
                         resolve(data.jit_bolt11);
                     } else {
-                        runInAction(() => {
+                        setError(() => {
                             this.flow_error = true;
                             this.flow_error_msg = this.formatFlowError(
                                 response,
@@ -851,7 +866,7 @@ export default class LSPStore {
                     }
                 })
                 .catch(() => {
-                    runInAction(() => {
+                    setError(() => {
                         this.flow_error = true;
                     });
                     reject();

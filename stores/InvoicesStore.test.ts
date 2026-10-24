@@ -385,7 +385,10 @@ describe('InvoicesStore.createInvoice LSP decision', () => {
     it('takes the LSP path when the caller asks for it before settings.enableLSP has been written', async () => {
         // Receive: switch flipped on, enableLSP write still queued
         const lspStore = await create(false, { useLsp: true, noLsp: false });
-        expect(lspStore.getZeroConfFee).toHaveBeenCalledWith(50000000);
+        expect(lspStore.getZeroConfFee).toHaveBeenCalledWith(
+            50000000,
+            expect.any(Function)
+        );
     });
 
     it('skips the LSP when the caller says no, even with enableLSP set', async () => {
@@ -544,7 +547,8 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
 
         expect(lspStore.getZeroConfInvoice).toHaveBeenCalledWith(
             'lnbc-inner',
-            expect.objectContaining({ feeSats: 2000, feeId: 'quote-2000' })
+            expect.objectContaining({ feeSats: 2000, feeId: 'quote-2000' }),
+            expect.any(Function)
         );
         expect(result!.paymentRequest).toBe('lnbc-wrapped');
     });
@@ -581,7 +585,8 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
         expect(requestedValue()).toBe('1000');
         expect(lspStore.getZeroConfInvoice).toHaveBeenCalledWith(
             'lnbc-inner',
-            expect.objectContaining({ feeSats: 3000, feeId: 'quote-3000' })
+            expect.objectContaining({ feeSats: 3000, feeId: 'quote-3000' }),
+            expect.any(Function)
         );
     });
 
@@ -605,7 +610,8 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
 
         expect(lspStore.getZeroConfInvoice).toHaveBeenCalledWith(
             'lnbc-inner',
-            expect.objectContaining({ feeSats: 2000, feeId: 'quote-2000' })
+            expect.objectContaining({ feeSats: 2000, feeId: 'quote-2000' }),
+            expect.any(Function)
         );
     });
 
@@ -723,7 +729,8 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
                 expect(requestedValue()).toBe('50000');
                 expect(lspStore.getZeroConfInvoice).toHaveBeenCalledWith(
                     'lnbc-inner',
-                    expect.objectContaining({ feeSats: fee })
+                    expect.objectContaining({ feeSats: fee }),
+                    expect.any(Function)
                 );
                 expect(submittedInvoice()).toBe('lnbc-wrapped');
             }
@@ -810,7 +817,8 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
 
             expect(lspStore.getZeroConfInvoice).toHaveBeenCalledWith(
                 'lnbc-inner',
-                expect.objectContaining({ feeSats: 2000, feeId: 'quote-2000' })
+                expect.objectContaining({ feeSats: 2000, feeId: 'quote-2000' }),
+                expect.any(Function)
             );
         });
 
@@ -854,7 +862,8 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
                 expect(requestedValue()).toBe('48000');
                 expect(lspStore.getZeroConfInvoice).toHaveBeenCalledWith(
                     'lnbc-inner',
-                    expect.objectContaining({ feeSats: 2000, feeId: 'fresh' })
+                    expect.objectContaining({ feeSats: 2000, feeId: 'fresh' }),
+                    expect.any(Function)
                 );
             });
 
@@ -887,7 +896,8 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
                 expect(requestedValue()).toBe('500');
                 expect(lspStore.getZeroConfInvoice).toHaveBeenCalledWith(
                     'lnbc-inner',
-                    expect.objectContaining({ feeSats: 500, feeId: 'fresh' })
+                    expect.objectContaining({ feeSats: 500, feeId: 'fresh' }),
+                    expect.any(Function)
                 );
             });
 
@@ -935,7 +945,8 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
                 expect(requestedValue()).toBe('50000');
                 expect(lspStore.getZeroConfInvoice).toHaveBeenCalledWith(
                     'lnbc-inner',
-                    expect.objectContaining({ feeSats: 0, feeId: 'fresh' })
+                    expect.objectContaining({ feeSats: 0, feeId: 'fresh' }),
+                    expect.any(Function)
                 );
             });
 
@@ -988,7 +999,8 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
                 expect(lspStore.getZeroConfFee).toHaveBeenCalledTimes(2);
                 expect(lspStore.getZeroConfInvoice).toHaveBeenCalledWith(
                     'lnbc-inner',
-                    expect.objectContaining({ feeId: 'fresh' })
+                    expect.objectContaining({ feeId: 'fresh' }),
+                    expect.any(Function)
                 );
             });
 
@@ -1209,5 +1221,452 @@ describe('InvoicesStore.createUnifiedInvoice', () => {
         expect(store.payment_request).toBe('lnbc-receive');
         expect(store.payment_request_amt).toBe('1000');
         expect(store.creatingInvoice).toBe(false);
+    });
+});
+
+// Leaving Receive calls reset(), and a new sale or a changed amount starts
+// a new request, while an older createUnifiedInvoice can still be waiting
+// on the node, the LSP or the user. The older call must not reach the
+// screen or the LNURL withdraw service, but still answers its own caller.
+describe('InvoicesStore superseded invoice requests', () => {
+    const deferred = () => {
+        let resolve: (value: any) => void = () => {};
+        let reject: (error: any) => void = () => {};
+        const promise = new Promise((res, rej) => {
+            resolve = res;
+            reject = rej;
+        });
+        return { promise, resolve, reject };
+    };
+
+    const flush = () => new Promise((resolve) => setImmediate(resolve));
+
+    const lnurl = (k1: string) =>
+        ({
+            callback: 'https://service.example/withdraw',
+            k1,
+            domain: 'service.example'
+        } as any);
+
+    const submittedK1s = () =>
+        (ReactNativeBlobUtil.fetch as jest.Mock).mock.calls.map((call) =>
+            new URL(call[1]).searchParams.get('k1')
+        );
+
+    const newStore = (lspStore: any = {}) =>
+        new InvoicesStore(
+            { settings: {} } as any,
+            {
+                resetFee: jest.fn(),
+                clearFee: jest.fn(),
+                flow_error: false,
+                ...lspStore
+            } as any,
+            {} as any,
+            {} as any
+        );
+
+    const params = { memo: '', value: '1000', expirySeconds: '3600' };
+
+    // What the next Receive screen could be showing by the time the old
+    // call finishes, none of it a default value
+    const seedNextScreen = (store: InvoicesStore) => {
+        store.payment_request = 'lnbc-next';
+        store.payment_request_amt = '777';
+        store.onChainAddress = 'bcrt1-next';
+        store.creatingInvoice = true;
+        store.creatingInvoiceError = false;
+        store.error_msg = null;
+        store.loading = true;
+    };
+
+    const expectNextScreenKept = (store: InvoicesStore) => {
+        expect(store.payment_request).toBe('lnbc-next');
+        expect(store.payment_request_amt).toBe('777');
+        expect(store.onChainAddress).toBe('bcrt1-next');
+        expect(store.creatingInvoice).toBe(true);
+        expect(store.creatingInvoiceError).toBe(false);
+        expect(store.error_msg).toBeNull();
+        expect(store.loading).toBe(true);
+    };
+
+    beforeEach(() => {
+        (BackendUtils.createInvoice as jest.Mock).mockReset();
+        (BackendUtils.getNewAddress as jest.Mock).mockReset();
+        (ReactNativeBlobUtil.fetch as jest.Mock).mockReset();
+        (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValue({
+            json: () => ({ status: 'OK' })
+        });
+    });
+
+    afterEach(() => {
+        (BackendUtils.supportsOnchainReceiving as jest.Mock).mockReturnValue(
+            false
+        );
+        (BackendUtils.supportsFlowLSP as jest.Mock).mockReturnValue(false);
+    });
+
+    it('returns a late invoice after reset() without showing or submitting it', async () => {
+        const backend = deferred();
+        (BackendUtils.createInvoice as jest.Mock).mockReturnValueOnce(
+            backend.promise
+        );
+        const store = newStore();
+
+        const pending = store.createUnifiedInvoice({
+            ...params,
+            lnurl: lnurl('old')
+        });
+        await flush();
+        store.reset();
+        seedNextScreen(store);
+        backend.resolve({ payment_request: 'lnbc-old', r_hash: 'aa' });
+
+        await expect(pending).resolves.toEqual({
+            rHash: 'aa',
+            paymentRequest: 'lnbc-old'
+        });
+        await flush();
+        expectNextScreenKept(store);
+        expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+    });
+
+    it('keeps the newer invoice and withdraw when an older request finishes last', async () => {
+        const older = deferred();
+        const newer = deferred();
+        (BackendUtils.createInvoice as jest.Mock)
+            .mockReturnValueOnce(older.promise)
+            .mockReturnValueOnce(newer.promise);
+        const store = newStore();
+
+        const a = store.createUnifiedInvoice({
+            ...params,
+            lnurl: lnurl('old')
+        });
+        const b = store.createUnifiedInvoice({
+            ...params,
+            value: '2000',
+            lnurl: lnurl('new')
+        });
+        await flush();
+        newer.resolve({ payment_request: 'lnbc-new', r_hash: 'bb' });
+        await expect(b).resolves.toEqual({
+            rHash: 'bb',
+            paymentRequest: 'lnbc-new'
+        });
+        older.resolve({ payment_request: 'lnbc-old', r_hash: 'aa' });
+        await expect(a).resolves.toEqual({
+            rHash: 'aa',
+            paymentRequest: 'lnbc-old'
+        });
+        await flush();
+
+        expect(store.payment_request).toBe('lnbc-new');
+        expect(store.payment_request_amt).toBe('2000');
+        expect(store.creatingInvoice).toBe(false);
+        expect(submittedK1s()).toEqual(['new']);
+    });
+
+    it('still rejects a late failure after reset() without reporting it', async () => {
+        const store = newStore();
+        const rejected = deferred();
+        const errored = deferred();
+        (BackendUtils.createInvoice as jest.Mock)
+            .mockReturnValueOnce(rejected.promise)
+            .mockReturnValueOnce(errored.promise);
+
+        const thrown = store.createUnifiedInvoice(params);
+        await flush();
+        store.reset();
+        const returned = store.createUnifiedInvoice(params);
+        await flush();
+        store.reset();
+        seedNextScreen(store);
+        rejected.reject(new Error('connection refused'));
+        errored.resolve({ error: true, message: 'node offline' });
+
+        await expect(thrown).rejects.toThrow('connection refused');
+        await expect(returned).rejects.toThrow(
+            'stores.InvoicesStore.errorCreatingInvoice'
+        );
+        expectNextScreenKept(store);
+    });
+
+    it('still rejects a late failure after a newer request without reporting it', async () => {
+        const older = deferred();
+        (BackendUtils.createInvoice as jest.Mock)
+            .mockReturnValueOnce(older.promise)
+            .mockResolvedValueOnce({
+                payment_request: 'lnbc-new',
+                r_hash: 'bb'
+            });
+        const store = newStore();
+
+        const a = store.createUnifiedInvoice(params);
+        await store.createUnifiedInvoice(params);
+        older.reject(new Error('connection refused'));
+
+        await expect(a).rejects.toThrow('connection refused');
+        expect(store.payment_request).toBe('lnbc-new');
+        expect(store.creatingInvoiceError).toBe(false);
+        expect(store.error_msg).toBeNull();
+        expect(store.creatingInvoice).toBe(false);
+        expect(store.loading).toBe(false);
+    });
+
+    it('leaves the next screen alone when the on-chain address arrives after reset()', async () => {
+        (BackendUtils.supportsOnchainReceiving as jest.Mock).mockReturnValue(
+            true
+        );
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            payment_request: 'lnbc-old',
+            r_hash: 'aa'
+        });
+        const address = deferred();
+        const failedAddress = deferred();
+        (BackendUtils.getNewAddress as jest.Mock)
+            .mockReturnValueOnce(address.promise)
+            .mockReturnValueOnce(failedAddress.promise);
+        const store = newStore();
+
+        const pending = store.createUnifiedInvoice(params);
+        const failing = store.createUnifiedInvoice(params);
+        await flush();
+        expect(BackendUtils.getNewAddress).toHaveBeenCalledTimes(2);
+        store.reset();
+        seedNextScreen(store);
+        address.resolve({ address: 'bcrt1-old' });
+        failedAddress.reject(new Error('wallet locked'));
+
+        await expect(pending).resolves.toEqual({
+            rHash: 'aa',
+            paymentRequest: 'lnbc-old',
+            onChainAddress: 'bcrt1-old'
+        });
+        await failing;
+        expectNextScreenKept(store);
+    });
+
+    it('does not let a silent call and a Receive call supersede each other', async () => {
+        const receive = deferred();
+        const nwc = deferred();
+        (BackendUtils.createInvoice as jest.Mock)
+            .mockReturnValueOnce(receive.promise)
+            .mockReturnValueOnce(nwc.promise)
+            .mockResolvedValueOnce({
+                payment_request: 'lnbc-receive-2',
+                r_hash: 'cc'
+            });
+        const store = newStore();
+
+        const shown = store.createUnifiedInvoice({
+            ...params,
+            lnurl: lnurl('receive')
+        });
+        const silent = store.createUnifiedInvoice({
+            ...params,
+            noLsp: true,
+            silent: true
+        });
+        await flush();
+        receive.resolve({ payment_request: 'lnbc-receive', r_hash: 'aa' });
+        await shown;
+        expect(store.payment_request).toBe('lnbc-receive');
+        expect(submittedK1s()).toEqual(['receive']);
+
+        // a Receive request that starts while the silent one is pending
+        // does not stop it either
+        await store.createUnifiedInvoice(params);
+        nwc.resolve({ payment_request: 'lnbc-nwc', r_hash: 'bb' });
+        await expect(silent).resolves.toEqual({
+            rHash: 'bb',
+            paymentRequest: 'lnbc-nwc'
+        });
+        expect(store.payment_request).toBe('lnbc-receive-2');
+    });
+
+    describe('with the LSP', () => {
+        const lspSetup = (overrides: any = {}) => {
+            const lspStore: any = {
+                info: { pubkey: 'lsp', connection_methods: [] },
+                getZeroConfFee: jest.fn(() =>
+                    Promise.resolve({ feeSats: 2000, feeId: 'quote' })
+                ),
+                getZeroConfInvoice: jest.fn(() =>
+                    Promise.resolve('lnbc-wrapped')
+                ),
+                zeroConfFee: 2500,
+                feeId: 'quote-on-screen',
+                ...overrides
+            };
+            const store = new InvoicesStore(
+                { settings: { enableLSP: true } } as any,
+                {
+                    resetFee: jest.fn(),
+                    clearFee: jest.fn(),
+                    flow_error: false,
+                    ...lspStore
+                } as any,
+                {} as any,
+                {
+                    flowLspNotConfigured: () => ({
+                        flowLspNotConfigured: false
+                    })
+                } as any
+            );
+            (BackendUtils.supportsFlowLSP as jest.Mock).mockReturnValue(true);
+            (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+                payment_request: 'lnbc-inner',
+                r_hash: 'hash'
+            });
+            return store;
+        };
+
+        it('drops a fee quote that arrives after reset() and asks for no other', async () => {
+            const quote = deferred();
+            const store = lspSetup({
+                getZeroConfFee: jest.fn(() => quote.promise)
+            });
+
+            const pending = store.createUnifiedInvoice({
+                ...params,
+                value: '50000'
+            });
+            await flush();
+            const isCurrent = (store.lspStore.getZeroConfFee as jest.Mock).mock
+                .calls[0][1];
+            expect(isCurrent()).toBe(true);
+            store.reset();
+            // LSPStore drops the answer and the error for this request
+            expect(isCurrent()).toBe(false);
+            quote.reject(undefined);
+
+            await expect(pending).rejects.toThrow(
+                'stores.InvoicesStore.errorCreatingInvoice'
+            );
+            expect(store.lspStore.getZeroConfFee).toHaveBeenCalledTimes(1);
+            expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
+        });
+
+        it('asks for no fee quote when superseded while connecting to the LSP', async () => {
+            const connected = deferred();
+            const store = lspSetup({
+                info: {
+                    pubkey: 'lsp',
+                    connection_methods: [{ address: 'lsp.example', port: 9735 }]
+                }
+            });
+            store.channelsStore = {
+                connectPeer: jest.fn(() => connected.promise)
+            } as any;
+
+            const pending = store.createUnifiedInvoice({
+                ...params,
+                value: '50000'
+            });
+            await flush();
+            expect(store.channelsStore.connectPeer).toHaveBeenCalled();
+            store.reset();
+            connected.resolve(undefined);
+
+            await expect(pending).rejects.toThrow();
+            // a quote request would drop the one the next request waits for
+            expect(store.lspStore.getZeroConfFee).not.toHaveBeenCalled();
+            expect(BackendUtils.createInvoice).not.toHaveBeenCalled();
+        });
+
+        it('does not ask to accept the fee for a request that was superseded', async () => {
+            const quote = deferred();
+            const confirmLspFee = jest.fn(() => Promise.resolve(true));
+            const store = lspSetup({
+                getZeroConfFee: jest.fn(() => quote.promise)
+            });
+
+            const pending = store.createUnifiedInvoice({
+                ...params,
+                value: '50000',
+                lnurl: lnurl('old'),
+                confirmLspFee
+            });
+            await flush();
+            store.reset();
+            quote.resolve({ feeSats: 2000, feeId: 'old' });
+
+            await expect(pending).rejects.toThrow();
+            expect(confirmLspFee).not.toHaveBeenCalled();
+            expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+        });
+
+        it('leaves the fee state alone when a superseded request is declined', async () => {
+            const answer = deferred();
+            const store = lspSetup();
+            const resetFee = store.lspStore.resetFee as jest.Mock;
+
+            const pending = store.createUnifiedInvoice({
+                ...params,
+                value: '50000',
+                lnurl: lnurl('old'),
+                confirmLspFee: () => answer.promise as Promise<boolean>
+            });
+            await flush();
+            expect(resetFee).toHaveBeenCalledTimes(1);
+            store.reset();
+            answer.resolve(false);
+
+            await expect(pending).rejects.toThrow();
+            // resetFee would drop the quote the next request waits for
+            expect(resetFee).toHaveBeenCalledTimes(1);
+        });
+
+        it('returns the wrapped invoice of a superseded request without showing or submitting it', async () => {
+            const answer = deferred();
+            const store = lspSetup();
+
+            const pending = store.createUnifiedInvoice({
+                ...params,
+                value: '50000',
+                lnurl: lnurl('old'),
+                confirmLspFee: () => answer.promise as Promise<boolean>
+            });
+            await flush();
+            store.reset();
+            seedNextScreen(store);
+            answer.resolve(true);
+
+            await expect(pending).resolves.toEqual({
+                rHash: expect.any(String),
+                paymentRequest: 'lnbc-wrapped'
+            });
+            await flush();
+            const proposalIsCurrent = (
+                store.lspStore.getZeroConfInvoice as jest.Mock
+            ).mock.calls[0][2];
+            expect(proposalIsCurrent()).toBe(false);
+            expectNextScreenKept(store);
+            expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+        });
+
+        it('keeps the fee shown when a superseded proposal fails', async () => {
+            const proposal = deferred();
+            const store = lspSetup({
+                getZeroConfInvoice: jest.fn(() => proposal.promise)
+            });
+
+            const pending = store.createUnifiedInvoice({
+                ...params,
+                value: '50000'
+            });
+            await flush();
+            store.reset();
+            seedNextScreen(store);
+            store.lspStore.zeroConfFee = 3000;
+            store.lspStore.feeId = 'next-quote';
+            proposal.reject(undefined);
+
+            await expect(pending).rejects.toThrow();
+            expect(store.lspStore.zeroConfFee).toBe(3000);
+            expect(store.lspStore.feeId).toBe('next-quote');
+            expectNextScreenKept(store);
+        });
     });
 });

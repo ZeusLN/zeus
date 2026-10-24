@@ -249,7 +249,29 @@ export default class Receive extends React.Component<
     // set on unmount so address and invoice requests that resolve later
     // don't start watchers that nothing will stop
     private unmounted = false;
+    // Bumped for each invoice this view asks InvoicesStore for. The store
+    // only shows the invoice of its latest request, so the result of an
+    // older one must not be watched, recorded for the order or handed on
+    // to the withdraw screen after a failure.
+    private invoiceRequestId = 0;
+    // Bumped by each NFC tag lookup, each invoice request and Cancel. The
+    // tag's LNURL server can answer after any of those, and the answer
+    // must then create, submit or show nothing. Kept apart from
+    // invoiceRequestId so a tap that turns out not to be a withdraw does
+    // not cancel the invoice request still finishing on screen.
+    private nfcLookupId = 0;
     hopPickerRef: HopPicker | null;
+
+    private startInvoiceRequest = () => {
+        this.nfcLookupId++;
+        const id = ++this.invoiceRequestId;
+        return () => !this.unmounted && id === this.invoiceRequestId;
+    };
+
+    private startNfcLookup = () => {
+        const id = ++this.nfcLookupId;
+        return () => !this.unmounted && id === this.nfcLookupId;
+    };
 
     private getDefaultIndex = (): number => {
         const { settings } = this.props.SettingsStore;
@@ -589,6 +611,12 @@ export default class Receive extends React.Component<
     };
 
     cleanup = () => {
+        // Cancel keeps the view mounted: an invoice request or NFC lookup
+        // still pending must not start a watcher, submit an invoice or
+        // open a screen afterwards
+        this.invoiceRequestId++;
+        this.nfcLookupId++;
+
         // kill all listeners and pollers
         this.stopWatchers();
 
@@ -619,6 +647,7 @@ export default class Receive extends React.Component<
         const effectiveLspIsActive = lspIsActive ?? this.state.lspIsActive;
         const { createUnifiedInvoice } = InvoicesStore;
         const skipOnchain = this.getSkipOnchain();
+        const isCurrent = this.startInvoiceRequest();
 
         // Set synchronously so componentDidMount's initialLoad flip sees
         // creatingInvoice=true before the checkExistingInvoice microtask runs.
@@ -631,6 +660,7 @@ export default class Receive extends React.Component<
                     const existingInvoice = await PosStore.getOrderInvoiceById(
                         orderId
                     );
+                    if (!isCurrent()) return false;
                     if (
                         existingInvoice &&
                         PosStore.canReuseInvoice(
@@ -654,6 +684,7 @@ export default class Receive extends React.Component<
         };
 
         checkExistingInvoice().then((canReuseInvoice) => {
+            if (!isCurrent()) return;
             if (canReuseInvoice) {
                 InvoicesStore.creatingInvoice = false;
                 return;
@@ -686,16 +717,19 @@ export default class Receive extends React.Component<
                 .then(
                     ({
                         rHash,
+                        paymentRequest,
                         onChainAddress
                     }: {
                         rHash: string;
+                        paymentRequest: string;
                         onChainAddress?: string;
                     }) => {
+                        if (!isCurrent()) return;
                         // Store invoice for POS orders
-                        if (orderId && InvoicesStore.payment_request) {
+                        if (orderId && paymentRequest) {
                             PosStore.recordInvoice({
                                 orderId,
-                                payment_request: InvoicesStore.payment_request,
+                                payment_request: paymentRequest,
                                 rHash,
                                 exchangeRate,
                                 amount: amount || '0',
@@ -798,20 +832,27 @@ export default class Receive extends React.Component<
 
     scanNfc = async () => {
         const str = await scanNfcTag(this.props.ModalStore);
-        if (!str) return;
+        if (!str || this.unmounted) return;
         this.setState({ nfcError: false });
         this.validateAddress(str);
     };
 
     validateAddress = (text: string) => {
-        const { navigation, InvoicesStore, route } = this.props;
-        const { lspIsActive, receiverName } = this.state;
+        const { navigation, InvoicesStore } = this.props;
+        // route.params.amount is in the display unit that was active when it
+        // was passed, and the amount under the QR code toggles that unit:
+        // use the sats it was converted to back then
+        const { lspIsActive, receiverName, satAmount } = this.state;
         const { createUnifiedInvoice } = InvoicesStore;
-        const satAmount = getSatAmount(route.params?.amount);
         const skipOnchain = this.getSkipOnchain();
+        // taken before the lookup: a newer tap, invoice or Cancel while the
+        // tag's LNURL server is answering supersedes this tap
+        const lookupIsCurrent = this.startNfcLookup();
 
         handleAnything(text, satAmount.toString())
             .then((response) => {
+                // the tag's LNURL server decides when this runs
+                if (!lookupIsCurrent()) return;
                 try {
                     const [route, props] = response;
                     const { lnurlParams } = props;
@@ -827,6 +868,7 @@ export default class Receive extends React.Component<
                     // we will automatically create an invoice and attempt to withdraw
                     // otherwise we present the user with the create invoice screen
                     if (Number(satAmount) > 0) {
+                        const isCurrent = this.startInvoiceRequest();
                         createUnifiedInvoice({
                             memo: lspIsActive
                                 ? ''
@@ -851,6 +893,7 @@ export default class Receive extends React.Component<
                                     rHash: string;
                                     onChainAddress?: string;
                                 }) => {
+                                    if (!isCurrent()) return;
                                     this.subscribeInvoice(
                                         rHash,
                                         onChainAddress
@@ -858,6 +901,7 @@ export default class Receive extends React.Component<
                                 }
                             )
                             .catch(() => {
+                                if (!isCurrent()) return;
                                 navigation.navigate(route, {
                                     satAmount,
                                     ...props
@@ -868,7 +912,9 @@ export default class Receive extends React.Component<
                     }
                 } catch (e) {}
             })
-            .catch(() => this.setState({ nfcError: true }));
+            .catch(() => {
+                if (lookupIsCurrent()) this.setState({ nfcError: true });
+            });
     };
 
     handlePaymentReceived = (
@@ -884,7 +930,9 @@ export default class Receive extends React.Component<
         const { orderId, orderTotal, orderTip, exchangeRate, rate } =
             this.state;
 
-        InvoicesStore.setWatchedInvoicePaid(amount);
+        // a watcher callback that was in flight when the watchers were
+        // stopped must not mark the next view's invoice as paid
+        if (!this.unmounted) InvoicesStore.setWatchedInvoicePaid(amount);
         BalanceStore.getCombinedBalance();
 
         if (
@@ -3033,6 +3081,8 @@ export default class Receive extends React.Component<
                                                                 selectedIndex: 1
                                                             });
                                                         }
+                                                        const isCurrent =
+                                                            this.startInvoiceRequest();
                                                         createUnifiedInvoice({
                                                             memo: lspIsActive
                                                                 ? ''
@@ -3092,6 +3142,10 @@ export default class Receive extends React.Component<
                                                                     rHash: string;
                                                                     onChainAddress?: string;
                                                                 }) => {
+                                                                    if (
+                                                                        !isCurrent()
+                                                                    )
+                                                                        return;
                                                                     this.subscribeInvoice(
                                                                         rHash,
                                                                         onChainAddress
