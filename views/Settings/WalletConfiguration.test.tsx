@@ -86,6 +86,7 @@ jest.mock('../../assets/images/SVG/Scan.svg', () => 'Scan');
 jest.mock('../../assets/images/SVG/Add.svg', () => 'AddIcon');
 
 import * as React from 'react';
+import { Alert } from 'react-native';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import WalletConfiguration from './WalletConfiguration';
@@ -94,6 +95,7 @@ import { createLdkNodeWallet } from '../../utils/LdkNodeUtils';
 import Storage from '../../storage';
 import { CUSTODIAL_LNDHUBS } from '../../utils/AddressUtils';
 import { clearNodeKeychainData } from '../../utils/DataClearUtils';
+import { reAuthNavigation } from '../../utils/NavigationUtils';
 
 const LNDHUB_IMPORT = 'lndhub://alice:secret@https://lndhub.example.com';
 
@@ -712,6 +714,222 @@ describe('WalletConfiguration', () => {
             ]);
             expect(navigation.reset).toHaveBeenCalled();
             consoleError.mockRestore();
+        });
+    });
+
+    describe('deleting an on-device wallet', () => {
+        const LDK_NODE = {
+            implementation: 'ldk-node',
+            ldkNodeDir: 'ldk-1',
+            nickname: 'LDK wallet'
+        };
+        const EMBEDDED_NODE = {
+            implementation: 'embedded-lnd',
+            lndDir: 'lnd-1',
+            nickname: 'Embedded wallet'
+        };
+
+        let alertSpy: jest.SpyInstance;
+
+        beforeEach(() => {
+            alertSpy = jest
+                .spyOn(Alert, 'alert')
+                .mockImplementation(() => void 0);
+        });
+
+        afterEach(() => {
+            alertSpy.mockRestore();
+        });
+
+        // Opens the saved wallet at index 0 and confirms "Delete Wallet"
+        const confirmDelete = async (
+            node: any,
+            {
+                active = true,
+                channels = [],
+                pendingChannels = [],
+                confirmedBlockchainBalance = 0,
+                unconfirmedBlockchainBalance = 0,
+                vssError = null
+            }: {
+                active?: boolean;
+                channels?: any[];
+                pendingChannels?: any[];
+                confirmedBlockchainBalance?: number;
+                unconfirmedBlockchainBalance?: number;
+                vssError?: string | null;
+            } = {}
+        ) => {
+            const nodes = [node, LND_NODE];
+            const settings = { nodes, selectedNode: 0, privacy: {} };
+            const SettingsStore = {
+                settings,
+                updateSettings: jest.fn(async (update: any) => ({
+                    ...settings,
+                    ...(typeof update === 'function'
+                        ? update(settings)
+                        : update)
+                })),
+                setConnectingStatus: jest.fn(),
+                invalidateConnection: jest.fn()
+            };
+            await render(
+                <WalletConfiguration
+                    {...({
+                        navigation: {
+                            goBack: jest.fn(),
+                            navigate: jest.fn(),
+                            popTo: jest.fn(),
+                            reset: jest.fn()
+                        },
+                        route: {
+                            params: { node, index: 0, active, saved: true }
+                        },
+                        SettingsStore,
+                        AlertStore: { vssError },
+                        ChannelsStore: { channels, pendingChannels },
+                        BalanceStore: {
+                            confirmedBlockchainBalance,
+                            unconfirmedBlockchainBalance
+                        },
+                        NostrWalletConnectStore: {
+                            deleteCurrentWalletConnections: jest.fn(() =>
+                                Promise.resolve()
+                            ),
+                            deleteAllConnectionData: jest.fn(() =>
+                                Promise.resolve()
+                            )
+                        },
+                        SyncStore: { reset: jest.fn() }
+                    } as any)}
+                />
+            );
+            await pressButton(
+                'views.Settings.WalletConfiguration.deleteWallet'
+            );
+            const [, , confirm] = (confirmAction as jest.Mock).mock.calls[0];
+            await act(async () => confirm.onPress());
+            return SettingsStore;
+        };
+
+        const alertMessage = () => alertSpy.mock.calls[0][1];
+
+        it('asks to make an inactive LDK Node wallet active instead of deleting it', async () => {
+            const SettingsStore = await confirmDelete(LDK_NODE, {
+                active: false
+            });
+
+            expect(alertSpy).toHaveBeenCalledTimes(1);
+            expect(alertMessage()).toBe(
+                'views.Settings.WalletConfiguration.deleteWallet.inactiveWarningLdk'
+            );
+            expect(SettingsStore.updateSettings).not.toHaveBeenCalled();
+        });
+
+        it('warns before deleting an LDK Node wallet with open channels', async () => {
+            const SettingsStore = await confirmDelete(LDK_NODE, {
+                channels: [{ channelId: 'a' }]
+            });
+
+            expect(alertMessage()).toBe(
+                'views.Settings.WalletConfiguration.deleteWallet.channelsWarningLdk'
+            );
+            expect(SettingsStore.updateSettings).not.toHaveBeenCalled();
+        });
+
+        it('warns before deleting an LDK Node wallet with pending channels', async () => {
+            const SettingsStore = await confirmDelete(LDK_NODE, {
+                pendingChannels: [{ channelId: 'a' }]
+            });
+
+            expect(alertMessage()).toBe(
+                'views.Settings.WalletConfiguration.deleteWallet.channelsWarningLdk'
+            );
+            expect(SettingsStore.updateSettings).not.toHaveBeenCalled();
+        });
+
+        it('warns that channel state is local only when VSS is failing', async () => {
+            const SettingsStore = await confirmDelete(LDK_NODE, {
+                channels: [{ channelId: 'a' }],
+                vssError: 'connection refused'
+            });
+
+            expect(alertMessage()).toBe(
+                'views.Settings.WalletConfiguration.deleteWallet.channelsWarningLdkVssError'
+            );
+            expect(SettingsStore.updateSettings).not.toHaveBeenCalled();
+        });
+
+        it('keeps the balance warning for an LDK Node wallet without channels when VSS is failing', async () => {
+            await confirmDelete(LDK_NODE, {
+                confirmedBlockchainBalance: 1000,
+                vssError: 'connection refused'
+            });
+
+            expect(alertMessage()).toBe(
+                'views.Settings.WalletConfiguration.deleteWallet.balanceWarning'
+            );
+        });
+
+        it('offers the seed backup from the LDK Node channels warning', async () => {
+            await confirmDelete(LDK_NODE, {
+                channels: [{ channelId: 'a' }]
+            });
+
+            const buttons = alertSpy.mock.calls[0][2];
+            const backup = buttons.find(
+                (b: any) => b.text === 'views.Settings.Seed.title'
+            );
+            backup.onPress();
+            expect(reAuthNavigation).toHaveBeenCalledWith(
+                expect.anything(),
+                'Seed',
+                { skipWarning: true, implementation: 'ldk-node' }
+            );
+        });
+
+        it('warns before deleting an LDK Node wallet with an on-chain balance', async () => {
+            const SettingsStore = await confirmDelete(LDK_NODE, {
+                unconfirmedBlockchainBalance: 1000
+            });
+
+            expect(alertMessage()).toBe(
+                'views.Settings.WalletConfiguration.deleteWallet.balanceWarning'
+            );
+            expect(SettingsStore.updateSettings).not.toHaveBeenCalled();
+        });
+
+        it('deletes the LDK Node wallet after the balance warning is accepted', async () => {
+            const SettingsStore = await confirmDelete(LDK_NODE, {
+                confirmedBlockchainBalance: 1000
+            });
+
+            const [proceed] = alertSpy.mock.calls[0][2];
+            await act(async () => proceed.onPress());
+            expect(SettingsStore.updateSettings).toHaveBeenCalled();
+        });
+
+        it('deletes an empty active LDK Node wallet without a warning', async () => {
+            const SettingsStore = await confirmDelete(LDK_NODE);
+
+            expect(alertSpy).not.toHaveBeenCalled();
+            expect(SettingsStore.updateSettings).toHaveBeenCalled();
+        });
+
+        it('keeps the embedded LND inactive and channels messages', async () => {
+            await confirmDelete(EMBEDDED_NODE, { active: false });
+            expect(alertMessage()).toBe(
+                'views.Settings.WalletConfiguration.deleteWallet.inactiveWarning'
+            );
+
+            alertSpy.mockClear();
+            (confirmAction as jest.Mock).mockClear();
+            await confirmDelete(EMBEDDED_NODE, {
+                channels: [{ channelId: 'a' }]
+            });
+            expect(alertMessage()).toBe(
+                'views.Settings.WalletConfiguration.deleteWallet.channelsWarning'
+            );
         });
     });
 

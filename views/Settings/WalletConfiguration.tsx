@@ -56,6 +56,7 @@ import VssServerPicker, {
 import { Row } from '../../components/layout/Row';
 import ShowHideToggle from '../../components/ShowHideToggle';
 
+import AlertStore from '../../stores/AlertStore';
 import BalanceStore from '../../stores/BalanceStore';
 import ChannelsStore from '../../stores/ChannelsStore';
 import NostrWalletConnectStore from '../../stores/NostrWalletConnectStore';
@@ -97,6 +98,7 @@ import {
 
 interface WalletConfigurationProps {
     navigation: NativeStackNavigationProp<any, any>;
+    AlertStore: AlertStore;
     BalanceStore: BalanceStore;
     ChannelsStore: ChannelsStore;
     NostrWalletConnectStore: NostrWalletConnectStore;
@@ -194,6 +196,7 @@ const ScanBadge = ({ onPress }: { onPress: () => void }) => (
 );
 
 @inject(
+    'AlertStore',
     'BalanceStore',
     'ChannelsStore',
     'NostrWalletConnectStore',
@@ -1087,13 +1090,20 @@ export default class WalletConfiguration extends React.Component<
 
     private performDelete = () => {
         const { implementation, active } = this.state;
-        const { ChannelsStore, BalanceStore, navigation } = this.props;
+        const { AlertStore, ChannelsStore, BalanceStore, navigation } =
+            this.props;
+        const isLdkNode = implementation === 'ldk-node';
+        // On-device wallets: channel and balance checks below read the
+        // stores, which only hold the active wallet's data
+        const isOnDevice = implementation === 'embedded-lnd' || isLdkNode;
 
-        if (implementation === 'embedded-lnd' && !active) {
+        if (isOnDevice && !active) {
             Alert.alert(
                 localeString('general.error'),
                 localeString(
-                    'views.Settings.WalletConfiguration.deleteWallet.inactiveWarning'
+                    isLdkNode
+                        ? 'views.Settings.WalletConfiguration.deleteWallet.inactiveWarningLdk'
+                        : 'views.Settings.WalletConfiguration.deleteWallet.inactiveWarning'
                 ),
                 [
                     {
@@ -1111,15 +1121,20 @@ export default class WalletConfiguration extends React.Component<
                 { cancelable: false }
             );
         } else if (
-            implementation === 'embedded-lnd' &&
+            isOnDevice &&
             (ChannelsStore.channels.length > 0 ||
                 ChannelsStore.pendingChannels.length > 0)
         ) {
+            // Only the active wallet reaches this branch, so a VSS error in
+            // AlertStore is this wallet's: its channel state is local only
+            const channelsWarning = !isLdkNode
+                ? 'views.Settings.WalletConfiguration.deleteWallet.channelsWarning'
+                : AlertStore?.vssError
+                ? 'views.Settings.WalletConfiguration.deleteWallet.channelsWarningLdkVssError'
+                : 'views.Settings.WalletConfiguration.deleteWallet.channelsWarningLdk';
             Alert.alert(
                 localeString('general.warning'),
-                localeString(
-                    'views.Settings.WalletConfiguration.deleteWallet.channelsWarning'
-                ),
+                localeString(channelsWarning),
                 [
                     {
                         text: localeString(
@@ -1129,13 +1144,16 @@ export default class WalletConfiguration extends React.Component<
                     },
                     {
                         text: localeString(
-                            'views.Settings.WalletConfiguration.deleteWallet.exportChannels'
+                            isLdkNode
+                                ? 'views.Settings.Seed.title'
+                                : 'views.Settings.WalletConfiguration.deleteWallet.exportChannels'
                         ),
                         onPress: () =>
-                            // Active embedded-LND only reaches this branch;
-                            // SettingsStore already has this wallet's seed.
+                            // Only an active on-device wallet reaches this
+                            // branch; SettingsStore already has its seed.
                             reAuthNavigation(navigation, 'Seed', {
-                                skipWarning: true
+                                skipWarning: true,
+                                ...(isLdkNode && { implementation: 'ldk-node' })
                             }),
                         isPreferred: true
                     },
@@ -1147,7 +1165,7 @@ export default class WalletConfiguration extends React.Component<
                 { cancelable: false }
             );
         } else if (
-            implementation === 'embedded-lnd' &&
+            isOnDevice &&
             (BalanceStore.confirmedBlockchainBalance !== 0 ||
                 BalanceStore.unconfirmedBlockchainBalance !== 0)
         ) {
