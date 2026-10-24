@@ -2889,7 +2889,7 @@ describe('NostrWalletConnectStore handleLightningPayInvoice fee cap', () => {
         expect(response.error?.message).toBe('No route found.');
     });
 
-    it('sends the full fee cap and holds none when the backend ignores fee limits', async () => {
+    it('sends the full fee cap and holds the fee reserve when the backend ignores fee limits', async () => {
         (BackendUtils.supportsCustomFeeLimit as jest.Mock).mockReturnValue(
             false
         );
@@ -2904,10 +2904,89 @@ describe('NostrWalletConnectStore handleLightningPayInvoice fee cap', () => {
             invoice: 'lnbc1fee-cap-a'
         });
 
+        // reserve: max(1% of 5000, 10) = 50
         expect(sentFeeLimits(transactionsStore)).toEqual([1000]);
         expect(connection.activity[0].status).toBe('pending');
-        expect(connection.activity[0].feeLimitSats).toBeUndefined();
-        expect(connection.pendingSpendSats).toBe(5000);
+        expect(connection.activity[0].feeLimitSats).toBe(50);
+        expect(connection.pendingSpendSats).toBe(5050);
+        expect(connection.remainingBudget).toBe(350);
+    });
+
+    it('refuses before paying when the budget covers the amount but not the fee reserve on a backend that ignores fee limits', async () => {
+        (BackendUtils.supportsCustomFeeLimit as jest.Mock).mockReturnValue(
+            false
+        );
+        const { store, transactionsStore } = buildHandlerStore();
+        const connection = addConnection(store, { maxAmountSats: 5049 });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice: 'lnbc1fee-cap-a' }
+        );
+
+        expect(transactionsStore.sendPaymentSilently).not.toHaveBeenCalled();
+        expect(response.result).toBeUndefined();
+        expect(response.error).toEqual({
+            code: Nip47ErrorCode.INSUFFICIENT_BALANCE,
+            message:
+                'stores.NostrWalletConnectStore.error.paymentAndFeeReserveExceedBudget'
+        });
+        expect(connection.activity).toHaveLength(0);
+        expect(connection.totalSpendSats).toBe(0);
+    });
+
+    it('uses a 10 sat fee reserve for small payments on a backend that ignores fee limits', async () => {
+        (BackendUtils.supportsCustomFeeLimit as jest.Mock).mockReturnValue(
+            false
+        );
+        jest.spyOn(
+            NostrConnectUtils,
+            'resolvePayInvoiceAmount'
+        ).mockResolvedValue({ amountSats: 100, zeroAmountInvoice: false });
+        const { store, transactionsStore } = buildHandlerStore();
+        const connection = addConnection(store, { maxAmountSats: 109 });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice: 'lnbc1fee-cap-a' }
+        );
+
+        expect(transactionsStore.sendPaymentSilently).not.toHaveBeenCalled();
+        expect(response.error?.code).toBe(Nip47ErrorCode.INSUFFICIENT_BALANCE);
+    });
+
+    it('pays when the budget covers the fee reserve and debits the fee paid on a backend that ignores fee limits', async () => {
+        (BackendUtils.supportsCustomFeeLimit as jest.Mock).mockReturnValue(
+            false
+        );
+        const { store, transactionsStore } = buildHandlerStore();
+        transactionsStore.getPaymentOutcome.mockReturnValue({
+            payment_preimage: 'ab'.repeat(32),
+            payment_fee: '7',
+            isIncomplete: false
+        });
+        const connection = addConnection(store, { maxAmountSats: 5050 });
+
+        const response = await (store as any).handleLightningPayInvoice(
+            connection,
+            { invoice: 'lnbc1fee-cap-a' }
+        );
+
+        expect(transactionsStore.sendPaymentSilently).toHaveBeenCalledTimes(1);
+        expect(response.error).toBeUndefined();
+        expect(connection.totalSpendSats).toBe(5007);
+        expect(connection.pendingSpendSats).toBe(0);
+    });
+
+    it('requires no fee reserve when the backend enforces the fee limit', async () => {
+        const { store, transactionsStore } = buildHandlerStore();
+        const connection = addConnection(store, { maxAmountSats: 5000 });
+
+        await (store as any).handleLightningPayInvoice(connection, {
+            invoice: 'lnbc1fee-cap-a'
+        });
+
+        expect(sentFeeLimits(transactionsStore)).toEqual([0]);
     });
 
     it('leaves the error unchanged when the backend ignores fee limits', async () => {

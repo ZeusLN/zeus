@@ -2639,6 +2639,29 @@ export default class NostrWalletConnectStore {
             return { result: undefined, error: budgetCheck.error };
         }
 
+        // Backends that take no fee limit (LndHub) cannot cap the fee, so
+        // the budget must also cover a fee reserve, held while pending.
+        const enforcesFeeLimit = !!BackendUtils.supportsCustomFeeLimit();
+        const feeReserveSats = enforcesFeeLimit
+            ? undefined
+            : NWCConnection.feeReserveSatsWithoutFeeLimit(amountSats);
+        if (
+            feeReserveSats !== undefined &&
+            !connection.canSpend(amountSats + feeReserveSats)
+        ) {
+            return NostrConnectUtils.createNip47Error(
+                localeString(
+                    'stores.NostrWalletConnectStore.error.paymentAndFeeReserveExceedBudget',
+                    {
+                        amount: amountSats.toString(),
+                        feeReserve: feeReserveSats.toString(),
+                        remaining: connection.remainingBudget.toString()
+                    }
+                ),
+                Nip47ErrorCode.INSUFFICIENT_BALANCE
+            );
+        }
+
         const lightningBalance = await this.balanceStore.getLightningBalance(
             true
         );
@@ -2658,8 +2681,8 @@ export default class NostrWalletConnectStore {
 
         // the fee cap is limited to the budget left after the amount.
         // Backends that ignore fee_limit_sat (LndHub) keep the full cap and
-        // hold none: a cap they never apply would only tie up the budget.
-        const enforcesFeeLimit = !!BackendUtils.supportsCustomFeeLimit();
+        // hold the fee reserve instead: a cap they never apply would only
+        // tie up the budget.
         const feeLimitSats = enforcesFeeLimit
             ? connection.feeLimitSatsForPayment(
                   amountSats,
@@ -2700,7 +2723,7 @@ export default class NostrWalletConnectStore {
                 rawInvoice: request.invoice,
                 connection,
                 amountSats,
-                feeLimitSats: enforcesFeeLimit ? feeLimitSats : undefined,
+                feeLimitSats: enforcesFeeLimit ? feeLimitSats : feeReserveSats,
                 payment_source: 'lightning',
                 payment: inTransitResult.payment,
                 paymentHash: paymentHash || inTransitResult.payment?.paymentHash
