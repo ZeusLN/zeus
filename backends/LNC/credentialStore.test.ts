@@ -20,7 +20,12 @@ jest.mock('../../storage', () => ({
 
 jest.mock('../../zeus_modules/@lightninglabs/lnc-rn', () => ({}));
 
-import LncCredentialStore, { LNC_STORAGE_KEY, hash } from './credentialStore';
+import LncCredentialStore, {
+    LNC_STORAGE_KEY,
+    hash,
+    forgetCredentials,
+    rememberCredentials
+} from './credentialStore';
 
 const PHRASE = 'abandon ability able about above absent absorb abstract';
 const BASE_KEY = `${LNC_STORAGE_KEY}:${hash(PHRASE)}`;
@@ -190,6 +195,84 @@ describe('LNC credentialStore', () => {
             await credentials.flushWrites();
 
             expect(JSON.parse(store[BASE_KEY]).remoteKey).toBe('remote-ghi');
+        });
+    });
+
+    // A native LNC client keeps reporting keys to its store after the
+    // wallet is deleted (a dial cannot be cancelled), so writes for a
+    // deleted wallet's phrase must not recreate its cleared entries
+    describe('after the wallet was deleted', () => {
+        const OTHER_PHRASE = 'zoo zoo zoo zoo zoo zoo zoo zoo';
+
+        afterEach(() => {
+            rememberCredentials(PHRASE);
+            rememberCredentials(OTHER_PHRASE);
+        });
+
+        it('drops keys reported later', async () => {
+            const credentials = new LncCredentialStore(PHRASE);
+            credentials.localKey = 'local-abc';
+
+            forgetCredentials(PHRASE);
+            credentials.remoteKey = 'remote-def';
+            credentials.serverHost = 'lnc.zeusln.app:443';
+            await credentials.flushWrites();
+
+            expect(mockSetItem).not.toHaveBeenCalled();
+            expect(store[BASE_KEY]).toBeUndefined();
+            expect(store[HOST_KEY]).toBeUndefined();
+        });
+
+        it('drops writes queued before the deletion', async () => {
+            let release: () => void = () => {};
+            let started: () => void = () => {};
+            const inFlight = new Promise<void>(
+                (resolve) => (started = resolve)
+            );
+            mockSetItem.mockImplementationOnce(async (key: string, value) => {
+                started();
+                await new Promise<void>((resolve) => (release = resolve));
+                store[key] =
+                    typeof value === 'string' ? value : JSON.stringify(value);
+                return true;
+            });
+            const credentials = new LncCredentialStore(PHRASE);
+            credentials.serverHost = 'lnc.zeusln.app:443';
+            await inFlight;
+            // queued behind the host write, which is still in flight
+            credentials.localKey = 'local-abc';
+            credentials.remoteKey = 'remote-def';
+
+            forgetCredentials(PHRASE);
+            release();
+            await credentials.flushWrites();
+
+            expect(store[BASE_KEY]).toBeUndefined();
+            // the write that was in flight is undone too
+            expect(store[HOST_KEY]).toBeUndefined();
+        });
+
+        it('keeps writing other wallets', async () => {
+            forgetCredentials(OTHER_PHRASE);
+
+            const credentials = new LncCredentialStore(PHRASE);
+            credentials.localKey = 'local-abc';
+            credentials.remoteKey = 'remote-def';
+            await credentials.flushWrites();
+
+            expect(store[BASE_KEY]).toBeDefined();
+        });
+
+        it('writes again once a wallet uses the phrase again', async () => {
+            forgetCredentials(PHRASE);
+            rememberCredentials(PHRASE);
+
+            const credentials = new LncCredentialStore(PHRASE);
+            credentials.localKey = 'local-abc';
+            credentials.remoteKey = 'remote-def';
+            await credentials.flushWrites();
+
+            expect(JSON.parse(store[BASE_KEY]).remoteKey).toBe('remote-def');
         });
     });
 

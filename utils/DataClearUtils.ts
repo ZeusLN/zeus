@@ -76,6 +76,7 @@ import {
     stopLdkNode
 } from './LdkNodeUtils';
 import { sleep } from './SleepUtils';
+import { forgetCredentials } from '../backends/LNC/credentialStore';
 import hashjs from 'hash.js';
 
 // LNC credentials are persisted by backends/LNC/credentialStore.ts under
@@ -686,6 +687,9 @@ export async function deleteNodeDataDirectoryWithRetry(
  * when the phrase is known (it lives in the node config).
  */
 async function clearLncCredentials(pairingPhrase: string) {
+    // Before clearing: a store still attached to a native LNC client must
+    // not write the entries back once they are gone
+    forgetCredentials(pairingPhrase);
     const baseKey = `${LNC_STORAGE_KEY}:${lncHash(pairingPhrase)}`;
     await clearKey(baseKey);
     await clearKey(`${baseKey}:host`);
