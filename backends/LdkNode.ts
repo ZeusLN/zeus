@@ -353,18 +353,15 @@ export default class LdkNode {
                     channel.inboundCapacityMsat
                 ).dividedBy(1000);
                 const localReserve = channel.unspendablePunishmentReserve || 0;
-                const remoteReserve =
-                    channel.counterpartyUnspendablePunishmentReserve || 0;
 
                 let channelLocal: BigNumber;
                 if (outSats.gt(0)) {
                     channelLocal = outSats.plus(localReserve);
                 } else {
-                    channelLocal = new BigNumber(channel.channelValueSats)
-                        .minus(inSats)
-                        .minus(remoteReserve)
-                        .minus(660);
-                    if (channelLocal.lt(0)) channelLocal = new BigNumber(0);
+                    channelLocal = this.claimableOnChannelClose(
+                        channel,
+                        balances
+                    );
                 }
                 localBalance = localBalance.plus(channelLocal);
                 remoteBalance = remoteBalance.plus(inSats);
@@ -438,13 +435,16 @@ export default class LdkNode {
      * Get all channels
      */
     getChannels = async (): Promise<any> => {
-        const channels = await LdkNodeInjection.channel.listChannels();
+        const [channels, balances] = await Promise.all([
+            LdkNodeInjection.channel.listChannels(),
+            LdkNodeInjection.node.listBalances()
+        ]);
         // Only return ready channels — pending open channels are
         // returned by getPendingChannels() instead.
         const readyChannels = channels.filter((c) => c.isChannelReady);
         return {
             channels: readyChannels.map((channel) =>
-                this.formatChannel(channel)
+                this.formatChannel(channel, balances)
             )
         };
     };
@@ -754,7 +754,7 @@ export default class LdkNode {
         return {
             total_limbo_balance: totalLimboBalance.toString(),
             pending_open_channels: pendingOpen.map((channel) => ({
-                channel: this.formatChannel(channel)
+                channel: this.formatChannel(channel, balances)
             })),
             pending_closing_channels: pendingClosing,
             pending_force_closing_channels: pendingForceClosing,
@@ -2051,18 +2051,34 @@ export default class LdkNode {
     };
 
     /**
+     * Our side of an open channel as LDK accounts for it. Used when outbound
+     * capacity is 0 (we are at or below the reserve). Deriving it from the
+     * inbound capacity instead would count inbound HTLCs that are still in
+     * flight, and may be failed back, as our balance.
+     */
+    private claimableOnChannelClose(
+        channel: ChannelDetails,
+        balances: BalanceDetails
+    ): BigNumber {
+        const balance = balances.lightningBalances.find(
+            (lb) =>
+                lb.type === 'claimableOnChannelClose' &&
+                lb.channelId === channel.channelId
+        );
+        return new BigNumber(balance?.amountSatoshis || 0);
+    }
+
+    /**
      * Format a channel for Zeus compatibility
      */
-    private formatChannel(channel: ChannelDetails): any {
+    private formatChannel(
+        channel: ChannelDetails,
+        balances: BalanceDetails
+    ): any {
         const localReserveSats = channel.unspendablePunishmentReserve || 0;
-        const remoteReserveSats =
-            channel.counterpartyUnspendablePunishmentReserve || 0;
 
         const outboundSats = new BigNumber(
             channel.outboundCapacityMsat
-        ).dividedBy(1000);
-        const inboundSats = new BigNumber(
-            channel.inboundCapacityMsat
         ).dividedBy(1000);
 
         let localBalanceSats: BigNumber;
@@ -2070,19 +2086,15 @@ export default class LdkNode {
             // Normal case: outbound + our reserve = local balance
             localBalanceSats = outboundSats.plus(localReserveSats);
         } else {
-            // Below reserve: outbound is 0, derive from capacity.
-            // The commit fee is already reflected in inboundCapacityMsat,
-            // so only subtract the remote reserve and anchor outputs
-            // (2 × 330 sats for anchor channels).
-            localBalanceSats = new BigNumber(channel.channelValueSats)
-                .minus(inboundSats)
-                .minus(remoteReserveSats)
-                .minus(660);
-            if (localBalanceSats.lt(0)) localBalanceSats = new BigNumber(0);
+            // Below reserve: outbound is 0, use LDK's own figure
+            localBalanceSats = this.claimableOnChannelClose(channel, balances);
         }
-        const remoteBalanceSats = new BigNumber(channel.channelValueSats).minus(
-            localBalanceSats
-        );
+        // Inbound + their reserve, mirroring outbound + our reserve above.
+        // Subtracting local from the capacity would count in-flight HTLCs,
+        // the commit fee and anchors as theirs.
+        const remoteBalanceSats = new BigNumber(channel.inboundCapacityMsat)
+            .dividedBy(1000)
+            .plus(channel.counterpartyUnspendablePunishmentReserve || 0);
 
         return {
             active: channel.isUsable,
