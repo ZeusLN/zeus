@@ -41,8 +41,8 @@ Persistence contracts for the ZEUS wallet (React Native, Bitcoin/Lightning) and 
 | Macaroon | LND's bearer-token credential (hex in `Node.macaroonHex` / `Node.adminMacaroon`). Possession = control of the node. |
 | Seed / mnemonic | BIP-39 word list that derives all wallet keys (`Node.seedPhrase`, `Node.ldkMnemonic`). Loss = loss of funds. |
 | Embedded LND / LDK Node | The two node implementations that run INSIDE the app and keep native on-disk state (channel databases etc.), unlike remote backends. |
-| Cashu / CDK | Ecash wallet subsystem backed by the Cashu Dev Kit Rust FFI; keeps its own SQLite database (`cashu_wallet.db`) outside the keychain. |
-| VSS | Versioned Storage Service — remote server (`https://vss.zeusln.com/vss`, `utils/LdkNodeUtils.ts` `DEFAULT_VSS_SERVER`) where LDK Node persists encrypted channel state, keyed from the node mnemonic. |
+| Cashu / CDK | Ecash wallet subsystem backed by the Cashu Dev Kit Rust FFI; keeps its own SQLite databases outside the keychain: one per wallet, `cashu_wallet_<sha256(mnemonic)[0..8]>.db` since v13.0.0 (e14d0e9ed), plus the pre-v13 shared `cashu_wallet.db`. |
+| VSS | Versioned Storage Service: remote server (`https://vss.zeusln.com/vss`, `utils/LdkNodeUtils.ts` `DEFAULT_VSS_SERVER`) where LDK Node persists encrypted channel state, keyed from the node mnemonic. Each wallet has its own store: `storeId` is the hex public key of the VSS signing key derived from that wallet's seed (`utils/LdkNodeUtils.ts`). |
 | Duress PIN | Alternate PIN or passphrase that, when entered, runs the full `clearAllData()` wipe and then `restartApp()` instead of unlocking (`views/Lockscreen.tsx` `deleteNodes`). |
 
 ## 1. The four storage layers — what belongs where
@@ -52,16 +52,16 @@ Persistence contracts for the ZEUS wallet (React Native, Bitcoin/Lightning) and 
 | **Keychain (canonical)** | `storage/index.ts` ONLY | Everything persisted by app code: the settings blob, all secrets, per-store data | `zeus-settings-v2`, `zeus-contacts-v2`, `zeus-notes-v2`, `swaps-rescue-key`, `<nodeDir>-cashu-seed-phrase` |
 | **Legacy EncryptedStorage** | `react-native-encrypted-storage` | ONLY two things: (a) the old `zeus-settings` blob read during legacy upgrade, (b) one-shot migration flag keys (`MOD_KEY*`, `ios-keychain-cloud-sync-migration-v1`, …). **Never add new data here.** | `lsp-taproot-mod`, `invoices-expiry-display-fix-v2` (both read-only legacy flags since PR #4477: still read, never written) |
 | **AsyncStorage** | `@react-native-async-storage/async-storage` | Non-sensitive UI/service flags only | persistent-service flags (`views/Settings/EmbeddedNode/`), Stealth Mode app data (`views/Stealth/`), NWC service flags |
-| **Native disk + remote** | native modules / FFI | Node and ecash state that app-level storage never sees | LND dirs (deleted via `deleteLndWallet` → `LndMobileTools.deleteLndDirectory`), `Documents/ldk-node/<uuid>/` (`utils/LdkNodeUtils.ts getLdkNodeStoragePath`), CDK SQLite `cashu_wallet.db`, remote VSS channel state |
+| **Native disk + remote** | native modules / FFI | Node and ecash state that app-level storage never sees | LND dirs (deleted via `deleteLndWallet` → `LndMobileTools.deleteLndDirectory`), `Documents/ldk-node/<uuid>/` (`utils/LdkNodeUtils.ts getLdkNodeStoragePath`), CDK SQLite `cashu_wallet_<hash>.db` per wallet (plus legacy `cashu_wallet.db`), remote VSS channel state (one store per wallet) |
 
 Rules of thumb:
 - New persisted app data → keychain via `storage/index.ts`. No exceptions for "small" or "temporary" data.
 - If you find yourself importing `react-native-keychain` directly outside `storage/`, `MigrationUtils`, `DataClearUtils`, or `KeychainRecoveryUtils`, stop — you are bypassing the contract.
 - Migration flags go in EncryptedStorage (that is their one remaining legitimate home — a flag must survive independently of the keychain data it guards).
 
-## 2. The storage contract (`storage/index.ts`, 57 lines — read it)
+## 2. The storage contract (`storage/index.ts`, 143 lines; read it)
 
-The canonical wrapper is a singleton `Storage` with exactly three methods. Its semantics are load-bearing:
+The canonical wrapper is a singleton `Storage` with `getItem`, `setItem`, `removeItem` and `blockWrites`. Its semantics are load-bearing:
 
 | Behavior | Detail | Trap |
 |---|---|---|
@@ -70,6 +70,16 @@ The canonical wrapper is a singleton `Storage` with exactly three methods. Its s
 | `getItem` returns **`false`** when missing | Not `null`, not `undefined` | `value !== null` checks are always true; use truthiness (`if (value)`) like the rest of the codebase |
 | `setItem('')` **deletes** the key | Empty/null string values route to `removeItem` (keychain rejects empty passwords) | "Clearing" a value and "deleting" a key are the same operation; a later `getItem` gives `false`, not `''` |
 | `setItem` auto-stringifies | Non-string values pass through `JSON.stringify` | Convenient for `Storage.setItem` — but NEVER pre-stringify for `settingsStore.setSettings` (Section 4, incident `7ed901a10`) |
+| `blockWrites()` latch | Once a data wipe starts, `setItem` logs a warning and returns `false` without writing, until `restartApp` reloads JS. `removeItem` is not blocked | Check `setItem`'s return value: `false` means nothing was written. In-flight writers would otherwise re-persist wiped data from memory |
+
+Module-level raw helpers in the same file, for migration and purge code only (they take FULL server names, add no `zeus:` prefix, do not route empty values to delete, and name the partition explicitly):
+
+| Helper | Detail |
+|---|---|
+| `getRawItem(server, cloudSync)` | Returns **`null`** on a miss, unlike `Storage.getItem`'s `false` |
+| `setRawLocalItem(server, value)` | Writes to the device-local partition; returns a boolean |
+| `removeRawItem(server, cloudSync)` | Deletes from one partition |
+| `getInternetPasswordServers(synchronizable)` | Lists servers in one partition through the iOS `KeychainAudit` native module; returns `[]` on Android and **throws** if the module is missing, so callers never mistake "unavailable" for "no entries" |
 
 ## 3. `zeus-settings-v2`: one blob, one shallow merge, the #1 data-loss footgun
 
@@ -77,7 +87,7 @@ The canonical wrapper is a singleton `Storage` with exactly three methods. Its s
 
 **The two write APIs (`stores/SettingsStore.ts`):**
 
-- `setSettings(settings)` — writes the WHOLE object to `Storage.setItem(STORAGE_KEY, settings)` and replaces `this.settings`. Callers must pass a complete settings object.
+- `setSettings(settings)`: writes the WHOLE object with `Storage.setItem(STORAGE_KEY, settings)` and returns `Promise<boolean>`. `this.settings` is replaced only when the write landed (`true`); a write refused by the wipe latch returns `false` and leaves memory unchanged. Its only caller is the queued update inside `SettingsStore`; other code goes through `updateSettings`/`updateSettingsGroup`.
 - `updateSettings(newSetting)` — does `{ ...existingSettings, ...newSetting }`. This is a **SHALLOW top-level merge**: any nested group you pass **replaces that group wholesale**.
 
 ```ts
@@ -189,7 +199,7 @@ Then register it, or it leaks:
 | 2 | `utils/KeychainRecoveryUtils.ts` → `OTHER_KEYS` | Otherwise the Keychain Recovery tool (`views/Tools/NodeConfigExportImport.tsx`) cannot find/restore it for users with lost data | Yes, if it holds user data worth recovering |
 | 3 | `utils/MigrationUtils.ts` → `keychainCloudSyncMigration` `migrationKeys` | Otherwise pre-2026 unprefixed keychain copies of the key are never migrated into the `zeus:` namespace | Only if the key **existed before the `zeus:` prefix migration** (Jan 2026, `318c721e7`). Brand-new keys have no unprefixed ancestor — skip. (Precedent: `FAVORITE_CURRENCIES_KEY`, added post-migration, is in `STORAGE_KEYS` only.) |
 
-If the key is dynamic (per-node/per-mint, like `<nodeDir>-cashu-*`), you must ALSO handle enumeration in `DataClearUtils` (see `clearCashuDataForNode`) — static lists can't clear keys they can't name.
+If the key is dynamic (per-node/per-mint, like `<nodeDir>-cashu-*`), you must ALSO handle enumeration in `DataClearUtils` (see `clearCashuDataForNode`); static lists can't clear keys they can't name. New `<nodeDir>-cashu-<suffix>` keys go in `CASHU_KEY_SUFFIXES` (`utils/DataClearUtils.ts`); a drift guard in `utils/DataClearUtils.test.ts` extracts the `-cashu-` literals from `stores/CashuStore.ts` and fails when one is missing. `utils/KeychainPurgeUtils.ts` keeps its own separate `CASHU_KEY_SUFFIXES` list.
 
 ## 6. iCloud rules and the orphaned-entry policy
 
@@ -197,7 +207,7 @@ History you must know before "improving" anything here: the multi-attempt iCloud
 
 Current rules (verified against master 2026-07-06):
 
-1. **All writes are `cloudSync: false`** — enforced inside `storage/index.ts`. Never write app data with `cloudSync: true`. NOTE: `cloudSync: false` only truly means non-synchronizable because `patches/patch-keychain-cloudsync.mjs` fixes react-native-keychain's presence-check bug; the patch throws at postinstall if a dependency bump ever removes it. Do not bump react-native-keychain without re-verifying `cloudSyncValue()`.
+1. **All writes are `cloudSync: false`**: enforced inside `storage/index.ts`. Never write app data with `cloudSync: true`. NOTE: `cloudSync: false` only truly means non-synchronizable because `patches/patch-keychain-cloudsync.mjs` fixes react-native-keychain's presence-check bug; the patch throws at postinstall if a dependency bump ever removes it. A second patch, `patches/patch-keychain-atomic-update.mjs` (#5413), makes iOS overwrites try `SecItemUpdate` before the library's delete-then-add, so a crash mid-write cannot delete `zeus-settings-v2` (zeus-failure-archaeology FA-13); it also throws at postinstall when the source stops matching. Do not bump react-native-keychain without re-verifying `cloudSyncValue()` and both patches.
 2. **Orphaned pre-migration entries are deleted by the one-shot KEY-004 auto-purge, but never by a MIGRATION.** `MigrationUtils.deleteFromOldKeychain` is still a no-op with the delete code commented out, and no MIGRATION may delete keychain data. Since the KEY-004 remediation, `autoPurgeLegacyKeychain` (`utils/KeychainPurgeUtils.ts`, fired from Wallet boot, iOS only) automatically deletes the iCloud-synced `zeus:*` copies and counterpart-verified legacy orphans: it runs only after `keychainDesyncMigration`'s flag proves local copies exist, is preflight-verified (live local blob must exist; a synchronizable `zeus:*` entry is never deleted while it is the only copy; an unprefixed entry is never deleted without its migrated counterpart), and retries next boot until a zero-failure pass. This was a deliberate maintainer policy reversal (2026-09, PR #4385): deletion still propagates to other devices (the #3625 mode), accepted because the sync copies ARE the KEY-004 exposure, the sync was never an advertised feature, and node-bound wallets never survived device transfer anyway. Tools > Keychain Cleanup remains as the manual, consent-gated fallback (covers Android legacy entries and safety-skipped items). The Keychain Recovery tool (`views/Tools/NodeConfigExportImport.tsx` + `utils/KeychainRecoveryUtils.ts`) still scans `current` / `unprefixed-local` / `unprefixed-cloud` / `encrypted-storage`; post-purge, empty recovery scans are expected. Any NEW deletion path is still maintainer-gated.
 3. **Explicit purges must clear BOTH sync variants and BOTH namespaces.** `DataClearUtils.clearKey` is the reference: it resets `zeus:<key>` local + cloud, and unprefixed `<key>` local + cloud, five calls total. Any new wipe path that clears fewer locations leaves secrets behind.
 4. `migrateKey` uses read → write → verify → delete ordering with 500 ms iOS sleeps around keychain ops (iCloud sync latency, `35aaf8897`) — keep that ordering and pacing if you extend it.
@@ -210,7 +220,7 @@ Current rules (verified against master 2026-07-06):
 | **Clear All Data** (`utils/DataClearUtils.clearAllData`, called from `views/Tools/index.tsx` and the Lockscreen, which then call `restartApp()`) | In order: `Storage.blockWrites()` latch for the rest of the JS context; `markWipePending()` (`wipe-pending` in EncryptedStorage, #5141); `clearNodeKeychainData` per configured node (Cashu keys under both `lndDir` and `ldkNodeDir`, `CASHU_KEY_SUFFIXES`, LNC credentials, xprv cache; xprv re-derivation skipped on Android) plus Cashu keys for `'lnd'`, `'ldk'`, `''`; CDK DB (`clearCDKDatabase`); node data dirs of configured nodes (`deleteNodeDataDirectoryWithRetry`, 3 attempts) and orphaned LND/LDK dirs no config names (`clearOrphanedNodeDataDirectories`, #5266); legacy rescue-key files and the staging copy; POS order records; legacy `zeus-settings`, `STORAGE_KEYS` (all 5 locations), notes; AsyncStorage; EncryptedStorage; HTTP cookies; delivered notifications; step 8 keychain sweep (iOS: every internet-password item in both partitions; Android: delete the `RN_KEYCHAIN` backing store); then the `wipe-pending` record is removed | VSS remote state (no delete path). A node dir that still fails after 3 attempts is logged and skipped, never aborts the wipe |
 | **Wallet deletion** (`WalletConfiguration.tsx` `deleteNodeConfig`) | Stops the node if active; `clearCDKDatabaseForNode` (per-wallet CDK DB, before its seed is cleared); `clearNodeKeychainData` (keeps LNC credentials another config shares); removes the blob entry with a functional `updateSettings`; then `deleteNodeDataDirectoryWithRetry` (embedded-lnd → `deleteLndWallet`, ldk-node → `stopLdkNode` + `deleteLdkNodeWallet`), and on failure `promptRetryDataDirDeletion` offers Retry or Skip. Deleting the last wallet also runs `clearCDKDatabase()` to sweep every remaining CDK DB | **VSS remote channel state: there is NO delete path** (`utils/LdkNodeUtils.ts` has no VSS delete; open gap, maintainer-acknowledged). A node dir the user skipped (later removed by Clear All Data's orphan sweep) |
 
-**Per-node Cashu namespacing:** always use `CashuStore.getNodeDir()` (returns `ldkNodeDir || 'ldk'` for ldk-node, else `lndDir || 'lnd'`) — NOT `settingsStore.lndDir || 'lnd'`, which is `'lnd'` for every LDK wallet (the old `CashuStore.getLndDir()` did this and was removed with the migration). That collision mixed ecash funds across LDK wallets in feature-branch builds; fixed by `1242ce94a` (2026-03-20) and for multimint keys by `35fa31fee` (2026-04-08), both before their PRs merged, so no release wrote LDK Cashu data under `lnd` and no migration is needed. The no-op `migrateLegacyCashuKeysToNodeDir` was removed (#4912); do not reintroduce a copy from `lnd-cashu-*`, because on released installs that namespace belongs to remote and embedded LND wallets. Incident narrative: zeus-failure-archaeology FA-11. Any new per-node key must be namespaced with `getNodeDir()`.
+**Per-node Cashu namespacing:** always use `CashuStore.getNodeDir()` (returns `ldkNodeDir || 'ldk'` for ldk-node, else `lndDir || 'lnd'`); NOT `settingsStore.lndDir || 'lnd'`, which is `'lnd'` for every LDK wallet (the old `CashuStore.getLndDir()` did this and was removed with the migration). That collision mixed ecash funds across LDK wallets in feature-branch builds; fixed by `1242ce94a` (2026-03-20) and for multimint keys by `35fa31fee` (2026-04-08), both before their PRs merged, so no release wrote LDK Cashu data under `lnd` and no migration is needed. The no-op `migrateLegacyCashuKeysToNodeDir` was removed (issue #4912, PR #5390); do not reintroduce a copy from `lnd-cashu-*`, because on released installs that namespace belongs to remote and embedded LND wallets. Incident narrative: zeus-failure-archaeology FA-11. Any new per-node key must be namespaced with `getNodeDir()`.
 
 **Node dirs are UUIDs:** new embedded wallets get `lndDir = uuidv4()` / `ldkNodeDir = uuidv4()` (`views/Settings/WalletConfiguration.tsx`); old single-wallet installs used the literal `'lnd'` — which is why fallbacks and `clearCashuDataForNode('lnd')` exist.
 
@@ -225,7 +235,7 @@ This executes within the gate defined in `zeus-change-control` (maintainer sign-
 - [ ] Both load paths covered (Section 4): a settings migration lives in a `priorVersion < N` block of `applySettingsMigrations`, which both `runSettingsMigrations` (modern) and `legacySettingsMigrations` (legacy) call; state that it is not called from anywhere else
 - [ ] Settings migration: `SETTINGS_VERSION` bumped to a number no public build has shipped, new block gated on `priorVersion < N` (Section 4). Keychain/file one-shot: flag key named and versioned (`<thing>-<fix>-v1`), read and written with `readFlag`/`writeFlag`
 - [ ] New keys registered per Section 5 (all applicable locations)
-- [ ] No `setSettings` call inside a settings migration (the stamped blob is written once by `applySettingsUpdate` or `storageMigrationV2`); anywhere else, no `JSON.stringify` into `setSettings` and every `setSettings` awaited; every `updateSettings` nested group spread
+- [ ] No `setSettings` call inside a settings migration (the stamped blob is written once by `applySettingsUpdate` or `storageMigrationV2`); anywhere else, no `JSON.stringify` into `setSettings` and every `setSettings` awaited; nested groups written with `updateSettingsGroup` or a functional `updateSettings`, never a `...settings.<group>` spread (Section 3)
 - [ ] No deletion of orphaned/unprefixed/iCloud keychain entries (Section 6 rule 2)
 - [ ] Jest coverage added in `utils/MigrationUtils.test.ts` for the new migration: the mutation function, an unstamped blob running the block, a blob stamped at N skipping it; the gate-consistency test still passes
 - [ ] Rollback story written (below)
@@ -237,9 +247,9 @@ PR CI never builds the app (test/lint/prettier/tsc only; the Android build workf
 | # | Scenario | How to set up | Pass condition |
 |---|---|---|---|
 | 1 | Fresh install | Wipe app / new simulator | Defaults correct; the first settings write stores `settingsVersion` equal to `SETTINGS_VERSION` (from `DEFAULT_SETTINGS`) so no settings migration runs; no migration UI flash |
-| 2 | Upgrade from legacy blob | Seed `zeus-settings` in EncryptedStorage (dev helper: `KeychainRecoveryUtils.copyToLegacyLocations()` writes current settings to all legacy locations) | Full `storageMigrationV2` runs once; all wallets, contacts, notes intact |
+| 2 | Upgrade from legacy blob | Seed `zeus-settings` in EncryptedStorage (dev helper: `KeychainRecoveryUtils.copyToLegacyLocations()` writes current settings to all legacy locations; dev builds only, it returns an error when `!__DEV__` since #4694) | Full `storageMigrationV2` runs once; all wallets, contacts, notes intact |
 | 3 | Upgrade from current v2 | Install released build, add wallets + nested settings, then install your build | Your migration runs exactly once; NO nested settings group reset (diff the blob before/after) |
-| 4 | iCloud-restored device (iOS) | Restore a device/simulator from a backup of a pre-`zeus:`-prefix install, or seed unprefixed cloud entries via `copyToLegacyLocations()` | No stale wallet resurrection; Keychain Recovery tool still lists orphans |
+| 4 | iCloud-restored device (iOS) | Restore a device/simulator from a backup of a pre-`zeus:`-prefix install, or seed unprefixed cloud entries via `copyToLegacyLocations()` (dev builds only, #4694) | No stale wallet resurrection; Keychain Recovery tool still lists orphans |
 | 5 | Multi-wallet | ≥2 embedded wallets incl. ≥2 LDK Node wallets with Cashu enabled | No cross-wallet data bleed; `getNodeDir()` namespacing holds; per-wallet balances distinct |
 | 6 | Duress wipe | Set duress PIN, trigger it | Full `clearAllData()` wipe and app restart to a fresh install state; kill the app mid-wipe once and confirm the next launch finishes it; note in the PR anything that survives per Section 7 |
 
@@ -261,7 +271,7 @@ Also re-run the automated floor: `yarn verify` (jest + prettier + tsc + lint —
 
 ## Provenance and maintenance
 
-Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha) by reading `storage/index.ts`, `stores/SettingsStore.ts`, `utils/MigrationUtils.ts`, `utils/DataClearUtils.ts`, `utils/KeychainRecoveryUtils.ts`, `utils/LdkNodeUtils.ts`, `stores/CashuStore.ts`, `views/Lockscreen.tsx`, `views/Settings/WalletConfiguration.tsx`, `views/Tools/*`; cited hashes checked with `git log`/`git show`; `npx jest utils/MigrationUtils.test.ts` executed (22/22 pass). Maintainer policy statements dated 2026-07-06. Section 7, the Duress PIN glossary entry, Section 8 test-matrix row 6 and the duress re-verify row were re-verified 2026-10-24 against master `3dc9f83e6` (`utils/DataClearUtils.ts`, `views/Lockscreen.tsx`, `views/Tools/index.tsx`, `views/Settings/WalletConfiguration.tsx`).
+Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha) by reading `storage/index.ts`, `stores/SettingsStore.ts`, `utils/MigrationUtils.ts`, `utils/DataClearUtils.ts`, `utils/KeychainRecoveryUtils.ts`, `utils/LdkNodeUtils.ts`, `stores/CashuStore.ts`, `views/Lockscreen.tsx`, `views/Settings/WalletConfiguration.tsx`, `views/Tools/*`; cited hashes checked with `git log`/`git show`; `npx jest utils/MigrationUtils.test.ts` executed (22/22 pass). Maintainer policy statements dated 2026-07-06. Section 7, the Duress PIN glossary entry, Section 8 test-matrix row 6 and the duress re-verify row were re-verified 2026-10-24 against master `3dc9f83e6` (`utils/DataClearUtils.ts`, `views/Lockscreen.tsx`, `views/Tools/index.tsx`, `views/Settings/WalletConfiguration.tsx`). Re-verified 2026-10-24 against master `3dc9f83e6`: the glossary Cashu/CDK and VSS rows, Section 1 native-disk row, Section 2, the Section 3 `setSettings` bullet, the Section 5 dynamic-key note, Section 6 rule 1, the Section 7 #4912/#5390 citation, the Section 8 checklist spread line and test-matrix rows 2 and 4.
 
 Section 4, the §1 legacy EncryptedStorage example, the Section 8 checklist lines on load paths, `setSettings`, version bumps and Jest coverage, test matrix row 1, the rollback bullet on version numbers, and the re-verify rows for `getSettings` order and flag names re-verified 2026-10-24 against master `3dc9f83e6` (`utils/SettingsVersion.ts`, `utils/MigrationUtils.ts`, `stores/SettingsStore.ts` `getSettings`; `npx jest utils/MigrationUtils`: 113 pass, 5 todo).
 

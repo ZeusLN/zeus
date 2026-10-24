@@ -35,7 +35,7 @@ Authoritative in-repo documents this skill summarizes (read them for full text; 
 
 ## 1. The four maintainer non-negotiables (UNWRITTEN rules)
 
-These four rules are **maintainer-stated (2026-07-06) and appear in NO repo document**. They bind anyway. Each has a paid-for rationale.
+These four rules are **maintainer-stated (2026-07-06; Rule 4 revised 2026-10-24) and appear in NO repo document**. They bind anyway. Each has a paid-for rationale.
 
 ### Rule 1 — Storage/keychain changes are gated
 
@@ -56,15 +56,16 @@ A regression found during release testing gets **reverted the same day**, never 
 
 Changes to send/receive/payment-handling code (`views/Send.tsx`, `views/PaymentRequest.tsx`, `stores/TransactionsStore.ts`, `backends/*`, `utils/BackendUtils.ts` dispatch) must be **minimal diffs**. No drive-by refactoring, renaming, or "cleanup" inside a funds-touching change.
 
-- WHY: automated coverage of payment-handling code is thin. As of 2026-10-08, `stores/TransactionsStore.ts` had 8% statement coverage and `views/Send.tsx` 19%, and no test loads `views/PaymentRequest.tsx` or `utils/BackendUtils.ts` (census and measurement: zeus-validation-and-qa). A refactor there is checked mostly by human review, across 7 backends.
+- WHY: automated coverage of payment-handling code is thin. `stores/TransactionsStore.test.ts`, `views/Send.test.tsx` and `views/PaymentRequest.test.tsx` exist, but they pin specific regressions rather than whole modules. `utils/BackendUtils.ts` has no test of its own, and 55 suites replace it with `jest.mock`, so no test exercises the real dispatch into the 7 backends (test census: zeus-validation-and-qa section 4). A refactor there is checked mostly by human review, across 7 backends.
 - INCIDENT (refactors bite even outside payment code): `fdad118ed` (2025-10-24), a "replace UNSAFE React lifecycle methods" refactor, caused an infinite-loading regression fixed only 3 weeks later by `93227029e` (2025-11-12, which cites the offending hash in its subject).
 
-### Rule 4 — Manual two-platform testing is mandatory
+### Rule 4: Manual device testing is mandatory
 
-No merge without hands-on testing by the author on **both iOS and Android**, regardless of green CI.
+No merge without hands-on testing by the author on a device or emulator, regardless of green CI. An Android test is sufficient for most PRs. iOS testing is also required when the change touches iOS-native code (`ios/`, Swift/Objective-C, `Podfile`/pods, the iOS extension targets) or iOS-specific rendering or behavior (maintainer decision 2026-10-24, replacing the 2026-07-06 rule that required both platforms for every PR).
 
-- WHY: PR CI runs only unit tests, lint, formatting, and type-check on Linux (Section 5) — it never builds or launches the mobile app. Rendering, native modules, and navigation differ per platform; CI green proves almost nothing about runtime behavior. CONTRIBUTING.md says "when possible"; the maintainer standard is stricter: do it.
-- The PR template's platform and backend checkboxes (Section 3) are how you attest to this.
+- WHY: PR CI runs only unit tests, lint, formatting, and type-check on Linux (Section 5). It never builds or launches the mobile app, so CI green proves almost nothing about runtime behavior. Native modules and some rendering differ per platform, which is why iOS-native and iOS-specific changes still need an iOS run.
+- CONTRIBUTING.md asks for testing "on both iOS and Android if possible" and on both for cosmetic/UI changes. Testing both is still welcome; the maintainer minimum is the rule above.
+- The PR template's platform and backend checkboxes (Section 3) are how you attest to this. Tick only the platforms you tested.
 
 ## 2. Change classification and gates
 
@@ -72,11 +73,11 @@ Classify every change before starting. When a change spans classes, the strictes
 
 | Class | What counts | Gate before coding | Gate before merge |
 |---|---|---|---|
-| **Funds-touching** | Sending/receiving payments, invoice creation/decoding, channel open/close, fee logic, seed/key handling: `views/Send.tsx`, `views/PaymentRequest.tsx`, `stores/TransactionsStore.ts`, `backends/*`, `utils/BackendUtils.ts`, swap/Cashu/NWC payment flows | Open an issue / discuss approach first (CONTRIBUTING "Share Early, Share Often") | Minimal diff (Rule 3); manual test on iOS + Android (Rule 4); test on every backend the code path can reach, recorded in the PR template matrix; regression test if it's a bug fix |
-| **Storage-touching** | `zeus-settings-v2` blob shape, any keychain key, `storage/index.ts`, migrations, changed defaults for existing users | **Maintainer sign-off + migration plan, always** (Rule 1) | Migration follows the gated pattern in zeus-storage-and-migrations; manual test on both platforms including upgrade-from-previous-version |
-| **UI-only** | Screens/components with no store-shape or payment-logic change | None beyond checking for an existing issue/PR | Manual test on **both** platforms (CONTRIBUTING is explicit: rendering differs); screenshots/video in the PR; theme check (styling violations fail the Lint CI job — see zeus-validation-and-qa); new user-facing strings go in `locales/en.json` only (Section 7) |
+| **Funds-touching** | Sending/receiving payments, invoice creation/decoding, channel open/close, fee logic, seed/key handling: `views/Send.tsx`, `views/PaymentRequest.tsx`, `stores/TransactionsStore.ts`, `backends/*`, `utils/BackendUtils.ts`, swap/Cashu/NWC payment flows | Open an issue / discuss approach first (CONTRIBUTING "Share Early, Share Often") | Minimal diff (Rule 3); manual device test (Rule 4: Android, plus iOS if iOS-native or iOS-specific); test on every backend the code path can reach, recorded in the PR template matrix; regression test if it's a bug fix |
+| **Storage-touching** | `zeus-settings-v2` blob shape, any keychain key, `storage/index.ts`, migrations, changed defaults for existing users | **Maintainer sign-off + migration plan, always** (Rule 1) | Migration follows the gated pattern in zeus-storage-and-migrations; manual test including upgrade-from-previous-version (Rule 4; keychain behavior differs on iOS, so test iOS when the change touches iOS keychain paths) |
+| **UI-only** | Screens/components with no store-shape or payment-logic change | None beyond checking for an existing issue/PR | Manual device test (Rule 4); add an iOS run when the UI is iOS-specific or renders differently there (CONTRIBUTING asks for both platforms on UI changes); screenshots/video in the PR; theme check (styling violations fail the Lint CI job, see zeus-validation-and-qa); new user-facing strings go in `locales/en.json` only (Section 7) |
 | **Docs-only** | `README.md`, `CONTRIBUTING.md`, `CODE_REVIEW.md`, `docs/*` | None | `docs:` commit prefix; no drive-by doc edits inside code PRs — known stale text is fixed via dedicated docs commits, not opportunistically |
-| **Dependency** | Any `package.json` addition/major bump | **Discuss with maintainers first** (Section 6) | PR template third-party-deps section filled; verify `yarn.lock` updated and both platforms still build |
+| **Dependency** | Any `package.json` addition/major bump | **Discuss with maintainers first** (Section 6) | PR template third-party-deps section filled; verify `yarn.lock` updated and both platforms still build (a dependency with native code or pods changes the iOS build, so it needs an iOS run) |
 | **Locales** | Translation strings | — | Only `locales/en.json` (Section 7) |
 
 ## 3. PR process
@@ -89,7 +90,7 @@ Classify every change before starting. When a change spans classes, the strictes
 2. **Category checkboxes** — new feature / bug fix / code refactor / configuration change / locales update / quality assurance / other.
 3. **Checklist** — you ran `yarn run tsc`, `yarn run lint`, `yarn run prettier`, `yarn run test` (i.e. everything `yarn verify` runs).
 4. **Testing** — did you add unit tests for modified or added testable logic; bug fixes should include a test that would have caught the bug (options: "No, I'm a fool" / Yes / N/A).
-5. **Platform matrix** — Android and iOS checkboxes, with OS version and phone model/VM. This is where Rule 4 is attested.
+5. **Platform matrix**: Android and iOS checkboxes, with OS version and phone model/VM. This is where Rule 4 is attested; tick only what you tested.
 6. **Backend testing matrix** — which of the 7 node types you tested against, with node/API versions: On-device: LDK Node, Embedded LND; Remote: LND (REST), LND (Lightning Node Connect), Core Lightning (CLNRest), Nostr Wallet Connect, LndHub.
 7. **Locales** — new translatable text flagged; acknowledgment that translations happen on Transifex, not in-repo.
 8. **Third-party dependencies** — whether contributors must re-run `yarn`, whether `package.json`/`yarn.lock` changed, both-platform install verified.
@@ -98,6 +99,8 @@ Classify every change before starting. When a change spans classes, the strictes
 ### First-time contributors: proof of work
 
 Per CONTRIBUTING.md: first-time contributors submitting features or UI changes **must attach screenshot or video evidence** that the change works, directly in the PR description. PRs without it are closed within 24 hours; repeat offenders are blocked. Also: no trivial typo/whitespace first PRs; issue assignment is team-only — just comment that you've started.
+
+First-time contributors must also state in the PR description whether AI tools wrote any part of the contribution (code, tests, commit messages, PR text) and, if so, list each tool and model and what it was used for (CONTRIBUTING.md "Disclosing AI Assistance", added in `5a13ad257`). AI-assisted PRs are accepted; the author must be able to explain the change, and the testing and proof-of-work rules still apply.
 
 ### Review vocabulary (Bitcoin-Core style, defined in CODE_REVIEW.md)
 
@@ -114,43 +117,46 @@ Per CONTRIBUTING.md: first-time contributors submitting features or UI changes *
 - Fetch a PR locally: `git fetch origin pull/<N>/head:pr-<N>` then `git checkout pr-<N>` (from CODE_REVIEW.md).
 - During review, push **fixup commits** (easy to re-review); **squash before merge**. Rebase on master; no merge commits in the branch.
 - Merge requirements (CONTRIBUTING.md): all CI checks pass, ≥1 maintainer approval, no unresolved conversations, up to date with base.
+- What GitHub enforces on `master` (`gh api repos/ZeusLN/zeus/branches/master/protection`, checked 2026-10-24): 1 approving review, stale approvals dismissed on new pushes, and the branch must be up to date with `master` (`strict: true`). The required-status-checks list is empty, so a red CI check does not block the merge button; conversation resolution, signed commits and linear history are not required; admins are not subject to the rules; force pushes to `master` are allowed and deletion is blocked. The rest of the CONTRIBUTING.md list is enforced by maintainers, not by GitHub.
 - Review checklist highlights (full list in CODE_REVIEW.md): no sensitive data (keys, macaroons, seeds) logged or exposed; inputs validated on payment paths; no potential fund-loss scenarios; no unnecessary `any` types; works across themes/locales/font sizes; commits atomic. Separately, CONTRIBUTING.md ("Test Coverage") requires that bug fixes include a test that would have caught the bug.
 
 ## 4. Commit style
 
-CONTRIBUTING.md prescribes `component:` prefixes (`views:`, `stores:`, `backends:`, `utils:`, `build:`, `docs:`, `tests:`) — that is the written rule and this skill does not override it. Master history additionally shows conventional-commit-ish prefixes being accepted in practice (122 of the last 200 commit subjects at `c5fd094fb` use them; most of the rest are merge commits), so either observed style is tolerated in review — but absent a maintainer statement authorizing otherwise, default to the CONTRIBUTING.md component prefixes. Real examples from `git log`:
+CONTRIBUTING.md prescribes `component:` prefixes (`views:`, `stores:`, `backends:`, `utils:`, `build:`, `docs:`, `tests:`), and current master history follows it. Of the last 200 commit subjects at `3dc9f83e6`, 56 are merge commits, 98 use an area or component prefix (often nested, `views: Tools: NodeConfigExportImport: ...`, or a store/file name such as `stores: LSPStore:` or `patches:`), and 22 use conventional-commit prefixes, mostly Dependabot's `chore(deps):`. Conventional prefixes are still tolerated in review, but default to the CONTRIBUTING.md component prefixes. Real examples from `git log`:
 
 ```
-fix(migrations): pass object to setSettings to avoid MobX observable corruption (#4150)
-fix(utxo-picker): restore UTXO labels and keep Set button above gesture bar
-ui: Receive: prevent input field flash on initial load via initialLoad state
-refactor: Receive: extract skipOnchain into helper
-docs: fix NWC service link in README (#4179)
-chore(deps): bump concurrent-ruby from 1.3.3 to 1.3.7
+views: Tools: NodeConfigExportImport: hide Export when no wallet can be exported
+stores: LSPStore: validate the LSPS7 extendable_channels list
+utils: KeychainRecoveryUtils: offer the cloud settings copy over an empty one
+patches: make iOS keychain overwrites atomic
+build: revert pod-install to 0.1.38 to fix Xcode Cloud
+chore(deps): bump fast-uri in /zeus_modules/@lightninglabs/lnc-core
 ```
 
 Rules:
 
 - Subject ≤ ~50 chars where possible; body wrapped at 72, explaining problem + why this approach (CONTRIBUTING.md).
 - Atomic commits; each should ideally pass `yarn verify` independently.
-- Version bumps are exactly `Version bump: vX.Y.Z[-alpha|-beta1]` (e.g. `Version bump: v13.1.3-alpha`) — maintainer-only.
+- Version bumps are exactly `Version bump: vX.Y.Z[-alpha|-alphaN|-betaN|-rcN]` (e.g. `Version bump: v13.2.4-alpha`, `Version bump: v13.2.3-rc1`); the final release bump has no suffix (`Version bump: v13.2.3`, on the `v13.2.3-branch` release branch). Maintainer-only.
 - Branch names: `feature/...`, `fix/...`, `refactor/...`.
 - When citing hashes in commit messages or discussions, use first-parent master hashes: `git log --all` contains duplicated/grafted merge hashes (e.g. PR #3444 appears as both `28bc50f5e` and `f47ef1acf`).
 
 ## 5. CI reality: green PR = exactly 4 checks
 
-Verified in `.github/workflows/` at `c5fd094fb`: exactly four workflows trigger on `pull_request` —
+Verified in `.github/workflows/` at `3dc9f83e6`: exactly four workflows trigger on `pull_request`:
 
 | Check name | Workflow file | Runs |
 |---|---|---|
-| Test | `test.yml` | `yarn run test` (jest) |
-| Lint | `lint.yml` | `yarn run lint` (eslint + the styles test) |
+| Test | `test.yml` | `yarn run test:coverage --coverageReporters=json-summary` (jest, all suites, plus a coverage summary artifact) |
+| Lint | `lint.yml` | `yarn run lint` (`eslint .`, including `prettier/prettier`, the jest focused/disabled-test rules, and the local `zeus/no-themecolor-in-static-stylesheet` and `zeus/no-negative-layout-offset` rules) |
 | Prettier | `prettier.yml` | `yarn run prettier` (format check) |
 | Typescript Check | `tsc.yml` | `yarn run tsc` |
 
+`coverage-comment.yml` runs after a successful Test run on a PR (`workflow_run`) and posts or updates one coverage comment. It reports coverage and never fails a PR on it.
+
 All four = `yarn verify` locally (`package.json`: `concurrently "yarn test" "yarn prettier" "yarn tsc" "yarn lint"`). Run `yarn verify` before every push. Details of each job's traps (themeColor style-sheet lint rule, Prettier pinned at 2.4.1, jest transform whitelist): **zeus-validation-and-qa**.
 
-What PR CI does **NOT** do: no mobile build, no dependency scan — `build-android.yml` and `dependency-scan.yml` are `workflow_dispatch`-only (manually triggered); `telegram.yml` is a push/release notifier, not a check. This is exactly why Rule 4 (manual two-platform testing) exists.
+What PR CI does **NOT** do: no mobile build, no dependency scan. `build-android.yml` and `dependency-scan.yml` are `workflow_dispatch`-only (manually triggered); `telegram.yml` is a push/issues/release notifier, not a check. This is exactly why Rule 4 (manual device testing) exists.
 
 CI runs on ubuntu-latest, Node 24.x, `yarn install --frozen-lockfile`.
 
@@ -159,10 +165,11 @@ CI runs on ubuntu-latest, Node 24.x, `yarn install --frozen-lockfile`.
 - **Discuss before adding** any new library (CONTRIBUTING.md "Discuss new dependencies"): there may be an existing in-repo solution or a preferred alternative, and every dependency is supply-chain surface in a funds-handling app.
 - Zeus vendors some packages under `zeus_modules/` (some via `file:` refs, some imported by relative path and deliberately NOT in `package.json`). Never `yarn add` something that lives there. Mechanics: **zeus-build-and-env**.
 - If a PR modifies dependencies: tick the PR-template third-party section, confirm `package.json` + `yarn.lock` are consistent, and verify install on both iOS and Android.
+- Dependabot (`.github/dependabot.yml`) opens weekly npm PRs with the `chore(deps)` prefix and weekly GitHub Actions PRs with the `ci` prefix. npm minor and patch bumps are grouped into one `minor-and-patch` PR; each major bump gets its own PR so native or crypto-sensitive upgrades are tested alone. `pod-install` majors are ignored: 1.x broke `yarn install` on Xcode Cloud and most dev Macs, and #5416 (`99b876551`) reverted the #5283 bump to 0.1.38. Treat a Dependabot major like any other dependency change: test it before approving.
 
 ## 7. Locales
 
-- **Only `locales/en.json` may be edited in-repo.** The other 33 locale files (34 total in `locales/` as of 2026-07-06) are managed through Transifex (https://explore.transifex.com/ZeusLN/zeus/) and must never be modified directly — such PRs get rejected.
+- **Only `locales/en.json` may be edited in-repo.** The other 36 locale files (37 total in `locales/` as of 2026-10-24) are managed through Transifex (https://explore.transifex.com/ZeusLN/zeus/) and must never be modified directly; such PRs get rejected.
 - All user-facing strings must go through the localization system; no hardcoded UI text.
 - Want to translate? Request a language role on Transifex, not a PR.
 
@@ -178,15 +185,15 @@ CI runs on ubuntu-latest, Node 24.x, `yarn install --frozen-lockfile`.
 
 1. Classified the change (Section 2)? Storage-touching → maintainer sign-off FIRST. Funds-touching → minimal diff, discussed first.
 2. `yarn verify` green locally.
-3. Manually tested on iOS AND Android (Rule 4); backends exercised and recorded.
+3. Manually tested on a device (Rule 4: Android suffices unless the change touches iOS-native code or iOS-specific rendering/behavior, then iOS too); backends exercised and recorded.
 4. New strings in `locales/en.json` only; no other locale files touched.
 5. Commits: CONTRIBUTING.md component-prefix style (conventional-commit-ish prefixes are tolerated in practice), atomic, rebased on master.
-6. PR template fully filled in — not deleted; screenshots for UI changes (mandatory for first-timers).
+6. PR template fully filled in, not deleted; screenshots for UI changes (mandatory for first-timers); first-timers also disclose AI assistance.
 7. If a dependency changed: was it discussed first?
 
 ## Provenance and maintenance
 
-Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha). Maintainer-stated rules (Section 1) confirmed verbally 2026-07-06 — they appear in no repo document; everything else was verified by reading the cited files or running the commands below.
+Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha). Re-verified 2026-10-24 against master `3dc9f83e6` (v13.2.4-alpha): Rule 3 WHY, Rule 4, Section 2 gates, first-time contributor rules, merge requirements and branch protection, Section 4 commit style and version-bump format, Section 5 CI table, Section 6 Dependabot, Section 7 locale count. Maintainer-stated rules (Section 1) confirmed verbally 2026-07-06, Rule 4 revised 2026-10-24. They appear in no repo document; everything else was verified by reading the cited files or running the commands below.
 
 Re-verify volatile facts:
 
@@ -194,14 +201,17 @@ Re-verify volatile facts:
 |---|---|
 | HEAD / version | `git log -1 --format='%h %s'` |
 | PR CI = exactly 4 workflows | `grep -l 'pull_request:' .github/workflows/*.yml` (expect lint, prettier, test, tsc) |
+| Branch protection on `master` | `gh api repos/ZeusLN/zeus/branches/master/protection` |
+| Dependabot policy | `cat .github/dependabot.yml` |
 | build/scan not in PR CI | `grep -A2 '^on:' .github/workflows/build-android.yml .github/workflows/dependency-scan.yml` (expect `workflow_dispatch`) |
 | `yarn verify` composition | `grep '"verify"' package.json` |
 | CI Node version | `grep node-version .github/workflows/test.yml` (24.x as of 2026-07-06) |
 | PR template sections | `cat .github/PULL_REQUEST_TEMPLATE.md` |
-| Locale file count / en-only rule | `ls locales \| wc -l` (34); CONTRIBUTING.md "Internationalization" |
+| Locale file count / en-only rule | `ls locales \| wc -l` (37 as of 2026-10-24); CONTRIBUTING.md "Internationalization" |
 | Proof-of-work rule | CONTRIBUTING.md "Proof of Work for First-Time Contributors" |
+| AI disclosure rule | CONTRIBUTING.md "Disclosing AI Assistance" |
 | ACK vocabulary | CODE_REVIEW.md "Review Approval Terminology" |
-| Commit-style drift | `git log --format='%s' -200 \| grep -Ec '^(fix\|ui\|refactor\|feat\|chore\|docs)[:(]'` |
+| Commit-style drift | `git log --format='%s' -200 \| grep -Ec '^(fix\|ui\|refactor\|feat\|chore\|docs)[:(]'` (22 at `3dc9f83e6`) |
 | Version-bump format | `git log --format='%s' --grep='Version bump' -5` |
 | Incident hashes | `git log -1 --format='%h %ad %s' --date=short <hash>` for `5f533bb12`, `7d8678457`, `7ed901a10`, `46f2bac00`, `e808fd71a`, `ed161541a`, `fdad118ed`, `93227029e`, `28bc50f5e` |
 | Revert-of-a-PR check | `git log --first-parent --grep='revert-<PR#>'` |

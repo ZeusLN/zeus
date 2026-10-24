@@ -5,7 +5,7 @@ description: Load when you need to RUN Zeus — start Metro / yarn android / yar
 
 # Zeus: Run and Operate
 
-Runbook for running the app in development, connecting it to a Lightning node, and performing release/reproducible-build operations. Verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha).
+Runbook for running the app in development, connecting it to a Lightning node, and performing release/reproducible-build operations. Verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha). Sections 3 (Outputs, versionCode, CI workflows) and 5 re-verified 2026-10-24 against master `3dc9f83e6` (v13.2.4-alpha).
 
 ## When to use / When NOT to use
 
@@ -117,15 +117,17 @@ Reproducibility support in the Gradle config: `org.gradle.parallel=false` in `an
 
 ### Outputs
 
-5 APKs land in `android/app/build/outputs/apk/release/` (paths confirmed by the artifact steps in `.github/workflows/build-android.yml`):
+4 APKs land in `android/app/build/outputs/apk/release/` (paths confirmed by the artifact steps in `.github/workflows/build-android.yml`):
 
-`zeus-armeabi-v7a.apk`, `zeus-arm64-v8a.apk`, `zeus-x86.apk`, `zeus-x86_64.apk`, `zeus-universal.apk`
+`zeus-armeabi-v7a.apk`, `zeus-arm64-v8a.apk`, `zeus-x86_64.apk`, `zeus-universal.apk`
 
-All **unsigned** — the release build type's `signingConfig` line is commented out in `android/app/build.gradle`. APK = Android package file; ABI = CPU architecture a binary targets; the "universal" APK bundles all four ABIs and is the one distributed on the website/GitHub releases.
+The 32-bit x86 ABI was dropped in `25d8ff806` ("build: drop the 32-bit x86 Android ABI"), so there is no `zeus-x86.apk`.
+
+All **unsigned**: the release build type's `signingConfig` line is commented out in `android/app/build.gradle`. APK = Android package file; ABI = CPU architecture a binary targets; the "universal" APK bundles all three ABIs and is the one distributed on the website/GitHub releases.
 
 ### Per-ABI versionCode
 
-From `android/app/build.gradle` (`versionCodeOverride`): each ABI split gets `versionCode = base * 1000 + {armeabi-v7a: 1, x86: 2, arm64-v8a: 3, x86_64: 4}`; the universal APK keeps the base. At v13.1.3-alpha the base is `131`, so: armeabi-v7a 131001, x86 131002, arm64-v8a 131003, x86_64 131004, universal 131.
+From `android/app/build.gradle` (`versionCodeOverride`): each ABI split gets `versionCode = base * 1000 + {armeabi-v7a: 1, arm64-v8a: 3, x86_64: 4}`; the universal APK keeps the base. Suffix `2` belonged to the dropped x86 ABI and is retired: never reuse or renumber the suffixes, or Play sees a lower versionCode for an ABI than one already published. The base (`versionCode` in `defaultConfig`) is a counter, not derived from the version string: it goes up by 1 on each new base version's first bump (133 at v13.2.1-alpha1, 134 at v13.2.2-alpha, 135 at v13.2.3-alpha1, 136 at v13.2.4-alpha) and stays put through that line's beta/rc bumps. At v13.2.4-alpha: armeabi-v7a 136001, arm64-v8a 136003, x86_64 136004, universal 136.
 
 ### How a user verifies a release
 
@@ -137,7 +139,7 @@ Per `docs/ReproducibleBuilds.md`:
 
 ### CI workflows are manual-only
 
-`.github/workflows/build-android.yml` (runs `bash ./build.sh --no-tty` on ubuntu, Node 24.x, uploads the 5 APKs as artifacts, 5-day retention) and `.github/workflows/dependency-scan.yml` (GuardDog + npm-scan) are both `workflow_dispatch:`-only — they take a branch input and never run on push/PR. PR CI is only the 4 verify checks (see zeus-validation-and-qa).
+`.github/workflows/build-android.yml` (runs `bash ./build.sh --no-tty` on ubuntu, Node 24.x, uploads the 4 APKs as artifacts, 5-day retention) and `.github/workflows/dependency-scan.yml` (GuardDog + npm-scan) are both `workflow_dispatch:`-only; they take a branch input and never run on push/PR. PR CI is the 4 verify checks (Test, Lint, Prettier, Typescript Check; see zeus-validation-and-qa). Two more workflows run automatically but check nothing: `coverage-comment.yml` runs on `workflow_run` after a successful `Test` run for a pull request and posts or updates the coverage comment on the PR, and `telegram.yml` posts master pushes, issue events and published releases to the project Telegram group.
 
 ### PGP signing
 
@@ -163,14 +165,14 @@ Commits and releases are signed with the key published in `PGP.txt` (repo root):
 
 ## 5) Operational conventions
 
-- **Version bump commits**: subject is exactly `Version bump: vX.Y.Z[-suffix]` (e.g. `Version bump: v13.1.3-alpha`, current HEAD `c5fd094fb`). The maximal file set a bump commit touches is 4: `package.json` `version`, `android/app/build.gradle` `versionName` (+ `versionCode` when incremented), `ios/zeus.xcodeproj/project.pbxproj` `MARKETING_VERSION` (all build configs), and the version list in `.github/ISSUE_TEMPLATE/bug_report.yml` — but not every bump touches all 4. Observed at `c5fd094fb`: the pbxproj and bug_report.yml entries only change when the suffix-less base version changes (i.e. on the post-release `-alpha` bump, e.g. `c5fd094fb`); beta/rc/final bumps typically touch only `package.json` + `build.gradle` (e.g. `a2dc04ab8` v13.1.2, `8b45b4111` v13.1.1-beta1 — 2 files each).
-- **Cadence** (observed in `git log --grep='Version bump'`): after a release, master is bumped to the next `-alpha`; a release line then walks `-alpha → -beta1… → -rc1… → final` (e.g. v13.1.0-alpha → beta1 → beta2 → rc1 → v13.1.0). Master effectively always sits on an `-alpha` (or in-flight beta/rc) version.
+- **Version bump commits**: subject is exactly `Version bump: vX.Y.Z[-suffix]` (e.g. `Version bump: v13.2.4-alpha`, `7bf873828`, the latest bump on master at `3dc9f83e6`). The maximal file set a bump commit touches is 4: `package.json` `version`, `android/app/build.gradle` `versionName` (+ `versionCode` when incremented), `ios/zeus.xcodeproj/project.pbxproj` `MARKETING_VERSION` (all build configs), and the version list in `.github/ISSUE_TEMPLATE/bug_report.yml`; but not every bump touches all 4. Observed at `c5fd094fb`: the pbxproj and bug_report.yml entries only change when the suffix-less base version changes (i.e. on the post-release `-alpha` bump, e.g. `c5fd094fb`, and `7bf873828`, which touched all 4); beta/rc/final bumps typically touch only `package.json` + `build.gradle` (e.g. `a2dc04ab8` v13.1.2, `8b45b4111` v13.1.1-beta1; 2 files each).
+- **Cadence** (observed in `git log --grep='Version bump'`): after a release, master is bumped to the next `-alpha`; a release line then walks `-alpha → -beta1… → -rc1… → final` (e.g. v13.1.0-alpha → beta1 → beta2 → rc1 → v13.1.0). Since v13.2.0 the alpha is often numbered too (`v13.2.0-alpha1`, `v13.2.1-alpha1`, `v13.2.3-alpha1`), though not always (`v13.2.2-alpha`, `v13.2.4-alpha`). Master effectively always sits on an `-alpha` (or in-flight beta/rc) version.
 - **Tags**: one tag per shipped version (`v13.1.2` etc., 269 tags at time of writing), lightweight with one historical annotated exception (`v0.10.2-rc2`), usually pointing at the version-bump commit — but not always (`v13.1.1` points at a non-bump commit, and final-release bump commits may sit on release branches rather than master). Signing lives on the commit (PGP key above), not the tag.
 - Release-time discipline (revert-first near releases, mandatory 2-platform manual testing) is owned by zeus-change-control — read it before touching anything during a release window.
 
 ## Provenance and maintenance
 
-Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha, versionCode 131). `./build.sh` execution itself verified by source read (build.sh + build-android.yml), not executed. Re-verification one-liners for volatile facts:
+Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha, versionCode 131); section 3 outputs/versionCode/CI and section 5 re-verified 2026-10-24 against master `3dc9f83e6` (v13.2.4-alpha, versionCode 136). `./build.sh` execution itself verified by source read (build.sh + build-android.yml), not executed. Re-verification one-liners for volatile facts:
 
 | Fact | Re-verify with |
 |---|---|
@@ -179,8 +181,9 @@ Facts verified 2026-07-06 against master `c5fd094fb` (v13.1.3-alpha, versionCode
 | `org.gradle.parallel=false` | `grep parallel android/gradle.properties` |
 | Unsigned release + per-ABI versionCode map + reproducible Zip settings | `grep -n 'signingConfig\|versionCodeOverride\|versionCodes\|reproducibleFileOrder' android/app/build.gradle` |
 | Current versionCode/versionName | `grep -n 'versionCode \|versionName' android/app/build.gradle` |
-| 5 APK names/paths | `grep 'path:' .github/workflows/build-android.yml` |
+| 4 APK names/paths | `grep 'path:' .github/workflows/build-android.yml` |
 | Workflows dispatch-only | `grep -A2 '^on:' .github/workflows/build-android.yml .github/workflows/dependency-scan.yml` |
+| All workflows and their triggers | `grep -n -A3 '^on:' .github/workflows/*.yml` |
 | 7 implementations + labels | `grep -n -A14 'INTERFACE_KEYS' stores/SettingsStore.ts \| head -25` |
 | Embedded networks + mutinynet filter | `grep -n 'EMBEDDED_NODE_NETWORK_KEYS\|mutinynet' stores/SettingsStore.ts views/Settings/WalletConfiguration.tsx utils/LdkNodeUtils.ts` |
 | Android emulator host 10.0.2.2 / Polar | `grep -n '10.0.2.2\|Polar' CONTRIBUTING.md` |
