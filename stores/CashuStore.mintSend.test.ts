@@ -268,19 +268,35 @@ describe('CashuStore.createInvoice', () => {
             const store = newStore();
             const releaseOld = deferQuote('quote-old', 'lnbc-old');
             const releaseNew = deferQuote('quote-new', 'lnbc-new');
+            const lnurl = {
+                callback: 'https://service.example/withdraw',
+                k1: 'k1value',
+                domain: 'service.example'
+            } as any;
 
-            const older = store.createInvoice({ memo: '', value: '10' });
+            const older = store.createInvoice({
+                memo: '',
+                value: '10',
+                lnurl
+            });
+            store.selectedMintUrl = B;
             const newer = store.createInvoice({ memo: '', value: '20' });
             await new Promise((resolve) => setImmediate(resolve));
 
             releaseNew();
             expect(await newer).toEqual({ paymentRequest: 'lnbc-new' });
             releaseOld();
-            expect(await older).toBeUndefined();
+            // NWC make_invoice answers with this, so the superseded call
+            // still returns its own invoice
+            expect(await older).toEqual({ paymentRequest: 'lnbc-old' });
+            await new Promise((resolve) => setImmediate(resolve));
 
             expect(store.invoice).toBe('lnbc-new');
             expect(store.quoteId).toBe('quote-new');
+            expect(store.lastInvoiceMintUrl).toBe(B);
             expect(store.creatingInvoice).toBe(false);
+            // the LNURL withdraw belonged to the superseded request
+            expect(blobFetch).not.toHaveBeenCalled();
             // the older quote is still recorded so it can be checked later
             expect(store.invoices!.map((i: any) => i.quote)).toEqual([
                 'quote-new',

@@ -3,6 +3,24 @@ jest.mock('../stores/Stores');
 jest.mock('../utils/LocaleUtils');
 
 jest.mock('react-native-blob-util', () => ({}));
+// CashuStore is loaded for the Cashu make_invoice tests; these keep its
+// native and settings imports out of the test
+jest.mock('./SettingsStore', () => ({
+    DEFAULT_NOSTR_RELAYS: ['wss://relay.one']
+}));
+jest.mock('@nostr-dev-kit/ndk', () => ({
+    __esModule: true,
+    default: jest.fn()
+}));
+jest.mock('../cashu-cdk', () => ({
+    __esModule: true,
+    default: { isAvailable: jest.fn(() => true) }
+}));
+jest.mock('../utils/NostrUtils', () => ({}));
+jest.mock('../utils/NostrMintBackup', () => ({}));
+jest.mock('../utils/MigrationUtils', () => ({}));
+jest.mock('../utils/ThemeUtils', () => ({}));
+jest.mock('../NavigationService', () => ({}));
 jest.mock('../ldknode/LdkNodeInjection', () => ({}));
 
 jest.mock('../utils/BackendUtils', () => ({
@@ -79,6 +97,7 @@ import CashuPayment from '../models/CashuPayment';
 import Base64Utils from '../utils/Base64Utils';
 import NostrConnectUtils, { Nip47ErrorCode } from '../utils/NostrConnectUtils';
 import InvoicesStore from './InvoicesStore';
+import CashuStore from './CashuStore';
 import NostrWalletConnectStore, {
     NWC_CLIENT_KEYS,
     NWC_CONNECTIONS_KEY,
@@ -2101,6 +2120,93 @@ describe('NostrWalletConnectStore make_invoice invoice isolation', () => {
         expect(response.error?.message).toBe('node offline');
         expect(invoicesStore.error_msg).toBeFalsy();
         expect(connection.activity).toHaveLength(0);
+    });
+});
+
+describe('NostrWalletConnectStore make_invoice from Cashu', () => {
+    const deferred = () => {
+        let resolve: (value: any) => void = () => {};
+        const promise = new Promise((r) => (resolve = r));
+        return { promise, resolve };
+    };
+
+    const MINT = 'https://mint.example';
+
+    const setup = () => {
+        const cashuStore = new CashuStore(
+            { implementation: 'lnd', lndDir: 'node1', settings: {} } as any,
+            {} as any,
+            {} as any,
+            {} as any
+        );
+        cashuStore.mintUrls = [MINT];
+        cashuStore.selectedMintUrl = MINT;
+        cashuStore.cashuWallets = {
+            [MINT]: { walletId: MINT, pubkey: '', errorConnecting: false }
+        } as any;
+        cashuStore.invoices = [];
+        const { store } = createStore({ cashuStore });
+        // isCashuConfigured is a computed, so satisfy its inputs rather
+        // than trying to redefine it
+        store.cashuEnabled = true;
+        const connection = addConnection(store, {
+            permissions: ['make_invoice']
+        });
+        return { store, connection, cashuStore };
+    };
+
+    beforeEach(() => {
+        jest.spyOn(
+            NostrConnectUtils,
+            'decodeInvoiceTagsForMakeInvoice'
+        ).mockResolvedValue({
+            paymentHash: '',
+            descriptionHash: '',
+            expiryTime: 4_000_000_000
+        } as any);
+        jest.spyOn(NostrConnectUtils, 'notifyNwcInvoiceReady').mockReturnValue(
+            undefined as any
+        );
+    });
+
+    it('answers overlapping make_invoice requests with their own invoices', async () => {
+        const { store, connection, cashuStore } = setup();
+        const first = deferred();
+        const second = deferred();
+        const createMintQuote = jest
+            .fn()
+            .mockReturnValueOnce(first.promise)
+            .mockReturnValueOnce(second.promise);
+        cashuStore.createMintQuoteCDK = createMintQuote;
+        const quote = (id: string, request: string) => ({
+            id,
+            request,
+            state: 'Unpaid',
+            expiry: 4_000_000_000
+        });
+
+        const a = (store as any).handleMakeInvoice(connection, {
+            amount: 1000_000
+        });
+        const b = (store as any).handleMakeInvoice(connection, {
+            amount: 2000_000
+        });
+        await flushMicrotasks();
+        expect(createMintQuote).toHaveBeenCalledTimes(2);
+        // the second request finishes first, so the first one is the
+        // superseded call when its quote arrives
+        second.resolve(quote('quote-second', 'lnbc-second'));
+        first.resolve(quote('quote-first', 'lnbc-first'));
+
+        const [responseA, responseB] = await Promise.all([a, b]);
+        expect(responseA.error).toBeUndefined();
+        expect(responseB.error).toBeUndefined();
+        expect(responseA.result.invoice).toBe('lnbc-first');
+        expect(responseB.result.invoice).toBe('lnbc-second');
+        expect(connection.activity.map((entry) => entry.id).sort()).toEqual([
+            'lnbc-first',
+            'lnbc-second'
+        ]);
     });
 });
 

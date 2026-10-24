@@ -4367,8 +4367,12 @@ export default class CashuStore {
             }
 
             // The quote is kept in this.invoices above, but a newer request
-            // or clearInvoice owns the invoice state and any LNURL withdraw
-            if (!isCurrent()) return;
+            // or clearInvoice owns the invoice state and any LNURL withdraw.
+            // The caller still gets its own invoice: NWC make_invoice
+            // requests are not queued and answer with this result.
+            if (!isCurrent()) {
+                return { paymentRequest: invoice?.getPaymentRequest };
+            }
 
             runInAction(() => {
                 this.invoice = invoice?.getPaymentRequest;
