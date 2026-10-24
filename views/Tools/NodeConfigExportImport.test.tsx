@@ -58,6 +58,7 @@ jest.mock('../../components/Text', () => {
     return Text;
 });
 jest.mock('../../components/LoadingIndicator', () => 'LoadingIndicator');
+jest.mock('../../components/Modal', () => require('react-native').Modal);
 jest.mock('../../components/NodeIdenticon', () => ({
     __esModule: true,
     default: 'NodeIdenticon',
