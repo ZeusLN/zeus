@@ -634,6 +634,75 @@ describe('InvoicesStore.createInvoice LSP fee quote', () => {
         expect(result!.paymentRequest).toBe('lnbc-wrapped');
     });
 
+    // Receive shows payment_request_lsp_fee next to the invoice
+    describe('the fee kept with the shown invoice', () => {
+        const createShown = (store: InvoicesStore, extra: any = {}) =>
+            store.createUnifiedInvoice({
+                memo: '',
+                value: '1000',
+                expirySeconds: '3600',
+                skipOnchain: true,
+                ...extra
+            });
+
+        it('is the fee the invoice was priced with, after a later quote replaces the shared one', async () => {
+            const { store, lspStore } = setup({
+                getZeroConfFee: jest.fn(() => quote(10000))
+            });
+
+            await createShown(store);
+            // e.g. a Swaps fee preview
+            lspStore.zeroConfFee = 2000;
+
+            expect(store.payment_request).toBe('lnbc-wrapped');
+            expect(store.payment_request_amt).toBe('1000');
+            expect(store.payment_request_lsp_fee).toBe(10000);
+        });
+
+        it('is 0 for an invoice wrapped without a fee', async () => {
+            const { store } = setup({
+                getZeroConfFee: jest.fn(() =>
+                    Promise.resolve({ feeSats: undefined, feeId: 'free' })
+                )
+            });
+
+            await createShown(store);
+
+            expect(store.payment_request_lsp_fee).toBe(0);
+        });
+
+        it('is null for an invoice the LSP does not wrap', async () => {
+            const { store } = setup();
+            store.payment_request_lsp_fee = 2000;
+
+            await createShown(store, { noLsp: true });
+
+            expect(store.payment_request).toBe('lnbc-inner');
+            expect(store.payment_request_lsp_fee).toBeNull();
+        });
+
+        it('is cleared when the LSP rejects the proposal', async () => {
+            const { store } = setup({
+                getZeroConfInvoice: jest.fn(() => Promise.reject())
+            });
+            store.payment_request_lsp_fee = 2000;
+
+            await expect(createShown(store)).rejects.toThrow();
+
+            expect(store.payment_request).toBeNull();
+            expect(store.payment_request_lsp_fee).toBeNull();
+        });
+
+        it('is cleared with the invoice on reset', async () => {
+            const { store } = setup();
+            await createShown(store);
+
+            store.reset();
+
+            expect(store.payment_request_lsp_fee).toBeNull();
+        });
+    });
+
     describe('LNURL-withdraw', () => {
         it('asks the caller to accept the fee before creating the invoice', async () => {
             const { store } = setup();
@@ -1106,10 +1175,15 @@ describe('InvoicesStore.createUnifiedInvoice', () => {
         second.resolve({ payment_request: 'lnbc-second', r_hash: 'bb' });
 
         const [resultA, resultB]: any[] = await Promise.all([a, b]);
-        expect(resultA).toEqual({ rHash: 'aa', paymentRequest: 'lnbc-first' });
+        expect(resultA).toEqual({
+            rHash: 'aa',
+            paymentRequest: 'lnbc-first',
+            lspFeeSats: null
+        });
         expect(resultB).toEqual({
             rHash: 'bb',
-            paymentRequest: 'lnbc-second'
+            paymentRequest: 'lnbc-second',
+            lspFeeSats: null
         });
     });
 
@@ -1198,7 +1272,8 @@ describe('InvoicesStore.createUnifiedInvoice', () => {
             expect(result).toEqual({
                 rHash: 'ee',
                 paymentRequest: 'lnbc-nwc',
-                onChainAddress: 'bcrt1-silent'
+                onChainAddress: 'bcrt1-silent',
+                lspFeeSats: null
             });
             expectReceiveStateKept(store);
             expect(store.onChainAddress).toBe('bcrt1-on-screen');
@@ -1324,7 +1399,8 @@ describe('InvoicesStore superseded invoice requests', () => {
 
         await expect(pending).resolves.toEqual({
             rHash: 'aa',
-            paymentRequest: 'lnbc-old'
+            paymentRequest: 'lnbc-old',
+            lspFeeSats: null
         });
         await flush();
         expectNextScreenKept(store);
@@ -1352,12 +1428,14 @@ describe('InvoicesStore superseded invoice requests', () => {
         newer.resolve({ payment_request: 'lnbc-new', r_hash: 'bb' });
         await expect(b).resolves.toEqual({
             rHash: 'bb',
-            paymentRequest: 'lnbc-new'
+            paymentRequest: 'lnbc-new',
+            lspFeeSats: null
         });
         older.resolve({ payment_request: 'lnbc-old', r_hash: 'aa' });
         await expect(a).resolves.toEqual({
             rHash: 'aa',
-            paymentRequest: 'lnbc-old'
+            paymentRequest: 'lnbc-old',
+            lspFeeSats: null
         });
         await flush();
 
@@ -1441,7 +1519,8 @@ describe('InvoicesStore superseded invoice requests', () => {
         await expect(pending).resolves.toEqual({
             rHash: 'aa',
             paymentRequest: 'lnbc-old',
-            onChainAddress: 'bcrt1-old'
+            onChainAddress: 'bcrt1-old',
+            lspFeeSats: null
         });
         await failing;
         expectNextScreenKept(store);
@@ -1480,7 +1559,8 @@ describe('InvoicesStore superseded invoice requests', () => {
         nwc.resolve({ payment_request: 'lnbc-nwc', r_hash: 'bb' });
         await expect(silent).resolves.toEqual({
             rHash: 'bb',
-            paymentRequest: 'lnbc-nwc'
+            paymentRequest: 'lnbc-nwc',
+            lspFeeSats: null
         });
         expect(store.payment_request).toBe('lnbc-receive-2');
     });
@@ -1635,7 +1715,8 @@ describe('InvoicesStore superseded invoice requests', () => {
 
             await expect(pending).resolves.toEqual({
                 rHash: expect.any(String),
-                paymentRequest: 'lnbc-wrapped'
+                paymentRequest: 'lnbc-wrapped',
+                lspFeeSats: 2000
             });
             await flush();
             const proposalIsCurrent = (

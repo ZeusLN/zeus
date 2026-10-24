@@ -39,6 +39,10 @@ export default class InvoicesStore {
     @observable withdrawal_req: WithdrawalRequest | null;
     @observable payment_request: string | null;
     @observable payment_request_amt: string | null;
+    // The LSP fee payment_request was priced with, null when it is not
+    // wrapped by the LSP. Screens show this next to the invoice rather than
+    // LSPStore.zeroConfFee, which a later fee request or reset can replace.
+    @observable payment_request_lsp_fee: number | null = null;
     @observable creatingInvoice = false;
     @observable creatingInvoiceError = false;
     @observable invoicesCount: number;
@@ -111,6 +115,7 @@ export default class InvoicesStore {
         this.invoice = null;
         this.pay_req = null;
         this.payment_request = null;
+        this.payment_request_lsp_fee = null;
         this.creatingInvoice = false;
         this.creatingInvoiceError = false;
         this.invoicesCount = 0;
@@ -280,7 +285,7 @@ export default class InvoicesStore {
                         )
                     );
                 }
-                const { rHash, paymentRequest } = result;
+                const { rHash, paymentRequest, lspFeeSats } = result;
                 if (BackendUtils.supportsOnchainReceiving() && !skipOnchain) {
                     // ZEUS-2223: the on-chain leg must come from the
                     // requested account; falling back to the default
@@ -296,10 +301,16 @@ export default class InvoicesStore {
                                 runInAction(() => {
                                     this.onChainAddress = onChainAddress;
                                     this.payment_request = paymentRequest;
+                                    this.payment_request_lsp_fee = lspFeeSats;
                                     this.loading = false;
                                     this.creatingInvoice = false;
                                 });
-                            return { rHash, paymentRequest, onChainAddress };
+                            return {
+                                rHash,
+                                paymentRequest,
+                                onChainAddress,
+                                lspFeeSats
+                            };
                         })
                         .catch(() => {
                             if (shared())
@@ -312,9 +323,10 @@ export default class InvoicesStore {
                     if (shared())
                         runInAction(() => {
                             this.payment_request = paymentRequest;
+                            this.payment_request_lsp_fee = lspFeeSats;
                             this.creatingInvoice = false;
                         });
-                    return { rHash, paymentRequest };
+                    return { rHash, paymentRequest, lspFeeSats };
                 }
             })
             .catch((error: any) => {
@@ -404,6 +416,7 @@ export default class InvoicesStore {
             }
             this.payment_request = null;
             this.payment_request_amt = null;
+            this.payment_request_lsp_fee = null;
             if (!unified) this.creatingInvoice = true;
             this.creatingInvoiceError = false;
             this.error_msg = null;
@@ -681,6 +694,7 @@ export default class InvoicesStore {
                                 this.lspStore.feeId = undefined;
                                 this.payment_request = null;
                                 this.payment_request_amt = null;
+                                this.payment_request_lsp_fee = null;
                                 this.creatingInvoice = false;
                             });
                         return;
@@ -733,7 +747,8 @@ export default class InvoicesStore {
                     rHash: invoice.getFormattedRhash,
                     paymentRequest: jit_bolt11
                         ? jit_bolt11
-                        : invoice.getPaymentRequest
+                        : invoice.getPaymentRequest,
+                    lspFeeSats: jit_bolt11 ? lspQuote.feeSats : null
                 };
             })
             .catch((error: any) => {

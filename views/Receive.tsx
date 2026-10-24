@@ -12,6 +12,7 @@ import BigNumber from 'bignumber.js';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import { ButtonGroup, Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
+import { runInAction } from 'mobx';
 import _map from 'lodash/map';
 import NfcManager from 'react-native-nfc-manager';
 import { Route } from '@react-navigation/native';
@@ -671,8 +672,16 @@ export default class Receive extends React.Component<
                         )
                     ) {
                         // Reuse existing invoice
-                        InvoicesStore.payment_request =
-                            existingInvoice.payment_request;
+                        runInAction(() => {
+                            InvoicesStore.payment_request =
+                                existingInvoice.payment_request;
+                            InvoicesStore.payment_request_amt =
+                                existingInvoice.amount;
+                            // records from before the fee was stored
+                            // show no fee rather than another quote's
+                            InvoicesStore.payment_request_lsp_fee =
+                                existingInvoice.lspFeeSats ?? null;
+                        });
                         this.subscribeInvoice(existingInvoice.rHash);
                         return true;
                     }
@@ -718,11 +727,13 @@ export default class Receive extends React.Component<
                     ({
                         rHash,
                         paymentRequest,
-                        onChainAddress
+                        onChainAddress,
+                        lspFeeSats
                     }: {
                         rHash: string;
                         paymentRequest: string;
                         onChainAddress?: string;
+                        lspFeeSats?: number | null;
                     }) => {
                         if (!isCurrent()) return;
                         // Store invoice for POS orders
@@ -730,6 +741,7 @@ export default class Receive extends React.Component<
                             PosStore.recordInvoice({
                                 orderId,
                                 payment_request: paymentRequest,
+                                lspFeeSats,
                                 rHash,
                                 exchangeRate,
                                 amount: amount || '0',
@@ -1134,7 +1146,10 @@ export default class Receive extends React.Component<
             showAdvanced
         } = this.state;
 
-        const { zeroConfFee, showLspSettings } = LSPStore;
+        const { showLspSettings } = LSPStore;
+        // the fee the shown invoice was priced with, not LSPStore.zeroConfFee,
+        // which a later fee request can replace while this invoice is shown
+        const zeroConfFee = InvoicesStore.payment_request_lsp_fee ?? undefined;
         const requiresChannelSetup =
             zeroConfFee &&
             new BigNumber(zeroConfFee).gte(LSP_MIN_CHANNEL_OPEN_FEE_SATS);
