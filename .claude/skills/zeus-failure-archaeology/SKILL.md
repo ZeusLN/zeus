@@ -222,15 +222,16 @@ Background: **NWC (Nostr Wallet Connect, NIP-47)** lets Nostr clients drive the 
 
 ## FA-11 — Cashu node-dir collision: all LDK wallets shared one mint DB
 
-**Dates:** 2026-03-20 → 2026-04-08. **Status: settled.**
+**Dates:** 2026-03-20 → 2026-04-08 (both fixes landed on feature branches before merge). **Status: settled.**
 
 Background: **Cashu** is a Chaumian ecash protocol; Zeus embeds the CDK (Cashu Dev Kit, Rust). Per-wallet Cashu data is namespaced by a node directory string.
 
-- **Symptom:** multiple LDK Node wallets on one device saw each other's mint data/balances.
+- **Symptom:** multiple LDK Node wallets on one device saw each other's mint data/balances. Seen only in builds of the `ldk-node` and `feat/cashu-multimint` feature branches; no release or tag was affected.
 - **Root cause:** namespacing used the LND directory getter, which returns the literal fallback `'lnd'` for every LDK Node wallet — so all LDK wallets collided on one namespace.
-- **Fix:** `1242ce94a` (2026-03-20) "fix: Cashu: isolate mint data per LDK node using getNodeDir()" — `CashuStore.getNodeDir()` returns `ldkNodeDir || 'ldk'` for ldk-node, `lndDir || 'lnd'` otherwise (verified in `stores/CashuStore.ts`). Follow-up `35fa31fee` (2026-04-08) "use getNodeDir for cashu multimint keys". Recovery is a **copy** migration, not a move: `MigrationUtils.migrateLegacyCashuKeysToNodeDir` copies four `cashu-*` key suffixes from the legacy `lnd`-prefixed keys to node-dir keys, only when the node key is empty (verified in `utils/MigrationUtils.ts`).
+- **Fix:** `1242ce94a` (2026-03-20) "fix: Cashu: isolate mint data per LDK node using getNodeDir()". `CashuStore.getNodeDir()` returns `ldkNodeDir || 'ldk'` for ldk-node, `lndDir || 'lnd'` otherwise (verified in `stores/CashuStore.ts`). It landed on the `ldk-node` branch, which reached master together with the LDK Node backend in PR #3784 (`b33cdb3c8`, 2026-03-27). Follow-up `35fa31fee` (2026-04-08) "use getNodeDir for cashu multimint keys" landed inside the multimint PR #3773 (`70e362781`, 2026-06-05), so master never wrote multimint keys under `lnd` either. No first-parent master commit and no tag ever wrote LDK Cashu data under the `lnd` prefix.
+- **Removed migration:** #3773 also added `MigrationUtils.migrateLegacyCashuKeysToNodeDir`, which was meant to copy four `cashu-*` suffixes from `lnd-` keys to node-dir keys. Its guard compared `Storage.getItem` against `null`/`undefined`, but `getItem` returns `false` on a miss, so it never copied anything (#4912). It was deleted rather than fixed: on released installs the `lnd` namespace belongs to remote wallets and embedded LND wallets without an `lndDir`, so a working copy would have moved those wallets' tokens, history and seed into LDK wallets. `stores/CashuStore.nodeDir.test.ts` checks that `initializeWallets` for an LDK node never touches `lnd-cashu-*` keys.
 
-**Lesson:** namespace per-wallet data with `CashuStore.getNodeDir()` (never the raw lndDir getter), and migrate by copying — leave legacy keys in place (same no-delete doctrine as FA-1).
+**Lesson:** namespace per-wallet data with `CashuStore.getNodeDir()` (never the raw lndDir getter). Before writing a copy migration, check with `git tag --contains` which releases actually wrote the old keys, and whether the source namespace is shared with other wallets. If a migration is needed, copy and leave legacy keys in place (same no-delete doctrine as FA-1), and test it with `getItem` returning `false` on a miss.
 
 ---
 
@@ -308,7 +309,7 @@ Caveat: these are **local branches in the primary development clone** (hundreds 
 8. **FA-8:** A storage-engine default is per-wallet state, not a global flag.
 9. **FA-9:** Length-cap inputs before regexing under Hermes.
 10. **FA-10/MP-1:** Check for `revert-<PR#>` before trusting any merged fix.
-11. **FA-11:** Namespace per-wallet data via `getNodeDir()`; migrate by copy, never move.
+11. **FA-11:** Namespace per-wallet data via `getNodeDir()`. Check which releases wrote the old keys before migrating; when migrating, copy, never move.
 12. **FA-12:** Record upstream issue numbers in MOD_KEY names; decide fresh-vs-migrated divergence explicitly.
 13. **MP-2:** Diff the graveyard branch before restarting stalled work.
 
