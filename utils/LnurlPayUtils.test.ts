@@ -8,6 +8,7 @@ import {
     getLnurlpUrl,
     verifyLnurlPayInvoice,
     isLnurlCallbackAllowed,
+    isSuccessActionUrlAllowed,
     verifyLnurlAuthCallback
 } from './LnurlPayUtils';
 
@@ -189,6 +190,48 @@ describe('LnurlPayUtils', () => {
             expect(
                 verifyLnurlPayInvoice('nope', METADATA, new BigNumber(21000)).ok
             ).toBe(false);
+        });
+    });
+
+    describe('isSuccessActionUrlAllowed', () => {
+        it('accepts https urls', () => {
+            expect(
+                isSuccessActionUrlAllowed('https://pay.example.com/receipt/1')
+            ).toBe(true);
+            expect(
+                isSuccessActionUrlAllowed('HTTPS://pay.example.com/receipt')
+            ).toBe(true);
+        });
+
+        it.each([
+            'http://pay.example.com/receipt',
+            'http://abcdefghijklmnop.onion/receipt',
+            'intent://scan/#Intent;scheme=zxing;package=com.example;end',
+            // eslint-disable-next-line no-script-url -- rejected input
+            'javascript:alert(1)',
+            // eslint-disable-next-line no-script-url -- rejected input
+            'JavaScript:alert(1)',
+            'zeusln:lnbc1',
+            'bitcoin:bc1qexample',
+            'file:///etc/hosts',
+            'data:text/html,hi',
+            'https://user:pass@pay.example.com/receipt',
+            'https://pay.example.com@other.example/receipt',
+            'https://other.example\\@pay.example.com/receipt',
+            'https://pay.example.com\n.evil.example/receipt',
+            'https://pay.example.com\t.evil.example/',
+            'https://pay.example.com\r.evil.example/receipt',
+            'https://',
+            'pay.example.com/receipt',
+            '',
+            'not a url'
+        ])('rejects %s', (successUrl) => {
+            expect(isSuccessActionUrlAllowed(successUrl)).toBe(false);
+        });
+
+        it('rejects non-string input', () => {
+            expect(isSuccessActionUrlAllowed(undefined as any)).toBe(false);
+            expect(isSuccessActionUrlAllowed(null as any)).toBe(false);
         });
     });
 
