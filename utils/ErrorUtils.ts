@@ -53,8 +53,25 @@ const parseLdkNodeError = (error: any): string => {
     if (androidMatch) return androidMatch[1].trim();
 
     // iOS: extract message from "<Type>(message: "...")"
-    const iosMatch = str.match(/\w+\(message:\s*"(.+?)"\)/);
-    if (iosMatch) return iosMatch[1].trim();
+    // Opening first, then its closing, see parseCashuDevKitError. Here the
+    // message cannot cross a newline, so an opening whose message does not
+    // close before the next newline is followed by the next opening whose
+    // message starts after that newline. Openings whose message starts
+    // before it would scan to the same newline and are skipped unscanned.
+    const iosOpening = /\w\(message:\s*"/g;
+    const iosClosing = /(.+?)"\)/y;
+    let blockedUntil = -1;
+    let opening: RegExpExecArray | null;
+    while ((opening = iosOpening.exec(str))) {
+        const start = opening.index + opening[0].length;
+        iosOpening.lastIndex = opening.index + 1;
+        if (start <= blockedUntil) continue;
+        iosClosing.lastIndex = start;
+        const iosMatch = iosClosing.exec(str);
+        if (iosMatch) return iosMatch[1].trim();
+        blockedUntil = str.indexOf('\n', start);
+        if (blockedUntil === -1) break;
+    }
 
     // Fallback: strip generic "Error: " prefix
     return str.replace(/^Error:\s*/, '').trim() || str;
@@ -78,9 +95,19 @@ const parseCashuDevKitError = (error: any): string => {
             : error?.message || error?.toString?.() || '';
     if (!str) return str;
 
-    const iosWithAssoc = str.match(
-        /CashuDevKit\.FfiError\.\w+\((?:code:\s*\d+,\s*)?(?:message|errorMessage):\s*"([\s\S]+?)"\)/
+    // Find the envelope's opening first, then scan for its closing `")` once.
+    // As a single regex the lazy scan for the closing starts over at every
+    // further opening in the text, which is quadratic, and the text embeds
+    // whatever the mint answered, at any length. What does not close the first
+    // opening does not close a later one either.
+    const iosOpening = str.match(
+        /CashuDevKit\.FfiError\.\w+\((?:code:\s*\d+,\s*)?(?:message|errorMessage):\s*"/
     );
+    const iosWithAssoc =
+        iosOpening &&
+        str
+            .slice(iosOpening.index + iosOpening[0].length)
+            .match(/^([\s\S]+?)"\)/);
     if (iosWithAssoc) return extractMintDetail(iosWithAssoc[1].trim());
 
     const iosBare = str.match(/CashuDevKit\.FfiError\.(\w+)/);
@@ -113,6 +140,15 @@ const cashuErrorForDisplay = (error: any): string => {
     return `${parsed.slice(0, CASHU_ERROR_DISPLAY_LIMIT).trimEnd()}…`;
 };
 
+// Linear-time str.replace(/[chars]+$/, ''). The regex form retries from every
+// position inside a run of matching characters that is not at the very end,
+// which is quadratic on the mint-controlled text handled here.
+const stripTrailing = (str: string, chars: RegExp): string => {
+    let end = str.length;
+    while (end > 0 && chars.test(str[end - 1])) end--;
+    return str.slice(0, end);
+};
+
 // "InsufficientFunds" -> "Insufficient funds"
 const humanizeVariantName = (variant: string): string => {
     const spaced = variant.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
@@ -131,11 +167,8 @@ const extractMintDetail = (msg: string): string => {
     );
     if (!detailMatch) return msg;
 
-    let detail = detailMatch[1].trim();
     // Strip trailing wrappers that closed the original quoted form.
-    while (/[`")\s]$/.test(detail)) {
-        detail = detail.slice(0, -1);
-    }
+    const detail = stripTrailing(detailMatch[1].trim(), /[`")\s]/);
     if (!detail) return msg;
     return detail.charAt(0).toUpperCase() + detail.slice(1);
 };
@@ -155,7 +188,7 @@ const extractMintDetail = (msg: string): string => {
 const stripJsonBlob = (msg: string): string => {
     const blobStart = msg.search(/[{[]/);
     if (blobStart === -1) return msg;
-    const blob = msg.slice(blobStart).replace(/[`"'\s]+$/, '');
+    const blob = stripTrailing(msg.slice(blobStart), /[`"'\s]/);
     // short inline JSON (e.g. a compact error object) is left alone
     if (blob.length < 80) return msg;
     // only treat the tail as a JSON document when it looks like one; prose
@@ -175,17 +208,19 @@ const stripJsonBlob = (msg: string): string => {
         // unparseable (possibly truncated) blob: nothing to extract
     }
     if (extracted) return extracted;
-    const prefix = msg
-        .slice(0, blobStart)
-        .replace(/^CDK Error:\s*/i, '')
-        .replace(/[`:\s]+$/, '')
-        .trim();
+    const prefix = stripTrailing(
+        msg.slice(0, blobStart).replace(/^CDK Error:\s*/i, ''),
+        /[`:\s]/
+    ).trim();
     if (/[a-zA-Z]/.test(prefix)) return prefix;
     const localeString = require('./LocaleUtils').localeString;
     return localeString('error.unexpectedResponse');
 };
 
-const pascalCase = /^[A-Z](([a-z0-9]+[A-Z]?)*)$/;
+// Same strings as /^[A-Z](([a-z0-9]+[A-Z]?)*)$/: an uppercase letter, then
+// letters and digits with no two uppercase letters in a row. That form
+// backtracks exponentially on a long lowercase run that does not match.
+const pascalCase = /^[A-Z](?:[a-z0-9]+[A-Z])*[a-z0-9]*$/;
 
 const errorToUserFriendly = (error: Error, errorContext?: string[]) => {
     let errorMessage: string = error?.message;
