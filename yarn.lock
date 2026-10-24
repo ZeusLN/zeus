@@ -1826,6 +1826,11 @@
     tseep "^1.3.1"
     typescript-lru-cache "^2.0.0"
 
+"@op-engineering/op-sqlite@18.2.5":
+  version "18.2.5"
+  resolved "https://registry.yarnpkg.com/@op-engineering/op-sqlite/-/op-sqlite-18.2.5.tgz#2c66e7c563fdb81de58a156616cb88e68ac8d296"
+  integrity sha512-OLmcM0SQLapP1p5Q6Ck5P+V3N6RsAhBozIG07PbQr+8wgB0gYoFgFjuWZK0JvNBY+UYgYPxkOQDd4rk4naWNGw==
+
 "@open-draft/deferred-promise@^2.1.0":
   version "2.2.0"
   resolved "https://registry.yarnpkg.com/@open-draft/deferred-promise/-/deferred-promise-2.2.0.tgz#4a822d10f6f0e316be4d67b4d4f8c9a124b073bd"
