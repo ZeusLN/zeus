@@ -116,8 +116,10 @@ const bitcoinQrParser = (input: string, prefix: string) => {
             amount = amount.replace(/,/g, '');
         }
         const parsedAmount = new BigNumber(amount).multipliedBy(SATS_PER_BTC);
-        if (!parsedAmount.isNaN()) {
-            satAmount = parsedAmount.toString();
+        // Ignore amounts that are not a whole, non-negative number of sats
+        // (more than 8 decimals, a sign, Infinity)
+        if (parsedAmount.isInteger() && !parsedAmount.isNegative()) {
+            satAmount = parsedAmount.toFixed();
         }
     }
 

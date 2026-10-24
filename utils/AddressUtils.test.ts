@@ -139,6 +139,19 @@ describe('AddressUtils', () => {
                 satAmount: undefined
             });
 
+            // fractional sats, negative amounts and Infinity are ignored
+            ['0.00100000001', '0.000000001', '-0.001', 'Infinity'].forEach(
+                (amount) =>
+                    expect(
+                        AddressUtils.processBIP21Uri(
+                            `bitcoin:bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu?amount=${amount}`
+                        )
+                    ).toEqual({
+                        value: 'bc1q7065ezyhcd3qtqlcvwcmp9t2weaxc4sguuvlwu',
+                        satAmount: undefined
+                    })
+            );
+
             // without fee
             expect(
                 AddressUtils.processBIP21Uri(
