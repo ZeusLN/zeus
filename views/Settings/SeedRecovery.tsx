@@ -85,6 +85,7 @@ import SettingsStore, {
 import NodeInfoStore from '../../stores/NodeInfoStore';
 import SwapStore from '../../stores/SwapStore';
 import { SWAPS_RESCUE_KEY, isValidRescueKey } from '../../utils/SwapUtils';
+import { addRecoveryWallet } from '../../utils/WalletRecoveryUtils';
 
 import Storage from '../../storage';
 
@@ -434,7 +435,10 @@ export default class SeedRecovery extends React.PureComponent<
             return {
                 nodes,
                 selectedNode: nodes.length - 1,
-                recovery: recoveryCipherSeed ? true : false,
+                // Pending next to any earlier restore that has not run yet
+                ...(recoveryCipherSeed
+                    ? addRecoveryWallet(current, lndDir || 'lnd')
+                    : {}),
                 initialLoad: false
             };
         }).then(async () => {
@@ -479,7 +483,7 @@ export default class SeedRecovery extends React.PureComponent<
             return {
                 nodes,
                 selectedNode: nodes.length - 1,
-                recovery: true
+                ...addRecoveryWallet(current, nodeDir)
             };
         }).then(async () => {
             setConnectingStatus(true);
