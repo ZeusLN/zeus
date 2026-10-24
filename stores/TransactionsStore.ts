@@ -145,8 +145,18 @@ export default class TransactionsStore {
     // the same payment sent twice by mistake
     @observable public paymentInFlightConfirmed = false;
 
-    // monotonic id assigned to each dispatched payment
+    // monotonic id assigned to each payment sendPayment accepts, when it
+    // is dispatched or held back by the graph sync prompt
     private paymentSequence = 0;
+    // id of the latest dispatched payment, whose result this store holds
+    private dispatchedPaymentSequence = 0;
+    // id reserved for the payment held in pendingPaymentData
+    private pendingPaymentSequence: number | null = null;
+    // lets a send screen tell this store's result apart from its own
+    // payment's, by comparing with the id sendPayment returned for it
+    public get lastPaymentSequence(): number {
+        return this.dispatchedPaymentSequence;
+    }
     // sequence of the payment that set paymentInFlight (null when none);
     // completion callbacks and the backstop timer only clear the flag on
     // behalf of that payment, so overlapping payments (e.g. one that
@@ -646,46 +656,62 @@ export default class TransactionsStore {
         );
     };
 
+    // Closing the prompt without sending abandons the held payment, so a
+    // later payment can't be taken for it
     @action
     public hideGraphSyncPrompt = () => {
         this.showGraphSyncPrompt = false;
+        this.pendingPaymentData = null;
+        this.pendingPaymentSequence = null;
     };
 
     @action
     public proceedWithPayment = async () => {
-        if (this.pendingPaymentData) {
-            this.hideGraphSyncPrompt();
-            this.sendPaymentInternal(this.pendingPaymentData);
+        const paymentData = this.pendingPaymentData;
+        const seq = this.pendingPaymentSequence;
+        if (paymentData && seq !== null) {
+            // release the payment before hiding the prompt, so hiding
+            // does not treat it as dismissed without an answer
             this.pendingPaymentData = null;
+            this.pendingPaymentSequence = null;
+            this.hideGraphSyncPrompt();
+            this.sendPaymentInternal(paymentData, seq);
         }
     };
 
+    // Returns the id of the payment: dispatched now, or held back by the
+    // graph sync prompt until the user decides. Returns null when the
+    // in-flight guard drops the request.
     @action
-    public sendPayment = (paymentData: SendPaymentReq) => {
+    public sendPayment = (paymentData: SendPaymentReq): number | null => {
         // Check graph sync before proceeding with payment
         if (!this.checkGraphSyncBeforePayment(paymentData)) {
-            return;
+            this.pendingPaymentSequence = ++this.paymentSequence;
+            return this.pendingPaymentSequence;
         }
 
         return this.sendPaymentInternal(paymentData);
     };
 
     @action
-    private sendPaymentInternal = ({
-        payment_request,
-        amount,
-        pubkey,
-        offer,
-        max_parts,
-        max_shard_amt,
-        fee_limit_sat,
-        max_fee_percent,
-        outgoing_chan_id,
-        last_hop_pubkey,
-        message,
-        amp,
-        timeout_seconds
-    }: SendPaymentReq) => {
+    private sendPaymentInternal = (
+        {
+            payment_request,
+            amount,
+            pubkey,
+            offer,
+            max_parts,
+            max_shard_amt,
+            fee_limit_sat,
+            max_fee_percent,
+            outgoing_chan_id,
+            last_hop_pubkey,
+            message,
+            amp,
+            timeout_seconds
+        }: SendPaymentReq,
+        reservedSeq?: number
+    ): number | null => {
         // Guard against double-submission: if a payment is already in flight,
         // ignore the new request. Without this a rapid double-tap (or a
         // re-fired swipe) dispatches two payments, and keysend in particular
@@ -694,10 +720,11 @@ export default class TransactionsStore {
         // the NWC service) don't come through here: they pay via
         // sendPaymentSilently, which leaves this store's state alone.
         if (this.paymentInFlight) {
-            return;
+            return null;
         }
 
-        const seq = ++this.paymentSequence;
+        const seq = reservedSeq ?? ++this.paymentSequence;
+        this.dispatchedPaymentSequence = seq;
         this.pendingSendSeqs.add(seq);
         this.paymentInFlight = true;
         this.inFlightOwnerSeq = seq;
@@ -730,7 +757,7 @@ export default class TransactionsStore {
                 ),
                 seq
             );
-            return;
+            return seq;
         }
 
         const data: any = {};
@@ -847,6 +874,7 @@ export default class TransactionsStore {
             .catch((err: Error) => {
                 this.handlePaymentError(err, seq);
             });
+        return seq;
     };
 
     // Clears the in-flight guard on behalf of payment `seq`. Callers that
