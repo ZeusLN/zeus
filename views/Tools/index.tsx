@@ -167,7 +167,9 @@ export default class Tools extends React.Component<ToolsProps, ToolsState> {
         }
 
         handleExportChannels({
-            isSqlite: SettingsStore.isSqlite ?? true,
+            // Configs saved before v0.12.3 have no isSqlite and run on
+            // Bolt (see writeLndConfig)
+            isSqlite: SettingsStore.isSqlite ?? false,
             lndDir: SettingsStore.lndDir || 'lnd',
             // nodeInfo is empty when the node isn't running, so read the
             // network from the persisted wallet config instead
