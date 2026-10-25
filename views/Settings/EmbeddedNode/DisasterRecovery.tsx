@@ -433,8 +433,13 @@ export default class DisasterRecovery extends React.Component<
                                                 setChannelBackupRecoveredError();
                                             }
                                         } catch (e: any) {
+                                            // The title must be a string, an
+                                            // Error object crashes the Button
                                             setChannelBackupRecoveredErrorMessage(
-                                                e
+                                                e?.message ||
+                                                    localeString(
+                                                        'general.error'
+                                                    )
                                             );
                                         }
                                     }}
