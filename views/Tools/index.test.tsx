@@ -45,6 +45,7 @@ jest.mock('../../assets/images/SVG/nwc-logo.svg', () => 'Svg');
 jest.mock('../../assets/images/SVG/Nostrich.svg', () => 'Svg');
 
 import * as React from 'react';
+import { Platform } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import Tools from './index';
 
@@ -94,5 +95,19 @@ describe('Tools', () => {
         expect(
             screen.getByText('views.Tools.nodeConfigExportImport.title')
         ).toBeTruthy();
+    });
+
+    it.each([
+        ['android', 'views.Tools.keychainCleanup.title.android'],
+        ['ios', 'views.Tools.keychainCleanup.title']
+    ] as const)('names the keychain cleanup tool for %s', async (os, title) => {
+        const platform = jest.replaceProperty(Platform, 'OS', os);
+        try {
+            await renderTools({ nodes: [] });
+
+            expect(screen.getByText(title)).toBeTruthy();
+        } finally {
+            platform.restore();
+        }
     });
 });
