@@ -1,7 +1,15 @@
 // In-memory file system for the paths Database.ts touches
 const mockFiles = new Set<string>();
 // Switches for failure cases, and a count of connections closed
-const mockFaults = { plaintext: false, transaction: false, closes: 0 };
+const mockFaults = {
+    plaintext: false,
+    transaction: false,
+    closes: 0,
+    // SQL that should throw when executed on a keyed connection
+    failSql: null as string | null,
+    // every statement executed on a keyed connection, in order
+    sql: [] as string[]
+};
 jest.mock('react-native-fs', () => ({
     __esModule: true,
     default: {
@@ -72,6 +80,12 @@ jest.mock('@op-engineering/op-sqlite', () => ({
             return {
                 execute: async (sql: string, params?: any[]) => {
                     guard();
+                    if (encryptionKey) {
+                        mockFaults.sql.push(sql);
+                        if (sql === mockFaults.failSql) {
+                            throw new Error('disk I/O error');
+                        }
+                    }
                     return sqlite.execute(sql, params);
                 },
                 transaction: async (fn: any) => {
@@ -135,6 +149,8 @@ describe('Database', () => {
         mockFaults.plaintext = false;
         mockFaults.transaction = false;
         mockFaults.closes = 0;
+        mockFaults.failSql = null;
+        mockFaults.sql = [];
         mockPlatform.OS = 'ios';
         newSession();
         jest.clearAllMocks();
@@ -325,5 +341,60 @@ describe('Database', () => {
         expect(mockFaults.closes).toBe(1);
         expect(mockFiles.has(DB_PATH)).toBe(true);
         expect(mockFiles.has(`${IOS_DIR}/zeus.db.unreadable`)).toBe(false);
+    });
+
+    it('switches to WAL with synchronous NORMAL on every open', async () => {
+        const first = await getDatabase();
+
+        expect(mockFaults.sql).toContain('PRAGMA journal_mode = WAL');
+        expect(
+            (await first!.execute('PRAGMA synchronous')).rows[0].synchronous
+        ).toBe(1);
+
+        // synchronous is per connection, so a later session sets it again
+        newSession();
+        mockFaults.sql = [];
+        const second = await getDatabase();
+        expect(mockFaults.sql).toContain('PRAGMA synchronous = NORMAL');
+        expect(
+            (await second!.execute('PRAGMA synchronous')).rows[0].synchronous
+        ).toBe(1);
+    });
+
+    it('sets the journal mode only after the schema and the encryption check', async () => {
+        await getDatabase();
+
+        const wal = mockFaults.sql.indexOf('PRAGMA journal_mode = WAL');
+        expect(wal).toBeGreaterThan(
+            mockFaults.sql.indexOf('PRAGMA user_version')
+        );
+        // the unkeyed probe ran first and found the file encrypted
+        expect(open).toHaveBeenCalledWith(
+            expect.objectContaining({ readOnly: true })
+        );
+    });
+
+    it('stays usable with the default journal when WAL cannot be enabled', async () => {
+        mockFaults.failSql = 'PRAGMA journal_mode = WAL';
+
+        const db = await getDatabase();
+
+        expect(db).not.toBeNull();
+        expect(
+            (await db!.execute('SELECT count(*) AS n FROM lnurlpay_tx')).rows[0]
+                .n
+        ).toBe(0);
+        expect(warn).toHaveBeenCalledWith(
+            '[Database] Could not enable WAL',
+            expect.any(Error)
+        );
+    });
+
+    it('never changes the journal of a file that is not encrypted', async () => {
+        mockFaults.plaintext = true;
+
+        await expect(getDatabase()).resolves.toBeNull();
+
+        expect(mockFaults.sql).not.toContain('PRAGMA journal_mode = WAL');
     });
 });

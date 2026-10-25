@@ -181,8 +181,34 @@ const isEncrypted = async (dir: string): Promise<boolean> => {
 };
 
 /**
- * Bring an open database up to date and confirm it is encrypted. On any
- * failure the connection is closed; a plaintext file is also deleted.
+ * WAL with synchronous=NORMAL. A commit appends to the -wal file instead of
+ * rewriting pages in place behind a rollback journal, and syncs only when
+ * the log is copied back (a checkpoint). In the #4471 benchmark this made
+ * single-row writes 4 to 7 times faster (Android emulator: 4.3 ms to
+ * 0.6 ms). An app crash loses no committed data; a power loss can lose the
+ * last commits since a checkpoint but does not corrupt the file.
+ *
+ * journal_mode is stored in the file, synchronous only lasts for the
+ * connection, so both are set on every open. If WAL cannot be enabled the
+ * database keeps the default rollback journal, which still works.
+ */
+const enableWal = async (database: DB) => {
+    try {
+        const result = await database.execute('PRAGMA journal_mode = WAL');
+        const mode = result.rows?.[0]?.journal_mode;
+        if (mode !== 'wal') {
+            console.warn(`[Database] journal_mode is ${mode}, not wal`);
+        }
+        await database.execute('PRAGMA synchronous = NORMAL');
+    } catch (e) {
+        console.warn('[Database] Could not enable WAL', e);
+    }
+};
+
+/**
+ * Bring an open database up to date, confirm it is encrypted, then switch
+ * it to WAL. On any failure before that the connection is closed; a
+ * plaintext file is also deleted.
  */
 const prepare = async (dir: string, database: DB): Promise<DB> => {
     try {
@@ -196,6 +222,7 @@ const prepare = async (dir: string, database: DB): Promise<DB> => {
         await deleteDatabaseFiles(dir);
         throw new Error('Database file is not encrypted');
     }
+    await enableWal(database);
     return database;
 };
 
