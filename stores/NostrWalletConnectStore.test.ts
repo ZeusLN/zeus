@@ -32,6 +32,8 @@ jest.mock('../utils/BackendUtils', () => ({
         supportsCustomFeeLimit: jest.fn(),
         decodePaymentRequest: jest.fn(),
         createInvoice: jest.fn(),
+        getInvoices: jest.fn(),
+        lookupInvoice: jest.fn(),
         supportsFlowLSP: jest.fn(() => false),
         supportsOnchainReceiving: jest.fn(() => false)
     }
@@ -2120,6 +2122,265 @@ describe('NostrWalletConnectStore make_invoice invoice isolation', () => {
         expect(response.error?.message).toBe('node offline');
         expect(invoicesStore.error_msg).toBeFalsy();
         expect(connection.activity).toHaveLength(0);
+    });
+
+    describe('activity invoice', () => {
+        const hashHex = '74e1540bf7f01fed' + 'ab'.repeat(24);
+        // what LND REST returns for r_hash; createUnifiedInvoice hands
+        // it on as base64url
+        const hashBase64 = Buffer.from(hashHex, 'hex').toString('base64');
+        const onScreen = new Invoice({
+            payment_request: 'lnbc-on-screen',
+            r_hash: 'ee'
+        });
+
+        // keeps the real getInvoices so a refresh would show up in
+        // loading and invoices
+        const setupWithSharedList = () => {
+            const invoicesStore = new InvoicesStore(
+                { settings: {} } as any,
+                { resetFee: jest.fn(), flow_error: false } as any,
+                {} as any,
+                {} as any
+            );
+            const { store } = createStore({ invoicesStore });
+            const connection = addConnection(store, {
+                permissions: ['make_invoice']
+            });
+            const harness = { store, connection, invoicesStore };
+            invoicesStore.invoices = [onScreen];
+            invoicesStore.loading = false;
+            const getInvoices = jest.spyOn(invoicesStore, 'getInvoices');
+            const loadingValues: boolean[] = [];
+            const stopWatching = autorun(() => {
+                loadingValues.push(invoicesStore.loading);
+            });
+            return { ...harness, getInvoices, loadingValues, stopWatching };
+        };
+
+        it.each([
+            ['the invoice list loads', 'resolve'],
+            ['the invoice list fails to load', 'reject']
+        ])(
+            'leaves the Receive screen invoice state alone when %s',
+            async (_label, outcome) => {
+                const {
+                    store,
+                    connection,
+                    invoicesStore,
+                    getInvoices,
+                    loadingValues,
+                    stopWatching
+                } = setupWithSharedList();
+                if (outcome === 'resolve') {
+                    (BackendUtils.getInvoices as jest.Mock).mockResolvedValue({
+                        invoices: []
+                    });
+                    (BackendUtils.lookupInvoice as jest.Mock).mockResolvedValue(
+                        {
+                            payment_request: 'lnbc-nwc',
+                            r_hash: hashBase64,
+                            memo: 'coffee',
+                            value: '1000'
+                        }
+                    );
+                } else {
+                    (BackendUtils.getInvoices as jest.Mock).mockRejectedValue(
+                        new Error('node offline')
+                    );
+                    (BackendUtils.lookupInvoice as jest.Mock).mockRejectedValue(
+                        new Error('node offline')
+                    );
+                }
+                (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+                    payment_request: 'lnbc-nwc',
+                    r_hash: hashBase64
+                });
+
+                try {
+                    const response = await (store as any).handleMakeInvoice(
+                        connection,
+                        { amount: 1000_000, description: 'coffee' }
+                    );
+
+                    expect(response.error).toBeUndefined();
+                    expect(getInvoices).not.toHaveBeenCalled();
+                    expect(loadingValues).toEqual([false]);
+                    expect(invoicesStore.loading).toBe(false);
+                    expect(invoicesStore.invoices).toEqual([onScreen]);
+                    expect(connection.activity[0].invoice?.getMemo).toBe(
+                        'coffee'
+                    );
+                } finally {
+                    stopWatching();
+                }
+            }
+        );
+
+        it('looks the invoice up by its hex hash', async () => {
+            const { store, connection } = setup();
+            (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+                payment_request: 'lnbc-nwc',
+                r_hash: hashBase64
+            });
+            (BackendUtils.lookupInvoice as jest.Mock).mockResolvedValue({
+                payment_request: 'lnbc-nwc',
+                r_hash: hashBase64,
+                memo: 'from node',
+                value: '1000'
+            });
+
+            await (store as any).handleMakeInvoice(connection, {
+                amount: 1000_000,
+                description: 'from request'
+            });
+
+            expect(BackendUtils.lookupInvoice).toHaveBeenCalledWith({
+                r_hash: hashHex
+            });
+            const invoice = connection.activity[0].invoice as Invoice;
+            expect(invoice).toBeInstanceOf(Invoice);
+            expect(invoice.getMemo).toBe('from node');
+            expect(invoice.getRHash).toBe(hashHex);
+        });
+
+        it('fills in the bolt11 and memo when the lookup result lacks them', async () => {
+            const { store, connection } = setup();
+            (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+                payment_request: 'lnbc-ldk',
+                r_hash: hashHex
+            });
+            // LDK Node payment records can have no bolt11 or description
+            (BackendUtils.lookupInvoice as jest.Mock).mockResolvedValue({
+                payment_request: '',
+                memo: '',
+                r_hash: hashHex,
+                value: '1000',
+                state: 'OPEN'
+            });
+
+            await (store as any).handleMakeInvoice(connection, {
+                amount: 1000_000,
+                description: 'tea'
+            });
+
+            const invoice = connection.activity[0].invoice as Invoice;
+            expect(invoice.getPaymentRequest).toBe('lnbc-ldk');
+            expect(invoice.getMemo).toBe('tea');
+        });
+
+        it('gives overlapping requests their own invoice and memo', async () => {
+            const { store, connection, invoicesStore } = setup();
+            invoicesStore.invoices = [onScreen];
+            const first = deferred();
+            const second = deferred();
+            (BackendUtils.createInvoice as jest.Mock)
+                .mockReturnValueOnce(first.promise)
+                .mockReturnValueOnce(second.promise);
+            (BackendUtils.lookupInvoice as jest.Mock).mockImplementation(
+                async ({ r_hash }: { r_hash: string }) => ({
+                    payment_request: r_hash === 'aa' ? 'lnbc-first' : '',
+                    r_hash,
+                    memo: r_hash === 'aa' ? 'first memo' : ''
+                })
+            );
+
+            const a = (store as any).handleMakeInvoice(connection, {
+                amount: 1000_000,
+                description: 'first memo'
+            });
+            const b = (store as any).handleMakeInvoice(connection, {
+                amount: 2000_000,
+                description: 'second memo'
+            });
+            await flushMicrotasks();
+            second.resolve({ payment_request: 'lnbc-second', r_hash: 'bb' });
+            first.resolve({ payment_request: 'lnbc-first', r_hash: 'aa' });
+            await Promise.all([a, b]);
+
+            const byId = Object.fromEntries(
+                connection.activity.map((entry) => [entry.id, entry])
+            );
+            expect(byId['lnbc-first'].invoice?.getPaymentRequest).toBe(
+                'lnbc-first'
+            );
+            expect(byId['lnbc-first'].invoice?.getMemo).toBe('first memo');
+            expect(byId['lnbc-second'].invoice?.getPaymentRequest).toBe(
+                'lnbc-second'
+            );
+            expect(byId['lnbc-second'].invoice?.getMemo).toBe('second memo');
+            expect(byId['lnbc-first'].invoice).not.toBe(
+                byId['lnbc-second'].invoice
+            );
+        });
+
+        it('builds the invoice from the request when the lookup fails', async () => {
+            const { store, connection } = setup();
+            (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+                payment_request: 'lnbc-offline',
+                r_hash: hashBase64
+            });
+            (BackendUtils.lookupInvoice as jest.Mock).mockRejectedValue(
+                new Error('invoice not found')
+            );
+
+            await (store as any).handleMakeInvoice(connection, {
+                amount: 21_000,
+                description: 'pizza'
+            });
+
+            const invoice = connection.activity[0].invoice as Invoice;
+            expect(invoice).toBeInstanceOf(Invoice);
+            expect(invoice.getPaymentRequest).toBe('lnbc-offline');
+            expect(invoice.getMemo).toBe('pizza');
+            expect(invoice.getAmount).toBe(21);
+            expect(invoice.getRHash).toBe(hashHex);
+            expect(invoice.isPaid).toBe(false);
+        });
+
+        it('settles the recorded activity once the node reports it paid', async () => {
+            const { store, connection } = setup();
+            (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+                payment_request: 'lnbc-later-paid',
+                r_hash: hashBase64
+            });
+            (BackendUtils.lookupInvoice as jest.Mock).mockRejectedValue(
+                new Error('invoice not found')
+            );
+            await (store as any).handleMakeInvoice(connection, {
+                amount: 21_000,
+                description: 'pizza'
+            });
+            const activity = connection.activity[0];
+            expect(activity.status).toBe('pending');
+
+            const paidFromNode = jest
+                .spyOn(NostrConnectUtils, 'lookupInvoicePaidFromNode')
+                .mockResolvedValue(true);
+            (BackendUtils.lookupInvoice as jest.Mock).mockResolvedValue({
+                payment_request: 'lnbc-later-paid',
+                r_hash: hashBase64,
+                memo: 'pizza',
+                value: '21',
+                settled: true,
+                r_preimage: Buffer.from('cd'.repeat(32), 'hex').toString(
+                    'base64'
+                )
+            });
+
+            await (store as any).reconcilePendingLightningMakeInvoice(activity);
+
+            expect(paidFromNode).toHaveBeenCalledWith({
+                paymentRequest: 'lnbc-later-paid',
+                rHash: hashHex
+            });
+            expect(BackendUtils.lookupInvoice).toHaveBeenLastCalledWith({
+                r_hash: hashHex
+            });
+            expect(activity.status).toBe('success');
+            expect(activity.invoice?.isPaid).toBe(true);
+            expect(activity.preimage).toBe('cd'.repeat(32));
+        });
     });
 });
 
