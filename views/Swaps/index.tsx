@@ -93,6 +93,11 @@ interface SwapState {
     inputDisplay: string;
     outputDisplay: string;
     invoice: string;
+    // The invoice the Generate button made and the LSP fee it was priced
+    // with (null when it is not LSP-wrapped). The fee row is shown only
+    // while that invoice is in the field, not for a pasted one.
+    generatedInvoice: string;
+    generatedInvoiceLspFee: number | null;
     isValid: boolean;
     error: string;
     apiUpdates: any;
@@ -139,6 +144,8 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
         inputDisplay: '',
         outputDisplay: '',
         invoice: '',
+        generatedInvoice: '',
+        generatedInvoiceLspFee: null as number | null,
         isValid: false,
         apiUpdates: '',
         error: '',
@@ -939,8 +946,7 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             UnitsStore,
             InvoicesStore,
             FiatStore,
-            SettingsStore,
-            LSPStore
+            SettingsStore
         } = this.props;
         const {
             reverse,
@@ -959,13 +965,27 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
             showRescueKeyBtn,
             enableLSP,
             flowLspNotConfigured,
-            feeRateLookupDone
+            feeRateLookupDone,
+            generatedInvoice,
+            generatedInvoiceLspFee
         } = this.state;
         const { subInfo, reverseInfo, loading, apiError, clearError } =
             SwapStore;
         const info: any = reverse ? reverseInfo : subInfo;
         const { units } = UnitsStore;
-        const { zeroConfFee } = LSPStore;
+        // The fee the invoice in the field was priced with. Not
+        // LSPStore.zeroConfFee: that is the latest preview, which an amount
+        // recalculation replaces while the invoice stays, and it does not
+        // apply to a pasted invoice.
+        const zeroConfFee =
+            enableLSP &&
+            !!invoice &&
+            invoice === generatedInvoice &&
+            generatedInvoiceLspFee !== null
+                ? generatedInvoiceLspFee
+                : undefined;
+        // a boolean, so a fee of 0 is not rendered as a bare text child
+        const showLspFee = zeroConfFee !== undefined;
 
         const { fiatRates } = FiatStore;
         const { settings, updateSettings } = SettingsStore;
@@ -2118,13 +2138,9 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                         justifyContent:
                                                             'space-between',
                                                         alignItems: 'center',
-                                                        marginBottom:
-                                                            zeroConfFee !==
-                                                                undefined &&
-                                                            invoice &&
-                                                            enableLSP
-                                                                ? 8
-                                                                : 0
+                                                        marginBottom: showLspFee
+                                                            ? 8
+                                                            : 0
                                                     }}
                                                 >
                                                     <Text
@@ -2181,80 +2197,76 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                         }}
                                                     />
                                                 </View>
-                                                {zeroConfFee !== undefined &&
-                                                    enableLSP &&
-                                                    invoice && (
-                                                        <TouchableOpacity
-                                                            onPress={() => {
-                                                                this.isNavigatingAway =
-                                                                    true;
-                                                                navigation.navigate(
+                                                {showLspFee && (
+                                                    <TouchableOpacity
+                                                        onPress={() => {
+                                                            this.isNavigatingAway =
+                                                                true;
+                                                            navigation.navigate(
+                                                                new BigNumber(
+                                                                    zeroConfFee
+                                                                ).gt(1000)
+                                                                    ? 'LspExplanationFees'
+                                                                    : 'LspExplanationRouting'
+                                                            );
+                                                        }}
+                                                    >
+                                                        <View
+                                                            style={{
+                                                                backgroundColor:
+                                                                    themeColor(
+                                                                        'secondary'
+                                                                    ),
+                                                                borderRadius: 10,
+                                                                top: 10,
+                                                                padding: 15,
+                                                                borderWidth: 0.5
+                                                            }}
+                                                        >
+                                                            <Text
+                                                                style={{
+                                                                    fontFamily:
+                                                                        'PPNeueMontreal-Medium',
+                                                                    color: themeColor(
+                                                                        'text'
+                                                                    ),
+                                                                    marginBottom: 5
+                                                                }}
+                                                            >
+                                                                {localeString(
                                                                     new BigNumber(
                                                                         zeroConfFee
                                                                     ).gt(1000)
-                                                                        ? 'LspExplanationFees'
-                                                                        : 'LspExplanationRouting'
-                                                                );
-                                                            }}
-                                                        >
-                                                            <View
+                                                                        ? 'views.Receive.lspExplainer'
+                                                                        : 'views.Receive.lspExplainerRouting'
+                                                                )}
+                                                            </Text>
+                                                            <Amount
+                                                                sats={
+                                                                    zeroConfFee
+                                                                }
+                                                                fixedUnits="sats"
+                                                            />
+                                                            <Text
                                                                 style={{
-                                                                    backgroundColor:
-                                                                        themeColor(
-                                                                            'secondary'
-                                                                        ),
-                                                                    borderRadius: 10,
-                                                                    top: 10,
-                                                                    padding: 15,
-                                                                    borderWidth: 0.5
+                                                                    fontFamily:
+                                                                        'PPNeueMontreal-Medium',
+                                                                    color: themeColor(
+                                                                        'secondaryText'
+                                                                    ),
+                                                                    fontSize: 15,
+                                                                    top: 5,
+                                                                    textAlign:
+                                                                        'right'
                                                                 }}
                                                             >
-                                                                <Text
-                                                                    style={{
-                                                                        fontFamily:
-                                                                            'PPNeueMontreal-Medium',
-                                                                        color: themeColor(
-                                                                            'text'
-                                                                        ),
-                                                                        marginBottom: 5
-                                                                    }}
-                                                                >
-                                                                    {localeString(
-                                                                        new BigNumber(
-                                                                            zeroConfFee
-                                                                        ).gt(
-                                                                            1000
-                                                                        )
-                                                                            ? 'views.Receive.lspExplainer'
-                                                                            : 'views.Receive.lspExplainerRouting'
-                                                                    )}
-                                                                </Text>
-                                                                <Amount
-                                                                    sats={
-                                                                        zeroConfFee
-                                                                    }
-                                                                    fixedUnits="sats"
-                                                                />
-                                                                <Text
-                                                                    style={{
-                                                                        fontFamily:
-                                                                            'PPNeueMontreal-Medium',
-                                                                        color: themeColor(
-                                                                            'secondaryText'
-                                                                        ),
-                                                                        fontSize: 15,
-                                                                        top: 5,
-                                                                        textAlign:
-                                                                            'right'
-                                                                    }}
-                                                                >
-                                                                    {localeString(
-                                                                        'general.tapToLearnMore'
-                                                                    )}
-                                                                </Text>
-                                                            </View>
-                                                        </TouchableOpacity>
-                                                    )}
+                                                                {localeString(
+                                                                    'general.tapToLearnMore'
+                                                                )}
+                                                            </Text>
+                                                        </View>
+                                                    </TouchableOpacity>
+                                                )}
                                             </View>
                                         )}
 
@@ -2304,6 +2316,9 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                 onPress={async () => {
                                                     this.setState({
                                                         invoice: '',
+                                                        generatedInvoice: '',
+                                                        generatedInvoiceLspFee:
+                                                            null,
                                                         fetchingInvoice: true
                                                     });
                                                     try {
@@ -2318,25 +2333,26 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                             return;
                                                         }
 
-                                                        await InvoicesStore.createUnifiedInvoice(
-                                                            {
-                                                                memo: '',
-                                                                value:
-                                                                    outputSats.toString() ||
-                                                                    '0',
-                                                                expirySeconds:
-                                                                    settings
-                                                                        ?.invoices
-                                                                        ?.expirySeconds ||
-                                                                    '3600',
-                                                                // only where the LSP switch and fee are shown
-                                                                useLsp:
-                                                                    !!enableLSP &&
-                                                                    BackendUtils.supportsFlowLSP() &&
-                                                                    !flowLspNotConfigured &&
-                                                                    !reverse
-                                                            }
-                                                        );
+                                                        const created =
+                                                            await InvoicesStore.createUnifiedInvoice(
+                                                                {
+                                                                    memo: '',
+                                                                    value:
+                                                                        outputSats.toString() ||
+                                                                        '0',
+                                                                    expirySeconds:
+                                                                        settings
+                                                                            ?.invoices
+                                                                            ?.expirySeconds ||
+                                                                        '3600',
+                                                                    // only where the LSP switch and fee are shown
+                                                                    useLsp:
+                                                                        !!enableLSP &&
+                                                                        BackendUtils.supportsFlowLSP() &&
+                                                                        !flowLspNotConfigured &&
+                                                                        !reverse
+                                                                }
+                                                            );
 
                                                         if (reverse) {
                                                             if (
@@ -2368,6 +2384,12 @@ export default class Swap extends React.PureComponent<SwapProps, SwapState> {
                                                                     {
                                                                         invoice:
                                                                             InvoicesStore.payment_request,
+                                                                        generatedInvoice:
+                                                                            created?.paymentRequest ||
+                                                                            '',
+                                                                        generatedInvoiceLspFee:
+                                                                            created?.lspFeeSats ??
+                                                                            null,
                                                                         error: ''
                                                                     },
                                                                     () =>
