@@ -1187,3 +1187,108 @@ describe('Receive LSP fee shown with the invoice', () => {
         expect(bareText(view.render())).toEqual([]);
     });
 });
+
+// Order's Pay button opens Receive with the order in route params and
+// autoGenerate. componentDidMount puts them in state and generates the
+// invoice in the same tick; on a device that setState is batched, and in
+// this test (no renderer) setState does nothing, so autoGenerateInvoice
+// has to use the values componentDidMount passes in.
+describe('Receive opened for a POS order', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    const mountForOrder = (extraParams: any = {}, UTXOsStore: any = {}) => {
+        const PosStore = {
+            getOrderInvoiceById: jest.fn(async (): Promise<any> => undefined),
+            canReuseInvoice: jest.fn(() => false),
+            recordInvoice: jest.fn()
+        };
+        const InvoicesStore: any = {
+            createUnifiedInvoice: jest.fn(() =>
+                Promise.resolve({
+                    rHash: 'hash-order',
+                    paymentRequest: 'lnbc-order'
+                })
+            ),
+            reset: jest.fn()
+        };
+        const settings = {
+            invoices: { receiverName: 'Shop', memo: '' },
+            enableLSP: false
+        };
+        const view = new Receive({
+            navigation: { navigate: jest.fn(), addListener: jest.fn() },
+            route: {
+                params: {
+                    amount: '1000',
+                    autoGenerate: true,
+                    memo: 'Coffee',
+                    orderId: 'order-1',
+                    orderTip: '0',
+                    orderTotal: '1000',
+                    exchangeRate: '60000',
+                    rate: 60000,
+                    ...extraParams
+                }
+            },
+            InvoicesStore,
+            PosStore,
+            SettingsStore: {
+                settings,
+                getSettings: jest.fn(async () => settings),
+                implementation: 'lnd'
+            },
+            LightningAddressStore: { status: jest.fn(async () => {}) },
+            NodeInfoStore: {
+                nodeInfo: {},
+                flowLspNotConfigured: () => ({ flowLspNotConfigured: true })
+            },
+            ChannelsStore: { totalInbound: 0 },
+            LSPStore: { reset: jest.fn() },
+            UnitsStore: { resetUnits: jest.fn() },
+            UTXOsStore,
+            ModalStore: {}
+        } as unknown as React.ComponentProps<typeof Receive>);
+        view.subscribeInvoice = jest.fn();
+        // what a batched update looks like to code running in the same tick
+        view.setState = jest.fn();
+        return { view, PosStore, InvoicesStore };
+    };
+
+    it('checks for and records the order invoice under the order id', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(1000);
+        const { view, PosStore, InvoicesStore } = mountForOrder();
+
+        await view.componentDidMount();
+        await flush();
+        await flush();
+
+        expect(PosStore.getOrderInvoiceById).toHaveBeenCalledWith('order-1');
+        expect(InvoicesStore.createUnifiedInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ memo: 'Shop:  Coffee', value: '1000' })
+        );
+        expect(PosStore.recordInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({
+                orderId: 'order-1',
+                payment_request: 'lnbc-order',
+                rHash: 'hash-order',
+                exchangeRate: '60000',
+                tip: '0'
+            })
+        );
+    });
+
+    it("creates the invoice for the account it was opened for, with that account's address type", async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(1000);
+        const { view, InvoicesStore } = mountForOrder(
+            { account: 'imported' },
+            { getAccountAddressType: jest.fn(async () => '4') }
+        );
+
+        await view.componentDidMount();
+        await flush();
+
+        expect(InvoicesStore.createUnifiedInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ account: 'imported', addressType: '4' })
+        );
+    });
+});
