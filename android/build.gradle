@@ -46,12 +46,22 @@ buildscript {
 
 allprojects {
     // op-sqlite's SQLCipher build depends on io.github.ronickg:openssl:3.3.2-1
-    // (OpenSSL 3.3, out of support since 2026-04). Pin the 3.6.2 build so
-    // Android matches the iOS OpenSSL-Universal 3.6.2 provider.
+    // (OpenSSL 3.3, out of support since 2026-04, published by one person).
+    // Use our own reproducible OpenSSL 3.6.2 build instead, matching iOS's
+    // OpenSSL-Universal 3.6.2. ZeusLN/openssl-android builds it;
+    // fetch-libraries.sh downloads it into android/openssl and checks it
+    // against fetch-libraries-versions.json. Keep the version here, the POM
+    // under android/openssl and fetch-libraries-versions.json in step.
     configurations.all {
-        resolutionStrategy.force 'io.github.ronickg:openssl:3.6.2-3'
+        resolutionStrategy.dependencySubstitution {
+            substitute module('io.github.ronickg:openssl') using module('app.zeusln.thirdparty:openssl:3.6.2-zeus1')
+        }
     }
     repositories {
+        maven {
+            url "$rootDir/openssl"
+            content { includeGroup 'app.zeusln.thirdparty' }
+        }
         google()
         mavenCentral()
         flatDir {
