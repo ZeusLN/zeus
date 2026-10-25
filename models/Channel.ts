@@ -94,7 +94,12 @@ export default class Channel extends BaseModel {
             this.confirmations_required > 0
         ) {
             return {
-                current: this.confirmations,
+                // The channel stays pending until it is ready, so the count
+                // can go past the required depth
+                current: Math.min(
+                    this.confirmations,
+                    this.confirmations_required
+                ),
                 total: this.confirmations_required
             };
         }

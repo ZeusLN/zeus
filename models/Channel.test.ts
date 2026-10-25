@@ -108,3 +108,49 @@ describe('Channel short channel ids', () => {
         });
     });
 });
+
+describe('Channel getConfirmations', () => {
+    // LDK Node gives the counts directly (backends/LdkNode.ts formatChannel)
+    const ldkPendingOpen = (
+        confirmations: number,
+        confirmations_required = 6
+    ) =>
+        new Channel({
+            pendingOpen: true,
+            confirmations,
+            confirmations_required
+        });
+
+    it('returns the LDK count below the required depth', () => {
+        expect(ldkPendingOpen(3).getConfirmations()).toEqual({
+            current: 3,
+            total: 6
+        });
+    });
+
+    it('returns the LDK count at the required depth', () => {
+        expect(ldkPendingOpen(6).getConfirmations()).toEqual({
+            current: 6,
+            total: 6
+        });
+    });
+
+    it('caps the LDK count at the required depth while the channel is not ready', () => {
+        expect(ldkPendingOpen(7).getConfirmations()).toEqual({
+            current: 6,
+            total: 6
+        });
+    });
+
+    it('returns null for an LDK zero-conf channel', () => {
+        expect(ldkPendingOpen(0, 0).getConfirmations()).toBeNull();
+    });
+
+    it('returns null when the channel is not pending open', () => {
+        const channel = new Channel({
+            confirmations: 7,
+            confirmations_required: 6
+        });
+        expect(channel.getConfirmations()).toBeNull();
+    });
+});
