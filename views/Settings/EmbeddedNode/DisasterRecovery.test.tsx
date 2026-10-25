@@ -32,7 +32,8 @@ import * as React from 'react';
 import { act, render, screen } from '@testing-library/react-native';
 
 import DisasterRecovery from './DisasterRecovery';
-import { channelBackupStore } from '../../../stores/Stores';
+import { channelBackupStore, settingsStore } from '../../../stores/Stores';
+import { restartNeeded } from '../../../utils/RestartUtils';
 
 describe('DisasterRecovery', () => {
     // The error handler clears the message after 5 seconds
@@ -81,5 +82,41 @@ describe('DisasterRecovery', () => {
         expect(titles()).toContain(
             'views.Settings.EmbeddedNode.initiateDisasterRecoveryOlympus'
         );
+    });
+
+    describe('automatic backups switch', () => {
+        const backupSwitch = () =>
+            screen.container.queryAll((n) => n.type === 'Switch')[0];
+
+        it.each([
+            ['on for a stored true', true, true],
+            ['off for a stored false', false, false],
+            ['off when unset, like Wallet.tsx', undefined, false]
+        ])('is %s', async (_, stored, shown) => {
+            (settingsStore as any).settings = {
+                automaticDisasterRecoveryBackup: stored
+            };
+
+            await render(<DisasterRecovery navigation={{} as any} />);
+
+            expect(backupSwitch().props.value).toBe(shown);
+        });
+
+        it('turns automatic backups back on when they are off', async () => {
+            (settingsStore as any).settings = {
+                automaticDisasterRecoveryBackup: false
+            };
+
+            await render(<DisasterRecovery navigation={{} as any} />);
+            await act(async () => {
+                await backupSwitch().props.onValueChange();
+            });
+
+            expect(settingsStore.updateSettings).toHaveBeenCalledWith({
+                automaticDisasterRecoveryBackup: true
+            });
+            expect(restartNeeded).toHaveBeenCalled();
+            expect(backupSwitch().props.value).toBe(true);
+        });
     });
 });
