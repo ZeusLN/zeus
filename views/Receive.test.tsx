@@ -8,12 +8,23 @@ jest.mock('@rneui/themed', () => ({
 }));
 jest.mock('react-native-nfc-manager', () => ({ isSupported: jest.fn() }));
 jest.mock('../utils/handleAnything', () => jest.fn());
-jest.mock('../utils/BackendUtils', () => ({
-    supportsOnchainReceiving: () => true,
-    supportsAddressTypeSelection: () => false,
-    watchInvoicePaid: jest.fn(() => jest.fn()),
-    watchOnchainReceived: jest.fn(() => jest.fn())
-}));
+jest.mock('../utils/BackendUtils', () => {
+    const mocked: any = {
+        supportsOnchainReceiving: () => true,
+        supportsAddressTypeSelection: () => false,
+        watchInvoicePaid: jest.fn(() => jest.fn()),
+        watchOnchainReceived: jest.fn(() => jest.fn())
+    };
+    // render() asks for many supports*() flags; unlisted ones are off
+    return new Proxy(mocked, {
+        get: (target, key) =>
+            key in target
+                ? target[key]
+                : key === '__esModule'
+                ? false
+                : () => false
+    });
+});
 jest.mock('../stores/SettingsStore', () => ({
     TIME_PERIOD_KEYS: [],
     DefaultInvoiceType: { Unified: 'unified', Lightning: 'lightning' }
@@ -695,9 +706,17 @@ describe('Receive invoice requests that were superseded', () => {
         await flush();
         view.autoGenerateInvoice('2000');
         await flush();
-        newer.resolve({ rHash: 'hash-new', paymentRequest: 'lnbc-new' });
+        newer.resolve({
+            rHash: 'hash-new',
+            paymentRequest: 'lnbc-new',
+            lspFeeSats: 10000
+        });
         await flush();
-        older.resolve({ rHash: 'hash-old', paymentRequest: 'lnbc-old' });
+        older.resolve({
+            rHash: 'hash-old',
+            paymentRequest: 'lnbc-old',
+            lspFeeSats: 2000
+        });
         await flush();
 
         expect(view.subscribeInvoice).toHaveBeenCalledTimes(1);
@@ -710,7 +729,10 @@ describe('Receive invoice requests that were superseded', () => {
             expect.objectContaining({
                 payment_request: 'lnbc-new',
                 rHash: 'hash-new',
-                amount: '2000'
+                amount: '2000',
+                // the fee comes with the invoice, so a reopened order
+                // shows it again
+                lspFeeSats: 10000
             })
         );
     });
@@ -963,5 +985,205 @@ describe('Receive NFC lookups that were superseded', () => {
             'hash-shown',
             undefined
         );
+    });
+});
+
+// What the payer and the user see next to an LSP-wrapped invoice: the fee
+// row and the amount under the QR. Both have to come from the quote the
+// shown invoice was priced with.
+describe('Receive LSP fee shown with the invoice', () => {
+    beforeEach(() => jest.clearAllMocks());
+
+    const collect = (node: any, out: any[] = []): any[] => {
+        if (Array.isArray(node)) {
+            node.forEach((n) => collect(n, out));
+        } else if (node && typeof node === 'object' && node.props) {
+            out.push(node);
+            collect(node.props.children, out);
+        }
+        return out;
+    };
+
+    const makeShownView = ({
+        invoicesStore,
+        lspStore,
+        posStore,
+        satAmount
+    }: {
+        invoicesStore: any;
+        lspStore: any;
+        posStore?: any;
+        satAmount: string;
+    }) => {
+        const view = new Receive({
+            navigation: { navigate: jest.fn(), addListener: jest.fn() },
+            route: { params: {} },
+            SettingsStore: { settings: {}, implementation: 'embedded-lnd' },
+            NodeInfoStore: { nodeInfo: {}, testnet: false },
+            // the same object, so the test sees what the view writes to it
+            InvoicesStore: Object.assign(invoicesStore, {
+                onChainAddress: null,
+                creatingInvoice: false,
+                creatingInvoiceError: false,
+                ...invoicesStore
+            }),
+            LSPStore: { flow_error_msg: '', ...lspStore },
+            PosStore: posStore,
+            UnitsStore: {},
+            LightningAddressStore: {},
+            ChannelsStore: {},
+            ModalStore: {}
+        } as unknown as React.ComponentProps<typeof Receive>);
+        view.state = {
+            ...view.state,
+            selectedIndex: 1,
+            satAmount,
+            value: satAmount,
+            initialLoad: false
+        };
+        return view;
+    };
+
+    const shown = (view: any) => {
+        const elements = collect(view.render());
+        const feeRow = elements.find(
+            (e) => e.type === 'Amount' && e.props.fixedUnits === 'sats'
+        );
+        const qr = elements.find((e) => e.type === 'CollapsedQR');
+        return {
+            fee: feeRow?.props.sats,
+            qrAmount: qr?.props.satAmount?.toString()
+        };
+    };
+
+    it('shows the fee the invoice was priced with after a later quote replaces the shared one', () => {
+        // invoice for 1,000 sats wrapped with a 10,000 sat fee on top; a
+        // later fee request (e.g. a Swaps preview) left 2,000 in LSPStore
+        const view = makeShownView({
+            invoicesStore: {
+                payment_request: 'lnbc-wrapped',
+                payment_request_amt: '1000',
+                payment_request_lsp_fee: 10000
+            },
+            lspStore: { zeroConfFee: 2000 },
+            satAmount: '1000'
+        });
+
+        expect(shown(view)).toEqual({ fee: 10000, qrAmount: '11000' });
+    });
+
+    it('shows the recorded fee for a reused POS invoice, not the last quote', async () => {
+        // order A (1,000 sats, 10,000 fee on top) is reopened after order B
+        // (50,000 sats, 2,000 fee) left its quote and amount in the stores
+        const invoicesStore: any = {
+            payment_request: null,
+            payment_request_amt: '50000',
+            payment_request_lsp_fee: 2000,
+            createUnifiedInvoice: jest.fn(),
+            showStoredInvoice: jest.fn(
+                ({ paymentRequest, amount, lspFeeSats }: any) => {
+                    invoicesStore.payment_request = paymentRequest;
+                    invoicesStore.payment_request_amt = amount;
+                    invoicesStore.payment_request_lsp_fee = lspFeeSats;
+                }
+            )
+        };
+        const posStore = {
+            getOrderInvoiceById: jest.fn(() =>
+                Promise.resolve({
+                    orderId: 'A',
+                    payment_request: 'lnbc-wrapped-a',
+                    lspFeeSats: 10000,
+                    rHash: 'hash-a',
+                    exchangeRate: '',
+                    amount: '1000',
+                    tip: '',
+                    createdAt: 0,
+                    expirySeconds: '3600'
+                })
+            ),
+            canReuseInvoice: jest.fn(() => true)
+        };
+        const view = makeShownView({
+            invoicesStore,
+            lspStore: { zeroConfFee: 2000 },
+            posStore,
+            satAmount: '1000'
+        });
+        view.state = { ...view.state, orderId: 'A' };
+
+        view.autoGenerateInvoice('1000');
+        await new Promise(process.nextTick);
+
+        expect(invoicesStore.createUnifiedInvoice).not.toHaveBeenCalled();
+        expect(invoicesStore.showStoredInvoice).toHaveBeenCalledWith({
+            paymentRequest: 'lnbc-wrapped-a',
+            amount: '1000',
+            lspFeeSats: 10000
+        });
+        expect(invoicesStore.payment_request).toBe('lnbc-wrapped-a');
+        expect(shown(view)).toEqual({ fee: 10000, qrAmount: '11000' });
+    });
+
+    // React Native throws when a string or number is a direct child of
+    // anything but Text; the test renderer does not, so collect them.
+    // React drops empty strings before they reach the host, so '' is fine.
+    const bareText = (
+        node: any,
+        insideText = false,
+        out: any[] = []
+    ): any[] => {
+        if (Array.isArray(node)) {
+            node.forEach((n) => bareText(n, insideText, out));
+        } else if (
+            (typeof node === 'string' && node !== '') ||
+            typeof node === 'number'
+        ) {
+            if (!insideText) out.push(node);
+        } else if (node && typeof node === 'object' && node.props) {
+            bareText(
+                node.props.children,
+                insideText || node.type === 'Text',
+                out
+            );
+        }
+        return out;
+    };
+
+    const texts = (view: any) =>
+        collect(view.render())
+            .filter((e) => e.type === 'Text')
+            .flatMap((e) => [].concat(e.props.children));
+
+    it('shows the wrapped-invoice note for a fee of 0, with no bare text outside Text', () => {
+        const view = makeShownView({
+            invoicesStore: {
+                payment_request: 'lnbc-wrapped',
+                payment_request_amt: '1000',
+                payment_request_lsp_fee: 0
+            },
+            lspStore: {},
+            satAmount: '1000'
+        });
+
+        expect(bareText(view.render())).toEqual([]);
+        expect(texts(view)).toContain(
+            'views.Receive.lspExplainerZeroFeeWrapper'
+        );
+        expect(shown(view)).toEqual({ fee: undefined, qrAmount: '1000' });
+    });
+
+    it('renders no bare text outside Text for a fee on top', () => {
+        const view = makeShownView({
+            invoicesStore: {
+                payment_request: 'lnbc-wrapped',
+                payment_request_amt: '1000',
+                payment_request_lsp_fee: 10000
+            },
+            lspStore: {},
+            satAmount: '1000'
+        });
+
+        expect(bareText(view.render())).toEqual([]);
     });
 });

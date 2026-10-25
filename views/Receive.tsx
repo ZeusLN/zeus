@@ -671,8 +671,13 @@ export default class Receive extends React.Component<
                         )
                     ) {
                         // Reuse existing invoice
-                        InvoicesStore.payment_request =
-                            existingInvoice.payment_request;
+                        InvoicesStore.showStoredInvoice({
+                            paymentRequest: existingInvoice.payment_request,
+                            amount: existingInvoice.amount,
+                            // records from before the fee was stored
+                            // show no fee rather than another quote's
+                            lspFeeSats: existingInvoice.lspFeeSats ?? null
+                        });
                         this.subscribeInvoice(existingInvoice.rHash);
                         return true;
                     }
@@ -718,11 +723,13 @@ export default class Receive extends React.Component<
                     ({
                         rHash,
                         paymentRequest,
-                        onChainAddress
+                        onChainAddress,
+                        lspFeeSats
                     }: {
                         rHash: string;
                         paymentRequest: string;
                         onChainAddress?: string;
+                        lspFeeSats?: number | null;
                     }) => {
                         if (!isCurrent()) return;
                         // Store invoice for POS orders
@@ -730,6 +737,7 @@ export default class Receive extends React.Component<
                             PosStore.recordInvoice({
                                 orderId,
                                 payment_request: paymentRequest,
+                                lspFeeSats,
                                 rHash,
                                 exchangeRate,
                                 amount: amount || '0',
@@ -1134,9 +1142,12 @@ export default class Receive extends React.Component<
             showAdvanced
         } = this.state;
 
-        const { zeroConfFee, showLspSettings } = LSPStore;
+        const { showLspSettings } = LSPStore;
+        // the fee the shown invoice was priced with, not LSPStore.zeroConfFee,
+        // which a later fee request can replace while this invoice is shown
+        const zeroConfFee = InvoicesStore.payment_request_lsp_fee ?? undefined;
         const requiresChannelSetup =
-            zeroConfFee &&
+            !!zeroConfFee &&
             new BigNumber(zeroConfFee).gte(LSP_MIN_CHANNEL_OPEN_FEE_SATS);
 
         const {
@@ -1796,7 +1807,9 @@ export default class Receive extends React.Component<
                                         </View>
                                     )}
                                 {haveInvoice &&
-                                    zeroConfFee &&
+                                    // a boolean: a fee of 0 must not become
+                                    // a bare text child of the View
+                                    !!zeroConfFee &&
                                     zeroConfFee > 0 &&
                                     (selectedIndex == 0 ||
                                         selectedIndex == 1) && (

@@ -196,6 +196,30 @@ describe('PosStore.saveStandaloneOrder', () => {
     });
 });
 
+describe('PosStore.recordInvoice', () => {
+    it('keeps the LSP fee the invoice was priced with, for Receive to show on reuse', () => {
+        makeStore('0').recordInvoice({
+            orderId: 'A',
+            payment_request: 'lnbc-wrapped-a',
+            lspFeeSats: 10000,
+            rHash: 'hash-a',
+            exchangeRate: '',
+            amount: '1000',
+            tip: '',
+            createdAt: 0,
+            expirySeconds: '3600'
+        });
+
+        expect(Storage.setItem).toHaveBeenLastCalledWith(
+            'pos-invoice-A',
+            expect.objectContaining({
+                payment_request: 'lnbc-wrapped-a',
+                lspFeeSats: 10000
+            })
+        );
+    });
+});
+
 describe('PosStore.getOrdersHistorical', () => {
     // a $10 order with 8% tax, as the Square Orders API returns it
     const squareOrder = (overrides: any = {}) => ({
