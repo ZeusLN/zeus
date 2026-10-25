@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# avd: create, boot, stop and delete the rig's own emulator, on a private
+# adb server, and install the rig CA as a user CA.
+#
+# usage: bin/avd create            avdmanager create avd AVD_NAME (AVD_IMAGE, AVD_DEVICE)
+#        bin/avd boot              headless boot on console port EMU_PORT, waits
+#                                  for sys.boot_completed; PID in state/run/emulator.pid
+#        bin/avd install-ca        adb root + copy state/tls/ca.crt to
+#                                  /data/misc/user/0/cacerts-added/<hash>.0
+#        bin/avd stop              adb emu kill, then the PID
+#        bin/avd delete            stop + avdmanager delete avd
+#        bin/avd adb-kill          stop the private adb server
+#        bin/avd status
+#
+# Isolation: every adb call uses ANDROID_ADB_SERVER_PORT=ADB_SERVER_PORT and
+# ANDROID_SERIAL=emulator-EMU_PORT, so other sessions' adb servers and
+# emulators never see this one (other sessions have reinstalled builds onto
+# shared emulators). The image must be google_apis (not playstore) for
+# adb root.
+set -euo pipefail
+. "$(dirname "$0")/../env.sh"
+. "$RIG_DIR/lib/common.sh"
+usage_if_help "$@"
+
+booted() { [ "$(adb_ shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = 1 ]; }
+
+case "${1:-}" in
+    create)
+        if "$EMULATOR" -list-avds | grep -qx "$AVD_NAME"; then log "AVD $AVD_NAME exists"; exit 0; fi
+        echo no | "$AVDMANAGER" create avd -n "$AVD_NAME" -k "$AVD_IMAGE" -d "$AVD_DEVICE" >/dev/null
+        cfg="$HOME/.android/avd/$AVD_NAME.avd/config.ini"
+        # keyboard on, more RAM, no snapshot quickboot
+        { echo "hw.keyboard=yes"; echo "hw.ramSize=3072"; echo "fastboot.forceColdBoot=yes"; } >>"$cfg"
+        log "AVD $AVD_NAME created ($AVD_IMAGE)" ;;
+    boot)
+        if proc_running emulator && booted; then log "emulator already booted ($ANDROID_SERIAL)"; exit 0; fi
+        lsof -nP -iTCP:"$EMU_PORT" -sTCP:LISTEN >/dev/null 2>&1 && die "console port $EMU_PORT in use"
+        "$ADB" start-server >/dev/null 2>&1
+        start_proc emulator "$EMULATOR" -avd "$AVD_NAME" -port "$EMU_PORT" \
+            -no-window -no-snapshot -no-audio -no-boot-anim
+        log "waiting for $ANDROID_SERIAL on adb server :$ADB_SERVER_PORT"
+        wait_until 60 sh -c "'$ADB' devices | grep -q '^$ANDROID_SERIAL'" \
+            || "$ADB" connect "127.0.0.1:$((EMU_PORT + 1))" >/dev/null 2>&1 || true
+        wait_until 240 booted || die "emulator did not boot; see $STATE/logs/emulator.log"
+        adb_ shell settings put global window_animation_scale 0
+        adb_ shell settings put global transition_animation_scale 0
+        adb_ shell settings put global animator_duration_scale 0
+        log "booted $ANDROID_SERIAL" ;;
+    install-ca)
+        ca="$STATE/tls/ca.crt"
+        [ -f "$ca" ] || die "no CA; run bin/ca"
+        h=$(openssl x509 -inform PEM -subject_hash_old -noout -in "$ca")
+        adb_ root >/dev/null; sleep 2; adb_ wait-for-device
+        adb_ push "$ca" "/data/local/tmp/$h.0" >/dev/null
+        adb_ shell "mkdir -p /data/misc/user/0/cacerts-added && cp /data/local/tmp/$h.0 /data/misc/user/0/cacerts-added/$h.0 && chown system:system /data/misc/user/0/cacerts-added/$h.0 && chmod 644 /data/misc/user/0/cacerts-added/$h.0 && rm /data/local/tmp/$h.0"
+        adb_ shell ls -l "/data/misc/user/0/cacerts-added/$h.0"
+        adb_ unroot >/dev/null 2>&1 || true
+        sleep 2; adb_ wait-for-device
+        log "user CA $h.0 installed (restart the app to pick it up)" ;;
+    stop)
+        adb_ emu kill >/dev/null 2>&1 || true
+        sleep 3
+        stop_proc emulator ;;
+    delete)
+        "$0" stop
+        "$AVDMANAGER" delete avd -n "$AVD_NAME" >/dev/null 2>&1 || true
+        rm -rf "$HOME/.android/avd/$AVD_NAME.avd" "$HOME/.android/avd/$AVD_NAME.ini"
+        log "AVD $AVD_NAME deleted" ;;
+    adb-kill) "$ADB" kill-server >/dev/null 2>&1 || true; log "adb server :$ADB_SERVER_PORT stopped" ;;
+    status)
+        echo "AVD $AVD_NAME: $("$EMULATOR" -list-avds | grep -qx "$AVD_NAME" && echo exists || echo missing)"
+        echo "emulator: $(proc_running emulator && echo "running pid $(cat "$STATE/run/emulator.pid")" || echo stopped)"
+        echo "adb :$ADB_SERVER_PORT devices:"; "$ADB" devices 2>/dev/null | tail -n +2 ;;
+    *) die "usage: bin/avd create|boot|install-ca|stop|delete|adb-kill|status (see --help)" ;;
+esac

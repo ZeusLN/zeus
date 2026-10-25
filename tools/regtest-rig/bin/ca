@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# ca: generate a throwaway CA and CA-signed TLS certs for alice, bob, carol.
+#
+# usage: bin/ca [--force]
+#
+# Writes state/<RIG_NAME>/tls/{ca.crt,ca.key,<node>/tls.cert,<node>/tls.key}.
+# SANs: localhost, 127.0.0.1, ::1, 10.0.2.2 and the node name, so the app
+# can use https://localhost:<rest port> with certVerification: true once
+# bin/avd install-ca has put ca.crt in the emulator's user CA store
+# (Zeus's network_security_config trusts user CAs).
+# Existing certs are kept unless --force; lnd must be restarted after
+# --force (bin/down && bin/up).
+set -euo pipefail
+. "$(dirname "$0")/../env.sh"
+. "$RIG_DIR/lib/common.sh"
+usage_if_help "$@"
+
+FORCE=0
+[ "${1:-}" = "--force" ] && FORCE=1
+D="$STATE/tls"
+mkdir -p "$D"
+OPENSSL="${OPENSSL:-openssl}"
+
+if [ "$FORCE" = 1 ] || [ ! -f "$D/ca.crt" ]; then
+    rm -rf "${D:?}"/*
+    "$OPENSSL" ecparam -name prime256v1 -genkey -noout -out "$D/ca.key" 2>/dev/null
+    "$OPENSSL" req -x509 -new -key "$D/ca.key" -sha256 -days 3650 \
+        -subj "/CN=regtest-rig $RIG_NAME CA" \
+        -addext "basicConstraints=critical,CA:TRUE" \
+        -addext "keyUsage=critical,keyCertSign,cRLSign" \
+        -out "$D/ca.crt"
+    log "CA created: $D/ca.crt"
+fi
+
+for n in alice bob carol; do
+    nd="$D/$n"
+    if [ -f "$nd/tls.cert" ] && [ "$FORCE" = 0 ]; then continue; fi
+    mkdir -p "$nd"
+    "$OPENSSL" ecparam -name prime256v1 -genkey -noout -out "$nd/tls.key" 2>/dev/null
+    "$OPENSSL" req -new -key "$nd/tls.key" -subj "/CN=$n" -out "$nd/tls.csr"
+    cat >"$nd/ext.cnf" <<EOF
+subjectAltName=DNS:localhost,DNS:$n,IP:127.0.0.1,IP:::1,IP:10.0.2.2
+basicConstraints=CA:FALSE
+extendedKeyUsage=serverAuth
+keyUsage=critical,digitalSignature,keyEncipherment
+EOF
+    "$OPENSSL" x509 -req -in "$nd/tls.csr" -CA "$D/ca.crt" -CAkey "$D/ca.key" \
+        -CAcreateserial -days 825 -sha256 -extfile "$nd/ext.cnf" -out "$nd/tls.cert" 2>/dev/null
+    chmod 644 "$nd/tls.key" "$nd/tls.cert"
+    log "cert for $n: $nd/tls.cert"
+done
+"$OPENSSL" x509 -in "$D/ca.crt" -noout -subject -fingerprint -sha256

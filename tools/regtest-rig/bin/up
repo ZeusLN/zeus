@@ -1,0 +1,116 @@
+#!/usr/bin/env bash
+# up: start the regtest stack, fund the nodes, open channels, export state.
+#
+# usage: bin/up [--profiles lsp,cashu,nwc,ldk|all]
+#
+# Idempotent: safe to rerun on a running stack. Steps:
+#   1. bin/ca (if certs are missing), write the mint config
+#   2. docker compose up -d (base + profiles), wait for healthy
+#   3. create the bitcoind wallet "rig", mine 101+ blocks, fund alice/bob/carol
+#   4. open bob->alice and bob->carol (10M sat, 4M pushed) if missing, mine 6
+#   5. export macaroons (hex), certs, pubkeys and URLs to state/<RIG_NAME>/
+#   6. profile lsp: start the stub LSP (bin/lsp start)
+# --profiles overrides PROFILES from the env file.
+set -euo pipefail
+. "$(dirname "$0")/../env.sh"
+. "$RIG_DIR/lib/common.sh"
+usage_if_help "$@"
+
+if [ "${1:-}" = "--profiles" ]; then PROFILES="$2"; export PROFILES; fi
+echo "$PROFILES" >"$STATE/profiles"
+
+[ -f "$STATE/tls/alice/tls.cert" ] || "$RIG_DIR/bin/ca"
+
+mkdir -p "$STATE/mint"
+sed -e "s/@MINT_PORT@/$MINT_PORT/g" -e "s/@RIG_NAME@/$RIG_NAME/g" \
+    -e "s/@MIN@/$MINT_MIN_DELAY/g" -e "s/@MAX@/$MINT_MAX_DELAY/g" \
+    "$RIG_DIR/templates/mint-config.toml" >"$STATE/mint/config.toml"
+
+log "compose up (profiles: ${PROFILES:-none})"
+# shellcheck disable=SC2046
+compose $(profile_flags) up -d --wait --wait-timeout 180
+
+# bitcoind wallet
+if ! btc -rpcwallet=rig getwalletinfo >/dev/null 2>&1; then
+    btc loadwallet rig >/dev/null 2>&1 || btc createwallet rig >/dev/null
+fi
+MINER=$(btc -rpcwallet=rig getnewaddress)
+H=$(btc getblockcount)
+if [ "$H" -lt 101 ]; then
+    log "mining $((101 - H + 50)) blocks"
+    btc generatetoaddress $((101 - H + 50)) "$MINER" >/dev/null
+fi
+
+for n in alice bob carol; do
+    wait_until 90 sh -c "docker exec $(container $n) lncli --network=regtest --tlscertpath=/tls/tls.cert --macaroonpath=/home/lnd/.lnd/data/chain/bitcoin/regtest/admin.macaroon getinfo | jq -e .synced_to_chain" \
+        || die "$n not synced"
+done
+
+# fund <node> <btc per utxo> <utxos>: several UTXOs so bob can open two
+# channels in one block without waiting for change to confirm
+fund() {
+    local n="$1" amt="$2" count="$3"
+    local utxos
+    utxos=$(lncli "$n" listunspent --min_confs 0 | jq '.utxos|length')
+    [ "$utxos" -ge "$count" ] && return 1
+    for _ in $(seq "$utxos" $((count - 1))); do
+        btc -rpcwallet=rig sendtoaddress "$(lncli "$n" newaddress p2tr | jq -r .address)" "$amt" >/dev/null
+    done
+    log "funded $n: $((count - utxos)) x $amt BTC"
+}
+FUNDED=0
+fund bob 2 4 && FUNDED=1
+fund alice 1 2 && FUNDED=1
+fund carol 1 2 && FUNDED=1
+if [ "$FUNDED" = 1 ]; then
+    btc generatetoaddress 6 "$MINER" >/dev/null
+    for n in alice bob carol; do
+        wait_until 60 sh -c "docker exec $(container $n) lncli --network=regtest --tlscertpath=/tls/tls.cert --macaroonpath=/home/lnd/.lnd/data/chain/bitcoin/regtest/admin.macaroon walletbalance | jq -e '.confirmed_balance|tonumber > 0'" || die "$n balance not confirmed"
+    done
+fi
+
+ALICE_PK=$(lncli alice getinfo | jq -r .identity_pubkey)
+BOB_PK=$(lncli bob getinfo | jq -r .identity_pubkey)
+CAROL_PK=$(lncli carol getinfo | jq -r .identity_pubkey)
+
+open_chan() {
+    local peer="$1" pk="$2"
+    if lncli bob listchannels | jq -e --arg pk "$pk" '.channels[]|select(.remote_pubkey==$pk)' >/dev/null \
+        || lncli bob pendingchannels | jq -e --arg pk "$pk" '.pending_open_channels[]|select(.channel.remote_node_pub==$pk)' >/dev/null; then
+        return 1
+    fi
+    lncli bob connect "$pk@$peer:9735" >/dev/null 2>&1 || true
+    lncli bob openchannel --node_key "$pk" --local_amt 10000000 --push_amt 4000000 >/dev/null \
+        || die "openchannel bob->$peer failed"
+    log "opened bob->$peer"
+}
+OPENED=0
+open_chan alice "$ALICE_PK" && OPENED=1
+open_chan carol "$CAROL_PK" && OPENED=1
+if [ "$OPENED" = 1 ]; then
+    btc generatetoaddress 6 "$MINER" >/dev/null
+fi
+wait_until 90 sh -c "[ \$(docker exec $(container bob) lncli --network=regtest --tlscertpath=/tls/tls.cert --macaroonpath=/home/lnd/.lnd/data/chain/bitcoin/regtest/admin.macaroon listchannels --active_only | jq '.channels|length') -ge 2 ]" \
+    || die "bob channels not active"
+
+# export state
+mkdir -p "$STATE/macaroons"
+for n in alice bob carol; do
+    docker exec "$(container "$n")" cat /home/lnd/.lnd/data/chain/bitcoin/regtest/admin.macaroon >"$STATE/macaroons/$n.macaroon"
+    xxd -p -c 10000 "$STATE/macaroons/$n.macaroon" >"$STATE/macaroons/$n.hex"
+done
+jq -n --arg alice "$ALICE_PK" --arg bob "$BOB_PK" --arg carol "$CAROL_PK" \
+    '{alice:$alice,bob:$bob,carol:$carol}' >"$STATE/pubkeys.json"
+jq -n \
+    --arg alice "https://localhost:$ALICE_REST_PORT" --arg bob "https://localhost:$BOB_REST_PORT" \
+    --arg carol "https://localhost:$CAROL_REST_PORT" --arg esplora "http://localhost:$ESPLORA_PORT" \
+    --arg mint "http://localhost:$MINT_PORT" --arg relay "ws://localhost:$RELAY_PORT" \
+    --arg lsp "http://localhost:$LSP_PORT" --arg lnurl "http://localhost:$LNURL_PORT" \
+    --arg bobp2p "10.0.2.2:$BOB_P2P_PORT" --arg metro "$METRO_PORT" \
+    '{alice:$alice,bob:$bob,carol:$carol,esplora:$esplora,mint:$mint,relay:$relay,lsp:$lsp,lnurl:$lnurl,bobP2pFromEmulator:$bobp2p,metroPort:$metro}' \
+    >"$STATE/urls.json"
+
+if has_profile lsp; then "$RIG_DIR/bin/lsp" start; fi
+
+log "ready: $(btc getblockcount) blocks, bob channels: $(lncli bob listchannels | jq '.channels|length')"
+cat "$STATE/pubkeys.json"
