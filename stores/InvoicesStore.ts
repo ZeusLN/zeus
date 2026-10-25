@@ -938,21 +938,25 @@ export default class InvoicesStore {
 
     // Shows an invoice created earlier (a reused POS order invoice) as the
     // current one. It counts as a new request, so an invoice request still
-    // running cannot replace it.
+    // running cannot replace it. onChainAddress is the on-chain leg of a
+    // unified invoice; without it the on-chain address is left as it is.
     @action
     public showStoredInvoice = ({
         paymentRequest,
         amount,
-        lspFeeSats
+        lspFeeSats,
+        onChainAddress
     }: {
         paymentRequest: string;
         amount: string;
         lspFeeSats: number | null;
+        onChainAddress?: string;
     }) => {
         this.invoiceRequestSeq++;
         this.payment_request = paymentRequest;
         this.payment_request_amt = amount;
         this.payment_request_lsp_fee = lspFeeSats;
+        if (onChainAddress) this.onChainAddress = onChainAddress;
     };
 
     public clearAddress = () => (this.onChainAddress = null);

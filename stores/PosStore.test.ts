@@ -220,6 +220,27 @@ describe('PosStore.recordInvoice', () => {
     });
 });
 
+describe('PosStore.recordInvoice on-chain leg', () => {
+    it('keeps the on-chain address of a unified invoice', () => {
+        makeStore('0').recordInvoice({
+            orderId: 'A',
+            payment_request: 'lnbc-a',
+            onChainAddress: 'bc1qa',
+            rHash: 'hash-a',
+            exchangeRate: '',
+            amount: '1000',
+            tip: '',
+            createdAt: 0,
+            expirySeconds: '3600'
+        });
+
+        expect(Storage.setItem).toHaveBeenLastCalledWith(
+            'pos-invoice-A',
+            expect.objectContaining({ onChainAddress: 'bc1qa' })
+        );
+    });
+});
+
 describe('PosStore order invoice node binding', () => {
     const storeFor = (node: any) =>
         new PosStore(

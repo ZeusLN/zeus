@@ -695,15 +695,24 @@ export default class Receive extends React.Component<
                             nodeIdentity
                         )
                     ) {
+                        // the on-chain leg of a unified invoice, unless
+                        // the invoice type has since become lightning only
+                        const onChainAddress = skipOnchain
+                            ? undefined
+                            : existingInvoice.onChainAddress || undefined;
                         // Reuse existing invoice
                         InvoicesStore.showStoredInvoice({
                             paymentRequest: existingInvoice.payment_request,
                             amount: existingInvoice.amount,
                             // records from before the fee was stored
                             // show no fee rather than another quote's
-                            lspFeeSats: existingInvoice.lspFeeSats ?? null
+                            lspFeeSats: existingInvoice.lspFeeSats ?? null,
+                            onChainAddress
                         });
-                        this.subscribeInvoice(existingInvoice.rHash);
+                        this.subscribeInvoice(
+                            existingInvoice.rHash,
+                            onChainAddress
+                        );
                         return true;
                     }
                 } catch (error) {
@@ -770,6 +779,7 @@ export default class Receive extends React.Component<
                                 orderId,
                                 payment_request: paymentRequest,
                                 lspFeeSats,
+                                onChainAddress,
                                 rHash,
                                 exchangeRate,
                                 amount: amount || '0',

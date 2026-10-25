@@ -41,6 +41,8 @@ export interface orderInvoiceInfo {
     tip: string;
     createdAt: number;
     expirySeconds: string;
+    // the on-chain leg of a unified invoice
+    onChainAddress?: string;
     // getNodeIdentity() of the wallet that created the invoice. POS orders
     // are shared by all wallets, the invoice is not. Records saved without
     // it are never reused.
@@ -247,6 +249,7 @@ export default class PosStore {
         orderId,
         payment_request,
         lspFeeSats,
+        onChainAddress,
         rHash,
         exchangeRate,
         amount,
@@ -259,6 +262,7 @@ export default class PosStore {
             orderId,
             payment_request,
             lspFeeSats,
+            onChainAddress,
             rHash,
             exchangeRate,
             amount,

@@ -1232,6 +1232,7 @@ describe('Receive opened for a POS order', () => {
                     paymentRequest: 'lnbc-order'
                 })
             ),
+            showStoredInvoice: jest.fn(),
             reset: jest.fn()
         };
         const settings = {
@@ -1347,6 +1348,158 @@ describe('Receive opened for a POS order', () => {
         // up to 23 hours after the node stopped accepting it
         expect(PosStore.recordInvoice).toHaveBeenCalledWith(
             expect.objectContaining({ expirySeconds: '3600' })
+        );
+    });
+
+    const unified = {
+        settings: {
+            invoices: {
+                receiverName: 'Shop',
+                memo: '',
+                defaultInvoiceType: 'unified'
+            }
+        }
+    };
+    const lightningOnly = {
+        settings: {
+            invoices: {
+                receiverName: 'Shop',
+                memo: '',
+                defaultInvoiceType: 'lightning'
+            }
+        }
+    };
+
+    // a valid record for this order on this node, of a unified invoice
+    const storedInvoice = (overrides: any = {}) => ({
+        orderId: 'order-1',
+        payment_request: 'lnbc-stored',
+        lspFeeSats: 500,
+        onChainAddress: 'bc1qstored',
+        rHash: 'hash-stored',
+        exchangeRate: '60000',
+        amount: '1000',
+        tip: '0',
+        createdAt: Math.floor(Date.now() / 1000),
+        expirySeconds: '3600',
+        nodeIdentity: 'node-a',
+        ...overrides
+    });
+
+    it('records the on-chain address of a unified order invoice', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(1000);
+        const { view, PosStore, InvoicesStore } = mountForOrder(
+            {},
+            {},
+            unified
+        );
+        InvoicesStore.createUnifiedInvoice.mockResolvedValueOnce({
+            rHash: 'hash-order',
+            paymentRequest: 'lnbc-order',
+            onChainAddress: 'bc1qorder'
+        });
+
+        await view.componentDidMount();
+        await flush();
+        await flush();
+
+        expect(InvoicesStore.createUnifiedInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ skipOnchain: false })
+        );
+        expect(PosStore.recordInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ onChainAddress: 'bc1qorder' })
+        );
+        expect(view.subscribeInvoice).toHaveBeenCalledWith(
+            'hash-order',
+            'bc1qorder'
+        );
+    });
+
+    it('reopens the order with its stored unified invoice instead of creating one', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(1000);
+        const { view, PosStore, InvoicesStore } = mountForOrder(
+            {},
+            {},
+            unified
+        );
+        const stored = storedInvoice();
+        PosStore.getOrderInvoiceById.mockResolvedValueOnce(stored);
+        PosStore.canReuseInvoice.mockReturnValue(true);
+
+        await view.componentDidMount();
+        await flush();
+        await flush();
+
+        expect(PosStore.getOrderInvoiceById).toHaveBeenCalledWith('order-1');
+        expect(PosStore.canReuseInvoice).toHaveBeenCalledWith(
+            stored,
+            '1000',
+            '0',
+            '60000',
+            'node-a'
+        );
+        expect(InvoicesStore.showStoredInvoice).toHaveBeenCalledWith({
+            paymentRequest: 'lnbc-stored',
+            amount: '1000',
+            lspFeeSats: 500,
+            onChainAddress: 'bc1qstored'
+        });
+        expect(InvoicesStore.createUnifiedInvoice).not.toHaveBeenCalled();
+        expect(view.subscribeInvoice).toHaveBeenCalledWith(
+            'hash-stored',
+            'bc1qstored'
+        );
+        expect(PosStore.recordInvoice).not.toHaveBeenCalled();
+    });
+
+    it('reopens a lightning-only order without the on-chain leg', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(1000);
+        const { view, PosStore, InvoicesStore } = mountForOrder(
+            {},
+            {},
+            lightningOnly
+        );
+        // stored while the invoice type was unified
+        PosStore.getOrderInvoiceById.mockResolvedValueOnce(storedInvoice());
+        PosStore.canReuseInvoice.mockReturnValue(true);
+
+        await view.componentDidMount();
+        await flush();
+        await flush();
+
+        expect(InvoicesStore.showStoredInvoice).toHaveBeenCalledTimes(1);
+        expect(
+            InvoicesStore.showStoredInvoice.mock.calls[0][0].onChainAddress
+        ).toBeUndefined();
+        expect(view.subscribeInvoice).toHaveBeenCalledWith(
+            'hash-stored',
+            undefined
+        );
+    });
+
+    it('reopens an order whose record has no on-chain address with lightning only', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(1000);
+        const { view, PosStore, InvoicesStore } = mountForOrder(
+            {},
+            {},
+            unified
+        );
+        PosStore.getOrderInvoiceById.mockResolvedValueOnce(
+            storedInvoice({ onChainAddress: undefined })
+        );
+        PosStore.canReuseInvoice.mockReturnValue(true);
+
+        await view.componentDidMount();
+        await flush();
+        await flush();
+
+        expect(
+            InvoicesStore.showStoredInvoice.mock.calls[0][0].onChainAddress
+        ).toBeUndefined();
+        expect(InvoicesStore.createUnifiedInvoice).not.toHaveBeenCalled();
+        expect(view.subscribeInvoice).toHaveBeenCalledWith(
+            'hash-stored',
+            undefined
         );
     });
 });
