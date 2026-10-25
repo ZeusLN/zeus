@@ -192,9 +192,10 @@ type MultimintSkipReason =
 
 export default class CashuStore {
     private getPayReqRequestId = 0;
-    // Bumped by each createInvoice call and by clearInvoice, so a quote that
-    // arrives after a newer request or after the invoice was cleared does
-    // not replace the invoice on screen
+    // Bumped by each createInvoice call that is not silent and by
+    // clearInvoice, so a quote that arrives after a newer request or after
+    // the invoice was cleared does not replace the invoice on screen.
+    // Silent calls (NWC make_invoice) neither bump nor check it.
     private createInvoiceRequestId = 0;
 
     @observable public mintUrls: Array<string> = [];
@@ -4299,18 +4300,36 @@ export default class CashuStore {
     public createInvoice = async ({
         memo,
         value,
-        lnurl
+        lnurl,
+        silent
     }: {
         memo: string;
         value: string;
         lnurl?: LNURLWithdrawParams;
+        // Create the invoice without touching the fields ReceiveEcash
+        // shows or polls (invoice, quoteId, lastInvoiceMintUrl,
+        // creatingInvoice, creatingInvoiceError, error_msg) and without
+        // bumping or checking createInvoiceRequestId, so it neither
+        // supersedes nor is superseded by the screen's request. The quote
+        // is still kept in this.invoices. The caller takes the invoice
+        // from the return value and gets failures as a thrown error. Not
+        // allowed with lnurl: the withdraw would never be submitted. NWC
+        // make_invoice is the only caller.
+        silent?: boolean;
     }) => {
-        const requestId = ++this.createInvoiceRequestId;
-        const isCurrent = () => requestId === this.createInvoiceRequestId;
-        this.invoice = undefined;
-        this.creatingInvoice = true;
-        this.creatingInvoiceError = false;
-        this.error_msg = undefined;
+        if (silent && lnurl) {
+            throw new Error('A silent Cashu invoice cannot use LNURL withdraw');
+        }
+        const requestId = silent ? 0 : ++this.createInvoiceRequestId;
+        // the invoice state and any LNURL withdraw belong to this call
+        const isCurrent = () =>
+            !silent && requestId === this.createInvoiceRequestId;
+        if (!silent) {
+            this.invoice = undefined;
+            this.creatingInvoice = true;
+            this.creatingInvoiceError = false;
+            this.error_msg = undefined;
+        }
 
         try {
             if (!this.isProperlyConfigured()) {
@@ -4367,9 +4386,9 @@ export default class CashuStore {
             }
 
             // The quote is kept in this.invoices above, but a newer request
-            // or clearInvoice owns the invoice state and any LNURL withdraw.
-            // The caller still gets its own invoice: NWC make_invoice
-            // requests are not queued and answer with this result.
+            // or clearInvoice owns the invoice state and any LNURL withdraw,
+            // and a silent call never owns them. The caller still gets its
+            // own invoice.
             if (!isCurrent()) {
                 return { paymentRequest: invoice?.getPaymentRequest };
             }
@@ -4429,14 +4448,15 @@ export default class CashuStore {
             if (__DEV__) {
                 console.log('Cashu createInvoice err', e);
             }
+            const error_msg = `${localeString(
+                'stores.InvoicesStore.errorCreatingInvoice'
+            )}: ${cashuErrorForDisplay(e) || 'Unknown error'}`;
+            if (silent) throw new Error(error_msg);
             if (!isCurrent()) return;
-            const error_msg = cashuErrorForDisplay(e) || 'Unknown error';
             runInAction(() => {
                 this.creatingInvoiceError = true;
                 this.creatingInvoice = false;
-                this.error_msg = `${localeString(
-                    'stores.InvoicesStore.errorCreatingInvoice'
-                )}: ${error_msg}`;
+                this.error_msg = error_msg;
             });
         }
     };
