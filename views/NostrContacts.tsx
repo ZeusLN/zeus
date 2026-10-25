@@ -652,9 +652,7 @@ export default class NostrContacts extends React.Component<
                         selectedContacts.length >= 0 && (
                             <Button
                                 title={`${localeString(
-                                    'views.OpenChannel.import'
-                                )} ${localeString(
-                                    'views.Settings.Contacts.contacts'
+                                    'views.NostrContacts.importContacts'
                                 )}${
                                     selectedContacts.length > 0
                                         ? ` (${selectedContacts.length})`

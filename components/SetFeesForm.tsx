@@ -176,11 +176,12 @@ export default class SetFeesForm extends React.Component<
                                 color: themeColor('secondaryText')
                             }}
                         >
-                            {`${localeString(
-                                'views.Channel.inbound'
-                            )} ${localeString(
-                                'components.SetFeesForm.baseFee'
-                            )} (${localeString('general.sats')})`}
+                            {localeString(
+                                'components.SetFeesForm.inboundBaseFee',
+                                {
+                                    unit: localeString('general.sats')
+                                }
+                            )}
                         </Text>
                         <TextInput
                             // @ts-ignore:next-line
@@ -201,11 +202,12 @@ export default class SetFeesForm extends React.Component<
                                 color: themeColor('secondaryText')
                             }}
                         >
-                            {`${localeString(
-                                'views.Channel.inbound'
-                            )} ${localeString(
-                                'components.SetFeesForm.feeRate'
-                            )} (${localeString('general.percentage')})`}
+                            {localeString(
+                                'components.SetFeesForm.inboundFeeRate',
+                                {
+                                    unit: localeString('general.percentage')
+                                }
+                            )}
                         </Text>
                         <TextInput
                             // @ts-ignore:next-line
