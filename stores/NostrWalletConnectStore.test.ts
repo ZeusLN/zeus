@@ -2059,6 +2059,28 @@ describe('NostrWalletConnectStore make_invoice invoice isolation', () => {
         expect(connection.activity[0].paymentHash).toBe(hex);
     });
 
+    it('answers with the hex of r_hash when the invoice gives no hash', async () => {
+        const { store, connection } = setup();
+        const hex = '74e1540bf7f01fed' + 'ab'.repeat(24);
+        (
+            NostrConnectUtils.decodeInvoiceTagsForMakeInvoice as jest.Mock
+        ).mockImplementation(async () => ({
+            paymentHash: '',
+            descriptionHash: '',
+            expiryTime: 4_000_000_000
+        }));
+        (BackendUtils.createInvoice as jest.Mock).mockResolvedValue({
+            payment_request: 'lnbc-nohash',
+            r_hash: Buffer.from(hex, 'hex').toString('base64')
+        });
+
+        const response = await (store as any).handleMakeInvoice(connection, {
+            amount: 1000_000
+        });
+
+        expect(response.result.payment_hash).toBe(hex);
+    });
+
     it('answers overlapping make_invoice requests with their own invoices', async () => {
         const { store, connection } = setup();
         const first = deferred();

@@ -2112,7 +2112,8 @@ export default class NostrWalletConnectStore {
             {
                 paymentRequest: invoice?.getPaymentRequest || paymentRequest,
                 // hex, from the invoice; rHash is base64url on LND REST
-                paymentHash: paymentHash || rHash || '',
+                paymentHash:
+                    paymentHash || NostrConnectUtils.paymentHashToHex(rHash),
                 descriptionHash,
                 expiryTime
             }
