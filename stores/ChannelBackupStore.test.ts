@@ -4,14 +4,20 @@ jest.mock('react-native-blob-util', () => ({
 }));
 jest.mock('../lndmobile/LndMobileInjection', () => ({
     __esModule: true,
-    default: { channel: {} }
+    default: { channel: { subscribeChannelEvents: jest.fn() } }
 }));
-jest.mock('../lndmobile/channel', () => ({}));
+jest.mock('../lndmobile/channel', () => ({
+    exportAllChannelBackups: jest.fn()
+}));
 jest.mock('../utils/BackendUtils', () => ({
     __esModule: true,
     default: { signMessage: jest.fn() }
 }));
-jest.mock('../utils/LndMobileUtils', () => ({}));
+jest.mock('../utils/LndMobileUtils', () => ({
+    LndMobileEventEmitter: {
+        addListener: jest.fn(() => ({ remove: jest.fn() }))
+    }
+}));
 jest.mock('../storage', () => ({
     __esModule: true,
     default: { getItem: jest.fn(), setItem: jest.fn() }
@@ -21,8 +27,13 @@ jest.mock('./SettingsStore', () => ({}));
 
 import ReactNativeBlobUtil from 'react-native-blob-util';
 
-import ChannelBackupStore from './ChannelBackupStore';
+import ChannelBackupStore, {
+    LAST_CHANNEL_BACKUP_STATUS,
+    LAST_CHANNEL_BACKUP_TIME
+} from './ChannelBackupStore';
 import BackendUtils from '../utils/BackendUtils';
+import { exportAllChannelBackups } from '../lndmobile/channel';
+import Storage from '../storage';
 
 const PUBKEY = '02'.padEnd(66, 'a');
 
@@ -229,5 +240,117 @@ describe('ChannelBackupStore', () => {
                 expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledTimes(1);
             }
         );
+    });
+
+    describe('backupChannels', () => {
+        beforeEach(() => {
+            (exportAllChannelBackups as jest.Mock).mockResolvedValue({
+                multi_chan_backup: {
+                    multi_chan_backup: new Uint8Array([1, 2, 3])
+                }
+            });
+        });
+
+        it('uploads the encrypted backup and logs SUCCESS', async () => {
+            mockServer(jsonResponse(200, { success: true }));
+            const store = createStore();
+
+            await expect(store.backupChannels()).resolves.toBe(true);
+            const [, url, , body] = (ReactNativeBlobUtil.fetch as jest.Mock)
+                .mock.calls[1];
+            expect(url).toBe('https://backups.lnolymp.us/api/backup');
+            expect(JSON.parse(body)).toMatchObject({
+                pubkey: PUBKEY,
+                message: 'nonce',
+                signature: 'signature'
+            });
+            expect(Storage.setItem).toHaveBeenCalledWith(
+                LAST_CHANNEL_BACKUP_STATUS,
+                'SUCCESS'
+            );
+        });
+
+        it.each([
+            [
+                'a 200 with success false',
+                jsonResponse(200, {
+                    success: false,
+                    error: 'Wrong message signed'
+                })
+            ],
+            [
+                'a JSON 500',
+                jsonResponse(500, {
+                    success: false,
+                    error: 'Internal server error'
+                })
+            ],
+            ['a non-JSON 502', htmlResponse(502)]
+        ])('logs ERROR and throws for %s', async (_, response) => {
+            mockServer(response);
+            const store = createStore();
+
+            await expect(store.backupChannels()).rejects.toThrow();
+            expect(Storage.setItem).toHaveBeenCalledWith(
+                LAST_CHANNEL_BACKUP_STATUS,
+                'ERROR'
+            );
+            expect(Storage.setItem).not.toHaveBeenCalledWith(
+                LAST_CHANNEL_BACKUP_STATUS,
+                'SUCCESS'
+            );
+        });
+
+        it('logs ERROR and throws when auth fails', async () => {
+            (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValueOnce(
+                htmlResponse(502)
+            );
+            const store = createStore();
+
+            await expect(store.backupChannels()).rejects.toThrow();
+            expect(Storage.setItem).toHaveBeenCalledWith(
+                LAST_CHANNEL_BACKUP_STATUS,
+                'ERROR'
+            );
+            expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledTimes(1);
+        });
+    });
+
+    describe('initSubscribeChannelEvents', () => {
+        const DAY = 24 * 60 * 60 * 1000;
+
+        it.each([
+            ['backs up when the last backup failed', 'ERROR', new Date(), true],
+            [
+                'backs up when the last backup is over three days old',
+                'SUCCESS',
+                new Date(Date.now() - 4 * DAY),
+                true
+            ],
+            ['backs up when nothing is stored', null, null, true],
+            [
+                'skips the backup when the last one succeeded a day ago',
+                'SUCCESS',
+                new Date(Date.now() - DAY),
+                false
+            ]
+        ])('%s', async (_, status, time, expected) => {
+            (Storage.getItem as jest.Mock).mockImplementation(
+                async (key: string) =>
+                    key === LAST_CHANNEL_BACKUP_STATUS
+                        ? status
+                        : key === LAST_CHANNEL_BACKUP_TIME && time
+                        ? `${time}`
+                        : null
+            );
+            const store = createStore();
+            const backupChannels = jest
+                .spyOn(store, 'backupChannels')
+                .mockResolvedValue(true);
+
+            await store.initSubscribeChannelEvents();
+
+            expect(backupChannels).toHaveBeenCalledTimes(expected ? 1 : 0);
+        });
     });
 });
