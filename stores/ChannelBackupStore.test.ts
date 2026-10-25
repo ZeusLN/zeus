@@ -132,8 +132,11 @@ describe('ChannelBackupStore', () => {
     });
 
     describe('advancedRecoveryList', () => {
-        it('stores the returned backups', async () => {
-            const backups = [{ id: '1', backup: 'encrypted' }];
+        // The server returns [] when the pubkey has no backups
+        it.each([
+            ['the returned backups', [{ id: '1', backup: 'encrypted' }]],
+            ['an empty backups list', []]
+        ])('stores %s', async (_, backups) => {
             mockServer(jsonResponse(200, { success: true, backups }));
             const store = createStore();
 
@@ -160,7 +163,8 @@ describe('ChannelBackupStore', () => {
                     error: 'Internal server error'
                 })
             ],
-            ['a non-JSON 502', htmlResponse(502)]
+            ['a non-JSON 502', htmlResponse(502)],
+            ['a 200 without backups', jsonResponse(200, { success: true })]
         ])(
             'sets the error flag without rejecting for %s',
             async (_, response) => {
