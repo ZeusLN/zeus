@@ -79,6 +79,7 @@ import { isNfcWithdraw, scanNfcTag } from '../utils/NFCUtils';
 import { themeColor } from '../utils/ThemeUtils';
 import { numberWithCommas, SATS_PER_BTC } from '../utils/UnitsUtils';
 import { getAmountFromSats } from '../utils/AmountUtils';
+import { withReceiverName } from '../utils/MemoUtils';
 import {
     ExpirationPreset,
     TimePeriod,
@@ -739,9 +740,7 @@ export default class Receive extends React.Component<
             createUnifiedInvoice({
                 memo: effectiveLspIsActive
                     ? ''
-                    : receiverName
-                    ? `${receiverName}:  ${memo}`
-                    : memo || '',
+                    : withReceiverName(receiverName, memo),
                 value: amount || '0',
                 expirySeconds: invoiceExpirySeconds,
                 ampInvoice: effectiveLspIsActive ? false : ampInvoice || false,
@@ -926,9 +925,7 @@ export default class Receive extends React.Component<
                         createUnifiedInvoice({
                             memo: lspIsActive
                                 ? ''
-                                : receiverName
-                                ? `${receiverName}:  ${memo}`
-                                : memo,
+                                : withReceiverName(receiverName, memo),
                             value: satAmount.toString(),
                             expirySeconds: '3600',
                             lnurl: lnurlParams,
@@ -3145,9 +3142,10 @@ export default class Receive extends React.Component<
                                                         createUnifiedInvoice({
                                                             memo: lspIsActive
                                                                 ? ''
-                                                                : receiverName
-                                                                ? `${receiverName}:  ${memo}`
-                                                                : memo,
+                                                                : withReceiverName(
+                                                                      receiverName,
+                                                                      memo
+                                                                  ),
                                                             value:
                                                                 satAmount.toString() ||
                                                                 '0',

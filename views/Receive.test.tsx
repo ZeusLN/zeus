@@ -526,6 +526,28 @@ describe('Receive.validateAddress (Pay via NFC)', () => {
     });
 
     it.each([
+        [false, 'Shop'],
+        [true, '']
+    ])(
+        'creates the withdraw invoice with the receiver name memo (LSP on: %s)',
+        async (lspIsActive, memo) => {
+            (getSatAmount as jest.Mock).mockReturnValue(1000);
+            (handleAnything as unknown as jest.Mock).mockResolvedValue(
+                WITHDRAW_RESPONSE
+            );
+            const { view, createUnifiedInvoice } = makeScanView('1000');
+            view.state = { ...view.state, receiverName: 'Shop', lspIsActive };
+
+            view.validateAddress('tag');
+            await flush();
+
+            expect(createUnifiedInvoice).toHaveBeenCalledWith(
+                expect.objectContaining({ memo })
+            );
+        }
+    );
+
+    it.each([
         [
             'an LNURL-pay request',
             'LnurlPay',
@@ -1077,6 +1099,42 @@ describe('Receive LSP fee shown with the invoice', () => {
         expect(shown(view)).toEqual({ fee: 10000, qrAmount: '11000' });
     });
 
+    it.each([
+        [false, 'Shop'],
+        [true, '']
+    ])(
+        'Create invoice uses the receiver name alone as the memo when there is no memo (LSP on: %s)',
+        (lspIsActive, memo) => {
+            const createUnifiedInvoice = jest.fn(() => new Promise(() => {}));
+            const view = makeShownView({
+                invoicesStore: { payment_request: null, createUnifiedInvoice },
+                lspStore: { reset: jest.fn() },
+                satAmount: '1000'
+            });
+            view.state = {
+                ...view.state,
+                receiverName: 'Shop',
+                memo: '',
+                expiry: '1',
+                lspIsActive
+            };
+            view.setState = jest.fn();
+
+            const create = collect(view.render()).find(
+                (e) =>
+                    e.type === 'Button' &&
+                    String(e.props.title).startsWith(
+                        'views.Receive.createInvoice'
+                    )
+            );
+            create.props.onPress();
+
+            expect(createUnifiedInvoice).toHaveBeenCalledWith(
+                expect.objectContaining({ memo })
+            );
+        }
+    );
+
     it('shows the recorded fee for a reused POS invoice, not the last quote', async () => {
         // order A (1,000 sats, 10,000 fee on top) is reopened after order B
         // (50,000 sats, 2,000 fee) left its quote and amount in the stores
@@ -1342,7 +1400,12 @@ describe('Receive opened for a POS order', () => {
         await flush();
 
         expect(InvoicesStore.createUnifiedInvoice).toHaveBeenCalledWith(
-            expect.objectContaining({ useLsp: true, expirySeconds: '3600' })
+            expect.objectContaining({
+                useLsp: true,
+                expirySeconds: '3600',
+                // the LSP wraps the invoice: no memo
+                memo: ''
+            })
         );
         // a 24h record would let a reopened order reuse the invoice for
         // up to 23 hours after the node stopped accepting it
@@ -1365,6 +1428,19 @@ describe('Receive opened for a POS order', () => {
 
         expect(InvoicesStore.createUnifiedInvoice).toHaveBeenCalledWith(
             expect.objectContaining({ memo: 'Thanks' })
+        );
+    });
+
+    it('uses the receiver name alone as the memo when there is no memo', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(1000);
+        const { view, InvoicesStore } = mountForOrder({ memo: '' });
+
+        await view.componentDidMount();
+        await flush();
+        await flush();
+
+        expect(InvoicesStore.createUnifiedInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ memo: 'Shop' })
         );
     });
 
