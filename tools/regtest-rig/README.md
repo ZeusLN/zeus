@@ -284,6 +284,33 @@ Verified).
 - **Shells.** zsh does not word-split `$var` (use `${=var}`), so
   `A="adb -s ..."; $A devices` fails there. The scripts are bash; call them,
   don't paste their bodies into zsh.
+- **Settings not loaded yet.** `bin/app restart` without `--node` returns
+  before settings load, so `settingsStore.settings.nodes` can still be
+  empty. Writing a filtered copy of that list back over CDP deletes every
+  wallet. Check `nodes.length` before writing nodes, or use
+  `bin/app restart --node`.
+- **Cashu after `bin/zeus mint-add`.** `mint-add` turns Cashu on without
+  calling `cashuStore.initializeWallets()`, so `cashuStore.payments` stays
+  undefined and melts are spent at the mint but never recorded. Run
+  `bin/app restart --node` after `mint-add`. `cashuStore.mintBalances` can
+  lag behind CDK `getBalances()` after a melt.
+- **Extra adb reverse ports.** `bin/app restart` re-applies only the rig's
+  own ports. A port you add yourself (a proxy, a second mint) is lost when
+  the adb server restarts; re-add it and remove it when done.
+- **Screenshots in subdirectories.** `bin/shot <dir>/<name>` fails unless
+  `state/<RIG>/screenshots/<dir>` exists; create it first.
+- **Tapping.** Wait about 3 s after navigating before tapping; an early tap
+  on Receive or Send can land on the memo field and open the keyboard.
+  `Z.press(text)` can match the wrong control when labels repeat (on Send,
+  "Send" matched a control that cleared the destination); tap by
+  coordinates there.
+- **`bin/metro check`.** Use a single-line string; a multi-line one matched
+  unrelated code.
+- **Egress checks.** `ping` and `nc` from `adb shell` say nothing useful
+  about what the app can reach. Run a `fetch` over CDP instead.
+- **Embedded Tor.** On a fresh AVD the first Tor start can time out
+  ("Failed to initialize Tor service"), and onion connects can need a few
+  Retry taps.
 - **Background processes.** Scripts start Metro, the emulator, the stub LSP
   and the LNURL server with nohup, a PID file in `state/<RIG>/run/` and a
   log in `state/<RIG>/logs/`; stop them with the matching script or
@@ -305,8 +332,20 @@ rig.
   (the rig CA covers alice, bob and carol), then use `https://localhost:<port>`.
 - With two debug targets, filter Metro's `/json/list` by `deviceName`
   (lib/cdp.js currently picks the last Zeus target).
-- The notification prompt keeps the app `inactive`; a Metro `resolveRequest`
-  shim for react-native-notifications avoids it.
+- The notification prompt keeps the app `inactive`. A Metro
+  `resolveRequest` shim for react-native-notifications avoided it in one
+  setup but not in another; a throwaway XCUITest that taps "Allow" works.
+- Embedded LND on regtest (used with this rig's bitcoind on 2026-10-25): the
+  rig's bitcoind already runs with `-blockfilterindex=1
+  -peerblockfilters=1`. In a scratch checkout only, patch `writeLndConfig`
+  in utils/LndMobileUtils.ts so the testnet path writes `bitcoin.regtest=1`,
+  `bitcoin.testnet=0` and `neutrino.connect=127.0.0.1:<BTC_P2P_PORT>`
+  (`10.0.2.2:<BTC_P2P_PORT>` on Android), then create the wallet with
+  `createLndWallet({lndDir, isTestnet: true})`.
+- LNC: litd 0.16 in integrated mode (its own lnd 0.20, which has
+  rpcmiddleware) attached to the rig network is one container instead of
+  lnd plus a remote-mode litd. Disable autopilot, loop, pool, faraday and
+  taproot-assets, and create the session right before connecting.
 
 ## Verified
 
