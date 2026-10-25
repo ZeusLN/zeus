@@ -39,8 +39,12 @@ case "${1:-}" in
         start_proc emulator "$EMULATOR" -avd "$AVD_NAME" -port "$EMU_PORT" \
             -no-window -no-snapshot -no-audio -no-boot-anim
         log "waiting for $ANDROID_SERIAL on adb server :$ADB_SERVER_PORT"
+        # The emulator registers itself with the adb server named by
+        # ANDROID_ADB_SERVER_PORT (exported by env.sh), as $ANDROID_SERIAL.
+        # Every rig script addresses it by that serial, so don't fall back
+        # to `adb connect`, which would register a different serial.
         wait_until 60 sh -c "'$ADB' devices | grep -q '^$ANDROID_SERIAL'" \
-            || "$ADB" connect "127.0.0.1:$((EMU_PORT + 1))" >/dev/null 2>&1 || true
+            || die "$ANDROID_SERIAL did not register with the adb server on :$ADB_SERVER_PORT; check bin/avd status and $STATE/logs/emulator.log, and that no other adb server is using port $ADB_SERVER_PORT"
         wait_until 240 booted || die "emulator did not boot; see $STATE/logs/emulator.log"
         adb_ shell settings put global window_animation_scale 0
         adb_ shell settings put global transition_animation_scale 0
