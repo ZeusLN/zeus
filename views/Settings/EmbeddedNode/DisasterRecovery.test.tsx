@@ -35,8 +35,14 @@ import DisasterRecovery from './DisasterRecovery';
 import { channelBackupStore } from '../../../stores/Stores';
 
 describe('DisasterRecovery', () => {
+    // The error handler clears the message after 5 seconds
     beforeEach(() => {
         jest.clearAllMocks();
+        jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+        jest.useRealTimers();
     });
 
     // @rneui's Button renders title as children, so an Error object there
@@ -67,5 +73,13 @@ describe('DisasterRecovery', () => {
         for (const title of titles()) {
             expect(typeof title).toBe('string');
         }
+
+        await act(async () => {
+            jest.advanceTimersByTime(5000);
+        });
+        expect(titles()).not.toContain('No backup found');
+        expect(titles()).toContain(
+            'views.Settings.EmbeddedNode.initiateDisasterRecoveryOlympus'
+        );
     });
 });
