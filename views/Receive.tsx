@@ -670,6 +670,8 @@ export default class Receive extends React.Component<
         const { createUnifiedInvoice } = InvoicesStore;
         const skipOnchain = this.getSkipOnchain();
         const isCurrent = this.startInvoiceRequest();
+        // POS orders are shared by all wallets; their invoices are not
+        const nodeIdentity = orderId ? PosStore.getNodeIdentity() : '';
 
         // Set synchronously so componentDidMount's initialLoad flip sees
         // creatingInvoice=true before the checkExistingInvoice microtask runs.
@@ -689,7 +691,8 @@ export default class Receive extends React.Component<
                             existingInvoice,
                             amount || '0',
                             orderTip,
-                            exchangeRate
+                            exchangeRate,
+                            nodeIdentity
                         )
                     ) {
                         // Reuse existing invoice
@@ -772,7 +775,8 @@ export default class Receive extends React.Component<
                                 amount: amount || '0',
                                 tip: orderTip,
                                 createdAt: Math.floor(Date.now() / 1000),
-                                expirySeconds: invoiceExpirySeconds
+                                expirySeconds: invoiceExpirySeconds,
+                                nodeIdentity
                             });
                         }
                         this.subscribeInvoice(rHash, onChainAddress);

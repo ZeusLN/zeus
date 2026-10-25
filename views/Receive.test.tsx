@@ -355,7 +355,11 @@ const makeNfcView = (
         setWatchedInvoicePaid: jest.fn(),
         reset: jest.fn()
     };
-    const PosStore = { recordPayment: jest.fn(), clearOrderInvoice: jest.fn() };
+    const PosStore = {
+        recordPayment: jest.fn(),
+        clearOrderInvoice: jest.fn(),
+        getNodeIdentity: () => 'node-a'
+    };
     const view = new Receive({
         navigation: { navigate },
         route: { params: { amount } },
@@ -675,6 +679,7 @@ describe('Receive invoice requests that were superseded', () => {
         const PosStore = {
             getOrderInvoiceById: jest.fn(async (): Promise<any> => undefined),
             canReuseInvoice: jest.fn(() => false),
+            getNodeIdentity: () => 'node-a',
             recordInvoice: jest.fn()
         };
         const InvoicesStore: any = {
@@ -1102,7 +1107,8 @@ describe('Receive LSP fee shown with the invoice', () => {
                     expirySeconds: '3600'
                 })
             ),
-            canReuseInvoice: jest.fn(() => true)
+            canReuseInvoice: jest.fn(() => true),
+            getNodeIdentity: () => 'node-a'
         };
         const view = makeShownView({
             invoicesStore,
@@ -1216,6 +1222,7 @@ describe('Receive opened for a POS order', () => {
         const PosStore = {
             getOrderInvoiceById: jest.fn(async (): Promise<any> => undefined),
             canReuseInvoice: jest.fn(() => false),
+            getNodeIdentity: () => 'node-a',
             recordInvoice: jest.fn()
         };
         const InvoicesStore: any = {
@@ -1289,7 +1296,8 @@ describe('Receive opened for a POS order', () => {
                 payment_request: 'lnbc-order',
                 rHash: 'hash-order',
                 exchangeRate: '60000',
-                tip: '0'
+                tip: '0',
+                nodeIdentity: 'node-a'
             })
         );
     });
