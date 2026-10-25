@@ -936,6 +936,25 @@ export default class InvoicesStore {
             });
     };
 
+    // Shows an invoice created earlier (a reused POS order invoice) as the
+    // current one. It counts as a new request, so an invoice request still
+    // running cannot replace it.
+    @action
+    public showStoredInvoice = ({
+        paymentRequest,
+        amount,
+        lspFeeSats
+    }: {
+        paymentRequest: string;
+        amount: string;
+        lspFeeSats: number | null;
+    }) => {
+        this.invoiceRequestSeq++;
+        this.payment_request = paymentRequest;
+        this.payment_request_amt = amount;
+        this.payment_request_lsp_fee = lspFeeSats;
+    };
+
     public clearAddress = () => (this.onChainAddress = null);
 
     // the fee belongs to the invoice it was priced with

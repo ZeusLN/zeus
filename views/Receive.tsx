@@ -12,7 +12,6 @@ import BigNumber from 'bignumber.js';
 import { LNURLWithdrawParams } from 'js-lnurl';
 import { ButtonGroup, Icon } from '@rneui/themed';
 import { inject, observer } from 'mobx-react';
-import { runInAction } from 'mobx';
 import _map from 'lodash/map';
 import NfcManager from 'react-native-nfc-manager';
 import { Route } from '@react-navigation/native';
@@ -672,15 +671,12 @@ export default class Receive extends React.Component<
                         )
                     ) {
                         // Reuse existing invoice
-                        runInAction(() => {
-                            InvoicesStore.payment_request =
-                                existingInvoice.payment_request;
-                            InvoicesStore.payment_request_amt =
-                                existingInvoice.amount;
+                        InvoicesStore.showStoredInvoice({
+                            paymentRequest: existingInvoice.payment_request,
+                            amount: existingInvoice.amount,
                             // records from before the fee was stored
                             // show no fee rather than another quote's
-                            InvoicesStore.payment_request_lsp_fee =
-                                existingInvoice.lspFeeSats ?? null;
+                            lspFeeSats: existingInvoice.lspFeeSats ?? null
                         });
                         this.subscribeInvoice(existingInvoice.rHash);
                         return true;
@@ -1151,7 +1147,7 @@ export default class Receive extends React.Component<
         // which a later fee request can replace while this invoice is shown
         const zeroConfFee = InvoicesStore.payment_request_lsp_fee ?? undefined;
         const requiresChannelSetup =
-            zeroConfFee &&
+            !!zeroConfFee &&
             new BigNumber(zeroConfFee).gte(LSP_MIN_CHANNEL_OPEN_FEE_SATS);
 
         const {
@@ -1811,7 +1807,9 @@ export default class Receive extends React.Component<
                                         </View>
                                     )}
                                 {haveInvoice &&
-                                    zeroConfFee &&
+                                    // a boolean: a fee of 0 must not become
+                                    // a bare text child of the View
+                                    !!zeroConfFee &&
                                     zeroConfFee > 0 &&
                                     (selectedIndex == 0 ||
                                         selectedIndex == 1) && (

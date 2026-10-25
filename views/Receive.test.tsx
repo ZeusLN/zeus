@@ -706,9 +706,17 @@ describe('Receive invoice requests that were superseded', () => {
         await flush();
         view.autoGenerateInvoice('2000');
         await flush();
-        newer.resolve({ rHash: 'hash-new', paymentRequest: 'lnbc-new' });
+        newer.resolve({
+            rHash: 'hash-new',
+            paymentRequest: 'lnbc-new',
+            lspFeeSats: 10000
+        });
         await flush();
-        older.resolve({ rHash: 'hash-old', paymentRequest: 'lnbc-old' });
+        older.resolve({
+            rHash: 'hash-old',
+            paymentRequest: 'lnbc-old',
+            lspFeeSats: 2000
+        });
         await flush();
 
         expect(view.subscribeInvoice).toHaveBeenCalledTimes(1);
@@ -721,7 +729,10 @@ describe('Receive invoice requests that were superseded', () => {
             expect.objectContaining({
                 payment_request: 'lnbc-new',
                 rHash: 'hash-new',
-                amount: '2000'
+                amount: '2000',
+                // the fee comes with the invoice, so a reopened order
+                // shows it again
+                lspFeeSats: 10000
             })
         );
     });
@@ -1068,7 +1079,14 @@ describe('Receive LSP fee shown with the invoice', () => {
             payment_request: null,
             payment_request_amt: '50000',
             payment_request_lsp_fee: 2000,
-            createUnifiedInvoice: jest.fn()
+            createUnifiedInvoice: jest.fn(),
+            showStoredInvoice: jest.fn(
+                ({ paymentRequest, amount, lspFeeSats }: any) => {
+                    invoicesStore.payment_request = paymentRequest;
+                    invoicesStore.payment_request_amt = amount;
+                    invoicesStore.payment_request_lsp_fee = lspFeeSats;
+                }
+            )
         };
         const posStore = {
             getOrderInvoiceById: jest.fn(() =>
@@ -1098,7 +1116,74 @@ describe('Receive LSP fee shown with the invoice', () => {
         await new Promise(process.nextTick);
 
         expect(invoicesStore.createUnifiedInvoice).not.toHaveBeenCalled();
+        expect(invoicesStore.showStoredInvoice).toHaveBeenCalledWith({
+            paymentRequest: 'lnbc-wrapped-a',
+            amount: '1000',
+            lspFeeSats: 10000
+        });
         expect(invoicesStore.payment_request).toBe('lnbc-wrapped-a');
         expect(shown(view)).toEqual({ fee: 10000, qrAmount: '11000' });
+    });
+
+    // React Native throws when a string or number is a direct child of
+    // anything but Text; the test renderer does not, so collect them.
+    // React drops empty strings before they reach the host, so '' is fine.
+    const bareText = (
+        node: any,
+        insideText = false,
+        out: any[] = []
+    ): any[] => {
+        if (Array.isArray(node)) {
+            node.forEach((n) => bareText(n, insideText, out));
+        } else if (
+            (typeof node === 'string' && node !== '') ||
+            typeof node === 'number'
+        ) {
+            if (!insideText) out.push(node);
+        } else if (node && typeof node === 'object' && node.props) {
+            bareText(
+                node.props.children,
+                insideText || node.type === 'Text',
+                out
+            );
+        }
+        return out;
+    };
+
+    const texts = (view: any) =>
+        collect(view.render())
+            .filter((e) => e.type === 'Text')
+            .flatMap((e) => [].concat(e.props.children));
+
+    it('shows the wrapped-invoice note for a fee of 0, with no bare text outside Text', () => {
+        const view = makeShownView({
+            invoicesStore: {
+                payment_request: 'lnbc-wrapped',
+                payment_request_amt: '1000',
+                payment_request_lsp_fee: 0
+            },
+            lspStore: {},
+            satAmount: '1000'
+        });
+
+        expect(bareText(view.render())).toEqual([]);
+        expect(texts(view)).toContain(
+            'views.Receive.lspExplainerZeroFeeWrapper'
+        );
+        expect(shown(view)).toEqual({ fee: undefined, qrAmount: '1000' });
+    });
+
+    it('renders no bare text outside Text for a fee on top', () => {
+        const view = makeShownView({
+            invoicesStore: {
+                payment_request: 'lnbc-wrapped',
+                payment_request_amt: '1000',
+                payment_request_lsp_fee: 10000
+            },
+            lspStore: {},
+            satAmount: '1000'
+        });
+
+        expect(bareText(view.render())).toEqual([]);
     });
 });

@@ -1418,6 +1418,36 @@ describe('InvoicesStore superseded invoice requests', () => {
         expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
     });
 
+    it('shows a stored invoice in one step and keeps it from a request still running', async () => {
+        const backend = deferred();
+        (BackendUtils.createInvoice as jest.Mock).mockReturnValueOnce(
+            backend.promise
+        );
+        const store = newStore();
+
+        const pending = store.createUnifiedInvoice({
+            ...params,
+            lnurl: lnurl('old')
+        });
+        await flush();
+        // a reopened POS order reuses its stored invoice
+        store.showStoredInvoice({
+            paymentRequest: 'lnbc-stored',
+            amount: '1000',
+            lspFeeSats: 10000
+        });
+        backend.resolve({ payment_request: 'lnbc-old', r_hash: 'aa' });
+
+        await expect(pending).resolves.toEqual(
+            expect.objectContaining({ paymentRequest: 'lnbc-old' })
+        );
+        await flush();
+        expect(store.payment_request).toBe('lnbc-stored');
+        expect(store.payment_request_amt).toBe('1000');
+        expect(store.payment_request_lsp_fee).toBe(10000);
+        expect(ReactNativeBlobUtil.fetch).not.toHaveBeenCalled();
+    });
+
     it('keeps the newer invoice and withdraw when an older request finishes last', async () => {
         const older = deferred();
         const newer = deferred();
