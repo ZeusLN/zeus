@@ -1196,7 +1196,23 @@ describe('Receive LSP fee shown with the invoice', () => {
 describe('Receive opened for a POS order', () => {
     beforeEach(() => jest.clearAllMocks());
 
-    const mountForOrder = (extraParams: any = {}, UTXOsStore: any = {}) => {
+    afterEach(() => {
+        delete (BackendUtils as any).supportsFlowLSP;
+    });
+
+    const mountForOrder = (
+        extraParams: any = {},
+        UTXOsStore: any = {},
+        {
+            settings: settingsOverrides = {},
+            flowLspNotConfigured = true,
+            totalInbound = 0
+        }: {
+            settings?: any;
+            flowLspNotConfigured?: boolean;
+            totalInbound?: number;
+        } = {}
+    ) => {
         const PosStore = {
             getOrderInvoiceById: jest.fn(async (): Promise<any> => undefined),
             canReuseInvoice: jest.fn(() => false),
@@ -1213,7 +1229,8 @@ describe('Receive opened for a POS order', () => {
         };
         const settings = {
             invoices: { receiverName: 'Shop', memo: '' },
-            enableLSP: false
+            enableLSP: false,
+            ...settingsOverrides
         };
         const view = new Receive({
             navigation: { navigate: jest.fn(), addListener: jest.fn() },
@@ -1240,9 +1257,9 @@ describe('Receive opened for a POS order', () => {
             LightningAddressStore: { status: jest.fn(async () => {}) },
             NodeInfoStore: {
                 nodeInfo: {},
-                flowLspNotConfigured: () => ({ flowLspNotConfigured: true })
+                flowLspNotConfigured: () => ({ flowLspNotConfigured })
             },
-            ChannelsStore: { totalInbound: 0 },
+            ChannelsStore: { totalInbound },
             LSPStore: { reset: jest.fn() },
             UnitsStore: { resetUnits: jest.fn() },
             UTXOsStore,
@@ -1289,6 +1306,39 @@ describe('Receive opened for a POS order', () => {
 
         expect(InvoicesStore.createUnifiedInvoice).toHaveBeenCalledWith(
             expect.objectContaining({ account: 'imported', addressType: '4' })
+        );
+    });
+
+    it('records the expiry the LSP locked the invoice to, not the expiry setting', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(1000);
+        (BackendUtils as any).supportsFlowLSP = () => true;
+        const { view, PosStore, InvoicesStore } = mountForOrder(
+            {},
+            {},
+            {
+                settings: {
+                    invoices: {
+                        receiverName: 'Shop',
+                        memo: '',
+                        expirySeconds: '86400'
+                    },
+                    enableLSP: true
+                },
+                flowLspNotConfigured: false
+            }
+        );
+
+        await view.componentDidMount();
+        await flush();
+        await flush();
+
+        expect(InvoicesStore.createUnifiedInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ useLsp: true, expirySeconds: '3600' })
+        );
+        // a 24h record would let a reopened order reuse the invoice for
+        // up to 23 hours after the node stopped accepting it
+        expect(PosStore.recordInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ expirySeconds: '3600' })
         );
     });
 });

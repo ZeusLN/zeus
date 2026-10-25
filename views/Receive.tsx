@@ -717,6 +717,12 @@ export default class Receive extends React.Component<
                 return;
             }
 
+            // the LSP locks the expiry, and the POS record must match the
+            // invoice it was created with
+            const invoiceExpirySeconds = effectiveLspIsActive
+                ? LOCKED_EXPIRY_SECONDS
+                : expirySeconds || '3600';
+
             createUnifiedInvoice({
                 memo: effectiveLspIsActive
                     ? ''
@@ -724,9 +730,7 @@ export default class Receive extends React.Component<
                     ? `${receiverName}:  ${memo}`
                     : memo || '',
                 value: amount || '0',
-                expirySeconds: effectiveLspIsActive
-                    ? LOCKED_EXPIRY_SECONDS
-                    : expirySeconds || '3600',
+                expirySeconds: invoiceExpirySeconds,
                 ampInvoice: effectiveLspIsActive ? false : ampInvoice || false,
                 blindedPaths: effectiveLspIsActive
                     ? false
@@ -768,7 +772,7 @@ export default class Receive extends React.Component<
                                 amount: amount || '0',
                                 tip: orderTip,
                                 createdAt: Math.floor(Date.now() / 1000),
-                                expirySeconds: expirySeconds || '3600'
+                                expirySeconds: invoiceExpirySeconds
                             });
                         }
                         this.subscribeInvoice(rHash, onChainAddress);
