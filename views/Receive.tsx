@@ -915,7 +915,8 @@ export default class Receive extends React.Component<
                         this.setState({ nfcError: true });
                         return;
                     }
-                    const { memo } = lnurlParams.defaultDescription;
+                    // LUD-03: defaultDescription is a string
+                    const memo: string = lnurlParams.defaultDescription || '';
 
                     // if an amount was entered on the keypad screen before scanning
                     // we will automatically create an invoice and attempt to withdraw

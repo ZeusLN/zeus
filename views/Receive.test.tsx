@@ -301,7 +301,7 @@ describe('Receive LNURL-withdraw LSP fee', () => {
             {
                 lnurlParams: {
                     tag: 'withdrawRequest',
-                    defaultDescription: { memo: '' }
+                    defaultDescription: 'card'
                 }
             }
         ]);
@@ -400,6 +400,17 @@ describe('Receive NFC scan', () => {
             expect.objectContaining({ value: '25000', lnurl: withdrawParams })
         );
         expect(navigate).not.toHaveBeenCalled();
+    });
+
+    it("uses the card's description as the memo", async () => {
+        const { view, InvoicesStore } = makeNfcView('25.00', 25000);
+
+        await view.scanNfc();
+        await flush();
+
+        expect(InvoicesStore.createUnifiedInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ memo: 'card' })
+        );
     });
 
     it('hands the sats on screen on when creating the invoice fails', async () => {
@@ -526,15 +537,18 @@ describe('Receive.validateAddress (Pay via NFC)', () => {
     });
 
     it.each([
-        [false, 'Shop'],
-        [true, '']
+        [false, 'card', 'Shop:  card'],
+        [true, 'card', ''],
+        // a card without a description: the receiver name alone
+        [false, '', 'Shop']
     ])(
-        'creates the withdraw invoice with the receiver name memo (LSP on: %s)',
-        async (lspIsActive, memo) => {
+        'creates the withdraw invoice with the receiver name memo (LSP on: %s, card description: %p)',
+        async (lspIsActive, defaultDescription, memo) => {
             (getSatAmount as jest.Mock).mockReturnValue(1000);
-            (handleAnything as unknown as jest.Mock).mockResolvedValue(
-                WITHDRAW_RESPONSE
-            );
+            (handleAnything as unknown as jest.Mock).mockResolvedValue([
+                'Receive',
+                { lnurlParams: { ...withdrawParams, defaultDescription } }
+            ]);
             const { view, createUnifiedInvoice } = makeScanView('1000');
             view.state = { ...view.state, receiverName: 'Shop', lspIsActive };
 
