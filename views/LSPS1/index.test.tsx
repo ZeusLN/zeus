@@ -93,6 +93,8 @@ const LEGACY_GET_INFO = {
 
 const REFUND_ADDRESS = 'views.LSPS1.refundOnchainAddress';
 const LSP_BALANCE = 'views.LSPS1.initialLSPBalance (general.sats)';
+const CLIENT_BALANCE = 'views.LSPS1.clientBalance (general.sats)';
+const REQUIRED_CONFIRMATIONS = 'views.LSPS1.requiredChannelConfirmations';
 
 const legacyGetInfoWith = (options: any) => ({
     ...LEGACY_GET_INFO,
@@ -201,5 +203,62 @@ describe('LSPS1 get_info that arrives after the screen mounts', () => {
         expect(screen.getByPlaceholderText(LSP_BALANCE)).toHaveDisplayValue(
             '100000'
         );
+    });
+
+    it('keeps the LSP balance at 0 when min_initial_lsp_balance_sat is "0.5"', async () => {
+        const { rerender } = await renderView({});
+        await rerender(
+            lsps1({ ...SPEC_GET_INFO, min_initial_lsp_balance_sat: '0.5' })
+        );
+
+        expect(screen.getByPlaceholderText(LSP_BALANCE)).toHaveDisplayValue(
+            '0'
+        );
+    });
+
+    it.each(['0', '0.5'])(
+        'keeps the client balance at 0 when min_initial_client_balance_sat is "%s"',
+        async (minClientBalance) => {
+            const { rerender } = await renderView({});
+            await rerender(
+                lsps1({
+                    ...SPEC_GET_INFO,
+                    min_initial_client_balance_sat: minClientBalance
+                })
+            );
+
+            expect(
+                screen.getByPlaceholderText(CLIENT_BALANCE)
+            ).toHaveDisplayValue('0');
+        }
+    );
+
+    it('fills the client balance from a nonzero min_initial_client_balance_sat', async () => {
+        const { rerender } = await renderView({});
+        await rerender(lsps1(SPEC_GET_INFO));
+
+        expect(screen.getByPlaceholderText(CLIENT_BALANCE)).toHaveDisplayValue(
+            '20000'
+        );
+    });
+
+    it('leaves the required confirmations empty when min_required_channel_confirmations is 0', async () => {
+        const { rerender } = await renderView({});
+        await rerender(lsps1(SPEC_GET_INFO));
+
+        expect(
+            screen.getByPlaceholderText(REQUIRED_CONFIRMATIONS)
+        ).toHaveDisplayValue('');
+    });
+
+    it('fills the required confirmations from a nonzero min_required_channel_confirmations', async () => {
+        const { rerender } = await renderView({});
+        await rerender(
+            lsps1({ ...SPEC_GET_INFO, min_required_channel_confirmations: 3 })
+        );
+
+        expect(
+            screen.getByPlaceholderText(REQUIRED_CONFIRMATIONS)
+        ).toHaveDisplayValue('3');
     });
 });
