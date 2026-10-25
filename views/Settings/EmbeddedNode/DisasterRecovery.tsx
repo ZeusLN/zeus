@@ -46,8 +46,9 @@ export default class DisasterRecovery extends React.Component<
     DisasterRecoveryState
 > {
     state = {
+        // Wallet.tsx and the Embedded node menu treat an unset value as off
         automaticDisasterRecoveryBackup:
-            settingsStore.settings.automaticDisasterRecoveryBackup || true,
+            !!settingsStore.settings.automaticDisasterRecoveryBackup,
         disasterRecoveryCopied: false,
         disasterRecoveryFileRecovered: false,
         disasterRecoveryFileRecoveredError: false,
@@ -433,8 +434,13 @@ export default class DisasterRecovery extends React.Component<
                                                 setChannelBackupRecoveredError();
                                             }
                                         } catch (e: any) {
+                                            // The title must be a string, an
+                                            // Error object crashes the Button
                                             setChannelBackupRecoveredErrorMessage(
-                                                e
+                                                e?.message ||
+                                                    localeString(
+                                                        'general.error'
+                                                    )
                                             );
                                         }
                                     }}

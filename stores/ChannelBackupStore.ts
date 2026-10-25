@@ -1,5 +1,5 @@
 import { action, observable, runInAction } from 'mobx';
-import ReactNativeBlobUtil from 'react-native-blob-util';
+import ReactNativeBlobUtil, { FetchBlobResponse } from 'react-native-blob-util';
 import * as CryptoJS from 'crypto-js';
 
 import NodeInfoStore from './NodeInfoStore';
@@ -26,6 +26,23 @@ export const LEGACY_LAST_CHANNEL_BACKUP_TIME = 'LAST_CHANNEL_BACKUP_TIME';
 
 export const LAST_CHANNEL_BACKUP_STATUS = 'zeus-last-channel-backup-status';
 export const LAST_CHANNEL_BACKUP_TIME = 'zeus-last-channel-backup-time';
+
+// Returns the body of a successful backups server response. Failures throw
+// the server's error message when the body is JSON, or the HTTP status when
+// it isn't (e.g. an HTML error page from the proxy in front of the server).
+const parseBackupsResponse = (response: FetchBlobResponse, route: string) => {
+    const status = response.info().status;
+    let data: any;
+    try {
+        data = response.json();
+    } catch {}
+    if (status !== 200 || !data?.success) {
+        throw new Error(
+            data?.error || `${route} response status code: ${status}`
+        );
+    }
+    return data;
+};
 
 export default class ChannelBackupStore {
     @observable public channelEventsSubscription: any;
@@ -127,11 +144,10 @@ export default class ChannelBackupStore {
                 pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
             })
         );
-        const authResponseStatus = authResponse.info().status;
-        if (authResponseStatus !== 200) {
-            throw new Error(`Auth response status code: ${authResponseStatus}`);
+        const { verification } = parseBackupsResponse(authResponse, 'Auth');
+        if (!verification) {
+            throw new Error('Auth response has no verification');
         }
-        const { verification } = authResponse.json();
 
         const messageSignData = await BackendUtils.signMessage(verification);
         const signature = messageSignData.zbase || messageSignData.signature;
@@ -145,14 +161,15 @@ export default class ChannelBackupStore {
                 signature
             })
         );
-        const data = recoverResponse.json();
-        const { backup, created_at, success } = data;
-        if (recoverResponse.info().status === 200 && success && backup) {
-            await this.triggerRecovery(backup);
-            return { backup, created_at };
-        } else {
-            throw new Error(data.error);
+        const { backup, created_at } = parseBackupsResponse(
+            recoverResponse,
+            'Recover'
+        );
+        if (!backup) {
+            throw new Error('Recover response has no backup');
         }
+        await this.triggerRecovery(backup);
+        return { backup, created_at };
     };
 
     @action
@@ -198,13 +215,10 @@ export default class ChannelBackupStore {
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
                 })
             );
-            const authResponseStatus = authResponse.info().status;
-            if (authResponseStatus !== 200) {
-                throw new Error(
-                    `Auth response status code: ${authResponseStatus}`
-                );
+            const { verification } = parseBackupsResponse(authResponse, 'Auth');
+            if (!verification) {
+                throw new Error('Auth response has no verification');
             }
-            const { verification } = authResponse.json();
 
             const messageSignData = await BackendUtils.signMessage(
                 verification
@@ -221,23 +235,25 @@ export default class ChannelBackupStore {
                     signature
                 })
             );
-            const data = recoverResponse.json();
-            const { backups } = data;
-            if (recoverResponse.info().status === 200 && backups) {
-                runInAction(() => {
-                    this.backups = backups;
-                    this.loading = false;
-                });
-                return backups;
+            const { backups } = parseBackupsResponse(
+                recoverResponse,
+                'Recover advanced'
+            );
+            if (!backups) {
+                throw new Error('Recover advanced response has no backups');
             }
-
-            throw new Error(data.error);
+            runInAction(() => {
+                this.backups = backups;
+                this.loading = false;
+            });
+            return backups;
         } catch (error) {
+            // Callers render the error flag rather than catching
+            console.error('advanced recovery list error', error);
             runInAction(() => {
                 this.error = true;
                 this.loading = false;
             });
-            throw error;
         }
     };
 
