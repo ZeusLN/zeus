@@ -1351,6 +1351,72 @@ describe('Receive opened for a POS order', () => {
         );
     });
 
+    it('uses the memo from the invoice settings when Receive is opened without one', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(1000);
+        const { view, InvoicesStore } = mountForOrder(
+            { memo: undefined },
+            {},
+            { settings: { invoices: { receiverName: '', memo: 'Thanks' } } }
+        );
+
+        await view.componentDidMount();
+        await flush();
+        await flush();
+
+        expect(InvoicesStore.createUnifiedInvoice).toHaveBeenCalledWith(
+            expect.objectContaining({ memo: 'Thanks' })
+        );
+    });
+
+    const lspActive = (totalInbound: number) => {
+        (BackendUtils as any).supportsFlowLSP = () => true;
+        return {
+            settings: {
+                invoices: { receiverName: 'Shop', memo: '' },
+                enableLSP: true
+            },
+            flowLspNotConfigured: false,
+            totalInbound
+        };
+    };
+
+    it('flags an amount above inbound liquidity as needing inbound with the LSP on', async () => {
+        (getSatAmount as jest.Mock).mockReturnValue(1000);
+        const { view } = mountForOrder(
+            { autoGenerate: false },
+            {},
+            lspActive(500)
+        );
+
+        await view.componentDidMount();
+
+        expect(view.setState).toHaveBeenCalledWith(
+            expect.objectContaining({ value: '1000', needInbound: true })
+        );
+    });
+
+    it('flags an LNURL withdraw above inbound liquidity as needing inbound with the LSP on', async () => {
+        (getSatAmount as jest.Mock).mockImplementation((a) => Number(a));
+        const { view } = mountForOrder(
+            {
+                amount: undefined,
+                autoGenerate: false,
+                lnurlParams: {
+                    maxWithdrawable: 1000000,
+                    defaultDescription: 'Withdraw'
+                }
+            },
+            {},
+            lspActive(500)
+        );
+
+        await view.componentDidMount();
+
+        expect(view.setState).toHaveBeenCalledWith(
+            expect.objectContaining({ memo: 'Withdraw', needInbound: true })
+        );
+    });
+
     const unified = {
         settings: {
             invoices: {

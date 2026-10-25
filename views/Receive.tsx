@@ -437,8 +437,9 @@ export default class Receive extends React.Component<
             if (accountAddressType) this.setState({ accountAddressType });
         }
 
-        // POS
-        const memo = route.params?.memo ?? this.state.memo;
+        // POS. this.state still holds the initial values here: the
+        // setState above is batched
+        const memo = route.params?.memo ?? (settings?.invoices?.memo || '');
         const { orderId, orderTotal, orderTip, exchangeRate, rate } =
             route.params ?? {};
 
@@ -456,7 +457,7 @@ export default class Receive extends React.Component<
             this.props.UnitsStore.resetUnits();
             let needInbound = false;
             if (
-                this.state.lspIsActive &&
+                lspIsActive &&
                 new BigNumber(getSatAmount(lnurl.maxWithdrawable / 1000)).gt(
                     this.props.ChannelsStore.totalInbound
                 )
@@ -474,7 +475,7 @@ export default class Receive extends React.Component<
         if (amount && amount != '0') {
             let needInbound = false;
             if (
-                this.state.lspIsActive &&
+                lspIsActive &&
                 getSatAmount(amount) !== 0 &&
                 new BigNumber(getSatAmount(amount)).gt(
                     this.props.ChannelsStore.totalInbound
