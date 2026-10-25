@@ -48,6 +48,23 @@ const mockServer = (response: any) => {
         .mockResolvedValueOnce(response);
 };
 
+const authFailures: Array<[string, any, string]> = [
+    [
+        'a 200 with success false',
+        jsonResponse(200, {
+            success: false,
+            error: 'Error authenticating. Try again in a few minutes.'
+        }),
+        'Error authenticating. Try again in a few minutes.'
+    ],
+    [
+        'a 200 without a verification',
+        jsonResponse(200, { success: true }),
+        'Auth response has no verification'
+    ],
+    ['a non-JSON 502', htmlResponse(502), 'Auth response status code: 502']
+];
+
 const createStore = () =>
     new ChannelBackupStore(
         { nodeInfo: { identity_pubkey: PUBKEY } } as any,
@@ -129,6 +146,22 @@ describe('ChannelBackupStore', () => {
             );
             expect(triggerRecovery).not.toHaveBeenCalled();
         });
+
+        it.each(authFailures)(
+            'throws without signing when auth returns %s',
+            async (_, response, message) => {
+                (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValueOnce(
+                    response
+                );
+                const store = createStore();
+
+                await expect(
+                    store.recoverStaticChannelBackup()
+                ).rejects.toThrow(message);
+                expect(BackendUtils.signMessage).not.toHaveBeenCalled();
+                expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledTimes(1);
+            }
+        );
     });
 
     describe('advancedRecoveryList', () => {
@@ -180,15 +213,21 @@ describe('ChannelBackupStore', () => {
             }
         );
 
-        it('sets the error flag when auth fails', async () => {
-            (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValueOnce(
-                htmlResponse(502)
-            );
-            const store = createStore();
+        it.each(authFailures)(
+            'sets the error flag without signing when auth returns %s',
+            async (_, response) => {
+                (ReactNativeBlobUtil.fetch as jest.Mock).mockResolvedValueOnce(
+                    response
+                );
+                const store = createStore();
 
-            await expect(store.advancedRecoveryList()).resolves.toBeUndefined();
-            expect(store.error).toBe(true);
-            expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledTimes(1);
-        });
+                await expect(
+                    store.advancedRecoveryList()
+                ).resolves.toBeUndefined();
+                expect(store.error).toBe(true);
+                expect(BackendUtils.signMessage).not.toHaveBeenCalled();
+                expect(ReactNativeBlobUtil.fetch).toHaveBeenCalledTimes(1);
+            }
+        );
     });
 });

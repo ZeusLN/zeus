@@ -144,11 +144,10 @@ export default class ChannelBackupStore {
                 pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
             })
         );
-        const authResponseStatus = authResponse.info().status;
-        if (authResponseStatus !== 200) {
-            throw new Error(`Auth response status code: ${authResponseStatus}`);
+        const { verification } = parseBackupsResponse(authResponse, 'Auth');
+        if (!verification) {
+            throw new Error('Auth response has no verification');
         }
-        const { verification } = authResponse.json();
 
         const messageSignData = await BackendUtils.signMessage(verification);
         const signature = messageSignData.zbase || messageSignData.signature;
@@ -216,13 +215,10 @@ export default class ChannelBackupStore {
                     pubkey: this.nodeInfoStore.nodeInfo.identity_pubkey
                 })
             );
-            const authResponseStatus = authResponse.info().status;
-            if (authResponseStatus !== 200) {
-                throw new Error(
-                    `Auth response status code: ${authResponseStatus}`
-                );
+            const { verification } = parseBackupsResponse(authResponse, 'Auth');
+            if (!verification) {
+                throw new Error('Auth response has no verification');
             }
-            const { verification } = authResponse.json();
 
             const messageSignData = await BackendUtils.signMessage(
                 verification
