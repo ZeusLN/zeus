@@ -60,6 +60,10 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
 
     renderSwap = ({ item }: { item: Swap }) => {
         const { SwapStore } = this.props;
+        // a legacy rescue's reverse amount came from the host
+        const showAmount =
+            !(item.isReverseSwap && item.imported) &&
+            (item.expectedAmount || item.isReverseSwap);
 
         return (
             <TouchableOpacity
@@ -147,7 +151,7 @@ export default class SwapsPane extends React.Component<SwapsPaneProps, {}> {
                         {item.id}
                     </Text>
                 </View>
-                {(item.expectedAmount || item.isReverseSwap) && (
+                {showAmount && (
                     <View
                         style={{
                             flexDirection: 'row',

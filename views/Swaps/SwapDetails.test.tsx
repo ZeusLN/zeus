@@ -292,20 +292,45 @@ describe('SwapDetails reverse claim', () => {
         expect(errorShown()).toBe('views.SwapDetails.lockupVerificationFailed');
     });
 
-    it('claims a rescued swap to a wallet address, not one stored from the host', async () => {
-        const { store } = await renderView({
-            imported: true,
-            destinationAddress: 'bc1qhost'
-        });
+    it.each([undefined, true])(
+        'claims a rescued swap to a wallet address despite stored marker %s',
+        async (claimAddressFromWallet) => {
+            const { store } = await renderView({
+                imported: true,
+                claimAddressFromWallet,
+                destinationAddress: 'bc1qhost'
+            });
+            nativeClaim.mockResolvedValue(undefined);
+
+            await sendConfirmedLockup();
+
+            expect(claimedTo()).toBe('bc1qwallet');
+            expect(store.resolveClaimAddress).toHaveBeenCalledWith(
+                expect.objectContaining({ destinationAddress: undefined })
+            );
+            expect(nativeClaim).toHaveBeenCalledTimes(1);
+        }
+    );
+
+    it('keeps one wallet address for a rescued swap across lockup rechecks', async () => {
+        const { store } = await renderView({ imported: true });
+        let next = 0;
+        store.resolveClaimAddress.mockImplementation(
+            async () => `bc1qwallet${next++}`
+        );
+        store.verifyReverseLockup
+            .mockResolvedValueOnce({ status: 'unconfirmed' })
+            .mockResolvedValueOnce({ status: 'unconfirmed' })
+            .mockResolvedValueOnce({ status: 'unconfirmed' })
+            .mockResolvedValue({ status: 'ok' });
         nativeClaim.mockResolvedValue(undefined);
 
         await sendConfirmedLockup();
+        await advance(3 * 60000);
 
-        expect(claimedTo()).toBe('bc1qwallet');
-        expect(store.resolveClaimAddress).toHaveBeenCalledWith(
-            expect.objectContaining({ destinationAddress: undefined })
-        );
-        expect(nativeClaim).toHaveBeenCalledTimes(1);
+        expect(store.verifyReverseLockup).toHaveBeenCalledTimes(4);
+        expect(store.resolveClaimAddress).toHaveBeenCalledTimes(1);
+        expect(claimedTo()).toBe('bc1qwallet0');
     });
 
     it('builds the claim without the host endpoint', async () => {
@@ -477,6 +502,43 @@ describe('SwapDetails reverse claim fee', () => {
             30 * 152
         );
     });
+
+    it('ignores the fee and rate stored on a rescued swap', async () => {
+        // a legacy rescue copied these from the host
+        const FeeStore = {
+            getOnchainFeesviaMempool: jest
+                .fn()
+                .mockResolvedValue({ fastestFee: 30 })
+        };
+        await renderView(
+            { imported: true, claimMinerFee: 300000, claimFeeRate: 2000 },
+            {},
+            { FeeStore }
+        );
+        nativeClaim.mockResolvedValue(undefined);
+
+        await sendConfirmedLockup();
+
+        expect(FeeStore.getOnchainFeesviaMempool).toHaveBeenCalled();
+        expect(claimedFee()).toBe(30 * 152);
+        expect(nativeClaim).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+        [false, true],
+        [true, false]
+    ])(
+        'with imported %s, shows the on-chain amount row: %s',
+        async (imported, shown) => {
+            await renderView({ imported, onchainAmount: 99100 });
+
+            const rows = screen.root!.queryAll(
+                (node: any) =>
+                    node.props.keyValue === 'views.SwapDetails.onchainAmount'
+            );
+            expect(rows.length > 0).toBe(shown);
+        }
+    );
 
     it('does not claim with a stored fee above the maximum', async () => {
         await claim({ claimMinerFee: 2000 * 152 + 1, claimFeeRate: 25 });

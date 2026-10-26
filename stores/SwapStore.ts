@@ -1110,7 +1110,9 @@ export default class SwapStore {
             lockupAddress: swap.effectiveLockupAddress,
             serverPubKey: swap.refundPubKey,
             timeoutBlockHeight: swap.timeoutBlockHeight,
-            onchainAmount: swap.onchainAmount,
+            // a legacy rescue's onchainAmount came from the host and is
+            // ignored below, so it must not fail this check either
+            onchainAmount: swap.imported ? undefined : swap.onchainAmount,
             ourPubKey: Buffer.from(ourPubKey),
             preimageHash: crypto.sha256(Buffer.from(preimageHex, 'hex'))
         });
@@ -1151,8 +1153,8 @@ export default class SwapStore {
             return { status: 'unavailable', reason: 'request-failed' };
         }
 
-        // A rescued swap's on-chain amount could only come from the host,
-        // so none is stored. Compare the lockup with this wallet's own
+        // Legacy rescues persisted arbitrary host fields, so ignore their
+        // onchainAmount even after repair. Compare with this wallet's own
         // payment for the swap instead. With no such payment, or a lockup
         // short of the floor for it, the user has to confirm the amount
         // before the preimage is revealed.
@@ -1163,7 +1165,9 @@ export default class SwapStore {
         // the host's own figure, and its invoice, which is what this wallet
         // pays, adds the same floor a rescued swap's payment does.
         const amountUnchecked = !swap.imported && !swap.onchainAmountVerified;
-        let minAmount: number | undefined = swap.onchainAmount ?? undefined;
+        let minAmount: number | undefined = swap.imported
+            ? undefined
+            : swap.onchainAmount ?? undefined;
         let paidAmount: number | undefined;
         let needsConfirmation = false;
         if (minAmount == null || amountUnchecked) {
@@ -1637,9 +1641,11 @@ export default class SwapStore {
      *
      * A rescued reverse swap has none: the destination is attached
      * client-side at creation and never sent to the host, so it cannot come
-     * back from /swap/restore. The claim path resolves one lazily and
-     * persists it here, so that a later attempt at the same swap pays out
-     * to the address already chosen rather than burning a fresh one.
+     * back from /swap/restore. The claim path takes one from the wallet and
+     * records it here. Swap.claimDestinationAddress ignores it on an
+     * imported swap, since legacy rescues stored host fields under the same
+     * keys, so SwapDetails takes a fresh address for a rescued swap once
+     * per screen session.
      *
      * Rescued swaps are written to SWAPS_KEY whatever their type and only
      * moved to REVERSE_SWAPS_KEY by the next fetchAndUpdateSwaps, so both
@@ -1858,9 +1864,10 @@ export default class SwapStore {
      * Resolves the address a reverse swap's claim should pay out to.
      *
      * A swap created on this device carries the destination the user picked.
-     * A rescued one does not, so fall back to a fresh address from the wallet
-     * in use and persist it, so a later attempt claims to the same address
-     * instead of generating another. Returns '' when there is nowhere to
+     * A rescued one does not, and Swap.claimDestinationAddress ignores any
+     * address it has stored, so it falls back to a fresh address from the
+     * wallet in use and records it. SwapDetails calls this once per screen
+     * session and reuses the result. Returns '' when there is nowhere to
      * claim to.
      */
     public resolveClaimAddress = async ({
