@@ -758,6 +758,82 @@ describe('CLNRest payment request bodies', () => {
         expect(sentBody().body).not.toHaveProperty('maxfee');
     });
 
+    // Send passes FeeLimit's fee_limit_sat through as a string
+    it('sends a fee limit of string 0 as maxfee 0 on keysend from v24.11', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v25.02' };
+
+        await cln.sendKeysend({
+            pubkey: '02ab',
+            amt: 200,
+            fee_limit_sat: '0',
+            max_fee_percent: '5.0'
+        });
+
+        expect(sentBody().body.maxfee).toBe(0);
+        expect(sentBody().body).not.toHaveProperty('maxfeepercent');
+    });
+
+    it('sends a fee limit of string 0 as 0 percent on keysend before v24.11', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.08' };
+
+        await cln.sendKeysend({
+            pubkey: '02ab',
+            amt: 200,
+            fee_limit_sat: '0',
+            max_fee_percent: '5.0'
+        });
+
+        expect(sentBody().body).toMatchObject({
+            maxfeepercent: 0,
+            exemptfee: 0
+        });
+        expect(sentBody().body).not.toHaveProperty('maxfee');
+    });
+
+    it.each([
+        ['v25.02', null],
+        ['v25.02', ''],
+        ['v25.02', '-1'],
+        ['v25.02', 'abc'],
+        ['v24.08', '-1'],
+        ['v24.08', 'abc']
+    ])(
+        'falls back to the percent on keysend on %s for a sat limit of %p',
+        async (version, limit) => {
+            mockNodeInfoStore.nodeInfo = { version };
+
+            await cln.sendKeysend({
+                pubkey: '02ab',
+                amt: 200,
+                fee_limit_sat: limit,
+                max_fee_percent: '0.5'
+            });
+
+            expect(sentBody().body).toMatchObject({
+                maxfeepercent: '0.5',
+                exemptfee: 0
+            });
+            expect(sentBody().body).not.toHaveProperty('maxfee');
+        }
+    );
+
+    // the sat limit cannot be turned into a percent without an amount
+    it('falls back to the percent on keysend before v24.11 without an amount', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.08' };
+
+        await cln.sendKeysend({
+            pubkey: '02ab',
+            fee_limit_sat: 5,
+            max_fee_percent: '0.5'
+        });
+
+        expect(sentBody().body).toMatchObject({
+            maxfeepercent: '0.5',
+            exemptfee: 0
+        });
+        expect(sentBody().body).not.toHaveProperty('maxfee');
+    });
+
     it.each([
         ['v24.11', '/v1/xpay'],
         ['v24.08', '/v1/pay']
