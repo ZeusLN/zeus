@@ -1287,7 +1287,7 @@
     "views.Settings.Payments.slideToPayThreshold": "滑动支付阈值",
     "views.Settings.Payments.timeoutSeconds": "超时（秒）",
     "views.Settings.Payments.preferredMempoolRate": "首选 Mempool 费率",
-    "views.Settings.Payments.feeLimitMethodExplainer": "手续费限额方式将默认为：当金额 ≤ 1000 聪时采用固定值，当金额 > 1000 聪时采用百分比。不过，您仍然可以在“支付请求”视图里的“设置”部分修改所使用的方式和金额。",
+    "views.Settings.Payments.feeLimitMethodExplainer": "Fee limit method will default to fixed for amounts up to 1000 sats and percentage for amounts greater than 1000 sats. You can change the method and values for an individual payment before you send it.",
     "views.Settings.Payments.defaultDonationPercentage": "默认捐助百分比",
     "views.Settings.Invoices.title": "发票设置",
     "views.Settings.Invoices.showCustomPreimageField": "显示自定义预映像字段",
