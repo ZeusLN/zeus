@@ -6,8 +6,14 @@ import {
     SEND_LABEL_PREFIX,
     findSentTransaction,
     isRequestTimeout,
+    mayHaveBeenSent,
     makeSendLabel
 } from './OnchainSendUtils';
+import {
+    markHttpStatus,
+    markNodeResponded,
+    markRestErrorResponse
+} from './PaymentLookupUtils';
 
 describe('makeSendLabel', () => {
     it('is the prefix plus 16 hex characters', () => {
@@ -148,5 +154,121 @@ describe('findSentTransaction', () => {
         } finally {
             jest.useRealTimers();
         }
+    });
+});
+
+describe('mayHaveBeenSent', () => {
+    const rpcError = (code: string, desc: string) =>
+        new Error(`rpc error: code = ${code} desc = ${desc}`);
+
+    it.each([
+        [
+            'a timeout on any backend',
+            'embedded-lnd',
+            new Error('Request timeout')
+        ],
+        [
+            'a REST failure with no response',
+            'lnd',
+            new Error('unexpected end of stream')
+        ],
+        ['a REST connection error string', 'lnd', 'connection closed'],
+        [
+            "a proxy's 502 over REST",
+            'lnd',
+            markRestErrorResponse(new Error('Bad Gateway'), undefined, 502)
+        ],
+        [
+            "a proxy's 503 in front of CLNRest",
+            'cln-rest',
+            markHttpStatus(new Error('x'), 503)
+        ],
+        ["a proxy's 504", 'lnd', markHttpStatus(new Error('x'), 504)],
+        [
+            'a CLNRest failure with no response',
+            'cln-rest',
+            new Error('Network request failed')
+        ],
+        [
+            'a dropped LNC connection',
+            'lightning-node-connect',
+            rpcError('Unavailable', 'transport is closing')
+        ],
+        [
+            'an LNC deadline',
+            'lightning-node-connect',
+            rpcError('DeadlineExceeded', 'context deadline exceeded')
+        ],
+        [
+            'a canceled LNC call',
+            'lightning-node-connect',
+            rpcError('Canceled', 'context canceled')
+        ],
+        [
+            'a broken LNC stream',
+            'lightning-node-connect',
+            rpcError('Internal', 'unexpected EOF')
+        ],
+        [
+            'an unrecognized LNC failure',
+            'lightning-node-connect',
+            new Error('mailbox closed')
+        ]
+    ])('is true for %s', (_, implementation, error) => {
+        expect(mayHaveBeenSent(error, implementation)).toBe(true);
+    });
+
+    it.each([
+        [
+            "lnd's gRPC error over REST",
+            'lnd',
+            markRestErrorResponse(new Error('insufficient funds'), 2, 500)
+        ],
+        [
+            "a proxy's 401 over REST",
+            'lnd',
+            markHttpStatus(new Error('Unauthorized'), 401)
+        ],
+        [
+            "clnrest's JSON-RPC error",
+            'cln-rest',
+            markHttpStatus(new Error('x'), 500)
+        ],
+        [
+            'a node error marked in process',
+            'embedded-lnd',
+            markNodeResponded(new Error('x'))
+        ],
+        [
+            'any embedded LND error',
+            'embedded-lnd',
+            new Error('insufficient funds')
+        ],
+        ['any LDK Node error', 'ldk-node', new Error('InsufficientFunds')],
+        [
+            "lnd's error over LNC",
+            'lightning-node-connect',
+            rpcError(
+                'Unknown',
+                'insufficient funds available to construct transaction'
+            )
+        ],
+        [
+            'an invalid LNC argument',
+            'lightning-node-connect',
+            rpcError('InvalidArgument', 'invalid address')
+        ],
+        [
+            'an LNC connection that is not ready',
+            'lightning-node-connect',
+            new Error('RPC connection not ready')
+        ],
+        [
+            'a missing LNC client',
+            'lightning-node-connect',
+            new Error('error getting client: unknown namespace')
+        ]
+    ])('is false for %s', (_, implementation, error) => {
+        expect(mayHaveBeenSent(error, implementation)).toBe(false);
     });
 });
