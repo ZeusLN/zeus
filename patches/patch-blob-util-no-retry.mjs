@@ -37,6 +37,11 @@
 // check retryOnConnectionFailure. 421 and 307/308 follow-ups can resend a
 // body, but they mean the server did not process the request.)
 //
+// This removes the resends above. It does not promise that a request reaches
+// the server once: redirect follow-ups stay on, and a request that fails
+// after the server acted on it still leaves the outcome unknown to the app
+// (ZeusLN/zeus#5468).
+//
 // Upstream: react-native-blob-util 0.25.1 (latest at time of writing).
 // Reported at https://github.com/RonRadtke/react-native-blob-util/issues/504.
 // Fixed upstream in pull/505 (master, 1.1.0) and pull/506 (support/0.25);

@@ -239,6 +239,38 @@ describe('patch-blob-util-no-retry', () => {
         );
     });
 
+    it('adds the 503 edit to a copy patched at 8f029cd88', () => {
+        // the interceptor and retry edits as that version wrote them,
+        // without the 503 edit
+        const root = makeTree(
+            fs.readFileSync(
+                path.join(
+                    __dirname,
+                    'fixtures',
+                    'ReactNativeBlobUtilReq-0.25.1-excerpt-patched-8f029cd88.java'
+                ),
+                'utf8'
+            )
+        );
+        const before = read(root);
+        expect(before).not.toContain(HTTP_RETRY_MARKER);
+
+        run(root);
+        const after = read(root);
+
+        expect(after.split(HTTP_RETRY_MARKER)).toHaveLength(2);
+        expect(after.split(MARKER)).toHaveLength(2);
+        expect(
+            after.split('// ZEUS PATCH: blob-util-no-connection-retry')
+        ).toHaveLength(2);
+        expect(after).toContain(
+            'return response.newBuilder().removeHeader("Retry-After").build();'
+        );
+        // the earlier edits are left as that version wrote them
+        expect(interceptor(after)).toBe(interceptor(before));
+        expect(readRaw(root)).not.toMatch(/[^\r]\n/);
+    });
+
     it('fails the install when the file is missing', () => {
         const root = fs.mkdtempSync(path.join(os.tmpdir(), 'blob-util-patch-'));
         roots.push(root);
