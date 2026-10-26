@@ -29,6 +29,14 @@ const lndEvent = {
     timestamp: '1700000000'
 };
 
+const unknownFieldError = (field: string) =>
+    new Error(
+        JSON.stringify({
+            code: 3,
+            message: `proto: (line 1:95): unknown field "${field}"`
+        })
+    );
+
 describe('FeeStore.getForwardingHistory', () => {
     beforeEach(() => {
         jest.resetAllMocks();
@@ -43,15 +51,7 @@ describe('FeeStore.getForwardingHistory', () => {
 
     it('retries without channel filters when the node rejects them', async () => {
         jest.mocked(BackendUtils.getForwardingHistory)
-            .mockRejectedValueOnce(
-                new Error(
-                    JSON.stringify({
-                        code: 3,
-                        message:
-                            'proto: (line 1:95): unknown field "incoming_chan_ids"'
-                    })
-                )
-            )
+            .mockRejectedValueOnce(unknownFieldError('incoming_chan_ids'))
             .mockResolvedValueOnce({
                 forwarding_events: [lndEvent],
                 last_offset_index: 1
@@ -73,6 +73,95 @@ describe('FeeStore.getForwardingHistory', () => {
         expect(store.earnedDuringTimeframe.toNumber()).toBe(1.5);
         expect(store.lastOffsetIndex).toBe(1);
         expect(store.forwardingHistoryError).toBe(false);
+        expect(store.loading).toBe(false);
+    });
+
+    it('filters events client-side after the unfiltered retry', async () => {
+        jest.mocked(BackendUtils.getForwardingHistory)
+            .mockRejectedValueOnce(unknownFieldError('incoming_chan_ids'))
+            .mockResolvedValueOnce({
+                forwarding_events: [
+                    lndEvent,
+                    { ...lndEvent, chan_id_in: '3', fee_msat: '4000' },
+                    { ...lndEvent, chan_id_out: '4', fee_msat: '8000' }
+                ]
+            });
+
+        const store = newStore();
+        store.getForwardingHistory(24, '1', '2');
+        await flush();
+        await flush();
+
+        expect(store.forwardingEvents).toHaveLength(1);
+        expect(store.forwardingEvents[0].inChannelId).toBe('1');
+        expect(store.forwardingEvents[0].outChannelId).toBe('2');
+        expect(store.earnedDuringTimeframe.toNumber()).toBe(1.5);
+    });
+
+    it('retries when only an outgoing filter is rejected', async () => {
+        jest.mocked(BackendUtils.getForwardingHistory)
+            .mockRejectedValueOnce(unknownFieldError('outgoing_chan_ids'))
+            .mockResolvedValueOnce({
+                forwarding_events: [
+                    lndEvent,
+                    { ...lndEvent, chan_id_in: '3', fee_msat: '4000' },
+                    { ...lndEvent, chan_id_out: '4', fee_msat: '8000' }
+                ]
+            });
+
+        const store = newStore();
+        store.getForwardingHistory(24, undefined, '2');
+        await flush();
+        await flush();
+
+        expect(BackendUtils.getForwardingHistory).toHaveBeenCalledTimes(2);
+        expect(
+            jest.mocked(BackendUtils.getForwardingHistory).mock.calls[0]
+        ).toEqual([24, undefined, '2']);
+        expect(
+            jest.mocked(BackendUtils.getForwardingHistory).mock.calls[1]
+        ).toEqual([24, undefined, undefined]);
+        expect(store.forwardingEvents).toHaveLength(2);
+        expect(store.earnedDuringTimeframe.toNumber()).toBe(5.5);
+        expect(store.loading).toBe(false);
+    });
+
+    it.each([
+        ['a generic error', new Error('connection refused')],
+        ['the same unknown-field error', unknownFieldError('incoming_chan_ids')]
+    ])(
+        'sets the error state when the retry fails with %s',
+        async (_label, retryError) => {
+            jest.mocked(BackendUtils.getForwardingHistory)
+                .mockRejectedValueOnce(unknownFieldError('incoming_chan_ids'))
+                .mockRejectedValueOnce(retryError)
+                // a third call means the retry looped
+                .mockResolvedValue({ forwarding_events: [] });
+
+            const store = newStore();
+            store.getForwardingHistory(24, '1', '2');
+            await flush();
+            await flush();
+            await flush();
+
+            expect(BackendUtils.getForwardingHistory).toHaveBeenCalledTimes(2);
+            expect(store.forwardingHistoryError).toBe(true);
+            expect(store.forwardingEvents).toEqual([]);
+            expect(store.loading).toBe(false);
+        }
+    );
+
+    it('sets the error state when the backend resolves undefined', async () => {
+        jest.mocked(BackendUtils.getForwardingHistory).mockResolvedValueOnce(
+            undefined
+        );
+
+        const store = newStore();
+        store.getForwardingHistory(24);
+        await flush();
+
+        expect(store.forwardingHistoryError).toBe(true);
+        expect(store.forwardingEvents).toEqual([]);
         expect(store.loading).toBe(false);
     });
 
@@ -146,6 +235,36 @@ describe('FeeStore.getForwardingHistory', () => {
         store.getForwardingHistory(24);
         await flush();
 
+        expect(store.earnedDuringTimeframe.toNumber()).toBe(2);
+    });
+
+    it('drops CLN forwards resolved before the timeframe', async () => {
+        jest.mocked(BackendUtils.isLNDBased).mockReturnValue(false);
+        const now = Math.floor(Date.now() / 1000);
+        const forward = {
+            in_channel: '1x1x0',
+            out_channel: '2x2x0',
+            in_msat: 1002000,
+            out_msat: 1000000,
+            status: 'settled'
+        };
+        jest.mocked(BackendUtils.getForwardingHistory).mockResolvedValueOnce({
+            forwards: [
+                { ...forward, fee_msat: 2000, resolved_time: now },
+                {
+                    ...forward,
+                    fee_msat: 5000,
+                    resolved_time: now - 25 * 3600
+                }
+            ]
+        });
+
+        const store = newStore();
+        store.getForwardingHistory(24);
+        await flush();
+
+        expect(store.forwardingEvents).toHaveLength(1);
+        expect(store.forwardingEvents[0].feeSat).toBe(2);
         expect(store.earnedDuringTimeframe.toNumber()).toBe(2);
     });
 });

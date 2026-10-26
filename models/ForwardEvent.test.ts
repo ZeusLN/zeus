@@ -15,6 +15,11 @@ describe('ForwardEvent.feeSat', () => {
 
     it('keeps a zero fee_msat instead of falling back to fee', () => {
         expect(new ForwardEvent({ fee: '7', fee_msat: '0' }).feeSat).toBe(0);
+        expect(new ForwardEvent({ fee: '7', fee_msat: 0 }).feeSat).toBe(0);
+    });
+
+    it('falls back to fee when fee_msat is null', () => {
+        expect(new ForwardEvent({ fee: '2', fee_msat: null }).feeSat).toBe(2);
     });
 
     it('falls back to fee in sats when fee_msat is missing', () => {
