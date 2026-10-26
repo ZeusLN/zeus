@@ -42,6 +42,9 @@ const sourceFiles = (dir: string): string[] =>
     });
 
 const RESTART_MODULE = 'react-native-restart';
+// Name the native module is registered under, so NativeModules.RNRestart
+// and TurboModuleRegistry.get('RNRestart') reach it without the package
+const NATIVE_MODULE = 'RNRestart';
 
 const isRestartModule = (node: ts.Node) =>
     ts.isStringLiteralLike(node) && node.text === RESTART_MODULE;
@@ -52,7 +55,9 @@ const isRestartModule = (node: ts.Node) =>
 // or `RNRestart.getReason()`
 const restartOffenders = (file: string): string[] => {
     const text = fs.readFileSync(file).toString('utf8');
-    if (!text.includes(RESTART_MODULE)) return [];
+    if (!text.includes(RESTART_MODULE) && !text.includes(NATIVE_MODULE)) {
+        return [];
+    }
 
     const source = ts.createSourceFile(
         file,
@@ -124,7 +129,11 @@ const restartOffenders = (file: string): string[] => {
             report(node, `import it as RNRestart`);
             return;
         }
-        if (ts.isIdentifier(node) && node.text === 'RNRestart') {
+        if (ts.isStringLiteralLike(node) && node.text === NATIVE_MODULE) {
+            report(node, 'call it through the RNRestart import');
+            return;
+        }
+        if (ts.isIdentifier(node) && node.text === NATIVE_MODULE) {
             checkIdentifier(node);
         }
         ts.forEachChild(node, visit);
