@@ -5247,9 +5247,18 @@ export default class CashuStore {
                         // Record the quote this part was paid with. For MPP
                         // parts that is the quote meltPartial created, not
                         // the planner's probe quote, which was never paid.
-                        const paidQuoteId = useRegularMelt
-                            ? meltQuote.id
-                            : (meltResult as CDKPartialMelted).quote_id;
+                        // Builds that omit the paid quote's fee reserve or
+                        // expiry fall back to the planner's.
+                        const partialResult = useRegularMelt
+                            ? undefined
+                            : (meltResult as CDKPartialMelted);
+                        const paidQuoteId = partialResult
+                            ? partialResult.quote_id
+                            : meltQuote.id;
+                        const paidFeeReserve =
+                            partialResult?.fee_reserve ?? meltQuote.fee_reserve;
+                        const paidExpiry =
+                            partialResult?.expiry ?? meltQuote.expiry;
 
                         const normalizedMeltState = normalizeMeltState(
                             meltResult.state,
@@ -5276,9 +5285,9 @@ export default class CashuStore {
                                 quote: {
                                     quote: paidQuoteId,
                                     amount: meltQuote.amount,
-                                    fee_reserve: meltQuote.fee_reserve,
+                                    fee_reserve: paidFeeReserve,
                                     state: normalizedMeltState,
-                                    expiry: meltQuote.expiry,
+                                    expiry: paidExpiry,
                                     payment_preimage: paymentPreimage || null
                                 },
                                 change: meltResult.change,

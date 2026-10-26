@@ -915,6 +915,53 @@ describe('CashuStore multi-mint payment (payLnInvoiceFromEcash)', () => {
             [undefined, undefined]
         );
     });
+
+    it('records the fee reserve and expiry of the quote meltPartial paid', async () => {
+        const store = await plannedStore();
+        cdk.meltPartial.mockImplementation(
+            async (mintUrl: string, _i: string, msat: number) => ({
+                ...paid(msat / 1000, 0),
+                quote_id: `paid-${mintUrl}`,
+                fee_reserve: mintUrl === A ? 3 : 4,
+                expiry: 1234567890
+            })
+        );
+
+        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
+
+        // The planner quoted fee 1 and expiry 9999999999 for both parts
+        expect(
+            store.payments!.map((p) => ({
+                fee_reserve: p.meltResponse.quote!.fee_reserve,
+                expiry: p.meltResponse.quote!.expiry
+            }))
+        ).toEqual([
+            { fee_reserve: 3, expiry: 1234567890 },
+            { fee_reserve: 4, expiry: 1234567890 }
+        ]);
+    });
+
+    it("keeps the planner's fee reserve and expiry when the bridge omits them", async () => {
+        const store = await plannedStore();
+        cdk.meltPartial.mockImplementation(
+            async (mintUrl: string, _i: string, msat: number) => ({
+                ...paid(msat / 1000, 0),
+                quote_id: `paid-${mintUrl}`
+            })
+        );
+
+        await store.payLnInvoiceFromEcash({ paymentRequest: INVOICE });
+
+        expect(
+            store.payments!.map((p) => ({
+                fee_reserve: p.meltResponse.quote!.fee_reserve,
+                expiry: p.meltResponse.quote!.expiry
+            }))
+        ).toEqual([
+            { fee_reserve: 1, expiry: 9999999999 },
+            { fee_reserve: 1, expiry: 9999999999 }
+        ]);
+    });
 });
 
 describe('CashuStore multi-mint selection', () => {

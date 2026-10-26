@@ -1184,10 +1184,12 @@ class CashuDevKitModule: RCTEventEmitter {
                 let prepared = try await wallet.prepareMelt(quoteId: quote.id)
                 let melted = try await prepared.confirm()
 
-                // Return the quote id so the caller can record which MPP
-                // quote this part was paid with.
+                // Return the id, fee reserve and expiry of the quote this
+                // part was paid with so the caller can record that quote.
                 var result = encodeMelted(melted)
                 result["quote_id"] = quote.id
+                result["fee_reserve"] = quote.feeReserve.value
+                result["expiry"] = quote.expiry
 
                 resolve(encodeToJson(result))
             } catch let error as FfiError {

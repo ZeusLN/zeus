@@ -113,9 +113,12 @@ export interface CDKMelted {
 }
 
 // Result of meltPartial, which creates its own MPP melt quote natively.
-// quote_id is that quote's id. Builds before it was added omit it.
+// quote_id, fee_reserve and expiry are that quote's. Builds before they
+// were added omit them.
 export interface CDKPartialMelted extends CDKMelted {
     quote_id?: string;
+    fee_reserve?: number;
+    expiry?: number;
 }
 
 // ============================================================================
