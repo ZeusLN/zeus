@@ -245,10 +245,12 @@ describe('CLNRest.request', () => {
         expect(mockDoTorRequest).toHaveBeenCalledTimes(2);
     });
 
-    it('shares one in-flight failed Tor request between identical calls', async () => {
+    it('shares one in-flight failed Tor request, then drops it from the cache', async () => {
         mockSettingsStore.enableTor = true;
         let reject: (e: Error) => void = () => {};
-        mockDoTorRequest.mockReturnValue(new Promise((_, r) => (reject = r)));
+        mockDoTorRequest
+            .mockReturnValueOnce(new Promise((_, r) => (reject = r)))
+            .mockResolvedValueOnce({ ok: true });
 
         const first = cln.postRequest('/v1/getinfo');
         const second = cln.postRequest('/v1/getinfo');
@@ -257,6 +259,11 @@ describe('CLNRest.request', () => {
         await expect(first).rejects.toThrow('tor down');
         await expect(second).rejects.toThrow('tor down');
         expect(mockDoTorRequest).toHaveBeenCalledTimes(1);
+
+        await expect(cln.postRequest('/v1/getinfo')).resolves.toEqual({
+            ok: true
+        });
+        expect(mockDoTorRequest).toHaveBeenCalledTimes(2);
     });
 });
 
