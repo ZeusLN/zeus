@@ -224,6 +224,7 @@
     "views.Settings.SocialMedia.twitter": "توییتر/اکس",
     "network.mainnet": "Mainnet",
     "network.testnet": "شبکه آزمایشی",
+    "network.testnet4": "Testnet4",
     "network.mutinynet": "Mutinynet",
     "nostr.nostr": "نوستر",
     "nostr.keys": "Nostr keys",
