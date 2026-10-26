@@ -38,6 +38,8 @@
 // body, but they mean the server did not process the request.)
 //
 // Upstream: react-native-blob-util 0.25.1 (latest at time of writing).
+// Reported at https://github.com/RonRadtke/react-native-blob-util/issues/504;
+// drop this patch once a release fixes it.
 //
 // Like the keychain patches this THROWS when the expected source is missing,
 // so a dependency bump cannot silently bring the resend back.
