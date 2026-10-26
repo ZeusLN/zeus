@@ -1145,8 +1145,10 @@ export default class CashuStore {
      * either spends an exact proof set or first swaps unspent proofs
      * into exact denominations and then melts those, so the bound is the
      * fee on every unspent proof plus the fee on one proof per bit of
-     * `inputsNeeded`. Fees are summed in ppk and rounded up once, as CDK
-     * does.
+     * `inputsNeeded`. The swap and the melt are separate mint requests
+     * and CDK rounds each one's fee up to a whole sat, so round them
+     * separately too. Only sat keysets count: the bridges return every
+     * keyset at the mint, including other units.
      */
     public estimateMeltInputFee = async (
         mintUrl: string,
@@ -1156,6 +1158,7 @@ export default class CashuStore {
         const feePpkById: Record<string, number> = {};
         let maxActivePpk = 0;
         for (const keyset of keysets) {
+            if (keyset.unit !== 'sat') continue;
             const ppk = Number(keyset.input_fee_ppk) || 0;
             feePpkById[keyset.id] = ppk;
             if (keyset.active && ppk > maxActivePpk) maxActivePpk = ppk;
@@ -1171,7 +1174,10 @@ export default class CashuStore {
             1,
             Math.ceil(inputsNeeded).toString(2).length
         );
-        return Math.ceil((swapPpk + maxActivePpk * meltProofCount) / 1000);
+        return (
+            Math.ceil(swapPpk / 1000) +
+            Math.ceil((maxActivePpk * meltProofCount) / 1000)
+        );
     };
 
     public getMintName = (mintUrl: string): string => {
@@ -5918,7 +5924,15 @@ export default class CashuStore {
                     invoice.paymentRequest
                 );
 
-                if (meltQuote.fee_reserve >= tokenAmt) {
+                // Input fees on the proofs already held at this mint and
+                // on the melt. The proofs this receive adds are not known
+                // yet, so the bound is checked again after the receive
+                const preReceiveInputFee = await this.estimateMeltInputFee(
+                    mintUrl,
+                    tokenAmt
+                );
+
+                if (meltQuote.fee_reserve + preReceiveInputFee >= tokenAmt) {
                     this.loading = false;
                     return {
                         success: false,

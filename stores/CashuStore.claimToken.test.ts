@@ -360,11 +360,145 @@ describe('CashuStore.claimToken toSelfCustody on a mint with input fees', () => 
             'stores.CashuStore.claimedButNotSwept'
         );
     });
+
+    it('does not consume the token when input fees exceed its amount', async () => {
+        const { store, invoicesStore } = makeStore();
+        invoicesStore.createInvoice.mockResolvedValue({
+            paymentRequest: 'lnbc1invoice'
+        });
+        (store.createMeltQuoteCDK as jest.Mock).mockResolvedValue({
+            fee_reserve: 0
+        });
+        // 990 held proofs + 10 melt proofs (bit length of 1000) at 1 sat
+        // each leave nothing to sweep
+        mockFeeMint(new Array(990).fill(1));
+
+        const result = await store.claimToken(
+            ENCODED_TOKEN,
+            makeDecoded(),
+            true
+        );
+
+        expect(store.receiveTokenCDK).not.toHaveBeenCalled();
+        expect(result.success).toBe(false);
+        expect(result.errorMessage).toBe('stores.CashuStore.feeExceedsAmt');
+    });
+
+    it('does not consume the token when the input fee estimate fails', async () => {
+        const { store, invoicesStore } = makeStore();
+        invoicesStore.createInvoice.mockResolvedValue({
+            paymentRequest: 'lnbc1invoice'
+        });
+        (store.createMeltQuoteCDK as jest.Mock).mockResolvedValue({
+            fee_reserve: 0
+        });
+        (CashuDevKit.getMintKeysets as jest.Mock).mockRejectedValue(
+            new Error('keysets unavailable')
+        );
+
+        const result = await store.claimToken(
+            ENCODED_TOKEN,
+            makeDecoded(),
+            true
+        );
+
+        expect(store.receiveTokenCDK).not.toHaveBeenCalled();
+        expect(result.success).toBe(false);
+    });
+
+    it('warns when the fee-adjusted invoice cannot be created after the receive', async () => {
+        const { store, invoicesStore } = makeStore();
+        invoicesStore.createInvoice
+            .mockResolvedValueOnce({ paymentRequest: 'lnbc1invoice' })
+            .mockRejectedValueOnce(new Error('node offline'));
+        (store.createMeltQuoteCDK as jest.Mock).mockResolvedValue({
+            fee_reserve: 2
+        });
+        (store.receiveTokenCDK as jest.Mock).mockResolvedValue(994);
+        mockFeeMint(RECEIVED_994_PROOFS);
+
+        const result = await store.claimToken(
+            ENCODED_TOKEN,
+            makeDecoded(),
+            true
+        );
+
+        expect(store.receiveTokenCDK).toHaveBeenCalledTimes(1);
+        expect(store.meltCDK).not.toHaveBeenCalled();
+        expect(result).toEqual({
+            success: true,
+            errorMessage: '',
+            warningMessage: 'stores.CashuStore.claimedButNotSwept'
+        });
+    });
+
+    it.each([
+        ['getMintKeysets', CashuDevKit.getMintKeysets],
+        ['getUnspentProofs', CashuDevKit.getUnspentProofs]
+    ])(
+        'warns when %s fails in the fee estimate after the receive',
+        async (_name, method) => {
+            const { store, invoicesStore } = makeStore();
+            invoicesStore.createInvoice.mockResolvedValue({
+                paymentRequest: 'lnbc1invoice'
+            });
+            (store.createMeltQuoteCDK as jest.Mock).mockResolvedValue({
+                fee_reserve: 2
+            });
+            (store.receiveTokenCDK as jest.Mock).mockResolvedValue(994);
+            mockFeeMint(RECEIVED_994_PROOFS);
+            // The pre-receive estimate succeeds, the one after fails
+            (method as jest.Mock)
+                .mockImplementationOnce(
+                    (method as jest.Mock).getMockImplementation()!
+                )
+                .mockRejectedValueOnce(new Error('database locked'));
+
+            const result = await store.claimToken(
+                ENCODED_TOKEN,
+                makeDecoded(),
+                true
+            );
+
+            expect(store.receiveTokenCDK).toHaveBeenCalledTimes(1);
+            expect(store.meltCDK).not.toHaveBeenCalled();
+            expect(result).toEqual({
+                success: true,
+                errorMessage: '',
+                warningMessage: 'stores.CashuStore.claimedButNotSwept'
+            });
+        }
+    );
 });
 
 describe('CashuStore.estimateMeltInputFee', () => {
     beforeEach(() => {
         jest.clearAllMocks();
+    });
+
+    it('rounds the swap and melt fees separately', async () => {
+        const { store } = makeStore();
+        mockFeeMint([1024], 50);
+
+        // Separate mint requests each charge at least one sat.
+        await expect(store.estimateMeltInputFee(MINT_URL, 1024)).resolves.toBe(
+            2
+        );
+    });
+
+    it('ignores active keysets in other currency units', async () => {
+        const { store } = makeStore();
+        (CashuDevKit.getMintKeysets as jest.Mock).mockResolvedValue([
+            { id: FEE_KEYSET, unit: 'sat', active: true, input_fee_ppk: 0 },
+            { id: 'usd-keyset', unit: 'usd', active: true, input_fee_ppk: 1000 }
+        ]);
+        (CashuDevKit.getUnspentProofs as jest.Mock).mockResolvedValue([
+            { amount: 1024, keyset_id: FEE_KEYSET }
+        ]);
+
+        await expect(store.estimateMeltInputFee(MINT_URL, 1024)).resolves.toBe(
+            0
+        );
     });
 
     it('is zero without fetching proofs when no keyset charges fees', async () => {
@@ -390,14 +524,14 @@ describe('CashuStore.estimateMeltInputFee', () => {
         );
     });
 
-    it('sums fractional ppk before rounding up once', async () => {
+    it('rounds fractional swap and melt fees up separately', async () => {
         const { store } = makeStore();
-        mockFeeMint(RECEIVED_994_PROOFS, 100);
+        mockFeeMint([64, 32, 1], 100);
 
-        // (6 + 10) * 100 ppk = 1600 ppk -> 2 sats
-        await expect(store.estimateMeltInputFee(MINT_URL, 994)).resolves.toBe(
-            2
-        );
+        // swap: 3 * 100 = 300 ppk -> 1 sat, melt: 7 * 100 = 700 ppk -> 1
+        // sat. Rounding the 1000 ppk sum once gives 1, and a sweep sized
+        // on that fails with InsufficientFunds.
+        await expect(store.estimateMeltInputFee(MINT_URL, 97)).resolves.toBe(2);
     });
 
     it('charges proofs from unknown keysets at the active keyset rate', async () => {
