@@ -1,7 +1,11 @@
 // TransactionsStore.sendPayment wired to the real NostrWalletConnect backend
 // (only the SDK's NIP-47 client is stubbed), so these cover what the send
 // screen sees for each wallet reply
-import { Nip47ReplyTimeoutError, Nip47WalletError } from '@getalby/sdk';
+import {
+    Nip47PublishTimeoutError,
+    Nip47ReplyTimeoutError,
+    Nip47WalletError
+} from '@getalby/sdk';
 import { sha256 } from 'js-sha256';
 
 const mockSettingsStore: any = { settings: { locale: 'en' } };
@@ -116,6 +120,8 @@ describe('TransactionsStore.sendPayment on Nostr Wallet Connect', () => {
         expect(store.payment_preimage).toBe(PREIMAGE);
         expect(store.payment_hash).toBe(PAYMENT_HASH);
         expect(store.isIncomplete).toBe(false);
+        // same key Payment.getNoteKey gives the payment in the activity list
+        expect(store.noteKey).toBe(`note-${PAYMENT_HASH}`);
     });
 
     it('records a reply without a preimage as in transit, not complete', async () => {
@@ -130,13 +136,21 @@ describe('TransactionsStore.sendPayment on Nostr Wallet Connect', () => {
         expect(store.status).toBe('IN_FLIGHT');
         expect(store.payment_preimage).toBe('');
         expect(store.payment_hash).toBe(PAYMENT_HASH);
+        expect(store.noteKey).toBe(`note-${PAYMENT_HASH}`);
     });
 
-    it('records a wallet reply timeout as in transit, not an error', async () => {
-        const { store, payInvoice } = await setup();
-        payInvoice.mockRejectedValue(
+    it.each([
+        [
+            'reply timeout',
             new Nip47ReplyTimeoutError('reply timeout: event abc', 'INTERNAL')
-        );
+        ],
+        [
+            'publish timeout',
+            new Nip47PublishTimeoutError('publish timeout: abc', 'INTERNAL')
+        ]
+    ])('records a wallet %s as in transit, not an error', async (_, error) => {
+        const { store, payInvoice } = await setup();
+        payInvoice.mockRejectedValue(error);
 
         store.sendPayment({ payment_request: SPEC_INVOICE });
         await flushPromises();
@@ -145,6 +159,7 @@ describe('TransactionsStore.sendPayment on Nostr Wallet Connect', () => {
         expect(store.error).toBe(false);
         expect(store.error_msg).toBeNull();
         expect(store.status).toBe('IN_FLIGHT');
+        expect(store.noteKey).toBe(`note-${PAYMENT_HASH}`);
     });
 
     it('surfaces a wallet error as a failed payment', async () => {

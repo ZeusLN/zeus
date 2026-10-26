@@ -216,13 +216,10 @@ export default class SendingLightning extends React.Component<
                 return;
             }
 
-            // The donation may still complete (NWC reply timeout or no
-            // preimage yet), so don't report it as donated
-            if (status === 'IN_FLIGHT') {
-                this.setState({
-                    payingDonation: false,
-                    amountDonated: parseFloat(donationAmount ?? '')
-                });
+            // A payment still pending (NWC timeout or no preimage yet) has
+            // not settled: record no amount or preimage for it
+            if (typeof status === 'string' && status === 'IN_FLIGHT') {
+                this.setState({ payingDonation: false });
                 return;
             }
 

@@ -443,6 +443,7 @@ describe('SendingLightning donation', () => {
             donationHandled: false
         });
         expect(hostProps('DonationInfoModal').donationPreimage).toBe('');
+        expect(hostProps('DonationInfoModal').amountDonated).toBeNull();
     });
 
     it('tries once when the donation LNURL returns no invoice', async () => {

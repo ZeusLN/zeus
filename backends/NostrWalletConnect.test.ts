@@ -3,8 +3,10 @@
 // assertions cover the request that would be sent to the wallet service
 // (field names, msat units) and the decoded result Zeus gets back.
 import {
+    Nip47PublishError,
     Nip47PublishTimeoutError,
     Nip47ReplyTimeoutError,
+    Nip47ResponseDecodingError,
     Nip47WalletError,
     NostrWebLNProvider
 } from '@getalby/sdk';
@@ -595,25 +597,46 @@ describe('NostrWalletConnect.payLightningInvoice', () => {
         ).rejects.toMatchObject({ message, code });
     });
 
-    it('reports a reply timeout as in flight, since the wallet may still pay', async () => {
-        const { backend, client } = await setup();
-        client.payInvoice.mockRejectedValue(
+    it.each([
+        [
+            'a reply timeout',
             new Nip47ReplyTimeoutError('reply timeout: event abc', 'INTERNAL')
-        );
+        ],
+        [
+            // the SDK stops waiting but does not cancel the publish
+            'a publish timeout',
+            new Nip47PublishTimeoutError('publish timeout: abc', 'INTERNAL')
+        ],
+        [
+            // the wallet answered, but the outcome can't be read
+            'an unparseable reply',
+            new Nip47ResponseDecodingError(
+                'failed to deserialize response',
+                'INTERNAL'
+            )
+        ]
+    ])(
+        'reports %s as in flight, since the wallet may still pay',
+        async (_, error) => {
+            const { backend, client } = await setup();
+            client.payInvoice.mockRejectedValue(error);
 
-        await expect(
-            backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
-        ).resolves.toEqual({
-            status: 'IN_FLIGHT',
-            payment_hash: PAY_HASH
-        });
-        expect(client.payInvoice).toHaveBeenCalledTimes(1);
-    });
+            await expect(
+                backend.payLightningInvoice({ payment_request: SPEC_INVOICE })
+            ).resolves.toEqual({
+                status: 'IN_FLIGHT',
+                payment_hash: PAY_HASH
+            });
+            expect(client.payInvoice).toHaveBeenCalledTimes(1);
+        }
+    );
 
-    it('still rejects on a publish timeout, since the wallet never got the request', async () => {
+    it('still rejects when no relay accepted the request', async () => {
+        // the SDK reports refused, failed and late-acknowledged publishes
+        // with the same error, so this one is left as a failure
         const { backend, client } = await setup();
-        const error = new Nip47PublishTimeoutError(
-            'publish timeout: abc',
+        const error = new Nip47PublishError(
+            'failed to publish: AggregateError: All promises were rejected',
             'INTERNAL'
         );
         client.payInvoice.mockRejectedValue(error);
@@ -624,8 +647,8 @@ describe('NostrWalletConnect.payLightningInvoice', () => {
     });
 
     it('does not treat another error with the same code as a reply timeout', async () => {
-        // reply and publish timeouts share the INTERNAL code, so only the
-        // error class tells them apart
+        // the SDK's timeout and decoding errors share the INTERNAL code,
+        // so only the error class tells them apart
         const { backend, client } = await setup();
         const error = new Nip47WalletError(
             'reply timeout: event abc',

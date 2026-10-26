@@ -1,4 +1,9 @@
-import { Nip47ReplyTimeoutError, NostrWebLNProvider } from '@getalby/sdk';
+import {
+    Nip47PublishTimeoutError,
+    Nip47ReplyTimeoutError,
+    Nip47ResponseDecodingError,
+    NostrWebLNProvider
+} from '@getalby/sdk';
 import BigNumber from 'bignumber.js';
 import { sha256 } from 'js-sha256';
 
@@ -96,17 +101,31 @@ export default class NostrWalletConnect {
         try {
             ({ preimage } = await this.nwc.sendPayment(data.payment_request));
         } catch (error) {
-            // The request reached the relay but the wallet did not answer
-            // in time. It may still complete the payment, so this is not a
-            // failure. Publish timeouts and wallet errors still reject.
-            if (error instanceof Nip47ReplyTimeoutError) {
+            // These errors leave the outcome unknown, so the payment may
+            // still complete:
+            // - reply timeout: the wallet did not answer in time.
+            // - publish timeout: the SDK stops waiting after 5 s but does
+            //   not cancel the publish, so the request can still reach the
+            //   wallet once the relay connects.
+            // - response decoding error: the wallet answered with something
+            //   that could not be parsed.
+            // Nip47PublishError still rejects. It also covers a relay that
+            // took the event but acknowledged it late, but the SDK drops
+            // the per-relay reasons, so it can't be told apart from a relay
+            // that refused the event. A retry reuses the payment hash.
+            // Wallet errors reject unchanged.
+            if (
+                error instanceof Nip47ReplyTimeoutError ||
+                error instanceof Nip47PublishTimeoutError ||
+                error instanceof Nip47ResponseDecodingError
+            ) {
                 return { status: 'IN_FLIGHT', payment_hash };
             }
             throw error;
         }
 
-        // NIP-47 wallets (including Zeus's own NWC service) answer with an
-        // empty preimage while the HTLC is still out
+        // A reply with no preimage is not proof of payment. Zeus's own NWC
+        // service answers with an empty preimage while the HTLC is still out
         if (!preimage) {
             return { status: 'IN_FLIGHT', payment_hash };
         }
