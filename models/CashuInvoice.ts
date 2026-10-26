@@ -196,7 +196,10 @@ export default class CashuInvoice extends BaseModel {
             this.originalTimeUntilExpiryInSeconds;
 
         if (originalTimeUntilExpiryInSeconds == null) {
-            return localeString('models.Invoice.never');
+            this.formattedOriginalTimeUntilExpiry = localeString(
+                'models.Invoice.never'
+            );
+            return;
         }
 
         const originalTimeUntilExpiryInMs =
