@@ -126,6 +126,7 @@ describe('ActivityFilter', () => {
         'views.ActivityFilter.endDate',
         'views.ActivityFilter.memo',
         'views.ActivityFilter.minimumAmount',
+        'views.ActivityFilter.maximumAmount',
         'general.sent'
     ])('renders the %s row as a label and one control group', async (label) => {
         const tree = await renderFilter();
