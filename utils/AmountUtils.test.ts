@@ -1264,6 +1264,9 @@ describe('AmountUtils', () => {
             expect(getFeeLimitSatsFromPercent('5.0', undefined)).toBe('');
             expect(getFeeLimitSatsFromPercent('5.0', '')).toBe('');
             expect(getFeeLimitSatsFromPercent('5.0', 0)).toBe('');
+            expect(getFeeLimitSatsFromPercent('5.0', '0')).toBe('');
+            expect(getFeeLimitSatsFromPercent('5.0', '-9')).toBe('');
+            expect(getFeeLimitSatsFromPercent('5.0', -9)).toBe('');
         });
 
         it('returns an empty limit, not a 0 sat cap, for an unusable input', () => {
@@ -1271,6 +1274,10 @@ describe('AmountUtils', () => {
             expect(getFeeLimitSatsFromPercent('abc', '1000')).toBe('');
             expect(getFeeLimitSatsFromPercent('5.0', 'abc')).toBe('');
             expect(getFeeLimitSatsFromPercent('-5', '1000')).toBe('');
+            // A negative fraction of a sat rounds up to -0, which must not
+            // become a 0 sat cap
+            expect(getFeeLimitSatsFromPercent('-5', '9')).toBe('');
+            expect(getFeeLimitSatsFromPercent('-0.1', '100')).toBe('');
             expect(getFeeLimitSatsFromPercent('Infinity', '1000')).toBe('');
         });
 

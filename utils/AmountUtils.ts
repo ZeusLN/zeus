@@ -417,25 +417,23 @@ export function feeLimitSatsToMaxRoutingFeeMsat(
  *
  * @param maxFeePercent - Fee limit as a percent of the amount; commas are
  * accepted as the decimal separator
- * Returns '' when either input is missing, not a number or negative, the
- * same as an empty fixed fee limit field, so the payment falls back to the
- * default fee limit instead of a hard cap of zero.
- *
  * @param satAmount - Payment amount in satoshis
- * @returns Fee limit in whole satoshis, or '' if no usable limit applies
+ * @returns Fee limit in whole satoshis, or '' when the amount is missing or
+ * not above 0, or the percent is missing, not a number or negative
  */
 export function getFeeLimitSatsFromPercent(
     maxFeePercent: string,
     satAmount?: string | number
 ): string {
-    if (!satAmount) return '';
-    const feeLimitSats = new BigNumber(maxFeePercent.replace(/,/g, '.'))
+    const percent = new BigNumber(maxFeePercent.replace(/,/g, '.'));
+    const amount = new BigNumber(satAmount ?? NaN);
+    if (!percent.isFinite() || percent.lt(0)) return '';
+    if (!amount.isFinite() || !amount.gt(0)) return '';
+    return percent
         .div(100)
-        .times(satAmount)
-        .integerValue(BigNumber.ROUND_CEIL);
-    return feeLimitSats.isFinite() && feeLimitSats.gte(0)
-        ? feeLimitSats.toFixed()
-        : '';
+        .times(amount)
+        .integerValue(BigNumber.ROUND_CEIL)
+        .toFixed();
 }
 
 /**

@@ -11,6 +11,7 @@ import SettingsStore from '../stores/SettingsStore';
 import InvoicesStore from '../stores/InvoicesStore';
 
 import BackendUtils from '../utils/BackendUtils';
+import FeeUtils from '../utils/FeeUtils';
 import { getFeeLimitSatsFromPercent } from '../utils/AmountUtils';
 import { localeString } from '../utils/LocaleUtils';
 import { themeColor } from '../utils/ThemeUtils';
@@ -136,8 +137,16 @@ export default class FeeLimit extends React.Component<
         }
     }
 
-    calculatePercentAmount = (satAmount?: string | number) =>
-        getFeeLimitSatsFromPercent(this.state.maxFeePercent, satAmount);
+    calculatePercentAmount = (satAmount?: string | number) => {
+        const percentAmount = getFeeLimitSatsFromPercent(
+            this.state.maxFeePercent,
+            satAmount
+        );
+        // An empty or unusable percent falls back to the default fee limit,
+        // so the amount shown is the cap that is sent on every payment path
+        if (percentAmount || !(Number(satAmount) > 0)) return percentAmount;
+        return FeeUtils.calculateDefaultRoutingFee(Number(satAmount));
+    };
 
     feeRecommendation = () => {
         const { feeLimitSat } = this.state;

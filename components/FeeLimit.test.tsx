@@ -146,7 +146,11 @@ describe('FeeLimit percentage', () => {
         ['5.0', 9, '1'],
         ['0', 10_000, '0'],
         ['1', 0, '0'],
-        ['abc', 10_000, '0']
+        // An unusable percent shows the default limit, 5% above 1000 sats
+        ['abc', 10_000, '500'],
+        ['-5', 10_000, '500'],
+        // and the whole amount at or below 1000 sats
+        ['-0.1', 45, '45']
     ])(
         'turns %p of %p sats into %p sats',
         async (percent, satAmount, limit) => {
@@ -159,32 +163,43 @@ describe('FeeLimit percentage', () => {
         }
     );
 
+    it('reports an empty limit, not a 0 sat cap, when there is no amount', async () => {
+        const { onFeeLimitSatChange } = await renderFeeLimit({
+            satAmount: 0,
+            feeOption: 'percent',
+            payments: { defaultFeePercentage: '1' }
+        });
+
+        expect(onFeeLimitSatChange).toHaveBeenLastCalledWith('');
+    });
+
     it.each([
-        ['1', 0],
-        ['abc', 10_000]
+        ['abc', 10_000, '500'],
+        ['-5', 9, '9'],
+        ['-0.1', 100, '100']
     ])(
-        'reports an empty limit, not a 0 sat cap, for %p of %p sats',
-        async (percent, satAmount) => {
+        'reports the default limit, not a 0 sat cap, for %p of %p sats',
+        async (percent, satAmount, limit) => {
             const { onFeeLimitSatChange } = await renderFeeLimit({
                 satAmount,
                 feeOption: 'percent',
                 payments: { defaultFeePercentage: percent }
             });
 
-            expect(onFeeLimitSatChange).toHaveBeenLastCalledWith('');
+            expect(onFeeLimitSatChange).toHaveBeenLastCalledWith(limit);
         }
     );
 
-    it('reports an empty limit when the percentage is cleared', async () => {
+    it('shows and reports the default limit when the percentage is cleared', async () => {
         const { onFeeLimitSatChange } = await renderFeeLimit({
-            satAmount: 10_000,
+            satAmount: 45,
             feeOption: 'percent'
         });
 
         await fireEvent.changeText(percentField(), '');
 
-        expect(percentShown()).toBe('0');
-        expect(onFeeLimitSatChange).toHaveBeenLastCalledWith('');
+        expect(percentShown()).toBe('45');
+        expect(onFeeLimitSatChange).toHaveBeenLastCalledWith('45');
     });
 
     it('reports a 0 sat limit for an explicit 0%', async () => {
