@@ -1,5 +1,10 @@
 jest.mock('../stores/Stores', () => ({}));
 jest.mock('react-native-blob-util', () => ({}));
+jest.mock('../utils/TorUtils', () => ({
+    doTorRequest: jest.fn(),
+    doTorRequestRaw: jest.fn(),
+    RequestMethod: { GET: 'GET', POST: 'POST', DELETE: 'DELETE' }
+}));
 jest.mock('../utils/UrlUtils', () => ({}));
 jest.mock('../utils/ErrorUtils', () => ({
     errorToUserFriendly: (e: any) => e?.message ?? String(e)
