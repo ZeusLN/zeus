@@ -1287,7 +1287,7 @@
     "views.Settings.Payments.slideToPayThreshold": "Geser untuk Membayar Ambang Batas",
     "views.Settings.Payments.timeoutSeconds": "Batas waktu (detik)",
     "views.Settings.Payments.preferredMempoolRate": "Biaya Mempool yang Diharapkan",
-    "views.Settings.Payments.feeLimitMethodExplainer": "Metode batas biaya akan digunakan secara default: nominal hingga 1000 sat ditetapkan dengan jumlah tetap, sedangkan nominal di atas 1000 sat ditetapkan dengan persentase. Anda bisa mengubah metode dan nilainya di bagian Pengaturan pada tampilan Permintaan Pembayaran.",
+    "views.Settings.Payments.feeLimitMethodExplainer": "Fee limit method will default to fixed for amounts up to 1000 sats and percentage for amounts greater than 1000 sats. You can change the method and values for an individual payment before you send it.",
     "views.Settings.Payments.defaultDonationPercentage": "Persentase Donasi Default",
     "views.Settings.Invoices.title": "Pengaturan faktur",
     "views.Settings.Invoices.showCustomPreimageField": "Tampilkan kolom preimage kustom",
