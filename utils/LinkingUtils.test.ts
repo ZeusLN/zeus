@@ -232,3 +232,187 @@ describe('LinkingUtils share intents', () => {
         ).not.toHaveBeenCalled();
     });
 });
+
+describe('LinkingUtils.handleInitialUrl', () => {
+    const { Linking, NativeModules, Platform } = require('react-native');
+    const { processSharedQRImageFast } = require('./ShareIntentProcessor');
+    const originalOS = Platform.OS;
+    const payload = {
+        base64Image: 'QRIMAGE',
+        requiresAuth: false,
+        requiresWalletSelection: false
+    };
+
+    const mockInitialUrl = (url: string | null) =>
+        jest.spyOn(Linking, 'getInitialURL').mockResolvedValue(url);
+
+    beforeEach(() => {
+        jest.clearAllMocks();
+        mockLoginRequired = false;
+        mockHandleAnythingResult = ['PaymentRequest', {}];
+        Platform.OS = 'android';
+        LinkingUtils.resetShareIntentFlag();
+        NativeModules.MobileTools = {
+            getIntentNfcData: jest.fn().mockResolvedValue(null),
+            clearSharedIntent: jest.fn().mockResolvedValue(true)
+        };
+        processSharedQRImageFast.mockResolvedValue(null);
+    });
+
+    afterEach(() => {
+        Platform.OS = originalOS;
+    });
+
+    // LinkingUtils is a singleton and lastHandledUrl carries over between
+    // tests, so each test uses its own URL.
+
+    it('handles the initial URL once when the Wallet view mounts again', async () => {
+        mockInitialUrl('lightning:lnbc1once');
+        const navigation = makeNavigation(['Wallet']);
+
+        await LinkingUtils.handleInitialUrl(navigation as any);
+        await flushPromises();
+        await LinkingUtils.handleInitialUrl(navigation as any);
+        await flushPromises();
+
+        expect(navigation.navigate).toHaveBeenCalledTimes(1);
+        expect(navigation.navigate).toHaveBeenCalledWith('PaymentRequest', {});
+    });
+
+    it('handles a new initial URL after a different one was handled', async () => {
+        const navigation = makeNavigation(['Wallet']);
+
+        mockInitialUrl('lightning:lnbc1first');
+        await LinkingUtils.handleInitialUrl(navigation as any);
+        await flushPromises();
+        mockInitialUrl('lightning:lnbc1second');
+        await LinkingUtils.handleInitialUrl(navigation as any);
+        await flushPromises();
+
+        expect(navigation.navigate).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not mark a link deferred behind login as handled', async () => {
+        mockLoginRequired = true;
+        mockInitialUrl('lightning:lnbc1deferred');
+        const navigation = makeNavigation(['Wallet']);
+
+        await LinkingUtils.handleInitialUrl(navigation as any);
+        await flushPromises();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+
+        mockLoginRequired = false;
+        LinkingUtils.processPendingDeepLink(navigation as any);
+        await flushPromises();
+        expect(navigation.navigate).toHaveBeenCalledTimes(1);
+
+        // handled now, so a remount does not open it a second time
+        await LinkingUtils.handleInitialUrl(navigation as any);
+        await flushPromises();
+        expect(navigation.navigate).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not read NFC or share intents when there is a URL', async () => {
+        mockInitialUrl('lightning:lnbc1withurl');
+        const navigation = makeNavigation(['Wallet']);
+
+        await LinkingUtils.handleInitialUrl(navigation as any);
+        await flushPromises();
+
+        expect(
+            NativeModules.MobileTools.getIntentNfcData
+        ).not.toHaveBeenCalled();
+        expect(processSharedQRImageFast).not.toHaveBeenCalled();
+    });
+
+    it('handles NFC data on Android when there is no URL', async () => {
+        mockInitialUrl(null);
+        NativeModules.MobileTools.getIntentNfcData.mockResolvedValue(
+            'lightning:lnbc1nfc'
+        );
+        const navigation = makeNavigation(['Wallet']);
+
+        await LinkingUtils.handleInitialUrl(navigation as any);
+        await flushPromises();
+
+        expect(navigation.navigate).toHaveBeenCalledWith('PaymentRequest', {});
+        expect(processSharedQRImageFast).not.toHaveBeenCalled();
+    });
+
+    it('opens ShareIntentProcessing for a shared image on Android when there is no URL', async () => {
+        mockInitialUrl(null);
+        processSharedQRImageFast.mockResolvedValue({
+            success: true,
+            route: 'ShareIntentProcessing',
+            params: payload
+        });
+        const navigation = makeNavigation(['Wallet']);
+
+        await LinkingUtils.handleInitialUrl(navigation as any);
+
+        expect(navigation.navigate).toHaveBeenCalledWith(
+            'ShareIntentProcessing',
+            payload
+        );
+    });
+
+    it('reads a new shared image on each call', async () => {
+        // handleInitialUrl resets shareIntentProcessed, so a share that
+        // arrives after the first one is not skipped
+        mockInitialUrl(null);
+        processSharedQRImageFast.mockResolvedValue({
+            success: true,
+            route: 'ShareIntentProcessing',
+            params: payload
+        });
+        const navigation = makeNavigation(['Wallet']);
+
+        await LinkingUtils.handleInitialUrl(navigation as any);
+        await LinkingUtils.handleInitialUrl(navigation as any);
+
+        expect(navigation.navigate).toHaveBeenCalledTimes(2);
+    });
+
+    it('does nothing on Android when there is no URL, NFC tag or share', async () => {
+        mockInitialUrl(null);
+        const navigation = makeNavigation(['Wallet']);
+
+        await LinkingUtils.handleInitialUrl(navigation as any);
+        await flushPromises();
+
+        expect(NativeModules.MobileTools.getIntentNfcData).toHaveBeenCalled();
+        expect(processSharedQRImageFast).toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('does not read Android intents on iOS when there is no URL', async () => {
+        Platform.OS = 'ios';
+        mockInitialUrl(null);
+        const navigation = makeNavigation(['Wallet']);
+
+        await LinkingUtils.handleInitialUrl(navigation as any);
+
+        expect(
+            NativeModules.MobileTools.getIntentNfcData
+        ).not.toHaveBeenCalled();
+        expect(processSharedQRImageFast).not.toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+    });
+
+    it('does not treat a failed iOS share URL as a deep link', async () => {
+        Platform.OS = 'ios';
+        mockInitialUrl('zeusln://share');
+        processSharedQRImageFast.mockResolvedValue({
+            success: false,
+            error: 'utils.shareIntent.processingError'
+        });
+        const navigation = makeNavigation(['Wallet']);
+
+        await LinkingUtils.handleInitialUrl(navigation as any);
+        await flushPromises();
+
+        expect(processSharedQRImageFast).toHaveBeenCalled();
+        expect(navigation.navigate).not.toHaveBeenCalled();
+        expect(navigation.popTo).not.toHaveBeenCalled();
+    });
+});
