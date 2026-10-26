@@ -124,7 +124,8 @@ export default class LND {
                                         errorInfo.message ||
                                         errorInfo.error
                                 ),
-                                grpcCode
+                                grpcCode,
+                                response.info().status
                             );
                         } catch (e) {
                             if (
@@ -133,7 +134,8 @@ export default class LND {
                             ) {
                                 throw markRestErrorResponse(
                                     new Error(response.data),
-                                    grpcCode
+                                    grpcCode,
+                                    response.info().status
                                 );
                             } else {
                                 throw markRestErrorResponse(
@@ -142,7 +144,8 @@ export default class LND {
                                             'backends.LND.restReq.connectionError'
                                         )
                                     ),
-                                    grpcCode
+                                    grpcCode,
+                                    response.info().status
                                 );
                             }
                         }

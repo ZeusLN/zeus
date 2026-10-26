@@ -202,5 +202,21 @@ describe('doTorRequest errors', () => {
 
         expect(error.message).toBe('circuit closed');
         expect(isNodeResponse(error)).toBe(false);
+        expect(error.httpStatus).toBeUndefined();
+    });
+
+    it.each([
+        ['a gRPC error', 500, '{"code":2,"message":"invoice expired"}'],
+        ["a proxy's error page", 502, '<html>Bad Gateway</html>']
+    ])('records the HTTP status of %s', async (_, status_code, body) => {
+        (RnTor.httpPost as jest.Mock).mockResolvedValue({ status_code, body });
+
+        const error = await doTorRequest(
+            'https://node.onion:8080/v1/transactions',
+            RequestMethod.POST,
+            '{}'
+        ).catch((e: any) => e);
+
+        expect(error.httpStatus).toBe(status_code);
     });
 });

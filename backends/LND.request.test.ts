@@ -292,6 +292,26 @@ describe('LND request core', () => {
                 'Network request failed'
             );
         });
+
+        it.each([
+            ['a gRPC error body', 500, '{"code":2,"message":"x"}'],
+            ['a non-JSON body', 502, 'Bad Gateway'],
+            ['an empty body', 500, '']
+        ])('records the HTTP status of %s', async (_, status, body) => {
+            mockFetch.mockResolvedValue(
+                response(status, body, () => JSON.parse(body))
+            );
+            const error = await lnd.getRequest('/v1/x').catch((e) => e);
+
+            expect(error.httpStatus).toBe(status);
+        });
+
+        it('records no HTTP status for a transport rejection', async () => {
+            mockFetch.mockRejectedValue(new Error('unexpected end of stream'));
+            const error = await lnd.getRequest('/v1/x').catch((e) => e);
+
+            expect(error.httpStatus).toBeUndefined();
+        });
     });
 
     describe('transport timeout race (non-Tor)', () => {
