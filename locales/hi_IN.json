@@ -1287,7 +1287,7 @@
     "views.Settings.Payments.slideToPayThreshold": "स्लाइड टू पे थ्रेशोल्ड",
     "views.Settings.Payments.timeoutSeconds": "टाइमआउट (सेकंड)",
     "views.Settings.Payments.preferredMempoolRate": "पसंदीदा मेमपूल दर",
-    "views.Settings.Payments.feeLimitMethodExplainer": "शुल्क सीमा विधि डिफॉल्ट रूप से 1000 सैट्स तक की राशि के लिए निश्चित होगी और 1000 सैट्स से अधिक की राशि के लिए प्रतिशत होगी। आप भुगतान अनुरोध दृश्य के सेटिंग्स अनुभाग में किस विधि और मान का उपयोग करना है, इसे बदल सकेंगे।",
+    "views.Settings.Payments.feeLimitMethodExplainer": "Fee limit method will default to fixed for amounts up to 1000 sats and percentage for amounts greater than 1000 sats. You can change the method and values for an individual payment before you send it.",
     "views.Settings.Payments.defaultDonationPercentage": "Default Donation Percentage",
     "views.Settings.Invoices.title": "इनवॉइस सेटिंग्स",
     "views.Settings.Invoices.showCustomPreimageField": "कस्टम प्रीइमेज फील्ड दिखाएं",
