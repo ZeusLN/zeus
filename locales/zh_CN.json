@@ -224,6 +224,7 @@
     "views.Settings.SocialMedia.twitter": "𝕏 / 推特",
     "network.mainnet": "主网",
     "network.testnet": "测试网",
+    "network.testnet4": "Testnet4",
     "network.mutinynet": "Mutinynet",
     "nostr.nostr": "Nostr",
     "nostr.keys": "Nostr 钥匙",

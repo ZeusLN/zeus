@@ -224,6 +224,7 @@
     "views.Settings.SocialMedia.twitter": "X / Twitter",
     "network.mainnet": "רשת ראשית",
     "network.testnet": "טסטנט",
+    "network.testnet4": "Testnet4",
     "network.mutinynet": "Mutinynet",
     "nostr.nostr": "נוסטר",
     "nostr.keys": "מפתחות Nostr",

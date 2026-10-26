@@ -224,6 +224,7 @@
     "views.Settings.SocialMedia.twitter": "تويتر/ X",
     "network.mainnet": "الشبكة الرئيسية",
     "network.testnet": "Testnet",
+    "network.testnet4": "Testnet4",
     "network.mutinynet": "Mutinynet",
     "nostr.nostr": "نوستر",
     "nostr.keys": "مفاتيح نوستر",

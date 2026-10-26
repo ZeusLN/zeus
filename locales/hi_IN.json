@@ -224,6 +224,7 @@
     "views.Settings.SocialMedia.twitter": "एक्स / ट्विटर",
     "network.mainnet": "मेननेट",
     "network.testnet": "टेस्टनेट",
+    "network.testnet4": "Testnet4",
     "network.mutinynet": "Mutinynet",
     "nostr.nostr": "नोस्टर",
     "nostr.keys": "नोस्टर कुंजियाँ",
