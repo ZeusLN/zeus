@@ -317,15 +317,15 @@ describe('CashuStore melting into our own invoice', () => {
         );
         store.cdkInitialized = true;
         jest.spyOn(store, 'isOffline', 'get').mockReturnValue(false);
-        jest.spyOn(store, 'receiveTokenCDK').mockResolvedValue(
-            undefined as any
-        );
+        // receiveTokenCDK resolves to the amount the mint credited
+        jest.spyOn(store, 'receiveTokenCDK').mockResolvedValue(1000);
         jest.spyOn(store, 'syncCDKBalances').mockResolvedValue(
             undefined as any
         );
         jest.spyOn(store, 'createMeltQuoteCDK').mockResolvedValue({
             fee_reserve: 0
         } as any);
+        jest.spyOn(store, 'estimateMeltInputFee').mockResolvedValue(0);
         return { store, isInvoicePaid };
     };
 
@@ -1191,6 +1191,7 @@ describe('CashuStore meltCDK and sweepMint melt state', () => {
         store.syncCDKBalances = jest.fn().mockResolvedValue(undefined);
         // payment proof has its own tests above
         store.isOwnInvoicePaid = jest.fn().mockResolvedValue(true);
+        store.estimateMeltInputFee = jest.fn().mockResolvedValue(0);
         return store;
     };
 
@@ -1310,7 +1311,7 @@ describe('CashuStore self-custody claim', () => {
         );
         store.cdkInitialized = true;
         store.mintUrls = [mintUrl];
-        store.receiveTokenCDK = jest.fn().mockResolvedValue(undefined);
+        store.receiveTokenCDK = jest.fn().mockResolvedValue(1000);
         store.createMeltQuoteCDK = jest.fn().mockResolvedValue({
             id: 'quote-1',
             amount: 1000,
@@ -1320,6 +1321,7 @@ describe('CashuStore self-custody claim', () => {
         store.syncCDKBalances = jest.fn().mockResolvedValue(undefined);
         // payment proof has its own tests above
         store.isOwnInvoicePaid = jest.fn().mockResolvedValue(true);
+        store.estimateMeltInputFee = jest.fn().mockResolvedValue(0);
         return store;
     };
 
