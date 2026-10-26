@@ -75,13 +75,14 @@ const formatBitcoinWithSpaces = (x: string | number) => {
     return `${integerFormatted}.${firstTwo} ${rest}`.trim();
 };
 
-// BIP21 amounts are in BTC with at most 8 decimals, so a request with
-// millisats (e.g. 1,000.5 sats) is rounded up to the next whole sat
+// On-chain amounts are whole sats, so a request with millisats
+// (e.g. 1,000.5 sats) is rounded up to the next whole sat
+const roundUpToWholeSats = (sats: string | number) =>
+    new BigNumber(sats).integerValue(BigNumber.ROUND_CEIL).toFixed();
+
+// BIP21 amounts are in BTC with at most 8 decimals
 const satsToBip21Amount = (sats: string | number) =>
-    new BigNumber(sats)
-        .integerValue(BigNumber.ROUND_CEIL)
-        .dividedBy(SATS_PER_BTC)
-        .toFixed();
+    new BigNumber(roundUpToWholeSats(sats)).dividedBy(SATS_PER_BTC).toFixed();
 
 type Units = 'sats' | 'BTC' | 'fiat';
 
@@ -91,6 +92,7 @@ export {
     numberWithCommas,
     numberWithDecimals,
     formatBitcoinWithSpaces,
+    roundUpToWholeSats,
     satsToBip21Amount
 };
 export type { Units };

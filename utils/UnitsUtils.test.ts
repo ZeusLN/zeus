@@ -1,4 +1,8 @@
-import { getDecimalPlaceholder, satsToBip21Amount } from './UnitsUtils';
+import {
+    getDecimalPlaceholder,
+    roundUpToWholeSats,
+    satsToBip21Amount
+} from './UnitsUtils';
 
 jest.mock('../stores/Stores', () => ({
     settingsStore: {
@@ -45,6 +49,19 @@ describe('UnitsUtils', () => {
                 string: '000',
                 count: 3
             });
+        });
+    });
+
+    describe('roundUpToWholeSats', () => {
+        it('keeps whole sats', () => {
+            expect(roundUpToWholeSats('1000')).toBe('1000');
+            expect(roundUpToWholeSats(1)).toBe('1');
+        });
+
+        it('rounds millisats up', () => {
+            expect(roundUpToWholeSats('1000.5')).toBe('1001');
+            expect(roundUpToWholeSats('1000.001')).toBe('1001');
+            expect(roundUpToWholeSats('0.001')).toBe('1');
         });
     });
 
