@@ -2723,6 +2723,15 @@ export default class SettingsStore {
         (this.settings?.pos?.posEnabled || PosEnabled.Disabled) !==
         PosEnabled.Disabled;
 
+    // Whether Wallet shows the POS tabs. 'unselected' counts: with POS
+    // enabled, Wallet always moves it to 'active', and the tab navigator
+    // picks its first tab when it mounts. A new App root over a connected
+    // node (see startNewRootSession) mounts the tabs before Wallet makes
+    // that move, so treating 'unselected' as not POS would open the wallet
+    // tabs and then swap them out from under the navigator.
+    public posViewActive = () =>
+        this.isPosEnabled() && this.posStatus !== 'inactive';
+
     public loginMethodConfigured = () =>
         this.settings &&
         (this.settings.passphrase ||

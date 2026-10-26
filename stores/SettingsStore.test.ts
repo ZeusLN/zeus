@@ -498,6 +498,43 @@ describe('SettingsStore.startNewRootSession', () => {
     );
 });
 
+describe('SettingsStore.posViewActive', () => {
+    const storeWith = (posEnabled: PosEnabled, posStatus: string) => {
+        const store = new SettingsStore();
+        store.settings = { pos: { posEnabled } } as any;
+        store.setPosStatus(posStatus);
+        return store;
+    };
+
+    it.each([
+        [PosEnabled.Standalone, 'active', true],
+        [PosEnabled.Square, 'active', true],
+        // Wallet moves 'unselected' to 'active' when POS is enabled
+        [PosEnabled.Standalone, 'unselected', true],
+        // the owner unlocked the full wallet
+        [PosEnabled.Standalone, 'inactive', false],
+        [PosEnabled.Disabled, 'unselected', false],
+        [PosEnabled.Disabled, 'active', false]
+    ])('POS %s with status %s: %s', (posEnabled, posStatus, expected) => {
+        expect(storeWith(posEnabled, posStatus).posViewActive()).toBe(expected);
+    });
+
+    it('is false before settings load', () => {
+        expect(new SettingsStore().posViewActive()).toBe(false);
+    });
+
+    // A new App root mounts Wallet's tab navigator at once when the node is
+    // still connected, so it must already pick the POS tabs, as a cold start
+    // does once connecting ends
+    it('shows the POS tabs for a new App root after the owner unlocked the wallet', () => {
+        const store = storeWith(PosEnabled.Standalone, 'inactive');
+
+        store.startNewRootSession();
+
+        expect(store.posViewActive()).toBe(true);
+    });
+});
+
 describe('SettingsStore.updateSettings', () => {
     it('serializes concurrent updates so neither is lost', async () => {
         seedSettings({ fiat: 'USD', locale: 'en' });
