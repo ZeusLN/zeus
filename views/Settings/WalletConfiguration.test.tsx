@@ -146,14 +146,6 @@ const pressButton = (name: string) =>
 
 const save = () => pressButton('views.Settings.WalletConfiguration.saveWallet');
 
-// Save on a config without certificate verification asks first
-const saveWithoutCertVerification = async () => {
-    await save();
-    await pressButton(
-        'views.Settings.WalletConfiguration.certificateUnderstand'
-    );
-};
-
 const interfaceDropdown = () =>
     screen.container.queryAll(
         (n) =>
@@ -598,7 +590,7 @@ describe('WalletConfiguration', () => {
             });
         });
 
-        it('asks about the certificate after an import over an lndhub config', async () => {
+        it('keeps certificate verification on after an import over an lndhub config', async () => {
             (Clipboard.getString as jest.Mock).mockResolvedValue(
                 LNDCONNECT_IMPORT
             );
@@ -619,11 +611,14 @@ describe('WalletConfiguration', () => {
             await save();
 
             expect(
-                screen.getByText(
+                screen.queryByText(
                     'views.Settings.AddEditNode.certificateWarning1'
                 )
-            ).toBeOnTheScreen();
-            expect(updateSettings).not.toHaveBeenCalled();
+            ).not.toBeOnTheScreen();
+            expect(savedNode(updateSettings)).toMatchObject({
+                implementation: 'lnd',
+                certVerification: true
+            });
         });
 
         // Only lndhub forces certVerification. Elsewhere it is the user's
@@ -708,7 +703,7 @@ describe('WalletConfiguration', () => {
             );
 
             await pressButton('views.Settings.AddEditNode.import');
-            await saveWithoutCertVerification();
+            await save();
 
             expect(savedNode(updateSettings)).toMatchObject({
                 implementation: 'lnd',
