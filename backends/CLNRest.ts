@@ -582,21 +582,22 @@ export default class CLNRest {
             // keysend amount (capped at CLN's 100% param limit). CLN
             // reads the percent to whole ppm and floors the budget, so
             // round up to 4 decimals to keep the cap at or above the
-            // fixed limit.
-            if (data.max_fee_percent) {
+            // fixed limit. Prefer fee_limit_sat so the cap matches the fee
+            // UI, same as pay, xpay and xkeysend: in percent mode it holds
+            // the rounded-up sat amount the UI shows, and the raw percent
+            // would cap below it.
+            if (maxfee !== undefined && this.supports('v24.11')) {
+                legacyRequest.maxfee = maxfee;
+            } else if (maxfee !== undefined && data.amt) {
+                legacyRequest.maxfeepercent = BigNumber.min(
+                    new BigNumber(data.fee_limit_sat)
+                        .times(100)
+                        .dividedBy(data.amt)
+                        .decimalPlaces(4, BigNumber.ROUND_CEIL),
+                    100
+                ).toNumber();
+            } else if (data.max_fee_percent) {
                 legacyRequest.maxfeepercent = data.max_fee_percent;
-            } else if (maxfee !== undefined) {
-                if (this.supports('v24.11')) {
-                    legacyRequest.maxfee = maxfee;
-                } else if (data.amt) {
-                    legacyRequest.maxfeepercent = BigNumber.min(
-                        new BigNumber(data.fee_limit_sat)
-                            .times(100)
-                            .dividedBy(data.amt)
-                            .decimalPlaces(4, BigNumber.ROUND_CEIL),
-                        100
-                    ).toNumber();
-                }
             }
             // With maxfeepercent, keysend raises any budget below
             // exemptfee (default 5000 msat) to exemptfee. Send 0 so the

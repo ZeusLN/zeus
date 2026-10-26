@@ -600,15 +600,48 @@ describe('CLNRest payment request bodies', () => {
         expect(sentBody().body.maxfeepercent).toBe(0.0001);
     });
 
+    // In percent mode FeeLimit rounds the sat limit up (5% of 50 sats
+    // shows 3), so the raw 5% would cap below the limit the UI shows
+    it('caps a percent-mode keysend at the shown sat limit from v24.11', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v25.02' };
+
+        await cln.sendKeysend({
+            pubkey: '02ab',
+            amt: 50,
+            fee_limit_sat: 3,
+            max_fee_percent: '5'
+        });
+
+        expect(sentBody().body.maxfee).toBe(3000);
+        expect(sentBody().body).not.toHaveProperty('maxfeepercent');
+        expect(sentBody().body).not.toHaveProperty('exemptfee');
+    });
+
+    it('converts the shown sat limit of a percent-mode keysend before v24.11', async () => {
+        mockNodeInfoStore.nodeInfo = { version: 'v24.08' };
+
+        await cln.sendKeysend({
+            pubkey: '02ab',
+            amt: 50,
+            fee_limit_sat: 3,
+            max_fee_percent: '5'
+        });
+
+        expect(sentBody().body).toMatchObject({
+            maxfeepercent: 6,
+            exemptfee: 0
+        });
+        expect(sentBody().body).not.toHaveProperty('maxfee');
+    });
+
     it.each(['v24.08', 'v25.02'])(
-        'sends a percent-mode cap with exemptfee 0 on keysend on %s',
+        'falls back to the percent with exemptfee 0 on keysend on %s when no sat limit is set',
         async (version) => {
             mockNodeInfoStore.nodeInfo = { version };
 
             await cln.sendKeysend({
                 pubkey: '02ab',
                 amt: 200,
-                fee_limit_sat: 6,
                 max_fee_percent: '3'
             });
 
