@@ -20,11 +20,13 @@ class LinkingUtils {
     private shareIntentProcessed = false;
     private pendingDeepLink: string | null = null;
     // Linking.getInitialURL() returns the same URL for the lifetime of the
-    // activity (and on Android, onNewIntent + setIntent refreshes it with
-    // each warm deep link), while the Wallet view — which consumes it — can
+    // process (and on Android, onNewIntent + setIntent refreshes it with
+    // each warm deep link), while the Wallet view, which consumes it, can
     // mount more than once, e.g. when 'Select wallet on start-up' is
-    // enabled. Track the last URL actually processed so it is only ever
-    // handled once.
+    // enabled. Track the last URL actually processed so it is handled once
+    // per JS runtime. A JS reload resets this field, and on iOS an in-app
+    // restart reloads JS without ending the process, so handleInitialUrl
+    // also checks startedByInAppRestart().
     private lastHandledUrl: string | null = null;
 
     processPendingDeepLink = (
